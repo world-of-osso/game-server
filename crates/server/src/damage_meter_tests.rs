@@ -425,6 +425,219 @@ fn hits_on_a_dummy_a_few_seconds_apart_are_one_session_and_a_longer_gap_starts_a
 
 // --- ECS: groups ---
 
+#[test]
+fn groupmeter_three_players_receive_exact_categories_and_capped_recaps() {
+    let (mut app, dps, tank, outsider) = group_app();
+    let healer = spawn_member(&mut app, 4, "Healer", 5);
+    let online: OnlineView = [
+        (1, member(dps, "Fbmage", 8)),
+        (2, member(tank, "Fbwarrior", 1)),
+        (3, member(outsider, "Fbrogue", 4)),
+        (4, member(healer, "Healer", 5)),
+    ]
+    .into();
+    let mut registry = app.world_mut().resource_mut::<GroupRegistry>();
+    registry.sync_presence(&online);
+    registry.invite(1, "Healer", &online);
+    registry.respond_invite(4, true);
+    assert_eq!(registry.group_members(1).len(), 3);
+    let players = [healer, tank, dps, outsider];
+    let connections: Vec<_> = players
+        .iter()
+        .enumerate()
+        .map(|(i, &player)| {
+            let connection = crate::spell_cast::test_harness::spawn_peer_connection(
+                &mut app,
+                player,
+                i as u64 + 1,
+            );
+            app.world_mut().entity_mut(connection).insert((
+                MessageSender::<DamageMeterSnapshot>::default(),
+                MessageReceiver::<DamageMeterSnapshot>::default(),
+            ));
+            connection
+        })
+        .collect();
+    app.world_mut().entity_mut(tank).insert(CombatStatus(true));
+    let mob = app.world_mut().spawn_empty().id();
+    for (player, damage, healing, overheal, interrupts, dispels) in [
+        (healer, 10, 100, 40, 1, 2),
+        (tank, 250, 20, 0, 2, 1),
+        (dps, 500, 0, 10, 3, 0),
+    ] {
+        crate::spell_cast::log_event(app.world_mut(), damage_line(player, mob, damage));
+        crate::spell_cast::log_event(
+            app.world_mut(),
+            CombatLogEvent {
+                kind: CombatLogKind::Heal,
+                overflow: overheal,
+                ..damage_line(player, tank, healing + overheal)
+            },
+        );
+        for _ in 0..interrupts {
+            crate::spell_cast::log_event(
+                app.world_mut(),
+                CombatLogEvent {
+                    kind: CombatLogKind::Interrupt,
+                    ..damage_line(player, mob, 0)
+                },
+            );
+        }
+        for _ in 0..dispels {
+            crate::spell_cast::log_event(
+                app.world_mut(),
+                CombatLogEvent {
+                    kind: CombatLogKind::Dispel,
+                    ..damage_line(player, tank, 0)
+                },
+            );
+        }
+    }
+    super::record_absorb(app.world_mut(), healer, 75.0);
+    for death in 0..3 {
+        for hit in 0..12 {
+            crate::spell_cast::log_event(
+                app.world_mut(),
+                damage_line(mob, tank, death * 100 + hit),
+            );
+        }
+        crate::spell_cast::log_event(
+            app.world_mut(),
+            CombatLogEvent {
+                kind: CombatLogKind::Death,
+                ..damage_line(mob, tank, 0)
+            },
+        );
+        // Accepted death transition must not count a combat-log death twice.
+        super::record_player_death_transition(app.world_mut(), tank);
+    }
+    let mut received = vec![Vec::new(); players.len()];
+    for _ in 0..30 {
+        app.update();
+        for (i, &connection) in connections.iter().enumerate() {
+            received[i].extend(
+                crate::spell_cast::test_harness::drain::<DamageMeterSnapshot>(&mut app, connection),
+            );
+        }
+    }
+    assert!(
+        received[3].is_empty(),
+        "outsider receives no group snapshots"
+    );
+    for (i, &recipient) in players[..3].iter().enumerate() {
+        assert!(
+            !received[i].is_empty(),
+            "member must receive a wire snapshot"
+        );
+        let snapshot = received[i].last().unwrap();
+        for session in [snapshot.current.as_ref().unwrap(), &snapshot.overall] {
+            assert_eq!(session.sources.len(), 3);
+            for (unit, expected) in [
+                (healer, (10, 100, 40, 75, 1, 2, 0)),
+                (tank, (250, 20, 0, 0, 2, 1, 3)),
+                (dps, (500, 0, 10, 0, 3, 0, 0)),
+            ] {
+                let source = session
+                    .sources
+                    .iter()
+                    .find(|source| source.unit == unit.to_bits())
+                    .unwrap();
+                assert_eq!(
+                    (
+                        source.total_amount,
+                        source.healing_done,
+                        source.overhealing,
+                        source.absorbs,
+                        source.interrupts,
+                        source.dispels,
+                        source.deaths
+                    ),
+                    expected
+                );
+                assert_eq!(source.is_local_player, unit == recipient);
+            }
+            let victim = session
+                .sources
+                .iter()
+                .find(|source| source.unit == tank.to_bits())
+                .unwrap();
+            assert_eq!(victim.death_recaps.len(), DAMAGE_METER_MAX_DEATH_RECAPS);
+            for (recap, death) in victim.death_recaps.iter().zip(1..3) {
+                assert_eq!(recap.events.len(), DAMAGE_METER_MAX_RECAP_EVENTS);
+                assert_eq!(
+                    recap
+                        .events
+                        .iter()
+                        .map(|event| event.amount)
+                        .collect::<Vec<_>>(),
+                    (4..12).map(|hit| death * 100 + hit).collect::<Vec<_>>()
+                );
+                assert!(
+                    recap
+                        .events
+                        .iter()
+                        .all(|event| event.target == Some(tank.to_bits()))
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn groupmeter_unlogged_death_transition_counts_once() {
+    let (mut app, mage, warrior, _) = group_app();
+    super::record_player_death_transition(app.world_mut(), warrior);
+    for recipient in [mage, warrior] {
+        let snapshot = app
+            .world()
+            .get::<DamageMeter>(recipient)
+            .unwrap()
+            .snapshot(0.0, recipient);
+        let victim = snapshot
+            .overall
+            .sources
+            .iter()
+            .find(|source| source.unit == warrior.to_bits())
+            .unwrap();
+        assert_eq!(victim.deaths, 1);
+        assert_eq!(victim.death_recaps.len(), 1);
+    }
+}
+
+#[test]
+fn groupmeter_healing_is_visible_to_a_non_casting_group_member() {
+    let (mut app, mage, warrior, outsider) = group_app();
+    crate::spell_cast::log_event(
+        app.world_mut(),
+        CombatLogEvent {
+            kind: CombatLogKind::Heal,
+            overflow: 40,
+            ..damage_line(mage, warrior, 140)
+        },
+    );
+    let snapshot = app
+        .world()
+        .get::<DamageMeter>(warrior)
+        .unwrap()
+        .snapshot(0.0, warrior);
+    assert_eq!(snapshot.overall.sources.len(), 2);
+    let healer = snapshot
+        .overall
+        .sources
+        .iter()
+        .find(|source| source.unit == mage.to_bits())
+        .unwrap();
+    assert_eq!((healer.healing_done, healer.overhealing), (100, 40));
+    assert!(
+        app.world()
+            .get::<DamageMeter>(outsider)
+            .unwrap()
+            .snapshot(0.0, outsider)
+            .current
+            .is_none()
+    );
+}
+
 fn spawn_member(app: &mut App, character: CharacterId, name: &str, class: u8) -> Entity {
     app.world_mut()
         .spawn((
@@ -547,7 +760,7 @@ fn a_group_member_s_damage_and_combat_reach_every_member_s_meter() {
         .iter()
         .map(|s| (s.name.as_str(), s.total_amount, s.is_local_player))
         .collect();
-    assert_eq!(sources, [("Fbwarrior", 250, false)]);
+    assert_eq!(sources, [("Fbwarrior", 250, false), ("Fbmage", 0, true)]);
     let warrior_view = world
         .get::<DamageMeter>(warrior)
         .unwrap()

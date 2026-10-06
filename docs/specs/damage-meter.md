@@ -6,7 +6,7 @@ Retail's UI reads only aggregated sessions (`C_DamageMeter.GetCombatSessionFromT
 
 ## What it must do
 
-- [x] Every `CombatLogKind::Damage` line with a positive amount by a player to another unit (`spell_cast::log_event`: spells, periodic ticks, melee swings, `.damage`) counts on the meter of that player and of every online member of its group (`GroupRegistry::group_members`). Healing, misses, self-damage and creature damage do not count.
+- [x] Every `CombatLogKind::Damage` line with a positive amount by a player to another unit (`spell_cast::log_event`: spells, periodic ticks, melee swings, `.damage`) counts on the meter of that player and of every online member of its group (`GroupRegistry::group_members`). Misses, self-damage and creature damage do not count as damage done; healing is a separate category.
 - [x] Damage is kept per source (unit, name, class) and per spell id (0 = melee).
 - [x] A meter's `Current` session starts when its owner or any online group member is in combat (`CombatStatus`), or at the first counted damage, and ends when none of them is; each start is a new session, numbered from 1 (`DamageMeterAvailableCombatSession.sessionID`). After it ends it stays `Current` until the next begins.
 - [x] Combat follows TrinityCore's `CombatManager` (`combat_refs.rs`, game-server wiki `systems/combat.md`): a fight with a creature that has a threat list lasts until it dies or evades, so a lull does not split the session and a kill ends it at once; a fight with a training dummy ends 5 s after the attacker's last hit (TC `npc_training_dummy`), so a gap over 5 s there starts a new session; auto-attack alone keeps nobody in combat.
@@ -15,10 +15,31 @@ Retail's UI reads only aggregated sessions (`C_DamageMeter.GetCombatSessionFromT
 - [x] A source's and a spell's `amount_per_second` is its damage over its session's duration (`GetSessionDurationSeconds`), 0 at duration 0.
 - [x] Sources rank by damage (ties by name), spells by damage; `total_amount` is the session sum; `is_local_player` marks the recipient.
 - [x] The owner gets `DamageMeterSnapshot { current, overall }` on `CombatChannel` when a session starts or ends, and at most every 1 s while one runs or has new damage; nothing while idle.
-- [ ] Pets and guardians (`RedirectSourceToOwner`), healing, absorbs, interrupts, dispels, damage taken, deaths and the other `DamageMeterType`s are not tracked.
+- Hunter pet actions redirect to their owner. Guardians, damage taken totals and other `DamageMeterType`s remain outside this change.
 - [ ] Only the current and overall sessions are kept; Retail lists past sessions (`GetAvailableCombatSessions`) and can reset them (`ResetAllCombatSessions`).
 - [ ] A session against a training dummy includes the 5 s after the last hit before the dummy's combat ends (as in TC). Combat starts when a harmful spell launches (Spell.cpp:8538-8541), and a missile lands after its flight, so a one-shot kill lasts the flight (0.57 s for Frostbolt at 20 yd).
 - [ ] Retail's session boundaries for a group (who must be in combat, whether a far-away member's combat counts) are not documented in the files; here any online member in combat keeps the session running.
+
+## Group category snapshots
+
+- [ ] Every online party/raid member receives every member's damage, effective healing, overhealing, consumed absorbs, successful interrupts, dispels and deaths in Current and Overall. Zero-valued members remain present. An unrelated idle player receives nothing.
+- [ ] Healing is `max(amount, 0) - clamp(overflow, 0, amount)`; overhealing is the clamped overflow. Absorbs count shield points consumed, credited to the shield caster, not the victim's combat-log `absorbed` field.
+- [ ] Each death freezes the last eight events targeting that member, chronological and excluding the Death line itself. Only the latest two death recaps per member per session are exported; death totals retain all deaths. Logged deaths and their accepted player-death transitions count once.
+- [ ] Exports contain at most 40 sources per session, 64 damage spells per source and 48 UTF-8 name bytes. Current plus Overall with two eight-event recaps per source fits 256 KiB in standard bincode, before transport framing. Category totals are never truncated when spell/recap detail is capped.
+- Snapshot delivery retains the existing one-second cadence and immediate session-boundary sends. Solo damage sessions, DPS and owner combat-log delivery remain unchanged; the added categories are authoritative for solo players too.
+
+### Retail reference
+
+Paths relative to `~/.cache/wow-ui-sim/blizzard-ui/retail/AddOns/`:
+
+- `Blizzard_DamageMeter/DamageMeterSessionWindow.lua:1-4`: damage, healing/HPS, interrupts, dispels and deaths category menu.
+- `Blizzard_DamageMeter/DamageMeterSessionWindow.lua:15-19,37-44`: healing, absorbs, interrupts, dispels and deaths types.
+- `Blizzard_DamageMeter/DamageMeterSessionWindow.lua:561-579`: aggregated `C_DamageMeter` session getters; `:967-970`: death recap action.
+- `Blizzard_APIDocumentationGenerated/DamageMeterConstantsDocumentation.lua:83-90,102-111`: storage and display categories. Overheal is a server detail, not a separate Retail menu category.
+
+### Client migration (client remains unchanged here)
+
+Read `DamageMeterSource.healing_done`, `overhealing`, `absorbs`, `interrupts`, `dispels`, `deaths` and `death_recaps` instead of incrementing these categories from owner-scoped `CombatLogEvent`. Recap entries expose timestamp, source/target, spell, amount, overflow and mitigation fields. Continue using `total_amount`, `amount_per_second` and `spells` for damage. A healing-and-absorbs view sums `healing_done + absorbs`; HPS divides by session duration. Do not add owner combat-log counts on top of snapshot totals. Deploy matching protocol consumers together: the extended serialized source is not wire-compatible with old builds.
 
 ## Tests
 
