@@ -571,4 +571,4 @@ Updated [[experience]] for persisted accumulation and kill bonus consumption; do
 
 ## 2026-10-06 — Dungeon achievements phase 1
 
-Added [[dungeon-achievements]]: local CASC provenance, partial encrypted-section coverage, supported DB2 criteria/tree semantics, Stockade full-run boundary, character/lock persistence, and client phase-2 contract. Targeted server proof pending.
+Added [[dungeon-achievements]]: local CASC provenance, partial encrypted-section coverage, supported DB2 criteria/tree semantics, Stockade full-run boundary, character/lock persistence, and client phase-2 contract. Targeted proof: nine server tests PASS (eight at 702cb80, Stockade frame-drain fixture at 96cad53), Python virtual-string/decrypted-section test PASS, focused native cargo check and cargo fmt check PASS. Normal checkpoints now persist alongside scheduled locks without imposing scheduled reset restrictions.

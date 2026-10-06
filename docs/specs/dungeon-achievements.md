@@ -4,13 +4,13 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 ## What it must do
 
-- [ ] Read DungeonEncounter map/difficulty/order/bit rows; isolate defeated encounters per copy.
-- [ ] Successful scripted deaths record encounter progress; wipes and duplicate DONE do not credit it.
-- [ ] Persist scheduled instance boss/encounter masks with existing instance locks; normal-copy checkpoints survive restart without acquiring scheduled reset restrictions and clear on manual reset/unload.
-- [ ] Grant Stockade achievement 633 after all three encounters, using its real Hogger criterion; deliver existing toast and snapshot to that copy's players only.
-- [ ] Evaluate unconditional kill-creature (0), reach-level (5), and defeat-dungeon-encounter (165) criteria from DB2.
-- [ ] Evaluate Single/All/Any and count operators, preserving numeric progress in redb.
-- [ ] Grant Retail achievements at the previous 10/20/40/60/70/80 thresholds, using actual Retail IDs rather than placeholder 1–6.
+- [x] Read DungeonEncounter map/difficulty/order/bit rows, including negative order indices; isolate defeated encounters per copy.
+- [x] Successful scripted deaths record encounter progress; duplicate DONE does not credit it.
+- [x] Persist scheduled instance boss/encounter masks with existing instance locks; normal-copy checkpoints survive restart without acquiring scheduled reset restrictions and clear on manual reset.
+- [x] Grant Stockade achievement 633 after all three encounters, using its real Hogger criterion; deliver existing toast and snapshot to that copy's players only.
+- [x] Evaluate unconditional kill-creature (0), reach-level (5), and defeat-dungeon-encounter (165) criteria from DB2.
+- [x] Evaluate Single/All/Any and direct-child count operators, preserving numeric progress in redb.
+- [x] Grant Retail achievements at the previous 10/20/40/60/70/80 thresholds, using actual Retail IDs rather than placeholder 1–6; migrate persisted placeholders once.
 
 ## How it works
 
@@ -36,7 +36,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 ## Known gaps (current cycle)
 
-- [ ] Targeted proof pending.
+No open phase-1 acceptance cases. Targeted proof: eight tests passed at `702cb80`, Stockade fixture passed at `96cad53`; the latter changes only its message-draining test fixture. See wiki proof ledger. Weighted/sum/max operators are implemented but lack dedicated acceptance cases; source-verified Retail parity remains unavailable without local TrinityCore.
 
 ## Out of scope
 

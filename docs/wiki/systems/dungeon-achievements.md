@@ -31,6 +31,16 @@ DB2 Retail level rows: 6/7/9/14783/15805/19459 for levels 10/20/40/60/70/80; the
 
 No TrinityCore checkout is available under `~/Repos`; interpretation uses observed local DB2 fields, not a fetched source. Operator 0 compares a criterion counter with Amount; 4 requires all children; 8 requires Amount completed children; 7 counts direct children with positive criterion counters. Operators 5/6/9 aggregate descendant counters by sum/max/weighted sum. Supported catalog trees exclude missing references, cycles, unknown/inverse operators, unsupported criterion types and conditional/timed criteria. These interpretations are inferred DB2 semantics, not independently source-verified Retail parity. Concrete level and Stockade trees anchor the All/Any behavior; count tests distinguish positive progress from completed thresholds.
 
+## Proof ledger
+
+- RED: baseline `c8cd38f` + Retail-ID assertion failed because placeholder achievement 1 was granted instead of Retail 6. `/tmp/claude/dungeonach-red.log`.
+- `702cb80`: detached build-lock + agent-run + desktop-server-build with explicit `--build-host local`, filter `dungeonach`: eight tests passed; Stockade fixture lost its toast by draining after two frames. The Lightyear host receiver clears each frame (`lightyear_messages-0.28.0/src/receive.rs`, `clear_typed`). Saved `/tmp/claude/dungeonach-second-green.log`.
+- `96cad53`: only that fixture changed to drain both frames. Same locked detached runner, filter `dungeonach_stockade_real_boss_deaths_record_ordered_progress_and_send_final_toast`: PASS, including real scripted boss deaths, ordered masks, copy isolation, final toast/snapshot, duplicate DONE and persisted character state. `target/server-test.log`, `/tmp/claude/dungeonach.out`.
+- `702cb80`: native helper `--build-host local --check -p server`: PASS without warnings, 78s. Later fixture-only edit does not invalidate production check. `/tmp/claude/dungeonach-check.out`.
+- `96cad53`: `cargo fmt --all -- --check`: PASS. Existing WDC5 decoder's `test_decrypted_sections_and_virtual_string_offsets`: PASS; later changes are Rust-only.
+
+The eight other passing tests cover actual level thresholds, real encounter asset matching, All/Any/direct count, character progress reopen, one-time placeholder migration, scheduled lock restore and normal Stockade checkpoint restore/manual reset. No broad suites, protocol edits, push or merge.
+
 ## Phase 2 client needs
 
 A dungeon-progress message must carry copy identity, difficulty, ordered encounter IDs/names and defeated state; send an initial snapshot on entry/reconnect and updates on successful completion/reset. Objective tracker renders one row per boss. Achievement window needs catalog metadata/categories and current/required/earned state; existing AchievementStateUpdate already supplies snapshots/toasts. No protocol changes are implemented here.
