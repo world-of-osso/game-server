@@ -92,6 +92,26 @@ fn dungeonach_tree_all_any_and_count_operators() {
 }
 
 #[test]
+fn dungeonach_placeholder_ids_migrate_once_in_redb() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let table = redb::TableDefinition::<u64, &[u8]>::new("achievements");
+    let txn = db.begin_write().unwrap();
+    {
+        let mut table = txn.open_table(table).unwrap();
+        table
+            .insert(42, br#"{"earned_ids":[1,6]}"#.as_slice())
+            .unwrap();
+    }
+    txn.commit().unwrap();
+    let first = crate::persistence::load_achievements(&db, 42);
+    assert_eq!(first.earned_ids, BTreeSet::from([6, 19459]));
+    let second = crate::persistence::load_achievements(&db, 42);
+    assert_eq!(first, second);
+}
+
+#[test]
 fn dungeonach_criteria_progress_persists_across_database_reopen() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let catalog = catalog();

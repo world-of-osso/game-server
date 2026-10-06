@@ -206,7 +206,7 @@ pub struct DungeonEncounter {
     /// -1 or 0: every difficulty of the map.
     pub difficulty_id: i32,
     /// Authored encounter display/run order, independent of script boss indices.
-    pub order_index: u32,
+    pub order_index: i32,
     /// The lock's `CompletedEncountersMask` bit.
     pub bit: u32,
 }

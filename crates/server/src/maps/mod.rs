@@ -148,7 +148,9 @@ fn load_instance_locks(
     };
     let saved = persistence::load_instance_locks(&db.db);
     let count: usize = saved.locks.values().map(|locks| locks.len()).sum();
-    *instances = InstanceManager::with_locks(locks::InstanceLocks::from_saved(saved));
+    let normal = persistence::load_normal_instance_locks(&db.db);
+    *instances =
+        InstanceManager::with_locks_and_normal(locks::InstanceLocks::from_saved(saved), normal);
     info!("Loaded {count} instance locks");
 }
 
@@ -163,7 +165,8 @@ fn save_instance_locks(
     }
     instances.locks_dirty = false;
     if let Some(db) = db {
-        persistence::save_instance_locks(&db.db, &instances.locks.saved());
+        let normal: Vec<_> = instances.normal_locks.values().cloned().collect();
+        persistence::save_instance_locks(&db.db, &instances.locks.saved(), &normal);
     }
 }
 

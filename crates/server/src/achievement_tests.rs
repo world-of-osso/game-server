@@ -1,6 +1,9 @@
 use super::*;
 use rusqlite::Connection;
 
+#[path = "achievement_normal_lock_tests.rs"]
+mod normal_locks;
+
 #[test]
 fn dungeonach_retail_level_ids_replace_placeholders() {
     let db = Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -51,7 +54,7 @@ fn dungeonach_scheduled_instance_lock_round_trip_restores_bosses_and_encounters(
     {
         let db = redb::Database::create(file.path()).unwrap();
         crate::persistence::create_tables(&db);
-        crate::maps::persistence::save_instance_locks(&db, &instances.locks.saved());
+        crate::maps::persistence::save_instance_locks(&db, &instances.locks.saved(), &[]);
     }
     let db = redb::Database::open(file.path()).unwrap();
     let saved = crate::maps::persistence::load_instance_locks(&db);

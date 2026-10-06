@@ -6,7 +6,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 - [ ] Read DungeonEncounter map/difficulty/order/bit rows; isolate defeated encounters per copy.
 - [ ] Successful scripted deaths record encounter progress; wipes and duplicate DONE do not credit it.
-- [ ] Persist scheduled instance boss/encounter masks with existing instance locks.
+- [ ] Persist scheduled instance boss/encounter masks with existing instance locks; normal-copy checkpoints survive restart without acquiring scheduled reset restrictions and clear on manual reset/unload.
 - [ ] Grant Stockade achievement 633 after all three encounters, using its real Hogger criterion; deliver existing toast and snapshot to that copy's players only.
 - [ ] Evaluate unconditional kill-creature (0), reach-level (5), and defeat-dungeon-encounter (165) criteria from DB2.
 - [ ] Evaluate Single/All/Any and count operators, preserving numeric progress in redb.
@@ -30,6 +30,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 - `crates/server/src/achievement_catalog_tests.rs`
 - `crates/server/src/achievement_tests.rs`
+- `crates/server/src/achievement_normal_lock_tests.rs`
 - `crates/server/src/scripted_ai/tests/dungeonach.rs`
 - `scripts/tests/test_db2_sections.py`
 
