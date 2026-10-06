@@ -14,11 +14,13 @@
 //! changed in flight (`DoTargetSpellHit`, Spell.cpp:2807); a caster that left the world
 //! drops the spell (`UpdatePointers`). Channeled spells never travel (Spell.cpp:3927).
 
+use std::sync::Arc;
+
 use bevy::prelude::*;
 
 use super::reflect::{self, Reflection};
 use super::{PlannedEffect, TargetPlan, attributes, is_channeled, now, resolve_effects};
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::SpellInfo;
 
 /// `SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC` (SharedDefines.h:773).
 const SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC: u32 = 0x0000_0010;
@@ -41,7 +43,7 @@ pub(crate) struct PendingSpellHits(Vec<PendingHit>);
 struct PendingHit {
     due: f64,
     caster: Entity,
-    spell_id: u32,
+    spell: Arc<SpellInfo>,
     depth: u8,
     landing: Landing,
 }
@@ -89,6 +91,7 @@ pub(super) fn launch(
     let delays = hit_delays(world, caster, spell, &plan);
     let launched = now(world);
     let (plan, reflected) = split_reflected(plan, &reflections, caster);
+    let mut snapshot = None;
     for (delay, landing) in landings(world, plan, reflected, &delays) {
         if delay == 0 {
             land_now(world, caster, spell, depth, landing);
@@ -100,7 +103,7 @@ pub(super) fn launch(
             .push(PendingHit {
                 due: launched + delay as f64 / 1000.0,
                 caster,
-                spell_id: spell.id,
+                spell: Arc::clone(snapshot.get_or_insert_with(|| Arc::new(spell.clone()))),
                 depth,
                 landing,
             });
@@ -127,14 +130,7 @@ pub(super) fn resolve_due_hits(world: &mut World) {
         if world.get_entity(hit.caster).is_err() {
             continue;
         }
-        let Some(spell) = world
-            .get_resource::<SpellStore>()
-            .and_then(|store| store.get(hit.spell_id))
-            .cloned()
-        else {
-            continue;
-        };
-        land_now(world, hit.caster, &spell, hit.depth, hit.landing);
+        land_now(world, hit.caster, &hit.spell, hit.depth, hit.landing);
     }
 }
 
