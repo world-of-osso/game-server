@@ -2,7 +2,7 @@
 
 ## [2026-10-06] systems | Group meter categories
 
-Updated [[combat]] with actor/victim group fan-out, shield-caster attribution and logged/transition death de-duplication. The [damage-meter spec](../specs/damage-meter.md) owns category semantics, export bounds, Retail references and the client migration field list. Targeted behavioral verification remains pending.
+Updated [[combat]] with actor/victim group fan-out, shield-caster attribution and logged/transition death de-duplication. The [damage-meter spec](../specs/damage-meter.md) owns category semantics, export bounds, Retail references and the client migration field list. Targeted local proof: 19 server meter tests and four protocol-filtered tests pass. First-absorb roster RED reproduced before the seeding fix; final server build reports no warnings.
 
 ## [2026-10-05] investigations | Northshire native versus effective stats
 
