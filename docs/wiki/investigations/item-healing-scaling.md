@@ -20,7 +20,7 @@ Algari ranks 211878/211879/211880 share coefficient 5450 and class -9. Existing 
 
 - Algari: warrior levels 90/71/80; exact amounts and one item consumed.
 - Minor Healing Potion 118 at level 10: 121 health. Healing Potion 929 at level 20: 1 health.
-- Dwarven Mild 422 at level 10: five seated ticks restore 153 health, versus 150 without food. Minor Agility Elixir 2457: 7 agility.
+- Dwarven Mild 422 at level 10: three seated ticks restore 91 whole health, versus 90 without food. Minor Agility Elixir 2457: 7 agility.
 - Netherweave Bandage 21990 at level 40: one health per periodic tick after consumption.
 - Cast-bar/missile tests modify Algari's spell **in memory** to test context lifetime, not claim Algari itself has cast time or travel.
 

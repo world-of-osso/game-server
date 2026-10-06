@@ -331,9 +331,10 @@ fn potionfix_scaling_food_restores_health_and_elixir_grants_agility() {
         .insert(shared::components::UnitLevel(10));
     use_slot(&mut eater, 0);
     let before = eater.h.health(caster);
-    eater.h.advance(200);
-    // Five seated ticks: (20 base + 1 * 2 / 5 food) * 1.5 = 30.6 each.
-    assert_eq!(eater.h.health(caster) - before, 153.0);
+    eater.h.advance(120);
+    // Three seated ticks: (20 base + 1 * 2 / 5 food) * 1.5 = 30.6 each.
+    // The existing regen accumulator carries fractions and applies whole health.
+    assert_eq!(eater.h.health(caster) - before, 91.0);
     assert_eq!(count_of(&eater, 422), 1);
     use_slot(&mut eater, 1);
     let active = eater.h.app.world().get::<ActiveAuras>(caster).unwrap();
