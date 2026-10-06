@@ -9,13 +9,13 @@ use std::collections::HashMap;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Player, UnitLevel};
+use shared::components::{EquipmentAppearance, EquipmentVisualSlot, Player, UnitLevel};
 use shared::protocol::{
     ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
-    GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupRosterSnapshot,
-    GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, RaidTargetIcons, ReadyCheckUpdate,
-    RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole, SetRaidSubgroup,
-    SetRaidTarget, StartReadyCheck,
+    GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupPortraitAppearance,
+    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, RaidTargetIcons,
+    ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole,
+    SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -82,6 +82,7 @@ type OnlinePlayers<'w, 's> = Query<
         &'static ClientId,
         Option<&'static UnitLevel>,
         Option<&'static crate::maps::difficulty::DungeonDifficulty>,
+        Option<&'static EquipmentAppearance>,
     ),
 >;
 
@@ -115,22 +116,43 @@ fn process_group_commands(
 fn build_online_view(players: &OnlinePlayers) -> OnlineView {
     players
         .iter()
-        .map(|(entity, player, client_id, level, difficulty)| {
-            (
-                client_id.0,
-                OnlineMember {
-                    entity: entity.to_bits(),
-                    name: player.name.clone(),
-                    class: player.class,
-                    level: level.map_or(1, |l| l.0),
-                    dungeon_difficulty: difficulty
-                        .map_or(crate::maps::store::DIFFICULTY_NORMAL, |difficulty| {
-                            difficulty.0
-                        }),
-                },
-            )
-        })
+        .map(
+            |(entity, player, client_id, level, difficulty, equipment)| {
+                (
+                    client_id.0,
+                    OnlineMember {
+                        entity: entity.to_bits(),
+                        name: player.name.clone(),
+                        class: player.class,
+                        level: level.map_or(1, |l| l.0),
+                        portrait: portrait_appearance(player, equipment),
+                        dungeon_difficulty: difficulty
+                            .map_or(crate::maps::store::DIFFICULTY_NORMAL, |difficulty| {
+                                difficulty.0
+                            }),
+                    },
+                )
+            },
+        )
         .collect()
+}
+
+fn portrait_appearance(
+    player: &Player,
+    equipment: Option<&EquipmentAppearance>,
+) -> GroupPortraitAppearance {
+    let head = equipment.and_then(|equipment| {
+        equipment
+            .entries
+            .iter()
+            .find(|entry| entry.slot == EquipmentVisualSlot::Head)
+            .cloned()
+    });
+    GroupPortraitAppearance {
+        race: player.race,
+        appearance: player.appearance.clone(),
+        head,
+    }
 }
 
 /// Drains one message type as `(sender character id, message)` pairs.
@@ -140,7 +162,7 @@ fn drain<M: lightyear::prelude::Message>(
 ) -> Vec<(CharacterId, M)> {
     let mut drained = Vec::new();
     for (link, mut receiver) in receivers.iter_mut() {
-        let Ok((_, _, client_id, _, _)) = players.get(link.0) else {
+        let Ok((_, _, client_id, _, _, _)) = players.get(link.0) else {
             receiver.receive().for_each(drop);
             continue;
         };
@@ -205,7 +227,7 @@ fn connections_by_character(
     connections
         .iter()
         .filter_map(|(conn, link)| {
-            let (_, _, client_id, _, _) = players.get(link.0).ok()?;
+            let (_, _, client_id, _, _, _) = players.get(link.0).ok()?;
             Some((client_id.0, conn))
         })
         .collect()

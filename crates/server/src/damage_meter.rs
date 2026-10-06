@@ -1,14 +1,14 @@
 //! Retail's built-in damage meter (`Blizzard_DamageMeter`, `C_DamageMeter`), computed on
 //! the server. Spec: docs/specs/damage-meter.md.
 //!
-//! Every damage line of the combat log (`spell_cast::log_event`) by a player is added to
-//! the meter of that player and of each online member of its group. A meter keeps the
+//! Combat-log category totals (`spell_cast::log_event`) and consumed shields are added
+//! to the meter of their player actor and each online member of its group. A meter keeps the
 //! `Current` session, one per combat of the owner's group, and the `Overall` session, the
 //! sum of all of them (`Enum.DamageMeterSessionType`). A session runs while the owner or
 //! any online group member is in combat; its duration is that combat time, and a
 //! source's DPS is its damage over the session's duration. The owner gets
 //! `DamageMeterSnapshot` when a session starts or ends and every
-//! `SEND_INTERVAL_SECS` while one runs or has new damage.
+//! `SEND_INTERVAL_SECS` while one runs or has new category data.
 //!
 //! Retail's UI only reads aggregated sessions from `C_DamageMeter` and never the combat
 //! log (DamageMeterSessionWindow.lua:561-579), but where Retail aggregates, server or
@@ -16,13 +16,15 @@
 //! never receives its group members' spell damage lines (`log_event` sends them only to
 //! the source's and target's owners).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Player};
 use shared::protocol::{
-    CombatChannel, CombatLogEvent, CombatLogKind, DamageMeterSession, DamageMeterSnapshot,
+    CombatChannel, CombatLogEvent, CombatLogKind, DAMAGE_METER_MAX_DEATH_RECAPS,
+    DAMAGE_METER_MAX_NAME_BYTES, DAMAGE_METER_MAX_RECAP_EVENTS, DAMAGE_METER_MAX_SOURCES,
+    DAMAGE_METER_MAX_SPELLS, DamageMeterDeathRecap, DamageMeterSession, DamageMeterSnapshot,
     DamageMeterSource, DamageMeterSpell,
 };
 
@@ -50,7 +52,7 @@ impl Plugin for DamageMeterPlugin {
     }
 }
 
-/// Who dealt damage, as the meter lists it.
+/// Player identity shared by damage, healing and action category totals.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DamageSource {
     pub unit: Entity,
@@ -64,6 +66,14 @@ struct SourceTotals {
     total: u64,
     /// Damage by spell id (0 = melee).
     spells: HashMap<u32, u64>,
+    healing_done: u64,
+    overhealing: u64,
+    absorbs: u64,
+    interrupts: u64,
+    dispels: u64,
+    deaths: u64,
+    death_recaps: VecDeque<DamageMeterDeathRecap>,
+    recent_events: VecDeque<CombatLogEvent>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -72,7 +82,7 @@ struct Totals {
 }
 
 impl Totals {
-    fn add(&mut self, source: &DamageSource, spell_id: u32, amount: u64) {
+    fn source_mut(&mut self, source: &DamageSource) -> &mut SourceTotals {
         let index = match self
             .sources
             .iter()
@@ -84,13 +94,62 @@ impl Totals {
                     source: source.clone(),
                     total: 0,
                     spells: HashMap::new(),
+                    healing_done: 0,
+                    overhealing: 0,
+                    absorbs: 0,
+                    interrupts: 0,
+                    dispels: 0,
+                    deaths: 0,
+                    death_recaps: VecDeque::new(),
+                    recent_events: VecDeque::new(),
                 });
                 self.sources.len() - 1
             }
         };
-        let totals = &mut self.sources[index];
+        &mut self.sources[index]
+    }
+
+    fn add(&mut self, source: &DamageSource, spell_id: u32, amount: u64) {
+        let totals = self.source_mut(source);
         totals.total += amount;
         *totals.spells.entry(spell_id).or_default() += amount;
+    }
+
+    fn record_event(&mut self, source: &DamageSource, event: &CombatLogEvent, actor: bool) {
+        let totals = self.source_mut(source);
+        if actor {
+            match event.kind {
+                CombatLogKind::Heal => {
+                    let amount = event.amount.max(0) as u64;
+                    let overheal = (event.overflow.max(0) as u64).min(amount);
+                    totals.healing_done += amount - overheal;
+                    totals.overhealing += overheal;
+                }
+                CombatLogKind::Interrupt => totals.interrupts += 1,
+                CombatLogKind::Dispel => totals.dispels += 1,
+                _ => {}
+            }
+        }
+        if event.target != Some(source.unit.to_bits()) {
+            return;
+        }
+        if event.kind == CombatLogKind::Death {
+            totals.deaths += 1;
+            push_capped(
+                &mut totals.death_recaps,
+                DamageMeterDeathRecap {
+                    timestamp_unix_ms: event.timestamp_unix_ms,
+                    events: totals.recent_events.drain(..).collect(),
+                },
+                DAMAGE_METER_MAX_DEATH_RECAPS,
+            );
+        } else {
+            push_capped(
+                &mut totals.recent_events,
+                event.clone(),
+                DAMAGE_METER_MAX_RECAP_EVENTS,
+            );
+        }
     }
 
     fn session(
@@ -99,6 +158,7 @@ impl Totals {
         duration: f64,
         active: bool,
         local: Entity,
+        visible_units: &[Entity],
     ) -> DamageMeterSession {
         let per_second = |amount: u64| {
             if duration > 0.0 {
@@ -110,6 +170,9 @@ impl Totals {
         let mut sources: Vec<DamageMeterSource> = self
             .sources
             .iter()
+            .filter(|totals| {
+                visible_units.is_empty() || visible_units.contains(&totals.source.unit)
+            })
             .map(|totals| {
                 let mut spells: Vec<DamageMeterSpell> = totals
                     .spells
@@ -125,14 +188,22 @@ impl Totals {
                         .cmp(&a.total_amount)
                         .then(a.spell_id.cmp(&b.spell_id))
                 });
+                spells.truncate(DAMAGE_METER_MAX_SPELLS);
                 DamageMeterSource {
                     unit: totals.source.unit.to_bits(),
-                    name: totals.source.name.clone(),
+                    name: truncate_name(&totals.source.name),
                     class_id: totals.source.class_id,
                     is_local_player: totals.source.unit == local,
                     total_amount: totals.total,
                     amount_per_second: per_second(totals.total),
                     spells,
+                    healing_done: totals.healing_done,
+                    overhealing: totals.overhealing,
+                    absorbs: totals.absorbs,
+                    interrupts: totals.interrupts,
+                    dispels: totals.dispels,
+                    deaths: totals.deaths,
+                    death_recaps: totals.death_recaps.iter().cloned().collect(),
                 }
             })
             .collect();
@@ -141,6 +212,7 @@ impl Totals {
                 .cmp(&a.total_amount)
                 .then_with(|| a.name.cmp(&b.name))
         });
+        sources.truncate(DAMAGE_METER_MAX_SOURCES);
         DamageMeterSession {
             session_id,
             duration_secs: duration as f32,
@@ -149,6 +221,21 @@ impl Totals {
             sources,
         }
     }
+}
+
+fn push_capped<T>(queue: &mut VecDeque<T>, value: T, limit: usize) {
+    if queue.len() == limit {
+        queue.pop_front();
+    }
+    queue.push_back(value);
+}
+
+fn truncate_name(name: &str) -> String {
+    let mut end = name.len().min(DAMAGE_METER_MAX_NAME_BYTES);
+    while !name.is_char_boundary(end) {
+        end -= 1;
+    }
+    name[..end].to_owned()
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -178,6 +265,8 @@ pub struct DamageMeter {
     /// A session started or ended since the last snapshot.
     changed: bool,
     last_sent_at: Option<f64>,
+    /// Latest online roster: accumulated former members do not grow the wire payload.
+    visible_units: Vec<Entity>,
 }
 
 impl DamageMeter {
@@ -222,6 +311,67 @@ impl DamageMeter {
         self.dirty = true;
     }
 
+    fn record_event(
+        &mut self,
+        now: f64,
+        source: &DamageSource,
+        event: &CombatLogEvent,
+        actor: bool,
+    ) {
+        if !self.is_active()
+            && !matches!(
+                event.kind,
+                CombatLogKind::Damage
+                    | CombatLogKind::Heal
+                    | CombatLogKind::Interrupt
+                    | CombatLogKind::Dispel
+                    | CombatLogKind::Death
+                    | CombatLogKind::Environmental(_)
+            )
+        {
+            return;
+        }
+        if actor && event.kind == CombatLogKind::Damage {
+            self.record(
+                now,
+                source,
+                event.spell_id.unwrap_or(0),
+                event.amount as u64,
+            );
+            return;
+        }
+        self.begin(now);
+        self.current
+            .as_mut()
+            .expect("session begun")
+            .totals
+            .record_event(source, event, actor);
+        self.overall.record_event(source, event, actor);
+        self.dirty = true;
+    }
+
+    fn record_absorb(&mut self, now: f64, source: &DamageSource, amount: u64) {
+        self.begin(now);
+        self.current
+            .as_mut()
+            .expect("session begun")
+            .totals
+            .source_mut(source)
+            .absorbs += amount;
+        self.overall.source_mut(source).absorbs += amount;
+        self.dirty = true;
+    }
+
+    fn include_roster(&mut self, roster: &[DamageSource]) {
+        self.visible_units = roster.iter().map(|member| member.unit).collect();
+        for member in roster {
+            self.overall.source_mut(member);
+            if let Some(current) = self.current.as_mut() {
+                current.totals.source_mut(member);
+            }
+        }
+    }
+
     fn overall_secs(&self, now: f64) -> f64 {
         let running = self
             .current
@@ -240,15 +390,20 @@ impl DamageMeter {
                     session.duration(now),
                     session.ended_at.is_none(),
                     local,
+                    &self.visible_units,
                 )
             }),
-            overall: self
-                .overall
-                .session(0, self.overall_secs(now), self.is_active(), local),
+            overall: self.overall.session(
+                0,
+                self.overall_secs(now),
+                self.is_active(),
+                local,
+                &self.visible_units,
+            ),
         }
     }
 
-    /// A session started or ended, or it runs or has new damage and the last snapshot is
+    /// A session started or ended, or it runs or has new data and the last snapshot is
     /// `SEND_INTERVAL_SECS` old.
     fn should_send(&self, now: f64) -> bool {
         let due = self
@@ -264,35 +419,113 @@ impl DamageMeter {
     }
 }
 
-/// Count a combat log line: damage dealt by a player to another unit goes to the meters
-/// of the player and its online group members.
+/// Count categories on the actor's group, and retain victim events on the victim's
+/// group. These sets may differ (PvP); the same player is processed only once.
 pub(crate) fn record_damage(world: &mut World, event: &CombatLogEvent) {
-    if event.kind != CombatLogKind::Damage || event.amount <= 0 || event.source == event.target {
-        return;
+    let actor = event
+        .source
+        .and_then(Entity::try_from_bits)
+        .and_then(|unit| player_source(world, unit));
+    let victim = event
+        .target
+        .and_then(Entity::try_from_bits)
+        .and_then(|unit| player_source(world, unit));
+    let counts_actor = matches!(
+        event.kind,
+        CombatLogKind::Heal | CombatLogKind::Interrupt | CombatLogKind::Dispel
+    ) || (event.kind == CombatLogKind::Damage
+        && event.amount > 0
+        && event.source != event.target);
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    if let Some(actor) = actor.as_ref().filter(|_| counts_actor) {
+        record_for_group(world, now, actor, event, true);
     }
-    let Some(unit) = event.source.and_then(Entity::try_from_bits) else {
-        return;
-    };
-    let Some(player) = world.get::<Player>(unit) else {
-        return;
-    };
-    let source = DamageSource {
+    if let Some(victim) = victim.filter(|victim| {
+        !counts_actor || actor.as_ref().is_none_or(|actor| actor.unit != victim.unit)
+    }) {
+        record_for_group(world, now, &victim, event, false);
+    }
+    if event.kind == CombatLogKind::Death {
+        if let Some(target) = event.target.and_then(Entity::try_from_bits) {
+            if world.get::<Player>(target).is_some() {
+                world.entity_mut(target).insert(MeterDeathRecorded);
+            }
+        }
+    }
+}
+
+fn player_source(world: &World, unit: Entity) -> Option<DamageSource> {
+    let unit = world
+        .get::<crate::hunter_pet::HunterPet>(unit)
+        .map_or(unit, |pet| pet.owner);
+    let player = world.get::<Player>(unit)?;
+    Some(DamageSource {
         unit,
         name: player.name.clone(),
         class_id: player.class,
+    })
+}
+
+fn record_for_group(
+    world: &mut World,
+    now: f64,
+    source: &DamageSource,
+    event: &CombatLogEvent,
+    actor: bool,
+) {
+    let recipients = meter_recipients(world, source.unit);
+    let roster: Vec<_> = recipients
+        .iter()
+        .filter_map(|&unit| player_source(world, unit))
+        .collect();
+    for &recipient in &recipients {
+        let mut entity = world.entity_mut(recipient);
+        let mut entry = entity.entry::<DamageMeter>().or_default();
+        let mut meter = entry.get_mut();
+        meter.record_event(now, source, event, actor);
+        meter.include_roster(&roster);
+    }
+}
+
+#[derive(Component)]
+struct MeterDeathRecorded;
+
+/// Damage paths already emit Death. Environmental/admin transitions may not: count
+/// their accepted transition once, without adding owner combat-log traffic.
+pub(crate) fn record_player_death_transition(world: &mut World, player: Entity) {
+    if world.get::<MeterDeathRecorded>(player).is_none() {
+        let mut event = crate::combat::death_log_event(player, player);
+        event.timestamp_unix_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time after 1970")
+            .as_millis() as u64;
+        record_damage(world, &event);
+    }
+    world.entity_mut(player).remove::<MeterDeathRecorded>();
+}
+
+/// Consumed shield points, attributed before the aura is removed. Incoming damage's
+/// `absorbed` field cannot identify the shield caster and must not be counted again.
+pub(crate) fn record_absorb(world: &mut World, caster: Entity, amount: f32) {
+    let Some(source) = player_source(world, caster) else {
+        return;
     };
+    let amount = amount.max(0.0) as u64;
+    if amount == 0 {
+        return;
+    }
     let now = world.resource::<Time>().elapsed_secs_f64();
-    let spell_id = event.spell_id.unwrap_or(0);
-    for recipient in meter_recipients(world, unit) {
-        let Ok(mut entity) = world.get_entity_mut(recipient) else {
-            continue;
-        };
-        entity.entry::<DamageMeter>().or_default().get_mut().record(
-            now,
-            &source,
-            spell_id,
-            event.amount as u64,
-        );
+    let recipients = meter_recipients(world, source.unit);
+    let roster: Vec<_> = recipients
+        .iter()
+        .filter_map(|&unit| player_source(world, unit))
+        .collect();
+    for recipient in recipients {
+        let mut entity = world.entity_mut(recipient);
+        let mut entry = entity.entry::<DamageMeter>().or_default();
+        let mut meter = entry.get_mut();
+        meter.record_absorb(now, &source, amount);
+        meter.include_roster(&roster);
     }
 }
 

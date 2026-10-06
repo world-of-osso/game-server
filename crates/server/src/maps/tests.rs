@@ -465,6 +465,7 @@ impl Harness {
                         name: format!("Traveler{id}"),
                         class: 1,
                         level: 20,
+                        portrait: Default::default(),
                         dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                     },
                 )

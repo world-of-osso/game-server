@@ -917,6 +917,7 @@ pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: 
     let mut left = amount;
     let mut depleted = Vec::new();
     let mut touched = false;
+    let mut contributions = Vec::new();
     for aura in auras.bypass_change_detection().auras.iter_mut() {
         for effect in aura.effects.iter_mut().filter(|effect| {
             effect.aura_type == handlers::SCHOOL_ABSORB
@@ -929,6 +930,7 @@ pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: 
             let soaked = left.min(effect.absorb_remaining);
             effect.absorb_remaining -= soaked;
             left -= soaked;
+            contributions.push((aura.caster, soaked));
             touched = true;
             if effect.absorb_remaining <= 0.0 {
                 depleted.push(aura.instance_id);
@@ -937,6 +939,9 @@ pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: 
     }
     if !touched {
         return (amount, 0.0);
+    }
+    for (caster, soaked) in contributions {
+        crate::damage_meter::record_absorb(world, caster, soaked);
     }
     if !depleted.is_empty() {
         remove_auras(world, unit, RemoveReason::Consumed, |aura| {

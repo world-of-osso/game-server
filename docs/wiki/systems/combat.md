@@ -49,6 +49,12 @@ Tests: `combat_tests/attack_requests.rs` (selection neither swings nor enters co
 
 Tests: `combat_refs_tests.rs` (lull, two opponents, PvP timeout, threat-less timeout, despawn, dead refused, Agony at launch, Polymorph without initial aggro).
 
+## Group damage meter
+
+`spell_cast::log_event` feeds `damage_meter.rs` before routing the owner-only combat log. Actor category totals fan out to the actor's online group; victim events fan out separately to the victim's group, so PvP need not share a roster. Each recipient's meter owns Current and Overall. Shield consumption credits its aura caster before removal; accepted player-death transitions fill missing Death lines and consume a marker to avoid double-counting logged deaths. Export limits and client migration fields live in the [damage-meter contract](../../specs/damage-meter.md).
+
+Source: `crates/server/src/damage_meter.rs`, `auras/mod.rs::absorb_damage`, `death/transitions.rs::process_player_death_transitions`. Behavioral proof: `damage_meter_tests.rs`.
+
 ## Replicated Unit Target
 
 `UnitTargetPlugin` (`unit_target.rs`, PostUpdate) mirrors each unit's current target into the replicated `UnitTarget(Option<u64>)` (entity bits) for target-of-target frames. Players: from `CombatTarget` (SetTarget). NPCs: from `CreatureState::Pursuing { target }`, which [[creature-aggro]] keeps equal to the creature's own `CombatTarget`. Written only when the value changes.

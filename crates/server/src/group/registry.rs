@@ -11,9 +11,9 @@ use shared::group::{
 };
 use shared::loot::LootMode;
 use shared::protocol::{
-    GROUP_INVITE_TIMEOUT_SECS, GroupMemberSnapshot, GroupMessageCode, GroupRoleSnapshot,
-    GroupRosterSnapshot, RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS, RaidTargetIcons,
-    ReadyCheckAnswer, ReadyCheckMemberSnapshot, ReadyCheckUpdate,
+    GROUP_INVITE_TIMEOUT_SECS, GroupMemberSnapshot, GroupMessageCode, GroupPortraitAppearance,
+    GroupRoleSnapshot, GroupRosterSnapshot, RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS,
+    RaidTargetIcons, ReadyCheckAnswer, ReadyCheckMemberSnapshot, ReadyCheckUpdate,
 };
 
 pub type CharacterId = u64;
@@ -26,6 +26,7 @@ pub struct OnlineMember {
     pub name: String,
     pub class: u8,
     pub level: u8,
+    pub portrait: GroupPortraitAppearance,
     /// `Player::GetDungeonDifficultyID`: a group it creates starts at it.
     pub dungeon_difficulty: u32,
 }
@@ -85,9 +86,8 @@ struct Group {
     is_raid: bool,
     roles: RoleAssignments,
     ready_check: Option<ActiveReadyCheck>,
-    /// Online entity and level last reported in a roster, to detect login, logout,
-    /// relog and level-ups.
-    reported_online: HashMap<CharacterId, Option<(u64, u8)>>,
+    /// Online entity, level and portrait last reported in a roster.
+    reported_online: HashMap<CharacterId, Option<(u64, u8, GroupPortraitAppearance)>>,
     /// `Group::m_dungeonDifficulty`, the leader's when the group formed.
     dungeon_difficulty: u32,
     /// `Group::m_targetIcons`.
@@ -125,6 +125,7 @@ struct Profile {
     name: String,
     class: u8,
     level: u8,
+    portrait: GroupPortraitAppearance,
     dungeon_difficulty: u32,
 }
 
@@ -690,6 +691,7 @@ impl GroupRegistry {
                     name: member.name.clone(),
                     class: member.class,
                     level: member.level,
+                    portrait: member.portrait.clone(),
                     dungeon_difficulty: member.dungeon_difficulty,
                 },
             );
@@ -835,6 +837,7 @@ impl GroupRegistry {
             class: profile.class,
             level: profile.level,
             entity: online.get(&member).map(|o| o.entity),
+            portrait: profile.portrait,
         }
     }
 
@@ -994,8 +997,13 @@ fn set_target_icon(icons: &mut RaidTargetIcons, target: u64, icon: u8) {
     }
 }
 
-fn reported_state(online: &OnlineView, member: CharacterId) -> Option<(u64, u8)> {
-    online.get(&member).map(|o| (o.entity, o.level))
+fn reported_state(
+    online: &OnlineView,
+    member: CharacterId,
+) -> Option<(u64, u8, GroupPortraitAppearance)> {
+    online
+        .get(&member)
+        .map(|o| (o.entity, o.level, o.portrait.clone()))
 }
 
 fn find_online_by_name<'a>(
