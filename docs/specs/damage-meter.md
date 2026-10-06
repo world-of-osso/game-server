@@ -46,6 +46,8 @@ Read `DamageMeterSource.interrupt_spells` and `dispel_spells` for each member's 
 
 ## Tests
 
+Targeted action-breakdown proof, 2026-10-06: server `4788713` (implementation `7f22fee`) passed all 20 `meter`-filtered tests; protocol `8147de9` passed all four `damage_meter`-filtered tests, including round trip and the maximum snapshot. Maximum encoded payload: 252,761 bytes, below 262,144 bytes (256 KiB), before framing. Both runs exited 0 without warnings through `build-lock.sh`, `agent-run meterspells`, and the local server helper; protocol tests used their own `../shared-protocol/Cargo.toml` manifest. Logs: `/tmp/claude/meterspells-resume-server.out` and `/tmp/claude/meterspells-resume-protocol.out`. No live server was started.
+
 Targeted local proof at server `24822cc` / protocol `a4bee6a`: all 19 server `damage_meter` tests pass without warnings. Protocol's four `damage_meter`-filtered tests passed at `a6e871f`; `a4bee6a` changes only a module comment. Both runs used the build lock, `agent-run groupmeter` and the local Docker helper; no live server was started.
 
 New behavioral assertions (`crates/server/src/damage_meter_tests.rs`):
