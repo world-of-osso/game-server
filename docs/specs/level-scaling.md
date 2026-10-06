@@ -79,7 +79,7 @@ Client
   - `tuned_creature_swings_expected_stat_damage_at_the_targets_level`.
 - `experience_tests.rs`: `tuned_kill_gives_xp_for_the_killers_scaled_level`, `group_members_see_a_tuned_kill_at_their_own_level`.
 - `creature_aggro_tests.rs`: `tuned_creature_aggro_radius_uses_its_level_against_the_player`.
-- `zones_world_db_tests.rs` (real world.db, `--ignored`): `tuned_creature_health_is_expected_stat_health_at_its_range_maximum`.
+- `zones_world_db_tests.rs` (real world.db, `--ignored`): `tuned_creature_health_is_expected_stat_health_at_its_range_maximum`; `creaturelevel_northshire_spawns_are_level_one_with_78_effective_health`; `creaturelevel_elwynn_and_durotar_spawns_scale_to_level_one`; `creaturelevel_higher_tuning_preserves_floor_and_player_scaling`. The latter tests actual difficulty-0 spawns against player entities and verifies effective-max-health hits kill the native pool.
 - game-engine `unit_frames.rs`:
   - `tuned_target_shows_its_level_for_the_local_player_in_difficulty_colour`;
   - `hostile_target_level_colour_follows_the_level_difference`;
@@ -88,7 +88,7 @@ Client
 
 ## Known gaps (current cycle)
 
-- [ ] The client shows the raw shared health pool. Hogger reads 13,137 to everyone, while Retail shows each viewer max health at their own level.
+- [ ] Resolve the reported Northshire native-stat display/combat block at the client/runtime boundary. Current Godot `targeting.rs` projects levels and health per viewer (client commit `ec4a6eff`); server real-spawn regressions pass, so native `npc-info` values alone do not reproduce the block.
 - [ ] Creature attack power is not modelled. Creature armor is ExpectedStat CreatureArmor ([player damage](player-damage.md)).
 - [ ] Creature attack speed is the server's flat 2 s, not `BaseAttackTime`.
 - [ ] Nameplates show no level. Retail's default nameplates show none either. Unit tooltips are the npctooltip branch's, which calls `level_for_viewer`.
