@@ -523,6 +523,7 @@ fn guild_ranks_player_requests_enforce_view_item_and_gold_limits() {
     let bank = contents(&mut h);
     assert!(bank.tabs[0].viewable);
     assert_eq!(slot_items(&bank.tabs[0]), vec![(0, LINEN, 20)]);
+    assert_eq!(h.count_of(LINEN), 20); // create_alt seeds the character's starter bags.
     withdraw_slot(&mut h, vault, 0);
     assert_eq!(failures(&mut h), vec![GuildBankError::WithdrawLimit]);
     // A rank edit takes effect while the reader's vault is already open.
@@ -536,7 +537,7 @@ fn guild_ranks_player_requests_enforce_view_item_and_gold_limits() {
     });
     h.play_as(reader);
     withdraw_slot(&mut h, vault, 0);
-    assert_eq!(h.count_of(LINEN), 20);
+    assert_eq!(h.count_of(LINEN), 40);
     assert!(failures(&mut h).is_empty());
     // Seed a second real stack in the persisted tab, then try the next withdrawal.
     let mut guild = load_guild(h.db(), GUILD);
