@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-06] systems | Group meter categories
+
+Updated [[combat]] with actor/victim group fan-out, shield-caster attribution and logged/transition death de-duplication. The [damage-meter spec](../specs/damage-meter.md) owns category semantics, export bounds, Retail references and the client migration field list. Targeted behavioral verification remains pending.
+
 ## [2026-10-05] investigations | Northshire native versus effective stats
 
 Updated [[level-scaling]] with the `c8cd38f` audit: ContentTuning 73 gives native level 30 / 4,379 health, but level-1 effective stats are 1 / 78. `npc-info` reports the native pool without a viewer. Source difficulty rows agree; Elwynn and Durotar share the pattern. Added three real-spawn `creaturelevel_*` regressions, including tuning-13 Flesh Eater's higher floor and lethal scaled health loss. Client runtime failure is not established; server native-level semantics preserved.
