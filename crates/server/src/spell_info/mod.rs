@@ -44,6 +44,10 @@ pub struct SpellInfo {
     pub misc: Option<SpellMisc>,
     /// Every `spell_effect` row, sorted by `EffectIndex` (indexes may be sparse).
     pub effects: Vec<SpellEffect>,
+    /// Runtime casting item's effective (squished) level, not a DB2 spell field.
+    /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
+    #[serde(skip)]
+    pub(crate) cast_item_level: Option<u16>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,

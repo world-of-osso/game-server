@@ -302,7 +302,10 @@ fn use_item(
 ) -> Result<(), InventoryError> {
     let (db, templates) = use_store(world)?;
     let model = load_model(db, templates, character_id)?;
-    let on_use = model.use_spell(request.location)?;
+    let (on_use, item_scaling) = model.use_spell(request.location)?;
+    let item_level = world
+        .resource::<crate::item_stats::ItemScalingTables>()
+        .item_level(&item_scaling);
     let in_combat = world
         .get::<shared::components::CombatStatus>(player)
         .is_some_and(|status| status.0);
@@ -327,9 +330,14 @@ fn use_item(
                 .and_then(|target| target.0)
         });
     let spell = on_use.spell_id;
-    if let Err(failure) =
-        crate::spell_cast::cast_item_spell(world, player, spell, target, on_use.cooldown)
-    {
+    if let Err(failure) = crate::spell_cast::cast_item_spell(
+        world,
+        player,
+        spell,
+        target,
+        on_use.cooldown,
+        item_level,
+    ) {
         debug!("Item use spell {spell} by {player} failed: {failure:?}");
         return Ok(());
     }

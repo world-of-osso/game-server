@@ -230,9 +230,9 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// positive. Otherwise a creature's damage effect is `BasePoints`% of ExpectedStat
 /// CreatureSpellDamage at its level, and everything else `BasePoints` (player class
 /// spells carry their damage in coefficients). Both round unless
-/// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Not modelled: item-level
-/// scaling (`SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL` spells keep `BasePoints`), the target's
-/// level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
+/// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Item-level spells instead
+/// use RandPropPoints at the casting item's effective level. Not modelled:
+/// the target's level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
 /// level multipliers of classes -6 and -7.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
     let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
@@ -246,7 +246,10 @@ fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &Sp
             value.round()
         }
     };
-    if effect.coefficient != 0.0 && attribute(11) & SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL == 0 {
+    if effect.coefficient != 0.0 {
+        if attribute(11) & SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL != 0 {
+            return round(item_spell_scaling_value(world, spell, effect));
+        }
         let base_level = spell.levels.as_ref().map_or(0, |levels| levels.base_level);
         let level = if base_level > 0
             && attribute(10) & SPELL_ATTR10_USE_SPELL_BASE_LEVEL_FOR_SCALING != 0
@@ -265,6 +268,32 @@ fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &Sp
     let auto_attack = attribute(0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
     let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
     round(stats.evaluate(auto_attack, level, tuning) * effect.base_points / 100.0)
+}
+
+/// Item-level branch of TC SpellEffectInfo::CalcBaseValue: classes -8/-9 use
+/// DamageReplaceStatF/DamageSecondaryF; other nonzero classes use a rare chest budget.
+fn item_spell_scaling_value(world: &World, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
+    if effect.scaling_class == 0 {
+        return 0.0;
+    }
+    // TC's effectiveItemLevel is 1 when the spell has no casting item.
+    let level = spell.cast_item_level.unwrap_or(1);
+    let tables = world.resource::<crate::item_stats::ItemScalingTables>();
+    let row = tables
+        .spell_budgets
+        .get(&level)
+        .expect("casting item level in RandPropPoints");
+    let column = match effect.scaling_class {
+        -8 => 0,
+        -9 => 1,
+        _ => 2,
+    };
+    let value = row[column] * effect.coefficient;
+    if value > 0.0 && value < 1.0 {
+        1.0
+    } else {
+        value
+    }
 }
 
 /// The SpellScaling amount of `effect` at `level`, before rounding: the
@@ -793,12 +822,13 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
 
 /// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
 fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    super::cast_triggered(
+    super::cast_triggered_with_item_level(
         world,
         ctx.caster,
         effect.trigger_spell,
         Some(target),
         ctx.depth + 1,
+        ctx.spell.cast_item_level,
     );
 }
 

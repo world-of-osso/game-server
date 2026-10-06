@@ -621,6 +621,16 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
         warn!("Aura spell {} not found", application.spell_id);
         return;
     };
+    apply_aura_with_spell(world, application, &spell);
+}
+
+/// Casts supply their per-cast spell clone so item-level amounts are snapshotted
+/// before the casting item is consumed. Other aura sources use the catalog above.
+pub(crate) fn apply_aura_with_spell(
+    world: &mut World,
+    application: &AuraApplication,
+    spell: &SpellInfo,
+) {
     let target = application.target;
     if world.get_entity(target).is_err() || world.get_entity(application.caster).is_err() {
         return;

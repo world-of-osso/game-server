@@ -80,6 +80,8 @@ Server gameplay systems.
 
 ## investigations/
 
+- [[item-healing-scaling]] — Algari zero-heal root cause, item-level RandPropPoints scaling, per-cast/aura context, consumable regressions.
+
 Debug logs and root cause analyses.
 
 - [[general-spell-grants]] — General grant investigation: Attributes_13 bit 16 marks 31 content abilities but also Throw; no verified prerequisite rule, server unchanged.

@@ -104,6 +104,9 @@ type QualityRow = [f64; 7];
 #[derive(Resource, Debug, Default, Clone)]
 pub struct ItemScalingTables {
     pub rand_prop_points: HashMap<u16, RandProp>,
+    /// RandPropPoints DamageReplaceStatF, DamageSecondaryF, SuperiorF_0.
+    /// Item spell scaling classes -8, -9, and the other nonzero classes.
+    pub spell_budgets: HashMap<u16, [f32; 3]>,
     pub armor_quality: HashMap<u16, QualityRow>,
     pub armor_shield: HashMap<u16, QualityRow>,
     /// Cloth, Leather, Mail, Plate.
@@ -436,6 +439,11 @@ pub fn load_item_scaling_tables(path: &Path) -> rusqlite::Result<ItemScalingTabl
             [floats(row, 1)?, floats(row, 6)?, floats(row, 11)?],
         ))
     })?;
+    let spell_budgets = load_map(
+        &conn,
+        "SELECT ID, DamageReplaceStatF, DamageSecondaryF, SuperiorF_0 FROM rand_prop_points",
+        |row| Ok((row.get(0)?, [row.get(1)?, row.get(2)?, row.get(3)?])),
+    )?;
     let armor_total = load_map(
         &conn,
         "SELECT ItemLevel, Cloth, Leather, Mail, Plate FROM item_armor_total",
@@ -449,6 +457,7 @@ pub fn load_item_scaling_tables(path: &Path) -> rusqlite::Result<ItemScalingTabl
     let damage = |table| quality_table(&conn, table, "ItemLevel", "Quality");
     Ok(ItemScalingTables {
         rand_prop_points,
+        spell_budgets,
         armor_quality: quality_table(&conn, "item_armor_quality", "ID", "Qualitymod")?,
         armor_shield: quality_table(&conn, "item_armor_shield", "ItemLevel", "Quality")?,
         armor_total,

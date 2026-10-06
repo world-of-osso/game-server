@@ -281,6 +281,7 @@ pub(crate) fn harness_with_plugins(
     let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
     app.insert_resource(SpellStore::fixture(spells));
     app.insert_resource(power_table(data));
+    app.insert_resource(crate::item_stats::load_item_scaling_tables(&data.powers_db).unwrap());
     app.insert_resource(shapeshift_forms(data));
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);

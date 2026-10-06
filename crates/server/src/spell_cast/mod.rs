@@ -598,12 +598,25 @@ pub(crate) fn cast_granted(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    cast_granted_with_item_level(world, caster, spell_id, target, None)
+}
+
+fn cast_granted_with_item_level(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    item_level: Option<u16>,
+) -> Result<(), CastFailure> {
     let result = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)
-        .and_then(|spell| start_cast(world, caster, &spell, target, None));
+        .and_then(|mut spell| {
+            spell.cast_item_level = item_level;
+            start_cast(world, caster, &spell, target, None)
+        });
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -637,6 +650,7 @@ pub(crate) fn cast_item_spell(
     spell_id: u32,
     target: Option<Entity>,
     cooldown: ItemCooldown,
+    item_level: u16,
 ) -> Result<(), CastFailure> {
     let now = now(world);
     let cooling = cooldown.category != 0
@@ -659,7 +673,7 @@ pub(crate) fn cast_item_spell(
         );
         return Err(CastFailure::OnCooldown);
     }
-    cast_granted(world, caster, spell_id, target)?;
+    cast_granted_with_item_level(world, caster, spell_id, target, Some(item_level))?;
     if cooldown.category != 0 && cooldown.category_ms > 0 {
         world
             .entity_mut(caster)
@@ -1070,7 +1084,9 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
         CastType::Normal => cast_allows_moving(spell),
         CastType::Channel => channel_allows_moving(spell),
     };
-    world.entity_mut(caster).insert(cast.clone());
+    world
+        .entity_mut(caster)
+        .insert((cast.clone(), PendingCastSpell(spell.clone())));
     mark_dirty(world, caster);
 }
 
@@ -1388,7 +1404,7 @@ fn resolve_effects(
         }
     }
     for (target, effect_mask) in aura_masks {
-        crate::auras::apply_aura(
+        crate::auras::apply_aura_with_spell(
             world,
             &AuraApplication {
                 caster,
@@ -1397,6 +1413,7 @@ fn resolve_effects(
                 effect_mask,
                 source: AuraSource::Cast,
             },
+            spell,
         );
     }
     run_hit_scripts(world, caster, spell, plan, depth);
@@ -1589,6 +1606,17 @@ pub(crate) fn cast_triggered(
     explicit: Option<Entity>,
     depth: u8,
 ) {
+    cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
+}
+
+pub(super) fn cast_triggered_with_item_level(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    item_level: Option<u16>,
+) {
     if depth > effects::MAX_TRIGGER_DEPTH {
         warn!(
             "Triggered spell {spell_id} skipped: depth {depth} exceeds {}",
@@ -1596,7 +1624,7 @@ pub(crate) fn cast_triggered(
         );
         return;
     }
-    let Some(spell) = world
+    let Some(mut spell) = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
         .cloned()
@@ -1604,6 +1632,7 @@ pub(crate) fn cast_triggered(
         warn!("Triggered spell {spell_id} not found");
         return;
     };
+    spell.cast_item_level = item_level;
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, &spell, explicit, true) {
         Ok(plan) => missiles::launch(world, caster, &spell, plan, depth),
@@ -1763,6 +1792,7 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    world.entity_mut(caster).remove::<PendingCastSpell>();
     world
         .entity_mut(caster)
         .remove::<crate::profession::CraftQueue>();
@@ -1838,12 +1868,12 @@ pub(crate) fn advance_casts(world: &mut World) {
     }
 }
 
+/// The spell snapshot belonging to a cast bar, including casting-item scaling.
+#[derive(Component)]
+struct PendingCastSpell(SpellInfo);
+
 fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Option<Entity>) {
-    let Some(spell) = world
-        .get_resource::<SpellStore>()
-        .and_then(|store| store.get(spell_id))
-        .cloned()
-    else {
+    let Some(PendingCastSpell(spell)) = world.entity_mut(caster).take::<PendingCastSpell>() else {
         return;
     };
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {

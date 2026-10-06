@@ -943,7 +943,13 @@ impl InventoryModel {
     pub(crate) fn use_spell(
         &self,
         location: ItemLocation,
-    ) -> Result<crate::item_templates::OnUseSpell, InventoryError> {
+    ) -> Result<
+        (
+            crate::item_templates::OnUseSpell,
+            crate::item_stats::ItemScaling,
+        ),
+        InventoryError,
+    > {
         let item = self.existing(location)?;
         let template = self.template(item);
         if template.is_some_and(|template| template.inventory_type != 0)
@@ -955,7 +961,7 @@ impl InventoryModel {
             ));
         }
         template
-            .and_then(|template| template.on_use)
+            .and_then(|template| template.on_use.map(|spell| (spell, template.scaling)))
             .ok_or_else(|| {
                 error(
                     InventoryErrorReason::CantDoRightNow,

@@ -2,6 +2,8 @@
 
 Requirements and data gaps: [inventory spec](../../specs/inventory.md).
 
+Item-use scaling and regression evidence: [[item-healing-scaling]].
+
 ## Storage
 
 `InventoryData.items` (table `inventories`) remains the owned bag-item list that trade, auction, mail and profession code edit. Two tables added beside it:
