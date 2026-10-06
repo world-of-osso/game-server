@@ -6,6 +6,25 @@ use shared::components::{Health, Mana, MovementControl, Position, UnitTap};
 use shared::death::DeathState;
 use shared::protocol::{ResurrectionOffer, ResurrectionResponse};
 
+#[derive(Resource)]
+struct FirstResurrection {
+    target: Entity,
+    restored: Option<(f32, f32, Position)>,
+}
+
+fn capture_first_resurrection(
+    mut proof: ResMut<FirstResurrection>,
+    players: Query<(&PlayerDeathState, &Health, &Mana, &Position)>,
+) {
+    if proof.restored.is_some() {
+        return;
+    }
+    let (state, health, mana, position) = players.get(proof.target).unwrap();
+    if state.state == DeathState::Alive {
+        proof.restored = Some((health.current, mana.current, *position));
+    }
+}
+
 fn fixture() -> (Harness, Entity, Entity) {
     let spell = SpellInfo {
         id: 7328,
@@ -45,6 +64,14 @@ fn fixture() -> (Harness, Entity, Entity) {
             max: 2000.0,
         },
     ));
+    h.app.insert_resource(FirstResurrection {
+        target,
+        restored: None,
+    });
+    h.app.add_systems(
+        Update,
+        capture_first_resurrection.after(crate::death::resurrection::receive_responses),
+    );
     let conn = spawn_peer_connection(&mut h.app, target, 99);
     h.app.world_mut().entity_mut(conn).insert((
         lightyear::prelude::MessageSender::<shared::protocol::DeathStateUpdate>::default(),
@@ -132,7 +159,16 @@ fn rezrtap_cast_offer_accept_percent_and_caster_position() {
         DeathState::Alive
     );
     assert_eq!(h.health(target), 350.0);
-    assert_eq!(h.app.world().get::<Mana>(target).unwrap().current, 700.0);
+    // Record the actual acceptance boundary, before subsequent gameplay regen ticks.
+    let restored = h
+        .app
+        .world()
+        .resource::<FirstResurrection>()
+        .restored
+        .unwrap();
+    assert_eq!(restored.0, 350.0);
+    assert_eq!(restored.1, 700.0);
+    assert_eq!(Some(&restored.2), h.app.world().get::<Position>(h.caster));
     assert_eq!(
         h.app.world().get::<Position>(target),
         h.app.world().get::<Position>(h.caster)
