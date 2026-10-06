@@ -1,6 +1,6 @@
 # Dungeon progress and achievements
 
-Server-only phase 1: ordered boss progress and DB2-driven character achievements. Source: `crates/server/src/achievement.rs`, `achievement_catalog.rs`, `maps/`, and `scripted_ai/instance_script.rs`. [Implementation and provenance](../wiki/systems/dungeon-achievements.md).
+Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character achievements and bounded achievement-window data. Source: `crates/server/src/achievement.rs`, `achievement_catalog.rs`, `maps/`, and `scripted_ai/instance_script.rs`. [Implementation and provenance](../wiki/systems/dungeon-achievements.md).
 
 ## What it must do
 
@@ -15,10 +15,10 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 ### Phase 2
 
 - [x] Import pinned local Achievement_Category FDID 1324299, category parents/order, and achievement category/icon metadata atomically with the phase-1 tables.
-- [ ] Send ordered encounter names and defeated state on instance entry, reconnect and each successful encounter defeat, scoped to the copy.
-- [ ] Clear dungeon objective rows on leaving an instance, even when DungeonEncounter also contains world-boss rows for the continent.
-- [ ] Serve categories, category achievements and criterion lines on request with bounded pages; never push the catalog on login.
-- [ ] Include character earned state, known completion dates and numeric criterion progress in category responses.
+- [x] Send ordered encounter names and defeated state on instance entry, reconnect and each successful encounter defeat, scoped to the copy; preserve raw flags and unknown optionality.
+- [x] Clear dungeon objective rows on leaving an instance, even when DungeonEncounter also contains world-boss rows for the continent.
+- [x] Serve categories, category achievements and criterion lines on request with bounded pages; never push the catalog on login.
+- [x] Include character earned state, known completion dates and numeric criterion progress in category responses; preserve unknown historical dates.
 
 ## How it works
 
@@ -49,7 +49,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 ## Known gaps (current cycle)
 
-No open phase-1 acceptance cases. Targeted proof: eight tests passed at `702cb80`, Stockade fixture passed at `96cad53`; the latter changes only its message-draining test fixture. See wiki proof ledger. Weighted/sum/max operators are implemented but lack dedicated acceptance cases; source-verified Retail parity remains unavailable without local TrinityCore.
+Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact revisions, commands and retained regression evidence. No verified optional DungeonEncounter flag is available: optionality stays unknown and raw flags are preserved. Weighted/sum/max operators from phase 1 still lack dedicated acceptance cases; no new evaluation or Retail-parity claim is made.
 
 ## Out of scope
 

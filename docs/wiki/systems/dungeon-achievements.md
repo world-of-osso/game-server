@@ -6,16 +6,16 @@ Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated enc
 
 Verified 2026-10-06: `/mnt/c/World of Warcraft/.build.info` names retail build `12.1.0.69933`, build key `dcfc90fffd79ba00406ae46f5f657592`. Local community listfile maps Achievement=1260179, Criteria=1263817, CriteriaTree=1263818, Achievement_Category=1324299. Phase 2 extracts Category from the same local build to server data; layout `67B2B4BD`, 243 rows. Achievement display metadata adds Category column 7 and IconFileID column 12. Category columns are Name/ID/Parent/Ui_order; the relationship repeats Ui_order, not a parent ID.
 
-Extraction (under game-engine's agent-run, no CDN/web):
+Extraction from the game-engine working directory, using its existing casc-local executable under agent-run (no CDN/web, outputs only to server data):
 
 ```sh
-scripts/agent/agent-run dungeonach cargo run --release --manifest-path /home/osso-test/Projects/world-of-osso/asset-resolver/Cargo.toml --bin casc-local -- 1260179 1263817 1263818 -o data/db2/12.1.0.69933
-python3 /home/osso-test/.worktrees/game-server-recup/scripts/import_achievements.py --db2-dir /home/osso-test/Projects/world-of-osso/game-engine/data/db2/12.1.0.69933 --db /home/osso-test/.worktrees/game-server-recup/data/world.db
+scripts/agent/agent-run dungeon2 target/release/casc-local 1260179 1263817 1263818 1324299 -o /home/osso-test/.worktrees/game-server-recup/data/db2/12.1.0.69933
+python3 /home/osso-test/.worktrees/game-server-recup/scripts/import_achievements.py --db2-dir /home/osso-test/.worktrees/game-server-recup/data/db2/12.1.0.69933 --db /home/osso-test/.worktrees/game-server-recup/data/world.db
 ```
 
-Layout hashes: Achievement `6FC5281B`, Criteria `53D03513`, CriteriaTree `FF97AE12`. Exports contain 14,081 / 66,340 / 120,821 rows (copies included). Missing TACT key `CF9022A9913B1B4D` leaves one Criteria and eight CriteriaTree records unavailable; decoder reports zero-filled sections and skips them. Supported achievement trees require every referenced row to exist. Stockade and level rows are present.
+Layout hashes: Achievement `6FC5281B`, Criteria `53D03513`, CriteriaTree `FF97AE12`. Achievement / Category / Criteria / CriteriaTree contain 14,081 / 243 / 66,340 / 120,821 rows (copies included). Missing TACT key `CF9022A9913B1B4D` leaves one Criteria and eight CriteriaTree records unavailable; decoder reports zero-filled sections and skips them. Supported achievement trees require every referenced row to exist. Stockade and level rows are present.
 
-Existing `scripts/db2.py extract` uses `db2_casc.py`; this importer follows that decoder path. Engine core's lighting reader is table-specific, not a general CSV exporter. Adjacent `.csv.import` files are Godot's `csv_translation` metadata, not DB2 export tools. No generated import/uid files are needed. CSV exports and original binaries remain uncommitted under game-engine `data/db2/12.1.0.69933/`. SQL subsets live in shared server `data/world.db`; `db2_build` stamps all three tables. Tests load concrete imported SQL rows; `sync_test_data` already mirrors `game-server/world.db`, so they need no additional CSV mirror entries.
+Existing `scripts/db2.py extract` uses `db2_casc.py`; this importer follows that decoder path. Engine core's lighting reader is table-specific, not a general CSV exporter. Adjacent `.csv.import` files are Godot's `csv_translation` metadata, not DB2 export tools. No generated import/uid files are needed. Phase-1 binaries remain under game-engine `data/db2/12.1.0.69933/`; phase 2 copies these to server `data/db2/12.1.0.69933/` alongside the locally extracted Category and all CSV exports. None is committed. SQL reference tables live in server `data/world.db`; `db2_build` stamps all four tables. Tests load concrete imported SQL rows; `sync_test_data` already mirrors `game-server/world.db`, so they need no additional CSV mirror entries.
 
 ## Runtime
 
@@ -39,7 +39,7 @@ No TrinityCore checkout is available under `~/Repos`; interpretation uses observ
 - `702cb80`: native helper `--build-host local --check -p server`: PASS without warnings, 78s. Later fixture-only edit does not invalidate production check. `/tmp/claude/dungeonach-check.out`.
 - `96cad53`: `cargo fmt --all -- --check`: PASS. Existing WDC5 decoder's `test_decrypted_sections_and_virtual_string_offsets`: PASS; later changes are Rust-only.
 
-The eight other passing tests cover actual level thresholds, real encounter asset matching, All/Any/direct count, character progress reopen, one-time placeholder migration, scheduled lock restore and normal Stockade checkpoint restore/manual reset. No broad suites, protocol edits, push or merge.
+The eight other passing tests cover actual level thresholds, real encounter asset matching, All/Any/direct count, character progress reopen, one-time placeholder migration, scheduled lock restore and normal Stockade checkpoint restore/manual reset. These phase-1 proofs used no broad suite, protocol edits, push or merge.
 
 ## Phase 2 runtime and client handoff
 
@@ -49,7 +49,26 @@ The eight other passing tests cover actual level thresholds, real encounter asse
 
 Newly earned character IDs acquire `earned_at` Unix seconds from ServerClock at the gameplay boundary and persist with counters. Old saved JSON lacks dates; serde defaults the map empty, preserving unknown dates rather than inventing history. Catalog evaluation remains pure; only the world event boundary reads the clock.
 
-Phase-2 RED: locked detached local helper compiled the new Stockade/continuation tests against missing messages/page method and failed with unresolved imports and missing `page`, exit 101. Python import RED lacked achievement_category; GREEN returned the concrete Stockade category 14808 (Classic, parent 168), icon 134163, 10 points and 243 categories. The existing missing encrypted records still produce explicit decoder warnings; none affects these fixtures. Rust GREEN pending.
+Phase-2 RED: locked detached local helper compiled the new Stockade/continuation tests against missing messages/page method and failed with unresolved imports and missing `page`, exit 101. Python import RED lacked achievement_category; GREEN returned the concrete Stockade category 14808 (Classic, parent 168), icon 134163, 10 points and 243 categories. The existing missing encrypted records still produce explicit decoder warnings; none affects these fixtures. Rust GREEN and final gates. Helper tests ran from game-engine, detached and polled, with the exact prefix:
+
+```sh
+/home/osso-test/.worktrees/build-lock.sh env DEPOT_SIBLING_SHARED_PROTOCOL=/home/osso-test/.worktrees/shared-protocol-dungeon scripts/agent/agent-run dungeon2 python3 scripts/desktop-server-build.py --root /home/osso-test/.worktrees/game-server-recup
+```
+
+Append each row's arguments. The protocol test uses `--manifest-path /home/osso-test/.worktrees/shared-protocol/Cargo.toml`: the helper snapshots the selected dungeon slot into that Docker-only sibling path, not the host's other protocol checkout.
+
+| Proof | Exact scope | Result / artifact |
+|---|---|---|
+| Locked detached helper `--build-host local --test -p server --no-fail-fast -- dungeon2` | server `46bdcd6`, protocol `f115ea5` | 5 passed: real Stockade entry, all ordered kills, both members/copy isolation, new connection/entity loaded from persisted state, all three catalog request variants, metadata/earned date, two-page categories/achievements/criteria, unknown requests, legacy dates and UTF-8 bounds. `/tmp/claude/dungeon2-final.out` |
+| Same helper, filter `dungeonach` | `46bdcd6` + `f115ea5` | 9 passed, including Stockade plus eight phase-1 threshold/criteria/persistence/lock regressions. `/tmp/claude/dungeon2-phase1.out` |
+| Same helper, filter `stockade --skip dungeon2` | `46bdcd6` + `f115ea5` | 24 passed; existing `stockade_guard_wields_its_virtual_items`, `stockade_models_are_chosen_by_probability`, and `stockade_spawns_take_their_addon_pose` remain ignored. `/tmp/claude/dungeon2-stockade.out` |
+| Same helper, standalone protocol manifest and `--test dungeon2_wire -- dungeon2 --nocapture` | protocol `f115ea5` | 4 passed; maximum category payload 56,397 bytes. `/tmp/claude/dungeon2-wire.out` |
+| Same helper, filter `dungeon2_leaving_instance` | server `fb4f44c` | Behavioral RED: a continent snapshot wrongly includes world boss 2416. `/tmp/claude/dungeon2-clear-red2.out` |
+| Same helper, filter `scripted_ai::tests::dungeonach::dungeon2` | server `b937cb3`, protocol `f115ea5` | 2 passed: Stockade lifecycle/reconnect/category and continent clear. This re-proves the changed snapshot scope. `/tmp/claude/dungeon2-runtime.out` |
+| Locked agent-run native `scripts/build-host.py --build-host local --check -p server` with explicit Cargo patch overrides for shared and its vendored netcode | `b937cb3` + `f115ea5` | PASS, no warnings; log confirms both exact protocol-slot paths. `/tmp/claude/dungeon2-check-final.out` |
+| `cargo fmt --manifest-path <slot>/Cargo.toml --all -- --check` (protocol), `-p server -- --check` (server), under agent-run | `b937cb3` + `f115ea5` | Both PASS. Manual changed-Rust readability audit: no suppressions or new complexity/nesting violations; new production functions at most 30 lines. |
+
+The standalone native check uses `--config 'patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso-test/.worktrees/shared-protocol-dungeon"'` and `--config 'patch.crates-io.lightyear_netcode.path="/home/osso-test/.worktrees/shared-protocol-dungeon/vendor/lightyear_netcode"'`. Do not use Cargo `paths` overrides (they emitted dependency-graph warnings), or add `--locked` again (the native helper already injects it). Neither workaround is retained in source/config. Import code stays at `7cb75b9`; presentation/criteria code stays at `46bdcd6`. The later snapshot-only change does not invalidate their proofs. Final docs-only edits do not invalidate code evidence. No broad suite, client execution, push, merge or deployment.
 
 ## Sources
 
