@@ -18,6 +18,10 @@ use super::*;
 // --- Network harness: loopback host-client connections, as in trade_tests ---
 
 fn setup_app() -> App {
+    setup_app_with(|_| {})
+}
+
+fn setup_app_with(extra: impl FnOnce(&mut App)) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -39,6 +43,7 @@ fn setup_app() -> App {
     app.register_message::<RaidTargetIcons>();
     app.register_message::<ConvertGroupToRaid>();
     app.add_plugins(GroupPlugin);
+    extra(&mut app);
     app.add_systems(Update, collect_inbox);
     app.finish();
     app.cleanup();
@@ -1163,7 +1168,7 @@ fn roster_portrait_fixture() -> (
 
 #[test]
 fn roster_portrait_three_members_far_and_cross_zone() {
-    let (mut app, alice, bob, _cid, expected) = roster_portrait_fixture();
+    let (mut app, alice, bob, _cid, mut expected) = roster_portrait_fixture();
     let roster = last_roster(&mut app, &alice);
     assert_eq!(roster.members.len(), 3);
     assert_eq!(
@@ -1178,10 +1183,15 @@ fn roster_portrait_three_members_far_and_cross_zone() {
     app.world_mut()
         .entity_mut(bob.player)
         .insert(crate::maps::InMap::continent(530));
-    // A subsequent roster still includes the same portrait in the new zone.
-    send(&mut app, &bob, LeaveGroup);
     pump(&mut app);
-    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    assert!(rosters(&mut app, &alice).is_empty());
+    // A head change after the transfer reaches A without leaving or rejoining.
+    expected.appearance.face = 6;
+    app.world_mut()
+        .get_mut::<Player>(bob.player)
+        .unwrap()
+        .appearance = expected.appearance.clone();
+    pump(&mut app);
     assert_eq!(
         last_roster(&mut app, &alice)
             .members
@@ -1262,8 +1272,23 @@ fn roster_portrait_helm_and_customization_changes_send_once() {
 
 #[test]
 fn roster_portrait_offline_member_retains_last_appearance_for_new_recipient() {
-    let (mut app, alice, bob, cid, expected) = roster_portrait_fixture();
+    let (mut app, alice, bob, cid, mut expected) = roster_portrait_fixture();
     rosters(&mut app, &alice);
+    expected.head.as_mut().unwrap().display_info_id = Some(54321);
+    app.world_mut()
+        .get_mut::<EquipmentAppearance>(bob.player)
+        .unwrap()
+        .entries[0] = expected.head.clone().unwrap();
+    pump(&mut app);
+    assert_eq!(
+        last_roster(&mut app, &alice)
+            .members
+            .iter()
+            .find(|member| member.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
     app.world_mut().despawn(bob.conn);
     app.world_mut().despawn(bob.player);
     pump(&mut app);
@@ -1282,4 +1307,143 @@ fn roster_portrait_offline_member_retains_last_appearance_for_new_recipient() {
     let member = roster.members.iter().find(|m| m.name == "Bob").unwrap();
     assert!(!member.online);
     assert_eq!(member.portrait, expected);
+}
+
+#[test]
+fn roster_portrait_persisted_helm_equip_reaches_far_member() {
+    use crate::item_templates::{ItemTemplate, ItemTemplates};
+    use crate::persistence::{self, GameDatabase, InventoryData, InventoryItemData};
+    use shared::components::{CharacterAppearance, EquipmentVisualSlot, EquippedAppearanceEntry};
+    use shared::protocol::*;
+
+    const HELM: u32 = 32329; // Cowl of Benevolence, head inventory type 1.
+    let db = persistence::temp_database();
+    persistence::create_character(&db, 1, "Alice", 1, 2).unwrap();
+    let (bob_id, mut character) = persistence::create_character(&db, 2, "Bob", 4, 2).unwrap();
+    character.appearance = CharacterAppearance {
+        sex: 1,
+        face: 3,
+        hair_color: 8,
+        ..Default::default()
+    };
+    persistence::save_character(&db, bob_id, &character);
+    persistence::save_inventory(
+        &db,
+        bob_id,
+        &InventoryData {
+            gold: 0,
+            items: vec![InventoryItemData {
+                item_guid: persistence::next_id(&db, "item_instance"),
+                item_id: HELM,
+                name: "Cowl of Benevolence".into(),
+                quality: 4,
+                required_level: 0,
+                stack_count: 1,
+                vendor_sell_price: 0,
+                unique_auction: false,
+            }],
+        },
+    );
+    let loaded = persistence::load_character(&db, bob_id).unwrap();
+    let mut app = setup_app_with(move |app| {
+        app.insert_resource(GameDatabase { db });
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.insert_resource(ItemTemplates(
+            [(
+                HELM,
+                ItemTemplate {
+                    inventory_type: 1,
+                    max_stack: 1,
+                    allowable_class: -1,
+                    allowable_race: u64::MAX,
+                    ..Default::default()
+                },
+            )]
+            .into_iter()
+            .collect(),
+        ));
+        app.register_message::<InventorySnapshot>();
+        app.register_message::<EquipmentSnapshot>();
+        app.register_message::<InventoryDelta>();
+        app.register_message::<InventoryError>();
+        app.register_message::<SwapItem>();
+        app.register_message::<SplitItem>();
+        app.register_message::<DestroyItem>();
+        app.register_message::<EquipItem>();
+        app.register_message::<SortBags>();
+        app.register_message::<UseItem>();
+        app.add_plugins(crate::inventory::InventoryPlugin);
+    });
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, bob_id, "Bob");
+    let cid = connect(&mut app, 3, "Cid");
+    app.world_mut().entity_mut(bob.player).insert((
+        Player {
+            name: loaded.name,
+            race: loaded.race,
+            class: loaded.class,
+            appearance: loaded.appearance.clone(),
+        },
+        EquipmentAppearance::default(),
+        Position {
+            x: 50_000.0,
+            y: 20_000.0,
+            z: 100.0,
+        },
+        crate::maps::InMap::continent(1),
+    ));
+    app.world_mut().entity_mut(bob.conn).insert((
+        crate::auth::InWorld {
+            character_id: bob_id,
+        },
+        MessageSender::<InventorySnapshot>::default(),
+        MessageSender::<EquipmentSnapshot>::default(),
+        MessageSender::<InventoryDelta>::default(),
+        MessageSender::<InventoryError>::default(),
+        MessageSender::<SwapItem>::default(),
+        MessageReceiver::<SwapItem>::default(),
+    ));
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    invite_and_accept(&mut app, &alice, &cid, "Cid");
+    rosters(&mut app, &alice);
+    app.world_mut()
+        .get_mut::<MessageSender<SwapItem>>(bob.conn)
+        .unwrap()
+        .send::<InventoryChannel>(SwapItem {
+            from: ItemLocation::Bag { bag: 0, slot: 0 },
+            to: ItemLocation::Equipment(EquipmentSlot::Head),
+        });
+    // Inventory deltas update equipment in PostUpdate; group observes it next Update.
+    pump(&mut app);
+    let updates = rosters(&mut app, &alice);
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].members.len(), 3);
+    let expected = GroupPortraitAppearance {
+        race: 4,
+        appearance: loaded.appearance,
+        head: Some(EquippedAppearanceEntry {
+            slot: EquipmentVisualSlot::Head,
+            item_id: Some(HELM),
+            display_info_id: None,
+            inventory_type: 1,
+            hidden: false,
+        }),
+    };
+    assert_eq!(
+        updates[0]
+            .members
+            .iter()
+            .find(|member| member.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
+    let persisted =
+        persistence::load_character(&app.world().resource::<GameDatabase>().db, bob_id).unwrap();
+    assert_eq!(
+        persisted.equipment_appearance.entries,
+        vec![expected.head.unwrap()]
+    );
+    pump(&mut app);
+    assert!(rosters(&mut app, &alice).is_empty());
 }
