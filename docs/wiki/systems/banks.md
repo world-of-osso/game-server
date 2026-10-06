@@ -33,3 +33,18 @@ Every table is defined in `persistence_banks.rs`.
 ## Daily reset
 - `DailyReset::day(unix)` = `floor((unix - hour*3600) / 86400)`, with the hour from `GAME_SERVER_DAILY_RESET_HOUR_UTC`.
 - Usage from another day or another guild counts as zero.
+
+## Player rank controls
+
+`guild_ranks.rs` handles authenticated `GuildRankRequest` packets on GuildChannel.
+`save_guild_ranks` commits the rank list and materialized member positions together;
+`ChangedGuilds` refreshes open vaults after edits. `guilds` layout 2 adds social flags
+and migrates layouts 0/1 once, preserving bank state. Chat gates speaker and listener
+before recording recipients in history. Social permission checks include the persisted
+guild ID, not only a cached component; hidden tab settings stay stored independently
+from the view/action gate.
+
+## Sources
+
+- [Guild ranks contract](../../specs/guild-ranks.md) — Retail controls, authority and persistence guarantees.
+- [guild_ranks.rs](../../../crates/server/src/guild_ranks.rs) — request decisions and recipient snapshots.

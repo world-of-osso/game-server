@@ -36,8 +36,8 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[player-damage]] | Retail player damage: weapon swings (AP / 6 × speed), off hand, haste timers, TrinityCore hit table, ExpectedStat creature armor, spell power from an Intellect main stat, spell variance/versatility, TRIGGER_MISSILE |
-| [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour |
-| [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, guild ranks, daily reset, logs |
+| [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour; Northshire native-vs-effective pool audit and starter regressions |
+| [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, player-managed guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
 | [[warlock-pets]] | Level-3 Imp lifecycle/AI; Retail command-dismiss investigation removes artificial 2641 fixture grant, RED blocked by build-helper API drift |
 | [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal; pinned override/form/capability/restriction rows distinguish Skyward Ascent from source-blocked Lift Off 374763 |

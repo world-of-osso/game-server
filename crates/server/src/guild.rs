@@ -21,11 +21,15 @@ use shared::components::Level;
 type NewConnections<'w, 's> = Query<
     'w,
     's,
-    (Entity, &'static PlayerLink),
+    (Entity, &'static PlayerLink, &'static InWorld),
     (With<Authenticated>, With<InWorld>, Added<InWorld>),
 >;
-type ActiveConnections<'w, 's> =
-    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, With<InWorld>)>;
+type ActiveConnections<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static PlayerLink, &'static InWorld),
+    (With<Authenticated>, With<InWorld>),
+>;
 type GuildMemberships<'w, 's> = Query<'w, 's, &'static GuildMembership>;
 type OnlinePlayers<'w, 's> = Query<
     'w,
@@ -44,6 +48,7 @@ type GuildQueryReceivers<'w, 's> = Query<
         Entity,
         &'static PlayerLink,
         &'static mut MessageReceiver<QueryGuild>,
+        &'static InWorld,
     ),
     (With<Authenticated>, With<InWorld>),
 >;
@@ -54,6 +59,7 @@ type GuildProfileReceivers<'w, 's, Message> = Query<
         Entity,
         &'static PlayerLink,
         &'static mut MessageReceiver<Message>,
+        &'static InWorld,
     ),
     (With<Authenticated>, With<InWorld>),
 >;
@@ -68,35 +74,50 @@ struct GuildUpdateMeta {
 }
 
 trait GuildProfileTextRequest {
+    fn required_right() -> u32;
     fn trimmed_text(&self) -> String;
 }
 
 impl GuildProfileTextRequest for SetGuildMotd {
+    fn required_right() -> u32 {
+        shared::protocol::GUILD_RIGHT_EDIT_MOTD
+    }
     fn trimmed_text(&self) -> String {
         self.text.trim().to_string()
     }
 }
 
 impl GuildProfileTextRequest for SetGuildInfo {
+    fn required_right() -> u32 {
+        shared::protocol::GUILD_RIGHT_EDIT_INFO
+    }
     fn trimmed_text(&self) -> String {
         self.text.trim().to_string()
     }
 }
 
+#[path = "guild_ranks.rs"]
+mod guild_ranks;
+#[cfg(test)]
+use guild_ranks::apply_rank_request;
+pub(crate) use guild_ranks::character_has_right;
+
 pub struct GuildPlugin;
 
 impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                send_initial_guild_state,
-                process_query_requests,
-                process_profile_text_updates,
-                process_set_officer_note_requests,
-            )
-                .chain(),
-        );
+        app.init_resource::<crate::guild_bank::ChangedGuilds>()
+            .add_systems(
+                Update,
+                (
+                    send_initial_guild_state,
+                    process_query_requests,
+                    process_profile_text_updates,
+                    process_set_officer_note_requests,
+                    guild_ranks::process_rank_requests,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -107,13 +128,18 @@ fn send_initial_guild_state(
     online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
-    for (conn_entity, link) in &connections {
+    for (conn_entity, link, world) in &connections {
         let Ok(guild) = guilds.get(link.0) else {
             continue;
         };
         send_guild_update(
             conn_entity,
-            Some(build_guild_snapshot(&db.db, guild, &online_players)),
+            Some(visible_guild_snapshot(
+                &db.db,
+                guild,
+                &online_players,
+                world.character_id,
+            )),
             Some("guild loaded".into()),
             None,
             &mut senders,
@@ -128,7 +154,7 @@ fn process_query_requests(
     online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
-    for (conn_entity, link, mut receiver) in &mut receivers {
+    for (conn_entity, link, mut receiver, world) in &mut receivers {
         let mut saw_request = false;
         for _ in receiver.receive() {
             saw_request = true;
@@ -148,7 +174,12 @@ fn process_query_requests(
         };
         send_guild_update(
             conn_entity,
-            Some(build_guild_snapshot(&db.db, guild, &online_players)),
+            Some(visible_guild_snapshot(
+                &db.db,
+                guild,
+                &online_players,
+                world.character_id,
+            )),
             Some("guild refreshed".into()),
             None,
             &mut senders,
@@ -203,7 +234,7 @@ fn process_profile_text_requests<Request, Apply>(
     Request: GuildProfileTextRequest + Send + Sync + 'static,
     Apply: Fn(&mut GuildProfileData, String) -> &'static str,
 {
-    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
+    for (conn_entity, link, mut receiver, world) in receivers.iter_mut() {
         let requests: Vec<_> = receiver
             .receive()
             .map(|request: Request| request.trimmed_text())
@@ -216,6 +247,25 @@ fn process_profile_text_requests<Request, Apply>(
             continue;
         };
         for text in requests {
+            if !character_has_right(
+                db,
+                world.character_id,
+                guild.guild_id,
+                Request::required_right(),
+            ) {
+                send_guild_update(
+                    conn_entity,
+                    None,
+                    None,
+                    Some(
+                        shared::protocol::GuildRankError::Permissions
+                            .message()
+                            .into(),
+                    ),
+                    senders,
+                );
+                continue;
+            }
             let mut profile = load_guild_profile(db, guild.guild_id);
             let success_message = apply(&mut profile, text);
             save_guild_profile(db, guild.guild_id, &profile);
@@ -243,7 +293,7 @@ fn process_set_officer_note_requests(
     online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
-    for (conn_entity, link, mut receiver) in &mut receivers {
+    for (conn_entity, link, mut receiver, world) in &mut receivers {
         let requests: Vec<_> = receiver.receive().collect();
         if requests.is_empty() {
             continue;
@@ -253,6 +303,25 @@ fn process_set_officer_note_requests(
             continue;
         };
         for request in requests {
+            if !character_has_right(
+                &db.db,
+                world.character_id,
+                guild.guild_id,
+                shared::protocol::GUILD_RIGHT_EDIT_OFFICER_NOTE,
+            ) {
+                send_guild_update(
+                    conn_entity,
+                    None,
+                    None,
+                    Some(
+                        shared::protocol::GuildRankError::Permissions
+                            .message()
+                            .into(),
+                    ),
+                    &mut senders,
+                );
+                continue;
+            }
             match update_officer_note(&db.db, guild, request) {
                 Ok(message) => broadcast_officer_note_update(
                     &db.db,
@@ -268,6 +337,7 @@ fn process_set_officer_note_requests(
                     &online_players,
                     guild,
                     conn_entity,
+                    world.character_id,
                     error,
                     &mut senders,
                 ),
@@ -314,10 +384,11 @@ fn send_officer_note_error(
     online_players: &OnlinePlayers,
     guild: &GuildMembership,
     conn_entity: Entity,
+    viewer: u64,
     error: String,
     senders: &mut GuildSenders,
 ) {
-    let snapshot = build_guild_snapshot(db, guild, online_players);
+    let snapshot = visible_guild_snapshot(db, guild, online_players, viewer);
     send_guild_update(conn_entity, Some(snapshot), None, Some(error), senders);
 }
 
@@ -364,8 +435,7 @@ fn broadcast_guild_update(
     meta: GuildUpdateMeta,
     senders: &mut GuildSenders,
 ) {
-    let snapshot = build_guild_snapshot(db, guild, online_players);
-    for (conn_entity, link) in connections.iter() {
+    for (conn_entity, link, world) in connections.iter() {
         let Ok(target_guild) = guilds.get(link.0) else {
             continue;
         };
@@ -374,12 +444,37 @@ fn broadcast_guild_update(
         }
         send_guild_update(
             conn_entity,
-            Some(snapshot.clone()),
+            Some(visible_guild_snapshot(
+                db,
+                guild,
+                online_players,
+                world.character_id,
+            )),
             meta.message.clone(),
             meta.error.clone(),
             senders,
         );
     }
+}
+
+fn visible_guild_snapshot(
+    db: &redb::Database,
+    guild: &GuildMembership,
+    online: &OnlinePlayers,
+    viewer: u64,
+) -> GuildSnapshot {
+    let mut snapshot = build_guild_snapshot(db, guild, online);
+    if !character_has_right(
+        db,
+        viewer,
+        guild.guild_id,
+        shared::protocol::GUILD_RIGHT_VIEW_OFFICER_NOTE,
+    ) {
+        for member in &mut snapshot.members {
+            member.officer_note.clear();
+        }
+    }
+    snapshot
 }
 
 fn build_guild_snapshot(
@@ -494,6 +589,10 @@ fn class_name_from_id(class_id: u8) -> String {
     }
     .into()
 }
+
+#[cfg(test)]
+#[path = "guild_ranks_tests.rs"]
+mod guild_ranks_tests;
 
 #[cfg(test)]
 mod tests {

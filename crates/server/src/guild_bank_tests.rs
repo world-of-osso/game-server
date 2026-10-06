@@ -470,3 +470,126 @@ fn character_and_guild_banks_survive_reopening_the_game_database() {
     assert_eq!(slot_items(&guild.tabs[0]), vec![(0, LINEN, 20)]);
     assert_eq!(guild.money, 50_000);
 }
+
+#[test]
+fn guild_ranks_player_requests_enforce_view_item_and_gold_limits() {
+    let Some(mut h) = harness() else {
+        panic!("guild rank fixture unavailable")
+    };
+    let vault = leader_with_tab(&mut h);
+    let master = h.character_id;
+    let reader = h.create_alt("Reader");
+    set_character_guild_by_id(h.db(), reader, GUILD, "Bank Testers").unwrap();
+    // Missing rank records follow the current bottom rank, not a future newly added one.
+    h.send::<_, GuildChannel>(GuildRankRequest::Add {
+        name: "Bank Reader".into(),
+    });
+    assert_eq!(
+        h.take::<GuildRanksState>().last().unwrap().ranks[5].name,
+        "Bank Reader"
+    );
+    assert_eq!(
+        crate::persistence::banks::load_guild_member_rank(
+            h.db(),
+            &load_guild(h.db(), GUILD),
+            reader
+        ),
+        4
+    );
+    h.send::<_, GuildChannel>(GuildRankRequest::SetTab {
+        rank: 5,
+        tab: 0,
+        view: true,
+        deposit: false,
+        withdrawals_per_day: 0,
+    });
+    h.send::<_, GuildChannel>(GuildRankRequest::SetPermissions {
+        rank: 5,
+        rights: GUILD_RIGHT_CHAT_LISTEN | GUILD_RIGHT_WITHDRAW_GOLD,
+        gold_per_day: 10_000,
+    });
+    h.send::<_, GuildChannel>(GuildRankRequest::Demote {
+        character_name: "Reader".into(),
+    });
+    deposit_linen(&mut h, vault);
+    h.send::<_, GuildBankChannel>(GuildBankMoneyTransfer {
+        object: vault.to_bits(),
+        copper: 30_000,
+        deposit: true,
+    });
+    h.play_as(reader);
+    h.take::<GuildBankContents>();
+    let vault = h.open_vault();
+    let bank = contents(&mut h);
+    assert!(bank.tabs[0].viewable);
+    assert_eq!(slot_items(&bank.tabs[0]), vec![(0, LINEN, 20)]);
+    assert_eq!(h.count_of(LINEN), 20); // create_alt seeds the character's starter bags.
+    withdraw_slot(&mut h, vault, 0);
+    assert_eq!(failures(&mut h), vec![GuildBankError::WithdrawLimit]);
+    // A rank edit takes effect while the reader's vault is already open.
+    h.play_as(master);
+    h.send::<_, GuildChannel>(GuildRankRequest::SetTab {
+        rank: 5,
+        tab: 0,
+        view: true,
+        deposit: false,
+        withdrawals_per_day: 1,
+    });
+    h.play_as(reader);
+    withdraw_slot(&mut h, vault, 0);
+    assert_eq!(h.count_of(LINEN), 40);
+    assert!(failures(&mut h).is_empty());
+    // Seed a second real stack in the persisted tab, then try the next withdrawal.
+    let mut guild = load_guild(h.db(), GUILD);
+    guild.tabs[0].slots[1] = Some(crate::persistence::InventoryItemData {
+        item_guid: 999_002,
+        item_id: LINEN,
+        name: "Linen Cloth".into(),
+        quality: 1,
+        required_level: 0,
+        stack_count: 5,
+        vendor_sell_price: 13,
+        unique_auction: false,
+    });
+    save_guild(h.db(), GUILD, &guild);
+    withdraw_slot(&mut h, vault, 1);
+    h.send::<_, GuildBankChannel>(GuildBankMoneyTransfer {
+        object: vault.to_bits(),
+        copper: 10_000,
+        deposit: false,
+    });
+    h.send::<_, GuildBankChannel>(GuildBankMoneyTransfer {
+        object: vault.to_bits(),
+        copper: 1,
+        deposit: false,
+    });
+    assert_eq!(
+        failures(&mut h),
+        vec![GuildBankError::WithdrawLimit, GuildBankError::WithdrawLimit]
+    );
+    assert_eq!(load_guild(h.db(), GUILD).money, 20_000);
+    assert_eq!(load_guild_bank_usage(h.db(), reader).tab_withdrawals[0], 1);
+    assert_eq!(
+        load_guild_bank_usage(h.db(), reader).copper_withdrawn,
+        10_000
+    );
+    h.play_as(master);
+    h.send::<_, GuildChannel>(GuildRankRequest::SetTab {
+        rank: 5,
+        tab: 0,
+        view: false,
+        deposit: false,
+        withdrawals_per_day: 0,
+    });
+    h.play_as(reader);
+    let vault = h.open_vault();
+    let bank = contents(&mut h);
+    assert!(!bank.tabs[0].viewable);
+    assert!(bank.tabs[0].slots.is_empty());
+    assert!(bank.tabs[0].text.is_empty());
+    h.send::<_, GuildBankChannel>(GuildBankQueryLog {
+        object: vault.to_bits(),
+        tab: Some(0),
+    });
+    assert_eq!(failures(&mut h), vec![GuildBankError::Permissions]);
+}

@@ -1,0 +1,76 @@
+# Player-managed guild ranks
+
+Retail guild rank controls live in `crates/server/src/guild_ranks.rs`. The server
+owns authority and persistence; see [banks](../wiki/systems/banks.md) for data flow.
+Wire contract: shared-protocol `docs/guild-ranks.md`.
+
+## What it must do
+
+### Rank controls
+- [x] Only Guild Master creates, removes, renames, reorders or configures ranks.
+- [x] There are 2–10 ranks, highest first. Rank 0 is immutable. Occupied ranks cannot be removed.
+- [x] Reordering preserves member rank identity; removing empty ranks renumbers lower positions.
+- [x] Adding ranks preserves members with an implicit lowest rank.
+- [x] Promote/demote requires its flag and a lower-ranked target in the same guild. Promotion never reaches the actor's rank; rank 0 never changes.
+- [ ] Names are nonempty, at most 15 characters, without control characters.
+
+### Social permissions
+- [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.
+- [x] Chat membership decisions use authoritative persisted guild IDs when components are stale.
+- [ ] Invitations, MOTD, guild information and officer-note editing/viewing require their rank flags.
+- [ ] Remove-member permission is stored with the rank; no player member-removal action currently exists.
+
+### Bank permissions
+- [x] Tab view/deposit and stacks/day are per rank/tab. Zero denies withdrawals; rank 0 alone is unlimited.
+- [x] Gold withdrawal and repair share a copper/day allowance; extra withdrawals are refused.
+- [x] Every bank request reloads the current rank. Hidden tab contents/text/logs are not disclosed.
+- [x] Updated rights are effective for an already-open vault, and open vault views refresh after edits.
+
+- [x] Hiding a tab preserves its configured deposit flag and daily stack limit; the action/view gate still refuses access.
+
+### Authority and durability
+- [x] Rank list and affected member positions commit together and survive database reopen.
+- [x] Stored bank balances, tabs, limits, logs and repair permissions survive layout upgrades.
+- [ ] Only authenticated in-world connections can request controls; the actor comes from the connection, never the packet.
+- [ ] Success broadcasts recipient-specific state; errors use typed Retail GlobalStrings refusals.
+
+## How it works
+
+- [Banks](../wiki/systems/banks.md#player-rank-controls) — rank transactions, layout migration, vault refresh and chat decisions.
+
+## Implementation inventory
+
+| File | Role |
+|---|---|
+| `crates/server/src/guild_ranks.rs` | Rank requests, authority and member mapping |
+| `crates/server/src/guild.rs` | Plugin registration and profile permission checks |
+| `crates/server/src/persistence_banks.rs` | Rank storage, atomic writes and layout migration |
+| `crates/server/src/guild_bank.rs` | Current-rank bank enforcement and recipient views |
+| `crates/server/src/messaging.rs` | Guild/officer chat and invitation permission checks |
+
+## Tests asserting this spec
+
+- `crates/server/src/guild_ranks_tests.rs` — GM controls, hierarchy/flags, bounds, immutable leader, rank identity and restart round-trip.
+- `crates/server/src/guild_bank_tests.rs` — actual player packets, open-vault edits, item/gold limits and hidden logs.
+- `crates/server/src/persistence_banks_tests.rs` — previous layouts and preserved limits.
+- `crates/server/src/messaging.rs` tests — guild/officer recipients and chat history.
+- `crates/server/src/merchant_guild_repair_tests.rs` — shared repair/gold allowance.
+
+## Known gaps (current cycle)
+
+- [ ] Client native settings UI and transport hookup are tracked in game-engine `docs/specs/guild-ranks.md`.
+- [ ] Unchecked contract bullets have code but lack specific passing behavioral proof.
+
+## Out of scope
+
+Authenticator-only ranks and Discord permissions are not among the requested existing-feature flags. Member removal itself has no existing player feature; its rank flag is represented.
+
+## Retail sources
+
+Root: `~/.cache/wow-ui-sim/blizzard-ui/retail/AddOns/`.
+
+- `Blizzard_GuildControlUI/Blizzard_GuildControlUI.lua:4,536–620`: max 10, minimum 2, occupied-rank deletion and shifts excluding Guild Master.
+- `Blizzard_GuildControlUI/Blizzard_GuildControlUI.xml:7`: 15-letter rank names.
+- `Blizzard_GuildControlUI/Blizzard_GuildControlUI.lua:137–238,420–459`: tab view/deposit/stacks controls, flags and shared gold/repair allowance.
+- `Blizzard_Communities/GuildRoster.lua:137–141`: strict promotion/demotion hierarchy.
+- `game-engine/data/GlobalStrings.csv`: Retail refusal strings.
