@@ -1319,7 +1319,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
     const HELM: u32 = 32329; // Cowl of Benevolence, head inventory type 1.
     let db = persistence::temp_database();
     persistence::create_character(&db, 1, "Alice", 1, 2).unwrap();
-    let (bob_id, mut character) = persistence::create_character(&db, 2, "Bob", 4, 2).unwrap();
+    let (bob_id, mut character) = persistence::create_character(&db, 2, "Bob", 4, 1).unwrap();
     character.appearance = CharacterAppearance {
         sex: 1,
         face: 3,
