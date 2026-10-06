@@ -1,14 +1,14 @@
 //! Retail's built-in damage meter (`Blizzard_DamageMeter`, `C_DamageMeter`), computed on
 //! the server. Spec: docs/specs/damage-meter.md.
 //!
-//! Every damage line of the combat log (`spell_cast::log_event`) by a player is added to
-//! the meter of that player and of each online member of its group. A meter keeps the
+//! Combat-log category totals (`spell_cast::log_event`) and consumed shields are added
+//! to the meter of their player actor and each online member of its group. A meter keeps the
 //! `Current` session, one per combat of the owner's group, and the `Overall` session, the
 //! sum of all of them (`Enum.DamageMeterSessionType`). A session runs while the owner or
 //! any online group member is in combat; its duration is that combat time, and a
 //! source's DPS is its damage over the session's duration. The owner gets
 //! `DamageMeterSnapshot` when a session starts or ends and every
-//! `SEND_INTERVAL_SECS` while one runs or has new damage.
+//! `SEND_INTERVAL_SECS` while one runs or has new category data.
 //!
 //! Retail's UI only reads aggregated sessions from `C_DamageMeter` and never the combat
 //! log (DamageMeterSessionWindow.lua:561-579), but where Retail aggregates, server or
@@ -52,7 +52,7 @@ impl Plugin for DamageMeterPlugin {
     }
 }
 
-/// Who dealt damage, as the meter lists it.
+/// Player identity shared by damage, healing and action category totals.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DamageSource {
     pub unit: Entity,
@@ -403,7 +403,7 @@ impl DamageMeter {
         }
     }
 
-    /// A session started or ended, or it runs or has new damage and the last snapshot is
+    /// A session started or ended, or it runs or has new data and the last snapshot is
     /// `SEND_INTERVAL_SECS` old.
     fn should_send(&self, now: f64) -> bool {
         let due = self
