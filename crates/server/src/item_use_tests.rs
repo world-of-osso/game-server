@@ -362,3 +362,75 @@ fn potionfix_antiseptic_bandage_snapshots_item_scaling_for_periodic_heal() {
     eater.h.advance(41);
     assert_eq!(eater.h.health(caster) - before, 2.0);
 }
+
+#[test]
+fn potionfix_item_level_survives_cast_bar_after_consumption() {
+    let mut eater = eater_with_spells(&[211_878], 2, &[431_416], 1).unwrap();
+    let caster = eater.h.caster;
+    app_world(&mut eater.h).entity_mut(caster).insert((
+        shared::components::Level(90),
+        shared::components::UnitLevel(90),
+        Health {
+            current: 18_444.0,
+            max: 100_000.0,
+        },
+        CombatStatus(true),
+    ));
+    let mut spell = eater
+        .h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(431_416)
+        .unwrap()
+        .clone();
+    spell.misc.as_mut().unwrap().cast_time = Some(crate::spell_info::SpellCastTime {
+        base_ms: 1000,
+        minimum_ms: 1000,
+    });
+    eater
+        .h
+        .app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, 211_878), 1);
+    assert_eq!(eater.h.health(caster), 18_444.0);
+    eater.h.advance(30);
+    assert_eq!(eater.h.health(caster), 18_444.0 + 46_591.0);
+}
+
+#[test]
+fn potionfix_item_level_survives_missile_after_consumption() {
+    let mut eater = eater_with_spells(&[211_878], 2, &[431_416], 1).unwrap();
+    let target = eater.h.npc;
+    app_world(&mut eater.h).entity_mut(target).insert((
+        shared::components::UnitFactionTemplate(1),
+        Health {
+            current: 18_444.0,
+            max: 100_000.0,
+        },
+    ));
+    let caster = eater.h.caster;
+    app_world(&mut eater.h)
+        .entity_mut(caster)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    let mut spell = eater
+        .h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(431_416)
+        .unwrap()
+        .clone();
+    spell.misc.as_mut().unwrap().speed = 10.0;
+    spell.effects[0].implicit_targets = [21, 0];
+    eater
+        .h
+        .app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, 211_878), 1);
+    assert_eq!(eater.h.health(target), 18_444.0);
+    eater.h.advance(20);
+    assert_eq!(eater.h.health(target), 18_444.0 + 46_591.0);
+}
