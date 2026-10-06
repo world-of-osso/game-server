@@ -12,6 +12,13 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 - [x] Evaluate Single/All/Any and direct-child count operators, preserving numeric progress in redb.
 - [x] Grant Retail achievements at the previous 10/20/40/60/70/80 thresholds, using actual Retail IDs rather than placeholder 1–6; migrate persisted placeholders once.
 
+### Phase 2
+
+- [x] Import pinned local Achievement_Category FDID 1324299, category parents/order, and achievement category/icon metadata atomically with the phase-1 tables.
+- [ ] Send ordered encounter names and defeated state on instance entry, reconnect and each successful encounter defeat, scoped to the copy.
+- [ ] Serve categories, category achievements and criterion lines on request with bounded pages; never push the catalog on login.
+- [ ] Include character earned state, known completion dates and numeric criterion progress in category responses.
+
 ## How it works
 
 - [Dungeon achievements](../wiki/systems/dungeon-achievements.md)
@@ -33,6 +40,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 - `crates/server/src/achievement_normal_lock_tests.rs`
 - `crates/server/src/scripted_ai/tests/dungeonach.rs`
 - `scripts/tests/test_db2_sections.py`
+- `scripts/tests/test_achievement_import.py` — real local categories and Stockade metadata.
 
 ## Known gaps (current cycle)
 
@@ -40,6 +48,6 @@ No open phase-1 acceptance cases. Targeted proof: eight tests passed at `702cb80
 
 ## Out of scope
 
-- Client objective tracker / achievement window and new protocol messages (phase 2).
+- Client objective tracker / achievement window rendering; client stays read-only in phase 2.
 - ModifierTree, timed, world-state, faction-specific, account-wide, unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated.
-- Achievement_Category: no category UI in phase 1.
+- Additional achievement evaluation rules beyond phase-1 supported criteria.
