@@ -606,12 +606,13 @@ fn bite_ordered_from_the_bar_is_cast_by_the_wolf_at_the_target() {
     });
     p.order(pet_action_button(BITE, ACT_ENABLED), Some(kobold), None);
     p.advance(2);
-    let bites = p.spell_damage(BITE, kobold);
-    assert_eq!(bites.len(), 1, "{:?}", p.h.inbox.log);
-    // 0.75 × the wolf's attack power (22% of its owner's 100), less the kobold's armor.
-    assert!(bites[0] > 0, "Bite did {} damage", bites[0]);
-    // The bite landed (and the wolf's first swing may have too).
-    assert!(p.h.health(kobold) <= 5_000.0 - bites[0] as f32);
+    // Bite rolls to hit like melee: the order is proven by the cast; damage only when it lands.
+    assert_eq!(p.spell_casts(BITE, kobold), 1, "{:?}", p.h.inbox.log);
+    if let [bite] = p.spell_damage(BITE, kobold)[..] {
+        // 0.75 × the wolf's attack power (22% of its owner's 100), less the kobold's armor.
+        assert!(bite > 0, "Bite did {bite} damage");
+        assert!(p.h.health(kobold) <= 5_000.0 - bite as f32);
+    }
     // Bite costs 25 Focus.
     assert_eq!(p.focus(), 75);
     // The wolf goes after the unit it bit (`_AttackStart`).

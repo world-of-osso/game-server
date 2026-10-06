@@ -55,6 +55,7 @@ fn spell_quest_app() -> Option<App> {
     app.insert_resource(crate::faction::world_db_faction_templates()?);
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(crate::scripted_ai::smart_ai::load_smart_scripts(&path).unwrap());
+    app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
