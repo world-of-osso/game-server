@@ -256,9 +256,9 @@ fn potionfix_algari_ranks_use_item_level_not_character_level() {
 }
 
 #[test]
-fn potionfix_minor_potion_and_healing_tonic_scale_at_other_levels() {
+fn potionfix_minor_and_healing_potions_scale_at_other_levels() {
     assert_item_heal(118, 439, 10, 121.0);
-    assert_item_heal(109_223, 156_438, 40, 3.0);
+    assert_item_heal(929, 441, 20, 1.0);
 }
 
 fn assert_item_heal(item: u32, spell_id: u32, level: u8, expected: f32) {
@@ -331,7 +331,25 @@ fn potionfix_scaling_food_restores_health_and_elixir_grants_strength() {
         .insert(shared::components::UnitLevel(10));
     use_slot(&mut eater, 0);
     let before = eater.h.health(caster);
+    eprintln!(
+        "food before: {:?} mods={:?}",
+        eater.h.app.world().get::<ActiveAuras>(caster),
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::auras::AuraStatMods>(caster)
+    );
     eater.h.advance(200);
+    eprintln!(
+        "food after: {:?} mods={:?}",
+        eater.h.app.world().get::<ActiveAuras>(caster),
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::auras::AuraStatMods>(caster)
+    );
     // Five seated ticks: (20 base + 1 * 2 / 5 food) * 1.5 = 30.6 each.
     assert_eq!(eater.h.health(caster) - before, 153.0);
     assert_eq!(count_of(&eater, 117), 1);
@@ -343,17 +361,24 @@ fn potionfix_scaling_food_restores_health_and_elixir_grants_strength() {
 }
 
 #[test]
-fn potionfix_antiseptic_bandage_snapshots_item_scaling_for_periodic_heal() {
-    // Antiseptic Bandage 111603 -> 161255: squished item level 15,
-    // SuperiorF_0 8.04534435272 * .04 is raised to one point per tick.
-    let mut eater = eater_with_spells(&[111_603], 2, &[161_255], MAGE).unwrap();
+fn potionfix_netherweave_bandage_snapshots_item_scaling_for_periodic_heal() {
+    // Netherweave Bandage 21990 -> 27030: squished item level 13,
+    // SuperiorF_0 6.626080513 * .05 is raised to one point per tick.
+    let mut eater = eater_with_spells(&[21_990], 2, &[27_030], MAGE).unwrap();
     let caster = eater.h.caster;
     app_world(&mut eater.h).entity_mut(caster).insert((
         shared::components::Level(40),
         shared::components::UnitLevel(40),
+        CombatStatus(true),
     ));
     use_slot(&mut eater, 0);
-    assert_eq!(count_of(&eater, 111_603), 1);
+    assert!(errors(&mut eater).is_empty());
+    assert!(
+        eater.h.inbox.failed.is_empty(),
+        "{:?}",
+        eater.h.inbox.failed
+    );
+    assert_eq!(count_of(&eater, 21_990), 1);
     let before = eater.h.health(caster);
     app_world(&mut eater.h)
         .get_mut::<CombatStatus>(caster)
