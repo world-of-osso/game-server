@@ -36,6 +36,58 @@ fn motion(app: &App, player: Entity) -> PlayerMotion {
     *app.world().get::<PlayerMotion>(player).unwrap()
 }
 
+/// Input receive → height judgement → gravity → replicated motion, including ticks
+/// with no input. Walking across the single fixture chunk's edge removes support.
+#[test]
+fn player_motion_airborne_walkoff_and_touchdown_replicate_without_jump() {
+    use super::client_height::{movement_app, tick};
+    let ground = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, 50.0);
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(100.0 - 100.0 / 3.0 + 0.2, 90.0, 50.0);
+    let (mut app, player, connection) = movement_app(ground, Position { x, y, z });
+    tick(&mut app, connection, vec![]);
+    assert_eq!(motion(&app, player), PlayerMotion(0));
+    let sent = PlayerInput {
+        direction: [-1.0, 0.0, 0.0],
+        facing_yaw: -std::f32::consts::FRAC_PI_2,
+        position: [x - 0.35, y, z],
+        ..input([0.0; 3])
+    };
+    tick(&mut app, connection, vec![sent]);
+    assert!(motion(&app, player).contains(PlayerMotion::FORWARD | PlayerMotion::FALLING));
+    assert!(!motion(&app, player).contains(PlayerMotion::JUMP_STARTED));
+    tick(&mut app, connection, vec![]);
+    assert!(motion(&app, player).contains(PlayerMotion::FALLING));
+    // A lower loaded surface replaces the unsupported probe on touchdown.
+    app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
+        99.0, 100.0, 48.0,
+    ));
+    for _ in 0..10 {
+        tick(&mut app, connection, vec![]);
+    }
+    assert_eq!(motion(&app, player), PlayerMotion(PlayerMotion::FORWARD));
+}
+
+#[test]
+fn player_motion_airborne_jump_keeps_origin_until_touchdown() {
+    use super::client_height::{flat_app, flat_spot, tick};
+    let (mut app, player, connection) = flat_app(50.0);
+    let start = flat_spot(51.5);
+    let sent = PlayerInput {
+        jumping: true,
+        position: [start.x, start.y, start.z],
+        ..input([0.0; 3])
+    };
+    tick(&mut app, connection, vec![sent]);
+    assert!(motion(&app, player).contains(PlayerMotion::FALLING | PlayerMotion::JUMP_STARTED));
+    // No jump opcode/report on subsequent ticks: airborne origin must persist.
+    tick(&mut app, connection, vec![]);
+    assert!(motion(&app, player).contains(PlayerMotion::FALLING | PlayerMotion::JUMP_STARTED));
+    for _ in 0..10 {
+        tick(&mut app, connection, vec![]);
+    }
+    assert_eq!(motion(&app, player), PlayerMotion(0));
+}
+
 #[test]
 fn spawned_player_stands_still() {
     let (app, player, _) = receiver_app();
@@ -69,14 +121,14 @@ fn inputs_set_forward_backward_strafe_walk_swim_and_jump_flags() {
                 jumping: true,
                 ..input(wire_direction(1.0, 0.0))
             },
-            PlayerMotion::FORWARD | PlayerMotion::FALLING,
+            PlayerMotion::FORWARD | PlayerMotion::FALLING | PlayerMotion::JUMP_STARTED,
         ),
         (
             PlayerInput {
                 jumping: true,
                 ..input([0.0; 3])
             },
-            PlayerMotion::FALLING,
+            PlayerMotion::FALLING | PlayerMotion::JUMP_STARTED,
         ),
     ];
     for (sent, expected) in cases {
@@ -99,7 +151,12 @@ fn the_stop_input_clears_direction_and_falling() {
     deliver_and_tick(&mut app, connection, vec![walking_jump]);
     assert_eq!(
         motion(&app, player),
-        PlayerMotion(PlayerMotion::STRAFE_LEFT | PlayerMotion::WALKING | PlayerMotion::FALLING)
+        PlayerMotion(
+            PlayerMotion::STRAFE_LEFT
+                | PlayerMotion::WALKING
+                | PlayerMotion::FALLING
+                | PlayerMotion::JUMP_STARTED
+        )
     );
     let stop = PlayerInput {
         running: false,

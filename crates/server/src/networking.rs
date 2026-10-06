@@ -644,7 +644,7 @@ type GravityPlayerData<'w, 's> = Query<
         &'static shared::components::MovementControl,
         &'static InMap,
         Has<OutOfBounds>,
-        Option<&'static PlayerMotion>,
+        Option<&'static mut PlayerMotion>,
     ),
     With<Player>,
 >;
@@ -686,13 +686,17 @@ pub(crate) fn apply_terrain_gravity(
         }
         // A flyer has no gravity; a fall starts where its flight ends
         // (`SetCanFly(false)` → `SetFallInformation(0, GetPositionZ())`).
-        if motion.is_some_and(|motion| motion.contains(PlayerMotion::FLYING)) {
+        if motion
+            .as_ref()
+            .is_some_and(|motion| motion.contains(PlayerMotion::FLYING))
+        {
             let grounded = FallTracker {
                 epoch: control.epoch,
                 ..FallTracker::grounded(pos.y)
             };
             fall_tracker.set_if_neq(grounded);
             vert_vel.set_if_neq(VerticalVelocity(0.0));
+            replicate_airborne_motion(motion, &grounded, entity, replication_dirty.as_deref());
             continue;
         }
         let previous_health = *health;
@@ -732,6 +736,12 @@ pub(crate) fn apply_terrain_gravity(
         if *fall_tracker != next_fall_tracker {
             *fall_tracker = next_fall_tracker;
         }
+        replicate_airborne_motion(
+            motion,
+            &next_fall_tracker,
+            entity,
+            replication_dirty.as_deref(),
+        );
         apply_gravity_health_transition(
             entity,
             previous_health,
@@ -743,6 +753,24 @@ pub(crate) fn apply_terrain_gravity(
         for log in logs {
             commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, log));
         }
+    }
+}
+
+/// Airborne motion changes replicate even without a new input or a position change.
+fn replicate_airborne_motion(
+    motion: Option<Mut<'_, PlayerMotion>>,
+    tracker: &FallTracker,
+    player: Entity,
+    replication_dirty: Option<&ReplicationDirtyQueue>,
+) {
+    let Some(mut motion) = motion else {
+        return;
+    };
+    let next = airborne_motion(*motion, tracker);
+    if motion.set_if_neq(next)
+        && let Some(dirty) = replication_dirty
+    {
+        dirty.mark(player);
     }
 }
 

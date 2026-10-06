@@ -196,7 +196,11 @@ pub(super) fn apply_movement_input(
         flying: if behind { flown } else { flying },
         ..input.clone()
     };
-    let next_motion = input_motion(&state, *motion);
+    let mut next_motion = input_motion(&state, *motion);
+    if fall_tracker.airborne && !state.flying && !swimming {
+        // An input changes intent, not the origin of an existing airborne interval.
+        next_motion = airborne_motion(next_motion, &fall_tracker);
+    }
     let mut changes =
         update_rotation_and_speed(&state, state.flying, auras, &mut rotation, &mut speed)
             .merge(set_motion(&mut motion, next_motion));
@@ -424,7 +428,8 @@ fn highest_arc(impulse: f32, secs: f32) -> f32 {
 /// Retail `MovementFlags` of an input, as the client's `CMSG_MOVE_*` carries them: the
 /// wire direction (its animation direction, `movement_to_direction`) against the facing
 /// sets FORWARD/BACKWARD/STRAFE_LEFT/STRAFE_RIGHT, the run toggle WALKING, the swim
-/// SWIMMING, a jump in the air FALLING and flight FLYING (and ADV_FLYING for a skyrider).
+/// SWIMMING, a jump FALLING with the project JUMP_STARTED marker, and flight FLYING
+/// (and ADV_FLYING for a skyrider). Gravity also sets FALLING for unjumped falls.
 /// CAN_FLY and CAN_ADV_FLY are the server's (`Unit::SetCanFly`, `Unit::SetCanAdvFly`), kept
 /// from `current`; a flyer does not swim (`SetCanFly` drops SWIMMING).
 fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
@@ -450,7 +455,10 @@ fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
     for (set, flag) in [
         (!input.running, PlayerMotion::WALKING),
         (input.swimming && !flying, PlayerMotion::SWIMMING),
-        (input.jumping && !flying, PlayerMotion::FALLING),
+        (
+            input.jumping && !flying,
+            PlayerMotion::FALLING | PlayerMotion::JUMP_STARTED,
+        ),
         (can_fly, PlayerMotion::CAN_FLY),
         (flying, PlayerMotion::FLYING),
         (can_adv_fly, PlayerMotion::CAN_ADV_FLY),
@@ -463,13 +471,28 @@ fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
     PlayerMotion(flags)
 }
 
+/// The authoritative airborne interval. Retail's jump opcode identifies its origin;
+/// FALLING_FAR describes falling phase, so it cannot stand in for jump origin.
+/// The existing takeoff impulse preserves that origin until gravity ends the interval.
+pub(super) fn airborne_motion(motion: PlayerMotion, tracker: &FallTracker) -> PlayerMotion {
+    let mut flags = motion.0 & !(PlayerMotion::FALLING | PlayerMotion::JUMP_STARTED);
+    if tracker.airborne {
+        flags |= PlayerMotion::FALLING;
+        if tracker.jump_impulse > 0.0 {
+            flags |= PlayerMotion::JUMP_STARTED;
+        }
+    }
+    PlayerMotion(flags)
+}
+
 /// The flags without movement: what a stop input leaves (walk and swim mode).
 fn stopped_motion(motion: PlayerMotion) -> PlayerMotion {
     const MOVING: u64 = PlayerMotion::FORWARD
         | PlayerMotion::BACKWARD
         | PlayerMotion::STRAFE_LEFT
         | PlayerMotion::STRAFE_RIGHT
-        | PlayerMotion::FALLING;
+        | PlayerMotion::FALLING
+        | PlayerMotion::JUMP_STARTED;
     PlayerMotion(motion.0 & !MOVING)
 }
 
