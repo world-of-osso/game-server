@@ -44,3 +44,9 @@ Key by `member.name` and pass that map to the existing `PartyPortraits::sync` ap
 Client source is unchanged in this task. Spec: shared-protocol `docs/specs/group-roster-portraits.md`. Behavioral proof: server `group::tests::roster_portrait_*` and shared `protocol_group_tests::roster_portrait_round_trips_on_the_wire`.
 
 The server fixtures cover three-member delivery across maps at `(50000, 20000, 100)`, customization changes after a map transfer without rejoining, display/hidden/removal changes, and retention of the latest changed helm for an offline member and a new recipient. `roster_portrait_persisted_helm_equip_reaches_far_member` loads concrete redb character data and sends an actual `SwapItem` request for head item 32329: inventory refreshes `EquipmentAppearance` in PostUpdate, the next Update sends exactly one roster to the distant member, and the physical equipment is persisted. The protocol round trip includes non-empty Dracthyr visage selectors and both hidden-head and absent-head payloads.
+
+## Verification — 2026-10-06
+
+- Server code `cb40477`: all four `group::tests::roster_portrait_*` tests pass, exit 0. The inventory fixture checks request errors, persisted head appearance, replicated equipment, roster delivery, and no duplicate update. Loopback connections require matching receivers for every sender; request → inventory PostUpdate → group Update → roster receipt spans four app frames.
+- Protocol code `e0a6d19`: `protocol::group_tests::roster_portrait_round_trips_on_the_wire` passes, exit 0, including complete-byte consumption.
+- Both runs use `build-lock.sh`, `DEPOT_SIBLING_SHARED_PROTOCOL`, `agent-run rosterlook`, and `desktop-server-build.py --build-host local --test` with targeted filters. No live server or client is started. Cargo formatting passes. Client compilation/rendering and independent Retail helmet pixel parity remain deferred.

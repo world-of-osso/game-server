@@ -2,7 +2,7 @@
 
 ## [2026-10-06] systems | Group roster portrait transport
 
-Linked [roster portrait transport](../group-roster-portraits.md): canonical customization plus head-only equipment, change-triggered reliable rosters and offline cache. Added persisted inventory-request, post-transfer and latest-offline-head fixtures; test execution pending shared build lock. Corrected deferred client path to `godot/ui-model/src/game/group_state.rs`; existing `apply_roster` already retains whole snapshots. Client unchanged; native Retail helm pixel parity remains unproven.
+Linked [roster portrait transport](../group-roster-portraits.md): canonical customization plus head-only equipment, change-triggered reliable rosters and offline cache. Added persisted inventory-request, post-transfer and latest-offline-head fixtures. At server `cb40477`, all four targeted roster tests pass; protocol `e0a6d19` round trip passes. Corrected fixture race/class and incomplete loopback receiver pairs; inventory PostUpdate requires a fourth frame before roster receipt. Production implementation from `737fef6` is unchanged. Corrected deferred client path to `godot/ui-model/src/game/group_state.rs`; existing `apply_roster` already retains whole snapshots. Client unchanged; native Retail helm pixel parity remains unproven.
 
 ## [2026-10-05] investigations | Northshire native versus effective stats
 
