@@ -4,11 +4,11 @@ Player resurrection spell effects send consent offers; creature damage exposes t
 
 ## What it must do
 
-- [ ] Resurrection spells offer a dead or ghost player the caster's identity, spell and a 60-second timeout without immediately reviving them.
-- [ ] Accept restores the spell's percentage of maximum health/mana at the caster's cast-time position; death/corpse/ghost state clears and movement adopts the new position.
-- [ ] Decline or expired acceptance leaves the target dead. Every response returns authoritative death state so refused acceptance cannot strand the client waiting.
-- [ ] RESURRECT_WITH_AURA applies its triggered aura only after consent.
-- [ ] Untapped creatures are available to everyone; a tapper and current group members are not denied. Other viewers are denied. Respawn/evade clears taps.
+- [x] Resurrection spells offer a dead or ghost player the caster's identity, spell and a 60-second timeout without immediately reviving them.
+- [x] Accept restores the spell's percentage of maximum health/mana at the caster's cast-time position; death/corpse/ghost state clears and movement adopts the new position.
+- [x] Decline or expired acceptance leaves the target dead. Every response returns authoritative death state so refused acceptance cannot strand the client waiting.
+- [x] RESURRECT_WITH_AURA applies its triggered aura only after consent.
+- [x] Untapped creatures are available to everyone; a tapper and current group members are not denied. Other viewers are denied. Respawn/evade clears taps.
 
 ## How it works
 
@@ -29,7 +29,7 @@ Player resurrection spell effects send consent offers; creature damage exposes t
 
 ## Known gaps (current cycle)
 
-- [ ] Targeted proof pending; native GPU/live realm proof is not part of the CPU tests.
+Targeted `rezrtap` proof passes 5/5, exit 0, without warnings; source scope at `15540af` (later test formatting is behavior-neutral). `/tmp/claude/rezrtap-server-final.out`. Native GPU/live realm proof is not part of these CPU tests.
 
 ## Out of scope
 
