@@ -152,6 +152,7 @@ struct Inbox {
     cancelled_invites: Vec<GroupInviteCancelled>,
     member_states: Vec<GroupMemberStates>,
     raid_targets: Vec<RaidTargetIcons>,
+    inventory_errors: Vec<shared::protocol::InventoryError>,
 }
 
 fn collect_inbox(
@@ -1373,6 +1374,14 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
         app.register_message::<SortBags>();
         app.register_message::<UseItem>();
         app.add_plugins(crate::inventory::InventoryPlugin);
+        app.add_systems(
+            Update,
+            |mut connections: Query<(&mut Inbox, &mut MessageReceiver<InventoryError>)>| {
+                for (mut inbox, mut errors) in &mut connections {
+                    inbox.inventory_errors.extend(errors.receive());
+                }
+            },
+        );
     });
     let alice = connect(&mut app, 1, "Alice");
     let bob = connect(&mut app, bob_id, "Bob");
@@ -1400,6 +1409,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
         MessageSender::<EquipmentSnapshot>::default(),
         MessageSender::<InventoryDelta>::default(),
         MessageSender::<InventoryError>::default(),
+        MessageReceiver::<InventoryError>::default(),
         MessageSender::<SwapItem>::default(),
         MessageReceiver::<SwapItem>::default(),
     ));
@@ -1415,9 +1425,12 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
         });
     // Inventory deltas update equipment in PostUpdate; group observes it next Update.
     pump(&mut app);
+    assert!(
+        inbox(&mut app, &bob).inventory_errors.is_empty(),
+        "equip request rejected: {:?}",
+        inbox(&mut app, &bob).inventory_errors
+    );
     let updates = rosters(&mut app, &alice);
-    assert_eq!(updates.len(), 1);
-    assert_eq!(updates[0].members.len(), 3);
     let expected = GroupPortraitAppearance {
         race: 4,
         appearance: loaded.appearance,
@@ -1429,6 +1442,19 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             hidden: false,
         }),
     };
+    let persisted =
+        persistence::load_character(&app.world().resource::<GameDatabase>().db, bob_id).unwrap();
+    let expected_equipment = vec![expected.head.clone().unwrap()];
+    assert_eq!(persisted.equipment_appearance.entries, expected_equipment);
+    assert_eq!(
+        app.world()
+            .get::<EquipmentAppearance>(bob.player)
+            .unwrap()
+            .entries,
+        expected_equipment
+    );
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].members.len(), 3);
     assert_eq!(
         updates[0]
             .members
@@ -1437,12 +1463,6 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             .unwrap()
             .portrait,
         expected
-    );
-    let persisted =
-        persistence::load_character(&app.world().resource::<GameDatabase>().db, bob_id).unwrap();
-    assert_eq!(
-        persisted.equipment_appearance.entries,
-        vec![expected.head.unwrap()]
     );
     pump(&mut app);
     assert!(rosters(&mut app, &alice).is_empty());
