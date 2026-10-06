@@ -320,44 +320,33 @@ fn assert_item_heal(item: u32, spell_id: u32, level: u8, expected: f32) {
 }
 
 #[test]
-fn potionfix_scaling_food_restores_health_and_elixir_grants_strength() {
-    // Tough Jerky 117 -> 433: item level 1, SuperiorF_0 2.41373538971 * .25,
-    // raised to one point. Lion's Strength 2454 -> 2367: level 3 budget
-    // 3.19360995293 * 1.3 = 4 points of strength.
-    let mut eater = eater_with_spells(&[117, 2454], 2, &[433, 2367], MAGE).unwrap();
+fn potionfix_scaling_food_restores_health_and_elixir_grants_agility() {
+    // Dwarven Mild 422 -> 435: item level 7 budget 3.22102379799 * .25,
+    // raised to one point. Minor Agility 2457 -> 2374: level 6 budget
+    // 2.77761483192 * 2.5 = 7 points of agility after rounding.
+    let mut eater = eater_with_spells(&[422, 2457], 2, &[435, 2374], MAGE).unwrap();
     let caster = eater.h.caster;
     app_world(&mut eater.h)
         .entity_mut(caster)
         .insert(shared::components::UnitLevel(10));
     use_slot(&mut eater, 0);
     let before = eater.h.health(caster);
-    eprintln!(
-        "food before: {:?} mods={:?}",
-        eater.h.app.world().get::<ActiveAuras>(caster),
-        eater
-            .h
-            .app
-            .world()
-            .get::<crate::auras::AuraStatMods>(caster)
-    );
     eater.h.advance(200);
-    eprintln!(
-        "food after: {:?} mods={:?}",
-        eater.h.app.world().get::<ActiveAuras>(caster),
-        eater
-            .h
-            .app
-            .world()
-            .get::<crate::auras::AuraStatMods>(caster)
-    );
     // Five seated ticks: (20 base + 1 * 2 / 5 food) * 1.5 = 30.6 each.
     assert_eq!(eater.h.health(caster) - before, 153.0);
-    assert_eq!(count_of(&eater, 117), 1);
+    assert_eq!(count_of(&eater, 422), 1);
     use_slot(&mut eater, 1);
     let active = eater.h.app.world().get::<ActiveAuras>(caster).unwrap();
-    let elixir = active.iter().find(|aura| aura.spell_id == 2367).unwrap();
-    assert_eq!(elixir.effects[0].amount, 4.0);
-    assert_eq!(count_of(&eater, 2454), 1);
+    let elixir = active.iter().find(|aura| aura.spell_id == 2374).unwrap();
+    assert_eq!(elixir.effects[0].amount, 7.0);
+    let modifiers = eater
+        .h
+        .app
+        .world()
+        .get::<crate::stats::StatModifiers>(caster)
+        .unwrap();
+    assert_eq!(modifiers.primary_flat.agility, 7.0);
+    assert_eq!(count_of(&eater, 2457), 1);
 }
 
 #[test]

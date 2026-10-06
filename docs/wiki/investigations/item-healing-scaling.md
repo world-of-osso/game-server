@@ -12,7 +12,7 @@ Instrumentation reproduced an injured level-90 warrior at 18444/100000 health: i
 
 Algari ranks 211878/211879/211880 share spell 431416, coefficient 5450 and scaling class -9. ItemSparse levels 265/275/285 become 56/58/60 through the existing Midnight item-squish curve 92181. RandPropPoints DamageSecondaryF is 8.54874134064/9.14560699463/9.79184818268; float multiplication and rounding yield **46591/49844/53366 health**, before healing modifiers and overheal. Character level does not select this budget.
 
-The item-use path retains the effective item level on a per-cast spell clone. Cast bars retain that clone; missiles already retain their spell; triggered spells inherit its item level. Aura application snapshots the clone's amounts rather than reloading the context-free catalog spell. The shared amount calculator uses DamageReplaceStatF for class -8, DamageSecondaryF for -9, and SuperiorF_0 (rare chest budget) for other nonzero item-scaling classes. Positive amounts below one become one before rounding. Spells without a casting item use level 1, matching TrinityCore's defined effectiveItemLevel.
+The item-use path retains the effective item level on a per-cast spell clone. Cast bars and missiles retain that clone; triggered spells inherit its item level. Aura application snapshots the clone's amounts rather than reloading the context-free catalog spell. The shared amount calculator uses DamageReplaceStatF for class -8, DamageSecondaryF for -9, and SuperiorF_0 (rare chest budget) for other nonzero item-scaling classes. Positive amounts below one become one before rounding. Spells without a casting item use level 1, matching TrinityCore's defined effectiveItemLevel.
 
 ## Regression coverage
 
@@ -20,9 +20,13 @@ The item-use path retains the effective item level on a per-cast spell clone. Ca
 
 - Algari rank 1: level-90 warrior in combat; exactly 46591 health, one potion consumed.
 - Algari ranks 2/3: levels 71/80; 49844/53366 health, proving item rather than player-level scaling.
-- Minor Healing Potion 118 at level 10: spell 439, class -9; 121 health. Healing Tonic 109223 at level 40: spell 156438, rare chest budget; 3 health.
-- Tough Jerky 117: spell 433 regenerates its scaled food amount while seated. Elixir of Lion's Strength 2454: spell 2367 grants 4 strength.
-- Antiseptic Bandage 111603 at level 40: spell 161255 retains a one-point periodic heal after consumption.
+- Minor Healing Potion 118 at level 10: spell 439, class -9; 121 health. Healing Potion 929 at level 20: spell 441, rare chest budget; 1 health.
+- Dwarven Mild 422 at level 10: spell 435 adds its one-point food amount; five seated regeneration ticks restore 153 health, versus 150 without food. Elixir of Minor Agility 2457: spell 2374 grants 7 agility.
+- Netherweave Bandage 21990 at level 40: spell 27030 retains a one-point periodic heal after consumption.
+
+The delayed cast-bar and missile tests alter the real Algari spell in memory to exercise context lifetime; they do not claim Algari itself has travel or cast time.
+
+Catalog limitations found read-only: Healing Tonic 109223 and Antiseptic Bandage 111603 exist in DB2 but not `content_item`, so the server cannot currently use them. RandPropPoints levels **1–3** have zero floating budgets: Tough Jerky 117 and Elixir of Lion's Strength 2454 therefore still produce zero from their source data, not from the removed coefficient bypass. No fallback or data changes were added. Positive-budget fixtures above isolate the code regression.
 
 Representative tests do not establish full support for every consumable script. Existing class -6/-7 item-level multipliers and target-level scaling remain outside this fix.
 
