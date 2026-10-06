@@ -119,13 +119,6 @@ impl Totals {
         let totals = self.source_mut(source);
         if actor {
             match event.kind {
-                CombatLogKind::Damage if event.source != event.target && event.amount > 0 => {
-                    totals.total += event.amount as u64;
-                    *totals
-                        .spells
-                        .entry(event.spell_id.unwrap_or(0))
-                        .or_default() += event.amount as u64;
-                }
                 CombatLogKind::Heal => {
                     let amount = event.amount.max(0) as u64;
                     let overheal = (event.overflow.max(0) as u64).min(amount);
@@ -338,6 +331,15 @@ impl DamageMeter {
         {
             return;
         }
+        if actor && event.kind == CombatLogKind::Damage {
+            self.record(
+                now,
+                source,
+                event.spell_id.unwrap_or(0),
+                event.amount as u64,
+            );
+            return;
+        }
         self.begin(now);
         self.current
             .as_mut()
@@ -358,6 +360,16 @@ impl DamageMeter {
             .absorbs += amount;
         self.overall.source_mut(source).absorbs += amount;
         self.dirty = true;
+    }
+
+    fn include_roster(&mut self, roster: &[DamageSource]) {
+        self.visible_units = roster.iter().map(|member| member.unit).collect();
+        for member in roster {
+            self.overall.source_mut(member);
+            if let Some(current) = self.current.as_mut() {
+                current.totals.source_mut(member);
+            }
+        }
     }
 
     fn overall_secs(&self, now: f64) -> f64 {
@@ -470,14 +482,8 @@ fn record_for_group(
         let mut entity = world.entity_mut(recipient);
         let mut entry = entity.entry::<DamageMeter>().or_default();
         let mut meter = entry.get_mut();
-        meter.visible_units = recipients.clone();
         meter.record_event(now, source, event, actor);
-        for member in &roster {
-            meter.overall.source_mut(member);
-            if let Some(current) = meter.current.as_mut() {
-                current.totals.source_mut(member);
-            }
-        }
+        meter.include_roster(&roster);
     }
 }
 
@@ -509,13 +515,17 @@ pub(crate) fn record_absorb(world: &mut World, caster: Entity, amount: f32) {
         return;
     }
     let now = world.resource::<Time>().elapsed_secs_f64();
-    for recipient in meter_recipients(world, source.unit) {
-        world
-            .entity_mut(recipient)
-            .entry::<DamageMeter>()
-            .or_default()
-            .get_mut()
-            .record_absorb(now, &source, amount);
+    let recipients = meter_recipients(world, source.unit);
+    let roster: Vec<_> = recipients
+        .iter()
+        .filter_map(|&unit| player_source(world, unit))
+        .collect();
+    for recipient in recipients {
+        let mut entity = world.entity_mut(recipient);
+        let mut entry = entity.entry::<DamageMeter>().or_default();
+        let mut meter = entry.get_mut();
+        meter.record_absorb(now, &source, amount);
+        meter.include_roster(&roster);
     }
 }
 
