@@ -54,6 +54,7 @@ New behavioral assertions (`crates/server/src/damage_meter_tests.rs`):
 - `groupmeter_healing_is_visible_to_a_non_casting_group_member`, `groupmeter_raid_receives_healing_without_counting_creature_damage`: party/raid healing and zero damage from creature hits.
 - `groupmeter_first_absorb_exports_the_whole_roster`, `groupmeter_real_shield_consumption_credits_the_caster_group`: absorb-only roster and real Power Word: Shield consumption; mitigation is not counted twice. First-absorb RED exported one source instead of two before roster seeding was fixed.
 - `groupmeter_categories_reset_current_but_preserve_overall`, `groupmeter_unlogged_death_transition_counts_once`: segment category reset and missing/logged Death transition accounting.
+- `damage_meter_action_spell_caps_preserve_totals_and_existing_pairs`: both action categories retain 16 distinct cast/affected pairs, increment retained pairs after the cap, preserve full counts for omitted pairs, clear Current detail at the next session, and preserve Overall detail.
 - `groupmeter_export_caps_detail_without_losing_totals`: spell-detail and UTF-8 name caps retain full damage totals. Protocol `damage_meter_snapshot_round_trips_on_the_wire` includes every new field; `damage_meter_maximum_snapshot_fits_payload_bound` round-trips a maximum-width 40-source, two-session fixture below the advertised byte bound. Registration and existing threat round-trip also pass.
 
 
