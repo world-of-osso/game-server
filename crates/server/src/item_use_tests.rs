@@ -34,10 +34,14 @@ fn world_db() -> std::path::PathBuf {
 /// A level 10 mage out of combat at 100/1000 health with `count` of each of `items` in
 /// its backpack, in order from slot 0.
 fn eater(items: &[u32], count: u32) -> Option<Eater> {
-    let mut h = harness(Vec::new(), &[BREAD_FOOD, WATER_DRINK], MAGE)?;
+    eater_with_spells(items, count, &[BREAD_FOOD, WATER_DRINK], MAGE)
+}
+
+fn eater_with_spells(items: &[u32], count: u32, spells: &[u32], class: u8) -> Option<Eater> {
+    let mut h = harness(Vec::new(), spells, class)?;
     let templates = crate::item_templates::load_item_templates(&world_db()).unwrap();
     let db = persistence::temp_database();
-    let (character_id, _) = persistence::create_character(&db, 1, "Eater", 1, MAGE).unwrap();
+    let (character_id, _) = persistence::create_character(&db, 1, "Eater", 1, class).unwrap();
     let items = items
         .iter()
         .map(|&item_id| InventoryItemData {
@@ -235,4 +239,82 @@ fn water_restores_a_percent_of_mana_each_second_beside_food() {
     let mut active = auras(&eater);
     active.sort_unstable();
     assert_eq!(active, vec![BREAD_FOOD, WATER_DRINK]);
+}
+
+/// DB2 12.0: Algari uses effect 0 of 431416, coefficient 5450, class -9,
+/// attribute 11 bit 4. Item level 265 squishes to 56; DamageSecondaryF
+/// 8.54874134064 gives round(5450 * 8.54874134064) = 46591.
+#[test]
+fn potionfix_algari_heals_injured_level_90_warrior_in_combat() {
+    assert_item_heal(211_878, 431_416, 90, 46_591.0);
+}
+
+#[test]
+fn potionfix_algari_ranks_use_item_level_not_character_level() {
+    assert_item_heal(211_879, 431_416, 71, 49_844.0);
+    assert_item_heal(211_880, 431_416, 80, 53_366.0);
+}
+
+#[test]
+fn potionfix_minor_potion_and_healing_tonic_scale_at_other_levels() {
+    assert_item_heal(118, 439, 10, 121.0);
+    assert_item_heal(109_223, 156_438, 40, 3.0);
+}
+
+fn assert_item_heal(item: u32, spell_id: u32, level: u8, expected: f32) {
+    let mut eater = eater_with_spells(&[item], 2, &[spell_id], 1).expect("world DB");
+    let caster = eater.h.caster;
+    app_world(&mut eater.h).entity_mut(caster).insert((
+        shared::components::Level(u32::from(level)),
+        shared::components::UnitLevel(level),
+        Health {
+            current: 18_444.0,
+            max: 100_000.0,
+        },
+        CombatStatus(true),
+    ));
+    let store = eater
+        .h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>();
+    let spell = store.get(spell_id).unwrap();
+    let effect = &spell.effects[0];
+    eprintln!(
+        "item={item} spell={spell_id} level={level} effect={} type={} target={:?} coefficient={} class={} base={} attrs11={:#x}",
+        effect.index,
+        effect.effect,
+        effect.implicit_targets,
+        effect.coefficient,
+        effect.scaling_class,
+        effect.base_points,
+        spell.misc.as_ref().unwrap().attributes[11]
+    );
+    use_slot(&mut eater, 0);
+    eprintln!(
+        "item={item} health={} logs={:?}",
+        eater.h.health(caster),
+        eater.h.inbox.log
+    );
+    assert!(errors(&mut eater).is_empty());
+    assert!(
+        eater.h.inbox.failed.is_empty(),
+        "{:?}",
+        eater.h.inbox.failed
+    );
+    assert_eq!(count_of(&eater, item), 1, "one item consumed");
+    assert_eq!(eater.h.health(eater.h.npc), 5000.0, "enemy not healed");
+    let heal = eater
+        .h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(spell_id) && event.kind == shared::protocol::CombatLogKind::Heal
+        })
+        .expect("heal reaches target resolution");
+    assert_eq!(heal.target, Some(caster.to_bits()), "self target resolved");
+    assert_eq!(heal.overflow, 0, "not clamped by health or encounter");
+    assert_eq!(eater.h.health(caster) - 18_444.0, expected);
+    assert_eq!(heal.amount as f32, expected);
 }
