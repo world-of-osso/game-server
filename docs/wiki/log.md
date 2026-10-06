@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-06] systems | Dungeon objectives and achievement window data
+
+Updated [[dungeon-achievements]] and its spec with phase-2 local category import, bounded request-only catalog/criteria pages, persisted earned dates, and copy-scoped dungeon snapshots. [Client hookup](../dungeon-achievements-client.md) pins fields, bounds and Retail file:line references. Import fixture GREEN; locked Rust RED confirms missing protocol/page API. Runtime GREEN pending.
+
 ## [2026-10-05] investigations | Northshire native versus effective stats
 
 Updated [[level-scaling]] with the `c8cd38f` audit: ContentTuning 73 gives native level 30 / 4,379 health, but level-1 effective stats are 1 / 78. `npc-info` reports the native pool without a viewer. Source difficulty rows agree; Elwynn and Durotar share the pattern. Added three real-spawn `creaturelevel_*` regressions, including tuning-13 Flesh Eater's higher floor and lethal scaled health loss. Client runtime failure is not established; server native-level semantics preserved.

@@ -22,6 +22,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 ## How it works
 
 - [Dungeon achievements](../wiki/systems/dungeon-achievements.md)
+- [Phase-2 client hookup and payload bounds](../dungeon-achievements-client.md)
 - [Boss scripts](../wiki/systems/boss-scripts.md)
 
 ## Implementation inventory
@@ -29,6 +30,8 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 - `scripts/import_achievements.py` — pinned local DB2 CSV export and atomic SQLite import.
 - `scripts/db2_casc.py` — existing WDC5 reader, extended for decrypted sections and virtual string blocks.
 - `crates/server/src/achievement_catalog.rs` — supported catalog, counters, tree evaluation and grants.
+- `crates/server/src/achievement_window.rs` — bounded presentation catalog and criterion continuations.
+- `crates/server/src/dungeon_progress.rs` — copy entry/reconnect and defeat snapshots.
 - `crates/server/src/achievement.rs` — persistent character state, gameplay events and existing message delivery.
 - `crates/server/src/maps/store.rs`, `instances.rs` — ordered encounter rows and copy masks.
 - `crates/server/src/scripted_ai/instance_script.rs` — successful encounter hook.
@@ -37,6 +40,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 - `crates/server/src/achievement_catalog_tests.rs`
 - `crates/server/src/achievement_tests.rs`
+- `crates/server/src/achievement_window_tests.rs` — real catalog continuation and unknown-ID behavior.
 - `crates/server/src/achievement_normal_lock_tests.rs`
 - `crates/server/src/scripted_ai/tests/dungeonach.rs`
 - `scripts/tests/test_db2_sections.py`

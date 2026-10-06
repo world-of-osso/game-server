@@ -5,7 +5,8 @@ use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::components::{Level, Npc};
 use shared::protocol::{
-    AchievementChannel, AchievementSnapshot, AchievementStateUpdate, AchievementToastSnapshot,
+    AchievementCatalogPage, AchievementChannel, AchievementSnapshot, AchievementStateUpdate,
+    AchievementToastSnapshot, QueryAchievementCatalog,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -16,12 +17,16 @@ use crate::persistence::{self, GameDatabase};
 #[path = "achievement_catalog.rs"]
 mod catalog;
 pub(crate) use catalog::{AchievementCatalog, CriteriaEvent, load_achievement_catalog};
+#[path = "dungeon_progress.rs"]
+mod dungeon;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerAchievementState {
     pub earned_ids: BTreeSet<u32>,
     #[serde(default)]
     pub criteria_progress: BTreeMap<u32, u64>,
+    #[serde(default)]
+    pub earned_at: BTreeMap<u32, i64>,
 }
 
 /// One-time migration of the six former level placeholders. Counter-bearing rows
@@ -57,11 +62,14 @@ pub struct AchievementPlugin;
 
 impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<crate::maps::ServerClock>();
         app.add_systems(
             Update,
             (
                 send_initial_achievement_snapshot,
                 process_level_achievement_updates,
+                dungeon::send_entry_progress,
+                send_requested_catalog_pages,
             )
                 .chain(),
         );
@@ -128,12 +136,16 @@ fn update_player_events(
     if !world.contains_resource::<AchievementCatalog>() {
         return None;
     }
+    let now = world.resource::<crate::maps::ServerClock>().unix();
     let result = world.resource_scope(|world, catalog: Mut<AchievementCatalog>| {
         let mut state = world.get_mut::<PlayerAchievementState>(player)?;
-        let toasts = events
+        let toasts: Vec<_> = events
             .iter()
             .flat_map(|event| catalog.update(&mut state, *event, completed_map))
             .collect();
+        for toast in &toasts {
+            state.earned_at.insert(toast.achievement_id, now);
+        }
         Some((catalog.snapshot(&state), toasts))
     });
     if result.is_some() {
@@ -206,6 +218,8 @@ pub(crate) fn record_encounter_defeat(
     {
         return;
     }
+    dungeon::send_map_progress(world, map);
+    let store = world.resource::<crate::maps::MapStore>();
     let encounters = store.encounters_for_map(map.map_id, difficulty);
     let mask = world
         .get_resource::<crate::maps::InstanceManager>()
@@ -265,6 +279,36 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity, killer:
     };
     if let Some(connection) = connection_for_player(world, killer) {
         send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+fn send_requested_catalog_pages(world: &mut World) {
+    let requests: Vec<_> = world
+        .query_filtered::<(
+            Entity,
+            &PlayerLink,
+            &mut MessageReceiver<QueryAchievementCatalog>,
+        ), (With<Authenticated>, With<InWorld>)>()
+        .iter_mut(world)
+        .flat_map(|(connection, link, mut receiver)| {
+            receiver
+                .receive()
+                .map(|request| (connection, link.0, request))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (connection, player, request) in requests {
+        let Some(catalog) = world.get_resource::<AchievementCatalog>() else {
+            continue;
+        };
+        let Some(state) = world.get::<PlayerAchievementState>(player) else {
+            continue;
+        };
+        let page = catalog.page(state, request);
+        if let Some(mut sender) = world.get_mut::<MessageSender<AchievementCatalogPage>>(connection)
+        {
+            sender.send::<AchievementChannel>(page);
+        }
     }
 }
 

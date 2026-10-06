@@ -91,6 +91,7 @@ struct AchievementDef {
 
 #[derive(Resource, Debug, Default)]
 pub(crate) struct AchievementCatalog {
+    window: window::WindowData,
     definitions: BTreeMap<u32, AchievementDef>,
     criteria: HashMap<u32, Criteria>,
     pub trees: HashMap<u32, CriteriaTree>,
@@ -297,6 +298,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
     load_criteria(conn, &mut catalog)?;
     load_trees(conn, &mut catalog)?;
     load_definitions(conn, &mut catalog)?;
+    catalog.window = window::load_window_data(conn)?;
     for (&id, criteria) in &catalog.criteria {
         if criteria.supported {
             catalog
@@ -380,3 +382,11 @@ fn load_definitions(conn: &Connection, catalog: &mut AchievementCatalog) -> rusq
 #[cfg(test)]
 #[path = "achievement_catalog_tests.rs"]
 mod tests;
+
+#[path = "achievement_window.rs"]
+mod window;
+pub(crate) use window::bound_text;
+
+#[cfg(test)]
+#[path = "achievement_window_tests.rs"]
+mod window_tests;

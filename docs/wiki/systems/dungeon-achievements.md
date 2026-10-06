@@ -1,10 +1,10 @@
 # Dungeon achievements
 
-Server phase 1 loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, and sends existing achievement snapshots/toasts. [Contract](../../specs/dungeon-achievements.md).
+Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
 ## Data and provenance
 
-Verified 2026-10-06: `/mnt/c/World of Warcraft/.build.info` names retail build `12.1.0.69933`, build key `dcfc90fffd79ba00406ae46f5f657592`. Local community listfile maps Achievement=1260179, Criteria=1263817, CriteriaTree=1263818, Achievement_Category=1324299. Category is not required by phase 1.
+Verified 2026-10-06: `/mnt/c/World of Warcraft/.build.info` names retail build `12.1.0.69933`, build key `dcfc90fffd79ba00406ae46f5f657592`. Local community listfile maps Achievement=1260179, Criteria=1263817, CriteriaTree=1263818, Achievement_Category=1324299. Phase 2 extracts Category from the same local build to server data; layout `67B2B4BD`, 243 rows. Achievement display metadata adds Category column 7 and IconFileID column 12. Category columns are Name/ID/Parent/Ui_order; the relationship repeats Ui_order, not a parent ID.
 
 Extraction (under game-engine's agent-run, no CDN/web):
 
@@ -41,14 +41,21 @@ No TrinityCore checkout is available under `~/Repos`; interpretation uses observ
 
 The eight other passing tests cover actual level thresholds, real encounter asset matching, All/Any/direct count, character progress reopen, one-time placeholder migration, scheduled lock restore and normal Stockade checkpoint restore/manual reset. No broad suites, protocol edits, push or merge.
 
-## Phase 2 client needs
+## Phase 2 runtime and client handoff
 
-A dungeon-progress message must carry copy identity, difficulty, ordered encounter IDs/names and defeated state; send an initial snapshot on entry/reconnect and updates on successful completion/reset. Objective tracker renders one row per boss. Achievement window needs catalog metadata/categories and current/required/earned state; existing AchievementStateUpdate already supplies snapshots/toasts. No protocol changes are implemented here.
+[Client hookup contract, bounds and pinned Retail file:line references](../../dungeon-achievements-client.md). `achievement_window.rs` keeps full presentation metadata separate from the supported grant catalog: listing an unsupported achievement never enables its criteria. Fixed ID-cursor pages include the first criteria page, plus a separate continuation request. Criterion descriptions and order come from CriteriaTree. Catalog data is request-only; old snapshot/toast delivery remains unchanged.
+
+`dungeon_progress.rs` detects new InWorld and copy changes, broadcasting a full replacement snapshot to authenticated in-world connections in that copy. The successful encounter hook sends after the mask is saved. Duplicate DONE is already rejected upstream. Encounter names/flags load from the existing localized DungeonEncounter table. Maximum 32 rows per applicable map/difficulty is validated at startup. Optionality is explicitly unknown: no verified optional Flags bit is assumed.
+
+Newly earned character IDs acquire `earned_at` Unix seconds from ServerClock at the gameplay boundary and persist with counters. Old saved JSON lacks dates; serde defaults the map empty, preserving unknown dates rather than inventing history. Catalog evaluation remains pure; only the world event boundary reads the clock.
+
+Phase-2 RED: locked detached local helper compiled the new Stockade/continuation tests against missing messages/page method and failed with unresolved imports and missing `page`, exit 101. Python import RED lacked achievement_category; GREEN returned the concrete Stockade category 14808 (Classic, parent 168), icon 134163, 10 points and 243 categories. The existing missing encrypted records still produce explicit decoder warnings; none affects these fixtures. Rust GREEN pending.
 
 ## Sources
 
 - `scripts/import_achievements.py`, `scripts/db2_casc.py` — local extraction/export/import.
-- `crates/server/src/achievement_catalog.rs`, `achievement.rs` — catalog and gameplay integration.
+- `crates/server/src/achievement_catalog.rs`, `achievement_window.rs`, `achievement.rs`, `dungeon_progress.rs` — catalog, bounded presentation and gameplay delivery.
+- [Client hookup](../../dungeon-achievements-client.md) — protocol fields, bounds and Retail sources.
 - `crates/server/src/maps/store.rs`, `instances.rs`, `locks.rs` — encounter ordering, masks and lock persistence.
 - `crates/server/src/scripted_ai/tests/dungeonach.rs` — real Stockade death/message proof.
 
