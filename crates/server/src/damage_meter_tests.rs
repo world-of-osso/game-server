@@ -479,6 +479,8 @@ fn groupmeter_three_players_receive_exact_categories_and_capped_recaps() {
                 app.world_mut(),
                 CombatLogEvent {
                     kind: CombatLogKind::Interrupt,
+                    spell_id: Some(2139),
+                    extra_spell_id: Some(116),
                     ..damage_line(player, mob, 0)
                 },
             );
@@ -488,6 +490,8 @@ fn groupmeter_three_players_receive_exact_categories_and_capped_recaps() {
                 app.world_mut(),
                 CombatLogEvent {
                     kind: CombatLogKind::Dispel,
+                    spell_id: Some(527),
+                    extra_spell_id: Some(589),
                     ..damage_line(player, tank, 0)
                 },
             );
@@ -542,6 +546,22 @@ fn groupmeter_three_players_receive_exact_categories_and_capped_recaps() {
                     .iter()
                     .find(|source| source.unit == unit.to_bits())
                     .unwrap();
+                let action_spells = |spell_id, affected_spell_id, count| {
+                    if count == 0 {
+                        Vec::new()
+                    } else {
+                        vec![shared::protocol::DamageMeterActionSpell {
+                            spell_id,
+                            affected_spell_id: Some(affected_spell_id),
+                            total_amount: count,
+                        }]
+                    }
+                };
+                assert_eq!(
+                    source.interrupt_spells,
+                    action_spells(2139, 116, expected.4)
+                );
+                assert_eq!(source.dispel_spells, action_spells(527, 589, expected.5));
                 assert_eq!(
                     (
                         source.total_amount,
@@ -607,6 +627,67 @@ fn groupmeter_export_caps_detail_without_losing_totals() {
             assert_eq!(source.name, "é".repeat(24));
         }
     }
+}
+
+#[test]
+fn damage_meter_action_spell_caps_preserve_totals_and_existing_pairs() {
+    use shared::protocol::DAMAGE_METER_MAX_ACTION_SPELLS;
+    let source = DamageSource {
+        unit: unit(1),
+        name: "Mage".into(),
+        class_id: 8,
+    };
+    let mut meter = DamageMeter::default();
+    for kind in [CombatLogKind::Interrupt, CombatLogKind::Dispel] {
+        for affected in 0..DAMAGE_METER_MAX_ACTION_SPELLS as u32 + 2 {
+            meter.record_event(
+                0.0,
+                &source,
+                &CombatLogEvent {
+                    kind,
+                    spell_id: Some(2139),
+                    extra_spell_id: Some(affected),
+                    ..damage_line(source.unit, unit(2), 0)
+                },
+                true,
+            );
+        }
+        meter.record_event(
+            0.0,
+            &source,
+            &CombatLogEvent {
+                kind,
+                spell_id: Some(2139),
+                extra_spell_id: Some(0),
+                ..damage_line(source.unit, unit(2), 0)
+            },
+            true,
+        );
+    }
+    let snapshot = meter.snapshot(1.0, source.unit);
+    for session in [snapshot.current.as_ref().unwrap(), &snapshot.overall] {
+        let source = &session.sources[0];
+        assert_eq!(source.interrupts, DAMAGE_METER_MAX_ACTION_SPELLS as u64 + 3);
+        assert_eq!(source.dispels, DAMAGE_METER_MAX_ACTION_SPELLS as u64 + 3);
+        for entries in [&source.interrupt_spells, &source.dispel_spells] {
+            assert_eq!(entries.len(), DAMAGE_METER_MAX_ACTION_SPELLS);
+            assert_eq!(entries[0].affected_spell_id, Some(0));
+            assert_eq!(entries[0].total_amount, 2);
+            assert!(entries.iter().all(|entry| entry.spell_id == 2139));
+            assert_eq!(
+                entries.iter().map(|entry| entry.total_amount).sum::<u64>(),
+                DAMAGE_METER_MAX_ACTION_SPELLS as u64 + 1
+            );
+        }
+    }
+    meter.end(1.0);
+    meter.begin(2.0);
+    let snapshot = meter.snapshot(3.0, source.unit);
+    assert!(snapshot.current.unwrap().sources.is_empty());
+    assert_eq!(
+        snapshot.overall.sources[0].interrupt_spells[0].total_amount,
+        2
+    );
 }
 
 #[test]

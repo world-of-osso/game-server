@@ -22,10 +22,11 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Player};
 use shared::protocol::{
-    CombatChannel, CombatLogEvent, CombatLogKind, DAMAGE_METER_MAX_DEATH_RECAPS,
-    DAMAGE_METER_MAX_NAME_BYTES, DAMAGE_METER_MAX_RECAP_EVENTS, DAMAGE_METER_MAX_SOURCES,
-    DAMAGE_METER_MAX_SPELLS, DamageMeterDeathRecap, DamageMeterSession, DamageMeterSnapshot,
-    DamageMeterSource, DamageMeterSpell,
+    CombatChannel, CombatLogEvent, CombatLogKind, DAMAGE_METER_MAX_ACTION_SPELLS,
+    DAMAGE_METER_MAX_DEATH_RECAPS, DAMAGE_METER_MAX_NAME_BYTES, DAMAGE_METER_MAX_RECAP_EVENTS,
+    DAMAGE_METER_MAX_SOURCES, DAMAGE_METER_MAX_SPELLS, DamageMeterActionSpell,
+    DamageMeterDeathRecap, DamageMeterSession, DamageMeterSnapshot, DamageMeterSource,
+    DamageMeterSpell,
 };
 
 use crate::auth::Authenticated;
@@ -70,7 +71,9 @@ struct SourceTotals {
     overhealing: u64,
     absorbs: u64,
     interrupts: u64,
+    interrupt_spells: Vec<DamageMeterActionSpell>,
     dispels: u64,
+    dispel_spells: Vec<DamageMeterActionSpell>,
     deaths: u64,
     death_recaps: VecDeque<DamageMeterDeathRecap>,
     recent_events: VecDeque<CombatLogEvent>,
@@ -98,7 +101,9 @@ impl Totals {
                     overhealing: 0,
                     absorbs: 0,
                     interrupts: 0,
+                    interrupt_spells: Vec::new(),
                     dispels: 0,
+                    dispel_spells: Vec::new(),
                     deaths: 0,
                     death_recaps: VecDeque::new(),
                     recent_events: VecDeque::new(),
@@ -125,8 +130,14 @@ impl Totals {
                     totals.healing_done += amount - overheal;
                     totals.overhealing += overheal;
                 }
-                CombatLogKind::Interrupt => totals.interrupts += 1,
-                CombatLogKind::Dispel => totals.dispels += 1,
+                CombatLogKind::Interrupt => {
+                    totals.interrupts += 1;
+                    record_action_spell(&mut totals.interrupt_spells, event);
+                }
+                CombatLogKind::Dispel => {
+                    totals.dispels += 1;
+                    record_action_spell(&mut totals.dispel_spells, event);
+                }
                 _ => {}
             }
         }
@@ -201,7 +212,9 @@ impl Totals {
                     overhealing: totals.overhealing,
                     absorbs: totals.absorbs,
                     interrupts: totals.interrupts,
+                    interrupt_spells: rank_action_spells(&totals.interrupt_spells),
                     dispels: totals.dispels,
+                    dispel_spells: rank_action_spells(&totals.dispel_spells),
                     deaths: totals.deaths,
                     death_recaps: totals.death_recaps.iter().cloned().collect(),
                 }
@@ -221,6 +234,36 @@ impl Totals {
             sources,
         }
     }
+}
+
+fn record_action_spell(spells: &mut Vec<DamageMeterActionSpell>, event: &CombatLogEvent) {
+    let Some(spell_id) = event.spell_id else {
+        return;
+    };
+    let affected_spell_id = event.extra_spell_id;
+    let existing = spells
+        .iter_mut()
+        .find(|entry| entry.spell_id == spell_id && entry.affected_spell_id == affected_spell_id);
+    if let Some(entry) = existing {
+        entry.total_amount += 1;
+    } else if spells.len() < DAMAGE_METER_MAX_ACTION_SPELLS {
+        spells.push(DamageMeterActionSpell {
+            spell_id,
+            affected_spell_id,
+            total_amount: 1,
+        });
+    }
+}
+
+fn rank_action_spells(spells: &[DamageMeterActionSpell]) -> Vec<DamageMeterActionSpell> {
+    let mut ranked = spells.to_vec();
+    ranked.sort_by(|a, b| {
+        b.total_amount
+            .cmp(&a.total_amount)
+            .then(a.spell_id.cmp(&b.spell_id))
+            .then(a.affected_spell_id.cmp(&b.affected_spell_id))
+    });
+    ranked
 }
 
 fn push_capped<T>(queue: &mut VecDeque<T>, value: T, limit: usize) {
