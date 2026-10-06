@@ -115,21 +115,7 @@ impl AchievementCatalog {
         request: QueryAchievementCatalog,
     ) -> AchievementCatalogPage {
         match request {
-            QueryAchievementCatalog::Categories { after_id } => {
-                let rows = self
-                    .window
-                    .categories
-                    .iter()
-                    .filter(|(id, _)| **id > after_id);
-                let (categories, next_id) = paginate(
-                    rows.map(|(id, row)| (*id, row.clone())),
-                    ACHIEVEMENT_CATEGORY_PAGE_SIZE,
-                );
-                AchievementCatalogPage::Categories {
-                    categories,
-                    next_id,
-                }
-            }
+            QueryAchievementCatalog::Categories { after_id } => self.categories_page(after_id),
             QueryAchievementCatalog::Category {
                 category_id,
                 after_id,
@@ -145,6 +131,22 @@ impl AchievementCatalog {
                     next_id,
                 }
             }
+        }
+    }
+
+    fn categories_page(&self, after_id: u32) -> AchievementCatalogPage {
+        let rows = self
+            .window
+            .categories
+            .iter()
+            .filter(|(id, _)| **id > after_id);
+        let (categories, next_id) = paginate(
+            rows.map(|(id, row)| (*id, row.clone())),
+            ACHIEVEMENT_CATEGORY_PAGE_SIZE,
+        );
+        AchievementCatalogPage::Categories {
+            categories,
+            next_id,
         }
     }
 

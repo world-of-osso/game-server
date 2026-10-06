@@ -153,3 +153,32 @@ fn dungeon2_criteria_paging_and_unknown_requests_are_bounded() {
     assert!(criteria.is_empty());
     assert_eq!(next_id, None);
 }
+
+#[test]
+fn dungeon2_utf8_caps_preserve_character_boundaries() {
+    assert_eq!(bound_text("Aé😀Z", 4), "Aé");
+    assert_eq!(bound_text("Aé😀Z", 0), "");
+    assert_eq!(bound_text("Aé😀Z", 8), "Aé😀Z");
+}
+
+#[test]
+fn dungeon2_legacy_earned_dates_are_unknown() {
+    let catalog = catalog();
+    let (state, _) = crate::achievement::decode_saved_achievement_state(br#"{"earned_ids":[633]}"#);
+    let page = catalog.page(
+        &state,
+        QueryAchievementCatalog::Category {
+            category_id: 14808,
+            after_id: 632,
+        },
+    );
+    let AchievementCatalogPage::Category { achievements, .. } = page else {
+        panic!("category");
+    };
+    let stockade = achievements
+        .iter()
+        .find(|row| row.achievement_id == 633)
+        .unwrap();
+    assert!(stockade.earned);
+    assert_eq!(stockade.earned_at, None);
+}
