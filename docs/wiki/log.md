@@ -571,4 +571,4 @@ Updated [[experience]] for persisted accumulation and kill bonus consumption; do
 
 ## [2026-10-05] systems | Player-managed guild ranks
 
-Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md): GM controls, strict hierarchy, per-rank social/bank rights, atomic member remapping and layout-2 migration. Targeted RED failed for missing rank APIs; GREEN pending. No deployment or native settings UI proof.
+Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md): GM controls, strict hierarchy, per-rank social/bank rights, atomic member remapping and layout-2 migration. Targeted RED failed for missing rank APIs. GREEN at `26b1264`: 37 guild-related server tests and one admin test pass; protocol wire test passes at `fe5ea8d`. Additional REDs reproduced cross-guild chat with stale membership components and erased masked tab settings; both now pass. No deployment or native settings UI proof.

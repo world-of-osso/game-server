@@ -40,7 +40,9 @@ Every table is defined in `persistence_banks.rs`.
 `save_guild_ranks` commits the rank list and materialized member positions together;
 `ChangedGuilds` refreshes open vaults after edits. `guilds` layout 2 adds social flags
 and migrates layouts 0/1 once, preserving bank state. Chat gates speaker and listener
-before recording recipients in history.
+before recording recipients in history. Social permission checks include the persisted
+guild ID, not only a cached component; hidden tab settings stay stored independently
+from the view/action gate.
 
 ## Sources
 
