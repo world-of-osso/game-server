@@ -301,7 +301,7 @@ struct GuildDataV0 {
 
 /// `SERVER_SETTINGS` key of the `GuildData` layout version.
 pub(crate) const GUILD_LAYOUT_KEY: &str = "guild_layout_version";
-/// 1: ranks carry `withdraw_repair`.
+/// 2: ranks carry social rights (layout 1 added `withdraw_repair`).
 pub(crate) const GUILD_LAYOUT_VERSION: u32 = 2;
 
 fn default_social_rights(officer: bool) -> u32 {
@@ -392,7 +392,7 @@ impl From<GuildDataV0> for GuildData {
     }
 }
 
-/// Rewrite every stored guild from layout version 0 to 1 in one transaction, once.
+/// Rewrite stored guilds from layout 0/1 to 2 in one transaction, once.
 pub(crate) fn migrate_guild_ranks(db: &Database) {
     let txn = db
         .begin_write()

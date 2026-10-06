@@ -18,13 +18,15 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.
 - [ ] Chat membership decisions use authoritative persisted guild IDs when components are stale.
 - [ ] Invitations, MOTD, guild information and officer-note editing/viewing require their rank flags.
-- [x] Remove-member permission is stored with the rank; no player member-removal action currently exists.
+- [ ] Remove-member permission is stored with the rank; no player member-removal action currently exists.
 
 ### Bank permissions
 - [x] Tab view/deposit and stacks/day are per rank/tab. Zero denies withdrawals; rank 0 alone is unlimited.
 - [x] Gold withdrawal and repair share a copper/day allowance; extra withdrawals are refused.
 - [x] Every bank request reloads the current rank. Hidden tab contents/text/logs are not disclosed.
 - [x] Updated rights are effective for an already-open vault, and open vault views refresh after edits.
+
+- [ ] Hiding a tab preserves its configured deposit flag and daily stack limit; the action/view gate still refuses access.
 
 ### Authority and durability
 - [x] Rank list and affected member positions commit together and survive database reopen.

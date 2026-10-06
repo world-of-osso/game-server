@@ -195,8 +195,8 @@ fn edit_rank(
                 .ok_or(GuildRankError::WrongTab)?;
             *tab = GuildTabRights {
                 view,
-                deposit: view && deposit,
-                withdrawals_per_day: if view { withdrawals_per_day } else { 0 },
+                deposit,
+                withdrawals_per_day,
             };
         }
         GuildRankRequest::Query => {}

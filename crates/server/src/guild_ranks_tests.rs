@@ -254,3 +254,26 @@ fn guild_ranks_retail_two_to_ten_rank_bounds() {
         Err(GuildRankError::TooFewRanks)
     );
 }
+
+#[test]
+fn guild_ranks_tab_view_toggle_preserves_other_tab_settings() {
+    let db = temp_database();
+    let (master, _, _) = members(&db);
+    apply_rank_request(
+        &db,
+        7,
+        master,
+        GuildRankRequest::SetTab {
+            rank: 4,
+            tab: 0,
+            view: false,
+            deposit: true,
+            withdrawals_per_day: 3,
+        },
+    )
+    .unwrap();
+    let guild = load_guild(&db, 7);
+    assert!(!guild.ranks[4].tabs[0].view);
+    assert!(guild.ranks[4].tabs[0].deposit);
+    assert_eq!(guild.ranks[4].tabs[0].withdrawals_per_day, 3);
+}
