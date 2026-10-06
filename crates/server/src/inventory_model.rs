@@ -16,7 +16,8 @@ use shared::protocol::{
     InventorySnapshot, ItemDurability, ItemLocation, ItemStack, REAGENT_BAG,
 };
 
-use crate::item_templates::{BIND_ON_EQUIP, ItemTemplate, ItemTemplates};
+use crate::item_stats::ItemScaling;
+use crate::item_templates::{BIND_ON_EQUIP, ItemTemplate, ItemTemplates, OnUseSpell};
 use crate::persistence::equipment::EquippedItem;
 use crate::persistence::inventory_store::{
     EquippedBagData, InventoryRecord, ItemInstanceData, ItemPlacementData,
@@ -943,13 +944,7 @@ impl InventoryModel {
     pub(crate) fn use_spell(
         &self,
         location: ItemLocation,
-    ) -> Result<
-        (
-            crate::item_templates::OnUseSpell,
-            crate::item_stats::ItemScaling,
-        ),
-        InventoryError,
-    > {
+    ) -> Result<(OnUseSpell, ItemScaling), InventoryError> {
         let item = self.existing(location)?;
         let template = self.template(item);
         if template.is_some_and(|template| template.inventory_type != 0)
