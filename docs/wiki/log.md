@@ -568,3 +568,7 @@ Updated existing Zaralda SSOT and linked specs/reference/index: native-friendly 
 ## 2026-10-05 — Rested XP administration
 
 Updated [[experience]] for persisted accumulation and kill bonus consumption; documented capped online/offline `set-rested` and owner updates. Corrected `LogXpGain.original` versus base `amount`.
+
+## [2026-10-05] systems | Player-managed guild ranks
+
+Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md): GM controls, strict hierarchy, per-rank social/bank rights, atomic member remapping and layout-2 migration. Targeted RED failed for missing rank APIs; GREEN pending. No deployment or native settings UI proof.

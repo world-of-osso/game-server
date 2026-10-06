@@ -35,6 +35,7 @@ type ChatProfileQuery<'w, 's> = Query<
 
 #[derive(SystemParam)]
 pub(crate) struct ChatSystemQueries<'w, 's> {
+    db: Option<Res<'w, GameDatabase>>,
     receivers: Query<
         'w,
         's,
@@ -90,7 +91,15 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
         let online = online_participants(&q.chat_senders, &q.profiles);
         collected
             .iter()
-            .flat_map(|chat| route_and_record(chat, &online, &q.groups, &mut q.history))
+            .flat_map(|chat| {
+                route_guild_chat(
+                    chat,
+                    &online,
+                    &q.groups,
+                    &mut q.history,
+                    q.db.as_deref().map(|db| &db.db),
+                )
+            })
             .collect::<Vec<_>>()
     };
     send_deliveries(deliveries, &mut q.chat_senders);
@@ -269,6 +278,50 @@ fn online_participants<'a>(
         .collect()
 }
 
+/// Gate both speaking and hearing before history records recipients.
+fn route_guild_chat(
+    chat: &CollectedChat,
+    online: &[ChatParticipant],
+    groups: &GroupRegistry,
+    history: &mut ChatHistoryBuffer,
+    db: Option<&redb::Database>,
+) -> Vec<(Entity, ChatMessage)> {
+    use shared::protocol::*;
+    let (speak, listen) = match chat.msg.channel {
+        ChatType::Guild => (GUILD_RIGHT_CHAT_SPEAK, GUILD_RIGHT_CHAT_LISTEN),
+        ChatType::Officer => (GUILD_RIGHT_OFFICER_SPEAK, GUILD_RIGHT_OFFICER_LISTEN),
+        _ => return route_and_record(chat, online, groups, history),
+    };
+    let Some(sender) = online.iter().find(|p| p.entity == chat.sender_entity) else {
+        return Vec::new();
+    };
+    let allowed = |participant: &ChatParticipant, right| {
+        db.is_some_and(|db| {
+            participant
+                .character_id
+                .is_some_and(|id| crate::guild::character_has_right(db, id, right))
+        })
+    };
+    if !allowed(sender, speak) {
+        return vec![(
+            sender.entity,
+            system_message(GuildRankError::Permissions.message().into()),
+        )];
+    }
+    let recipients: Vec<_> = online
+        .iter()
+        .filter(|p| {
+            p.guild_id == sender.guild_id && allowed(p, listen) && accepts_from(p, &chat.msg.sender)
+        })
+        .map(|p| p.entity)
+        .collect();
+    record_history(history, &chat.msg, &recipients, online);
+    recipients
+        .into_iter()
+        .map(|entity| (entity, chat.msg.clone()))
+        .collect()
+}
+
 /// Route one message, record delivered copies in history, and return the
 /// `(player, message)` pairs to send.
 fn route_and_record(
@@ -303,7 +356,9 @@ fn route_chat(
         ChatType::Yell => {
             sender.zone == recipient.zone && within_range(sender, recipient, YELL_RANGE)
         }
-        ChatType::Guild => sender.guild_id.is_some() && recipient.guild_id == sender.guild_id,
+        ChatType::Guild | ChatType::Officer => {
+            sender.guild_id.is_some() && recipient.guild_id == sender.guild_id
+        }
         ChatType::Party => match (sender.character_id, recipient.character_id) {
             (Some(a), Some(b)) => groups.is_in_same_group(a, b),
             _ => false,
@@ -560,6 +615,19 @@ fn handle_guild_invite(
             error: Some("You are not in a guild".into()),
         };
     };
+
+    if !char_ids.get(inviter_entity).is_ok_and(|id| {
+        crate::guild::character_has_right(&db.db, id.0, shared::protocol::GUILD_RIGHT_INVITE)
+    }) {
+        return GuildInviteResponse {
+            success: false,
+            error: Some(
+                shared::protocol::GuildRankError::Permissions
+                    .message()
+                    .into(),
+            ),
+        };
+    }
 
     let Some(target_character_id) =
         persistence::find_character_id_by_name(&db.db, &req.target_character_name)
@@ -829,6 +897,62 @@ mod tests {
             ChatRoute::Deliver(recipients) => recipients,
             ChatRoute::Reject(text) => panic!("expected delivery, got rejection {text:?}"),
         }
+    }
+
+    #[test]
+    fn guild_ranks_gate_guild_and_officer_chat_before_history() {
+        use crate::persistence::banks::*;
+        use shared::protocol::*;
+        let db = persistence::temp_database();
+        let mut world = World::new();
+        let origin = at(0.0);
+        let mut online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &origin, &[]),
+        ];
+        for (participant, rank) in online.iter_mut().zip([0, 4]) {
+            let (id, _) = persistence::create_character(&db, 1, participant.name, 1, 1).unwrap();
+            persistence::set_character_guild_by_id(&db, id, 7, "Bank Testers").unwrap();
+            save_guild_member_rank(&db, id, rank);
+            participant.character_id = Some(id);
+            participant.guild_id = Some(7);
+        }
+        let mut history = ChatHistoryBuffer::default();
+        let groups = GroupRegistry::default();
+        let officer = CollectedChat {
+            msg: chat("Alice", ChatType::Officer),
+            sender_entity: online[0].entity,
+        };
+        let deliveries = route_guild_chat(&officer, &online, &groups, &mut history, Some(&db));
+        assert_eq!(
+            deliveries.iter().map(|d| d.0).collect::<Vec<_>>(),
+            vec![online[0].entity]
+        );
+        assert!(history_for_player(&history, 100, "Bob", None).is_empty());
+        let blocked = CollectedChat {
+            msg: chat("Bob", ChatType::Officer),
+            sender_entity: online[1].entity,
+        };
+        let deliveries = route_guild_chat(&blocked, &online, &groups, &mut history, Some(&db));
+        assert_eq!(deliveries.len(), 1);
+        assert_eq!(deliveries[0].1.channel, ChatType::System);
+        assert_eq!(
+            deliveries[0].1.content,
+            GuildRankError::Permissions.message()
+        );
+        let mut guild = load_guild(&db, 7);
+        guild.ranks[4].rights = GUILD_RIGHT_CHAT_SPEAK;
+        save_guild(&db, 7, &guild);
+        let speaking = CollectedChat {
+            msg: chat("Bob", ChatType::Guild),
+            sender_entity: online[1].entity,
+        };
+        let deliveries = route_guild_chat(&speaking, &online, &groups, &mut history, Some(&db));
+        assert_eq!(
+            deliveries.iter().map(|d| d.0).collect::<Vec<_>>(),
+            vec![online[0].entity]
+        );
+        assert!(history_for_player(&history, 100, "Bob", None).is_empty());
     }
 
     #[test]

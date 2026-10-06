@@ -227,3 +227,54 @@ fn canonical_game_database_migrates() {
         GUILD_LAYOUT_VERSION
     );
 }
+
+#[test]
+fn guild_ranks_layout_one_preserves_bank_allowances_on_upgrade() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("guild.redb");
+    {
+        let db = Database::create(&path).unwrap();
+        let txn = db.begin_write().unwrap();
+        let old = GuildDataV1 {
+            ranks: vec![
+                GuildRankDataV1 {
+                    name: "Master".into(),
+                    withdraw_gold: true,
+                    withdraw_repair: true,
+                    gold_per_day: 0,
+                    tabs: vec![],
+                },
+                GuildRankDataV1 {
+                    name: "Officer".into(),
+                    withdraw_gold: false,
+                    withdraw_repair: true,
+                    gold_per_day: 12_345,
+                    tabs: vec![GuildTabRights {
+                        view: true,
+                        deposit: false,
+                        withdrawals_per_day: 3,
+                    }],
+                },
+            ],
+            money: 90_000,
+            tabs: vec![],
+        };
+        write(&txn, GUILDS, 7, &old);
+        super::super::set_layout_version(&txn, GUILD_LAYOUT_KEY, 1);
+        txn.commit().unwrap();
+    }
+    let db = Database::create(&path).unwrap();
+    create_tables(&db);
+    let guild = load_guild(&db, 7);
+    assert_eq!(guild.money, 90_000);
+    assert_eq!(guild.ranks[1].gold_per_day, 12_345);
+    assert!(!guild.ranks[1].withdraw_gold);
+    assert!(guild.ranks[1].withdraw_repair);
+    assert_eq!(guild.ranks[1].tabs[0].withdrawals_per_day, 3);
+    assert_ne!(
+        guild.ranks[1].rights & shared::protocol::GUILD_RIGHT_INVITE,
+        0
+    );
+    create_tables(&db);
+    assert_eq!(load_guild(&db, 7), guild);
+}

@@ -43,6 +43,8 @@ pub struct GuildTabRights {
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct GuildRankData {
     pub name: String,
+    /// Social rights (`GUILD_RIGHT_*`); monetary rights retain their existing fields.
+    pub rights: u32,
     /// AzerothCore `GR_RIGHT_WITHDRAW_GOLD`.
     pub withdraw_gold: bool,
     /// TrinityCore `GR_RIGHT_WITHDRAW_REPAIR` (Guild.h:123): repairs paid from the guild
@@ -72,6 +74,7 @@ impl Default for GuildData {
     fn default() -> Self {
         let rank = |name: &str, all_rights: bool| GuildRankData {
             name: name.into(),
+            rights: default_social_rights(all_rights),
             withdraw_gold: all_rights,
             withdraw_repair: all_rights,
             gold_per_day: 0,
@@ -299,7 +302,69 @@ struct GuildDataV0 {
 /// `SERVER_SETTINGS` key of the `GuildData` layout version.
 pub(crate) const GUILD_LAYOUT_KEY: &str = "guild_layout_version";
 /// 1: ranks carry `withdraw_repair`.
-pub(crate) const GUILD_LAYOUT_VERSION: u32 = 1;
+pub(crate) const GUILD_LAYOUT_VERSION: u32 = 2;
+
+fn default_social_rights(officer: bool) -> u32 {
+    use shared::protocol::*;
+    if officer {
+        GUILD_RIGHT_ALL & !(GUILD_RIGHT_WITHDRAW_GOLD | GUILD_RIGHT_WITHDRAW_REPAIR)
+    } else {
+        GUILD_RIGHT_CHAT_LISTEN | GUILD_RIGHT_CHAT_SPEAK
+    }
+}
+
+/// Layout 1 before player-managed social permissions.
+#[derive(bitcode::Encode, bitcode::Decode)]
+struct GuildRankDataV1 {
+    name: String,
+    withdraw_gold: bool,
+    withdraw_repair: bool,
+    gold_per_day: u64,
+    tabs: Vec<GuildTabRights>,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode)]
+struct GuildDataV1 {
+    ranks: Vec<GuildRankDataV1>,
+    money: u64,
+    tabs: Vec<BankTabData>,
+}
+
+impl From<GuildDataV1> for GuildData {
+    fn from(old: GuildDataV1) -> Self {
+        Self {
+            ranks: old
+                .ranks
+                .into_iter()
+                .enumerate()
+                .map(|(index, rank)| GuildRankData {
+                    name: rank.name,
+                    rights: default_social_rights(index <= 1),
+                    withdraw_gold: rank.withdraw_gold,
+                    withdraw_repair: rank.withdraw_repair,
+                    gold_per_day: rank.gold_per_day,
+                    tabs: rank.tabs,
+                })
+                .collect(),
+            money: old.money,
+            tabs: old.tabs,
+        }
+    }
+}
+
+/// Persist the ordered rank list and all affected member positions atomically.
+/// Callers materialize implicit lowest-rank members before adding/removing ranks.
+pub fn save_guild_ranks(db: &Database, guild_id: u32, guild: &GuildData, members: &[(u64, u8)]) {
+    let txn = db.begin_write().expect("Failed to begin guild ranks write");
+    write(&txn, GUILDS, guild_id, guild);
+    {
+        let mut table = txn.open_table(GUILD_MEMBER_RANKS).expect("open ranks");
+        for &(character, rank) in members {
+            table.insert(character, rank).expect("write member rank");
+        }
+    }
+    txn.commit().expect("Failed to commit guild ranks");
+}
 
 impl From<GuildDataV0> for GuildData {
     /// Version 0 ranks get `GR_RIGHT_WITHDRAW_REPAIR` as TrinityCore's default ranks
@@ -312,6 +377,7 @@ impl From<GuildDataV0> for GuildData {
             .enumerate()
             .map(|(index, rank)| GuildRankData {
                 name: rank.name,
+                rights: default_social_rights(index <= 1),
                 withdraw_gold: rank.withdraw_gold,
                 withdraw_repair: index <= 1,
                 gold_per_day: rank.gold_per_day,
@@ -331,7 +397,8 @@ pub(crate) fn migrate_guild_ranks(db: &Database) {
     let txn = db
         .begin_write()
         .expect("Failed to begin guild layout migration");
-    if super::layout_version(&txn, GUILD_LAYOUT_KEY) >= GUILD_LAYOUT_VERSION {
+    let version = super::layout_version(&txn, GUILD_LAYOUT_KEY);
+    if version >= GUILD_LAYOUT_VERSION {
         return;
     }
     let migrated = {
@@ -343,10 +410,15 @@ pub(crate) fn migrate_guild_ranks(db: &Database) {
             .expect("Failed to iterate guilds")
             .map(|row| {
                 let (key, value) = row.expect("Failed to read guild row");
-                let old: GuildDataV0 = bitcode::decode(value.value()).unwrap_or_else(|error| {
+                let guild = match version {
+                    0 => bitcode::decode::<GuildDataV0>(value.value()).map(GuildData::from),
+                    1 => bitcode::decode::<GuildDataV1>(value.value()).map(GuildData::from),
+                    _ => unreachable!("unsupported guild layout {version}"),
+                }
+                .unwrap_or_else(|error| {
                     panic!("Failed to migrate guild {}: {error:?}", key.value())
                 });
-                (key.value(), old.into())
+                (key.value(), guild)
             })
             .collect();
         for (guild_id, guild) in &rows {

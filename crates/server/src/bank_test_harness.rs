@@ -86,6 +86,7 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
     add_inbox::<BankContents>(&mut app);
     add_inbox::<BankFailed>(&mut app);
     add_inbox::<GuildBankContents>(&mut app);
+    add_inbox::<GuildRanksState>(&mut app);
     add_inbox::<GuildBankFailed>(&mut app);
     add_inbox::<GuildBankLog>(&mut app);
     add_inbox::<MailboxContents>(&mut app);
@@ -102,6 +103,7 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
         NpcInteractionPlugin,
         BankPlugin,
         GuildBankPlugin,
+        crate::guild::GuildPlugin,
         MailPlugin,
     ));
     app.finish();
@@ -174,6 +176,8 @@ fn spawn_connection(app: &mut App, peer: u64, character_id: u64, name: &str) -> 
             ),
             (
                 pair::<GuildBankContents>(),
+                pair::<GuildRankRequest>(),
+                pair::<GuildRanksState>(),
                 pair::<GuildBankLog>(),
                 pair::<GuildBankFailed>(),
                 pair::<GuildBankDeposit>(),
