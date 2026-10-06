@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] investigations | Northshire native versus effective stats
+
+Updated [[level-scaling]] with the `c8cd38f` audit: ContentTuning 73 gives native level 30 / 4,379 health, but level-1 effective stats are 1 / 78. `npc-info` reports the native pool without a viewer. Source difficulty rows agree; Elwynn and Durotar share the pattern. Added three real-spawn `creaturelevel_*` regressions, including tuning-13 Flesh Eater's higher floor and lethal scaled health loss. Client runtime failure is not established; server native-level semantics preserved.
+
 ## [2026-10-05] systems | SmartAI combat caster movement
 
 Updated [[boss-scripts]] and its spec: Geomancer 476's loaded UPDATE_IC/VICTIM row never ran because those event/target types were unsupported. Added combat-only initial/repeat timers, victim targeting, CMC chase hold and cast-failure retry/chase recovery, citing pinned TC SmartScript/SmartAI. Four real-data regressions reproduced absent Fireball in RED; all 15 targeted scripted-AI tests passed at `798c4c6` (four new, eleven existing), including exact 3–5 s repeat and sustained exhaustion. Impact: 9,371 combat-update and 1,411 CMC cast rows in the loader's current creature set. Other unsupported script types remain gaps.

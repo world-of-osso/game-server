@@ -668,6 +668,104 @@ fn tuned_creature_health_is_expected_stat_health_at_its_range_maximum() {
     assert_eq!(stats(HOGGER), (13_137.0, 13_137.0, 30, (1, 30, 0)));
 }
 
+/// Spawn actual continent rows on their own maps, through the same difficulty-0
+/// template selection as startup. The returned keys are creature entries.
+fn spawn_scaling_entries(entries: &[u32]) -> (World, HashMap<u32, Entity>) {
+    let data = world_data();
+    let mut world = World::new();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, &world);
+    let mut entities = HashMap::new();
+    for map_id in [0, 1] {
+        let spawns: Vec<_> = entries
+            .iter()
+            .filter_map(|entry| {
+                data.spawns
+                    .iter()
+                    .find(|spawn| spawn.template_entry == *entry && u32::from(spawn.map) == map_id)
+            })
+            .collect();
+        let spawned = spawn_creatures(
+            &mut commands,
+            data,
+            crate::maps::InMap::continent(map_id),
+            0,
+            false,
+            spawns.iter().copied(),
+        );
+        for spawn in spawns {
+            entities.insert(spawn.template_entry, spawned[&spawn.guid]);
+        }
+    }
+    queue.apply(&mut world);
+    assert_eq!(
+        entities.len(),
+        entries.len(),
+        "every entry must have a spawn"
+    );
+    (world, entities)
+}
+
+/// Assert observable level, health and lethal damage against a real player
+/// entity, not just the template's imported level columns.
+fn assert_scaled_spawn(world: &mut World, creature: Entity, player_level: u8, expected: (u8, f32)) {
+    let player = world.spawn(UnitLevel(player_level)).id();
+    let attacker = crate::level_scaling::UnitScaling::of(world, player);
+    let victim = crate::level_scaling::UnitScaling::of(world, creature);
+    let level = victim.level_against(&attacker);
+    let stats = world.get::<ScaledStats>(creature).unwrap();
+    let effective_health = stats.0.max_health(level);
+    assert_eq!((level, effective_health), expected);
+    let health = *world.get::<Health>(creature).unwrap();
+    assert_eq!(health.current, health.max);
+    // A hit equal to effective max health must kill the shared native pool.
+    let loss = crate::level_scaling::health_loss(&attacker, &victim, effective_health);
+    let mut pool = world.get_mut::<Health>(creature).unwrap();
+    assert!(crate::death::apply_health_damage(&mut pool, loss));
+    assert_eq!(pool.current, 0.0);
+    world.despawn(player);
+}
+
+#[test]
+#[ignore = "requires the imported world.db"]
+fn creaturelevel_northshire_spawns_are_level_one_with_78_effective_health() {
+    // CT 73 is 1-30; ExpectedStat(-2, 1) = 78, class mod 4 = 1,
+    // HealthModifier = 1 for all three. Native health remains 4,379.
+    let entries = [49874, 49871, 299];
+    let (mut world, entities) = spawn_scaling_entries(&entries);
+    for entry in entries {
+        let creature = entities[&entry];
+        let scaling = world.get::<LevelScaling>(creature).unwrap();
+        assert_eq!((scaling.min_level, scaling.max_level), (1, 30));
+        assert_eq!(world.get::<UnitLevel>(creature).unwrap().0, 30);
+        assert_eq!(world.get::<Health>(creature).unwrap().max, 4_379.0);
+        assert_scaled_spawn(&mut world, creature, 1, (1, 78.0));
+    }
+}
+
+#[test]
+#[ignore = "requires the imported world.db"]
+fn creaturelevel_elwynn_and_durotar_spawns_scale_to_level_one() {
+    // Elwynn: Stonetusk Boar, Mangy Wolf (CT 73). Durotar: Elder Mottled
+    // Boar, Vile Familiar, Felstalker, Razormane Quilboar (CT 70).
+    let entries = [113, 525, 3100, 3101, 3102, 3111];
+    let (mut world, entities) = spawn_scaling_entries(&entries);
+    for entry in entries {
+        assert_scaled_spawn(&mut world, entities[&entry], 1, (1, 78.0));
+    }
+}
+
+#[test]
+#[ignore = "requires the imported world.db"]
+fn creaturelevel_higher_tuning_preserves_floor_and_player_scaling() {
+    // Flesh Eater (3), Duskwood, CT 13: 10-30. ExpectedStat(-2, 10)
+    // = 377.3422546 and (-2, 30) = 4378.7749023; modifiers = 1.
+    for (player_level, expected) in [(1, (10, 378.0)), (10, (10, 378.0)), (40, (30, 4_379.0))] {
+        let (mut world, entities) = spawn_scaling_entries(&[3]);
+        assert_scaled_spawn(&mut world, entities[&3], player_level, expected);
+    }
+}
+
 /// Riverpaw Outrunner (478, level 9, faction 20), Diseased Young Wolf (299,
 /// civilian), Forest Spider (30, level 5, faction 22) and Stormwind's Heroic
 /// Training Dummy (31146).
