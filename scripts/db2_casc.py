@@ -7,12 +7,13 @@ decoded as WDC5. Column names and INTEGER/REAL types come from the table's DDL i
 db2_schema.sql, positionally; the expected layout hash pins that order to the build
 (WoWDBDefs `LAYOUT` line for the table).
 
-Handles the subset the local tables need: one or more unencrypted sections, inline
+Handles the subset the local tables need: unencrypted or already decrypted sections, inline
 IDs or a non-inline ID list (prepended as the first column), a relationship map (its
 foreign id appended as the last column), copy tables, and field
 compression none/bitpacked/common/pallet/pallet array/signed bitpacked. A pallet-array
-field expands to its array-count columns. String fields (TEXT columns) are read from a
-single section's string block; inline arrays and sparse (offset-map) layouts fail.
+field expands to its array-count columns. String fields (TEXT columns) resolve through the virtual concatenation of all
+section string blocks; zero-filled encrypted sections are reported and skipped.
+Inline arrays and sparse (offset-map) layouts fail.
 Tables with localized strings are read from their enUS copy (casc_locale.py).
 """
 
@@ -61,8 +62,6 @@ def decode(data, text_columns=frozenset()):
     their field's offset points at: the offset counts from the field's own byte in
     the record (fields before them must not be arrays)."""
     header = read_header(data)
-    if text_columns and header["section_count"] != 1:
-        raise ValueError("string fields of a multi-section DB2 are not supported")
     if header["flags"] & 1:
         raise ValueError("sparse (offset map) DB2 layout is not supported")
     offset = 204
@@ -70,9 +69,7 @@ def decode(data, text_columns=frozenset()):
     for _ in range(header["section_count"]):
         key, file_offset, count, strings, _end, id_list, relations, _offset_map, copies = struct.unpack_from(
             "<Q8I", data, offset)
-        if key:
-            raise ValueError("encrypted DB2 section is not supported")
-        sections.append((file_offset, count, strings, id_list, copies, relations))
+        sections.append((file_offset, count, strings, id_list, copies, relations, key))
         offset += 40
     offset += header["field_count"] * 4
     infos = [struct.unpack_from("<HHIIIII", data, offset + 24 * i) for i in range(header["info_size"] // 24)]
@@ -92,7 +89,18 @@ def decode(data, text_columns=frozenset()):
             cursor += extra
     size = header["record_size"]
     rows = {}
-    for file_offset, count, strings, id_list, copies, relations in sections:
+    string_blocks, cumulative_strings = [], 0
+    for file_offset, count, strings, *_ in sections:
+        string_blocks.append((cumulative_strings, cumulative_strings + strings, file_offset + count * size))
+        cumulative_strings += strings
+    prior_records = 0
+    for file_offset, count, strings, id_list, copies, relations, key in sections:
+        first_record = prior_records
+        prior_records += count
+        if key and not any(data[file_offset:file_offset + count * size]):
+            import warnings
+            warnings.warn(f"Skipping zero-filled DB2 section key {key:016X}, {count} records", stacklevel=2)
+            continue
         ids_at = file_offset + count * size + strings
         ids = struct.unpack_from(f"<{id_list // 4}I", data, ids_at) if id_list else None
         text_fields = [column - (1 if ids else 0) for column in text_columns]
@@ -108,8 +116,17 @@ def decode(data, text_columns=frozenset()):
             bits = int.from_bytes(data[file_offset + record * size:file_offset + (record + 1) * size], "little")
             fields = [field_value(index, info, bits, pallets) for index, info in enumerate(infos)]
             for index in text_fields:
-                at = file_offset + record * size + infos[index][0] // 8 + fields[index]
-                fields[index] = data[at:data.index(b"\0", at)].decode("utf-8")
+                relative = fields[index]
+                if relative == 0:
+                    fields[index] = ""
+                    continue
+                virtual = (first_record + record - header["record_count"]) * size + infos[index][0] // 8 + relative
+                block = next((block for block in string_blocks if block[0] <= virtual < block[1]), None)
+                if block is None:
+                    raise ValueError(f"string field {index}: virtual offset {virtual} outside string blocks")
+                start, end, physical = block
+                at = physical + virtual - start
+                fields[index] = data[at:data.index(b"\0", at, physical + end - start)].decode("utf-8")
             record_id = ids[record] if ids else fields[header["id_index"]]
             for index, info in enumerate(infos):
                 if info[3] == COMPRESSION_COMMON:

@@ -645,8 +645,12 @@ pub fn load_achievements(
         .expect("Failed to read achievements")
     {
         Some(guard) => {
-            serde_json::from_slice::<crate::achievement::PlayerAchievementState>(guard.value())
-                .expect("decode achievements")
+            let (state, migrated) =
+                crate::achievement::decode_saved_achievement_state(guard.value());
+            if migrated {
+                save_achievements(db, character_id, &state);
+            }
+            state
         }
         None => {
             let state = crate::achievement::PlayerAchievementState::default();

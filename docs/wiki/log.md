@@ -568,3 +568,7 @@ Updated existing Zaralda SSOT and linked specs/reference/index: native-friendly 
 ## 2026-10-05 — Rested XP administration
 
 Updated [[experience]] for persisted accumulation and kill bonus consumption; documented capped online/offline `set-rested` and owner updates. Corrected `LogXpGain.original` versus base `amount`.
+
+## 2026-10-06 — Dungeon achievements phase 1
+
+Added [[dungeon-achievements]]: local CASC provenance, partial encrypted-section coverage, supported DB2 criteria/tree semantics, Stockade full-run boundary, character/lock persistence, and client phase-2 contract. Targeted server proof pending.

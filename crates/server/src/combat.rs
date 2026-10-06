@@ -1043,6 +1043,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     entity.world_scope(|world| {
         combat_stop(world, npc);
         crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
+        crate::achievement::record_creature_death(world, npc, killer);
     });
 }
 

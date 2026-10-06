@@ -205,6 +205,8 @@ pub struct DungeonEncounter {
     pub map_id: u32,
     /// -1 or 0: every difficulty of the map.
     pub difficulty_id: i32,
+    /// Authored encounter display/run order, independent of script boss indices.
+    pub order_index: u32,
     /// The lock's `CompletedEncountersMask` bit.
     pub bit: u32,
 }
@@ -393,6 +395,20 @@ impl MapStore {
                     && (encounter.difficulty_id <= 0
                         || encounter.difficulty_id as u32 == difficulty_id)
             })
+    }
+
+    pub fn encounters_for_map(&self, map_id: u32, difficulty_id: u32) -> Vec<&DungeonEncounter> {
+        let mut encounters: Vec<_> = self
+            .dungeon_encounters
+            .values()
+            .filter(|encounter| {
+                encounter.map_id == map_id
+                    && (encounter.difficulty_id <= 0
+                        || encounter.difficulty_id as u32 == difficulty_id)
+            })
+            .collect();
+        encounters.sort_by_key(|encounter| (encounter.order_index, encounter.id));
+        encounters
     }
 
     pub fn area_triggers_on(&self, map_id: u32) -> &[AreaTriggerTeleport] {
@@ -615,13 +631,14 @@ fn load_difficulty_entries(conn: &Connection) -> rusqlite::Result<HashMap<u32, D
 
 fn load_dungeon_encounters(conn: &Connection) -> rusqlite::Result<HashMap<u32, DungeonEncounter>> {
     let mut statement =
-        conn.prepare("SELECT ID, MapID, DifficultyID, Bit FROM dungeon_encounter")?;
+        conn.prepare("SELECT ID, MapID, DifficultyID, Bit, OrderIndex FROM dungeon_encounter WHERE Bit BETWEEN 0 AND 31")?;
     let rows = statement.query_map([], |row| {
         Ok(DungeonEncounter {
             id: row.get(0)?,
             map_id: row.get(1)?,
             difficulty_id: row.get(2)?,
             bit: row.get(3)?,
+            order_index: row.get(4)?,
         })
     })?;
     rows.map(|row| row.map(|encounter| (encounter.id, encounter)))

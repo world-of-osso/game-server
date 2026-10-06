@@ -569,6 +569,12 @@ impl InstanceManager {
         results
     }
 
+    pub fn completed_encounters(&self, map: InMap) -> u32 {
+        self.copies
+            .get(&map)
+            .map_or(0, |copy| copy.initial_data.completed_encounters)
+    }
+
     /// `InstanceMap::UpdateInstanceLock` for a boss of copy `map` becoming `DONE`:
     /// the shared state (instance-id bound) and each player's lock record the kill.
     /// Returns the players saved for the first time (`InstanceSaveCreated`).
@@ -583,13 +589,15 @@ impl InstanceManager {
         let Some(copy) = self.copies.get_mut(&map) else {
             return Vec::new();
         };
+        copy.initial_data.done_bosses = done_bosses;
+        if let Some(bit) = encounter_bit {
+            copy.initial_data.completed_encounters |= 1 << bit;
+        }
+        // Normal dungeons have no scheduled lock, but still track their copy's progress.
         if copy.lock_owner.is_none() {
             return Vec::new();
         }
         copy.lock_used = true;
-        if let Some(bit) = encounter_bit {
-            copy.initial_data.completed_encounters |= 1 << bit;
-        }
         let update = super::locks::LockUpdate {
             instance_id: map.instance_id,
             done_bosses,

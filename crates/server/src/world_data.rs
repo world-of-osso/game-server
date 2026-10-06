@@ -936,6 +936,9 @@ fn startup_load_world_data(mut commands: Commands) {
         maps.area_triggers.len()
     );
     commands.insert_resource(maps);
+    let achievements = crate::achievement::load_achievement_catalog(&conn)
+        .expect("Failed to load achievements; run scripts/import_achievements.py with locally extracted DB2s");
+    commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
