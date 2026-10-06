@@ -582,7 +582,7 @@ fn guild_ranks_player_requests_enforce_view_item_and_gold_limits() {
         withdrawals_per_day: 0,
     });
     h.play_as(reader);
-    h.open_vault();
+    let vault = h.open_vault();
     let bank = contents(&mut h);
     assert!(!bank.tabs[0].viewable);
     assert!(bank.tabs[0].slots.is_empty());
