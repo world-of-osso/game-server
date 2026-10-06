@@ -455,6 +455,7 @@ fn member(entity: Entity, name: &str, class: u8) -> OnlineMember {
         name: name.into(),
         class,
         level: 10,
+        portrait: Default::default(),
         dungeon_difficulty: 1,
     }
 }

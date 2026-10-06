@@ -408,6 +408,7 @@ fn online(names: &[&str]) -> OnlineView {
                     name: (*name).into(),
                     class: 1,
                     level: 10,
+                    portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                 },
             )
@@ -1085,4 +1086,200 @@ fn joining_a_party_clears_its_icons_and_leaving_clears_the_leavers() {
         raid_targets(&mut app, &bob).last(),
         Some(&icons(&[(1, HOGGER)]))
     );
+}
+
+// Portrait payloads use the real GroupChannel loopback harness, not replication interest.
+fn roster_portrait_fixture() -> (
+    App,
+    Client,
+    Client,
+    Client,
+    shared::protocol::GroupPortraitAppearance,
+) {
+    use shared::components::{
+        CharacterAppearance, CustomizationChoiceSelection, EquipmentAppearance,
+        EquipmentVisualSlot, EquippedAppearanceEntry,
+    };
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let cid = connect(&mut app, 3, "Cid");
+    let portrait = shared::protocol::GroupPortraitAppearance {
+        race: 4,
+        appearance: CharacterAppearance {
+            sex: 1,
+            skin_color: 3,
+            face: 2,
+            eye_color: 5,
+            hair_style: 7,
+            hair_color: 8,
+            facial_style: 4,
+            customization_choices: vec![CustomizationChoiceSelection {
+                option_id: 101,
+                choice_id: 202,
+            }],
+            visage: None,
+        },
+        head: Some(EquippedAppearanceEntry {
+            slot: EquipmentVisualSlot::Head,
+            item_id: Some(19019),
+            display_info_id: Some(12345),
+            inventory_type: 1,
+            hidden: false,
+        }),
+    };
+    app.world_mut().get_mut::<Player>(bob.player).unwrap().race = portrait.race;
+    app.world_mut()
+        .get_mut::<Player>(bob.player)
+        .unwrap()
+        .appearance = portrait.appearance.clone();
+    app.world_mut().entity_mut(bob.player).insert((
+        EquipmentAppearance {
+            entries: vec![
+                portrait.head.clone().unwrap(),
+                EquippedAppearanceEntry {
+                    slot: EquipmentVisualSlot::Chest,
+                    item_id: Some(100),
+                    display_info_id: Some(200),
+                    inventory_type: 5,
+                    hidden: false,
+                },
+            ],
+        },
+        Position {
+            x: 50_000.0,
+            y: 20_000.0,
+            z: 100.0,
+        },
+        crate::maps::InMap::continent(1),
+    ));
+    app.world_mut()
+        .entity_mut(alice.player)
+        .insert(crate::maps::InMap::continent(0));
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    invite_and_accept(&mut app, &alice, &cid, "Cid");
+    (app, alice, bob, cid, portrait)
+}
+
+#[test]
+fn roster_portrait_three_members_far_and_cross_zone() {
+    let (mut app, alice, bob, _cid, expected) = roster_portrait_fixture();
+    let roster = last_roster(&mut app, &alice);
+    assert_eq!(roster.members.len(), 3);
+    assert_eq!(
+        roster
+            .members
+            .iter()
+            .find(|m| m.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
+    app.world_mut()
+        .entity_mut(bob.player)
+        .insert(crate::maps::InMap::continent(530));
+    // A subsequent roster still includes the same portrait in the new zone.
+    send(&mut app, &bob, LeaveGroup);
+    pump(&mut app);
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    assert_eq!(
+        last_roster(&mut app, &alice)
+            .members
+            .iter()
+            .find(|m| m.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
+}
+
+#[test]
+fn roster_portrait_helm_and_customization_changes_send_once() {
+    use shared::components::{EquipmentAppearance, EquipmentVisualSlot};
+    let (mut app, alice, bob, _cid, mut expected) = roster_portrait_fixture();
+    rosters(&mut app, &alice);
+    let head = expected.head.as_mut().unwrap();
+    head.display_info_id = Some(54321);
+    head.hidden = true;
+    app.world_mut()
+        .get_mut::<EquipmentAppearance>(bob.player)
+        .unwrap()
+        .entries[0] = head.clone();
+    pump(&mut app);
+    let updates = rosters(&mut app, &alice);
+    assert_eq!(updates.len(), 1);
+    assert_eq!(
+        updates[0]
+            .members
+            .iter()
+            .find(|m| m.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
+    expected.appearance.hair_color = 9;
+    app.world_mut()
+        .get_mut::<Player>(bob.player)
+        .unwrap()
+        .appearance = expected.appearance.clone();
+    pump(&mut app);
+    assert_eq!(
+        last_roster(&mut app, &alice)
+            .members
+            .iter()
+            .find(|m| m.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
+    // Non-head equipment changes do not resend portraits.
+    app.world_mut()
+        .get_mut::<EquipmentAppearance>(bob.player)
+        .unwrap()
+        .entries[1]
+        .display_info_id = Some(999);
+    pump(&mut app);
+    assert!(rosters(&mut app, &alice).is_empty());
+    app.world_mut()
+        .get_mut::<EquipmentAppearance>(bob.player)
+        .unwrap()
+        .entries
+        .retain(|entry| entry.slot != EquipmentVisualSlot::Head);
+    expected.head = None;
+    pump(&mut app);
+    assert_eq!(
+        last_roster(&mut app, &alice)
+            .members
+            .iter()
+            .find(|m| m.name == "Bob")
+            .unwrap()
+            .portrait,
+        expected
+    );
+    pump(&mut app);
+    assert!(rosters(&mut app, &alice).is_empty());
+}
+
+#[test]
+fn roster_portrait_offline_member_retains_last_appearance_for_new_recipient() {
+    let (mut app, alice, bob, cid, expected) = roster_portrait_fixture();
+    rosters(&mut app, &alice);
+    app.world_mut().despawn(bob.conn);
+    app.world_mut().despawn(bob.player);
+    pump(&mut app);
+    let roster = last_roster(&mut app, &alice);
+    let member = roster.members.iter().find(|m| m.name == "Bob").unwrap();
+    assert!(!member.online);
+    assert_eq!(member.entity, None);
+    assert_eq!(member.portrait, expected);
+    // Cid reconnects without ever needing Bob's replicated entity.
+    app.world_mut().despawn(cid.conn);
+    app.world_mut().despawn(cid.player);
+    pump(&mut app);
+    let cid = connect(&mut app, 3, "Cid");
+    pump(&mut app);
+    let roster = last_roster(&mut app, &cid);
+    let member = roster.members.iter().find(|m| m.name == "Bob").unwrap();
+    assert!(!member.online);
+    assert_eq!(member.portrait, expected);
 }
