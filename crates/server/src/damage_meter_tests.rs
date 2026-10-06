@@ -732,6 +732,78 @@ fn groupmeter_raid_receives_healing_without_counting_creature_damage() {
 }
 
 #[test]
+fn groupmeter_categories_reset_current_but_preserve_overall() {
+    let (mut app, healer, tank, _) = group_app();
+    crate::spell_cast::log_event(
+        app.world_mut(),
+        CombatLogEvent {
+            kind: CombatLogKind::Heal,
+            overflow: 40,
+            ..damage_line(healer, tank, 140)
+        },
+    );
+    crate::spell_cast::log_event(
+        app.world_mut(),
+        CombatLogEvent {
+            kind: CombatLogKind::Death,
+            ..damage_line(tank, tank, 0)
+        },
+    );
+    super::record_player_death_transition(app.world_mut(), tank);
+    app.update(); // No member in combat: encounter one ends.
+    crate::spell_cast::log_event(
+        app.world_mut(),
+        CombatLogEvent {
+            kind: CombatLogKind::Heal,
+            ..damage_line(healer, tank, 20)
+        },
+    );
+    for recipient in [healer, tank] {
+        let snapshot = app
+            .world()
+            .get::<DamageMeter>(recipient)
+            .unwrap()
+            .snapshot(0.0, recipient);
+        let current = snapshot.current.unwrap();
+        assert_eq!(current.session_id, 2);
+        let current_healer = current
+            .sources
+            .iter()
+            .find(|source| source.unit == healer.to_bits())
+            .unwrap();
+        assert_eq!(
+            (current_healer.healing_done, current_healer.overhealing),
+            (20, 0)
+        );
+        let overall_healer = snapshot
+            .overall
+            .sources
+            .iter()
+            .find(|source| source.unit == healer.to_bits())
+            .unwrap();
+        assert_eq!(
+            (overall_healer.healing_done, overall_healer.overhealing),
+            (120, 40)
+        );
+        let current_tank = current
+            .sources
+            .iter()
+            .find(|source| source.unit == tank.to_bits())
+            .unwrap();
+        assert_eq!(current_tank.deaths, 0);
+        assert!(current_tank.death_recaps.is_empty());
+        let overall_tank = snapshot
+            .overall
+            .sources
+            .iter()
+            .find(|source| source.unit == tank.to_bits())
+            .unwrap();
+        assert_eq!(overall_tank.deaths, 1);
+        assert_eq!(overall_tank.death_recaps.len(), 1);
+    }
+}
+
+#[test]
 fn groupmeter_unlogged_death_transition_counts_once() {
     let (mut app, mage, warrior, _) = group_app();
     super::record_player_death_transition(app.world_mut(), warrior);
