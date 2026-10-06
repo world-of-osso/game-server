@@ -208,6 +208,7 @@ fn party(members: &[(u64, &str, Entity)]) -> GroupRegistry {
                     name: name.into(),
                     class: 1,
                     level: 20,
+                    portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                 },
             )

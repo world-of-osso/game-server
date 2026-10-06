@@ -5,6 +5,8 @@
 
 Content catalog for the game-server wiki.
 
+[Group roster portrait transport](../group-roster-portraits.md) — cached head appearance, cross-zone/offline lifecycle, behavioral fixtures and deferred native-client hookup.
+
 ## design/
 
 Architecture decisions and design specifications.

@@ -1123,6 +1123,7 @@ mod tests {
                     name: p.name.into(),
                     class: 1,
                     level: 10,
+                    portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                 };
                 (
