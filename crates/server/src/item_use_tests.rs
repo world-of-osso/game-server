@@ -318,3 +318,49 @@ fn assert_item_heal(item: u32, spell_id: u32, level: u8, expected: f32) {
     assert_eq!(eater.h.health(caster) - 18_444.0, expected);
     assert_eq!(heal.amount as f32, expected);
 }
+
+#[test]
+fn potionfix_scaling_food_restores_health_and_elixir_grants_strength() {
+    // Tough Jerky 117 -> 433: item level 1, SuperiorF_0 2.41373538971 * .25,
+    // raised to one point. Lion's Strength 2454 -> 2367: level 3 budget
+    // 3.19360995293 * 1.3 = 4 points of strength.
+    let mut eater = eater_with_spells(&[117, 2454], 2, &[433, 2367], MAGE).unwrap();
+    let caster = eater.h.caster;
+    app_world(&mut eater.h)
+        .entity_mut(caster)
+        .insert(shared::components::UnitLevel(10));
+    use_slot(&mut eater, 0);
+    let before = eater.h.health(caster);
+    eater.h.advance(40);
+    assert!(
+        eater.h.health(caster) > before,
+        "scaling food must regenerate health"
+    );
+    assert_eq!(count_of(&eater, 117), 1);
+    use_slot(&mut eater, 1);
+    let active = eater.h.app.world().get::<ActiveAuras>(caster).unwrap();
+    let elixir = active.iter().find(|aura| aura.spell_id == 2367).unwrap();
+    assert_eq!(elixir.effects[0].amount, 4.0);
+    assert_eq!(count_of(&eater, 2454), 1);
+}
+
+#[test]
+fn potionfix_antiseptic_bandage_snapshots_item_scaling_for_periodic_heal() {
+    // Antiseptic Bandage 111603 -> 161255: squished item level 15,
+    // SuperiorF_0 8.04534435272 * .04 is raised to one point per tick.
+    let mut eater = eater_with_spells(&[111_603], 2, &[161_255], MAGE).unwrap();
+    let caster = eater.h.caster;
+    app_world(&mut eater.h).entity_mut(caster).insert((
+        shared::components::Level(40),
+        shared::components::UnitLevel(40),
+    ));
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, 111_603), 1);
+    let before = eater.h.health(caster);
+    app_world(&mut eater.h)
+        .get_mut::<CombatStatus>(caster)
+        .unwrap()
+        .0 = true;
+    eater.h.advance(41);
+    assert_eq!(eater.h.health(caster) - before, 2.0);
+}
