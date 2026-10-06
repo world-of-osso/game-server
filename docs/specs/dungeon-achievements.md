@@ -16,6 +16,7 @@ Server-only phase 1: ordered boss progress and DB2-driven character achievements
 
 - [x] Import pinned local Achievement_Category FDID 1324299, category parents/order, and achievement category/icon metadata atomically with the phase-1 tables.
 - [ ] Send ordered encounter names and defeated state on instance entry, reconnect and each successful encounter defeat, scoped to the copy.
+- [ ] Clear dungeon objective rows on leaving an instance, even when DungeonEncounter also contains world-boss rows for the continent.
 - [ ] Serve categories, category achievements and criterion lines on request with bounded pages; never push the catalog on login.
 - [ ] Include character earned state, known completion dates and numeric criterion progress in category responses.
 

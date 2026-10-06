@@ -211,6 +211,42 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
     );
 }
 
+#[test]
+fn dungeon2_leaving_instance_clears_objectives_despite_world_boss_rows() {
+    let data = data().expect("Stockade and continent DB2 fixtures");
+    assert_eq!(data.maps.encounters_for_map(0, 0)[0].id, 2353);
+    let mut app = stockade_app(data);
+    let (player, connection) = spawn_player(&mut app, COPY, [158.0, 116.0, -35.1, 0.0], 1001);
+    attach_dungeon2_messages(app.world_mut(), connection);
+    let mut h = Harness {
+        app,
+        players: vec![(player, connection, Inbox::default())],
+    };
+    h.advance(0.05);
+    assert_eq!(
+        drain::<DungeonProgress>(h.app.world_mut(), connection)[0]
+            .encounters
+            .len(),
+        3
+    );
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(InMap::continent(0));
+    h.advance(0.05);
+    let updates = drain::<DungeonProgress>(h.app.world_mut(), connection);
+    assert_eq!(updates.len(), 1);
+    assert_eq!(
+        (
+            updates[0].map_id,
+            updates[0].instance_id,
+            updates[0].difficulty_id
+        ),
+        (0, 0, 0)
+    );
+    assert!(updates[0].encounters.is_empty());
+}
+
 fn attach_dungeon2_messages(world: &mut World, connection: Entity) {
     world.entity_mut(connection).insert((
         MessageSender::<AchievementStateUpdate>::default(),
