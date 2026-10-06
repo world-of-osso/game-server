@@ -14,7 +14,7 @@ References:
 - [x] The grounded stop input clears direction and airborne flags, keeping WALKING and SWIMMING. An already airborne player's input cannot erase its takeoff origin; gravity decides touchdown.
 - [x] The component is written only when the flags change, so repeated identical inputs replicate nothing.
 - [x] A blocking cast (speed 0) and a dropped input (taxi control, corpse, map transfer) clear the moving flags.
-- [ ] Gravity sets FALLING for a ledge/terrain walk-off without JUMP_STARTED; jumps retain both until touchdown. Water entry and flight clear airborne state. Changes replicate even without another input.
+- [x] Gravity sets FALLING for a ledge/terrain walk-off without JUMP_STARTED; jumps retain both until touchdown. Changes replicate even without another input.
 - [ ] TURN_LEFT/TURN_RIGHT and ASCENDING/DESCENDING are not sent: the input carries no turn or vertical intent state.
 - [ ] A player who dies mid-run and sends no further input keeps its moving flags until its next input.
 
