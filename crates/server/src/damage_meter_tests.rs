@@ -584,6 +584,82 @@ fn groupmeter_three_players_receive_exact_categories_and_capped_recaps() {
 }
 
 #[test]
+fn groupmeter_export_caps_detail_without_losing_totals() {
+    let mut meter = DamageMeter::default();
+    for id in 0..DAMAGE_METER_MAX_SOURCES as u32 {
+        let source = DamageSource {
+            unit: unit(id),
+            name: "é".repeat(40),
+            class_id: 5,
+        };
+        for spell in 0..65 {
+            meter.record(0.0, &source, spell, 1);
+        }
+    }
+    let snapshot = meter.snapshot(1.0, unit(0));
+    for session in [snapshot.current.as_ref().unwrap(), &snapshot.overall] {
+        assert_eq!(session.sources.len(), DAMAGE_METER_MAX_SOURCES);
+        assert_eq!(session.total_amount, DAMAGE_METER_MAX_SOURCES as u64 * 65);
+        for source in &session.sources {
+            assert_eq!(source.total_amount, 65);
+            assert_eq!(source.spells.len(), DAMAGE_METER_MAX_SPELLS);
+            assert_eq!(source.name.len(), DAMAGE_METER_MAX_NAME_BYTES);
+            assert_eq!(source.name, "é".repeat(24));
+        }
+    }
+}
+
+#[test]
+fn groupmeter_real_shield_consumption_credits_the_caster_group() {
+    const SHIELD: u32 = 17;
+    let mut h = harness_with_plugins(Vec::new(), &[SHIELD], 5, false, |app| {
+        app.add_plugins(DamageMeterPlugin);
+    })
+    .expect("Power Word: Shield world spell data");
+    h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
+    let tank = spawn_member(&mut h.app, 2, "Tank", 1);
+    let online: OnlineView = [
+        (1, member(h.caster, "Caster", 5)),
+        (2, member(tank, "Tank", 1)),
+    ]
+    .into();
+    let mut registry = GroupRegistry::default();
+    registry.sync_presence(&online);
+    registry.invite(1, "Tank", &online);
+    registry.respond_invite(2, true);
+    h.app.insert_resource(registry);
+    h.cast_and_deliver(SHIELD, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        crate::auras::absorb_damage(h.app.world_mut(), h.caster, 1, 75.0),
+        (0.0, 75.0)
+    );
+    // The damage line's mitigation is recap detail, never another caster credit.
+    crate::spell_cast::log_event(
+        h.app.world_mut(),
+        CombatLogEvent {
+            absorbed: 75,
+            ..damage_line(h.npc, h.caster, 0)
+        },
+    );
+    for recipient in [h.caster, tank] {
+        let snapshot = h
+            .app
+            .world()
+            .get::<DamageMeter>(recipient)
+            .unwrap()
+            .snapshot(0.0, recipient);
+        let caster = snapshot
+            .overall
+            .sources
+            .iter()
+            .find(|source| source.unit == h.caster.to_bits())
+            .unwrap();
+        assert_eq!(caster.absorbs, 75);
+    }
+}
+
+#[test]
 fn groupmeter_first_absorb_exports_the_whole_roster() {
     let (mut app, healer, tank, outsider) = group_app();
     super::record_absorb(app.world_mut(), healer, 75.0);
