@@ -124,6 +124,18 @@ fn helm_durability() -> ItemDurability {
     )
 }
 
+#[derive(Resource, Default)]
+struct DeathReplies(Vec<DeathStateUpdate>);
+
+fn collect_death_replies(
+    mut receivers: Query<&mut MessageReceiver<DeathStateUpdate>>,
+    mut replies: ResMut<DeathReplies>,
+) {
+    for mut receiver in &mut receivers {
+        replies.0.extend(receiver.receive());
+    }
+}
+
 fn select_character_in_world(
     db: GameDatabase,
     account_id: u64,
@@ -141,6 +153,8 @@ fn select_character_in_world(
     app.register_message::<DeathStateUpdate>();
     app.insert_resource(db);
     app.insert_resource(helm_durability());
+    app.init_resource::<DeathReplies>();
+    app.add_systems(Last, collect_death_replies);
     app.add_plugins(DeathPlugin);
     app.insert_resource(crate::maps::MapStore::continents());
     app.init_resource::<crate::maps::InstanceManager>();
@@ -614,18 +628,10 @@ fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
     persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
-    // The death systems run the frame after the player spawns; the client
-    // hears the restored state in the initial death snapshot.
-    let mut updates = Vec::new();
     for _ in 0..3 {
         app.update();
-        let mut receivers = app
-            .world_mut()
-            .query::<&mut MessageReceiver<DeathStateUpdate>>();
-        for mut receiver in receivers.iter_mut(app.world_mut()) {
-            updates.extend(receiver.receive());
-        }
     }
+    let updates = &app.world().resource::<DeathReplies>().0;
     let states: Vec<_> = updates
         .iter()
         .filter_map(|update| {
@@ -720,16 +726,10 @@ fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
     };
     persistence::create_tables(&db.db);
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
-    let mut updates = Vec::new();
     for _ in 0..3 {
         app.update();
-        let mut receivers = app
-            .world_mut()
-            .query::<&mut MessageReceiver<DeathStateUpdate>>();
-        for mut receiver in receivers.iter_mut(app.world_mut()) {
-            updates.extend(receiver.receive());
-        }
     }
+    let updates = &app.world().resource::<DeathReplies>().0;
     let states: Vec<_> = updates
         .iter()
         .filter_map(|update| {
