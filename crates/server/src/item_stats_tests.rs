@@ -5,6 +5,172 @@
 use super::*;
 use crate::item_templates::{ItemTemplates, load_item_templates};
 
+// Exact headers and level-1 rows from scripts/tests/fixtures/forever-scaling-70205;
+// ArmorLocation uses chest row 5. Embedded because desktop snapshots omit CSVs.
+const FOREVER_SCALING_CSVS: [(&str, &str); 9] = [
+    (
+        "rand_prop_points",
+        "ID,GoodF_0,GoodF_1,GoodF_2,GoodF_3,GoodF_4,SuperiorF_0,SuperiorF_1,SuperiorF_2,SuperiorF_3,SuperiorF_4,EpicF_0,EpicF_1,EpicF_2,EpicF_3,EpicF_4\n1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1",
+    ),
+    (
+        "armor_location",
+        "ID,Clothmodifier,Leathermodifier,Chainmodifier,Platemodifier\n5,0.159999996,0.159999996,0.159999996,0.159999996",
+    ),
+    (
+        "item_armor_quality",
+        "ID,Qualitymod_0,Qualitymod_1,Qualitymod_2,Qualitymod_3,Qualitymod_4,Qualitymod_5,Qualitymod_6\n1,0.899999976,0.949999988,1,1.10000002,1.20000005,1.20000005,1.20000005",
+    ),
+    (
+        "item_armor_shield",
+        "ItemLevel,Quality_0,Quality_1,Quality_2,Quality_3,Quality_4,Quality_5,Quality_6\n1,5,10,16,27,38,38,38",
+    ),
+    (
+        "item_armor_total",
+        "ItemLevel,Cloth,Leather,Mail,Plate\n1,18.5200005,108.660004,241.630005,271.579987",
+    ),
+    (
+        "item_damage_one_hand",
+        "ItemLevel,Quality_0,Quality_1,Quality_2,Quality_3,Quality_4,Quality_5,Quality_6\n1,0.761455715,0.780158043,1.2690928,3.89907432,6.95736933,6.95736933,6.95736933",
+    ),
+    (
+        "item_damage_one_hand_caster",
+        "ItemLevel,Quality_0,Quality_1,Quality_2,Quality_3,Quality_4,Quality_5,Quality_6\n1,0.761455715,0.780158043,1.2690928,3.89907432,6.95736933,6.95736933,6.95736933",
+    ),
+    (
+        "item_damage_two_hand",
+        "ItemLevel,Quality_0,Quality_1,Quality_2,Quality_3,Quality_4,Quality_5,Quality_6\n1,0.989892423,1.01420546,1.64982069,5.06879663,9.04458046,9.04458046,9.04458046",
+    ),
+    (
+        "item_damage_two_hand_caster",
+        "ItemLevel,Quality_0,Quality_1,Quality_2,Quality_3,Quality_4,Quality_5,Quality_6\n1,0.989892423,1.01420546,1.64982069,5.06879663,9.04458046,9.04458046,9.04458046",
+    ),
+];
+
+fn pinned_scaling_database() -> (tempfile::TempDir, std::path::PathBuf) {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("world.db");
+    let conn = Connection::open(&path).unwrap();
+    for (table, csv) in FOREVER_SCALING_CSVS {
+        let mut lines = csv.lines();
+        let columns = lines.next().unwrap();
+        conn.execute_batch(&format!("CREATE TABLE skyborne_{table} ({columns});"))
+            .unwrap();
+        for line in lines {
+            let values: Vec<f64> = line
+                .split(',')
+                .map(|value| value.parse().unwrap())
+                .collect();
+            let parameters = vec!["?"; values.len()].join(",");
+            conn.execute(
+                &format!("INSERT INTO skyborne_{table} VALUES ({parameters})"),
+                rusqlite::params_from_iter(values),
+            )
+            .unwrap();
+        }
+        conn.execute_batch(&format!(
+            "CREATE TABLE {table} AS SELECT * FROM skyborne_{table};"
+        ))
+        .unwrap();
+    }
+    // Retail-only capability with deliberately different values at the same level.
+    conn.execute_batch(
+        "ALTER TABLE rand_prop_points ADD COLUMN DamageReplaceStatF REAL;
+         ALTER TABLE rand_prop_points ADD COLUMN DamageSecondaryF REAL;
+         UPDATE rand_prop_points SET DamageReplaceStatF = 41.25, DamageSecondaryF = 73.5,
+             SuperiorF_0 = 19, GoodF_0 = 29;
+         UPDATE item_armor_total SET Cloth = 1000;
+         UPDATE item_damage_one_hand SET Quality_2 = 50;
+         CREATE TABLE item_squish_era (ID INTEGER, CurveID INTEGER);",
+    )
+    .unwrap();
+    (directory, path)
+}
+
+#[test]
+fn pinned_70205_scaling_loads_normal_stats_without_retail_spell_budgets() {
+    let (_directory, path) = pinned_scaling_database();
+    let retail = load_item_scaling_tables(&path).unwrap();
+    assert_eq!(retail.spell_budgets[&1], [41.25, 73.5, 19.0]);
+    let forever = load_forever_item_scaling_tables(&path).unwrap();
+    assert!(forever.spell_budgets.is_empty());
+    assert_eq!(forever.squish, None);
+    let mut armor = ItemTemplate {
+        inventory_type: 5,
+        scaling: ItemScaling {
+            class_id: ITEM_CLASS_ARMOR,
+            subclass_id: 1,
+            quality: 2,
+            item_level: 1,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    armor.scaling.stats[0] = ItemStatAllocation {
+        stat: 4,
+        allocation: 10000,
+        ..Default::default()
+    };
+    let stats = item_stats(&armor, &forever);
+    assert_eq!(stats.block.primary.strength, 1.0);
+    assert_eq!(stats.block.secondary.armor, 3.0);
+    let retail_stats = item_stats(&armor, &retail);
+    assert_eq!(retail_stats.block.primary.strength, 29.0);
+    assert_eq!(retail_stats.block.secondary.armor, 160.0);
+    let weapon = ItemTemplate {
+        inventory_type: 13,
+        scaling: ItemScaling {
+            class_id: ITEM_CLASS_WEAPON,
+            quality: 2,
+            item_level: 1,
+            delay_ms: 2000,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(
+        item_stats(&weapon, &forever).weapon,
+        Some(WeaponDamage {
+            min: 2.0,
+            max: 3.0,
+            speed: 2.0,
+            kind: WeaponType::OneHand,
+        })
+    );
+    assert_eq!(item_stats(&weapon, &retail).weapon.unwrap().min, 100.0);
+}
+
+#[test]
+fn pinned_70205_scaling_rejects_missing_source_owned_tables() {
+    let (_directory, path) = pinned_scaling_database();
+    Connection::open(&path)
+        .unwrap()
+        .execute_batch("DROP TABLE skyborne_item_damage_one_hand;")
+        .unwrap();
+    let error = load_forever_item_scaling_tables(&path).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("no such table: skyborne_item_damage_one_hand"),
+        "{error}"
+    );
+}
+
+#[test]
+fn pinned_70205_scaling_does_not_make_retail_budget_fields_optional() {
+    let (_directory, path) = pinned_scaling_database();
+    Connection::open(&path)
+        .unwrap()
+        .execute_batch("ALTER TABLE rand_prop_points DROP COLUMN DamageSecondaryF;")
+        .unwrap();
+    let error = load_item_scaling_tables(&path).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("no such column: DamageSecondaryF"),
+        "{error}"
+    );
+}
+
 const NOTCHED_SHORTSWORD: u32 = 727;
 const VENDETTA: u32 = 776;
 const BLACK_DUSKWOOD_STAFF: u32 = 937;

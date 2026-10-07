@@ -15,6 +15,8 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 - [x] Import exactly nine source-pinned Forever item-scaling CSVs atomically into isolated `skyborne_` tables in an existing owned scratch database; preserve Retail schemas/rows/provenance. Validate build, FDID/layout/raw/schema pins, CSV hashes/columns/row IDs and required levels before publication; missing/tampered source or SQL failure leaves no partial refresh. Publish only authored fields and exact per-row raw provenance, never Retail scaling substitutes.
 
+- [ ] Load normal Forever armor, weapon and stat scaling from the pinned schema without requiring Retail-only spell-budget fields. Forever `spell_budgets` must be empty; Retail values remain mandatory and source-owned.
+
 ## How it works
 
 - [Skyborne system](../wiki/systems/skyborne.md)
@@ -41,6 +43,9 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 - [x] New races 95/96 persist map 2991 and approved reconstructed starts: 95→(4088.501,1847.5,976.169), 96→(4051.417,1858.625,977.620). Race 96 is inferred, not an established level-1 intro. Initial facing is atan2(giver Y−start Y,giver X−start X), converted to replicated yaw; existing characters are not relocated.
 - [ ] Full terrain/LOS closure and Forever racial/loadout parity remain separate gaps.
+- [ ] Forever item-spell scaling classes -8/-9 remain unsupported: RandPropPoints FDID 1310245/layout 4FD22743 declares only ID and Good/Superior/Epic arrays of five values, not DamageReplaceStatF or DamageSecondaryF. No invented zero columns, Retail borrowing or fallback. Existing Retail-only caster lookup is outside this loader integration.
+
+Pending loader regression: `crates/server/src/item_stats_tests.rs` uses exact pinned CSV headers/level-1 rows in a temporary database, distinct Retail values, and actual loader/stat outputs plus missing-source errors. Desktop RED at `8352a4e63916301b9f8827efbe72a277d74cb51d` was blocked before execution by unrelated test constructors in `auras/tests.rs` and `group/tests.rs`; no behavioral RED/GREEN or loader fix is claimed. Command, scope hashes and logs: `target/pinned-70205-loader-proof/`.
 
 ## Out of scope
 
