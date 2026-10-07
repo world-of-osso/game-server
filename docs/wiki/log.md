@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-07] checkpoint | Rebased Skyborn source and protocol boundary
+
+Updated [[skyborne]] with Main-supplied clean90/no-skip rebase onto8b3819b0 at pushed bef3fa745, backup ref/cold data-binary target, preserved character30/40XP and conflict-resolution boundaries. Historical1448 receipt retained but changed scopes invalidated. Native auth succeeds then old-runtime48/client510 fingerprint rejection before world; no NPC/graphics or current server tests/build GREEN. Linked engine CPU/build checkpoint. Docs-only; Main owns matching desktop rebuild; no operations, tests, delegation or push.
+
 ## [2026-10-06] systems | Player resurrection and creature taps
 
 Added [offer/tap mechanics](systems/player-resurrection-and-taps.md) and [contract](../specs/player-resurrection-and-taps.md): Retail effects 18/172, implicit-zero target validation, owner consent/expiry replies, cast-position restoration, stable character tap IDs and roster comparison. Targeted proof ledger: `/tmp/claude/rezrtap-proof.md`. No production service, merge, push or deployment.
