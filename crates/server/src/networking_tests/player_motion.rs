@@ -57,11 +57,26 @@ fn player_motion_airborne_walkoff_and_touchdown_replicate_without_jump() {
     assert!(!motion(&app, player).contains(PlayerMotion::JUMP_STARTED));
     tick(&mut app, connection, vec![]);
     assert!(motion(&app, player).contains(PlayerMotion::FALLING));
-    // A lower loaded surface replaces the unsupported probe on touchdown.
+    // Terrain corners identify authored 100/3-yard grid cells: the lower surface
+    // must occupy the adjacent cell the player walked into, not the original one.
     app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
-        99.0, 100.0, 48.0,
+        100.0 - 100.0 / 3.0,
+        100.0,
+        48.0,
     ));
-    for _ in 0..10 {
+    let pos = *app.world().get::<Position>(player).unwrap();
+    assert_eq!(
+        app.world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .ground_at(0, Vec3::new(pos.x, pos.y, pos.z)),
+        crate::ground::GroundProbe::Supported(48.0)
+    );
+    tick(&mut app, connection, vec![]);
+    let landed = app.world().get::<Position>(player).unwrap();
+    assert!((landed.y - 48.0).abs() <= GROUND_SNAP_THRESHOLD);
+    assert!(!app.world().get::<FallTracker>(player).unwrap().airborne);
+    assert_eq!(motion(&app, player), PlayerMotion(PlayerMotion::FORWARD));
+    for _ in 0..9 {
         tick(&mut app, connection, vec![]);
     }
     assert_eq!(motion(&app, player), PlayerMotion(PlayerMotion::FORWARD));
