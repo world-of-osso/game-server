@@ -64,26 +64,28 @@ Historical user choice kept acceptance blocked: `34e23d5` restored the appearanc
 
 Main reports all 90 commits replayed without skips onto `8b3819b0`, clean source `bef3fa74577e6810e72bdbace1d7baeda1afa910`, pushed as `origin/skyborn`. Backup ref: `refs/backup/skyborn-pre-rebase-4fac87a243f2`. Cold data/binary backup: `target/skyborn-e2e/backups/before-master-4fac87a243f2`; engine `target/skyborn-source-items/server-pre-rebase-cold-backup.json` records the exact backup. Character30 retains40XP; never reset.
 
+Current pushed server checkpoint is `708d493`; engine pushed `c65b03d2b`. Earlier `bef3fa745` and protocol48-versus510748 rejection are historical, superseded by matching scratch world entry below; historical1448 suite remains revision-scoped, not fresh rebased proof.
+
 | Boundary | Evidence | Current gap |
 |---|---|---|
-| Rebased source | Master CombatLogEvent dispel/extraID/wall-clock helper retained alongside local strict metadata assertions. DB2 decrypted/zero-filled warning policy retained alongside strict selected IDs, global strings and sparse decoder. Shared spell-budget loading incorrectly requires Retail-only columns from Forever; source-applicability correction pending | Source resolution is not build/test proof |
-| Historical server suite | `c5cf88a` fresh1448-pass receipt remains in [content import](content-import.md#forever-zephras-overlay) | Changed scopes invalidated by rebase; no current server suite/build GREEN |
-| Native `ailee-assets` | Main reports successful auth followed by explicit server protocol fingerprint rejection: old runtime protocol `48f3640` versus client `5107483b`; agent243 source report identifies that boundary | Fails before world entry; no NPC/graphics credit, not credentials or scheduling |
-| Matching runtime | User approved matching scratch rebuild and push; scratch server stopped, old cage gone, data backed up; master-aligned server source available | Main-owned desktop helper rebuild pending; no matching runtime/native acceptance |
+| Loader source applicability | `c1cdf6e` restricts spell budgets to Retail; normal Forever scaling stays mandatory and Forever spell-budget map empty. Matching loader tests GREEN3/3 | No Forever item-spell support, fabricated columns, borrowed budgets or fallback |
+| Independent bounded gate | [Ledger](../../../target/final-bounded-server-3eb1181/ledger.md) at `708d493`: fmt/check exit0, Rust8/8, changed Python1/1; loader3/3 reused by matching hashes, unchanged Python18 retained by exact scopes | Not a fresh whole-suite pass; loader fixture-helper readability advisory retained |
+| Matching portable runtime | Server SHA256 `c818f4541057feb805756106dd59d00719de1ad6e4d61dca4b31b6077e9daed0` from `3eb1181`, installed owned scratch only; matching extension `62eddda…` authenticated/world entered | Production unchanged; startup initially lacked AreaTable and achievements |
+| Native boundary | Character30 retains40XP/log`[]`; seven source-kit queries; Ailee attached12 textured batches then actual fixture FAIL Batch94/geoset3601, texture_count1/base_texture empty | Grove not reached; genuine batch-binding investigation pending agent277, no Ailee native GREEN/pixel/whole-goal claim |
 
-[Engine current checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) owns independent equipment20/20, retained core/synthetic scopes and matching client build evidence. No source RowData changes, production deployment or PR. This checkpoint performs documentation changes only.
+Pinned Forever70205 RandPropPoints has16 columns and lacks Retail-only `DamageReplaceStatF`/`DamageSecondaryF`; producer faithful. The former shared-loader requirement was a consumer defect, now corrected, not missing authored data.
 
-### RandPropPoints source applicability diagnosis
+### Scratch prerequisite provenance and limits
 
-Main-supplied finding: pinned `Forever70205` `RandPropPoints` has 16 columns and lacks `DamageReplaceStatF`/`DamageSecondaryF`; the producer faithfully preserves that schema. The rebased shared loader incorrectly requires those Retail-only columns during Forever startup. This is a consumer source-applicability defect, not missing authored data or a producer defect.
+Existing supported narrow importers provisioned only owned scratch. [Area receipt](../../../../game-engine-skyborn/target/skyborn-source-items/scratch-area-import.json): local AreaTable CSV9848 rows, SHA256 `8559dee102d82ad2dcfba36360d9d94947baf2880a145d2b69c83ba1d6f3342b`, explicitly stamped `local-csv-sha256:8559dee102d82ad2dcfba36360d9d94947baf2880a145d2b69c83ba1d6f3342b;build-unverified`. Build **UNVERIFIED**, not pinned Retail build proof.
 
-Agent267 is correcting spell-budget loading to Retail only. Normal Forever item scaling remains mandatory; its spell-budget map stays empty. The item-spell effect evaluator remains Retail: no Forever item-spell support, fabricated columns/data, borrowed Retail budgets or fallback is claimed. Main committed source-aware aura/group test constructors at `cbd588f`; that source change is not test proof.
+[Achievement receipt](../../../../game-engine-skyborn/target/skyborn-source-items/scratch-achievement-import.json) and [read-only source transfer/hashes](../../../../game-engine-skyborn/target/skyborn-source-items/scratch-achievement-source-transfer.json): four pinned local Desktop DB2s69933, imported Achievement14081/Category243/Criteria66340/CriteriaTree120821. Exactly1 Criteria and8 CriteriaTree encrypted/unavailable rows remain excluded under existing policy; no fabricated rows.
 
-Targeted proof, matching desktop rebuild and native acceptance remain pending. Historical receipts retain their original revision/scope; they do not prove the current source or native runtime. Scratch remains stopped; character30/40XP remains preserved. No operations, tests or builds were performed by this documentation audit.
+[Engine checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) links native and diagnostic logs. Fixture `5a85044ee` adds error context only, not weakened assertions. Main reports runtime stopped, server MainPID0 and cage stopped; no canonical/server/player data mutation outside owned scratch. This documentation audit runs no operations/builds/tests.
 
 ## Sources
 
-- Main-supplied 2026-10-07 source finding — pinned Forever70205 RandPropPoints schema, faithful producer, shared-loader defect, agent267 correction scope and `cbd588f` constructors; targeted proof/rebuild/native pending.
+- Main-supplied 2026-10-07 source finding — pinned Forever70205 RandPropPoints schema, faithful producer, shared-loader defect, Retail-only correction `c1cdf6e`, matching3/3, independent bounded gate and matching native material FAIL; prior pending status historical.
 - Main-supplied 2026-10-07 checkpoint — rebase, pushed revisions, conflict resolutions, runtime fingerprint diagnosis, cold backup and character preservation; no fresh runtime verification by this documentation audit.
 - [Cold backup receipt](../../../../game-engine-skyborn/target/skyborn-source-items/server-pre-rebase-cold-backup.json) — exact pre-rebase data/binary backup target.
 
