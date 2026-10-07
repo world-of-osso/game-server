@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-07] systems | Merchant sale order and bag repair
+
+Updated [merchant](systems/merchant.md): chronological wrapped buyback lists retain physical request slots; item-guid durability survives unequipping and owned bag-item repairs save damage and payment atomically. Contract: [merchant spec](../specs/merchant.md). Live and suite proof ledger: `/home/osso-test/Projects/world-of-osso/game-engine/data/diagnostics/merchantloop-2026-10-07/proof-ledger.txt`.
+
 ## [2026-10-07] systems | Death logout/login persistence
 
 Updated [[persistence]] with reproduced restore → select → initial-snapshot ordering race, atomic full death-state checkpoint, exact graveyard restoration and additive saved-data compatibility. Regression boundary: reopened redb → new SelectCharacter session. Proof ledger: `/home/osso-test/Projects/world-of-osso/game-engine/data/diagnostics/deathpersist-2026-10-07/proof-ledger.txt`. No merge, push or deploy.

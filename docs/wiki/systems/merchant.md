@@ -23,6 +23,13 @@ Money and bags change in one `InventoryModel` (load → mutate → `save_invento
 - `VendorStock`: `(vendor entity, slot) → count, last increment` in server seconds. `available()` implements `GetVendorItemCurrentCount` and `consume()` implements `UpdateVendorItemCurrentCount`.
 - `BuybackSlots` (a component on the connection) follows `AddItemToBuyBackSlot` / `RemoveItemFromBuyBackSlot`. Difference: AzerothCore's scan replaces the oldest sale even when an earlier slot is empty. Here an empty slot (sold-at time 0) counts as the oldest, so holes are filled first.
 
+## Sources
+
+- [Merchant contract](../../specs/merchant.md)
+- [Request handlers](../../../crates/server/src/merchant.rs)
+- [Buyback ordering](../../../crates/server/src/merchant/stock.rs)
+- [Item storage](../../../crates/server/src/persistence_inventory.rs)
+
 ## Durability and repair cost
 
 `durability.rs` loads `ItemDurability` at startup from world.db:
