@@ -465,6 +465,10 @@ fn send_resurrect_response(
     }
 }
 
+/// Resurrection Sickness: `Player::ResurrectPlayer(0.5f, true)` casts it on the player
+/// after a spirit healer resurrection at or above the sickness level.
+const RESURRECTION_SICKNESS_SPELL: u32 = 15007;
+
 type SpiritHealerPlayerData<'w, 's> = Query<
     'w,
     's,
@@ -492,6 +496,7 @@ fn process_spirit_healer_requests(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
+    mut commands: Commands,
 ) {
     let now = current_seconds(&time);
     for (conn_entity, link, mut receiver) in &mut receivers {
@@ -522,7 +527,19 @@ fn process_spirit_healer_requests(
                 level.map(|level| level.0).unwrap_or_default(),
                 now,
             ) {
-                Ok(message) => {
+                Ok((message, sickness)) => {
+                    if sickness {
+                        let player = link.0;
+                        commands.queue(move |world: &mut World| {
+                            crate::spell_cast::cast_triggered(
+                                world,
+                                player,
+                                RESURRECTION_SICKNESS_SPELL,
+                                Some(player),
+                                0,
+                            );
+                        });
+                    }
                     teleported(dirty_queue.as_deref(), link.0, &mut control);
                     send_update(
                         conn_entity,
@@ -737,7 +754,7 @@ fn resurrect_at_spirit_healer(
     death_state: &mut PlayerDeathState,
     level: u8,
     now: u64,
-) -> Result<String, String> {
+) -> Result<(String, bool), String> {
     let graveyard = death_state
         .graveyard
         .as_ref()
@@ -758,7 +775,10 @@ fn resurrect_at_spirit_healer(
         crate::durability::apply_spirit_healer_loss(&mut durability);
     }
     complete_resurrection(health, mana, death_state);
-    Ok("accepted spirit healer resurrection".into())
+    Ok((
+        "accepted spirit healer resurrection".into(),
+        result.sickness.is_some(),
+    ))
 }
 
 fn complete_resurrection(

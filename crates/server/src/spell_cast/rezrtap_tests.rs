@@ -279,3 +279,95 @@ fn rezrtap_damage_tap_projection_and_clear() {
     crate::creature_tap::clear(h.app.world_mut(), npc);
     assert!(!h.app.world().get::<UnitTap>(npc).unwrap().denied(99, &[]));
 }
+
+/// A ghost at its graveyard's spirit healer, level `level`, with a connection
+/// that can send `AcceptSpiritHealerResurrection`.
+fn healer_fixture(level: u8) -> (Harness, Entity, Entity) {
+    let sickness = world_db()
+        .expect("world fixture")
+        .store
+        .get(15007)
+        .expect("resurrection sickness fixture")
+        .clone();
+    let mut h = harness_with_plugins(vec![sickness], &[], 2, false, |app| {
+        app.add_plugins(DeathPlugin);
+    })
+    .expect("world fixture required");
+    let ghost = spawn_player(&mut h.app, 5, 3.0);
+    h.app.world_mut().entity_mut(ghost).insert((
+        shared::components::Level(level),
+        PlayerDeathState {
+            state: DeathState::Ghost,
+            corpse: None,
+            graveyard: Some(shared::death::Graveyard {
+                id: 1,
+                zone_id: 12,
+                faction: 0,
+                map_id: 0,
+                x: 5.0,
+                y: 0.0,
+                z: 0.0,
+            }),
+        },
+        MovementControl::default(),
+        Health {
+            current: 0.0,
+            max: 1000.0,
+        },
+    ));
+    let conn = spawn_peer_connection(&mut h.app, ghost, 99);
+    h.app.world_mut().entity_mut(conn).insert((
+        lightyear::prelude::MessageSender::<shared::protocol::DeathStateUpdate>::default(),
+        lightyear::prelude::MessageReceiver::<shared::protocol::DeathStateUpdate>::default(),
+        lightyear::prelude::MessageSender::<shared::protocol::AcceptSpiritHealerResurrection>::default(),
+        lightyear::prelude::MessageReceiver::<shared::protocol::AcceptSpiritHealerResurrection>::default(),
+    ));
+    (h, ghost, conn)
+}
+
+fn accept_spirit_healer(h: &mut Harness, conn: Entity) {
+    h.app
+        .world_mut()
+        .get_mut::<lightyear::prelude::MessageSender<shared::protocol::AcceptSpiritHealerResurrection>>(conn)
+        .unwrap()
+        .send::<shared::protocol::DeathChannel>(shared::protocol::AcceptSpiritHealerResurrection);
+    h.advance(3);
+}
+
+fn has_sickness(h: &Harness, ghost: Entity) -> bool {
+    h.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(ghost)
+        .is_some_and(|auras| auras.has_spell(15007))
+}
+
+/// `WorldSession::HandleSpiritHealerActivate` → `Player::ResurrectPlayer(0.5f, true)`:
+/// at or above the sickness level the player casts Resurrection Sickness (15007) on
+/// itself.
+#[test]
+fn spirit_healer_resurrection_applies_resurrection_sickness() {
+    let (mut h, ghost, conn) = healer_fixture(30);
+    accept_spirit_healer(&mut h, conn);
+    assert_eq!(
+        h.app.world().get::<PlayerDeathState>(ghost).unwrap().state,
+        DeathState::Alive
+    );
+    assert!(
+        has_sickness(&h, ghost),
+        "level 30 spirit healer resurrection"
+    );
+}
+
+#[test]
+fn spirit_healer_resurrection_below_sickness_level_has_no_sickness() {
+    let (mut h, ghost, conn) = healer_fixture(5);
+    accept_spirit_healer(&mut h, conn);
+    assert_eq!(
+        h.app.world().get::<PlayerDeathState>(ghost).unwrap().state,
+        DeathState::Alive
+    );
+    assert!(
+        !has_sickness(&h, ghost),
+        "level 5 is below the sickness level"
+    );
+}
