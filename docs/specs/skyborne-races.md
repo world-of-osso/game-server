@@ -15,7 +15,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 - [x] Import exactly nine source-pinned Forever item-scaling CSVs atomically into isolated `skyborne_` tables in an existing owned scratch database; preserve Retail schemas/rows/provenance. Validate build, FDID/layout/raw/schema pins, CSV hashes/columns/row IDs and required levels before publication; missing/tampered source or SQL failure leaves no partial refresh. Publish only authored fields and exact per-row raw provenance, never Retail scaling substitutes.
 
-- [ ] Load normal Forever armor, weapon and stat scaling from the pinned schema without requiring Retail-only spell-budget fields. Forever `spell_budgets` must be empty; Retail values remain mandatory and source-owned.
+- [x] Load normal Forever armor, weapon and stat scaling from the pinned schema without requiring Retail-only spell-budget fields. Forever `spell_budgets` is empty; Retail values remain mandatory and source-owned. Normal Forever scaling tables remain mandatory. This loader support does not implement Forever spell evaluation.
 
 ## How it works
 
@@ -45,7 +45,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - [ ] Full terrain/LOS closure and Forever racial/loadout parity remain separate gaps.
 - [ ] Forever item-spell scaling classes -8/-9 remain unsupported: RandPropPoints FDID 1310245/layout 4FD22743 declares only ID and Good/Superior/Epic arrays of five values, not DamageReplaceStatF or DamageSecondaryF. No invented zero columns, Retail borrowing or fallback. Existing Retail-only caster lookup is outside this loader integration.
 
-Pending loader regression: `crates/server/src/item_stats_tests.rs` uses exact pinned CSV headers/level-1 rows in a temporary database, distinct Retail values, and actual loader/stat outputs plus missing-source errors. Desktop RED at `8352a4e63916301b9f8827efbe72a277d74cb51d` was blocked before execution by unrelated test constructors in `auras/tests.rs` and `group/tests.rs`; no behavioral RED/GREEN or loader fix is claimed. Command, scope hashes and logs: `target/pinned-70205-loader-proof/`.
+Loader regression: `crates/server/src/item_stats_tests.rs` uses exact pinned CSV headers/level-1 rows with integer keys in a temporary database, distinct Retail values, actual loader/stat outputs and missing-source errors. Behavioral RED at `d342155` fails on the absent Forever `DamageReplaceStatF` column; the Retail-required-field case passes. The loader now limits spell-budget loading to Retail; targeted GREEN remains pending at this implementation commit. Prior compile-blocked and fixture-type failures are not behavioral loader evidence. Command, revision/scope hashes and results: `target/pinned-70205-loader-proof/ledger.json`.
 
 ## Out of scope
 

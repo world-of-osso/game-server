@@ -462,14 +462,16 @@ fn load_scaling_namespace(
             [floats(row, 1)?, floats(row, 6)?, floats(row, 11)?],
         ))
     })?;
-    let spell_budgets = load_map(
-        conn,
-        &format!(
-            "SELECT ID, DamageReplaceStatF, DamageSecondaryF, SuperiorF_0 FROM {}",
-            table("rand_prop_points")
-        ),
-        |row| Ok((row.get(0)?, [row.get(1)?, row.get(2)?, row.get(3)?])),
-    )?;
+    let spell_budgets = if table_prefix.is_empty() {
+        load_map(
+            conn,
+            "SELECT ID, DamageReplaceStatF, DamageSecondaryF, SuperiorF_0 FROM rand_prop_points",
+            |row| Ok((row.get(0)?, [row.get(1)?, row.get(2)?, row.get(3)?])),
+        )?
+    } else {
+        // Pinned Forever RandPropPoints has no Retail spell-budget fields.
+        HashMap::new()
+    };
     let armor_total = load_map(
         conn,
         &format!(
