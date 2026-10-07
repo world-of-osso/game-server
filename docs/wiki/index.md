@@ -54,7 +54,7 @@ Server gameplay systems.
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
 | [[swimming-and-breath]] | MH2O terrain liquid (client-matched sampling), swim height bounds, no gravity for swimmers, TrinityCore breath/fatigue mirror timers and drowning damage |
 | [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management |
-| [[persistence]] | Dual-layer storage: redb for mutable player data, physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
+| [[persistence]] | redb/SQLite storage; atomic death-state/HP saves, exact corpse/graveyard relog, legacy-record compatibility and initial-snapshot ordering; physical equipment and gold replication |
 | [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1 |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
 | [[class-progression]] | Race/class validation including Monk/DH/Evoker, new-character levels and temporary starts, Initial spec below 10, known spells, action bars and progression persistence |

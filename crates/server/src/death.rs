@@ -76,8 +76,10 @@ impl Plugin for DeathPlugin {
         #[cfg(test)]
         app.init_resource::<DeathTransitionCounters>();
         app.add_systems(PostStartup, load_graveyards_from_world_data);
+        // SelectCharacter spawns during Update. Restore legacy corpses and send
+        // the initial snapshot only after all login commands have been applied.
         app.add_systems(
-            Update,
+            PostUpdate,
             (restore_persisted_ghosts, send_initial_death_snapshot).chain(),
         );
         app.add_systems(Update, resurrection::receive_responses);

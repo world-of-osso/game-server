@@ -663,6 +663,17 @@ fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     let account_id = 12;
     let (character_id, _) =
         persistence::create_character(&db.db, account_id, "Unreleased", 1, 1).unwrap();
+    let mut data = persistence::load_character(&db.db, character_id).unwrap();
+    data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
+        slot: EquipmentVisualSlot::Head,
+        item_id: Some(100),
+        display_info_id: Some(200),
+        inventory_type: 1,
+        hidden: false,
+    }];
+    let expected_durability =
+        crate::durability::load_equipped_durability(&data, &helm_durability());
+    persistence::save_character(&db.db, character_id, &data);
     let mut dead = ghost_at_graveyard(character_id);
     dead.state = DeathState::Dead;
     log_out(&db, character_id, 0.0, Some(&dead));
@@ -676,6 +687,10 @@ fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     let player = app.world().entity(player);
     assert_eq!(player.get::<PlayerDeathState>(), Some(&dead));
     assert_eq!(player.get::<Health>().unwrap().current, 0.0);
+    assert_eq!(
+        player.get::<EquippedDurability>().unwrap().slots,
+        expected_durability.slots
+    );
 }
 
 /// Frozen pre-change corpse encoding; no death-state row existed in this layout.

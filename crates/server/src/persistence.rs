@@ -186,6 +186,11 @@ pub(crate) const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("ne
 pub(crate) const CHARACTER_CORPSES: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_corpses");
 
+/// Full death state, saved atomically with character HP. Separate from the
+/// unchanged bitcode character/corpse layouts so pre-existing rows stay readable.
+pub(crate) const CHARACTER_DEATH_STATES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_death_states");
+
 /// A ghost's corpse, in the Bevy-space coordinates of `shared::death::Corpse`.
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct CorpseData {
@@ -305,6 +310,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(NEXT_IDS);
     let _ = txn.open_table(SERVER_SETTINGS);
     let _ = txn.open_table(CHARACTER_CORPSES);
+    txn.open_table(CHARACTER_DEATH_STATES)
+        .expect("Failed to create character death states table");
     let _ = txn.open_table(crate::maps::persistence::CHARACTER_MAPS);
     txn.open_table(crate::maps::persistence::NORMAL_INSTANCE_LOCKS)
         .expect("Failed to create normal instance locks");
@@ -678,6 +685,22 @@ pub fn save_achievements(
             .expect("Failed to insert achievements");
     }
     txn.commit().expect("Failed to commit achievements save");
+}
+
+pub fn load_player_death_state(
+    db: &Database,
+    character_id: u64,
+) -> Option<crate::death::PlayerDeathState> {
+    let txn = db.begin_read().expect("Failed to begin death state read");
+    let table = txn
+        .open_table(CHARACTER_DEATH_STATES)
+        .expect("Failed to open character death states table");
+    table
+        .get(character_id)
+        .expect("Failed to read character death state")
+        .map(|row| {
+            serde_json::from_slice(row.value()).expect("Failed to decode character death state")
+        })
 }
 
 pub fn load_corpse(db: &Database, character_id: u64) -> Option<CorpseData> {

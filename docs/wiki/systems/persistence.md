@@ -31,9 +31,20 @@ Pure Rust, ACID, embedded B-tree. No external server process. Tables:
 | `pvp_states` | `CharacterId` | PlayerPvpProgress |
 | `character_progression` | `CharacterId` | Active spec ID and action bar ([[class-progression]]) |
 | `character_traits` | `CharacterId` | Trait purchases per spec ([[talents]]) |
-| `character_corpses` | `CharacterId` | `CorpseData` (map, Bevy-space position, death time) of a released ghost. Periodic, logout and shutdown saves (`save_live_character`) write it while `PlayerDeathState` is Ghost and delete it otherwise; a 0-health character with a row logs in as a Ghost with that corpse and the corpse's graveyard (`death.rs` `restore_persisted_ghosts`, AzerothCore `Player::LoadFromDB` `PLAYER_FLAGS_GHOST` + `Player::LoadCorpse`); without one it dies again on login (Dead at its saved position) |
+| `character_death_states` | `CharacterId` | JSON `PlayerDeathState`: Alive/Dead/Ghost, corpse and exact selected graveyard; atomically saved with character HP and restored during character selection before entering the world |
+| `character_corpses` | `CharacterId` | Unchanged bitcode `CorpseData` of a released ghost; retained for pre-death-state records and written/deleted alongside full death state |
 
 File: `data/game.redb`
+
+## Death Logout/Login (verified: 2026-10-07)
+
+At `f25258b`, corpse coordinates were persisted for ghosts, but the death enum and selected graveyard were not. `restore_persisted_ghosts` and `send_initial_death_snapshot` ran in an Update chain without ordering against character selection. The legal order restore → select → snapshot sent Alive with HP 0; next-frame restoration did not resend the initial snapshot because `Added<InWorld>` had expired. A controlled-order login regression reproduces the observed `[Alive]` instead of `[Ghost]`.
+
+Full state now uses an additive table, leaving character and corpse encodings unchanged. Logout, periodic and shutdown saves checkpoint death state and HP in one transaction; Dead/Ghost HP is zero. Login inserts the saved state directly, preserving corpse coordinates, creation time and the chosen graveyard rather than selecting it again or replaying death penalties. Resurrection replaces the saved state with Alive and clears the legacy corpse row.
+
+Pre-change records have no full-state row: existing HP/corpse reconstruction remains their explicit compatibility path. Legacy ghost restoration and the initial snapshot run together in PostUpdate, after Update login commands. Old records cannot recover a graveyard never stored; they retain the existing nearest-corpse graveyard lookup. Reopened-redb → SelectCharacter tests cover ghost/exact graveyard, unreleased dead, alive after resurrection, and a frozen pre-change corpse record.
+
+Reference: [TrinityCore 3.3.5 Player.cpp](https://github.com/TrinityCore/TrinityCore/blob/3.3.5/src/server/game/Entities/Player/Player.cpp), `Player::LoadFromDB` restores ghost/dead state before restoring saved health; `Player::LoadCorpse` restores the saved corpse instead of reviving on login. This server represents both unreleased Dead and released Ghost with HP 0.
 
 ## Legacy Database Incident: Missing `pvp_states`
 

@@ -340,6 +340,13 @@ fn handle_select(
     };
     (data.x, data.y, data.z) =
         crate::terrain_height::bevy_to_wow(place.position.x, place.position.y, place.position.z);
+    let saved_death = persistence::load_player_death_state(&db.db, character_id);
+    if saved_death
+        .as_ref()
+        .is_some_and(|death| death.state != shared::death::DeathState::Alive)
+    {
+        data.health = 0.0;
+    }
     let state = load_selected_character_state(db, character_id, data.race);
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
@@ -351,7 +358,10 @@ fn handle_select(
         build_player_init_state(state),
     );
     commands.entity(player_entity).insert(dungeon_difficulty);
-    if data.health <= 0.0 {
+    if let Some(death) = saved_death {
+        commands.entity(player_entity).insert(death);
+    } else if data.health <= 0.0 {
+        // Compatibility for characters saved before full death-state persistence.
         match persistence::load_corpse(&db.db, character_id) {
             Some(corpse) => {
                 commands

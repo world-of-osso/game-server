@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-07] systems | Death logout/login persistence
+
+Updated [[persistence]] with reproduced restore → select → initial-snapshot ordering race, atomic full death-state checkpoint, exact graveyard restoration and additive saved-data compatibility. Regression boundary: reopened redb → new SelectCharacter session. Proof ledger: `/home/osso-test/Projects/world-of-osso/game-engine/data/diagnostics/deathpersist-2026-10-07/proof-ledger.txt`. No merge, push or deploy.
+
 ## [2026-10-06] systems | Player resurrection and creature taps
 
 Added [offer/tap mechanics](systems/player-resurrection-and-taps.md) and [contract](../specs/player-resurrection-and-taps.md): Retail effects 18/172, implicit-zero target validation, owner consent/expiry replies, cast-position restoration, stable character tap IDs and roster comparison. Targeted proof ledger: `/tmp/claude/rezrtap-proof.md`. No production service, merge, push or deployment.

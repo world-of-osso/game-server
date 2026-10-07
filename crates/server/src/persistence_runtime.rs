@@ -6,7 +6,7 @@ use shared::components::{Health, Player, Position};
 
 use redb::ReadableTable;
 
-use super::{CHARACTER_CORPSES, CHARACTERS, CharacterData, GameDatabase};
+use super::{CHARACTER_CORPSES, CHARACTER_DEATH_STATES, CHARACTERS, CharacterData, GameDatabase};
 use crate::death::PlayerDeathState;
 use crate::maps::persistence::CHARACTER_MAPS;
 use crate::maps::{InMap, MapTransfer};
@@ -170,6 +170,13 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
                     )
                 });
             data.sync_live_components(character.player, character.position, character.health);
+            if character
+                .death
+                .is_some_and(|death| death.state != shared::death::DeathState::Alive)
+            {
+                data.health = 0.0;
+            }
+            save_death_state(&txn, id, character.death);
             rows.insert(id, bitcode::encode(&data).as_slice())
                 .expect("Failed to insert character");
             match ghost_corpse(character.death) {
@@ -185,6 +192,29 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
         }
     }
     txn.commit().expect("Failed to commit live character save");
+}
+
+fn save_death_state(
+    txn: &redb::WriteTransaction,
+    character_id: u64,
+    death: Option<&PlayerDeathState>,
+) {
+    let mut table = txn
+        .open_table(CHARACTER_DEATH_STATES)
+        .expect("Failed to open character death states table");
+    match death {
+        Some(death) => {
+            let bytes = serde_json::to_vec(death).expect("Failed to encode character death state");
+            table
+                .insert(character_id, bytes.as_slice())
+                .expect("Failed to save character death state");
+        }
+        None => {
+            table
+                .remove(character_id)
+                .expect("Failed to remove character death state");
+        }
+    }
 }
 
 /// Only a released ghost keeps its corpse across logins (AzerothCore saves
