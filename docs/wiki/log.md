@@ -671,3 +671,7 @@ Reconciled [[skyborne]], index and source/race contracts against tracked factory
 ## [2026-10-05] systems | Record estimated-stat startup and bounded native evidence
 
 [Content import](systems/content-import.md#forever-zephras-overlay) owns approved health/unit-class estimates, actual startup and fresh whole-workspace proof at c5cf88a; [Skyborne](systems/skyborne.md#native-entry-and-npc-startup-source-gap-2026-10-05) links bounded native evidence. Historical missing-stat panic/ignored regression preserved; no authored/full Classic or complete gameplay claim. Native artifact gate pending.
+
+## [2026-10-07] systems | Record matching scratch native material failure
+
+[skyborne](systems/skyborne.md) checkpoint updated from supplied evidence: server Retail-only loader3/3 and independent bounded gate; scratch prerequisite provenance retains AreaTable build UNVERIFIED and encrypted achievement gaps. Matching world entry preserves character30/40XP/log[]; Ailee12 textured batches precede Batch94/geoset3601 empty base_texture FAIL, Grove not reached. Diagnostic assertions unchanged; batch-binding investigation pending. Historical scopes retained; docs only, no runtime/test/build/push actions.
