@@ -318,8 +318,7 @@ fn process_durability_queries(
     }
 }
 
-/// A newly equipped item starts at full durability; the item still in its slot
-/// keeps its value.
+/// New items start full; equipment moves restore the inventory's saved item damage.
 fn sync_durability_from_equipment_appearance(
     mut players: DurabilityAppearanceQuery,
     rules: Res<ItemDurability>,
