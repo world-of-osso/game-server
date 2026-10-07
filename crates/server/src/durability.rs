@@ -152,6 +152,7 @@ type DurabilityAppearanceQuery<'w, 's> = Query<
     (
         &'static EquipmentAppearance,
         &'static mut EquippedDurability,
+        Option<&'static ClientId>,
     ),
     (With<Player>, Changed<EquipmentAppearance>),
 >;
@@ -322,9 +323,21 @@ fn process_durability_queries(
 fn sync_durability_from_equipment_appearance(
     mut players: DurabilityAppearanceQuery,
     rules: Res<ItemDurability>,
+    db: Option<Res<GameDatabase>>,
 ) {
-    for (appearance, mut durability) in &mut players {
+    for (appearance, mut durability, character_id) in &mut players {
+        let saved = db
+            .as_ref()
+            .zip(character_id)
+            .and_then(|(db, id)| persistence::load_character(&db.db, id.0));
         let next = durability_slots(appearance, &rules, |slot, item_id| {
+            if let Some(data) = &saved {
+                return data
+                    .durability
+                    .iter()
+                    .find(|entry| entry.slot == slot)
+                    .map(|entry| entry.current);
+            }
             durability
                 .slots
                 .iter()

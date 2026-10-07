@@ -282,6 +282,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::INVENTORY_LAYOUTS);
     let _ = txn.open_table(inventory_store::BAG_SLOTS);
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
+    txn.open_table(inventory_store::ITEM_DURABILITIES)
+        .expect("create item durability table");
     let _ = txn.open_table(quest_store::QUEST_LOGS);
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
     let _ = txn.open_table(pet_store::PET_STABLES);

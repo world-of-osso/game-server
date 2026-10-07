@@ -13,7 +13,7 @@ Vendors in `crates/server/src/merchant.rs`, with `merchant/catalog.rs` (the worl
 
 A buy with `destination` (the client's merchant cursor dropped on a bag slot) goes through `InventoryModel::store_item_at`: the slot takes what fits, the rest goes through `store_item`, and the room check covers both before anything changes. `sell_all_junk` lists the poor-quality bag stacks with a sell price from `VendorCatalog.goods`, then runs the ordinary `sell` on each, so every sale fills a buyback slot and re-sends `BuybackList`.
 
-Money and bags change in one `InventoryModel` (load → mutate → `save_inventory_record`) and are recorded in `GoldUpdateQueue`. That queue replicates `Gold` and makes `send_inventory_deltas` send the owner an `InventoryDelta`. Repair also mutates the player's `EquippedDurability`, whose change detection persists it and sends `DurabilityStateUpdate`.
+Money and bags change in one `InventoryModel` (load → mutate → `save_inventory_record`) and are recorded in `GoldUpdateQueue`. That queue replicates `Gold` and makes `send_inventory_deltas` send the owner an `InventoryDelta`. Equipped repair also mutates the player's `EquippedDurability`, whose change detection persists it and sends `DurabilityStateUpdate`. Per-item bag repair saves the item's durability and gold in the same inventory transaction; the existing `ItemStack.durability` in `InventoryDelta` carries the repaired state.
 
 ## Data
 
@@ -34,4 +34,4 @@ Money and bags change in one `InventoryModel` (load → mutate → `save_invento
 
 Example: Tarnished Chain Vest 2379 (Retail item level 2, quality 1, mail) has multiplier 1 × 0.8, max 55. Losing 11 points costs 8 copper.
 
-Players get `EquippedDurability` through an entity command at spawn (`insert_equipped_durability`), because the character-select pipeline has no resource access. `sync_durability_from_equipment_appearance` keeps a slot's value while the same item stays equipped.
+Players get `EquippedDurability` through an entity command at spawn (`insert_equipped_durability`), because the character-select pipeline has no resource access. `sync_durability_from_equipment_appearance` restores the saved current value. Equipment moves preserve `(current, max)` by item guid in the separate `item_durabilities` redb table, without changing existing item-instance rows; bag snapshots expose that state and re-equipping restores it. `BuybackList` uses sale order (oldest first, newest last), retaining each entry's physical request slot and same-tick request order.

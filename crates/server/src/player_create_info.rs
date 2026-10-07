@@ -280,6 +280,7 @@ impl NewCharacterKit<'_> {
             equipped: Vec::new(),
             bag_slots: Vec::new(),
             instances: HashMap::new(),
+            item_durability: HashMap::new(),
         };
         let mut model = InventoryModel::from_record(empty, self.templates, mint);
         for &(item_id, count) in &info.items {

@@ -35,7 +35,7 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
 - [x] Repair (`RepairItem { item_guid }`, where `None` means all equipped items) works only at a `REPAIR` NPC.
   - Each item costs `lost * DurabilityCosts[ItemLevel][class/subclass] * DurabilityQuality[(Quality+1)*2]`, at least 1 copper.
   - Items the remaining money can't cover stay damaged and the request answers `NotEnoughMoney`.
-  - `Some(guid)` repairs only that equipped item. Any other guid (a bag item, which has no durability) changes nothing and answers nothing, as TrinityCore `HandleRepairItemOpcode` (NPCHandler.cpp:748).
+  - `Some(guid)` repairs only that owned equipped or bag item, using its own lost durability and cost (TrinityCore `Player::DurabilityRepair` resolves the item by position). An undamaged, unrepairable or foreign item is refused with `ItemNotFound`, without changing money or durability.
 - [x] Guild bank repair (`RepairItem { item_guid: None, guild_bank: true }`, Retail `RepairAllItems(true)`; TrinityCore `HandleRepairItemOpcode` `UseGuildBank`, NPCHandler.cpp:389-420, applies it to repair-all only, so `Some(guid)` with the flag pays personally):
   - The player's rank needs `GR_RIGHT_WITHDRAW_REPAIR`, else `GuildPermissions` ("You don't have permission to do that."); a player without a guild gets the same.
   - Damaged items are repaired cheapest first while their running total fits `guild_repair_money`; the total is taken from the guild money once (TrinityCore `Player::DurabilityRepairAll(guildBank = true)`, Player.cpp:4636-4669). The player's own money is never touched.
@@ -43,18 +43,18 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Items left damaged answer `GuildNotEnoughMoney` ("The guild bank does not have enough money"); when nothing fits, nothing changes and nothing is logged. TrinityCore answers neither error; the personal repair's `NotEnoughMoney` is the precedent.
   - After a guild repair the vendor list is sent again with the new `guild_repair_money`, and guild members with the vault open get the new bank.
 - [x] Every decoded vendor request is logged once (`merchant request character=<id> <request>`).
-- [x] Durability belongs to equipped items with `item_template.MaxDurability > 0`, matched by `content_item.SourceEntry`. A newly equipped item starts at full durability.
+- [x] Durability belongs to items with `item_template.MaxDurability > 0`, matched by `content_item.SourceEntry`. Unequipping preserves damage by item guid in storage and bag snapshots; re-equipping restores that item's durability. A new item starts at full durability.
 - [x] Changing from the old per-slot profile: at login a saved current value is capped to the item's max, an equipped item without `MaxDurability` (e.g. Recruit's Boots 40) loses its durability slot, and a newly equipped item starts at full durability instead of taking over the slot's value.
 - [x] Admin `set-gold <character> <copper>` sets the money and replicates it live. `set-durability <character> <percent>` sets every equipped item to that percent of its max.
 - [ ] No reputation price discount (`GetReputationPriceDiscount`): NPC factions are not mapped to reputation factions.
 - [ ] Items with a Wrath `ExtendedCost` (12,887 rows) are skipped, because Retail `ItemExtendedCost` is not imported.
 - [ ] No vendor conditions, no refundable purchases; no per-bag junk-sell exclusion flags (`BagSlotFlags::ExcludeJunkSell`).
-- [ ] Bag items have no durability, so selling damaged items and repairing bag items do not apply.
+- [ ] Sale prices are not reduced for damaged items.
 
 ## Tests asserting this spec
 
 - `crates/server/src/merchant_tests.rs`: real world.db vendors.
-  - Godric Rothgar 1213: armor list and prices, buy the vest for 89 copper, refusals, a purchase that doesn't fit, repair all for 16 copper, partial repair, repairing only the equipped vest for 8 copper, a bag item's guid ignored.
+  - Godric Rothgar 1213: armor list and prices, buy the vest for 89 copper, refusals, a purchase that doesn't fit, repair all for 16 copper, partial repair, repairing only the equipped vest for 8 copper, damaged bag vest repair for 8 copper, undamaged/foreign bag repair refused, and insufficient-money bag repair preserving damage.
   - Brother Danil 152: water at 5 per purchase stacking to 20, no sell price, no repair.
   - Tharynn Bouden 66: the limited pattern sells out.
   - Also: linen sale and buyback, restock timing, 13th sale, admin commands.

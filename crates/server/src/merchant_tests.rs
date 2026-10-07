@@ -755,9 +755,7 @@ fn repairing_one_item_repairs_only_that_equipped_item() {
 }
 
 #[test]
-fn repairing_a_bag_item_is_ignored_as_trinitycore_does() {
-    // TrinityCore `HandleRepairItemOpcode` (NPCHandler.cpp:748): an item without
-    // durability repairs for nothing and answers nothing. Bag items carry none here.
+fn repairing_an_undamaged_bag_item_is_refused() {
     let Some(mut h) = harness() else { return };
     damage_gear(&mut h);
     h.grant(LINEN, 1);
@@ -776,9 +774,137 @@ fn repairing_a_bag_item_is_ignored_as_trinitycore_does() {
         guild_bank: false,
     });
 
-    assert!(h.failures().is_empty());
+    assert_eq!(h.failures(), vec![MerchantError::ItemNotFound]);
     assert_eq!(h.inventory().gold, 100_000);
     assert_eq!(durability(&h), vec![(44, 55), (25, 35)]);
+}
+
+fn damaged_vest_in_backpack(h: &mut Harness) -> u64 {
+    let guid = equip(h, TARNISHED_CHAIN_VEST);
+    let world = h.app.world();
+    let db = &world.resource::<GameDatabase>().db;
+    let mut character = persistence::load_character(db, h.character_id).unwrap();
+    character.durability = vec![persistence::DurabilityEntryData {
+        slot: EquipmentVisualSlot::Chest,
+        current: 44,
+        max: 55,
+    }];
+    persistence::save_character(db, h.character_id, &character);
+    let mut model =
+        crate::inventory::load_model(db, world.resource::<ItemTemplates>(), h.character_id)
+            .unwrap();
+    model
+        .swap(
+            ItemLocation::Equipment(shared::protocol::EquipmentSlot::Chest),
+            ItemLocation::Bag { bag: 0, slot: 15 },
+        )
+        .unwrap();
+    save_inventory_record(db, h.character_id, &model.into_record());
+    guid
+}
+
+fn bag_durability(h: &Harness, guid: u64) -> Option<shared::protocol::ItemDurability> {
+    let world = h.app.world();
+    crate::inventory::load_model(
+        &world.resource::<GameDatabase>().db,
+        world.resource::<ItemTemplates>(),
+        h.character_id,
+    )
+    .unwrap()
+    .inventory_snapshot()
+    .bags
+    .into_iter()
+    .flat_map(|bag| bag.items)
+    .find(|item| item.item.item_guid == guid)
+    .unwrap()
+    .item
+    .durability
+}
+
+#[test]
+fn repairing_a_damaged_bag_item_persists_its_durability_and_charges_only_its_cost() {
+    let Some(mut h) = harness() else { return };
+    let guid = damaged_vest_in_backpack(&mut h);
+    assert_eq!(
+        bag_durability(&h, guid),
+        Some(shared::protocol::ItemDurability {
+            current: 44,
+            max: 55
+        })
+    );
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: Some(guid),
+        guild_bank: false,
+    });
+    assert!(h.failures().is_empty());
+    assert_eq!(h.inventory().gold, 100_000 - 8);
+    assert_eq!(
+        bag_durability(&h, guid),
+        Some(shared::protocol::ItemDurability {
+            current: 55,
+            max: 55
+        })
+    );
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: Some(guid),
+        guild_bank: false,
+    });
+    assert_eq!(h.failures(), vec![MerchantError::ItemNotFound]);
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: Some(u64::MAX),
+        guild_bank: false,
+    });
+    assert_eq!(h.failures(), vec![MerchantError::ItemNotFound]);
+    assert_eq!(h.inventory().gold, 100_000 - 8);
+    // Re-equipping must retain the repaired item's state, not its old slot value.
+    let world = h.app.world();
+    let db = &world.resource::<GameDatabase>().db;
+    let mut model =
+        crate::inventory::load_model(db, world.resource::<ItemTemplates>(), h.character_id)
+            .unwrap();
+    model
+        .auto_equip(ItemLocation::Bag { bag: 0, slot: 15 })
+        .unwrap();
+    assert_eq!(
+        model
+            .equipment_snapshot()
+            .items
+            .into_iter()
+            .find(|entry| entry.item.item_guid == guid)
+            .unwrap()
+            .item
+            .durability,
+        Some(shared::protocol::ItemDurability {
+            current: 55,
+            max: 55
+        })
+    );
+}
+
+#[test]
+fn bag_repair_with_insufficient_money_keeps_damage_and_gold() {
+    let Some(mut h) = harness() else { return };
+    let guid = damaged_vest_in_backpack(&mut h);
+    h.set_gold(7);
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: Some(guid),
+        guild_bank: false,
+    });
+    assert_eq!(h.failures(), vec![MerchantError::NotEnoughMoney]);
+    assert_eq!(h.inventory().gold, 7);
+    assert_eq!(
+        bag_durability(&h, guid),
+        Some(shared::protocol::ItemDurability {
+            current: 44,
+            max: 55
+        })
+    );
 }
 
 #[test]

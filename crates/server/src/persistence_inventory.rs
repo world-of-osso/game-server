@@ -41,6 +41,10 @@ pub struct EquippedBagData {
     pub item: InventoryItemData,
 }
 
+/// Durability by item guid: bitcode `(current, max)`, separate from existing instance rows.
+pub(crate) const ITEM_DURABILITIES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("item_durabilities");
+
 /// Per-instance item state (template attributes live in `ItemTemplates`).
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ItemInstanceData {
@@ -56,6 +60,7 @@ pub struct InventoryRecord {
     pub equipped: Vec<EquippedItem>,
     pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
+    pub item_durability: HashMap<u64, (u32, u32)>,
 }
 
 pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<InventoryRecord> {
@@ -80,12 +85,28 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         .iter()
         .chain(equipped.iter().map(|entry| &entry.item))
         .chain(bag_slots.iter().map(|entry| &entry.item))
-        .map(|item| item.item_guid);
+        .map(|item| item.item_guid)
+        .collect::<Vec<_>>();
     let instances = guids
+        .iter()
+        .copied()
         .filter_map(|guid| {
             let row = table.get(guid).expect("read item instance")?;
             let data = bitcode::decode(row.value()).expect("decode item instance");
             Some((guid, data))
+        })
+        .collect();
+    let durability_table = txn
+        .open_table(ITEM_DURABILITIES)
+        .expect("open item durability");
+    let item_durability = guids
+        .into_iter()
+        .filter_map(|guid| {
+            let row = durability_table.get(guid).expect("read item durability")?;
+            Some((
+                guid,
+                bitcode::decode(row.value()).expect("decode item durability"),
+            ))
         })
         .collect();
     Some(InventoryRecord {
@@ -95,6 +116,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         equipped,
         bag_slots,
         instances,
+        item_durability,
     })
 }
 
@@ -152,6 +174,14 @@ pub(crate) fn write_inventory_record(
             .expect("open inventory table")
             .insert(character_id, bytes.as_slice())
             .expect("write inventory row");
+    }
+    let mut durability = txn
+        .open_table(ITEM_DURABILITIES)
+        .expect("open item durability");
+    for (guid, state) in &record.item_durability {
+        durability
+            .insert(*guid, bitcode::encode(state).as_slice())
+            .expect("write item durability");
     }
     let mut instances = txn.open_table(ITEM_INSTANCES).expect("open item instances");
     for (guid, data) in &record.instances {

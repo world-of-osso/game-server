@@ -13,8 +13,7 @@
 //!
 //! Gaps: no reputation price discount (`GetReputationPriceDiscount`; NPC factions
 //! are not mapped to reputation factions), no `ExtendedCost` items, no vendor
-//! conditions and no sell price reduction for damaged items (bag items carry no
-//! durability).
+//! conditions and no sell price reduction for damaged items.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -597,7 +596,7 @@ fn process_repair_requests(mut requests: Requests<RepairItem>, mut shop: Shop) {
 /// AzerothCore `DurabilityRepairAll` / `DurabilityRepair`: each damaged item costs
 /// `ItemDurability::repair_cost`; an item that costs more than the money left stays
 /// damaged (AzerothCore skips it silently; we answer "You don't have enough money.").
-/// Only equipped items carry durability.
+/// Per-item repair also accepts damaged owned bag items.
 fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> MerchantResult {
     let vendor = customer.vendor_for(req.npc)?;
     let repairs = shop
@@ -612,18 +611,27 @@ fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> Merchant
         return guild_repair(shop, customer, vendor);
     }
     let mut model = shop.load(customer.character_id)?;
-    // TrinityCore `HandleRepairItemOpcode` repairs the item if the player has it and
-    // answers nothing; only equipped items carry durability, so any other guid is a no-op.
+    // TrinityCore `Player::DurabilityRepair` resolves any owned item by position,
+    // not just equipment. The request identifies that item by guid.
     let only: Option<EquipmentVisualSlot> = match req.item_guid {
         None => None,
         Some(guid) => match model.equipped_visual_slot(guid) {
             Some(slot) => Some(slot),
-            None => return Ok(()),
+            None => return repair_bag_item(shop, customer, model, guid),
         },
     };
     let Ok(mut durability) = shop.durability.get_mut(customer.player) else {
         return Err(MerchantError::ItemNotFound);
     };
+    if let Some(slot) = only {
+        let damaged = durability
+            .slots
+            .iter()
+            .any(|entry| entry.slot == slot && entry.current < entry.max);
+        if !damaged {
+            return Err(MerchantError::ItemNotFound);
+        }
+    }
     let mut gold = model.gold();
     let mut short = false;
     for entry in durability
@@ -655,6 +663,31 @@ fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> Merchant
     if short {
         return Err(MerchantError::NotEnoughMoney);
     }
+    Ok(())
+}
+
+/// Repair an owned bag item and save its damage and payment in one transaction.
+fn repair_bag_item(
+    shop: &mut Shop,
+    customer: &Customer,
+    mut model: InventoryModel,
+    guid: u64,
+) -> MerchantResult {
+    let item = model.bag_item(guid).ok_or(MerchantError::ItemNotFound)?;
+    let state = model
+        .bag_durability(guid)
+        .ok_or(MerchantError::ItemNotFound)?;
+    let cost = shop
+        .durability_rules
+        .repair_cost(item.item_id, state.max.saturating_sub(state.current))
+        .filter(|&cost| cost > 0)
+        .ok_or(MerchantError::ItemNotFound)?;
+    if u64::from(cost) > model.gold() {
+        return Err(MerchantError::NotEnoughMoney);
+    }
+    model.restore_bag_durability(guid);
+    model.set_gold(model.gold() - u64::from(cost));
+    shop.save(customer.character_id, model);
     Ok(())
 }
 

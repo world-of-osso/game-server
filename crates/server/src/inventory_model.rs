@@ -22,7 +22,7 @@ use crate::persistence::equipment::EquippedItem;
 use crate::persistence::inventory_store::{
     EquippedBagData, InventoryRecord, ItemInstanceData, ItemPlacementData,
 };
-use crate::persistence::{CharacterData, InventoryItemData};
+use crate::persistence::{CharacterData, DurabilityEntryData, InventoryItemData};
 use crate::stats::EquippedItems;
 
 pub(crate) type InventoryView = BTreeMap<ItemLocation, ItemStack>;
@@ -36,6 +36,7 @@ pub(crate) struct InventoryModel {
     overflow: Vec<InventoryItemData>,
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
     instances: HashMap<u64, ItemInstanceData>,
+    item_durability: HashMap<u64, (u32, u32)>,
     /// Templates of the item ids this character owns.
     templates: HashMap<u32, ItemTemplate>,
     character: CharacterData,
@@ -69,6 +70,7 @@ impl InventoryModel {
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
+            item_durability: record.item_durability,
             templates: owned_templates,
             character: record.character,
             gold: record.inventory.gold,
@@ -274,6 +276,7 @@ impl InventoryModel {
             equipped,
             bag_slots,
             instances: self.instances,
+            item_durability: self.item_durability,
         }
     }
 
@@ -328,7 +331,12 @@ impl InventoryModel {
                     bag: bag as u8,
                     slot: slot as u8,
                 };
-                item.as_ref().map(|item| (location, self.stack(item, None)))
+                item.as_ref().map(|item| {
+                    (
+                        location,
+                        self.stack(item, self.bag_durability(item.item_guid)),
+                    )
+                })
             })
         });
         let equipped = self.equipped.iter().map(|(slot, item)| {
@@ -472,10 +480,36 @@ impl InventoryModel {
         let result = op(self);
         for slot in EquipmentSlot::ALL {
             if before.get(&slot) != self.equipped.get(&slot) {
+                self.sync_item_durability(slot, before.get(&slot).map(|item| item.item_guid));
                 self.sync_appearance(slot);
             }
         }
         result
+    }
+
+    /// Preserve damage on the item leaving a slot and restore the incoming item's state.
+    fn sync_item_durability(&mut self, slot: EquipmentSlot, previous_guid: Option<u64>) {
+        let Some(visual) = slot.visual_slot() else {
+            return;
+        };
+        if let (Some(guid), Some(state)) = (previous_guid, self.equipped_durability(slot)) {
+            self.item_durability
+                .insert(guid, (state.current, state.max));
+        }
+        self.character
+            .durability
+            .retain(|entry| entry.slot != visual);
+        let incoming = self
+            .equipped
+            .get(&slot)
+            .and_then(|item| self.item_durability.get(&item.item_guid));
+        if let Some(&(current, max)) = incoming {
+            self.character.durability.push(DurabilityEntryData {
+                slot: visual,
+                current,
+                max,
+            });
+        }
     }
 
     /// Replace the appearance entry for `slot` with the physical item, keeping `hidden`.
@@ -1034,6 +1068,21 @@ impl InventoryModel {
             .iter()
             .find(|(_, item)| item.item_guid == item_guid)
             .and_then(|(slot, _)| slot.visual_slot())
+    }
+
+    /// Saved per-item state; callers validate the item's location separately.
+    pub(crate) fn bag_durability(&self, guid: u64) -> Option<ItemDurability> {
+        self.item_durability
+            .get(&guid)
+            .map(|&(current, max)| ItemDurability { current, max })
+    }
+
+    pub(crate) fn restore_bag_durability(&mut self, guid: u64) {
+        let state = self
+            .item_durability
+            .get_mut(&guid)
+            .expect("validated bag durability");
+        state.0 = state.1;
     }
 
     /// Every item in the bags, in bag and slot order.
