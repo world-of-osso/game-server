@@ -99,7 +99,16 @@ fn harness(stone_entry: u32) -> Option<Harness> {
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
     app.insert_resource(load_meeting_stone_data(&conn).unwrap());
-    app.insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    app.insert_resource(crate::ground::GroundMap::new(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
+        maps.maps
+            .iter()
+            .map(|(&id, map)| (id, map.wdt_file_data_id))
+            .collect(),
+    ));
+    app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    app.insert_resource(maps);
     let spawn = stone_spawn(&conn, stone_entry);
     let stone = app.world_mut().spawn(game_object_bundle(&spawn)).id();
     let stone_position = *app.world().get::<Position>(stone).unwrap();
@@ -322,6 +331,36 @@ impl Harness {
         self.use_object(self.helper.connection, portal);
         assert_eq!(self.requests.len(), 1, "summon offer sent");
     }
+}
+
+#[test]
+fn meetingstones_summon_from_stormwind_subzone_sends_zone_without_player_zone_component() {
+    let mut h = harness(DEADMINES_STONE).expect("meeting stone world fixture");
+    let summoner = h.summoner.player;
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(-8850.0, 650.0, 60.0);
+    h.app
+        .world_mut()
+        .entity_mut(summoner)
+        .remove::<Zone>()
+        .insert(Position { x, y, z });
+    assert!(h.app.world().get::<Zone>(summoner).is_none());
+    assert_eq!(
+        h.app
+            .world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .area_at(0, Vec3::new(x, y, z)),
+        Some(5148)
+    );
+    super::summon::send_summon_request(h.app.world_mut(), summoner, h.target.player);
+    h.advance(3);
+    assert_eq!(
+        h.requests,
+        vec![SummonRequest {
+            summoner: "Stonecaller".into(),
+            zone_id: 1519,
+            time_left_ms: 120_000,
+        }]
+    );
 }
 
 #[test]

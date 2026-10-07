@@ -25,14 +25,14 @@ pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
     /// TC TerrainInfo::GetZoneId follows ParentAreaID to the top-level zone.
-    fn zone(&self, mut area_id: u32, map_id: u32) -> Option<&AreaEntry> {
+    pub(crate) fn zone_id(&self, mut area_id: u32, map_id: u32) -> Option<u32> {
         loop {
             let area = self.0.get(&area_id)?;
             if area.map_id != map_id {
                 return None;
             }
             if area.parent == 0 {
-                return Some(area);
+                return Some(area_id);
             }
             area_id = area.parent;
         }
@@ -47,9 +47,10 @@ impl AreaTable {
         race: u8,
         factions: &FactionTemplates,
     ) -> bool {
-        let Some(zone) = self.zone(area_id, map_id) else {
+        let Some(zone_id) = self.zone_id(area_id, map_id) else {
             return false;
         };
+        let zone = &self.0[&zone_id];
         if zone.flags & LINKED_CHAT == 0 {
             return false;
         }

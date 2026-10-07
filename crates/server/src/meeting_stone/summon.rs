@@ -16,7 +16,7 @@
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{CombatStatus, Player, Position, Rotation, Zone};
+use shared::components::{CombatStatus, Player, Position, Rotation};
 use shared::protocol::{InteractionChannel, SummonRequest, SummonResponse};
 
 use crate::auth::InWorld;
@@ -80,15 +80,29 @@ fn summoner_location(world: &World, summoner: Entity) -> Option<WorldLocation> {
     })
 }
 
-fn send_summon_request(world: &mut World, summoner: Entity, target: Entity) {
+pub(super) fn send_summon_request(world: &mut World, summoner: Entity, target: Entity) {
     let Some(location) = summoner_location(world, summoner) else {
         return;
     };
+    let position = world
+        .get::<Position>(summoner)
+        .expect("summoner location has position");
+    let feet = Vec3::new(position.x, position.y, position.z);
+    let area_id = world
+        .resource_mut::<crate::ground::GroundMap>()
+        .area_at(location.map_id, feet);
+    let zone_id = area_id
+        .and_then(|area| {
+            world
+                .resource::<crate::area_table::AreaTable>()
+                .zone_id(area, location.map_id)
+        })
+        .unwrap_or(0);
     let request = SummonRequest {
         summoner: world
             .get::<Player>(summoner)
             .map_or_else(String::new, |player| player.name.clone()),
-        zone_id: world.get::<Zone>(summoner).map_or(0, |zone| zone.id),
+        zone_id,
         time_left_ms: SUMMON_DELAY_MS,
     };
     let expires_at = now(world) + f64::from(SUMMON_DELAY_MS) / 1000.0;
