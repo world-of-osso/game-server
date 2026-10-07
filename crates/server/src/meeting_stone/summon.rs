@@ -80,24 +80,29 @@ fn summoner_location(world: &World, summoner: Entity) -> Option<WorldLocation> {
     })
 }
 
-pub(super) fn send_summon_request(world: &mut World, summoner: Entity, target: Entity) {
-    let Some(location) = summoner_location(world, summoner) else {
-        return;
-    };
+/// Reuse city rest's terrain area lookup and top-level AreaTable ancestry.
+fn read_summoner_zone_id(world: &mut World, summoner: Entity, map_id: u32) -> u32 {
     let position = world
         .get::<Position>(summoner)
         .expect("summoner location has position");
     let feet = Vec3::new(position.x, position.y, position.z);
     let area_id = world
         .resource_mut::<crate::ground::GroundMap>()
-        .area_at(location.map_id, feet);
-    let zone_id = area_id
+        .area_at(map_id, feet);
+    area_id
         .and_then(|area| {
             world
                 .resource::<crate::area_table::AreaTable>()
-                .zone_id(area, location.map_id)
+                .zone_id(area, map_id)
         })
-        .unwrap_or(0);
+        .unwrap_or(0)
+}
+
+pub(super) fn send_summon_request(world: &mut World, summoner: Entity, target: Entity) {
+    let Some(location) = summoner_location(world, summoner) else {
+        return;
+    };
+    let zone_id = read_summoner_zone_id(world, summoner, location.map_id);
     let request = SummonRequest {
         summoner: world
             .get::<Player>(summoner)
