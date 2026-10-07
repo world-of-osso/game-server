@@ -60,7 +60,23 @@ The minimal gate change `2af05c1` retained a real imported-row regression expect
 
 Historical user choice kept acceptance blocked: `34e23d5` restored the appearance allowlist `[0,1,34,670]` and explicitly ignored the startup regression. Ignored was not passing. Later explicit approval of reasonable health/unit-class estimates supersedes that hold, not the missing authored-stat evidence. [Content import](content-import.md#forever-zephras-overlay) owns the estimate policy and current workspace/startup proof: map2991 is now included and the actual1662-spawn regression runs. [Engine native matrix](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-scoped-capability-matrix) owns bounded race95 native92460 acceptance and race96 visible Ventaari evidence, including Ailee's withheld visual and pending independent artifact gate. No authored/full Classic, all-NPC visual or complete quest-gameplay claim.
 
+## Rebased source and runtime checkpoint (2026-10-07)
+
+Main reports all 90 commits replayed without skips onto `8b3819b0`, clean source `bef3fa74577e6810e72bdbace1d7baeda1afa910`, pushed as `origin/skyborn`. Backup ref: `refs/backup/skyborn-pre-rebase-4fac87a243f2`. Cold data/binary backup: `target/skyborn-e2e/backups/before-master-4fac87a243f2`; engine `target/skyborn-source-items/server-pre-rebase-cold-backup.json` records the exact backup. Character30 retains40XP; never reset.
+
+| Boundary | Evidence | Current gap |
+|---|---|---|
+| Rebased source | Master CombatLogEvent dispel/extraID/wall-clock helper retained alongside local strict metadata assertions. DB2 decrypted/zero-filled warning policy retained alongside strict selected IDs, global strings and sparse decoder. New spell budgets remain source-qualified in Forever, not Retail | Source resolution is not build/test proof |
+| Historical server suite | `c5cf88a` fresh1448-pass receipt remains in [content import](content-import.md#forever-zephras-overlay) | Changed scopes invalidated by rebase; no current server suite/build GREEN |
+| Native `ailee-assets` | Main reports successful auth followed by explicit server protocol fingerprint rejection: old runtime protocol `48f3640` versus client `5107483b`; agent243 source report identifies that boundary | Fails before world entry; no NPC/graphics credit, not credentials or scheduling |
+| Matching runtime | User approved matching scratch rebuild and push; scratch server stopped, old cage gone, data backed up; master-aligned server source available | Main-owned desktop helper rebuild pending; no matching runtime/native acceptance |
+
+[Engine current checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) owns independent equipment20/20, retained core/synthetic scopes and matching client build evidence. No source RowData changes, production deployment or PR. This checkpoint performs documentation changes only.
+
 ## Sources
+
+- Main-supplied 2026-10-07 checkpoint — rebase, pushed revisions, conflict resolutions, runtime fingerprint diagnosis, cold backup and character preservation; no fresh runtime verification by this documentation audit.
+- [Cold backup receipt](../../../../game-engine-skyborn/target/skyborn-source-items/server-pre-rebase-cold-backup.json) — exact pre-rebase data/binary backup target.
 
 - [Startup gate](../../../crates/server/src/maps/instances.rs), [real startup regression](../../../crates/server/src/zones_world_db_tests.rs), [spawn stats](../../../crates/server/src/zones.rs) — startup boundary; historical entry/panic observations and current evidence supplied by Main for this audit.
 - [race_class.rs](../../../crates/server/src/race_class.rs), [faction.rs](../../../crates/server/src/faction.rs), [persistence_character.rs](../../../crates/server/src/persistence_character.rs)
