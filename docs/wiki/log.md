@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-07] checkpoint | RandPropPoints source applicability
+
+Updated [[skyborne]] and index: Main reports faithful pinned Forever70205 RandPropPoints16 schema lacks Retail DamageReplaceStatF/DamageSecondaryF; rebased shared-loader requirement is the defect. Agent267 correction pending: Retail-only spell budgets, mandatory normal Forever scaling, empty Forever spell-budget map. Retail effect evaluator does not establish Forever item-spell support; no fabricated/borrowed data or fallback. Source-aware aura/group constructors committed at cbd588f, not proof. Targeted proof/rebuild/native pending; historical scopes retained, scratch stopped, character30/40XP preserved. Docs only; no specs, operations, delegation, push, tests or builds.
+
 ## [2026-10-07] checkpoint | Rebased Skyborn source and protocol boundary
 
 Updated [[skyborne]] with Main-supplied clean90/no-skip rebase onto8b3819b0 at pushed bef3fa745, backup ref/cold data-binary target, preserved character30/40XP and conflict-resolution boundaries. Historical1448 receipt retained but changed scopes invalidated. Native auth succeeds then old-runtime48/client510 fingerprint rejection before world; no NPC/graphics or current server tests/build GREEN. Linked engine CPU/build checkpoint. Docs-only; Main owns matching desktop rebuild; no operations, tests, delegation or push.

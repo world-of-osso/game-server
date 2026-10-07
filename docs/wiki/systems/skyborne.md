@@ -66,15 +66,24 @@ Main reports all 90 commits replayed without skips onto `8b3819b0`, clean source
 
 | Boundary | Evidence | Current gap |
 |---|---|---|
-| Rebased source | Master CombatLogEvent dispel/extraID/wall-clock helper retained alongside local strict metadata assertions. DB2 decrypted/zero-filled warning policy retained alongside strict selected IDs, global strings and sparse decoder. New spell budgets remain source-qualified in Forever, not Retail | Source resolution is not build/test proof |
+| Rebased source | Master CombatLogEvent dispel/extraID/wall-clock helper retained alongside local strict metadata assertions. DB2 decrypted/zero-filled warning policy retained alongside strict selected IDs, global strings and sparse decoder. Shared spell-budget loading incorrectly requires Retail-only columns from Forever; source-applicability correction pending | Source resolution is not build/test proof |
 | Historical server suite | `c5cf88a` fresh1448-pass receipt remains in [content import](content-import.md#forever-zephras-overlay) | Changed scopes invalidated by rebase; no current server suite/build GREEN |
 | Native `ailee-assets` | Main reports successful auth followed by explicit server protocol fingerprint rejection: old runtime protocol `48f3640` versus client `5107483b`; agent243 source report identifies that boundary | Fails before world entry; no NPC/graphics credit, not credentials or scheduling |
 | Matching runtime | User approved matching scratch rebuild and push; scratch server stopped, old cage gone, data backed up; master-aligned server source available | Main-owned desktop helper rebuild pending; no matching runtime/native acceptance |
 
 [Engine current checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) owns independent equipment20/20, retained core/synthetic scopes and matching client build evidence. No source RowData changes, production deployment or PR. This checkpoint performs documentation changes only.
 
+### RandPropPoints source applicability diagnosis
+
+Main-supplied finding: pinned `Forever70205` `RandPropPoints` has 16 columns and lacks `DamageReplaceStatF`/`DamageSecondaryF`; the producer faithfully preserves that schema. The rebased shared loader incorrectly requires those Retail-only columns during Forever startup. This is a consumer source-applicability defect, not missing authored data or a producer defect.
+
+Agent267 is correcting spell-budget loading to Retail only. Normal Forever item scaling remains mandatory; its spell-budget map stays empty. The item-spell effect evaluator remains Retail: no Forever item-spell support, fabricated columns/data, borrowed Retail budgets or fallback is claimed. Main committed source-aware aura/group test constructors at `cbd588f`; that source change is not test proof.
+
+Targeted proof, matching desktop rebuild and native acceptance remain pending. Historical receipts retain their original revision/scope; they do not prove the current source or native runtime. Scratch remains stopped; character30/40XP remains preserved. No operations, tests or builds were performed by this documentation audit.
+
 ## Sources
 
+- Main-supplied 2026-10-07 source finding — pinned Forever70205 RandPropPoints schema, faithful producer, shared-loader defect, agent267 correction scope and `cbd588f` constructors; targeted proof/rebuild/native pending.
 - Main-supplied 2026-10-07 checkpoint — rebase, pushed revisions, conflict resolutions, runtime fingerprint diagnosis, cold backup and character preservation; no fresh runtime verification by this documentation audit.
 - [Cold backup receipt](../../../../game-engine-skyborn/target/skyborn-source-items/server-pre-rebase-cold-backup.json) — exact pre-rebase data/binary backup target.
 
