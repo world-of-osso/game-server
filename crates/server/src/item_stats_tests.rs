@@ -53,7 +53,16 @@ fn pinned_scaling_database() -> (tempfile::TempDir, std::path::PathBuf) {
     for (table, csv) in FOREVER_SCALING_CSVS {
         let mut lines = csv.lines();
         let columns = lines.next().unwrap();
-        conn.execute_batch(&format!("CREATE TABLE skyborne_{table} ({columns});"))
+        let definitions = columns
+            .split(',')
+            .enumerate()
+            .map(|(index, column)| {
+                let kind = if index == 0 { "INTEGER" } else { "REAL" };
+                format!("{column} {kind}")
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        conn.execute_batch(&format!("CREATE TABLE skyborne_{table} ({definitions});"))
             .unwrap();
         for line in lines {
             let values: Vec<f64> = line
