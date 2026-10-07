@@ -64,14 +64,14 @@ Historical user choice kept acceptance blocked: `34e23d5` restored the appearanc
 
 Main reports all 90 commits replayed without skips onto `8b3819b0`, clean source `bef3fa74577e6810e72bdbace1d7baeda1afa910`, pushed as `origin/skyborn`. Backup ref: `refs/backup/skyborn-pre-rebase-4fac87a243f2`. Cold data/binary backup: `target/skyborn-e2e/backups/before-master-4fac87a243f2`; engine `target/skyborn-source-items/server-pre-rebase-cold-backup.json` records the exact backup. Character30 retains40XP; never reset.
 
-Current pushed server checkpoint is `708d493`; engine pushed `c65b03d2b`. Earlier `bef3fa745` and protocol48-versus510748 rejection are historical, superseded by matching scratch world entry below; historical1448 suite remains revision-scoped, not fresh rebased proof.
+Current pushed server checkpoint is `708d493`; engine production `041fa0f54` was pushed earlier, while current test rename `f7643e3e9` is not yet pushed. Earlier `bef3fa745` and protocol48-versus510748 rejection are historical, superseded by matching scratch world entry below; historical1448 suite remains revision-scoped, not fresh rebased proof.
 
 | Boundary | Evidence | Current gap |
 |---|---|---|
 | Loader source applicability | `c1cdf6e` restricts spell budgets to Retail; normal Forever scaling stays mandatory and Forever spell-budget map empty. Matching loader tests GREEN3/3 | No Forever item-spell support, fabricated columns, borrowed budgets or fallback |
 | Independent bounded gate | [Ledger](../../../target/final-bounded-server-3eb1181/ledger.md) at `708d493`: fmt/check exit0, Rust8/8, changed Python1/1; loader3/3 reused by matching hashes, unchanged Python18 retained by exact scopes | Not a fresh whole-suite pass; loader fixture-helper readability advisory retained |
 | Matching portable runtime | Server SHA256 `c818f4541057feb805756106dd59d00719de1ad6e4d61dca4b31b6077e9daed0` from `3eb1181`, installed owned scratch only; matching extension `62eddda…` authenticated/world entered | Production unchanged; startup initially lacked AreaTable and achievements |
-| Native boundary | Character30 retains40XP/log`[]`; seven source-kit queries; Ailee attached12 textured batches then actual fixture FAIL Batch94/geoset3601, texture_count1/base_texture empty | Grove not reached; genuine batch-binding investigation pending agent277, no Ailee native GREEN/pixel/whole-goal claim |
+| Native boundary | Character30 retains40XP/log`[]`; seven source-kit queries; Ailee attached12 textured batches then actual fixture FAIL Batch94/geoset3601, texture_count1/base_texture empty | Historical Batch94 RED superseded by current native type20 binding below; strict Ailee now FAILS Batch117 type7. No full Ailee GREEN/pixels or whole-goal claim |
 
 Pinned Forever70205 RandPropPoints has16 columns and lacks Retail-only `DamageReplaceStatF`/`DamageSecondaryF`; producer faithful. The former shared-loader requirement was a consumer defect, now corrected, not missing authored data.
 
@@ -81,9 +81,21 @@ Existing supported narrow importers provisioned only owned scratch. [Area receip
 
 [Achievement receipt](../../../../game-engine-skyborn/target/skyborn-source-items/scratch-achievement-import.json) and [read-only source transfer/hashes](../../../../game-engine-skyborn/target/skyborn-source-items/scratch-achievement-source-transfer.json): four pinned local Desktop DB2s69933, imported Achievement14081/Category243/Criteria66340/CriteriaTree120821. Exactly1 Criteria and8 CriteriaTree encrypted/unavailable rows remain excluded under existing policy; no fabricated rows.
 
-[Engine checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) links native and diagnostic logs. Fixture `5a85044ee` adds error context only, not weakened assertions. Main reports runtime stopped, server MainPID0 and cage stopped; no canonical/server/player data mutation outside owned scratch. This documentation audit runs no operations/builds/tests.
+### Current final checkpoint: import preservation and native blocker
+
+Main-supplied independent data-import gate278 records **all270 old tables/10,365,014 rows unchanged**, five expected added tables. AreaTable build remains UNVERIFIED;1 Criteria/8 CriteriaTree encrypted/unavailable gaps remain. This is SQLite import preservation, not physical redb byte preservation: redb bytes changed after login, while character30 retains40XP/log`[]`.
+
+[Engine checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) owns exact current CPU3/3,12 unchanged assets, scoped fmt0/check0 with zero errors/warnings in the same warm Depot cache, without native rebuild rerun. Actual mapped extension `f781a663…` and server `c818f454…` first failed prelogin opening a CASC index. Final16 files present; bounded traced retry initialized all16 opens without install/cache changes. Failed exact filename/root cause UNPROVED; no Syncthing-race fix claim. Retry authenticated character30/40XP/log`[]` and completed seven source-kit queries.
+
+Native Batch94/97 type20 baseTexture256×256 now binds, correcting the compositor omission. Strict Ailee then FAILS Batch117/mesh_part0, one type7/TXID0 slot, shader0. Authentic model/skin receipts show material flags0/blend0 and positive-area triangle0.0001062, not degenerate; current Forever layout202 has no authored type7 layer/canvas/source FDID. Semantic replacement contract remains unresolved: no unsupported-legacy classification, skip/hide or guessed runtime binding. **Overall goal OPEN; no full Ailee GREEN/pixels.**
+
+Separate independent current shoulder-assets native proof DONE: Left6/Right5 original identities7579617/18, base256×256 plus second64×64, eight PNGs including front/back under `rebased-current-grove-race95`. Main observed both leaf pads; blue planar hair/body quality excluded. Current Grove independent artifact/pixel gate291 pending. Async driver OS exit uncaptured; no global graphics/shutdown claim.
+
+[Current cleanup receipt](../../../../game-engine-skyborn/target/skyborn-source-items/rebased-current-native-cleanup.json) records server inactive/MainPID0, UDP15002 empty and client/cage PIDs absent. Not proof of normal shutdown. This docs-only reconciliation performs no operations/builds/tests/data edits/delegation/push.
 
 ## Sources
+
+- Main-supplied current final checkpoint (2026-10-07) — independent import278, traced native retry, separate shoulder scope and pending Grove291; explicit unresolved Ailee type7 semantics. [Engine checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) owns linked current CPU, authentic binding/geometry and cleanup artifacts.
 
 - Main-supplied 2026-10-07 source finding — pinned Forever70205 RandPropPoints schema, faithful producer, shared-loader defect, Retail-only correction `c1cdf6e`, matching3/3, independent bounded gate and matching native material FAIL; prior pending status historical.
 - Main-supplied 2026-10-07 checkpoint — rebase, pushed revisions, conflict resolutions, runtime fingerprint diagnosis, cold backup and character preservation; no fresh runtime verification by this documentation audit.

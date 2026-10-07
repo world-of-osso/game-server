@@ -675,3 +675,7 @@ Reconciled [[skyborne]], index and source/race contracts against tracked factory
 ## [2026-10-07] systems | Record matching scratch native material failure
 
 [skyborne](systems/skyborne.md) checkpoint updated from supplied evidence: server Retail-only loader3/3 and independent bounded gate; scratch prerequisite provenance retains AreaTable build UNVERIFIED and encrypted achievement gaps. Matching world entry preserves character30/40XP/log[]; Ailee12 textured batches precede Batch94/geoset3601 empty base_texture FAIL, Grove not reached. Diagnostic assertions unchanged; batch-binding investigation pending. Historical scopes retained; docs only, no runtime/test/build/push actions.
+
+## [2026-10-07] systems | Reconcile current final checkpoint; goal OPEN
+
+[skyborne](systems/skyborne.md) reconciles current independent proof and later traced native evidence: corrected type20 composition is separate from unresolved Ailee type7/full-native acceptance. Records separate shoulder scope, pending Grove291, import278 preservation/provenance limits and cleanup exclusions. Historical failures retained; prior CASC root cause unproved. Overall goal OPEN. Docs-only; no code/data/tests/build/delegation/ops/push.
