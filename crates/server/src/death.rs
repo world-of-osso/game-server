@@ -55,7 +55,7 @@ impl Default for PlayerDeathState {
 }
 
 #[derive(Resource, Default)]
-struct DeathServerState {
+pub(crate) struct DeathServerState {
     graveyards: GraveyardRegistry,
 }
 
@@ -103,7 +103,7 @@ pub(crate) struct PersistedGhost(pub Corpse);
 /// Player::LoadFromDB: a character saved with `PLAYER_FLAGS_GHOST` loads
 /// still dead, as a ghost, and `Player::LoadCorpse` puts its corpse back
 /// where it died. The graveyard is the corpse's, as at release.
-fn restore_persisted_ghosts(
+pub(crate) fn restore_persisted_ghosts(
     ghosts: Query<(Entity, &PersistedGhost, &Player)>,
     state: Res<DeathServerState>,
     mut commands: Commands,
@@ -185,7 +185,7 @@ fn lookup_corpse_graveyard(
 type NewInWorldLink<'w, 's> =
     Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
 
-fn send_initial_death_snapshot(
+pub(crate) fn send_initial_death_snapshot(
     connections: NewInWorldLink,
     players: Query<(&Position, Option<&PlayerDeathState>)>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,

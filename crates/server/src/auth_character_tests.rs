@@ -144,7 +144,14 @@ fn select_character_in_world(
     app.add_plugins(DeathPlugin);
     app.insert_resource(crate::maps::MapStore::continents());
     app.init_resource::<crate::maps::InstanceManager>();
-    app.add_systems(Update, process_select_character);
+    // Reproduce the legal production ordering that used to send Alive before
+    // the next frame restored the newly selected ghost.
+    app.add_systems(
+        Update,
+        process_select_character
+            .after(crate::death::restore_persisted_ghosts)
+            .before(crate::death::send_initial_death_snapshot),
+    );
     app.finish();
     app.cleanup();
 
@@ -589,12 +596,22 @@ fn log_out(db: &GameDatabase, character_id: u64, health: f32, death: Option<&Pla
 /// that logs out comes back a ghost, not freshly Dead at the graveyard.
 #[test]
 fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
-    let db = test_db();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("death-login.redb");
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
     let account_id = 11;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Spirit", 1, 1)
         .expect("character should be created");
     let ghost = ghost_at_graveyard(character_id);
     log_out(&db, character_id, 0.0, Some(&ghost));
+    drop(db);
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
     // The death systems run the frame after the player spawns; the client
@@ -623,14 +640,121 @@ fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
     let death_state = player.get::<PlayerDeathState>().expect("ghost restored");
     assert_eq!(death_state.state, DeathState::Ghost);
     assert_eq!(death_state.corpse, ghost.corpse);
+    assert_eq!(death_state.graveyard, ghost.graveyard);
     let position = player.get::<shared::components::Position>().unwrap();
     assert_eq!((position.x, position.z), (-9050.0, 200.0));
     assert_eq!(player.get::<Health>().unwrap().current, 0.0);
 }
 
 #[test]
+fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("dead-login.redb");
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
+    let account_id = 12;
+    let (character_id, _) =
+        persistence::create_character(&db.db, account_id, "Unreleased", 1, 1).unwrap();
+    let mut dead = ghost_at_graveyard(character_id);
+    dead.state = DeathState::Dead;
+    log_out(&db, character_id, 0.0, Some(&dead));
+    drop(db);
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
+
+    let (app, player) = select_character_in_world(db, account_id, character_id);
+    let player = app.world().entity(player);
+    assert_eq!(player.get::<PlayerDeathState>(), Some(&dead));
+    assert_eq!(player.get::<Health>().unwrap().current, 0.0);
+}
+
+/// Frozen pre-change corpse encoding; no death-state row existed in this layout.
+#[derive(bitcode::Encode)]
+struct PreDeathStateCorpse {
+    map_id: u16,
+    x: f32,
+    y: f32,
+    z: f32,
+    created_at: u64,
+}
+
+#[test]
+fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("legacy-death.redb");
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
+    let account_id = 13;
+    let (character_id, mut data) =
+        persistence::create_character(&db.db, account_id, "LegacySpirit", 1, 1).unwrap();
+    data.health = 0.0;
+    persistence::save_character(&db.db, character_id, &data);
+    let ghost = ghost_at_graveyard(character_id);
+    let corpse = ghost.corpse.as_ref().unwrap();
+    let bytes = bitcode::encode(&PreDeathStateCorpse {
+        map_id: corpse.map_id,
+        x: corpse.x,
+        y: corpse.y,
+        z: corpse.z,
+        created_at: corpse.created_at,
+    });
+    let txn = db.db.begin_write().unwrap();
+    txn.delete_table(redb::TableDefinition::<u64, &[u8]>::new(
+        "character_death_states",
+    ))
+    .unwrap();
+    txn.open_table(persistence::CHARACTER_CORPSES)
+        .unwrap()
+        .insert(character_id, bytes.as_slice())
+        .unwrap();
+    txn.commit().unwrap();
+    drop(db);
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
+    let (mut app, player) = select_character_in_world(db, account_id, character_id);
+    let mut updates = Vec::new();
+    for _ in 0..3 {
+        app.update();
+        let mut receivers = app
+            .world_mut()
+            .query::<&mut MessageReceiver<DeathStateUpdate>>();
+        for mut receiver in receivers.iter_mut(app.world_mut()) {
+            updates.extend(receiver.receive());
+        }
+    }
+    let states: Vec<_> = updates
+        .iter()
+        .filter_map(|update| {
+            update
+                .snapshot
+                .as_ref()
+                .map(|snapshot| snapshot.state.clone())
+        })
+        .collect();
+    assert_eq!(states, vec![shared::protocol::DeathStateSnapshot::Ghost]);
+    let player = app.world().entity(player);
+    let state = player.get::<PlayerDeathState>().unwrap();
+    assert_eq!(state.state, DeathState::Ghost);
+    assert_eq!(state.corpse, ghost.corpse);
+    assert_eq!(player.get::<Health>().unwrap().current, 0.0);
+}
+
+#[test]
 fn character_saved_after_resurrection_logs_in_alive() {
-    let db = test_db();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("alive-login.redb");
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
     let account_id = 12;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Risen", 1, 1)
         .expect("character should be created");
@@ -641,6 +765,11 @@ fn character_saved_after_resurrection_logs_in_alive() {
         Some(&ghost_at_graveyard(character_id)),
     );
     log_out(&db, character_id, 50.0, Some(&PlayerDeathState::default()));
+    drop(db);
+    let db = GameDatabase {
+        db: redb::Database::create(&path).unwrap(),
+    };
+    persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
     app.update();
