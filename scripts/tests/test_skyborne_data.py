@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from contextlib import closing
 from pathlib import Path
 
@@ -38,9 +39,119 @@ class SkyborneDecodeTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing.*999999"):
             db2_casc.decode(data, record_ids={2991, 999999}, inline_arrays={6: 2})
 
-    def test_full_encrypted_table_still_fails(self):
-        with self.assertRaisesRegex(ValueError, "encrypted"):
-            db2_casc.decode((SOURCE / "1349477.db2").read_bytes())
+    def test_full_fixed_table_reports_and_skips_zero_filled_sections(self):
+        data = (SOURCE / "1349477.db2").read_bytes()
+        with warnings.catch_warnings(record=True) as reported:
+            warnings.simplefilter("always")
+            header, rows = db2_casc.decode(
+                data,
+                text_columns=frozenset(range(1, 7)),
+                inline_arrays={6: 2},
+            )
+        self.assertEqual(
+            [(warning.category, str(warning.message)) for warning in reported],
+            [
+                (
+                    UserWarning,
+                    "Skipping zero-filled DB2 section key 0DA4670DB36FB2A9, 2 records",
+                ),
+                (
+                    UserWarning,
+                    "Skipping zero-filled DB2 section key D2C028CB7AC14D0B, 5 records",
+                ),
+                (
+                    UserWarning,
+                    "Skipping zero-filled DB2 section key DA0E7785727A0A65, 1 records",
+                ),
+            ],
+        )
+        self.assertEqual(header["layout_hash"], 0xD43AFAC3)
+        self.assertEqual(header["record_count"], 79)
+        self.assertEqual(len(rows), 71)
+        # Exact IDs from the pinned file's clear section; eight encrypted ID
+        # entries are zero-filled, not additional Map 0 records/placeholders.
+        self.assertEqual(
+            set(rows),
+            {
+                0,
+                1,
+                13,
+                25,
+                29,
+                30,
+                33,
+                34,
+                35,
+                36,
+                37,
+                42,
+                43,
+                44,
+                47,
+                48,
+                70,
+                90,
+                109,
+                129,
+                169,
+                189,
+                209,
+                229,
+                230,
+                249,
+                269,
+                289,
+                309,
+                329,
+                349,
+                369,
+                389,
+                409,
+                429,
+                449,
+                450,
+                469,
+                489,
+                509,
+                529,
+                531,
+                533,
+                2720,
+                2784,
+                2789,
+                2791,
+                2804,
+                2806,
+                2807,
+                2817,
+                2832,
+                2853,
+                2856,
+                2868,
+                2875,
+                2902,
+                2921,
+                2959,
+                2980,
+                2991,
+                2995,
+                2996,
+                2997,
+                2998,
+                2999,
+                3005,
+                3021,
+                3065,
+                3104,
+                3109,
+            },
+        )
+        self.assertTrue(all(len(row) == 30 for row in rows.values()))
+        self.assertEqual(rows[0][1], "Azeroth")
+        self.assertEqual(
+            rows[2991][1:9], ["2991", "Zephras Isle", "", "", "", "", 0, 0]
+        )
+        self.assertEqual(rows[2991][23], 7198644)
 
 
 class SkyborneImportTest(unittest.TestCase):

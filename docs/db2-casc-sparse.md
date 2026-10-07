@@ -20,9 +20,11 @@ Other sparse flags/compressions/widths fail explicitly.
 - `field_types`: stored field index to `INTEGER` (signed metadata width), `REAL`
   (float32), or `UNSIGNED` (default). Sparse-only; obtain declarations from the
   matching DBD, not numeric guesses. Returned arrays flatten into output columns.
-- `record_ids`: every requested ID must resolve from a clear row or clear copy;
-  encrypted sections never produce zero-filled placeholder rows. Without this
-  selection, any encrypted section fails, even if requested rows would be clear.
+- `record_ids`: every requested ID must resolve from a readable row or copy;
+  zero-filled encrypted sections never produce placeholder rows. Without this
+  selection, sparse decoding rejects encrypted sections. Fixed-record decoding
+  instead reports and skips zero-filled encrypted sections and reads already
+  decrypted sections, preserving the existing behavior.
 
 ## Concrete evidence and targeted tests
 
