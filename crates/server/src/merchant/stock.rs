@@ -97,6 +97,8 @@ pub struct BuybackEntry {
 pub struct BuybackSlots {
     slots: [Option<BuybackEntry>; BUYBACK_SLOTS],
     current: usize,
+    /// Sale order also breaks ties between requests in the same server tick.
+    sale_order: Vec<u8>,
 }
 
 impl BuybackSlots {
@@ -109,18 +111,33 @@ impl BuybackSlots {
             self.oldest()
         };
         self.slots[slot] = Some(entry);
+        self.sale_order
+            .retain(|&previous| usize::from(previous) != slot);
+        self.sale_order.push(slot as u8);
         if self.current < BUYBACK_SLOTS - 1 {
             self.current += 1;
         }
     }
 
     fn oldest(&self) -> usize {
-        (0..BUYBACK_SLOTS)
-            .min_by(|&a, &b| {
-                let time = |slot: usize| self.slots[slot].as_ref().map_or(0.0, |e| e.sold_at);
-                time(a).total_cmp(&time(b))
-            })
-            .unwrap_or(0)
+        if let Some(slot) = self.slots.iter().position(Option::is_none) {
+            return slot;
+        }
+        // TrinityCore's per-slot timestamps select the oldest sale. Iterate in
+        // request order so identical timestamps still evict the oldest request.
+        let time = |slot: u8| {
+            self.slots[usize::from(slot)]
+                .as_ref()
+                .expect("occupied slot")
+                .sold_at
+        };
+        usize::from(
+            *self
+                .sale_order
+                .iter()
+                .min_by(|&&a, &&b| time(a).total_cmp(&time(b)))
+                .expect("full buyback list"),
+        )
     }
 
     pub fn get(&self, slot: u8) -> Option<&BuybackEntry> {
@@ -130,17 +147,22 @@ impl BuybackSlots {
     /// AzerothCore `RemoveItemFromBuyBackSlot` (PlayerStorage.cpp:4062).
     pub fn remove(&mut self, slot: u8) -> Option<BuybackEntry> {
         let entry = self.slots.get_mut(usize::from(slot))?.take();
+        self.sale_order.retain(|&previous| previous != slot);
         if self.slots[self.current].is_some() {
             self.current = usize::from(slot);
         }
         entry
     }
 
-    /// Filled slots in slot order.
+    /// Filled slots in sale order, oldest first; requests retain physical slots.
     pub fn entries(&self) -> impl Iterator<Item = (u8, &BuybackEntry)> {
-        self.slots
-            .iter()
-            .enumerate()
-            .filter_map(|(slot, entry)| Some((slot as u8, entry.as_ref()?)))
+        self.sale_order.iter().map(|&slot| {
+            (
+                slot,
+                self.slots[usize::from(slot)]
+                    .as_ref()
+                    .expect("sale has a slot"),
+            )
+        })
     }
 }

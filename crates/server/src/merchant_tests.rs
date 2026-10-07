@@ -595,14 +595,76 @@ fn a_thirteenth_sale_replaces_the_oldest_buyback() {
         .entries()
         .map(|(slot, entry)| (slot, entry.item.item_guid))
         .collect();
-    let mut expected: Vec<(u8, u64)> = (0..12).map(|slot| (slot, u64::from(slot))).collect();
-    expected[0] = (0, 12);
+    let mut expected: Vec<(u8, u64)> = (1..12).map(|slot| (slot, u64::from(slot))).collect();
+    expected.push((0, 12));
     assert_eq!(guids, expected);
 
     // Buying back slot 5 frees it; the next sale fills it.
     slots.remove(5);
     slots.add(sale(20, 20.0));
     assert_eq!(slots.get(5).unwrap().item.item_guid, 20);
+}
+
+#[test]
+fn same_tick_sales_keep_request_order_across_multiple_wraps() {
+    let mut slots = BuybackSlots::default();
+    for guid in 0..25 {
+        slots.add(sale(guid, 0.0));
+    }
+    assert_eq!(
+        slots
+            .entries()
+            .map(|(_, entry)| entry.item.item_guid)
+            .collect::<Vec<_>>(),
+        (13..25).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn wrapped_buyback_list_restores_the_thirteenth_sale_by_its_real_slot() {
+    let Some(mut h) = harness() else { return };
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.take::<BuybackList>();
+    let mut sold_ids = Vec::new();
+    for index in 0..13 {
+        let (slot, item_id) = if index == 12 {
+            (5, 2385)
+        } else {
+            (VEST_SLOT, TARNISHED_CHAIN_VEST)
+        };
+        h.buy(godric, slot, item_id, 1);
+        let guid = h
+            .inventory()
+            .items
+            .iter()
+            .find(|item| item.item_id == item_id)
+            .unwrap()
+            .item_guid;
+        h.sell(godric, guid, 0);
+        sold_ids.push(item_id);
+    }
+    assert!(h.failures().is_empty());
+    let lists = h.take::<BuybackList>();
+    let last = lists.last().unwrap();
+    assert_eq!(
+        last.items.iter().map(|item| item.slot).collect::<Vec<_>>(),
+        (1..12).chain([0]).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        last.items
+            .iter()
+            .map(|item| item.item_id)
+            .collect::<Vec<_>>(),
+        sold_ids[1..]
+    );
+    let newest = last.items.last().unwrap();
+    h.send::<_, MerchantChannel>(BuybackItemRequest {
+        npc: godric.to_bits(),
+        slot: newest.slot,
+    });
+    assert!(h.failures().is_empty());
+    assert_eq!(h.count_of(2385), vec![1]);
+    assert!(h.count_of(TARNISHED_CHAIN_VEST).is_empty());
 }
 
 #[test]

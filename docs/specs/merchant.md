@@ -31,7 +31,7 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - A sale goes into the current slot, or replaces the oldest sale when that slot is taken.
   - Buying back costs what the sale paid, restores the item (stacking) and frees the slot.
   - Refused with `ItemNotFound` (empty slot), `NotEnoughMoney` or `InventoryFull`.
-  - `BuybackList` (filled slots in slot order) is sent after every change.
+  - `BuybackList` is sent after every change in sale order, oldest first and newest last, including wrapped slots. Each entry keeps its physical slot for buyback requests; sales within one server tick retain their request order.
 - [x] Repair (`RepairItem { item_guid }`, where `None` means all equipped items) works only at a `REPAIR` NPC.
   - Each item costs `lost * DurabilityCosts[ItemLevel][class/subclass] * DurabilityQuality[(Quality+1)*2]`, at least 1 copper.
   - Items the remaining money can't cover stay damaged and the request answers `NotEnoughMoney`.
