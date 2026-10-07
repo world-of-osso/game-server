@@ -93,7 +93,19 @@ Separate independent current shoulder-assets native proof DONE: Left6/Right5 ori
 
 [Current cleanup receipt](../../../../game-engine-skyborn/target/skyborn-source-items/rebased-current-native-cleanup.json) records server inactive/MainPID0, UDP15002 empty and client/cage PIDs absent. Not proof of normal shutdown. This docs-only reconciliation performs no operations/builds/tests/data edits/delegation/push.
 
+## Reported motion fixture correction (2026-10-07)
+
+`player_motion_airborne_walkoff_and_touchdown_replicate_without_jump` failed because its replacement ground was not under the player, not because physics retained stale FALLING. Original corner100 and replacement99 both select terrain X-cell3; player x66.51667 occupies cell2. Instrumented original ordering showed ten Unsupported ticks, y49.02→39.22, motion2049 correctly falling. [Diagnostic ledger](../../../target/reported-skyborn-motion-diagnostic/ledger.md) owns exact RED and coordinate evidence.
+
+Test-only `a7616cd`, subsequently pushed to origin/skyborn per Main, uses adjacent corner `100 - 100/3`. It asserts Supported(48) before gravity, first no-input-tick landing within existing snap tolerance, grounded tracker and motion1; retains ten ticks and final motion assertion. No weakened assertion, wait, production physics, protocol or real-data change.
+
+[GREEN/final ledger](../../../target/reported-skyborn-motion-green-a7616cd/ledger.md) retains exact1/1 PASS; independent302 scoped fmt/check-server-tests exit0, no warnings or own readability findings. Production/protocol hashes unchanged; prior60-case proof remains valid separately, not a fresh combined-suite claim. HostClient input/gravity boundary only: no UDP, rendered animation, real terrain or whole-goal acceptance.
+
+[Engine handoff checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#desktop-handoff-checkpoint-2026-10-07) owns the staged OssoBuild packet and metadata-refresh boundary. Packet availability is not remote test consumption or landing. Main's newer NPC checkpoint approves source-unselected-pass omission; native type2 RED/corrective301 pending supersedes the historical policy hold above, not Ailee acceptance. Provenance, encrypted records, NPC/PBR/blue-hair limits remain; goal OPEN.
+
 ## Sources
+
+- Main-supplied 2026-10-07 bounded checkpoint — motion push, independent302 and current NPC policy/RED; local diagnostic/GREEN ledgers read, no new test or remote operation in this docs audit.
 
 - Main-supplied current final checkpoint (2026-10-07) — independent import278, traced native retry, separate shoulder scope and pending Grove291; explicit unresolved Ailee type7 semantics. [Engine checkpoint](../../../../game-engine-skyborn/docs/wiki/systems/forever-data.md#current-sourceproof-checkpoint-2026-10-07) owns linked current CPU, authentic binding/geometry and cleanup artifacts.
 

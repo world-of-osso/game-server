@@ -679,3 +679,7 @@ Reconciled [[skyborne]], index and source/race contracts against tracked factory
 ## [2026-10-07] systems | Reconcile current final checkpoint; goal OPEN
 
 [skyborne](systems/skyborne.md) reconciles current independent proof and later traced native evidence: corrected type20 composition is separate from unresolved Ailee type7/full-native acceptance. Records separate shoulder scope, pending Grove291, import278 preservation/provenance limits and cleanup exclusions. Historical failures retained; prior CASC root cause unproved. Overall goal OPEN. Docs-only; no code/data/tests/build/delegation/ops/push.
+
+## [2026-10-07] audit | Reported motion fixture correction
+
+Updated [[skyborne]] with wrong-cell root cause, stronger first-tick landing assertions, pushed test-only a7616cd and retained independent bounded proof. Linked engine-owned remote handoff and current NPC RED; no new tests, operations or full-goal claim.

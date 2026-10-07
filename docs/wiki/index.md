@@ -102,3 +102,5 @@ Debug logs and root cause analyses.
 | [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices plus player-death and broad auto-AFK scan reductions complete, while preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |
 
 - [Zaralda observed native success](investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01) — saved exit0 interaction; source/import and renderer gates distinct; independent artifact gate116 scoped PASS, no whole-world PASS.
+
+- [Reported motion fixture correction](systems/skyborne.md#reported-motion-fixture-correction-2026-10-07) — adjacent-cell fixture fix a7616cd, retained exact GREEN and independent scoped gate; unchanged production/protocol, remote consumer gates open.
