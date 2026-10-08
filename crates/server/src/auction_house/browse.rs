@@ -206,6 +206,7 @@ fn compare_groups(
     now: u64,
 ) -> Ordering {
     let order = match query.sort_field {
+        AuctionSortField::Bid | AuctionSortField::Quantity => std::cmp::Ordering::Equal,
         AuctionSortField::Name => a.item.item.name.cmp(&b.item.item.name),
         AuctionSortField::MinBid => a.lowest_bid.compare(b.lowest_bid),
         AuctionSortField::Buyout => a.lowest_price.compare(b.lowest_price),
