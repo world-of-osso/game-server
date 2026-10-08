@@ -488,6 +488,8 @@ struct ProgressionSenders<'w, 's> {
     bar: Query<'w, 's, &'static mut MessageSender<ActionBarSnapshot>>,
     traits: Query<'w, 's, &'static mut MessageSender<TraitConfigSnapshot>>,
     commit: Query<'w, 's, &'static mut MessageSender<TraitCommitResult>>,
+    /// The replicated `ActiveSpec` reaches clients only once its entity is marked.
+    replication: Option<Res<'w, ReplicationDirtyQueue>>,
 }
 
 fn send<M: Message>(senders: &mut Query<&mut MessageSender<M>>, connection: Entity, message: M) {
@@ -575,6 +577,7 @@ type ProgressionPlayer = (
     &'static mut KnownSpells,
     &'static mut ActionBar,
     &'static mut TraitLoadout,
+    Entity,
 );
 
 /// Apply a re-evaluated spec, trait config and known spells after a level, spec
@@ -582,7 +585,7 @@ type ProgressionPlayer = (
 /// bar buttons for unlearned spells and persist. `TraitConfigSnapshot` is sent when the spec or config changed, or
 /// always with `always_send_traits`.
 fn refresh_player(
-    (player, _, client_id, mut spec, mut known, mut bar, mut traits): (
+    (player, _, client_id, mut spec, mut known, mut bar, mut traits, entity): (
         &Player,
         &Level,
         &ClientId,
@@ -590,6 +593,7 @@ fn refresh_player(
         Mut<KnownSpells>,
         Mut<ActionBar>,
         Mut<TraitLoadout>,
+        Entity,
     ),
     evaluated: Evaluated,
     always_send_traits: bool,
@@ -603,6 +607,9 @@ fn refresh_player(
     let spec_changed = *spec != new_spec;
     if spec_changed {
         *spec = new_spec;
+        if let Some(replication) = &senders.replication {
+            replication.mark(entity);
+        }
         send(
             &mut senders.spec,
             connection,
