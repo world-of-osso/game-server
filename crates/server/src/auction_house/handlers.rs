@@ -69,7 +69,7 @@ pub(super) fn search_for_viewer(
     viewer: Option<(u8, u8, u16)>,
     sources: super::queries::DefinitionSources<'_>,
 ) -> AuctionSearchResults {
-    if query.class_id.is_none() && !query.usable_only {
+    if query.class_id.is_none() && query.subcategory_filters.is_empty() && !query.usable_only {
         return search_auctions(auctions, query, sources);
     }
     super::queries::search_auctions_matching(auctions, query, sources, |auction| {
@@ -90,7 +90,7 @@ pub(super) fn auction_matches_viewer(
     viewer: Option<(u8, u8, u16)>,
     source: shared::item_data::ItemDefinitionSource,
 ) -> bool {
-    if query.class_id.is_none() && !query.usable_only {
+    if query.class_id.is_none() && query.subcategory_filters.is_empty() && !query.usable_only {
         return true;
     }
     let Some(template) =
@@ -101,6 +101,21 @@ pub(super) fn auction_matches_viewer(
     if query
         .class_id
         .is_some_and(|class| class != template.scaling.class_id)
+    {
+        return false;
+    }
+    // Retail category nodes OR their class/subclass/inventory alternatives;
+    // TrinityCore a352b1fa AuctionHouseMgr.cpp:1081-1096 filters before paging.
+    if !query.subcategory_filters.is_empty()
+        && !query.subcategory_filters.iter().any(|filter| {
+            filter.class_id == template.scaling.class_id
+                && filter
+                    .subclass_id
+                    .is_none_or(|id| id == template.scaling.subclass_id)
+                && filter
+                    .inventory_type
+                    .is_none_or(|kind| kind == template.inventory_type)
+        })
     {
         return false;
     }
