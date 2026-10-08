@@ -7,7 +7,7 @@ use shared::protocol::{
 };
 
 use crate::auth::{Authenticated, InWorld};
-use crate::gold::GoldUpdateQueue;
+use crate::gold::{GoldUpdateQueue, format_money};
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase};
 use crate::persistence_types::InventoryData;
@@ -225,15 +225,11 @@ fn barber_shop_success_message(cost: u32) -> String {
     if cost == 0 {
         "barber shop changes applied".into()
     } else {
-        format!("barber shop changes applied for {}", format_money(cost))
+        format!(
+            "barber shop changes applied for {}",
+            format_money(u64::from(cost))
+        )
     }
-}
-
-fn format_money(copper: u32) -> String {
-    let gold = copper / 10_000;
-    let silver = (copper % 10_000) / 100;
-    let copper = copper % 100;
-    format!("{gold}g {silver}s {copper}c")
 }
 
 fn barber_shop_appearance(
