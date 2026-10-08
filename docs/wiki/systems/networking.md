@@ -204,7 +204,7 @@ The interest index retains life state with its position/map data. Target changes
 
 TrinityCore `a352b1fa` sources: [Player.cpp:1136-1170](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Player/Player.cpp#L1136) (`Player::setDeathState` delegates to Unit); [Player.cpp:4286-4288](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Player/Player.cpp#L4286) (`BuildPlayerRepop`: body to ghost, one health); [SpellAuraEffects.cpp:1871-1894](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Spells/Auras/SpellAuraEffects.cpp#L1871) (`HandleAuraGhost` sets/removes `PLAYER_FLAGS_GHOST` and ghost visibility/detection); [Object.cpp:931-944](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Object/Object.cpp#L931) (ghost visibility mask and group exception).
 
-Targeted proof: [UDP transitions](../../../crates/server/src/networking_tests/ghoststate.rs), [stationary observer changes](../../../crates/server/src/interest_tests.rs). These exercise transport and production release/corpse handlers, not a live realm.
+Targeted proof: [UDP transitions](../../../crates/server/src/networking_tests/ghoststate.rs), [stationary observer changes](../../../crates/server/src/interest_tests.rs). These exercise transport and production release/corpse handlers, not a live realm. At `9fcd652`, locked targeted `ghoststate` RED 0/2 becomes GREEN 2/2 (`/home/osso/.worktrees/logs/ghoststate-server-{red,green}.log`): the ghost observer sees Alive → Dead → Ghost → Alive, the living observer never decodes a Ghost frame, and stationary observer phase changes update visibility.
 
 ## See Also
 
