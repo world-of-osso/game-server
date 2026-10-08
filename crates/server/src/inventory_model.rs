@@ -429,7 +429,7 @@ impl InventoryModel {
             .into_iter()
             .filter_map(|(location, item)| match location {
                 ItemLocation::Equipment(slot) => Some(EquippedItemView { slot, item }),
-                ItemLocation::Bag { .. } => None,
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. } => None,
             })
             .collect();
         EquipmentSnapshot { items }
@@ -458,6 +458,10 @@ impl InventoryModel {
                 format!("server has no storage for equipment slot {slot:?}"),
             )),
             ItemLocation::Equipment(_) => Ok(()),
+            ItemLocation::Bank { .. } => Err(error(
+                InventoryErrorReason::WrongSlot,
+                "bank slots are not inventory slots",
+            )),
         }
     }
 
@@ -467,6 +471,7 @@ impl InventoryModel {
                 self.bags[usize::from(bag)][usize::from(slot)].as_ref()
             }
             ItemLocation::Equipment(slot) => self.equipped.get(&slot),
+            ItemLocation::Bank { .. } => None,
         }
     }
 
@@ -476,6 +481,7 @@ impl InventoryModel {
                 self.bags[usize::from(bag)][usize::from(slot)].take()
             }
             ItemLocation::Equipment(slot) => self.equipped.remove(&slot),
+            ItemLocation::Bank { .. } => None,
         }
     }
 
@@ -490,6 +496,7 @@ impl InventoryModel {
                     None => self.equipped.remove(&slot),
                 };
             }
+            ItemLocation::Bank { .. } => unreachable!("check_location refuses bank slots"),
         }
     }
 
@@ -825,6 +832,7 @@ impl InventoryModel {
                 return Ok(());
             }
             ItemLocation::Bag { bag, slot } => (bag, slot),
+            ItemLocation::Bank { .. } => unreachable!("check_location refuses bank slots"),
         };
         if cell_bag == bag {
             return Err(error(

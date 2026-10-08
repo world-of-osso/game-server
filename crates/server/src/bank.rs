@@ -567,3 +567,7 @@ fn update_tab_settings(
 #[cfg(test)]
 #[path = "bank_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "bank_move_tests.rs"]
+mod move_tests;
