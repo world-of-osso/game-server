@@ -90,6 +90,8 @@ fn setup_app_with_time() -> App {
     app
 }
 
+#[path = "networking_tests/active_spec.rs"]
+mod active_spec;
 #[path = "networking_tests/bag_slots.rs"]
 mod bag_slots;
 #[path = "networking_tests/client_height.rs"]
