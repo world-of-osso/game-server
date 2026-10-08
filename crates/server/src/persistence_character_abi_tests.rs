@@ -195,6 +195,7 @@ fn character_disk_abi_owned_sources_hydrate_by_guid_not_race_after_reopen() {
                         unique_auction: false,
                     },
                 }],
+                item_durability: HashMap::new(),
                 definition_sources: if id == 3 {
                     HashMap::new()
                 } else {
