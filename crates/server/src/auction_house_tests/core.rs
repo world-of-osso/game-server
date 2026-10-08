@@ -40,6 +40,7 @@ fn create_auction_moves_items_from_inventory_into_state() {
 
     let response = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         character_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -96,6 +97,7 @@ fn successful_auction_deposit_updates_online_gold() {
             .resource_mut::<crate::gold::GoldUpdateQueue>();
         super::super::handlers::create_auction_with_gold_update(
             &db,
+            &ItemTemplates::default(),
             &mut state,
             character_id,
             crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -137,6 +139,7 @@ fn place_bid_refunds_previous_bidder_and_updates_current_bid() {
     let mut state = AuctionHouseState::default();
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,

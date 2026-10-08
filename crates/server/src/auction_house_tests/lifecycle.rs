@@ -12,6 +12,7 @@ fn cancel_own_auction_returns_item_via_mail() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -57,6 +58,7 @@ fn cancel_auction_with_bids_rejected() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -86,6 +88,7 @@ fn bid_on_own_auction_rejected() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -131,6 +134,7 @@ fn bid_only_auction_rejects_buyout() {
 
     let response = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -177,6 +181,7 @@ fn create_auction_rejected_with_insufficient_deposit() {
 
     let response = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -216,6 +221,7 @@ fn max_auction_slots_per_character_enforced() {
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let response = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -251,6 +257,7 @@ fn duration_tiers_set_correct_expiry() {
         let mut state = AuctionHouseState::default();
         create_auction(
             &db,
+            &ItemTemplates::default(),
             &mut state,
             seller_id,
             crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -287,6 +294,7 @@ fn concurrent_bids_respect_updated_minimum() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -332,6 +340,7 @@ fn bid_at_buyout_price_triggers_immediate_sale() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -373,6 +382,7 @@ fn insufficient_gold_for_bid_and_buyout() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -422,6 +432,7 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -531,6 +542,7 @@ fn expired_auction_without_bid_returns_item_to_seller() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -597,6 +609,7 @@ fn relist_after_expired_auction() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -651,6 +664,7 @@ fn relist_after_expired_auction() {
         .expect("returned item in inventory");
     let relist = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,

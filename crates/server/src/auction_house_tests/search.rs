@@ -10,6 +10,7 @@ fn create_auction_appears_in_search_results() {
 
     let response = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -61,6 +62,7 @@ fn bid_recorded_and_underbid_rejected() {
     let mut state = AuctionHouseState::default();
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,

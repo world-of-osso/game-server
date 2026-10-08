@@ -210,6 +210,8 @@ pub(super) fn validate_offered_item(
 pub(super) enum ExchangeRefusal {
     /// `character_id` no longer has an offered item.
     OfferGone(u64),
+    /// An offered item became soulbound before settlement.
+    BoundItem,
     /// `character_id` no longer has the offered money (TrinityCore
     /// `HandleAcceptTradeOpcode` `EQUIP_ERR_NOT_ENOUGH_MONEY`).
     NotEnoughMoney(u64),
@@ -224,6 +226,7 @@ impl ExchangeRefusal {
     pub(super) fn message_for(self, viewer: u64) -> &'static str {
         match self {
             Self::OfferGone(_) => ERR_ITEM_NOT_FOUND,
+            Self::BoundItem => ERR_TRADE_BOUND_ITEM,
             Self::NotEnoughMoney(who) if who == viewer => ERR_NOT_ENOUGH_MONEY,
             Self::NotEnoughMoney(_) => "Trade failed.",
             Self::BagFull(who) if who == viewer => "Trade failed, you don't have enough space.", // ERR_TRADE_BAG_FULL
@@ -260,10 +263,14 @@ pub(super) fn execute_completed_trade(
         trade.initiator_offer.gold,
     )?;
     let mut mint = || persistence::next_id(db, "item_instance");
-    let to_target = take_offered_items(&mut initiator, &trade.initiator_offer, &mut mint)
-        .ok_or(ExchangeRefusal::OfferGone(trade.initiator))?;
-    let to_initiator = take_offered_items(&mut target, &trade.target_offer, &mut mint)
-        .ok_or(ExchangeRefusal::OfferGone(trade.target))?;
+    let to_target = take_offered_items(
+        &mut initiator,
+        &trade.initiator_offer,
+        trade.initiator,
+        &mut mint,
+    )?;
+    let to_initiator =
+        take_offered_items(&mut target, &trade.target_offer, trade.target, &mut mint)?;
     store_received(&mut initiator, to_initiator, templates, &mut mint)
         .ok_or(ExchangeRefusal::BagFull(trade.initiator))?;
     store_received(&mut target, to_target, templates, &mut mint)
@@ -298,17 +305,23 @@ fn exchanged_gold(
 fn take_offered_items(
     model: &mut InventoryModel,
     offer: &TradeOffer,
+    character_id: u64,
     mint: &mut impl FnMut() -> u64,
-) -> Option<Vec<(InventoryItemData, shared::item_data::ItemDefinitionSource)>> {
+) -> Result<Vec<(InventoryItemData, shared::item_data::ItemDefinitionSource)>, ExchangeRefusal> {
     offer
         .traded_items()
         .map(|item| {
-            let owned = model.bag_item(item.item_guid)?;
+            let owned = model
+                .bag_item(item.item_guid)
+                .ok_or(ExchangeRefusal::OfferGone(character_id))?;
             let source = model.definition_source(owned.item_guid);
+            if model.is_soulbound(item.item_guid) {
+                return Err(ExchangeRefusal::BoundItem);
+            }
             model
                 .take_bag_item(item.item_guid, u32::from(item.count), mint)
-                .ok()
                 .map(|taken| (taken, source))
+                .map_err(|_| ExchangeRefusal::OfferGone(character_id))
         })
         .collect()
 }

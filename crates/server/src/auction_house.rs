@@ -12,6 +12,7 @@ use shared::protocol::{
 };
 
 use crate::auth::InWorld;
+use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::persistence::{
     self, AuctionData, GameDatabase, InventoryData, InventoryItemData,
     mail_store::{MailData, MailItemData, MailSender},

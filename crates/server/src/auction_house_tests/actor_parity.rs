@@ -132,6 +132,7 @@ fn create_actor_pair(
     let before = unix_now();
     let response = create_auction(
         db,
+        &ItemTemplates::default(),
         &mut auctions,
         player,
         0,
