@@ -11,6 +11,50 @@ use equipment_admin_types::{EquipmentGrantItem, EquipmentOwnership};
 use admin_output::print_response;
 
 const DEFAULT_SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
+const DEFAULT_TIMEOUT_MS: u64 = 10_000;
+const TIMEOUT_ENV: &str = "GAME_SERVER_ADMIN_TIMEOUT_MS";
+
+fn read_timeout() -> Result<std::time::Duration, String> {
+    let invalid = || format!("{TIMEOUT_ENV} must be a positive integer number of milliseconds");
+    let milliseconds = match std::env::var(TIMEOUT_ENV) {
+        Ok(value) => value.parse::<u64>().map_err(|_| invalid())?,
+        Err(std::env::VarError::NotPresent) => DEFAULT_TIMEOUT_MS,
+        Err(std::env::VarError::NotUnicode(_)) => return Err(invalid()),
+    };
+    if milliseconds == 0 {
+        return Err(invalid());
+    }
+    Ok(std::time::Duration::from_millis(milliseconds))
+}
+
+/// Bound the synchronous dependency's entire connect/write/read exchange. Main
+/// exits on timeout, so the process closes even a worker blocked inside connect.
+fn call_with_timeout(
+    path: std::path::PathBuf,
+    command: &str,
+    request: AdminRequest,
+    timeout: std::time::Duration,
+) -> Result<AdminResponse, String> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let worker_path = path.clone();
+    std::thread::spawn(move || {
+        let response = Client::call(worker_path, &request);
+        // The receiver is gone when main times out and exits.
+        let _ = sender.send(response);
+    });
+    match receiver.recv_timeout(timeout) {
+        Ok(response) => response.map_err(|error| format!("Failed to connect: {error}")),
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Err(format!(
+            "Admin command '{command}' on socket {} timed out after {} ms (connect/request/reply)",
+            path.display(),
+            timeout.as_millis()
+        )),
+        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => Err(format!(
+            "Admin command '{command}' on socket {}: request worker disconnected",
+            path.display()
+        )),
+    }
+}
 
 /// The server's admin socket; `GAME_SERVER_ADMIN_SOCKET` as the server reads it.
 fn socket_path() -> std::path::PathBuf {
@@ -454,19 +498,21 @@ fn main() {
     }
 
     let request = parse_request(&args);
-    let response: AdminResponse = match Client::call(socket_path(), &request) {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("Failed to connect: {e}");
+    let response = read_timeout()
+        .and_then(|timeout| call_with_timeout(socket_path(), &args[1], request, timeout))
+        .unwrap_or_else(|error| {
+            eprintln!("{error}");
             std::process::exit(1);
-        }
-    };
+        });
 
     print_response(&response);
 }
 
 fn print_usage() {
     eprintln!("Usage:");
+    eprintln!(
+        "  {TIMEOUT_ENV}=<positive milliseconds> (default {DEFAULT_TIMEOUT_MS}; total IPC deadline)"
+    );
     eprintln!("  game-server-admin ping");
     eprintln!("  game-server-admin economy-status");
     eprintln!("  game-server-admin list-accounts");

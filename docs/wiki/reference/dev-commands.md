@@ -14,6 +14,32 @@ ssh sakuin /opt/game-server/game-server-admin <command>
 
 Runs on the `sakuin` host. Communicates with the server via a Unix IPC socket (`admin_ipc.rs`, `admin_ipc_server.rs`). Source for the admin binary: `crates/server/src/bin/admin.rs`.
 
+### Timeout
+
+`GAME_SERVER_ADMIN_SOCKET` selects the socket (default `/tmp/game-server-admin.sock`).
+The client has one **10-second total IPC deadline**, covering connect, request write,
+and the complete reply. Override it with `GAME_SERVER_ADMIN_TIMEOUT_MS`, a positive
+integer number of milliseconds; zero, invalid values, and overflow are errors.
+
+```bash
+GAME_SERVER_ADMIN_TIMEOUT_MS=60000 game-server-admin list-characters
+```
+
+Timeout exits with status 1 and names the socket, command (without credentials or
+other arguments), and deadline. Existing connection errors and successful output
+are unchanged. A timeout does **not** cancel a command already received by the
+server; inspect its result before retrying a mutation.
+
+No commands are exempt. Admin handlers perform local queries, password hashing,
+or bounded character/equipment updates with redb commits; there is no admin import
+or full-world save command (world import is a separate script below). Ten seconds
+allows headroom for hashing and disk commits, not an unlimited stalled-server wait.
+Large account/character lists, account moves, or unusually slow storage can use an
+explicitly extended deadline as above.
+
+Process/socket regression tests: `crates/server/tests/admin_timeout.rs` (silent
+listener, normal Pong, missing socket, invalid timeout configuration).
+
 Trusted physical equipment manifests use a plain JSON array, not an envelope:
 
 ```bash
