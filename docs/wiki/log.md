@@ -692,3 +692,7 @@ Reconciled [[skyborne]], index and source/race contracts against tracked factory
 Updated [[skyborne]] with wrong-cell root cause, stronger first-tick landing assertions, pushed test-only a7616cd and retained independent bounded proof. Linked engine-owned remote handoff and current NPC RED; no new tests, operations or full-goal claim.
 
 - 2026-10-07 — Reconcile bounded corrective742 native Ailee/Grove functional DONE, mapped/build receipts, CPU13 and pending304; retain OS-exit/pixel/parity/provenance exclusions. Record final handoff metadata hash proof separately from unproved consumption/landing. Docs-only; no runtime or test operations.
+
+## 2026-10-08 — Character-bank item moves
+
+Existing ItemLocation/SwapItem/SplitItem extended to character bank tabs; [bank system](systems/banks.md) records native cursor and transactional server behavior. Targeted proof tracked in `/home/osso/.worktrees/handoff-bankmoves.md`; no live run.

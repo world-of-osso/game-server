@@ -9,6 +9,9 @@ use crate::bank_test_harness::{COPPER_ORE, Harness, LINEN, PEACEBLOOM, harness};
 use crate::item_templates::ItemTemplates;
 use crate::persistence::{self, InventoryItemData};
 
+#[path = "bank_move_rule_tests.rs"]
+mod rule_tests;
+
 fn bank(tab: u8, slot: u8) -> ItemLocation {
     ItemLocation::Bank { tab, slot }
 }
