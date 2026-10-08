@@ -4,6 +4,8 @@
 mod economic;
 #[path = "merchant_guild_repair_tests.rs"]
 mod guild_repair;
+#[path = "owned_commerce_buyback_tests.rs"]
+mod owned_commerce_sources;
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -494,6 +496,7 @@ fn selling_linen_pays_its_sell_price_and_buyback_returns_it() {
         lists,
         vec![BuybackList {
             items: vec![BuybackItem {
+                definition_source: shared::item_data::ItemDefinitionSource::Retail,
                 slot: 0,
                 item_id: LINEN,
                 name: "Linen Cloth".into(),
@@ -1070,4 +1073,73 @@ fn sell_all_junk_needs_the_vendor_open() {
 
     assert_eq!(h.failures(), vec![MerchantError::NotInteracting]);
     assert_eq!(h.count_of(RUINED_PELT), vec![2]);
+}
+
+impl Harness {
+    fn source_collision(&mut self, id: u32) {
+        use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
+        use shared::item_data::ItemDefinitionSource::Forever70205;
+        let plain = crate::item_templates::ItemTemplate {
+            max_stack: 200,
+            allowable_class: -1,
+            allowable_race: u64::MAX,
+            ..Default::default()
+        };
+        let mut templates = self.app.world_mut().resource_mut::<ItemTemplates>();
+        templates.retail.insert(id, plain);
+        templates.forever.insert(id, plain);
+        let mut catalog = self.app.world_mut().resource_mut::<VendorCatalog>();
+        catalog.goods.insert(
+            id,
+            catalog::VendorGoods {
+                name: format!("Retail {id}"),
+                quality: 1,
+                buy_price: 1,
+                sell_price: 1,
+                buy_count: 1,
+                max_count: 1,
+            },
+        );
+        catalog.vendors.insert(
+            GODRIC_ROTHGAR,
+            vec![catalog::VendorSlot {
+                item_id: id,
+                maxcount: 0,
+                incrtime: 0,
+            }],
+        );
+        let db = &self.app.world().resource::<GameDatabase>().db;
+        let mut record = load_inventory_record(db, self.character_id).unwrap();
+        record.inventory.items.clear();
+        record.inventory.items.push(InventoryItemData {
+            item_guid: 1001,
+            item_id: id,
+            name: format!("Forever {id}"),
+            quality: 1,
+            required_level: 0,
+            stack_count: 1,
+            vendor_sell_price: 1,
+            unique_auction: false,
+        });
+        record.definition_sources.insert(1001, Forever70205);
+        save_inventory_record(db, self.character_id, &record);
+    }
+}
+
+#[test]
+fn source_requirements_static_merchant_unique_limit_counts_retail_only() {
+    for id in [2947, 2512, 2101] {
+        let mut h = harness().expect("world vendor fixture required");
+        h.source_collision(id);
+        let npc = h.open(GODRIC_ROTHGAR);
+        h.buy(npc, 0, id, 1);
+        assert!(
+            h.failures().is_empty(),
+            "Forever {id} must not block Retail purchase"
+        );
+        assert_eq!(h.count_of(id), vec![1, 1]);
+        h.buy(npc, 0, id, 1);
+        assert_eq!(h.failures(), vec![MerchantError::CantCarryMore]);
+        assert_eq!(h.count_of(id), vec![1, 1]);
+    }
 }

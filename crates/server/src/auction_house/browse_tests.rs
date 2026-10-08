@@ -43,7 +43,9 @@ fn browse(
     auctions: &HashMap<u64, AuctionData>,
     query: &AuctionSearchQuery,
 ) -> AuctionBrowseResults {
-    browse_for_viewer(auctions, query, None, None)
+    browse_for_viewer(auctions, query, None, None, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    })
 }
 
 #[test]
@@ -55,10 +57,12 @@ fn global_quantity_and_cheapest_offer_include_offers_beyond_old_page() {
     auctions.insert(76, offer(76, 1, 7, Some(8)));
     let query = text_query("");
     assert!(
-        !super::super::queries::search_auctions(&auctions, &query)
-            .results
-            .iter()
-            .any(|a| a.auction_id == 76)
+        !super::super::queries::search_auctions(&auctions, &query, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        })
+        .results
+        .iter()
+        .any(|a| a.auction_id == 76)
     );
     let result = browse(&auctions, &query);
     assert_eq!(result.total_results, 1);
@@ -216,18 +220,27 @@ fn class_and_usable_requirements_share_flat_viewer_logic_before_paging() {
             ..Default::default()
         };
         template.scaling.class_id = if id % 2 == 0 { 7 } else { 4 };
-        templates.0.insert(id as u32, template);
+        templates.retail.insert(id as u32, template);
     }
-    templates.0.get_mut(&2).unwrap().allowable_class = 1 << 7;
-    templates.0.get_mut(&4).unwrap().allowable_race = 1 << 1;
+    templates.retail.get_mut(&2).unwrap().allowable_class = 1 << 7;
+    templates.retail.get_mut(&4).unwrap().allowable_race = 1 << 1;
     let mut query = text_query("");
     query.class_id = Some(7);
     assert_eq!(
-        browse_for_viewer(&auctions, &query, Some(&templates), None).total_results,
+        browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        })
+        .total_results,
         60
     );
     query.usable_only = true;
-    let first = browse_for_viewer(&auctions, &query, Some(&templates), Some((1, 1, 20)));
+    let first = browse_for_viewer(
+        &auctions,
+        &query,
+        Some(&templates),
+        Some((1, 1, 20)),
+        &|_| shared::item_data::ItemDefinitionSource::Retail,
+    );
     assert_eq!(first.total_results, 58);
     assert_eq!(first.items.len(), 50);
     assert!(
@@ -238,17 +251,29 @@ fn class_and_usable_requirements_share_flat_viewer_logic_before_paging() {
     );
     query.page = 1;
     assert_eq!(
-        browse_for_viewer(&auctions, &query, Some(&templates), Some((1, 1, 20)))
-            .items
-            .len(),
+        browse_for_viewer(
+            &auctions,
+            &query,
+            Some(&templates),
+            Some((1, 1, 20)),
+            &|_| shared::item_data::ItemDefinitionSource::Retail
+        )
+        .items
+        .len(),
         8
     );
     assert_eq!(
-        browse_for_viewer(&auctions, &query, Some(&templates), None).total_results,
+        browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        })
+        .total_results,
         0
     );
     assert_eq!(
-        browse_for_viewer(&auctions, &query, None, Some((1, 1, 20))).total_results,
+        browse_for_viewer(&auctions, &query, None, Some((1, 1, 20)), &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        })
+        .total_results,
         0
     );
 }
@@ -269,7 +294,7 @@ fn browse_300k_cpu_under_200ms() {
             ..Default::default()
         };
         template.scaling.class_id = 7;
-        templates.0.entry(item).or_insert(template);
+        templates.retail.entry(item).or_insert(template);
     }
     let mut slowest = Duration::ZERO;
     for (text, class, usable, page, expected) in [
@@ -284,7 +309,13 @@ fn browse_300k_cpu_under_200ms() {
         query.sort_field = AuctionSortField::Buyout;
         let cpu_before = thread_cpu_ticks();
         let start = Instant::now();
-        let result = browse_for_viewer(&auctions, &query, Some(&templates), Some((1, 1, 20)));
+        let result = browse_for_viewer(
+            &auctions,
+            &query,
+            Some(&templates),
+            Some((1, 1, 20)),
+            &|_| shared::item_data::ItemDefinitionSource::Retail,
+        );
         let elapsed = start.elapsed();
         let cpu_ticks = thread_cpu_ticks() - cpu_before;
         slowest = slowest.max(elapsed);
@@ -377,7 +408,9 @@ fn ascii_case_insensitive_search_preserves_literal_non_ascii_and_empty_queries()
             expected,
             "{text:?}"
         );
-        let flat = super::super::queries::search_auctions(&auctions, &query);
+        let flat = super::super::queries::search_auctions(&auctions, &query, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        });
         assert_eq!(
             flat.results
                 .iter()
@@ -475,6 +508,9 @@ mod session {
         });
         app.add_plugins(ProtocolPlugin);
         app.init_resource::<Inbox>();
+        app.insert_resource(GameDatabase {
+            db: persistence::temp_database(),
+        });
         app.insert_resource(FactionTemplates(HashMap::from([(
             1,
             FactionTemplateEntry {

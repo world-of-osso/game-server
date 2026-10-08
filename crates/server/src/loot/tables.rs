@@ -203,7 +203,8 @@ impl LootTables {
         if row.needs_quest && !needs_quest_item(row.item) {
             return;
         }
-        let Some(template) = items.get(row.item) else {
+        let Some(template) = items.get(shared::item_data::ItemDefinitionSource::Retail, row.item)
+        else {
             return;
         };
         add_stacks(row, template, rng, drops);
@@ -237,7 +238,8 @@ fn valid_in_group(row: &LootRow, items: &ItemTemplates, drops: &[DroppedItem]) -
     if row.reference != 0 {
         return true;
     }
-    let Some(template) = items.get(row.item) else {
+    let Some(template) = items.get(shared::item_data::ItemDefinitionSource::Retail, row.item)
+    else {
         return false;
     };
     let limit = if template.inventory_type == 0 { 3 } else { 1 };
@@ -336,7 +338,10 @@ impl LootTables {
         misses: &mut HashMap<u32, f64>,
     ) {
         if row.reference == 0 {
-            if items.get(row.item).is_some() {
+            if items
+                .get(shared::item_data::ItemDefinitionSource::Retail, row.item)
+                .is_some()
+            {
                 *misses.entry(row.item).or_insert(1.0) *= 1.0 - chance;
             }
             return;
@@ -355,7 +360,12 @@ impl LootTables {
 fn group_shares<'a>(group: &'a [LootRow], items: &ItemTemplates) -> Vec<(&'a LootRow, f64)> {
     let rows: Vec<&LootRow> = group
         .iter()
-        .filter(|row| row.reference != 0 || items.get(row.item).is_some())
+        .filter(|row| {
+            row.reference != 0
+                || items
+                    .get(shared::item_data::ItemDefinitionSource::Retail, row.item)
+                    .is_some()
+        })
         .collect();
     let mut left = 100.0_f64;
     let mut shares = Vec::new();

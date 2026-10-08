@@ -1,4 +1,7 @@
 //! Real-DB tests against data/world.db.
+#[path = "owned_commerce_guild_tests.rs"]
+mod owned_commerce_sources;
+
 use shared::protocol::*;
 
 use super::DailyReset;

@@ -208,7 +208,11 @@ fn paladin_with_shield(spells: &[u32], shield: bool) -> Harness {
     world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
     world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
     let items = if shield {
-        vec![(shared::protocol::EquipmentSlot::OffHand, WORN_WOODEN_SHIELD)]
+        vec![(
+            shared::protocol::EquipmentSlot::OffHand,
+            shared::item_data::ItemDefinitionSource::Retail,
+            WORN_WOODEN_SHIELD,
+        )]
     } else {
         Vec::new()
     };
@@ -636,23 +640,30 @@ fn cancel_aura_removes_own_buff_but_not_a_debuff() {
 }
 
 #[test]
-fn purify_dispels_a_magic_debuff() {
-    let Some(mut h) = harness(Vec::new(), &[PURIFY, SHADOW_WORD_PAIN], 5) else {
-        return;
-    };
+fn purify_dispels_a_magic_debuff_combat_log_metadata() {
+    let mut h = harness(Vec::new(), &[PURIFY, SHADOW_WORD_PAIN], 5).expect("spell fixture");
+    let before = std::time::SystemTime::now();
     make_npc_hostile_to_players(&mut h);
     apply(&mut h.app, h.npc, h.caster, SHADOW_WORD_PAIN);
     assert_eq!(auras_of(&h, h.caster, SHADOW_WORD_PAIN)[0].dispel_type, 1);
     h.cast_and_deliver(PURIFY, None);
     assert!(auras_of(&h, h.caster, SHADOW_WORD_PAIN).is_empty());
-    let dispel = log_of(&h, CombatLogKind::Dispel, PURIFY);
+    let dispel: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Dispel)
+        .collect();
     assert_eq!(dispel.len(), 1);
+    assert_eq!(dispel[0].spell_id, Some(PURIFY));
     assert_eq!(dispel[0].source, Some(h.caster.to_bits()));
     assert_eq!(
         dispel[0].extra_spell_id,
         Some(SHADOW_WORD_PAIN),
         "names the removed aura"
     );
+    assert_eq!(dispel[0].target, Some(h.caster.to_bits()));
+    crate::spell_cast::test_harness::assert_combat_log_metadata(&h.inbox.log, before);
 }
 
 #[test]

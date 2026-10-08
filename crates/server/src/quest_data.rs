@@ -96,8 +96,11 @@ pub(crate) struct QuestTemplate {
     pub quest_info_type: u8,
     pub quest_info_modifiers: u32,
     pub special_flags: u32,
-    /// Race bits (`1 << (race - 1)` in the imported Wrath data); 0 = any.
-    pub allowable_races: u32,
+    /// 0 = any; legacy race-ID bits or explicitly labelled PlayableRaceBit masks.
+    pub allowable_races: u64,
+    pub race_mask_playable: bool,
+    /// Captured objectives not implemented by the native quest system cannot auto-complete.
+    pub completion_blocked: bool,
     /// Class bits (`1 << (class - 1)`); 0 = any.
     pub allowable_classes: u32,
     pub exclusive_group: i32,
@@ -110,6 +113,8 @@ pub(crate) struct QuestTemplate {
     pub money_scaling: Option<QuestMoneyScaling>,
     /// `RewardXPDifficulty`: column of the QuestXP DB2 row.
     pub reward_xp_difficulty: u8,
+    /// Fixed captured reward; Some(0) also prevents guessed XP for unknown reconstruction data.
+    pub captured_reward_xp: Option<u32>,
     /// Item given on accept (`StartItem` x `ProvidedItemCount`).
     pub start_item: u32,
     pub provided_item_count: u32,
@@ -325,7 +330,9 @@ fn quest_from_row(
         quest_info_type: int(row, "QuestInfoType")?.clamp(0, 255) as u8,
         quest_info_modifiers: int(row, "QuestInfoModifiers")? as u32,
         special_flags: int(row, "SpecialFlags")? as u32,
-        allowable_races: int(row, "AllowableRaces")? as u32,
+        allowable_races: int(row, "AllowableRaces")? as u64,
+        race_mask_playable: false,
+        completion_blocked: false,
         allowable_classes: int(row, "AllowableClasses")? as u32,
         exclusive_group: int(row, "ExclusiveGroup")? as i32,
         reward_next_quest: int(row, "RewardNextQuest")? as u32,
@@ -344,6 +351,7 @@ fn quest_from_row(
             })
             .transpose()?,
         reward_xp_difficulty: int(row, "RewardXPDifficulty")?.clamp(0, 255) as u8,
+        captured_reward_xp: None,
         start_item: int(row, "StartItem")? as u32,
         provided_item_count: int(row, "ProvidedItemCount")? as u32,
         reward_items: item_pairs(row, "RewardItem", "RewardAmount", 4)?,
@@ -535,6 +543,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
         links.push((quest.id, link));
         db.quests.insert(quest.id, quest);
     }
+    load_reconstruction_metadata(&conn, &mut db)?;
     link_quests(&mut db, &links);
     db.starters = load_relations(&conn, "content_creature_queststarter")?;
     db.enders = load_relations(&conn, "content_creature_questender")?;
@@ -548,6 +557,46 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.area_triggers = load_area_triggers(&conn)?;
     db.kill_credits = load_kill_credits(&conn)?;
     Ok(db)
+}
+
+/// Optional source overlay metadata; base Retail/Wrath rows retain their existing rules.
+fn load_reconstruction_metadata(conn: &Connection, db: &mut QuestDb) -> rusqlite::Result<()> {
+    let present: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='zephras_quest_meta')",
+        [], |row| row.get(0),
+    )?;
+    if !present {
+        return Ok(());
+    }
+    let mut statement = conn.prepare(
+        "SELECT quest_id, reward_xp, completion_blocked, race_mask_playable FROM zephras_quest_meta",
+    )?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, Option<u32>>(1)?,
+            row.get::<_, bool>(2)?,
+            row.get::<_, bool>(3)?,
+        ))
+    })?;
+    for row in rows {
+        apply_reconstruction_metadata(db, row?)?;
+    }
+    Ok(())
+}
+
+fn apply_reconstruction_metadata(
+    db: &mut QuestDb,
+    (id, xp, blocked, playable): (u32, Option<u32>, bool, bool),
+) -> rusqlite::Result<()> {
+    let quest = db.quests.get_mut(&id).ok_or_else(|| {
+        error!("Zephras metadata references unloaded quest {id}");
+        rusqlite::Error::InvalidQuery
+    })?;
+    quest.captured_reward_xp = Some(xp.unwrap_or(0));
+    quest.completion_blocked = blocked;
+    quest.race_mask_playable = playable;
+    Ok(())
 }
 
 const AREA_TRIGGER_QUERY: &str = "SELECT a.ID, a.ContinentID, a.Pos_0, a.Pos_1, a.Pos_2, \

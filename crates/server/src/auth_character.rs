@@ -529,11 +529,13 @@ fn build_player_identity(data: &CharacterData) -> Player {
     }
 }
 
-fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle {
+fn build_player_runtime_components(character_id: u64, data: &CharacterData) -> impl Bundle {
+    let facing = crate::persistence_character::reconstructed_start_facing(data);
+    let yaw = facing.map_or(0.0, |angle| angle + std::f32::consts::FRAC_PI_2);
     (
         Rotation {
             x: 0.0,
-            y: 0.0,
+            y: yaw,
             z: 0.0,
         },
         MovementSpeed(DEFAULT_RUN_SPEED),
@@ -543,8 +545,8 @@ fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle
         UnitStats::default(),
         CombatRatings::default(),
         DerivedStats::default(),
-        Level(level as u8),
-        UnitLevel(level as u8),
+        Level(data.level as u8),
+        UnitLevel(data.level as u8),
         ClientId(character_id),
         CombatTarget::default(),
         Replicate::to_clients(NetworkTarget::All),
@@ -562,7 +564,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
         build_player_identity(data),
         UnitFactionTemplate(crate::faction::faction_template_for_race(data.race)),
         data.equipment_appearance.clone(),
-        build_player_runtime_components(character_id, data.level),
+        build_player_runtime_components(character_id, data),
     )
 }
 

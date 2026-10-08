@@ -130,7 +130,7 @@ fn counts_above_the_stack_size_split_into_stacks() {
         max_count: 45,
     };
     let mut items = ItemTemplates::default();
-    items.0.insert(
+    items.retail.insert(
         159,
         ItemTemplate {
             max_stack: 20,

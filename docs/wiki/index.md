@@ -1,5 +1,7 @@
 # Wiki Index
 
+[Current bounded Skyborne/commerce audit](systems/skyborne.md#native-entry-and-npc-startup-source-gap-2026-10-05): approved health/unit-class estimates supersede the historical hold; [fresh workspace/startup proof](systems/content-import.md#forever-zephras-overlay) and linked bounded native acceptance retain visual/gameplay gaps and pending native artifact gate. [Owned commerce and requirement receipts](systems/inventory.md#bounded-owned-commerce-and-requirement-proof-2026-10-05) are scoped4/4 and11/11, not whole parity.
+
 [Native desktop/local development](../remote-builds.md) — normal build/run/check/test workflow, host-local runtime state, and pending runtime proof; [contract](../specs/build-host.md).
 
 
@@ -54,8 +56,8 @@ Server gameplay systems.
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
 | [[swimming-and-breath]] | MH2O terrain liquid (client-matched sampling), swim height bounds, no gravity for swimmers, TrinityCore breath/fatigue mirror timers and drowning damage |
 | [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management |
-| [[persistence]] | redb/SQLite storage; atomic death-state/HP saves, exact corpse/graveyard relog, legacy-record compatibility and initial-snapshot ordering; physical equipment and gold replication |
-| [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1 |
+| [[persistence]] | Frozen pre-source character/equipment ABI, GUID-hydrated cache sources, redb for mutable player data; atomic death-state/HP saves, exact corpse/graveyard relog, legacy-record compatibility and initial-snapshot ordering; physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
+| [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1; labelled Forever Zephras overlay, source masks/XP, captured NPC displays, labelled missing-class/health estimates, client asset needs and completion gaps |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
 | [[class-progression]] | Race/class validation including Monk/DH/Evoker, new-character levels and temporary starts, Initial spec below 10, known spells, action bars and progression persistence |
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
@@ -65,13 +67,15 @@ Server gameplay systems.
 | [[auras]] | Aura runtime: stacking/refresh, periodic ticks, Recuperate full-health completion, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
+| [[skyborne]] | Forever95/96; [current bounded checkpoint](systems/skyborne.md#rebased-source-and-runtime-checkpoint-2026-10-07): corrective742 native Ailee/Grove functional DONE, CPU13;304 final gate pending, no OS-exit/independent pixel/full parity claim. Import278 preservation/provenance gaps retained; character30/40XP/log[] preserved, physical redb changed; motion a761 fixture-only proof retained; remote consumption/landing open |
+| [[ground-assets]] | Registered-map local CASC closure, Forever grid/MPY2 corrections, post-sync 72-tile ground/LOS proof and authored-hole/eye-table limits |
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
 | [[dungeon-achievements]] | Local CASC categories/criteria, bounded achievement pages/dates, ordered copy objective snapshots and Stockade grants; client hookup |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
 | [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
-| [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
+| [[inventory]] | Owner-only snapshots/deltas, GUID-owned Retail/Forever definitions, source-qualified requirements/unique limits, transfers/stacking/equipment scaling, placements, instance tables and parity gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
 | [[bot-economy]] | Direct suppliers and bounded real merchant CLI/cost/cap proof; auction restart/mail/latency ledger in [[auction-house]], bounded native and final source audits PASS; content gaps in [[economy-catalog]] |
 | [[auction-house]] | Global ItemID browse and real AuctionID actions; exact saved CLI/restart/mail, twelve pinned loopback samples and bounded native and final source audits PASS |
@@ -98,3 +102,5 @@ Debug logs and root cause analyses.
 | [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices plus player-death and broad auto-AFK scan reductions complete, while preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |
 
 - [Zaralda observed native success](investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01) — saved exit0 interaction; source/import and renderer gates distinct; independent artifact gate116 scoped PASS, no whole-world PASS.
+
+- [Reported motion fixture correction](systems/skyborne.md#reported-motion-fixture-correction-2026-10-07) — adjacent-cell fixture fix a7616cd, retained exact GREEN and independent scoped gate; unchanged production/protocol, remote consumer gates open.

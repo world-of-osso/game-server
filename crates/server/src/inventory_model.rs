@@ -10,6 +10,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use shared::components::EquippedAppearanceEntry;
+use shared::item_data::ItemDefinitionSource;
 use shared::protocol::{
     BACKPACK_SLOTS, BAG_COUNT, BagContents, BagSlotItem, EquipmentSlot, EquipmentSnapshot,
     EquippedItem as EquippedItemView, InventoryError, InventoryErrorReason, InventorySlotChange,
@@ -37,8 +38,9 @@ pub(crate) struct InventoryModel {
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
     instances: HashMap<u64, ItemInstanceData>,
     item_durability: HashMap<u64, (u32, u32)>,
-    /// Templates of the item ids this character owns.
-    templates: HashMap<u32, ItemTemplate>,
+    definition_sources: HashMap<u64, ItemDefinitionSource>,
+    /// Source-qualified definitions of owned items.
+    templates: HashMap<(ItemDefinitionSource, u32), ItemTemplate>,
     character: CharacterData,
     gold: u64,
 }
@@ -63,7 +65,13 @@ impl InventoryModel {
             .iter()
             .chain(record.equipped.iter().map(|entry| &entry.item))
             .chain(record.bag_slots.iter().map(|entry| &entry.item))
-            .filter_map(|item| Some((item.item_id, *templates.get(item.item_id)?)))
+            .filter_map(|item| {
+                let source = record.definition_sources[&item.item_guid];
+                Some((
+                    (source, item.item_id),
+                    *templates.get(source, item.item_id)?,
+                ))
+            })
             .collect();
         let mut model = Self {
             bags: vec![Vec::new(); usize::from(BAG_COUNT)],
@@ -71,6 +79,7 @@ impl InventoryModel {
             equipped: BTreeMap::new(),
             instances: record.instances,
             item_durability: record.item_durability,
+            definition_sources: record.definition_sources,
             templates: owned_templates,
             character: record.character,
             gold: record.inventory.gold,
@@ -124,8 +133,10 @@ impl InventoryModel {
         let mut unplaced = Vec::new();
         for mut item in items {
             if !seen.insert(item.item_guid) {
-                let meta = self.instances.get(&item.item_guid).copied();
+                let source_guid = item.item_guid;
+                let meta = self.instances.get(&source_guid).copied();
                 item.item_guid = mint();
+                self.copy_definition_source(source_guid, item.item_guid);
                 seen.insert(item.item_guid);
                 if let Some(meta) = meta {
                     self.instances.insert(item.item_guid, meta);
@@ -226,9 +237,7 @@ impl InventoryModel {
             return false;
         };
         self.template(item)
-            .copied()
-            .unwrap_or_default()
-            .can_go_into_bag(container)
+            .is_some_and(|item| item.can_go_into_bag(container))
     }
 
     /// `EQUIP_ERR_WRONG_BAG_TYPE` when `item` may not be put at `location`.
@@ -277,7 +286,49 @@ impl InventoryModel {
             bag_slots,
             instances: self.instances,
             item_durability: self.item_durability,
+            definition_sources: self.definition_sources,
         }
+    }
+
+    fn copy_definition_source(&mut self, source_guid: u64, new_guid: u64) {
+        if let Some(source) = self.definition_sources.get(&source_guid).copied() {
+            self.definition_sources.insert(new_guid, source);
+        }
+    }
+
+    pub(crate) fn remember_definition_sources(
+        &mut self,
+        sources: HashMap<u64, ItemDefinitionSource>,
+    ) {
+        for (guid, source) in sources {
+            if let Some(previous) = self.definition_sources.insert(guid, source) {
+                assert_eq!(
+                    previous, source,
+                    "cannot change definition source for GUID {guid}"
+                );
+            }
+        }
+    }
+
+    fn register_definition(
+        &mut self,
+        item: &InventoryItemData,
+        source: ItemDefinitionSource,
+        template: ItemTemplate,
+    ) {
+        if let Some(previous) = self.definition_sources.insert(item.item_guid, source) {
+            assert_eq!(
+                previous, source,
+                "cannot change definition source for GUID {}",
+                item.item_guid
+            );
+        }
+        self.templates.insert((source, item.item_id), template);
+    }
+
+    fn same_definition(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
+        left.item_id == right.item_id
+            && self.definition_source(left.item_guid) == self.definition_source(right.item_guid)
     }
 
     // --- Views -----------------------------------------------------------
@@ -292,15 +343,20 @@ impl InventoryModel {
             items: self
                 .equipped
                 .iter()
-                .map(|(slot, item)| (*slot, item.item_id))
+                .map(|(slot, item)| (*slot, self.definition_source(item.item_guid), item.item_id))
                 .collect(),
         }
+    }
+
+    pub(crate) fn definition_source(&self, guid: u64) -> ItemDefinitionSource {
+        self.definition_sources[&guid]
     }
 
     fn stack(&self, item: &InventoryItemData, durability: Option<ItemDurability>) -> ItemStack {
         ItemStack {
             item_guid: item.item_guid,
             item_id: item.item_id,
+            definition_source: self.definition_source(item.item_guid),
             count: item.stack_count,
             durability,
             soulbound: self
@@ -448,7 +504,8 @@ impl InventoryModel {
     }
 
     fn template(&self, item: &InventoryItemData) -> Option<&ItemTemplate> {
-        self.templates.get(&item.item_id)
+        self.templates
+            .get(&(self.definition_source(item.item_guid), item.item_id))
     }
 
     fn inventory_type(&self, item: &InventoryItemData) -> u8 {
@@ -517,20 +574,24 @@ impl InventoryModel {
         let Some(visual) = slot.visual_slot() else {
             return;
         };
-        let entry = self
-            .equipped
-            .get(&slot)
-            .map(|item| (item.item_id, self.inventory_type(item)));
+        let entry = self.equipped.get(&slot).map(|item| {
+            (
+                item.item_id,
+                self.inventory_type(item),
+                self.definition_source(item.item_guid),
+            )
+        });
         let entries = &mut self.character.equipment_appearance.entries;
         let hidden = entries
             .iter()
             .find(|entry| entry.slot == visual)
             .is_some_and(|entry| entry.hidden);
         entries.retain(|entry| entry.slot != visual);
-        if let Some((item_id, inventory_type)) = entry {
+        if let Some((item_id, inventory_type, source)) = entry {
             entries.push(EquippedAppearanceEntry {
                 slot: visual,
                 item_id: Some(item_id),
+                definition_source: Some(source),
                 display_info_id: None,
                 inventory_type,
                 hidden,
@@ -589,7 +650,7 @@ impl InventoryModel {
         matches!(
             (from, to),
             (ItemLocation::Bag { .. }, ItemLocation::Bag { .. })
-        ) && source.item_id == target.item_id
+        ) && self.same_definition(source, target)
             && target.stack_count < self.max_stack(target)
     }
 
@@ -917,7 +978,7 @@ impl InventoryModel {
         }
         self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
-            let fits = target.item_id == source.item_id
+            let fits = self.same_definition(source, target)
                 && target.stack_count + count <= self.max_stack(target);
             if !fits {
                 return Err(error(
@@ -932,6 +993,7 @@ impl InventoryModel {
         let source_guid = split.item_guid;
         split.item_guid = new_guid;
         split.stack_count = count;
+        self.copy_definition_source(source_guid, new_guid);
         if let Some(meta) = self.instances.get(&source_guid).copied() {
             self.instances.insert(new_guid, meta);
         }
@@ -1007,44 +1069,64 @@ impl InventoryModel {
         self.gold = gold;
     }
 
-    /// Items of `item_id` in bags and equipment.
-    pub(crate) fn owned_count(&self, item_id: u32) -> u32 {
+    /// Items of `(source, item_id)` in bags, equipment and overflow.
+    pub(crate) fn owned_count(&self, source: ItemDefinitionSource, item_id: u32) -> u32 {
         self.bags
             .iter()
             .flatten()
             .flatten()
             .chain(self.equipped.values())
             .chain(&self.overflow)
-            .filter(|item| item.item_id == item_id)
+            .filter(|item| {
+                item.item_id == item_id && self.definition_source(item.item_guid) == source
+            })
             .map(|item| item.stack_count)
             .sum()
     }
 
-    /// Items of `item_id` in bags (reagents and tools never come from equipment).
-    pub(crate) fn bag_count(&self, item_id: u32) -> u32 {
+    /// Items of `(source, item_id)` in bags (not equipment or overflow).
+    pub(crate) fn bag_count(&self, source: ItemDefinitionSource, item_id: u32) -> u32 {
         self.bag_items()
-            .filter(|item| item.item_id == item_id)
+            .filter(|item| {
+                item.item_id == item_id && self.definition_source(item.item_guid) == source
+            })
             .map(|item| item.stack_count)
             .sum()
     }
 
-    /// Item ids of every bag stack.
-    pub(crate) fn bag_item_ids(&self) -> impl Iterator<Item = u32> + '_ {
-        self.bag_items().map(|item| item.item_id)
+    /// Item ids of bag stacks belonging to the selected source.
+    pub(crate) fn bag_item_ids(
+        &self,
+        source: ItemDefinitionSource,
+    ) -> impl Iterator<Item = u32> + '_ {
+        self.bag_items()
+            .filter(move |item| self.definition_source(item.item_guid) == source)
+            .map(|item| item.item_id)
     }
 
-    /// AzerothCore `DestroyItemCount`: remove `count` of `item_id` from bag
-    /// stacks in bag order; nothing changes when the bags hold fewer.
-    pub(crate) fn destroy_bag_items(&mut self, item_id: u32, count: u32) -> Result<(), String> {
-        if self.bag_count(item_id) < count {
-            return Err(format!("bags hold fewer than {count} of item {item_id}"));
+    /// AzerothCore `DestroyItemCount`: remove `count` of `(source, item_id)`
+    /// in bag order; nothing changes when that source holds fewer.
+    pub(crate) fn destroy_bag_items(
+        &mut self,
+        source: ItemDefinitionSource,
+        item_id: u32,
+        count: u32,
+    ) -> Result<(), String> {
+        if self.bag_count(source, item_id) < count {
+            return Err(format!(
+                "bags hold fewer than {count} of {source:?} item {item_id}"
+            ));
         }
+        let sources = &self.definition_sources;
         let mut left = count;
         for cell in self.bags.iter_mut().flatten() {
             if left == 0 {
                 break;
             }
-            let Some(item) = cell.as_mut().filter(|item| item.item_id == item_id) else {
+            let Some(item) = cell
+                .as_mut()
+                .filter(|item| item.item_id == item_id && sources[&item.item_guid] == source)
+            else {
                 continue;
             };
             let taken = left.min(item.stack_count);
@@ -1092,7 +1174,7 @@ impl InventoryModel {
 
     /// Item ids whose appearance the account learns (Retail transmog): every
     /// equipped item and every soulbound one.
-    pub(crate) fn appearance_sources(&self) -> Vec<u32> {
+    pub(crate) fn appearance_sources(&self) -> Vec<(ItemDefinitionSource, u32)> {
         let equipped = self.equipped.values();
         let soulbound = self
             .bags
@@ -1101,7 +1183,10 @@ impl InventoryModel {
             .flatten()
             .chain(&self.overflow)
             .filter(|item| self.is_soulbound(item.item_guid));
-        equipped.chain(soulbound).map(|item| item.item_id).collect()
+        equipped
+            .chain(soulbound)
+            .map(|item| (self.definition_source(item.item_guid), item.item_id))
+            .collect()
     }
 
     pub(crate) fn is_soulbound(&self, item_guid: u64) -> bool {
@@ -1156,6 +1241,7 @@ impl InventoryModel {
         let mut taken = item.clone();
         taken.item_guid = mint();
         taken.stack_count = count;
+        self.copy_definition_source(item_guid, taken.item_guid);
         if let Some(meta) = self.instances.get(&item_guid).copied() {
             self.instances.insert(taken.item_guid, meta);
         }
@@ -1168,10 +1254,11 @@ impl InventoryModel {
     pub(crate) fn store_item(
         &mut self,
         item: InventoryItemData,
+        source: ItemDefinitionSource,
         template: ItemTemplate,
         mint: &mut impl FnMut() -> u64,
     ) -> OpResult {
-        self.templates.insert(item.item_id, template);
+        self.register_definition(&item, source, template);
         let max_stack = template.max_stack.max(1);
         if self.room_for(&item, max_stack) < item.stack_count {
             return Err(error(
@@ -1180,11 +1267,15 @@ impl InventoryModel {
             ));
         }
         let mut left = item.stack_count;
+        let sources = &self.definition_sources;
         for other in self.bags.iter_mut().flatten().flatten() {
             if left == 0 {
                 break;
             }
-            if other.item_id == item.item_id && other.stack_count < max_stack {
+            if other.item_id == item.item_id
+                && sources[&other.item_guid] == source
+                && other.stack_count < max_stack
+            {
                 let moved = left.min(max_stack - other.stack_count);
                 other.stack_count += moved;
                 left -= moved;
@@ -1197,6 +1288,7 @@ impl InventoryModel {
             let mut stack = item.clone();
             stack.item_guid = guid.take().unwrap_or_else(&mut *mint);
             stack.stack_count = count;
+            self.copy_definition_source(item.item_guid, stack.item_guid);
             self.bags[bag][slot] = Some(stack);
             left -= count;
         }
@@ -1209,10 +1301,11 @@ impl InventoryModel {
     pub(crate) fn store_new_item_in_best_slots(
         &mut self,
         item: InventoryItemData,
+        source: ItemDefinitionSource,
         template: ItemTemplate,
         mint: &mut impl FnMut() -> u64,
     ) -> OpResult {
-        self.templates.insert(item.item_id, template);
+        self.register_definition(&item, source, template);
         let mut guid = Some(item.item_guid);
         let mut left = item.stack_count;
         while left > 0 {
@@ -1220,6 +1313,7 @@ impl InventoryModel {
                 break;
             };
             let item_guid = guid.take().unwrap_or_else(&mut *mint);
+            self.copy_definition_source(item.item_guid, item_guid);
             let copy = InventoryItemData {
                 item_guid,
                 stack_count: 1,
@@ -1237,7 +1331,8 @@ impl InventoryModel {
             stack_count: left,
             ..item
         };
-        self.store_item(rest, template, mint)
+        self.copy_definition_source(item.item_guid, item_guid);
+        self.store_item(rest, source, template, mint)
     }
 
     /// `Player::Create` second pass (Player.cpp:525-554): each backpack item in slot
@@ -1312,6 +1407,7 @@ impl InventoryModel {
     pub(crate) fn store_item_at(
         &mut self,
         mut item: InventoryItemData,
+        source: ItemDefinitionSource,
         template: ItemTemplate,
         location: ItemLocation,
         mint: &mut impl FnMut() -> u64,
@@ -1323,12 +1419,12 @@ impl InventoryModel {
             ));
         };
         self.check_location(location)?;
-        self.templates.insert(item.item_id, template);
+        self.register_definition(&item, source, template);
         self.check_bag_type(location, &item)?;
         let max_stack = template.max_stack.max(1);
         let room_here = match self.get(location) {
             None => max_stack,
-            Some(other) if other.item_id == item.item_id && other.stack_count < max_stack => {
+            Some(other) if self.same_definition(other, &item) && other.stack_count < max_stack => {
                 max_stack - other.stack_count
             }
             Some(_) => {
@@ -1364,10 +1460,12 @@ impl InventoryModel {
             return Ok(());
         }
         if guid_taken {
+            let source_guid = item.item_guid;
             item.item_guid = mint();
+            self.copy_definition_source(source_guid, item.item_guid);
         }
         item.stack_count = rest;
-        self.store_item(item, template, mint)
+        self.store_item(item, source, template, mint)
     }
 
     /// Items like `item` the bags can still take: free slots of containers it may go
@@ -1380,7 +1478,7 @@ impl InventoryModel {
             .flat_map(|(_, cells)| cells)
             .map(|cell| match cell {
                 None => max_stack,
-                Some(other) if other.item_id == item.item_id => {
+                Some(other) if self.same_definition(other, item) => {
                     max_stack.saturating_sub(other.stack_count)
                 }
                 Some(_) => 0,

@@ -1129,6 +1129,7 @@ fn roster_portrait_fixture() -> (
         head: Some(EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Head,
             item_id: Some(19019),
+            definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: Some(12345),
             inventory_type: 1,
             hidden: false,
@@ -1146,6 +1147,7 @@ fn roster_portrait_fixture() -> (
                 EquippedAppearanceEntry {
                     slot: EquipmentVisualSlot::Chest,
                     item_id: Some(100),
+                    definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
                     display_info_id: Some(200),
                     inventory_type: 5,
                     hidden: false,
@@ -1349,8 +1351,8 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
     let mut app = setup_app_with(move |app| {
         app.insert_resource(GameDatabase { db });
         app.init_resource::<crate::gold::GoldUpdateQueue>();
-        app.insert_resource(ItemTemplates(
-            [(
+        app.insert_resource(ItemTemplates {
+            retail: [(
                 HELM,
                 ItemTemplate {
                     inventory_type: 1,
@@ -1362,7 +1364,8 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             )]
             .into_iter()
             .collect(),
-        ));
+            forever: Default::default(),
+        });
         app.register_message::<InventorySnapshot>();
         app.register_message::<EquipmentSnapshot>();
         app.register_message::<InventoryDelta>();
@@ -1441,6 +1444,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
         head: Some(EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Head,
             item_id: Some(HELM),
+            definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: None,
             inventory_type: 1,
             hidden: false,

@@ -14,7 +14,7 @@ use shared::components::{
 };
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
-    CombatLogEvent, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
+    CombatLogEvent, CombatLogKind, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
     SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 
@@ -444,5 +444,27 @@ impl Harness {
             .get_mut::<PowerPools>(self.caster)
             .unwrap();
         pools.get_mut(power).unwrap().current = value;
+    }
+}
+
+pub(crate) fn assert_combat_log_metadata(
+    events: &[shared::protocol::CombatLogEvent],
+    before: std::time::SystemTime,
+) {
+    let after = std::time::SystemTime::now();
+    let unix_ms = |time: std::time::SystemTime| {
+        time.duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+    };
+    assert!(!events.is_empty());
+    for event in events {
+        assert!(
+            (unix_ms(before)..=unix_ms(after)).contains(&event.timestamp_unix_ms),
+            "event must be stamped with wall-clock time at emission: {event:?}"
+        );
+        if !matches!(event.kind, CombatLogKind::Interrupt | CombatLogKind::Dispel) {
+            assert_eq!(event.extra_spell_id, None, "{event:?}");
+        }
     }
 }

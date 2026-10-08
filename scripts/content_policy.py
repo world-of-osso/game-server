@@ -43,6 +43,7 @@ import sys
 from pathlib import Path
 
 import derived_merchants
+import zephras_content
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -63,13 +64,23 @@ REWARD_ITEMS = [(f"RewardItem{n}", f"RewardAmount{n}") for n in range(1, 5)] + [
 ]
 REWARD_SPELLS = ["RewardSpell", "RewardDisplaySpell"]
 QUEST_CHILDREN = {
-    "quest_template_addon": "ID", "quest_offer_reward": "ID", "quest_request_items": "ID",
-    "quest_poi": "QuestID", "quest_poi_points": "QuestID",
-    "creature_queststarter": "quest", "creature_questender": "quest",
-    "gameobject_queststarter": "quest", "gameobject_questender": "quest",
+    "quest_template_addon": "ID",
+    "quest_offer_reward": "ID",
+    "quest_request_items": "ID",
+    "quest_poi": "QuestID",
+    "quest_poi_points": "QuestID",
+    "creature_queststarter": "quest",
+    "creature_questender": "quest",
+    "gameobject_queststarter": "quest",
+    "gameobject_questender": "quest",
     "areatrigger_involvedrelation": "quest",
 }
-LOOT_TABLES = ["creature_loot_template", "gameobject_loot_template", "reference_loot_template", "item_loot_template"]
+LOOT_TABLES = [
+    "creature_loot_template",
+    "gameobject_loot_template",
+    "reference_loot_template",
+    "item_loot_template",
+]
 # SkillLineAbilityAcquireMethod AutomaticCharLevel / LearnedOrAutomaticCharLevel (TrinityCore DBCEnums.h):
 # the spells a character gains by level. Learned (0) rows are talent/helper spells (Hotbar Slot 01,
 # Bloodthirst Heal); NeverLearned (3) is excluded as in spell_info/class_data.rs.
@@ -81,7 +92,9 @@ ITEM_COLUMNS = """
     s.StartQuestID, s.ItemSet, s.Flags_0, s.Flags_1, s.Flags_2, s.Flags_3, s.Flags_4,
     (SELECT a.ItemDisplayInfoID FROM item_modified_appearance m JOIN item_appearance a ON a.ID = m.ItemAppearanceID
      WHERE m.ItemID = s.ID AND m.ItemAppearanceModifierID = 0 ORDER BY m.OrderIndex LIMIT 1) AS DisplayInfoID,
-""" + ",\n".join(f"    s.StatModifier_bonusStat_{n}, s.StatPercentEditor_{n}" for n in range(10))
+""" + ",\n".join(
+    f"    s.StatModifier_bonusStat_{n}, s.StatPercentEditor_{n}" for n in range(10)
+)
 
 
 def normalize(name):
@@ -90,24 +103,36 @@ def normalize(name):
 
 def load_overrides(path, conn):
     """{kind: {source_id: retail_id}}; fails when a reviewed name no longer matches either side."""
-    source_name_sql = {"item": "SELECT name FROM item_template WHERE entry = ?",
-                       "creature": "SELECT name FROM creature_template WHERE entry = ?"}
-    retail_name_sql = {"item": "SELECT Display_lang FROM item_sparse WHERE ID = ?",
-                       "spell": "SELECT Name_lang FROM spell_name WHERE ID = ?",
-                       "creature": "SELECT name FROM tdb_creature_template WHERE entry = ?"}
+    source_name_sql = {
+        "item": "SELECT name FROM item_template WHERE entry = ?",
+        "creature": "SELECT name FROM creature_template WHERE entry = ?",
+    }
+    retail_name_sql = {
+        "item": "SELECT Display_lang FROM item_sparse WHERE ID = ?",
+        "spell": "SELECT Name_lang FROM spell_name WHERE ID = ?",
+        "creature": "SELECT name FROM tdb_creature_template WHERE entry = ?",
+    }
     overrides = {"item": {}, "spell": {}, "creature": {}}
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
-            kind, source_id, retail_id = row["kind"], int(row["source_id"]), int(row["retail_id"])
+            kind, source_id, retail_id = (
+                row["kind"],
+                int(row["source_id"]),
+                int(row["retail_id"]),
+            )
             if not row["reason"].strip():
                 raise SystemExit(f"{path.name}: {kind} {source_id} has no reason")
             retail = conn.execute(retail_name_sql[kind], (retail_id,)).fetchone()
             if retail is None or retail[0] != row["retail_name"]:
-                raise SystemExit(f"{path.name}: Retail {kind} {retail_id} is {retail}, reviewed as {row['retail_name']!r}")
+                raise SystemExit(
+                    f"{path.name}: Retail {kind} {retail_id} is {retail}, reviewed as {row['retail_name']!r}"
+                )
             if kind in source_name_sql:
                 source = conn.execute(source_name_sql[kind], (source_id,)).fetchone()
                 if source is None or source[0] != row["source_name"]:
-                    raise SystemExit(f"{path.name}: source {kind} {source_id} is {source}, reviewed as {row['source_name']!r}")
+                    raise SystemExit(
+                        f"{path.name}: source {kind} {source_id} is {source}, reviewed as {row['source_name']!r}"
+                    )
             overrides[kind][source_id] = retail_id
     return overrides
 
@@ -134,7 +159,9 @@ def read_wrath_spell_names(path):
 
 def create_map_table(conn, name, mapping):
     conn.execute(f"DROP TABLE IF EXISTS {name}")
-    conn.execute(f"CREATE TEMP TABLE {name} (source_id INTEGER PRIMARY KEY, retail_id INTEGER NOT NULL)")
+    conn.execute(
+        f"CREATE TEMP TABLE {name} (source_id INTEGER PRIMARY KEY, retail_id INTEGER NOT NULL)"
+    )
     conn.executemany(f"INSERT INTO {name} VALUES (?, ?)", mapping.items())
 
 
@@ -142,13 +169,18 @@ def build_items(conn, item_map, item_reasons, retail_ids, report):
     """content_item: mapped AzerothCore items plus the Retail items TrinityCore content references (no SourceEntry)."""
     for source_id, reason in sorted(item_reasons.items()):
         report.drop("item_template", f"entry={source_id}", source_id, reason)
-    conn.execute("CREATE TEMP TABLE item_source AS SELECT retail_id, source_id FROM temp.item_map")
-    conn.executemany("INSERT INTO temp.item_source VALUES (?, NULL)",
-                     ((item,) for item in sorted(retail_ids - set(item_map.values()))))
+    conn.execute(
+        "CREATE TEMP TABLE item_source AS SELECT retail_id, source_id FROM temp.item_map"
+    )
+    conn.executemany(
+        "INSERT INTO temp.item_source VALUES (?, NULL)",
+        ((item,) for item in sorted(retail_ids - set(item_map.values()))),
+    )
     conn.execute("DROP TABLE IF EXISTS content_item")
     conn.execute(f"""CREATE TABLE content_item AS SELECT {ITEM_COLUMNS}, im.source_id AS SourceEntry
         FROM temp.item_source im JOIN item_sparse s ON s.ID = im.retail_id LEFT JOIN item i ON i.ID = s.ID""")
     conn.execute("CREATE UNIQUE INDEX content_item_id ON content_item(ID)")
+    db2.skyborne_data.project_items(conn)
 
 
 def build_vendors(conn, report):
@@ -157,89 +189,151 @@ def build_vendors(conn, report):
         SELECT v.entry, v.slot, COALESCE(m.retail_id, v.item), v.maxcount, v.incrtime, v.ExtendedCost, v.VerifiedBuild
         FROM npc_vendor v LEFT JOIN temp.item_map m ON m.source_id = v.item
         WHERE v.item < 0 OR m.retail_id IS NOT NULL""")
-    for entry, item in conn.execute("""SELECT entry, item FROM npc_vendor v WHERE item > 0
+    for (
+        entry,
+        item,
+    ) in conn.execute("""SELECT entry, item FROM npc_vendor v WHERE item > 0
             AND NOT EXISTS (SELECT 1 FROM temp.item_map m WHERE m.source_id = v.item)"""):
         report.drop("npc_vendor", f"entry={entry}", item, "item not mapped")
 
 
 def build_quests(conn, item_map, spell_map, report):
     clone_table(conn, "quest_template", "content_quest_template")
-    conn.execute("INSERT INTO content_quest_template SELECT * FROM quest_template WHERE ID IN (SELECT ID FROM quest_v2)")
-    for (quest,) in conn.execute("SELECT ID FROM quest_template WHERE ID NOT IN (SELECT ID FROM quest_v2)"):
-        report.drop("quest_template", f"ID={quest}", quest, "quest id not in Retail QuestV2")
+    conn.execute(
+        "INSERT INTO content_quest_template SELECT * FROM quest_template WHERE ID IN (SELECT ID FROM quest_v2)"
+    )
+    for (quest,) in conn.execute(
+        "SELECT ID FROM quest_template WHERE ID NOT IN (SELECT ID FROM quest_v2)"
+    ):
+        report.drop(
+            "quest_template", f"ID={quest}", quest, "quest id not in Retail QuestV2"
+        )
     columns = [c for pair in REWARD_ITEMS for c in pair] + REWARD_SPELLS
-    for row in conn.execute(f"SELECT ID, {', '.join(columns)} FROM content_quest_template").fetchall():
+    for row in conn.execute(
+        f"SELECT ID, {', '.join(columns)} FROM content_quest_template"
+    ).fetchall():
         quest, values = row[0], dict(zip(columns, row[1:]))
         updates = {}
         for item_col, amount_col in REWARD_ITEMS:
             source = values[item_col]
             if source and source not in item_map:
-                report.drop("quest_template", f"ID={quest} {item_col}", source, "reward item not mapped; zeroed")
+                report.drop(
+                    "quest_template",
+                    f"ID={quest} {item_col}",
+                    source,
+                    "reward item not mapped; zeroed",
+                )
                 updates.update({item_col: 0, amount_col: 0})
             elif source:
                 updates[item_col] = item_map[source]
         for spell_col in REWARD_SPELLS:
             source = values[spell_col]
             if source > 0 and source not in spell_map:
-                report.drop("quest_template", f"ID={quest} {spell_col}", source, "reward spell not mapped; zeroed")
+                report.drop(
+                    "quest_template",
+                    f"ID={quest} {spell_col}",
+                    source,
+                    "reward spell not mapped; zeroed",
+                )
                 updates[spell_col] = 0
             elif source > 0:
                 updates[spell_col] = spell_map[source]
         changed = {c: v for c, v in updates.items() if v != values[c]}
         if changed:
-            conn.execute(f"UPDATE content_quest_template SET {', '.join(f'{c} = ?' for c in changed)} WHERE ID = ?",
-                         (*changed.values(), quest))
+            conn.execute(
+                f"UPDATE content_quest_template SET {', '.join(f'{c} = ?' for c in changed)} WHERE ID = ?",
+                (*changed.values(), quest),
+            )
     for table, key in QUEST_CHILDREN.items():
         clone_table(conn, table, f"content_{table}")
-        conn.execute(f"INSERT INTO content_{table} SELECT * FROM {table} WHERE {key} IN (SELECT ID FROM content_quest_template)")
-        for (quest,) in conn.execute(f"SELECT {key} FROM {table} WHERE {key} NOT IN (SELECT ID FROM content_quest_template)"):
+        conn.execute(
+            f"INSERT INTO content_{table} SELECT * FROM {table} WHERE {key} IN (SELECT ID FROM content_quest_template)"
+        )
+        for (quest,) in conn.execute(
+            f"SELECT {key} FROM {table} WHERE {key} NOT IN (SELECT ID FROM content_quest_template)"
+        ):
             report.drop(table, f"{key}={quest}", quest, "quest dropped")
 
 
 def build_loot(conn, report):
     for table in LOOT_TABLES:
         clone_table(conn, table, f"content_{table}")
-        entry = "(SELECT retail_id FROM temp.item_map WHERE source_id = l.Entry)" if table == "item_loot_template" else "l.Entry"
+        entry = (
+            "(SELECT retail_id FROM temp.item_map WHERE source_id = l.Entry)"
+            if table == "item_loot_template"
+            else "l.Entry"
+        )
         item = "CASE WHEN l.Reference != 0 THEN l.Item ELSE (SELECT retail_id FROM temp.item_map WHERE source_id = l.Item) END"
         conn.execute(f"""INSERT INTO content_{table}
             SELECT e, i, Reference, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment FROM (
                 SELECT {entry} AS e, {item} AS i, l.* FROM {table} l) WHERE e IS NOT NULL AND i IS NOT NULL""")
         for source_entry, source_item, e, i in conn.execute(
-                f"SELECT l.Entry, l.Item, {entry}, {item} FROM {table} l").fetchall():
+            f"SELECT l.Entry, l.Item, {entry}, {item} FROM {table} l"
+        ).fetchall():
             if e is None:
-                report.drop(table, f"Entry={source_entry}", source_entry, "container item not mapped")
+                report.drop(
+                    table,
+                    f"Entry={source_entry}",
+                    source_entry,
+                    "container item not mapped",
+                )
             elif i is None:
-                report.drop(table, f"Entry={source_entry}", source_item, "item not mapped")
+                report.drop(
+                    table, f"Entry={source_entry}", source_item, "item not mapped"
+                )
 
 
 def build_gameobjects(conn, report):
     clone_table(conn, "gameobject_template", "content_gameobject_template")
     conn.execute("""INSERT INTO content_gameobject_template SELECT * FROM gameobject_template t
         WHERE t.displayId = 0 OR t.displayId IN (SELECT ID FROM game_object_display_info)""")
-    for entry, display in conn.execute("""SELECT entry, displayId FROM gameobject_template
+    for (
+        entry,
+        display,
+    ) in conn.execute("""SELECT entry, displayId FROM gameobject_template
             WHERE entry NOT IN (SELECT entry FROM content_gameobject_template)"""):
-        report.drop("gameobject_template", f"entry={entry}", display, "display not in Retail GameObjectDisplayInfo")
+        report.drop(
+            "gameobject_template",
+            f"entry={entry}",
+            display,
+            "display not in Retail GameObjectDisplayInfo",
+        )
     for table, key in (("gameobject_template_addon", "entry"), ("gameobject", "id")):
         clone_table(conn, table, f"content_{table}")
         kept = f"{key} IN (SELECT entry FROM content_gameobject_template)"
         conn.execute(f"INSERT INTO content_{table} SELECT * FROM {table} WHERE {kept}")
         row_key = "guid" if table == "gameobject" else "entry"
-        for row, entry in conn.execute(f"SELECT {row_key}, {key} FROM {table} WHERE NOT ({kept})"):
+        for row, entry in conn.execute(
+            f"SELECT {row_key}, {key} FROM {table} WHERE NOT ({kept})"
+        ):
             report.drop(table, f"{row_key}={row}", entry, "template dropped")
 
 
 def retail_model_reason(conn, entry, name, reviewed):
     """None when TrinityCore's Retail models for `entry` may replace AzerothCore's, else why not."""
-    retail = conn.execute("SELECT name FROM tdb_creature_template WHERE entry = ?", (entry,)).fetchone()
+    retail = conn.execute(
+        "SELECT name FROM tdb_creature_template WHERE entry = ?", (entry,)
+    ).fetchone()
     if retail is None:
         return "no TrinityCore Retail template"
     if not reviewed and normalize(retail[0]) != normalize(name):
         return f"TrinityCore Retail name {retail[0]!r} != {name!r}"
-    displays = [d for (d,) in conn.execute(
-        "SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID = ? ORDER BY Idx", (entry,))]
+    displays = [
+        d
+        for (d,) in conn.execute(
+            "SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID = ? ORDER BY Idx",
+            (entry,),
+        )
+    ]
     if not displays:
         return "no TrinityCore Retail models"
-    absent = [d for d in displays if not conn.execute("SELECT 1 FROM creature_display_info WHERE ID = ?", (d,)).fetchone()]
+    absent = [
+        d
+        for d in displays
+        if not conn.execute(
+            "SELECT 1 FROM creature_display_info WHERE ID = ?", (d,)
+        ).fetchone()
+    ]
     if absent:
         return f"TrinityCore Retail displays {absent} absent from Retail CreatureDisplayInfo"
     return None
@@ -247,7 +341,9 @@ def retail_model_reason(conn, entry, name, reviewed):
 
 def build_creature_models(conn, overrides, report):
     clone_table(conn, "creature_template_model", "content_creature_template_model")
-    conn.execute("INSERT INTO content_creature_template_model SELECT * FROM creature_template_model")
+    conn.execute(
+        "INSERT INTO content_creature_template_model SELECT * FROM creature_template_model"
+    )
     # A Retail spawn references its entry by TrinityCore's id, so that entry is TrinityCore's
     # creature even when TrinityCore renamed it (Pygmy Surf Crawler 3106 -> Surf Crawler).
     retail_spawned = retail_content.retail_spawned_entries(conn)
@@ -256,14 +352,26 @@ def build_creature_models(conn, overrides, report):
         WHERE m.CreatureDisplayID NOT IN (SELECT ID FROM creature_display_info) ORDER BY m.CreatureID""").fetchall()
     for entry, name in wrath_only:
         retail_entry = overrides.get(entry, entry)
-        reason = retail_model_reason(conn, retail_entry, name, entry in overrides or entry in retail_spawned)
+        reason = retail_model_reason(
+            conn, retail_entry, name, entry in overrides or entry in retail_spawned
+        )
         if reason:
-            report.drop("creature_template_model", f"CreatureID={entry}", entry, f"display absent from Retail kept: {reason}")
+            report.drop(
+                "creature_template_model",
+                f"CreatureID={entry}",
+                entry,
+                f"display absent from Retail kept: {reason}",
+            )
             continue
-        conn.execute("DELETE FROM content_creature_template_model WHERE CreatureID = ?", (entry,))
-        conn.execute("""INSERT INTO content_creature_template_model
+        conn.execute(
+            "DELETE FROM content_creature_template_model WHERE CreatureID = ?", (entry,)
+        )
+        conn.execute(
+            """INSERT INTO content_creature_template_model
             SELECT ?, Idx, CreatureDisplayID, DisplayScale, Probability, VerifiedBuild
-            FROM tdb_creature_template_model WHERE CreatureID = ?""", (entry, retail_entry))
+            FROM tdb_creature_template_model WHERE CreatureID = ?""",
+            (entry, retail_entry),
+        )
 
 
 def apply_policy(
@@ -335,6 +443,14 @@ def main():
     parser.add_argument(
         "--derived-merchants", type=Path, default=DEFAULT_DERIVED_MERCHANTS
     )
+    parser.add_argument(
+        "--zephras-content", type=Path, default=zephras_content.DEFAULT_CONTENT
+    )
+    parser.add_argument(
+        "--zephras-report",
+        type=Path,
+        default=PROJECT_DIR / "target/zephras-content-report.json",
+    )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
@@ -343,6 +459,7 @@ def main():
     if missing:
         raise SystemExit(f"Missing content policy inputs: {', '.join(missing)}")
     merchants = derived_merchants.load_manifest(args.derived_merchants)
+    zephras = zephras_content.load_input(args.zephras_content)
     if args.check:
         return
     wrath_spell_names = read_wrath_spell_names(wrath_path)
@@ -350,7 +467,10 @@ def main():
     conn = sqlite3.connect(args.db, isolation_level=None)
     try:
         conn.execute("BEGIN")
+        # Retire old ownership before rebuilding tables with fresh Retail rows.
+        zephras_content.clear_overlay(conn)
         apply_policy(conn, wrath_spell_names, args.overrides, report, merchants)
+        zephras_report = zephras_content.apply_overlay(conn, *zephras)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:
@@ -359,6 +479,7 @@ def main():
     finally:
         conn.close()
     report.write(args.report)
+    zephras_content.write_report(args.zephras_report, zephras_report)
     conn = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     for name in sorted(
         r[0]

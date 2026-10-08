@@ -13,13 +13,39 @@ Item-use scaling and regression evidence: [[item-healing-scaling]].
 | `inventory_layouts` | `CharacterId` | `Vec<ItemPlacementData{item_guid, bag, slot}>` |
 | `item_instances` | item guid | `ItemInstanceData{soulbound}` |
 
-Instance state is keyed by guid, so it follows an item through trade, mail and auctions. Item rules (inventory type, `Stackable`, required level, class/race masks, bonding) come from world.db `content_item`, loaded at startup into the `ItemTemplates` resource (`item_templates.rs`). Equipped items stay in `character_equipment` (visual-slot keyed, see [[persistence]]). `persistence_inventory.rs` loads and saves all of these plus `CharacterData` in one transaction.
+Instance state is keyed by guid, so it follows an item through trade, mail and auctions. Item rules (inventory type, `Stackable`, required level, class/race masks, bonding) come from source-qualified world.db catalogs in the `ItemTemplates` resource (`item_templates.rs`); details below. Equipped items stay in `character_equipment` (visual-slot keyed, see [[persistence]]). `persistence_inventory.rs` loads and saves all of these plus `CharacterData` in one transaction.
+
+## Definition source
+
+Contract: [item definition source](../../specs/item-definition-source.md). The additive global `item_definition_sources` table stores `GUID -> u8` (0 Retail, 1 Forever70205), independently of owner rows. Missing legacy markers mean Retail; invalid tags and changes to existing tags panic with the GUID. `InventoryData` and `ItemInstanceData{soulbound}` encodings are unchanged.
+
+`load_item_definition_source(db, guid)` reads identity. `write_item_definition_source(txn, guid, source)` marks a newly minted GUID in its creation transaction, accepting repeated identical writes. Creation callers must tag Forever explicitly. `InventoryRecord.definition_sources` loads identities for bag, equipment and equipped-bag GUIDs. Record saves only add/validate markers; they never erase markers when ownership changes. The inventory model preserves the map and copies provenance for GUIDs it mints. Incoming transfer GUIDs keep their global marker even when the receiving pre-transfer record lacks that map entry.
+
+`ItemTemplates { retail, forever }::get(source, id)` probes only the selected map. `load_item_templates` is Retail-only; startup uses `load_runtime_item_templates` for both namespaces. `load_model` rejects any owned GUID without a selected-source definition. Trade captures source before partial-stack GUID minting; incoming storage receives explicit source before bag/equip validation. Mail, banks and buyback read global GUID identity. Bank deposit source maps preserve mixed-source stacks and write minted markers with the inventory transaction. Auctions clone source onto their new listing GUID through `MarketChanges.definition_sources` in the market transaction; query transforms receive a pure GUID-source callback backed by one read table per request batch.
+
+`EquippedItems.items` stores `(slot, source, id)`. Stats choose Retail `ItemScalingTables` or `ForeverItemScalingTables` explicitly; missing selected definitions/tables panic with context. Scalar formulas remain unchanged. Wire stacks, appearances, trade, auction browse/listings and buyback retain source. Unowned content-source and Classic-parity limits are tracked only in the [source contract](../../specs/item-definition-source.md#known-gaps-current-cycle).
+
+## Bounded owned-commerce and requirement proof (2026-10-05)
+
+[Owned-commerce ledger](../../../target/owned-commerce-source-runtime/ledger.md) records four passing production-handler tests, zero failed/ignored, at server `2af05c1` / shared `48f3640`: mail send/return/take with four redb reopen boundaries and source-qualified wire/equip eligibility for 2947; guild-bank deposit/withdraw for both 2512 sources with app/connection/database recreation, permissions and ownership/log checks; partial auction listing GUID minting, persisted auction restore, buyout/mail claim and final reopen without cross-source merging; and sale/buyback of both 2101 sources with gold 10000→10002→10000. Buyback preserves the live connection across vendor/redb reopen: **live-session only**, not logout/server-restart persistence. Catalog values use captured importer fixtures, not invented sale prices. Storage reopen is not crash/network/process-death proof.
+
+[Requirement ledger](../../../target/source-requirements-proof/ledger.md) records behavioral RED 11 failures at `46d9702`, then GREEN 11 passed/zero failed or ignored at implementation `1a1b049` plus the retained unowned scope patch. Coverage: source-qualified bag/owned counts and removal, quest progress/turn-in/abandon, profession reagents/explicit/category tools, static/economic merchant unique limits and loot unique limits. Initial helper/dependency failures receive no behavioral credit. These bounded receipts do not establish whole commerce parity, native UI acceptance, broad-suite success or current whole-HEAD acceptance; Main owns integration verification.
 
 ## Model
 
-`InventoryModel::from_record` builds a grid (backpack 16 slots, bags 1-4 size 0). Items with a valid placement keep it; unplaced items (new loot, trade, mail) take the first free slot; a guid duplicated within one character (trade/auction partial stacks keep the source guid) gets a fresh guid; items with no free slot go to `overflow` so saving never drops them. Bind-on-pickup and quest items are marked soulbound on load; bind-on-equip items when equipped. Same-item stacks merge up to `Stackable`.
+`InventoryModel::from_record` builds a grid (backpack 16 slots, bags 1-4 size 0). Items with a valid placement keep it; unplaced items (new loot, trade, mail) take the first free slot; a guid duplicated within one character (trade/auction partial stacks keep the source guid) gets a fresh guid; items with no free slot go to `overflow` so saving never drops them. Bind-on-pickup and quest items are marked soulbound on load; bind-on-equip items when equipped. Same-source, same-ID stacks merge up to the selected `Stackable`.
+
+`bag_count`, `bag_item_ids`, `destroy_bag_items` and `owned_count` require an explicit source. Removal prechecks only that source and preserves bag order; insufficient selected-source counts leave every stack unchanged. `owned_count` includes bags, equipment and overflow. Retail profession reagents/tools (including categories), static/economic merchant purchases and loot limits select Retail, matching their existing producer. Quest views and removal read each matching GUID's persisted source, counting/removing Retail only; snapshot, progress, giver markers, turn-in and abandon share these predicates. No numeric-ID remap or recipient-race lookup is involved. Unowned reward provenance remains a [contract gap](../../specs/item-definition-source.md#known-gaps-current-cycle).
 
 Operations mutate the model; `with_appearance_sync` then rewrites the appearance entry of each equipment slot whose item changed, keeping `hidden`. `into_record` writes placements in bag order.
+
+## Sources
+
+- [Inventory persistence](../../../crates/server/src/persistence_inventory.rs)
+- [Inventory model](../../../crates/server/src/inventory_model.rs)
+- [Definition source tests](../../../crates/server/src/persistence_item_source_tests.rs)
+- [Owned runtime source tests](../../../crates/server/src/inventory_source_tests.rs)
+- [Owned-commerce ledger](../../../target/owned-commerce-source-runtime/ledger.md), [requirement ledger](../../../target/source-requirements-proof/ledger.md) — exact executed revisions, scope patches, commands and saved output.
 
 ## Networking
 

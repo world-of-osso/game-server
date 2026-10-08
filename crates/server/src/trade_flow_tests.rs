@@ -286,21 +286,51 @@ fn a_full_bag_refuses_the_exchange_and_keeps_the_trade_open() {
     let Some(mut h) = trade_harness() else { return };
     let (a, b) = (h.a.connection, h.b.connection);
     let (a_id, b_id) = (h.a.character_id, h.b.character_id);
-    // Fill Tradeb's backpack with 16 single items of other kinds.
+    // Retail IDs also captured in skyborne_kit_fixture.rs; none can stack with Linen.
+    let filler_ids = [
+        25, 35, 39, 40, 117, 159, 876, 2092, 2362, 2504, 2512, 2947, 3661, 4536, 4540, 58231,
+    ];
+    assert_eq!(filler_ids.len(), usize::from(BACKPACK_SLOTS));
+    let catalog = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("open real Retail catalog");
     let mut full = h.inventory(b_id);
-    full.items = (0..u32::from(BACKPACK_SLOTS))
-        .map(|index| persistence::InventoryItemData {
-            item_guid: 50_000 + u64::from(index),
-            item_id: 2_000_000 + index,
-            name: format!("Filler {index}"),
-            quality: 1,
-            required_level: 0,
-            stack_count: 1,
-            vendor_sell_price: 0,
-            unique_auction: false,
+    full.items = filler_ids
+        .into_iter()
+        .enumerate()
+        .map(|(index, item_id)| {
+            catalog
+                .query_row(
+                    "SELECT Name, Quality, RequiredLevel, SellPrice FROM content_item WHERE ID = ?1",
+                    [item_id],
+                    |row| {
+                        Ok(persistence::InventoryItemData {
+                            item_guid: 50_000 + index as u64,
+                            item_id,
+                            name: row.get(0)?,
+                            quality: row.get(1)?,
+                            required_level: row.get(2)?,
+                            stack_count: 1,
+                            vendor_sell_price: row.get(3)?,
+                            unique_auction: false,
+                        })
+                    },
+                )
+                .expect("real Retail filler definition")
         })
         .collect();
     persistence::save_inventory(h.db(), b_id, &full);
+    let model = crate::inventory::load_model(
+        h.db(),
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        b_id,
+    )
+    .expect("full backpack hydrates from real Retail definitions");
+    assert_eq!(model.free_cells(), 0);
     h.open_trade();
     h.send(a, offer(0, h.guid(a_id, LINEN), 20));
     h.send(a, ConfirmTrade);

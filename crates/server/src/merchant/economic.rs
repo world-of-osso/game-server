@@ -39,7 +39,10 @@ pub(super) fn vendor_inventory(
 }
 
 fn offered_item(shop: &Shop, buyer: Buyer, batch: &model::StockBatch) -> Option<VendorItem> {
-    let template = shop.template(batch.item_id)?;
+    let template = shop.template(
+        shared::item_data::ItemDefinitionSource::Retail,
+        batch.item_id,
+    )?;
     if !buyer.offered(&template) {
         return None;
     }
@@ -172,7 +175,9 @@ fn validate_offered_goods(
     player: Entity,
     item_id: u32,
 ) -> Result<(ItemTemplate, Buyer, VendorGoods), MerchantError> {
-    let template = shop.template(item_id).ok_or(MerchantError::ItemNotFound)?;
+    let template = shop
+        .template(shared::item_data::ItemDefinitionSource::Retail, item_id)
+        .ok_or(MerchantError::ItemNotFound)?;
     let buyer = shop.buyer(player);
     if !buyer.offered(&template) {
         return Err(MerchantError::ItemNotFound);
@@ -206,7 +211,11 @@ fn validate_purchase_inventory(inventory: &InventoryModel, purchase: &Purchase) 
         return Err(MerchantError::NotEnoughMoney);
     }
     if purchase.goods.max_count > 0
-        && inventory.owned_count(purchase.item_id) + purchase.count > purchase.goods.max_count
+        && inventory.owned_count(
+            shared::item_data::ItemDefinitionSource::Retail,
+            purchase.item_id,
+        ) + purchase.count
+            > purchase.goods.max_count
     {
         return Err(MerchantError::CantCarryMore);
     }
@@ -285,8 +294,19 @@ fn store_purchase_item(
         unique_auction: false,
     };
     let result = match destination {
-        Some(location) => inventory.store_item_at(item, template, location, &mut mint),
-        None => inventory.store_item(item, template, &mut mint),
+        Some(location) => inventory.store_item_at(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            location,
+            &mut mint,
+        ),
+        None => inventory.store_item(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            &mut mint,
+        ),
     };
     result.map_err(|error| match error.reason {
         InventoryErrorReason::CantStack => MerchantError::CantStack,

@@ -281,12 +281,18 @@ impl GuildVault<'_, '_> {
         &self.db.as_ref().expect("checked by ready").db
     }
 
-    fn template(&self, item_id: u32) -> ItemTemplate {
-        // Items without a template never stack (`InventoryModel::store_item`).
-        self.templates
+    fn load_template(
+        &self,
+        item: &crate::persistence::InventoryItemData,
+    ) -> Result<(shared::item_data::ItemDefinitionSource, ItemTemplate), GuildBankError> {
+        let source =
+            persistence::inventory_store::load_item_definition_source(self.db(), item.item_guid);
+        let template = self
+            .templates
             .as_ref()
-            .and_then(|templates| templates.get(item_id).copied())
-            .unwrap_or_default()
+            .and_then(|templates| templates.get(source, item.item_id).copied())
+            .ok_or(GuildBankError::ItemNotFound)?;
+        Ok((source, template))
     }
 
     fn mint(&self) -> impl FnMut() -> u64 + '_ {
@@ -334,7 +340,16 @@ impl GuildVault<'_, '_> {
                         String::new()
                     },
                     slots: if viewable {
-                        bank_storage::tab_slots(tab, |guid| bound.contains(&guid))
+                        bank_storage::tab_slots(
+                            tab,
+                            |guid| bound.contains(&guid),
+                            |guid| {
+                                persistence::inventory_store::load_item_definition_source(
+                                    self.db(),
+                                    guid,
+                                )
+                            },
+                        )
                     } else {
                         Vec::new()
                     },
@@ -565,22 +580,26 @@ fn deposit(vault: &mut GuildVault, member: &Member, req: GuildBankDeposit) -> Gu
         .bag_item(req.item_guid)
         .cloned()
         .ok_or(GuildBankError::ItemNotFound)?;
-    let template = vault.template(item.item_id);
+    let (source, template) = vault.load_template(&item)?;
     if template.bonding == BIND_QUEST {
         return Err(GuildBankError::QuestItem);
     }
     if model.is_soulbound(req.item_guid) {
         return Err(GuildBankError::BoundItem);
     }
+    let mut sources = bank_storage::load_tab_definition_sources(vault.db(), &guild.tabs);
+    sources.insert(item.item_guid, source);
     let mut mint = vault.mint();
     bank_storage::deposit(
         &mut guild.tabs,
         &[tab],
         item.clone(),
         template.max_stack,
+        &mut sources,
         &mut mint,
     )
     .map_err(|TabsFull| GuildBankError::TabFull)?;
+    model.remember_definition_sources(sources);
     model
         .take_bag_item(req.item_guid, 0, &mut mint)
         .map_err(|_| GuildBankError::ItemNotFound)?;
@@ -619,10 +638,10 @@ fn withdraw(vault: &mut GuildVault, member: &Member, req: GuildBankWithdraw) -> 
     let item = bank_storage::take(&mut guild.tabs, req.tab, req.slot)
         .ok_or(GuildBankError::ItemNotFound)?;
     let mut model = vault.load_model(member.character_id)?;
-    let template = vault.template(item.item_id);
+    let (source, template) = vault.load_template(&item)?;
     let mut mint = vault.mint();
     model
-        .store_item(item.clone(), template, &mut mint)
+        .store_item(item.clone(), source, template, &mut mint)
         .map_err(|_| GuildBankError::InventoryFull)?;
     drop(mint);
     if per_day.is_some() {

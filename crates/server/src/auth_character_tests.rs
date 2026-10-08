@@ -141,6 +141,20 @@ fn select_character_in_world(
     account_id: u64,
     character_id: u64,
 ) -> (App, Entity) {
+    select_character_with_maps(
+        db,
+        account_id,
+        character_id,
+        crate::maps::MapStore::continents(),
+    )
+}
+
+fn select_character_with_maps(
+    db: GameDatabase,
+    account_id: u64,
+    character_id: u64,
+    maps: crate::maps::MapStore,
+) -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -156,7 +170,7 @@ fn select_character_in_world(
     app.init_resource::<DeathReplies>();
     app.add_systems(Last, collect_death_replies);
     app.add_plugins(DeathPlugin);
-    app.insert_resource(crate::maps::MapStore::continents());
+    app.insert_resource(maps);
     app.init_resource::<crate::maps::InstanceManager>();
     // Reproduce the legal production ordering that used to send Alive before
     // the next frame restored the newly selected ghost.
@@ -166,6 +180,8 @@ fn select_character_in_world(
             .after(crate::death::restore_persisted_ghosts)
             .before(crate::death::send_initial_death_snapshot),
     );
+    app.init_resource::<TerrainReplies>();
+    app.add_systems(Last, collect_terrain_replies);
     app.finish();
     app.cleanup();
 
@@ -204,6 +220,65 @@ fn select_character_in_world(
         .find_map(|(entity, client_id)| (client_id.0 == character_id).then_some(entity))
         .expect("selecting a character should spawn its player entity");
     (app, player)
+}
+
+#[test]
+fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
+    let kit = crate::player_create_info::OwnedKit::from_world_db().expect("real world.db kit");
+    let pairs = [(95, &[1, 3, 4, 8, 11][..]), (96, &[1, 3, 4, 7, 11][..])];
+    for (race, classes) in pairs {
+        for &class in classes {
+            let directory = tempfile::tempdir().expect("tempdir");
+            let path = directory.path().join("skyborne.redb");
+            let db = redb::Database::create(&path).expect("create database");
+            persistence::create_tables(&db);
+            let (character_id, data) = persistence::create_character_with_appearance(
+                &db,
+                1,
+                "Skyborne",
+                race,
+                class,
+                CharacterAppearance::default(),
+                &kit.kit(),
+            )
+            .expect("authored Skyborne pair should create with real kit");
+            assert_eq!(data.level, 1);
+            let expected = if race == 95 {
+                (4088.501, 1847.5, 976.169)
+            } else {
+                (4051.417, 1858.625, 977.620)
+            };
+            assert_eq!((data.x, data.y, data.z), expected);
+            drop(db);
+
+            let db = redb::Database::open(&path).expect("reopen character storage");
+            let saved = persistence::load_character(&db, character_id).expect("saved character");
+            assert_eq!((saved.race, saved.class, saved.level), (race, class, 1));
+            assert_eq!(
+                crate::maps::persistence::load_character_map(&db, character_id),
+                2991
+            );
+            let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+            let maps = crate::maps::store::load_map_store(&conn).expect("scratch map overlay");
+            let (app, player) =
+                select_character_with_maps(GameDatabase { db }, 1, character_id, maps);
+            let entity = app.world().entity(player);
+            assert_eq!(entity.get::<UnitLevel>(), Some(&UnitLevel(1)));
+            assert_eq!(entity.get::<Player>().unwrap().race, race);
+            assert_eq!(entity.get::<Player>().unwrap().class, class);
+            let template = if race == 95 { 3629 } else { 3628 };
+            assert_eq!(
+                entity.get::<shared::components::UnitFactionTemplate>(),
+                Some(&shared::components::UnitFactionTemplate(template))
+            );
+            assert_eq!(entity.get::<crate::maps::InMap>().unwrap().map_id, 2991);
+            let terrain = app.world().resource::<TerrainReplies>().0.first().unwrap();
+            assert_eq!(terrain.map_name, "2991");
+            assert_eq!((terrain.initial_tile_y, terrain.initial_tile_x), (28, 24));
+            let rotation = entity.get::<shared::components::Rotation>().unwrap();
+            assert!((rotation.y - std::f32::consts::PI).abs() < 0.001);
+        }
+    }
 }
 
 #[test]
@@ -255,6 +330,7 @@ fn selecting_zero_health_character_queues_one_death_transition() {
     data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
         slot: EquipmentVisualSlot::Head,
         item_id: Some(100),
+        definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
         display_info_id: Some(200),
         inventory_type: 1,
         hidden: false,

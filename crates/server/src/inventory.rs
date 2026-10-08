@@ -93,6 +93,24 @@ pub(crate) fn load_model(
             format!("character {character_id} has no record"),
         )
     })?;
+    for item in record
+        .inventory
+        .items
+        .iter()
+        .chain(record.equipped.iter().map(|entry| &entry.item))
+        .chain(record.bag_slots.iter().map(|entry| &entry.item))
+    {
+        let source = record.definition_sources[&item.item_guid];
+        if templates.get(source, item.item_id).is_none() {
+            return Err(error(
+                InventoryErrorReason::ItemNotFound,
+                format!(
+                    "GUID {} has no {:?} definition for item {}",
+                    item.item_guid, source, item.item_id
+                ),
+            ));
+        }
+    }
     let mut mint = || persistence::next_id(db, "item_instance");
     Ok(InventoryModel::from_record(record, templates, &mut mint))
 }
@@ -113,8 +131,8 @@ pub(crate) fn grant_item(
         .get(&item_id)
         .ok_or_else(|| format!("item {item_id} is not in content_item"))?;
     let template = *templates
-        .get(item_id)
-        .ok_or_else(|| format!("item {item_id} has no template"))?;
+        .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+        .ok_or_else(|| format!("item {item_id} has no Retail template"))?;
     let mut model =
         load_model(db, templates, character_id).map_err(|error| format!("{error:?}"))?;
     let item = persistence::InventoryItemData {
@@ -129,7 +147,12 @@ pub(crate) fn grant_item(
     };
     let mut mint = || persistence::next_id(db, "item_instance");
     model
-        .store_item(item, template, &mut mint)
+        .store_item(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            &mut mint,
+        )
         .map_err(|error| format!("{error:?}"))?;
     save_inventory_record(db, character_id, &model.into_record());
     Ok(goods.name.clone())

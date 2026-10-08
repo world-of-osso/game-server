@@ -90,6 +90,42 @@ fn patrol_app_with(guids: &'static [u32], extra: impl FnOnce(&mut App)) -> App {
     app
 }
 
+#[test]
+fn zephras_startup_spawns_imported_givers_on_the_hosted_continent() {
+    let data = load_world_data(&world_db_path());
+    let expected = data.spawns_by_map[&2991].len();
+    assert_eq!(expected, 1662, "actual imported Zephras spawn fixture");
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins).insert_resource(data);
+    app.add_systems(
+        PostStartup,
+        |mut commands: Commands, data: Res<WorldData>| {
+            let count =
+                spawn_map_creatures(&mut commands, &data, MapContent::continent(2991), false);
+            assert_eq!(count, 1662, "hosted Zephras must not open empty");
+        },
+    );
+    app.update();
+    let world = app.world_mut();
+    let mut query = world.query::<(&Npc, &ModelDisplay, &Position, &crate::maps::InMap, &Health)>();
+    for (entry, display, wow_position, estimated_health) in [
+        (251362, 136968, (4088.500790, 1850.5, 976.173490), 42.0),
+        (251487, 139694, (4051.417491, 1861.625, 977.620399), 102.0),
+    ] {
+        let giver = query
+            .iter(world)
+            .find(|(npc, _, _, _, _)| npc.template_id == entry)
+            .expect("imported nearby quest giver spawned");
+        assert_eq!(giver.1.display_id, display);
+        assert_eq!(*giver.3, crate::maps::InMap::continent(2991));
+        assert_eq!(giver.4.max, estimated_health);
+        assert_eq!(giver.4.current, estimated_health);
+        let (x, y, z) =
+            crate::terrain_height::wow_to_bevy(wow_position.0, wow_position.1, wow_position.2);
+        assert!((Vec3::new(giver.2.x, giver.2.y, giver.2.z) - Vec3::new(x, y, z)).length() < 0.01);
+    }
+}
+
 fn entity_of(app: &App, guid: u32) -> Entity {
     app.world().resource::<Spawned>().0[&guid]
 }
@@ -1085,6 +1121,7 @@ fn stockade_guard_wields_its_virtual_items() {
     let entry = |slot, item_id, display_info_id, inventory_type| EquippedAppearanceEntry {
         slot,
         item_id: Some(item_id),
+        definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
         display_info_id: Some(display_info_id),
         inventory_type,
         hidden: false,

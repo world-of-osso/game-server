@@ -756,3 +756,7 @@ fn check_spawned_ground(
 #[cfg(test)]
 #[path = "ground_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "zephras_ground_tests.rs"]
+mod zephras_tests;

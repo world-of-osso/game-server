@@ -121,7 +121,7 @@ pub(crate) fn pending_senders(mails: &[MailData], now: u64) -> Vec<String> {
     senders
 }
 
-fn header(mail: &MailData, soulbound: &HashSet<u64>) -> MailHeader {
+fn header(db: &Database, mail: &MailData, soulbound: &HashSet<u64>) -> MailHeader {
     MailHeader {
         mail_id: mail.mail_id,
         sender: mail.sender.name().to_owned(),
@@ -137,6 +137,10 @@ fn header(mail: &MailData, soulbound: &HashSet<u64>) -> MailHeader {
                 item: ItemStack {
                     item_guid: attached.item.item_guid,
                     item_id: attached.item.item_id,
+                    definition_source: persistence::inventory_store::load_item_definition_source(
+                        db,
+                        attached.item.item_guid,
+                    ),
                     count: attached.item.stack_count,
                     durability: None,
                     soulbound: soulbound.contains(&attached.item.item_guid),
@@ -164,7 +168,7 @@ pub(crate) fn mailbox_contents(db: &Database, character_id: u64, object: u64) ->
         object,
         mails: inbox(&mails, now)
             .into_iter()
-            .map(|mail| header(mail, &soulbound))
+            .map(|mail| header(db, mail, &soulbound))
             .collect(),
         now,
     }
@@ -415,10 +419,14 @@ fn take_attachment(
         return Err(MailError::CodInsufficientMoney);
     }
     let item = mails[index].items[position].item.clone();
-    let template = templates.get(item.item_id).copied().unwrap_or_default();
+    let source = persistence::inventory_store::load_item_definition_source(db, item.item_guid);
+    let template = templates
+        .get(source, item.item_id)
+        .copied()
+        .ok_or(MailError::Internal)?;
     let mut mint = || persistence::next_id(db, "item_instance");
     model
-        .store_item(item, template, &mut mint)
+        .store_item(item, source, template, &mut mint)
         .map_err(|_| MailError::InventoryFull)?;
     model.set_gold(model.gold() - cod);
     let mail = &mut mails[index];

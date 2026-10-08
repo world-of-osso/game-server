@@ -707,6 +707,7 @@ mod tests {
         EquippedAppearanceEntry {
             slot,
             item_id,
+            definition_source: item_id.map(|_| shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: None,
             inventory_type: 0,
             hidden: false,

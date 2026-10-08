@@ -22,6 +22,8 @@ pub struct MarketChanges {
     pub expected_inventories: Vec<(u64, InventoryData)>,
     pub inventories: Vec<(u64, InventoryData)>,
     pub records: Vec<(u64, InventoryRecord)>,
+    /// Identity for new GUIDs minted from owned market items.
+    pub definition_sources: Vec<(u64, shared::item_data::ItemDefinitionSource)>,
     /// Full replacements, applied before appending `mails`.
     pub mailboxes: Vec<(u64, Vec<MailData>)>,
     pub mails: Vec<(u64, MailData)>,
@@ -68,6 +70,9 @@ pub fn commit_market(
         if let Some(state) = state {
             txn.open_table(STATE)?
                 .insert(STATE_KEY, bitcode::encode(state).as_slice())?;
+        }
+        for &(guid, source) in &changes.definition_sources {
+            crate::persistence::inventory_store::write_item_definition_source(&txn, guid, source);
         }
         write_auctions(&txn, changes)?;
         write_inventories(&txn, changes)?;

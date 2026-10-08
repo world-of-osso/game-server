@@ -1,3 +1,6 @@
+#[path = "owned_commerce_auction_tests.rs"]
+mod owned_commerce_sources;
+
 use super::*;
 use crate::gold::GoldUpdateQueue;
 use crate::persistence;
@@ -8,7 +11,9 @@ mod load_fixture;
 /// Take a mail's money and items at a mailbox (`TakeInboxMoney`, `TakeInboxItem`).
 fn take_mail(db: &redb::Database, character_id: u64, mail_id: u64, gold: &mut GoldUpdateQueue) {
     use shared::protocol::MailAction;
-    let templates = crate::item_templates::ItemTemplates::default();
+    let templates =
+        crate::item_templates::load_runtime_item_templates(&crate::test_data::world_db_path())
+            .expect("load runtime item catalogs for mailbox claims");
     let mail = mail_store::load_mailbox(db, character_id)
         .into_iter()
         .find(|mail| mail.mail_id == mail_id)
@@ -220,7 +225,9 @@ mod bounded_slice {
                     assert!(expected.len() > 14);
                     for page in 0..=(expected.len() / 7 + 1) {
                         query.page = page as u32;
-                        let result = search_auctions(&auctions, &query);
+                        let result = search_auctions(&auctions, &query, &|_| {
+                            shared::item_data::ItemDefinitionSource::Retail
+                        });
                         assert_eq!(result.total_results as usize, expected.len());
                         let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
                         let expected_ids: Vec<_> = expected
@@ -252,10 +259,12 @@ mod bounded_slice {
         query.item_id = Some(42);
         query.page_size = 10;
         query.page = 1;
-        let result =
-            super::super::queries::search_auctions_matching(&auctions, &query, |auction| {
-                auction.auction_id % 3 == 0
-            });
+        let result = super::super::queries::search_auctions_matching(
+            &auctions,
+            &query,
+            &|_| shared::item_data::ItemDefinitionSource::Retail,
+            |auction| auction.auction_id % 3 == 0,
+        );
         assert_eq!(result.total_results, 26);
         let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
         assert_eq!(ids, (11..=20).map(|index| index * 6).collect::<Vec<_>>());
@@ -288,7 +297,9 @@ mod bounded_slice {
             query.sort_field = field;
             query.page = page;
             let start = std::time::Instant::now();
-            let result = search_auctions(&auctions, &query);
+            let result = search_auctions(&auctions, &query, &|_| {
+                shared::item_data::ItemDefinitionSource::Retail
+            });
             let elapsed = start.elapsed();
             eprintln!("300k query text={text:?} field={field:?} page={page}: {elapsed:?}");
             assert_eq!(result.total_results, 300_000);

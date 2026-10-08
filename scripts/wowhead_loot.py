@@ -35,7 +35,8 @@ def load_wowhead_drops(conn, root):
         difficulty INTEGER NOT NULL, count INTEGER NOT NULL, outof INTEGER NOT NULL, stack_min INTEGER NOT NULL,
         stack_max INTEGER NOT NULL, quality INTEGER NOT NULL, classs INTEGER NOT NULL, scrape TEXT NOT NULL,
         PRIMARY KEY (entry, item, difficulty))""")
-    pages = sorted(root.glob("*/*.json")) if root.is_dir() else []
+    # Flat numeric NPC pages are the loot format; calibration/content reports are not.
+    pages = sorted(root.glob("*/[0-9]*.json")) if root.is_dir() else []
     scraped = {}
     for path in pages:
         entry = int(path.stem)

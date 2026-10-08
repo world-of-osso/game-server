@@ -146,12 +146,18 @@ impl Vault<'_, '_> {
         &self.db.as_ref().expect("checked by ready").db
     }
 
-    fn template(&self, item_id: u32) -> ItemTemplate {
-        // Items without a template never stack (`InventoryModel::store_item`).
-        self.templates
+    fn load_template(
+        &self,
+        item: &crate::persistence::InventoryItemData,
+    ) -> Result<(shared::item_data::ItemDefinitionSource, ItemTemplate), BankError> {
+        let source =
+            persistence::inventory_store::load_item_definition_source(self.db(), item.item_guid);
+        let template = self
+            .templates
             .as_ref()
-            .and_then(|templates| templates.get(item_id).copied())
-            .unwrap_or_default()
+            .and_then(|templates| templates.get(source, item.item_id).copied())
+            .ok_or(BankError::ItemNotFound)?;
+        Ok((source, template))
     }
 
     fn mint(&self) -> impl FnMut() -> u64 + '_ {
@@ -207,7 +213,9 @@ impl Vault<'_, '_> {
                     name: tab.name.clone(),
                     icon: tab.icon,
                     deposit_flags: tab.deposit_flags,
-                    slots: bank_storage::tab_slots(tab, soulbound),
+                    slots: bank_storage::tab_slots(tab, soulbound, |guid| {
+                        persistence::inventory_store::load_item_definition_source(self.db(), guid)
+                    }),
                 })
                 .collect(),
             next_tab_cost: self.prices.of(bank).get(data.tabs.len()).copied(),
@@ -347,10 +355,25 @@ fn move_into_bank(
     if bank == BankType::Account && model.is_soulbound(item_guid) {
         return Err(BankError::SoulboundInAccountBank);
     }
-    let max_stack = vault.template(item.item_id).max_stack;
+    let source = model.definition_source(item_guid);
+    let template = vault
+        .templates
+        .as_ref()
+        .and_then(|templates| templates.get(source, item.item_id))
+        .ok_or(BankError::ItemNotFound)?;
+    let mut sources = bank_storage::load_tab_definition_sources(vault.db(), &data.tabs);
+    sources.insert(item_guid, source);
     let mut mint = vault.mint();
-    bank_storage::deposit(&mut data.tabs, order, item, max_stack, &mut mint)
-        .map_err(|TabsFull| BankError::BankFull)?;
+    bank_storage::deposit(
+        &mut data.tabs,
+        order,
+        item,
+        template.max_stack,
+        &mut sources,
+        &mut mint,
+    )
+    .map_err(|TabsFull| BankError::BankFull)?;
+    model.remember_definition_sources(sources);
     model
         .take_bag_item(item_guid, 0, &mut mint)
         .map_err(|_| BankError::ItemNotFound)?;
@@ -383,10 +406,10 @@ fn withdraw(vault: &mut Vault, patron: &Patron, req: BankWithdraw) -> BankResult
     let item =
         bank_storage::take(&mut data.tabs, req.tab, req.slot).ok_or(BankError::ItemNotFound)?;
     let mut model = vault.load_model(patron.character_id)?;
-    let template = vault.template(item.item_id);
+    let (source, template) = vault.load_template(&item)?;
     let mut mint = vault.mint();
     model
-        .store_item(item, template, &mut mint)
+        .store_item(item, source, template, &mut mint)
         .map_err(|_| BankError::InventoryFull)?;
     drop(mint);
     vault.save(patron, req.bank, &data, Some(model));
@@ -481,7 +504,9 @@ fn auto_deposit_items(
     model
         .bag_items()
         .filter_map(|item: &InventoryItemData| {
-            let template = vault.template(item.item_id);
+            let (_, template) = vault
+                .load_template(item)
+                .expect("loaded owned item has a definition");
             let reagent = template.scaling.class_id == ITEM_CLASS_TRADEGOODS;
             let selected = match bank {
                 BankType::Character => reagent,

@@ -386,7 +386,7 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
     );
 }
 
-/// Every playable race/class gets a Retail loadout, and every kit item has a
+/// Every playable race/class gets its authored loadout, and every kit item has a
 /// template, so creation stores all of them.
 #[test]
 fn every_playable_pair_has_a_loadout_and_creates() {
@@ -401,8 +401,8 @@ fn every_playable_pair_has_a_loadout_and_creates() {
         }
         for &(item_id, _) in &info.items {
             assert!(
-                kit.templates.get(item_id).is_some(),
-                "item {item_id} template"
+                kit.kit().new_item(race, item_id, 1, 0).is_ok(),
+                "race {race} item {item_id} source-local template"
             );
         }
         let created = create(&kit, "Probe", race, class);
@@ -411,7 +411,8 @@ fn every_playable_pair_has_a_loadout_and_creates() {
             .items
             .iter()
             .map(|&(item_id, count)| {
-                if kit.templates.get(item_id).unwrap().max_stack > 1 {
+                let (_, template, _) = kit.kit().new_item(race, item_id, count, 0).unwrap();
+                if template.max_stack > 1 {
                     1
                 } else {
                     count as usize

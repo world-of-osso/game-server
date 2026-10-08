@@ -202,7 +202,11 @@ fn each_player_receives_only_its_own_sheet_stats_and_equipping_updates_them() {
     assert_eq!(seen_derived(&mut clients[1], "Alice"), Some(None));
 
     server.world_mut().entity_mut(alice).insert(EquippedItems {
-        items: vec![(EquipmentSlot::MainHand, NOTCHED_SHORTSWORD)],
+        items: vec![(
+            EquipmentSlot::MainHand,
+            shared::item_data::ItemDefinitionSource::Retail,
+            NOTCHED_SHORTSWORD,
+        )],
     });
     advance(&mut server, &mut clients, 100);
 

@@ -44,10 +44,9 @@ mod catalog;
 mod economic;
 mod stock;
 
-#[cfg(test)]
-pub(crate) use catalog::VendorGoods;
 use catalog::VendorSlot;
 pub use catalog::{VendorCatalog, load_vendor_catalog};
+pub(crate) use catalog::{VendorGoods, load_skyborne_goods};
 use stock::{BuybackEntry, BuybackSlots, VendorStock};
 
 /// Retail `ITEM_FLAG2_FACTION_HORDE` / `ITEM_FLAG2_FACTION_ALLIANCE` (`Flags_1`).
@@ -145,8 +144,12 @@ impl Shop<'_, '_> {
         &self.db.as_ref().expect("checked by ready").db
     }
 
-    fn template(&self, item_id: u32) -> Option<ItemTemplate> {
-        self.templates.as_ref()?.get(item_id).copied()
+    fn template(
+        &self,
+        source: shared::item_data::ItemDefinitionSource,
+        item_id: u32,
+    ) -> Option<ItemTemplate> {
+        self.templates.as_ref()?.get(source, item_id).copied()
     }
 
     fn now(&self) -> f64 {
@@ -215,7 +218,10 @@ impl Shop<'_, '_> {
             .into_iter()
             .enumerate()
             .filter_map(|(index, slot)| {
-                let template = *self.templates.as_ref()?.get(slot.item_id)?;
+                let template = *self.templates.as_ref()?.get(
+                    shared::item_data::ItemDefinitionSource::Retail,
+                    slot.item_id,
+                )?;
                 if !buyer.offered(&template) {
                     return None;
                 }
@@ -267,6 +273,10 @@ impl Shop<'_, '_> {
             .map(|(slot, entry)| BuybackItem {
                 slot,
                 item_id: entry.item.item_id,
+                definition_source: persistence::inventory_store::load_item_definition_source(
+                    self.db(),
+                    entry.item.item_guid,
+                ),
                 name: entry.item.name.clone(),
                 quality: entry.item.quality,
                 count: entry.item.stack_count,
@@ -424,7 +434,10 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
         .cloned()
         .ok_or(MerchantError::ItemNotFound)?;
     let template = shop
-        .template(slot.item_id)
+        .template(
+            shared::item_data::ItemDefinitionSource::Retail,
+            slot.item_id,
+        )
         .ok_or(MerchantError::ItemNotFound)?;
     let buyer = shop.buyer(customer.player);
     if !buyer.offered(&template) {
@@ -450,7 +463,13 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     if model.gold() < price {
         return Err(MerchantError::NotEnoughMoney);
     }
-    if goods.max_count > 0 && model.owned_count(slot.item_id) + items > goods.max_count {
+    if goods.max_count > 0
+        && model.owned_count(
+            shared::item_data::ItemDefinitionSource::Retail,
+            slot.item_id,
+        ) + items
+            > goods.max_count
+    {
         return Err(MerchantError::CantCarryMore);
     }
     let mut mint = shop.mint();
@@ -465,8 +484,19 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
         unique_auction: false,
     };
     match req.destination {
-        Some(location) => model.store_item_at(item, template, location, &mut mint),
-        None => model.store_item(item, template, &mut mint),
+        Some(location) => model.store_item_at(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            location,
+            &mut mint,
+        ),
+        None => model.store_item(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            &mut mint,
+        ),
     }
     .map_err(|error| match error.reason {
         InventoryErrorReason::CantStack => MerchantError::CantStack,
@@ -500,11 +530,7 @@ fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResu
     if count > item.stack_count {
         return Err(MerchantError::NotInterested);
     }
-    let sell_price = shop
-        .catalog
-        .goods
-        .get(&item.item_id)
-        .map_or(0, |goods| goods.sell_price);
+    let sell_price = item.vendor_sell_price;
     if sell_price == 0 {
         return Err(MerchantError::NotInterested);
     }
@@ -542,12 +568,7 @@ fn sell_all_junk(
     let junk: Vec<u64> = shop
         .load(customer.character_id)?
         .bag_items()
-        .filter(|item| {
-            shop.catalog
-                .goods
-                .get(&item.item_id)
-                .is_some_and(|goods| goods.quality == QUALITY_POOR && goods.sell_price > 0)
-        })
+        .filter(|item| item.quality == QUALITY_POOR && item.vendor_sell_price > 0)
         .map(|item| item.item_guid)
         .collect();
     for item_guid in junk {
@@ -575,11 +596,14 @@ fn buy_back(shop: &mut Shop, customer: &mut Customer, req: BuybackItemRequest) -
     if model.gold() < u64::from(entry.price) {
         return Err(MerchantError::NotEnoughMoney);
     }
-    // Items without a template never stack (`InventoryModel::max_stack`).
-    let template = shop.template(entry.item.item_id).unwrap_or_default();
+    let source =
+        persistence::inventory_store::load_item_definition_source(shop.db(), entry.item.item_guid);
+    let template = shop
+        .template(source, entry.item.item_id)
+        .ok_or(MerchantError::ItemNotFound)?;
     let mut mint = shop.mint();
     model
-        .store_item(entry.item, template, &mut mint)
+        .store_item(entry.item, source, template, &mut mint)
         .map_err(|_| MerchantError::InventoryFull)?;
     drop(mint);
     model.set_gold(model.gold() - u64::from(entry.price));

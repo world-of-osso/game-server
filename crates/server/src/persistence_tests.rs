@@ -1,3 +1,4 @@
+use super::character_abi_tests::PreSourceEquipment;
 use super::*;
 use shared::components::{
     CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, Health,
@@ -85,7 +86,7 @@ struct LegacyCharacterDataV3AppearanceV1 {
     class: u8,
     level: u16,
     appearance: LegacyCharacterAppearanceV1,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: PreSourceEquipment,
 }
 
 #[derive(bitcode::Encode)]
@@ -185,11 +186,13 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
             entries: vec![EquippedAppearanceEntry {
                 slot: EquipmentVisualSlot::Feet,
                 item_id: None,
+                definition_source: None,
                 display_info_id: Some(154620),
                 inventory_type: 0,
                 hidden: false,
             }],
-        },
+        }
+        .into(),
     }
 }
 
@@ -348,7 +351,7 @@ fn customization_migration_reopens_all_earlier_schemas() {
             bitcode::encode(&equipped_six),
             "LegacyV3AppearanceV1",
             expected_six.clone(),
-            equipped_six.equipment_appearance.clone(),
+            equipped_six.equipment_appearance.clone().into(),
         ),
         (
             bitcode::encode(&seven),
@@ -382,8 +385,8 @@ fn customization_migration_reopens_all_earlier_schemas() {
                     .unwrap()
                     .value()
                     .to_vec();
-                let current: CharacterData =
-                    bitcode::decode(&bytes).expect("legacy row rewritten to current schema");
+                let current: CharacterData = CharacterData::decode_stored(&bytes)
+                    .expect("legacy row rewritten to current schema");
                 assert_eq!(
                     current,
                     CharacterData {
@@ -577,6 +580,7 @@ fn character_data_round_trip_preserves_equipment_appearance() {
         entries: vec![EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Chest,
             item_id: Some(6123),
+            definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: Some(777),
             inventory_type: 5,
             hidden: false,
@@ -596,6 +600,7 @@ fn sync_live_components_preserves_existing_equipment_appearance() {
         entries: vec![EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Chest,
             item_id: None,
+            definition_source: None,
             display_info_id: Some(175942),
             inventory_type: 0,
             hidden: false,
