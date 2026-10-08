@@ -95,13 +95,13 @@ fn bank_splits_preserve_binding_guids_and_counts_after_database_reopen() {
     };
     h.play_as(character);
     h.open_banker();
-    let bank = h
+    let contents = h
         .take::<BankContents>()
         .into_iter()
         .find(|c| c.bank == BankType::Character)
         .unwrap();
-    let kept = bank.tabs[0].slots[0].as_ref().unwrap();
-    let split = bank.tabs[1].slots[1].as_ref().unwrap();
+    let kept = contents.tabs[0].slots[0].as_ref().unwrap();
+    let split = contents.tabs[1].slots[1].as_ref().unwrap();
     assert_eq!(
         (kept.item_guid, kept.count, kept.soulbound),
         (original, 13, true)
