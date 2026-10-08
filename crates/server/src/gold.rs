@@ -10,6 +10,14 @@ use crate::persistence::ClientId;
 /// a player or a Warband bank holds.
 pub(crate) const MAX_MONEY: u64 = 99_999_999_999;
 
+/// Render a copper amount without narrowing the server's money range.
+pub(crate) fn format_money(copper: u64) -> String {
+    let gold = copper / 10_000;
+    let silver = (copper % 10_000) / 100;
+    let copper = copper % 100;
+    format!("{gold}g {silver}s {copper}c")
+}
+
 /// Persisted `InventoryData` changes: gold values to replicate, plus the characters
 /// whose bag contents need an `InventoryDelta`.
 #[derive(Resource, Default)]

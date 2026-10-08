@@ -232,8 +232,9 @@ fn stage_previous_bidder_refund(
             db,
             "Outbid",
             &format!(
-                "You have been outbid on {}. Your {} gold has been refunded.",
-                auction.item.name, refund
+                "You have been outbid on {}. Your {} has been refunded.",
+                auction.item.name,
+                crate::gold::format_money(refund)
             ),
             0,
             None,

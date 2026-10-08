@@ -17,6 +17,11 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 - Reject soulbound item instances, bind-on-pickup items and quest items through the existing auction operation response, without changing inventory, money or listings.
 - Unbound bind-on-equip items remain auctionable. Binding checks use server template and persisted item-instance state; no wire or persistence schema change is required.
 
+### Refund notifications
+
+- Outbid mail states the credited refund in gold, silver and copper (`0g 2s 0c` for 200 copper), preserving the server's `u64` money range.
+- The notification does not attach the refund again: the balance credit and mail are settled together.
+
 ### Live acceptance
 
 - [x] Saved CLI grouped all-item pages 0/1 and Leather text query, flat name search and ItemID 2318 page 1 return meaningful populated results. [Exact ledger](../wiki/systems/auction-house.md) records 311 distinct items and final live total 300068 offers (historical sample 300075); it does not certify every filter combination.
