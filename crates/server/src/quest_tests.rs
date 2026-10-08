@@ -124,6 +124,9 @@ macro_rules! for_quest_messages {
     };
 }
 
+#[path = "zephras_quest_tests.rs"]
+mod zephras_tests;
+
 fn register<M: Message + serde::Serialize + serde::de::DeserializeOwned>(app: &mut App) {
     app.register_message::<M>();
 }
@@ -917,3 +920,131 @@ fn a_gray_forest_wolf_kill_counts_as_a_prowler() {
 
 #[path = "quest_spell_tests.rs"]
 mod spell;
+
+#[test]
+fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
+    use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
+    use shared::item_data::ItemDefinitionSource::{Forever70205, Retail};
+    for id in [2947, 2512, 2101] {
+        let mut app = setup_app().expect("world quest fixture required");
+        let client = spawn_client(&mut app, 2);
+        let rainer = spawn_npc(&mut app, DEPUTY_RAINER, 2.0);
+        let plain = app.world().resource::<ItemTemplates>().retail[&PAINTED_GNOLL_ARMBAND];
+        {
+            let mut templates = app.world_mut().resource_mut::<ItemTemplates>();
+            templates.retail.insert(id, plain);
+            templates.forever.insert(id, plain);
+        }
+        {
+            let mut quests = app.world_mut().resource_mut::<QuestDb>();
+            let quest = quests.quests.get_mut(&RIVERPAW_GNOLL_BOUNTY).unwrap();
+            quest.objectives[0].object_id = id;
+            quest.start_item = id;
+            quest.provided_item_count = 1;
+        }
+        mark_rewarded(&app, &client, WESTBROOK_GARRISON_NEEDS_HELP);
+        enter_world(&mut app, &client);
+        accept(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY);
+        let mut record = load_inventory_record(db(&app), client.character_id).unwrap();
+        let provided = record
+            .inventory
+            .items
+            .iter_mut()
+            .find(|item| item.item_id == id)
+            .unwrap();
+        provided.stack_count = 8;
+        provided.item_guid = persistence::next_id(db(&app), "item_instance");
+        let guid = provided.item_guid;
+        record.definition_sources.insert(guid, Forever70205);
+        save_inventory_record(db(&app), client.character_id, &record);
+        app.world_mut()
+            .resource_mut::<GoldUpdateQueue>()
+            .record_items(client.character_id);
+        app.update();
+        request(
+            &mut app,
+            &client,
+            QuestGiverCompleteQuest {
+                npc: rainer,
+                quest_id: RIVERPAW_GNOLL_BOUNTY,
+            },
+        );
+        let request_items = received::<QuestGiverRequestItems>(&mut app, &client);
+        assert_eq!(
+            request_items.len(),
+            1,
+            "Forever-only {id} must not complete quest"
+        );
+        assert!(!request_items[0].can_complete);
+        turn_in(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY, Some(1));
+        assert_eq!(
+            received::<QuestFailed>(&mut app, &client)[0].reason,
+            QuestFailedReason::ObjectivesIncomplete
+        );
+        let mut record = load_inventory_record(db(&app), client.character_id).unwrap();
+        let retail_guid = persistence::next_id(db(&app), "item_instance");
+        record.inventory.items.push(InventoryItemData {
+            item_guid: retail_guid,
+            stack_count: 9,
+            ..record
+                .inventory
+                .items
+                .iter()
+                .find(|item| item.item_guid == guid)
+                .unwrap()
+                .clone()
+        });
+        record.definition_sources.insert(retail_guid, Retail);
+        save_inventory_record(db(&app), client.character_id, &record);
+        app.world_mut()
+            .resource_mut::<GoldUpdateQueue>()
+            .record_items(client.character_id);
+        app.update();
+        turn_in(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY, Some(1));
+        assert_eq!(
+            received::<QuestGiverQuestComplete>(&mut app, &client).len(),
+            1
+        );
+        let inventory = persistence::load_inventory(db(&app), client.character_id);
+        assert_eq!(
+            inventory
+                .items
+                .iter()
+                .find(|item| item.item_guid == guid)
+                .unwrap()
+                .stack_count,
+            8
+        );
+        assert!(
+            !inventory
+                .items
+                .iter()
+                .any(|item| item.item_guid == retail_guid)
+        );
+        // Abandon also must not remove a same-ID Forever provided-item collision.
+        let mut log = load_quest_log(db(&app), client.character_id);
+        log.active
+            .push(crate::persistence::quest_store::ActiveQuestData {
+                quest_id: RIVERPAW_GNOLL_BOUNTY,
+                counts: vec![0],
+            });
+        save_quest_log(db(&app), client.character_id, &log);
+        request(
+            &mut app,
+            &client,
+            AbandonQuest {
+                quest_id: RIVERPAW_GNOLL_BOUNTY,
+            },
+        );
+        let inventory = persistence::load_inventory(db(&app), client.character_id);
+        assert_eq!(
+            inventory
+                .items
+                .iter()
+                .find(|item| item.item_guid == guid)
+                .unwrap()
+                .stack_count,
+            8
+        );
+    }
+}

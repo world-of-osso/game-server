@@ -5,6 +5,8 @@ use std::{
 };
 
 use super::*;
+use shared::item_data::ItemDefinitionSource;
+pub(super) type DefinitionSources<'a> = &'a dyn Fn(u64) -> ItemDefinitionSource;
 
 #[cfg(test)]
 #[path = "search_first_page_tests.rs"]
@@ -13,13 +15,15 @@ mod search_first_page_tests;
 pub(super) fn search_auctions(
     auctions: &HashMap<u64, AuctionData>,
     query: &AuctionSearchQuery,
+    sources: DefinitionSources<'_>,
 ) -> AuctionSearchResults {
-    search_auctions_matching(auctions, query, |_| true)
+    search_auctions_matching(auctions, query, sources, |_| true)
 }
 
 pub(super) fn search_auctions_matching(
     auctions: &HashMap<u64, AuctionData>,
     query: &AuctionSearchQuery,
+    sources: DefinitionSources<'_>,
     additional_match: impl Fn(&AuctionData) -> bool,
 ) -> AuctionSearchResults {
     let needle = query.text.to_ascii_lowercase();
@@ -30,11 +34,14 @@ pub(super) fn search_auctions_matching(
     let now = unix_now();
     let (total_results, results) = if let Some((start, end)) = bounded_prefix(query, auctions.len())
     {
-        prefix_page_listings(listings, query, now, start, end)
+        prefix_page_listings(listings, query, now, start, end, sources)
     } else {
         let mut listings: Vec<_> = listings.collect();
         let total_results = listings.len() as u32;
-        (total_results, paged_listings(&mut listings, query, now))
+        (
+            total_results,
+            paged_listings(&mut listings, query, now, sources),
+        )
     };
     AuctionSearchResults {
         query: query.clone(),
@@ -136,6 +143,7 @@ fn prefix_page_listings<'a>(
     now: u64,
     start: usize,
     end: usize,
+    sources: DefinitionSources<'_>,
 ) -> (u32, Vec<AuctionListingSummary>) {
     let mut best = BinaryHeap::with_capacity(end);
     let mut total_results = 0;
@@ -156,7 +164,7 @@ fn prefix_page_listings<'a>(
         .into_sorted_vec()
         .into_iter()
         .skip(start)
-        .map(|listing| to_listing_summary_at(listing.auction, now))
+        .map(|listing| to_listing_summary_at(listing.auction, now, sources))
         .collect();
     (total_results, results)
 }
@@ -165,6 +173,7 @@ fn paged_listings(
     listings: &mut [&AuctionData],
     query: &AuctionSearchQuery,
     now: u64,
+    sources: DefinitionSources<'_>,
 ) -> Vec<AuctionListingSummary> {
     let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
     let start = (query.page as usize).saturating_mul(page_size);
@@ -183,7 +192,7 @@ fn paged_listings(
     let page = &mut remaining[..page_len];
     page.sort_unstable_by(compare);
     page.iter()
-        .map(|auction| to_listing_summary_at(auction, now))
+        .map(|auction| to_listing_summary_at(auction, now, sources))
         .collect()
 }
 
@@ -221,22 +230,32 @@ pub(super) fn auction_time_rank(time_left: AuctionTimeLeft) -> u8 {
     }
 }
 
-pub(super) fn inventory_snapshot(inventory: &InventoryData) -> AuctionInventorySnapshot {
+pub(super) fn inventory_snapshot(
+    inventory: &InventoryData,
+    sources: DefinitionSources<'_>,
+) -> AuctionInventorySnapshot {
     AuctionInventorySnapshot {
         gold: inventory.gold,
         items: inventory
             .items
             .iter()
             .cloned()
-            .map(to_inventory_item)
+            .map(|item| {
+                let source = sources(item.item_guid);
+                to_inventory_item(item, source)
+            })
             .collect(),
     }
 }
 
-fn to_inventory_item(item: InventoryItemData) -> AuctionInventoryItem {
+fn to_inventory_item(
+    item: InventoryItemData,
+    source: ItemDefinitionSource,
+) -> AuctionInventoryItem {
     AuctionInventoryItem {
         item_guid: item.item_guid,
         item_id: item.item_id,
+        definition_source: source,
         name: item.name,
         quality: item.quality,
         required_level: item.required_level,
@@ -245,14 +264,21 @@ fn to_inventory_item(item: InventoryItemData) -> AuctionInventoryItem {
     }
 }
 
-pub(super) fn to_listing_summary(auction: &AuctionData) -> AuctionListingSummary {
-    to_listing_summary_at(auction, unix_now())
+pub(super) fn to_listing_summary(
+    auction: &AuctionData,
+    sources: DefinitionSources<'_>,
+) -> AuctionListingSummary {
+    to_listing_summary_at(auction, unix_now(), sources)
 }
 
-fn to_listing_summary_at(auction: &AuctionData, now: u64) -> AuctionListingSummary {
+fn to_listing_summary_at(
+    auction: &AuctionData,
+    now: u64,
+    sources: DefinitionSources<'_>,
+) -> AuctionListingSummary {
     AuctionListingSummary {
         auction_id: auction.auction_id,
-        item: to_inventory_item(auction.item.clone()),
+        item: to_inventory_item(auction.item.clone(), sources(auction.item.item_guid)),
         owner_name: auction.seller_name.clone(),
         stack_count: auction.stack_count,
         min_bid: auction.min_bid,

@@ -3,9 +3,14 @@
 //! `InventoryData.items` stays the owned-item list every system edits; placements
 //! record which bag slot each item guid occupies. Items without a placement (new
 //! loot, trade, mail) are placed by the inventory model on next load.
+#[cfg(test)]
+#[path = "persistence_item_source_tests.rs"]
+mod item_source_tests;
+
 use std::collections::{HashMap, HashSet};
 
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
+use shared::item_data::ItemDefinitionSource;
 
 use super::equipment::{EQUIPMENT, EquippedItem};
 use super::{
@@ -26,6 +31,11 @@ pub(crate) const BAG_SLOTS: TableDefinition<u64, &[u8]> =
 /// Keyed by guid so attributes follow the item through trade, mail and auctions.
 pub(crate) const ITEM_INSTANCES: TableDefinition<u64, &[u8]> =
     TableDefinition::new("item_instances");
+
+/// Immutable catalog identity, independent of owner and unchanged serialized rows.
+/// Tags: 0 = Retail, 1 = Forever build 70205. Unmarked legacy GUIDs are Retail.
+pub(crate) const ITEM_DEFINITION_SOURCES: TableDefinition<u64, u8> =
+    TableDefinition::new("item_definition_sources");
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ItemPlacementData {
@@ -61,6 +71,7 @@ pub struct InventoryRecord {
     pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
     pub item_durability: HashMap<u64, (u32, u32)>,
+    pub definition_sources: HashMap<u64, ItemDefinitionSource>,
 }
 
 pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<InventoryRecord> {
@@ -80,13 +91,20 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         character_id,
     );
     let table = txn.open_table(ITEM_INSTANCES).expect("open item instances");
-    let guids = inventory
+    let sources = txn
+        .open_table(ITEM_DEFINITION_SOURCES)
+        .expect("open item definition sources");
+    let guids: Vec<u64> = inventory
         .items
         .iter()
         .chain(equipped.iter().map(|entry| &entry.item))
         .chain(bag_slots.iter().map(|entry| &entry.item))
         .map(|item| item.item_guid)
         .collect::<Vec<_>>();
+    let definition_sources = guids
+        .iter()
+        .map(|&guid| (guid, read_item_definition_source(&sources, guid)))
+        .collect();
     let instances = guids
         .iter()
         .copied()
@@ -117,7 +135,65 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         bag_slots,
         instances,
         item_durability,
+        definition_sources,
     })
+}
+
+/// Read global GUID identity; absent legacy markers mean Retail, not a catalog probe.
+pub fn load_item_definition_source(db: &Database, guid: u64) -> ItemDefinitionSource {
+    let txn = db.begin_read().expect("begin item definition source read");
+    let table = txn
+        .open_table(ITEM_DEFINITION_SOURCES)
+        .expect("open item definition sources");
+    read_item_definition_source(&table, guid)
+}
+
+fn decode_item_definition_source(guid: u64, tag: u8) -> ItemDefinitionSource {
+    match tag {
+        0 => ItemDefinitionSource::Retail,
+        1 => ItemDefinitionSource::Forever70205,
+        _ => panic!("invalid item definition source {tag} for GUID {guid}"),
+    }
+}
+
+pub(crate) fn read_item_definition_source(
+    table: &impl ReadableTable<u64, u8>,
+    guid: u64,
+) -> ItemDefinitionSource {
+    let row = table.get(guid).expect("read item definition source");
+    row.map_or(ItemDefinitionSource::Retail, |row| {
+        decode_item_definition_source(guid, row.value())
+    })
+}
+
+/// Mark a newly minted GUID inside its creation transaction. Repeated writes of
+/// the same identity are allowed; changing an existing marker is an error.
+pub(crate) fn write_item_definition_source(
+    txn: &WriteTransaction,
+    guid: u64,
+    source: ItemDefinitionSource,
+) {
+    let mut table = txn
+        .open_table(ITEM_DEFINITION_SOURCES)
+        .expect("open item definition sources");
+    let existing = table
+        .get(guid)
+        .expect("read item definition source")
+        .map(|row| decode_item_definition_source(guid, row.value()));
+    if let Some(stored) = existing {
+        assert_eq!(
+            stored, source,
+            "cannot change item definition source for GUID {guid}"
+        );
+        return;
+    }
+    let tag = match source {
+        ItemDefinitionSource::Retail => 0,
+        ItemDefinitionSource::Forever70205 => 1,
+    };
+    table
+        .insert(guid, tag)
+        .expect("write item definition source");
 }
 
 /// Which of `guids` are soulbound (`ItemInstanceData::soulbound`).
@@ -138,7 +214,7 @@ pub fn soulbound_guids(db: &Database, guids: impl Iterator<Item = u64>) -> HashS
         .collect()
 }
 
-fn read_row<T: bitcode::DecodeOwned + Default>(
+pub(crate) fn read_row<T: bitcode::DecodeOwned + Default>(
     table: &impl ReadableTable<u64, &'static [u8]>,
     key: u64,
 ) -> T {
@@ -167,7 +243,7 @@ pub(crate) fn write_inventory_record(
         (INVENTORY_LAYOUTS, bitcode::encode(&record.placements)),
         (EQUIPMENT, bitcode::encode(&record.equipped)),
         (BAG_SLOTS, bitcode::encode(&record.bag_slots)),
-        (CHARACTERS, bitcode::encode(&record.character)),
+        (CHARACTERS, record.character.encode_stored()),
     ];
     for (definition, bytes) in rows {
         txn.open_table(definition)
@@ -183,6 +259,14 @@ pub(crate) fn write_inventory_record(
             .insert(*guid, bitcode::encode(state).as_slice())
             .expect("write item durability");
     }
+    for (&guid, &source) in &record.definition_sources {
+        write_item_definition_source(txn, guid, source);
+    }
+    crate::persistence_character::validate_forever_equipment_sources(
+        txn,
+        character_id,
+        &record.character,
+    );
     let mut instances = txn.open_table(ITEM_INSTANCES).expect("open item instances");
     for (guid, data) in &record.instances {
         instances

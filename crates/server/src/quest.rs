@@ -107,6 +107,7 @@ pub(crate) fn quest_player(player: &Player, level: &Level) -> QuestPlayer {
 
 /// Marker of each NPC for this character.
 pub(crate) fn giver_statuses(
+    db: &redb::Database,
     quests: &QuestDb,
     log: &QuestLogData,
     inventory: &InventoryData,
@@ -117,7 +118,7 @@ pub(crate) fn giver_statuses(
         .map(|(npc, template_id)| QuestGiverStatusEntry {
             npc: npc.to_bits(),
             status: giver_status(quests, log, player, template_id, |item_id| {
-                bag_count(inventory, item_id)
+                bag_count(db, inventory, item_id)
             }),
         })
         .collect()
@@ -135,7 +136,7 @@ fn send_initial_quest_log(
     for (connection, in_world) in &connections {
         let log = load_quest_log(db, in_world.character_id);
         let inventory = persistence::load_inventory(db, in_world.character_id);
-        let snapshot = log_snapshot(quests, &log, &inventory);
+        let snapshot = log_snapshot(db, quests, &log, &inventory);
         commands.entity(connection).insert((
             SentQuestLog {
                 entries: view_of(&snapshot.entries),
@@ -337,7 +338,7 @@ fn send_quest_updates(
         }
         let log = load_quest_log(db, in_world.character_id);
         let inventory = persistence::load_inventory(db, in_world.character_id);
-        let view = view_of(&log_entries(quests, &log, &inventory));
+        let view = view_of(&log_entries(db, quests, &log, &inventory));
         if let Some(update) = diff_log(&sent.entries, &sent.watched, &view, &log.watched)
             && let Ok(mut sender) = log_senders.get_mut(connection)
         {
@@ -357,6 +358,7 @@ fn send_quest_updates(
             .iter()
             .filter_map(|&npc| Some((npc, npcs.get(npc).ok()?.template_id)));
         let statuses = giver_statuses(
+            db,
             quests,
             &log,
             &inventory,

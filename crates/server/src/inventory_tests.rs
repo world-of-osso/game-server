@@ -49,8 +49,8 @@ fn test_templates() -> ItemTemplates {
         },
         ..template(18, 1, 0, 0, -1)
     };
-    ItemTemplates(
-        [
+    ItemTemplates {
+        retail: [
             (WORN_SHORTSWORD, template(21, 1, 2, 1, -1)),
             (LINEN, reagent(template(0, 1000, 0, 0, -1))),
             (PEACEBLOOM, reagent(template(0, 1000, 0, 0, -1))),
@@ -62,7 +62,8 @@ fn test_templates() -> ItemTemplates {
         ]
         .into_iter()
         .collect(),
-    )
+        forever: Default::default(),
+    }
 }
 
 fn bag(slot: u8) -> ItemLocation {
@@ -223,6 +224,7 @@ fn stack(guid: u64, item_id: u32, count: u32) -> ItemStack {
     ItemStack {
         item_guid: guid,
         item_id,
+        definition_source: shared::item_data::ItemDefinitionSource::Retail,
         count,
         durability: None,
         soulbound: false,

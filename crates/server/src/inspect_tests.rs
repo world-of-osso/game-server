@@ -15,6 +15,7 @@ fn build_inspect_snapshot_includes_equipment_and_empty_legacy_talents() {
         entries: vec![EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Head,
             item_id: Some(100),
+            definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: Some(200),
             inventory_type: 1,
             hidden: false,

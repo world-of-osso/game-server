@@ -710,5 +710,9 @@ fn unix_now() -> u64 {
 }
 
 #[cfg(test)]
+#[path = "inventory_source_tests.rs"]
+mod source_tests;
+
+#[cfg(test)]
 #[path = "trade_tests.rs"]
 mod tests;

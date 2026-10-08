@@ -177,7 +177,7 @@ fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
                 data.health = 0.0;
             }
             save_death_state(&txn, id, character.death);
-            rows.insert(id, bitcode::encode(&data).as_slice())
+            rows.insert(id, data.encode_stored().as_slice())
                 .expect("Failed to insert character");
             match ghost_corpse(character.death) {
                 Some(corpse) => corpses

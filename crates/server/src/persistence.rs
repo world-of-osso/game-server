@@ -284,6 +284,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
     txn.open_table(inventory_store::ITEM_DURABILITIES)
         .expect("create item durability table");
+    txn.open_table(inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("Failed to create item definition sources table");
     let _ = txn.open_table(quest_store::QUEST_LOGS);
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
     let _ = txn.open_table(pet_store::PET_STABLES);
@@ -431,13 +433,13 @@ fn collect_legacy_character_migrations(db: &Database) -> Vec<(u64, Vec<u8>)> {
         .expect("Failed to iterate character records")
         .filter_map(|row| {
             let (id, bytes) = row.expect("Failed to read character migration row");
-            if bitcode::decode::<CharacterData>(bytes.value()).is_ok() {
+            if CharacterData::decode_stored(bytes.value()).is_ok() {
                 return None;
             }
             let data = CharacterData::decode_compatible(bytes.value()).unwrap_or_else(|error| {
                 panic!("Failed to migrate character {}: {error}", id.value())
             });
-            Some((id.value(), bitcode::encode(&data)))
+            Some((id.value(), data.encode_stored()))
         })
         .collect()
 }
@@ -1000,3 +1002,7 @@ mod startup_tests;
 #[cfg(test)]
 #[path = "persistence_customization_tests.rs"]
 mod customization_tests;
+
+#[cfg(test)]
+#[path = "persistence_character_abi_tests.rs"]
+mod character_abi_tests;

@@ -7,7 +7,7 @@ Every unit carries a Retail `FactionTemplate` ID in the replicated `UnitFactionT
 | Unit | Source | Set in |
 |---|---|---|
 | NPC | AzerothCore `creature_template.faction` (a FactionTemplate ID) | `zones.rs` spawn |
-| Player | `ChrRaces.FactionID`, Retail build 12.1.0.69933 (const table `faction_template_for_race`; world.db has no `chr_races` table) | `auth_character.rs` world entry |
+| Player | `ChrRaces.FactionID`, Retail build 12.1.0.69933 plus [[skyborne]] Forever rows (const table `faction_template_for_race`; world.db has no `chr_races` table) | `auth_character.rs` world entry |
 
 - `faction_template` is imported by `scripts/db2.py` (table `FactionTemplate`) at build 12.1.0.69933 and loaded into the `FactionTemplates` resource by `WorldDataPlugin`.
 - Example player templates: Human 1, Orc 2, Dwarf 3, Night Elf 4, Undead 5, Tauren 6, Gnome 115, Troll 116, Blood Elf 1610, Draenei 1629, Worgen 2203, Goblin 2204. Unknown race = 0.
@@ -68,6 +68,8 @@ Not modelled: player reputation (AzerothCore returns the player's reputation ran
 - wago.tools DB2 `FactionTemplate` and `ChrRaces`, build 12.1.0.69933.
 
 ## See Also
+
+- [[skyborne]] — source-backed Forever faction overlay and creation/login evidence
 
 - [[spell-casting]] — enemy/ally relations for explicit and area targets
 - [[combat]] — auto-attack

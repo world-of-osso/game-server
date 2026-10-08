@@ -496,7 +496,10 @@ fn level_20_arcane_mage_in_caster_cloth_derives_sheet_stats() {
             Level(20),
             ActiveSpec(SPEC_ARCANE),
             EquippedItems {
-                items: CASTER_CLOTH.to_vec(),
+                items: CASTER_CLOTH
+                    .iter()
+                    .map(|&(slot, id)| (slot, shared::item_data::ItemDefinitionSource::Retail, id))
+                    .collect(),
             },
             UnitStats::default(),
             CombatRatings::default(),

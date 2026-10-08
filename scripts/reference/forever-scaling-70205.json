@@ -1,0 +1,175 @@
+{
+  "ArmorLocation": {
+    "columns": [
+      "ID",
+      "Clothmodifier",
+      "Leathermodifier",
+      "Chainmodifier",
+      "Platemodifier"
+    ],
+    "explicit_build": true,
+    "fdid": 1284818,
+    "layout": "FB67352F",
+    "raw_sha256": "565dee93a070e1470205e227a1fb236463f5daa8832abf0bf4043ce3bd681d2f",
+    "schema_sha256": "5cc4ab95ae3849df0ba8fe01861ca041f577fa4a0afa184ef4b3fcebbcc06050",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ArmorLocation.dbd",
+    "table_hash": "B1911544"
+  },
+  "ItemArmorQuality": {
+    "columns": [
+      "ID",
+      "Qualitymod_0",
+      "Qualitymod_1",
+      "Qualitymod_2",
+      "Qualitymod_3",
+      "Qualitymod_4",
+      "Qualitymod_5",
+      "Qualitymod_6"
+    ],
+    "explicit_build": true,
+    "fdid": 1283021,
+    "layout": "2935AA9D",
+    "raw_sha256": "67628d34b90d977514d14ae70ed658ec3e19f356f882cc2f1e029c1db46c5c2b",
+    "schema_sha256": "3ba03d09b1f7f9b3302f9ffe626601467f3cac988781dc9e4b37450e35656715",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemArmorQuality.dbd",
+    "table_hash": "B94A5807"
+  },
+  "ItemArmorShield": {
+    "columns": [
+      "ItemLevel",
+      "Quality_0",
+      "Quality_1",
+      "Quality_2",
+      "Quality_3",
+      "Quality_4",
+      "Quality_5",
+      "Quality_6"
+    ],
+    "explicit_build": true,
+    "fdid": 1277741,
+    "layout": "7E6C94F9",
+    "raw_sha256": "b35098dd45d3367414dbe97dd19127a010a0ff8222a935f8faefb3aa29cc3def",
+    "schema_sha256": "b635c6c26bb463ca616e3d8c9d64ad464dfa4d1d2bd7596b5d0ecc4b201e09bb",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemArmorShield.dbd",
+    "table_hash": "FFBB8DC2"
+  },
+  "ItemArmorTotal": {
+    "columns": [
+      "ItemLevel",
+      "Cloth",
+      "Leather",
+      "Mail",
+      "Plate"
+    ],
+    "explicit_build": true,
+    "fdid": 1283022,
+    "layout": "EB155D51",
+    "raw_sha256": "a644a2edbae2677c46b49d69b72c311e34904e44598f0a3fa42da74d6769d5b7",
+    "schema_sha256": "e74a751a870752e957f6108a0504bcc1ef31dd70deeb9d9e42151b948ec9284d",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemArmorTotal.dbd",
+    "table_hash": "029D50FE"
+  },
+  "ItemDamageOneHand": {
+    "columns": [
+      "ItemLevel",
+      "Quality_0",
+      "Quality_1",
+      "Quality_2",
+      "Quality_3",
+      "Quality_4",
+      "Quality_5",
+      "Quality_6"
+    ],
+    "explicit_build": true,
+    "fdid": 1277743,
+    "layout": "56F30531",
+    "raw_sha256": "35bbc193595e611eaac37ee72b6e4617697f6d7d687582acb5231814d28a4653",
+    "schema_sha256": "3f6a5e14db1d6a469dba2b0ab2d8498712ae101a61668d19908cd5b101892289",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemDamageOneHand.dbd",
+    "table_hash": "E0A6BB08"
+  },
+  "ItemDamageOneHandCaster": {
+    "columns": [
+      "ItemLevel",
+      "Quality_0",
+      "Quality_1",
+      "Quality_2",
+      "Quality_3",
+      "Quality_4",
+      "Quality_5",
+      "Quality_6"
+    ],
+    "explicit_build": true,
+    "fdid": 1277739,
+    "layout": "56F30531",
+    "raw_sha256": "8c5d1481919488dd485b703bc19abced4ea81a8552eee8cd5410be4700403e68",
+    "schema_sha256": "3f6a5e14db1d6a469dba2b0ab2d8498712ae101a61668d19908cd5b101892289",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemDamageOneHandCaster.dbd",
+    "table_hash": "F2972767"
+  },
+  "ItemDamageTwoHand": {
+    "columns": [
+      "ItemLevel",
+      "Quality_0",
+      "Quality_1",
+      "Quality_2",
+      "Quality_3",
+      "Quality_4",
+      "Quality_5",
+      "Quality_6"
+    ],
+    "explicit_build": true,
+    "fdid": 1277738,
+    "layout": "56F30531",
+    "raw_sha256": "90496b8efdb747df7293571c27925407a0dbc528ee5544d53733bfd83c08ee59",
+    "schema_sha256": "3f6a5e14db1d6a469dba2b0ab2d8498712ae101a61668d19908cd5b101892289",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemDamageTwoHand.dbd",
+    "table_hash": "D8C5FD43"
+  },
+  "ItemDamageTwoHandCaster": {
+    "columns": [
+      "ItemLevel",
+      "Quality_0",
+      "Quality_1",
+      "Quality_2",
+      "Quality_3",
+      "Quality_4",
+      "Quality_5",
+      "Quality_6"
+    ],
+    "explicit_build": true,
+    "fdid": 1277742,
+    "layout": "56F30531",
+    "raw_sha256": "ac0697a06745bcbe90ce231d42ac53cc0cbb1fcdff71a851fcb9001a71ffdae7",
+    "schema_sha256": "3f6a5e14db1d6a469dba2b0ab2d8498712ae101a61668d19908cd5b101892289",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemDamageTwoHandCaster.dbd",
+    "table_hash": "80A1A0FA"
+  },
+  "RandPropPoints": {
+    "columns": [
+      "ID",
+      "GoodF_0",
+      "GoodF_1",
+      "GoodF_2",
+      "GoodF_3",
+      "GoodF_4",
+      "SuperiorF_0",
+      "SuperiorF_1",
+      "SuperiorF_2",
+      "SuperiorF_3",
+      "SuperiorF_4",
+      "EpicF_0",
+      "EpicF_1",
+      "EpicF_2",
+      "EpicF_3",
+      "EpicF_4"
+    ],
+    "explicit_build": true,
+    "fdid": 1310245,
+    "layout": "4FD22743",
+    "raw_sha256": "a3edc16cbf61a3b0ea7ef297692fef5def352a882a6df5c30254caea28f79a3e",
+    "schema_sha256": "4070bfa66ecee3441dd149c4c9199bd933d00a7dee24cfc698bc30d5aa256c9c",
+    "schema_source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/RandPropPoints.dbd",
+    "table_hash": "5D8CEFA6"
+  }
+}

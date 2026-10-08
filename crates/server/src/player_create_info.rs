@@ -8,8 +8,8 @@ use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 
 use crate::inventory::inventory_model::InventoryModel;
-use crate::item_templates::ItemTemplates;
-use crate::merchant::VendorCatalog;
+use crate::item_templates::{ItemTemplate, ItemTemplates};
+use crate::merchant::{VendorCatalog, VendorGoods};
 use crate::persistence::inventory_store::InventoryRecord;
 use crate::persistence::{CharacterData, InventoryItemData};
 use crate::persistence_progression::{ActionRefData, ProgressionData};
@@ -17,6 +17,11 @@ use crate::race_class::{playable_pairs, race_mask_has_race};
 
 /// `CharacterLoadoutEntry::IsForNewCharacter` (DB2Structure.h:664).
 const NEW_CHARACTER_LOADOUT: u32 = 9;
+const FOREVER_BUILD: &str = "1.60.1.70205";
+
+fn is_skyborne_race(race: u8) -> bool {
+    matches!(race, 95 | 96)
+}
 /// `ITEM_CLASS_CONSUMABLE` / `ITEM_SUBCLASS_FOOD_DRINK` (ItemTemplate.h:486).
 const ITEM_CLASS_CONSUMABLE: u8 = 0;
 const ITEM_SUBCLASS_FOOD_DRINK: u8 = 5;
@@ -39,7 +44,13 @@ pub struct PlayerCreateInfo {
 
 /// Kits of every playable race/class (`race_class::playable_pairs`).
 #[derive(Resource, Debug, Default)]
-pub struct PlayerCreateInfos(pub HashMap<(u8, u8), PlayerCreateInfo>);
+pub struct PlayerCreateInfos(pub HashMap<(u8, u8), PlayerCreateInfo>, SkyborneKitItems);
+
+#[derive(Debug, Default)]
+struct SkyborneKitItems {
+    templates: HashMap<u32, ItemTemplate>,
+    goods: HashMap<u32, VendorGoods>,
+}
 
 impl PlayerCreateInfos {
     /// Test fixture: every playable pair with an empty kit.
@@ -49,6 +60,7 @@ impl PlayerCreateInfos {
             playable_pairs()
                 .map(|pair| (pair, PlayerCreateInfo::default()))
                 .collect(),
+            SkyborneKitItems::default(),
         )
     }
 
@@ -95,28 +107,41 @@ const LOADOUT_QUERY: &str = "SELECT l.ChrClassID, l.RaceMasks_0, l.RaceMasks_1, 
       WHERE x.ItemID = li.ItemID ORDER BY e.LegacySlotIndex LIMIT 1) \
      FROM character_loadout l JOIN character_loadout_item li ON li.CharacterLoadoutID = l.ID \
      JOIN content_item c ON c.ID = li.ItemID \
-     WHERE l.Purpose = ?1 ORDER BY l.ID, li.ID";
+     WHERE l.Purpose = ?1 AND EXISTS (SELECT 1 FROM db2_row_source p \
+      WHERE p.table_name='character_loadout' AND p.row_id=l.ID AND p.build=?3) = ?2 \
+     ORDER BY l.ID, li.ID";
 
 /// ObjectMgr.cpp:3938-3994: items of every `CharacterLoadout` with Purpose 9, for
 /// each race in its `RaceMask` (`RaceMask::HasRace`). Items without a `content_item`
 /// row (TrinityCore: no item template) are skipped.
-fn load_loadout_items(conn: &Connection) -> rusqlite::Result<Vec<LoadoutItem>> {
-    let mut statement = conn.prepare(LOADOUT_QUERY)?;
-    let rows = statement.query_map([NEW_CHARACTER_LOADOUT], |row| {
-        let amount = |column| -> rusqlite::Result<u32> {
-            Ok(row.get::<_, i64>(column)?.clamp(1, i64::from(u32::MAX)) as u32)
-        };
-        Ok(LoadoutItem {
-            class_id: row.get(0)?,
-            race_masks: [row.get::<_, i64>(1)? as u32, row.get::<_, i64>(2)? as u32],
-            item_id: row.get(3)?,
-            buy_count: amount(4)?,
-            max_stack: amount(5)?,
-            item_class: row.get(6)?,
-            item_subclass: row.get(7)?,
-            effect_category: row.get(8)?,
-        })
-    })?;
+fn load_loadout_items(conn: &Connection, forever: bool) -> rusqlite::Result<Vec<LoadoutItem>> {
+    let query = if forever {
+        LOADOUT_QUERY
+            .replace("content_item", "skyborne_content_item")
+            .replace("item_x_item_effect", "skyborne_item_x_item_effect")
+            .replace("JOIN item_effect", "JOIN skyborne_item_effect")
+    } else {
+        LOADOUT_QUERY.to_owned()
+    };
+    let mut statement = conn.prepare(&query)?;
+    let rows = statement.query_map(
+        rusqlite::params![NEW_CHARACTER_LOADOUT, forever, FOREVER_BUILD],
+        |row| {
+            let amount = |column| -> rusqlite::Result<u32> {
+                Ok(row.get::<_, i64>(column)?.clamp(1, i64::from(u32::MAX)) as u32)
+            };
+            Ok(LoadoutItem {
+                class_id: row.get(0)?,
+                race_masks: [row.get::<_, i64>(1)? as u32, row.get::<_, i64>(2)? as u32],
+                item_id: row.get(3)?,
+                buy_count: amount(4)?,
+                max_stack: amount(5)?,
+                item_class: row.get(6)?,
+                item_subclass: row.get(7)?,
+                effect_category: row.get(8)?,
+            })
+        },
+    )?;
     rows.collect()
 }
 
@@ -142,7 +167,10 @@ fn apply_item_overrides(
     for row in rows {
         let (race, class, item_id, amount) = row?;
         for ((pair_race, pair_class), info) in infos.iter_mut() {
-            if (race != 0 && race != *pair_race) || (class != 0 && class != *pair_class) {
+            if is_skyborne_race(*pair_race)
+                || (race != 0 && race != *pair_race)
+                || (class != 0 && class != *pair_class)
+            {
                 continue;
             }
             match amount {
@@ -197,15 +225,70 @@ fn load_actions(conn: &Connection) -> rusqlite::Result<Vec<(u8, u8, u8, ActionRe
     Ok(actions)
 }
 
+fn kit_data_error(message: String) -> rusqlite::Error {
+    rusqlite::Error::SqliteFailure(
+        rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT),
+        Some(message),
+    )
+}
+
+fn validate_forever_content(conn: &Connection) -> rusqlite::Result<()> {
+    let mut statement = conn.prepare(
+        "SELECT DISTINCT li.ItemID FROM character_loadout l \
+         JOIN character_loadout_item li ON li.CharacterLoadoutID=l.ID \
+         JOIN db2_row_source p ON p.table_name='character_loadout' AND p.row_id=l.ID \
+         LEFT JOIN skyborne_content_item c ON c.ID=li.ItemID \
+         LEFT JOIN skyborne_item i ON i.ID=li.ItemID \
+         LEFT JOIN skyborne_item_sparse s ON s.ID=li.ItemID \
+         WHERE p.build=? AND (c.ID IS NULL OR i.ID IS NULL OR s.ID IS NULL) \
+         ORDER BY li.ItemID",
+    )?;
+    let missing = statement
+        .query_map([FOREVER_BUILD], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(kit_data_error(format!(
+            "missing required Forever kit content: {missing:?}"
+        )))
+    }
+}
+
+fn apply_loadout_items(
+    infos: &mut HashMap<(u8, u8), PlayerCreateInfo>,
+    items: Vec<LoadoutItem>,
+    forever: bool,
+) {
+    for item in items {
+        for ((race, class), info) in infos.iter_mut() {
+            if is_skyborne_race(*race) == forever
+                && *class == item.class_id
+                && race_mask_has_race(item.race_masks, *race)
+            {
+                info.items.push((item.item_id, item.count()));
+            }
+        }
+    }
+}
+
 pub fn load_player_create_infos(conn: &Connection) -> rusqlite::Result<PlayerCreateInfos> {
+    validate_forever_content(conn)?;
+    let skyborne = SkyborneKitItems {
+        templates: crate::item_templates::load_skyborne_item_templates(conn)?,
+        goods: crate::merchant::load_skyborne_goods(conn)?,
+    };
     let mut infos: HashMap<(u8, u8), PlayerCreateInfo> = playable_pairs()
         .map(|pair| (pair, PlayerCreateInfo::default()))
         .collect();
-    for item in load_loadout_items(conn)? {
-        for ((race, class), info) in infos.iter_mut() {
-            if *class == item.class_id && race_mask_has_race(item.race_masks, *race) {
-                info.items.push((item.item_id, item.count()));
-            }
+    for forever in [false, true] {
+        apply_loadout_items(&mut infos, load_loadout_items(conn, forever)?, forever);
+    }
+    for (&(race, class), info) in &infos {
+        if is_skyborne_race(race) && info.items.is_empty() {
+            return Err(kit_data_error(format!(
+                "race {race} class {class} has no authored Forever kit"
+            )));
         }
     }
     apply_item_overrides(conn, &mut infos)?;
@@ -214,7 +297,7 @@ pub fn load_player_create_infos(conn: &Connection) -> rusqlite::Result<PlayerCre
             info.actions.push((slot, action));
         }
     }
-    Ok(PlayerCreateInfos(infos))
+    Ok(PlayerCreateInfos(infos, skyborne))
 }
 
 /// Test fixture owning a kit: empty (`bare`) or the real data/world.db one.
@@ -241,7 +324,8 @@ impl OwnedKit {
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         Some(Self {
             create_info: load_player_create_infos(&conn).expect("player create info"),
-            templates: crate::item_templates::load_item_templates(&path).expect("item templates"),
+            templates: crate::item_templates::load_runtime_item_templates(&path)
+                .expect("source-qualified item templates"),
             catalog: crate::merchant::load_vendor_catalog(&conn).expect("vendor catalog"),
         })
     }
@@ -281,11 +365,12 @@ impl NewCharacterKit<'_> {
             bag_slots: Vec::new(),
             instances: HashMap::new(),
             item_durability: HashMap::new(),
+            definition_sources: HashMap::new(),
         };
         let mut model = InventoryModel::from_record(empty, self.templates, mint);
         for &(item_id, count) in &info.items {
-            let (item, template) = self.new_item(item_id, count, mint())?;
-            if let Err(error) = model.store_new_item_in_best_slots(item, template, mint) {
+            let (item, template, source) = self.new_item(race, item_id, count, mint())?;
+            if let Err(error) = model.store_new_item_in_best_slots(item, source, template, mint) {
                 error!(
                     "race {race} class {class} cannot equip or store kit item {item_id}: {error:?}"
                 );
@@ -317,19 +402,37 @@ impl NewCharacterKit<'_> {
 
     fn new_item(
         &self,
+        race: u8,
         item_id: u32,
         count: u32,
         item_guid: u64,
-    ) -> Result<(InventoryItemData, crate::item_templates::ItemTemplate), String> {
-        let template = *self
-            .templates
-            .get(item_id)
-            .ok_or_else(|| format!("kit item {item_id} has no template"))?;
-        let goods = self
-            .catalog
-            .goods
-            .get(&item_id)
-            .ok_or_else(|| format!("kit item {item_id} is not in content_item"))?;
+    ) -> Result<
+        (
+            InventoryItemData,
+            ItemTemplate,
+            shared::item_data::ItemDefinitionSource,
+        ),
+        String,
+    > {
+        use shared::item_data::ItemDefinitionSource;
+        let (source, template, goods) = if is_skyborne_race(race) {
+            (
+                ItemDefinitionSource::Forever70205,
+                self.create_info.1.templates.get(&item_id),
+                self.create_info.1.goods.get(&item_id),
+            )
+        } else {
+            (
+                ItemDefinitionSource::Retail,
+                self.templates.get(ItemDefinitionSource::Retail, item_id),
+                self.catalog.goods.get(&item_id),
+            )
+        };
+        let template = *template
+            .ok_or_else(|| format!("race {race} kit item {item_id} has no {source:?} template"))?;
+        let goods = goods.ok_or_else(|| {
+            format!("race {race} kit item {item_id} has no {source:?} catalog row")
+        })?;
         let item = InventoryItemData {
             item_guid,
             item_id,
@@ -340,7 +443,7 @@ impl NewCharacterKit<'_> {
             vendor_sell_price: goods.sell_price,
             unique_auction: false,
         };
-        Ok((item, template))
+        Ok((item, template, source))
     }
 }
 
@@ -373,3 +476,7 @@ fn startup_load_player_create_infos(mut commands: Commands) {
 #[cfg(test)]
 #[path = "player_create_info_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "skyborne_kit_tests.rs"]
+mod skyborne_tests;

@@ -145,7 +145,9 @@ fn bid_only_auction_rejects_buyout() {
     assert!(response.success);
     let auction_id = *state.auctions.keys().next().expect("auction id");
 
-    let results = search_auctions(&state.auctions, &text_query(""));
+    let results = search_auctions(&state.auctions, &text_query(""), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.results[0].buyout_price, None);
 
     let buyout = buyout_auction(&db, &mut state, buyer_id, auction_id);

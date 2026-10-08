@@ -23,7 +23,9 @@ fn create_auction_appears_in_search_results() {
     );
     assert!(response.success);
 
-    let results = search_auctions(&state.auctions, &text_query(""));
+    let results = search_auctions(&state.auctions, &text_query(""), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 1);
     assert_eq!(results.results.len(), 1);
     let listing = &results.results[0];
@@ -34,10 +36,16 @@ fn create_auction_appears_in_search_results() {
     assert_eq!(listing.owner_name, "Seller");
 
     let name_prefix = &source_item.name[..3].to_ascii_lowercase();
-    let name_results = search_auctions(&state.auctions, &text_query(name_prefix));
+    let name_results = search_auctions(&state.auctions, &text_query(name_prefix), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(name_results.total_results, 1);
 
-    let empty_results = search_auctions(&state.auctions, &text_query("zzz_nonexistent_item"));
+    let empty_results = search_auctions(
+        &state.auctions,
+        &text_query("zzz_nonexistent_item"),
+        &|_| shared::item_data::ItemDefinitionSource::Retail,
+    );
     assert_eq!(empty_results.total_results, 0);
     assert!(empty_results.results.is_empty());
 }
@@ -97,37 +105,51 @@ fn search_filters_by_name_quality_and_level_range() {
         .insert(3, test_auction(3, "Linen Cloth", 1, 5));
     state.auctions.insert(4, test_auction(4, "Iron Ore", 1, 1));
 
-    let results = search_auctions(&state.auctions, &text_query("sword"));
+    let results = search_auctions(&state.auctions, &text_query("sword"), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 2);
 
-    let results = search_auctions(&state.auctions, &text_query("iron"));
+    let results = search_auctions(&state.auctions, &text_query("iron"), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 2);
 
     let mut query = text_query("");
     query.quality = Some(3);
-    let results = search_auctions(&state.auctions, &query);
+    let results = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 1);
     assert_eq!(results.results[0].item.name, "Steel Sword");
 
     let mut query = text_query("");
     query.min_level = Some(10);
-    let results = search_auctions(&state.auctions, &query);
+    let results = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 2);
 
     let mut query = text_query("");
     query.max_level = Some(5);
-    let results = search_auctions(&state.auctions, &query);
+    let results = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 2);
 
     let mut query = text_query("iron");
     query.min_level = Some(1);
     query.max_level = Some(10);
-    let results = search_auctions(&state.auctions, &query);
+    let results = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 2);
 
     let mut query = text_query("sword");
     query.quality = Some(3);
-    let results = search_auctions(&state.auctions, &query);
+    let results = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 1);
     assert_eq!(results.results[0].item.name, "Steel Sword");
 }
@@ -141,25 +163,35 @@ fn search_returns_empty_for_non_matching_filters() {
 
     let mut query = text_query("");
     query.quality = Some(4);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
 
     let mut query = text_query("");
     query.min_level = Some(30);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
 
     let mut query = text_query("");
     query.max_level = Some(10);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
 
-    let r = search_auctions(&state.auctions, &text_query("zzz"));
+    let r = search_auctions(&state.auctions, &text_query("zzz"), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
 
     let mut query = text_query("iron");
     query.quality = Some(4);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
 }
 
@@ -181,7 +213,9 @@ fn search_with_all_filters_combined() {
     query.quality = Some(2);
     query.min_level = Some(10);
     query.max_level = Some(25);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 1);
     assert_eq!(r.results[0].item.name, "Iron Sword");
 
@@ -189,14 +223,18 @@ fn search_with_all_filters_combined() {
     query.quality = Some(2);
     query.min_level = Some(1);
     query.max_level = Some(25);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 2);
 
     let mut query = text_query("iron");
     query.quality = Some(4);
     query.min_level = Some(10);
     query.max_level = Some(25);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
 }
 
@@ -215,7 +253,9 @@ fn faction_isolation_filters_auctions() {
 
     let mut query = text_query("");
     query.faction = 1;
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 2);
     let names: Vec<&str> = r.results.iter().map(|l| l.item.name.as_str()).collect();
     assert!(names.contains(&"Alliance Sword"));
@@ -223,13 +263,17 @@ fn faction_isolation_filters_auctions() {
 
     let mut query = text_query("");
     query.faction = 2;
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 2);
     let names: Vec<&str> = r.results.iter().map(|l| l.item.name.as_str()).collect();
     assert!(names.contains(&"Horde Axe"));
     assert!(names.contains(&"Neutral Cloth"));
 
-    let r = search_auctions(&state.auctions, &text_query(""));
+    let r = search_auctions(&state.auctions, &text_query(""), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 3);
 }
 
@@ -272,6 +316,7 @@ fn sort_by_price_time_remaining_and_name() {
                 faction: 0,
                 ..Default::default()
             },
+            &|_| shared::item_data::ItemDefinitionSource::Retail,
         )
     };
     let names = |r: AuctionSearchResults| -> Vec<String> {
@@ -320,6 +365,7 @@ fn pagination_respects_page_boundaries() {
                 faction: 0,
                 ..Default::default()
             },
+            &|_| shared::item_data::ItemDefinitionSource::Retail,
         )
     };
 

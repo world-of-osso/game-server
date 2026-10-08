@@ -1,5 +1,7 @@
 use super::*;
 
+include!("skyborne_faction_fixture.rs");
+
 /// FactionTemplate IDs (Retail DB2, AzerothCore `creature_template.faction`).
 const HUMAN: u32 = 1;
 const ORC: u32 = 2;
@@ -35,6 +37,15 @@ fn maps_horde_race_to_horde_faction() {
 }
 
 #[test]
+fn skyborne_factions_follow_forever_chr_races() {
+    for (race, faction, group, template) in [(95, 1, 3, 3629), (96, 2, 5, 3628)] {
+        assert_eq!(faction_for_race(race), faction);
+        assert_eq!(faction_group_for_race(race), group);
+        assert_eq!(faction_template_for_race(race), template);
+    }
+}
+
+#[test]
 fn maps_unknown_race_to_neutral_faction() {
     assert_eq!(faction_for_race(0), 0);
 }
@@ -45,6 +56,29 @@ fn race_faction_templates_come_from_chr_races() {
     assert_eq!(faction_template_for_race(2), ORC);
     assert_eq!(faction_template_for_race(10), 1610);
     assert_eq!(faction_template_for_race(22), 2203);
+}
+
+#[test]
+fn skyborne_imported_templates_have_authored_reactions() {
+    let mut templates = world_db_faction_templates().expect("world.db factions");
+    let scratch = Connection::open_in_memory().expect("scratch database");
+    scratch
+        .execute_batch(SKYBORNE_FACTION_SQL)
+        .expect("source-decoded faction fixture");
+    templates.0.extend(
+        load_faction_templates(&scratch)
+            .expect("imported templates")
+            .0,
+    );
+    for (skyborne, ally, enemy) in [(3629, HUMAN, ORC), (3628, ORC, HUMAN)] {
+        assert_eq!(templates.reaction(skyborne, ally), Reaction::Friendly);
+        assert_eq!(templates.reaction(ally, skyborne), Reaction::Friendly);
+        assert_eq!(templates.reaction(skyborne, enemy), Reaction::Hostile);
+        assert_eq!(templates.reaction(enemy, skyborne), Reaction::Hostile);
+        assert!(templates.can_assist(player(skyborne), player(ally)));
+        assert!(!templates.can_assist(player(skyborne), player(enemy)));
+        assert!(!templates.can_attack(player(skyborne), player(enemy)));
+    }
 }
 
 #[test]

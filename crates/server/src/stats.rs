@@ -21,7 +21,7 @@ use crate::character_stats_data::{
     SPEED_RATING, VERSATILITY_RATING,
 };
 use crate::class_progression::{ActiveSpec, KnownSpells};
-use crate::item_stats::{ItemScalingTables, WeaponDamage, item_stats};
+use crate::item_stats::{ForeverItemScalingTables, ItemScalingTables, WeaponDamage, item_stats};
 use crate::item_templates::ItemTemplates;
 use crate::melee::PlayerDefense;
 use crate::spell_info::{ClassInfo, ClassSpells, SpellStore};
@@ -35,7 +35,7 @@ const BASE_MASTERY_POINTS: f32 = 8.0;
 /// entry and after every item change.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
 pub struct EquippedItems {
-    pub items: Vec<(EquipmentSlot, u32)>,
+    pub items: Vec<(EquipmentSlot, shared::item_data::ItemDefinitionSource, u32)>,
 }
 
 /// Aura stat changes, folded in after base + gear. Absent means none.
@@ -484,9 +484,29 @@ fn spec_inputs(
 pub(crate) struct ItemData<'w> {
     templates: Option<Res<'w, ItemTemplates>>,
     tables: Option<Res<'w, ItemScalingTables>>,
+    forever_tables: Option<Res<'w, ForeverItemScalingTables>>,
 }
 
 impl ItemData<'_> {
+    fn scaling_tables(
+        &self,
+        source: shared::item_data::ItemDefinitionSource,
+    ) -> &ItemScalingTables {
+        match source {
+            shared::item_data::ItemDefinitionSource::Retail => self
+                .tables
+                .as_deref()
+                .expect("Retail gear requires Retail scaling tables"),
+            shared::item_data::ItemDefinitionSource::Forever70205 => {
+                &self
+                    .forever_tables
+                    .as_deref()
+                    .expect("Forever70205 gear requires Forever70205 scaling tables")
+                    .0
+            }
+        }
+    }
+
     /// Stat blocks of every equipped item and the main- and off-hand weapons.
     fn gear(&self, equipped: Option<&EquippedItems>) -> Gear {
         let mut gear = Gear {
@@ -497,16 +517,21 @@ impl ItemData<'_> {
             shield_armor: None,
             health_regen: 0.0,
         };
-        let (Some(templates), Some(tables), Some(equipped)) =
-            (self.templates.as_deref(), self.tables.as_deref(), equipped)
-        else {
+        let Some(equipped) = equipped else {
             return gear;
         };
-        for &(slot, item_id) in &equipped.items {
-            let Some(template) = templates.get(item_id) else {
-                continue;
-            };
-            let stats = item_stats(template, tables);
+        if equipped.items.is_empty() {
+            return gear;
+        }
+        let templates = self
+            .templates
+            .as_deref()
+            .expect("equipped items require definition catalogs");
+        for &(slot, source, item_id) in &equipped.items {
+            let template = templates
+                .get(source, item_id)
+                .unwrap_or_else(|| panic!("equipped item {item_id} has no {source:?} definition"));
+            let stats = item_stats(template, self.scaling_tables(source));
             gear.blocks.push(stats.block);
             gear.health_regen += stats.health_regen;
             if template.inventory_type == INVTYPE_SHIELD && slot == EquipmentSlot::OffHand {

@@ -1,0 +1,285 @@
+{
+  "character_loadout": [
+    {
+      "ID": 2373,
+      "ChrClassID": 4,
+      "Purpose": 9,
+      "ModID": 75,
+      "Extra": 0,
+      "RaceMasks_0": 0,
+      "RaceMasks_1": 3
+    },
+    {
+      "ID": 2374,
+      "ChrClassID": 3,
+      "Purpose": 9,
+      "ModID": 75,
+      "Extra": 0,
+      "RaceMasks_0": 0,
+      "RaceMasks_1": 3
+    },
+    {
+      "ID": 2375,
+      "ChrClassID": 1,
+      "Purpose": 9,
+      "ModID": 75,
+      "Extra": 0,
+      "RaceMasks_0": 0,
+      "RaceMasks_1": 3
+    },
+    {
+      "ID": 2376,
+      "ChrClassID": 8,
+      "Purpose": 9,
+      "ModID": 75,
+      "Extra": 0,
+      "RaceMasks_0": 0,
+      "RaceMasks_1": 3
+    },
+    {
+      "ID": 2377,
+      "ChrClassID": 7,
+      "Purpose": 9,
+      "ModID": 75,
+      "Extra": 0,
+      "RaceMasks_0": 0,
+      "RaceMasks_1": 3
+    },
+    {
+      "ID": 2378,
+      "ChrClassID": 11,
+      "Purpose": 9,
+      "ModID": 75,
+      "Extra": 0,
+      "RaceMasks_0": 0,
+      "RaceMasks_1": 3
+    }
+  ],
+  "character_loadout_item": [
+    {
+      "ID": 35131,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 4540
+    },
+    {
+      "ID": 35132,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 2947
+    },
+    {
+      "ID": 35133,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 6948
+    },
+    {
+      "ID": 35138,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 159
+    },
+    {
+      "ID": 35139,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 2504
+    },
+    {
+      "ID": 35140,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 2101
+    },
+    {
+      "ID": 35141,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 2512
+    },
+    {
+      "ID": 35142,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 117
+    },
+    {
+      "ID": 35143,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 6948
+    },
+    {
+      "ID": 35149,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 117
+    },
+    {
+      "ID": 35150,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 6948
+    },
+    {
+      "ID": 35155,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 35
+    },
+    {
+      "ID": 35156,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 117
+    },
+    {
+      "ID": 35157,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 159
+    },
+    {
+      "ID": 35158,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 6948
+    },
+    {
+      "ID": 35160,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 117
+    },
+    {
+      "ID": 35161,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 159
+    },
+    {
+      "ID": 35164,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 6948
+    },
+    {
+      "ID": 35171,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 6948
+    },
+    {
+      "ID": 35172,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 3661
+    },
+    {
+      "ID": 35175,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 159
+    },
+    {
+      "ID": 35176,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 4536
+    },
+    {
+      "ID": 36235,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 271668
+    },
+    {
+      "ID": 36236,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 271666
+    },
+    {
+      "ID": 36237,
+      "CharacterLoadoutID": 2378,
+      "ItemID": 271665
+    },
+    {
+      "ID": 36238,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 271668
+    },
+    {
+      "ID": 36239,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 271666
+    },
+    {
+      "ID": 36240,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 271665
+    },
+    {
+      "ID": 36241,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 271659
+    },
+    {
+      "ID": 36242,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 271658
+    },
+    {
+      "ID": 36243,
+      "CharacterLoadoutID": 2376,
+      "ItemID": 271655
+    },
+    {
+      "ID": 36244,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 271673
+    },
+    {
+      "ID": 36245,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 271674
+    },
+    {
+      "ID": 36246,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 271675
+    },
+    {
+      "ID": 36247,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 271661
+    },
+    {
+      "ID": 36248,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 271662
+    },
+    {
+      "ID": 36249,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 271663
+    },
+    {
+      "ID": 36250,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 271671
+    },
+    {
+      "ID": 36251,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 271672
+    },
+    {
+      "ID": 36252,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 271669
+    },
+    {
+      "ID": 36433,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 280399
+    },
+    {
+      "ID": 36434,
+      "CharacterLoadoutID": 2377,
+      "ItemID": 280400
+    },
+    {
+      "ID": 36897,
+      "CharacterLoadoutID": 2375,
+      "ItemID": 876
+    },
+    {
+      "ID": 36899,
+      "CharacterLoadoutID": 2373,
+      "ItemID": 2092
+    },
+    {
+      "ID": 36901,
+      "CharacterLoadoutID": 2374,
+      "ItemID": 2092
+    }
+  ]
+}

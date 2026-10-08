@@ -29,7 +29,15 @@ fn main() {
     };
 
     let data = character_data::CharacterData::decode_compatible(raw.value()).expect("decode");
+    let stored = data.encode_stored();
+    let round_trip =
+        character_data::CharacterData::decode_stored(&stored).expect("decode current storage");
+    assert_eq!(
+        round_trip, data,
+        "current storage codec changed the inspected character"
+    );
     println!("character_id={character_id}");
+    println!("stored_bytes={}", stored.len());
     println!("name={}", data.name);
     println!("appearance={:?}", data.appearance);
     println!("equipment_appearance={:?}", data.equipment_appearance);

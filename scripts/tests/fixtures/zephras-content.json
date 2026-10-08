@@ -1,0 +1,642 @@
+{
+  "map": 2991,
+  "zone": 16593,
+  "provenance": "forever-zephras-20261004",
+  "reconstructed": true,
+  "quests": [
+    {
+      "id": 92460,
+      "name": "Coming of Age",
+      "level": 1,
+      "reqlevel": 1,
+      "side": 3,
+      "races": [
+        95
+      ],
+      "race_mask": 4294967296,
+      "classes": null,
+      "class_mask": 0,
+      "starter_npc_ids": [
+        251362
+      ],
+      "ender_npc_ids": [
+        251361
+      ],
+      "objectives": [],
+      "text": {
+        "objectives": "Speak with Rorian the Dayseeker in Thendal Grove.",
+        "description": "Look at you, bright eyed and ready for adventure! We've been awaiting your arrival and anticipating your much needed help here in Thendal Village. I imagine you are brimming with both nerves and excitement for what is to come. After all, you only get to come of age once in a lifetime.\n\n<Ailee smiles kindly.>\n\nGo, seek out our village leader Rorian the Dayseeker at the entrance to the greatfather tree just west of here. He will get you started on your journey.",
+        "completion": "Gale's greetings, <name>. I am honored to bestow your coming of age relic today as you are recognized for the potential you bring to the shen'dorei. Our people have faced great hardship and persecution in our complex history.\n\nToday you are given this relic which is one of many held by those before you. Someday when your ashes are scattered to the winds it will pass to another to continue our tradition.\n\nAs you take this relic with you know that the winds of home will be with you wherever you travel."
+      },
+      "rewards": {
+        "xp": 40,
+        "money": 0,
+        "items": [
+          [
+            264908,
+            1
+          ]
+        ],
+        "choice_items": null,
+        "spells": null,
+        "reputation": [
+          [
+            2778,
+            25
+          ],
+          [
+            2779,
+            25
+          ]
+        ],
+        "scaling": {
+          "minLevel": 1,
+          "maxLevel": 1,
+          "xp": {
+            "multiplier": 1,
+            "levels": {
+              "1": 40
+            }
+          },
+          "coin": {
+            "rewardAtCap": 0,
+            "multiplier": 1,
+            "levels": {
+              "1": 0
+            }
+          }
+        }
+      },
+      "series": {
+        "rows": [
+          [
+            92460
+          ],
+          [
+            92461
+          ]
+        ],
+        "ids": [
+          92460,
+          92461
+        ],
+        "order": 1,
+        "prev": [],
+        "next": [
+          92461
+        ]
+      },
+      "category": 16593,
+      "source": "https://www.wowhead.com/forever/quest=92460",
+      "page_captured": true
+    },
+    {
+      "id": 92461,
+      "name": "Harmony in Balance",
+      "level": 1,
+      "reqlevel": 1,
+      "side": 3,
+      "races": [
+        95
+      ],
+      "race_mask": 4294967296,
+      "classes": null,
+      "class_mask": 0,
+      "starter_npc_ids": [
+        251361
+      ],
+      "ender_npc_ids": [
+        251361
+      ],
+      "objectives": [
+        {
+          "type": "kill",
+          "target_kind": "npc",
+          "target_id": 250873,
+          "count": 8,
+          "name": "Juvenile Vuldren slain (8)",
+          "source": "objective table"
+        }
+      ],
+      "text": {
+        "objectives": "Slay 8 Vuldren Juveniles in Thendal Grove.\n \nJuvenile Vuldren slain (8)",
+        "description": "We live in times of great uncertainty for our people. We face unprecedented challenges that may require bold solutions, but we also must contend with the ordinary and mundane here in Thendal Grove. Take, for example, the recent unsustainable rise in the vuldren population.\n\nThe vuldren are a vital part of our ecosystem. However, imbalances must be corrected to maintain the delicate harmony that all creatures in Thendal Grove share.\n\nHead east and cull some of the vuldren there.",
+        "completion": "Thank you for your service to Zephras, young <class>.\n\nThe vuldren are typically quite docile, but the animals that call Zephras home can sense when the magic on the winds is out of balance, which can lead to dangerous and unpredictable behavior if left unchecked."
+      },
+      "rewards": {
+        "xp": 80,
+        "money": 15,
+        "items": null,
+        "choice_items": [
+          [
+            257281,
+            1
+          ],
+          [
+            257280,
+            1
+          ]
+        ],
+        "spells": null,
+        "reputation": [
+          [
+            2778,
+            50
+          ],
+          [
+            2779,
+            50
+          ]
+        ],
+        "scaling": {
+          "minLevel": 1,
+          "maxLevel": 1,
+          "xp": {
+            "multiplier": 1,
+            "levels": {
+              "1": 80
+            }
+          },
+          "coin": {
+            "rewardAtCap": 0,
+            "multiplier": 1,
+            "levels": {
+              "1": 15
+            }
+          }
+        }
+      },
+      "series": {
+        "rows": [
+          [
+            92460
+          ],
+          [
+            92461
+          ]
+        ],
+        "ids": [
+          92460,
+          92461
+        ],
+        "order": 2,
+        "prev": [
+          92460
+        ],
+        "next": []
+      },
+      "category": 16593,
+      "source": "https://www.wowhead.com/forever/quest=92461",
+      "page_captured": true
+    },
+    {
+      "id": 92465,
+      "name": "Agitators",
+      "level": 3,
+      "reqlevel": 2,
+      "side": 3,
+      "races": [
+        95
+      ],
+      "race_mask": 4294967296,
+      "classes": null,
+      "class_mask": 0,
+      "starter_npc_ids": [
+        249363
+      ],
+      "ender_npc_ids": [
+        249363
+      ],
+      "objectives": [
+        {
+          "type": "kill",
+          "target_kind": "npc",
+          "target_id": 251160,
+          "count": 7,
+          "name": "Al'Aketh Convert slain (7)",
+          "source": "objective table"
+        },
+        {
+          "type": "unknown",
+          "target_kind": "npc",
+          "target_id": 251143,
+          "count": 6,
+          "name": "Roiling Winds destroyed (6)",
+          "source": "objective table"
+        }
+      ],
+      "text": {
+        "objectives": "Slay 6 Roiling Winds and 7 Al'Aketh Converts in Thendal Grove.\n \nAl'Aketh Convert slain (7)\n\n \nRoiling Winds destroyed (6)",
+        "description": "The Al'Aketh cult is a blight upon this island. These cultists are surely the ones responsible for agitating the simple wind sprites that reside here and turning them violent.\n\nRegrettably, we'll need to disperse these roiling winds here before they harm someone. We also need to send a clear message to the cult that they are not welcome in the grove.\n\nWill you lend me your aid, <class>?",
+        "progress": "Is it done?",
+        "completion": "It pains me to shed shen'dorei blood here in the grove, but we do what we must."
+      },
+      "rewards": {
+        "xp": 250,
+        "money": 50,
+        "items": null,
+        "choice_items": null,
+        "spells": null,
+        "reputation": [
+          [
+            2778,
+            50
+          ],
+          [
+            2779,
+            50
+          ]
+        ],
+        "scaling": {
+          "minLevel": 3,
+          "maxLevel": 3,
+          "xp": {
+            "multiplier": 1,
+            "levels": {
+              "3": 250
+            }
+          },
+          "coin": {
+            "rewardAtCap": 0,
+            "multiplier": 1,
+            "levels": {
+              "3": 50
+            }
+          }
+        }
+      },
+      "series": {
+        "rows": [
+          [
+            92464
+          ],
+          [
+            92465
+          ],
+          [
+            92469,
+            92471
+          ],
+          [
+            92470
+          ],
+          [
+            92472
+          ]
+        ],
+        "ids": [
+          92464,
+          92465,
+          92469,
+          92471,
+          92470,
+          92472
+        ],
+        "order": 2,
+        "prev": [
+          92464
+        ],
+        "next": [
+          92469,
+          92471
+        ]
+      },
+      "category": 16593,
+      "source": "https://www.wowhead.com/forever/quest=92465",
+      "page_captured": true
+    },
+    {
+      "id": 92598,
+      "name": "The Gift of Skysight",
+      "level": 4,
+      "reqlevel": 2,
+      "side": 2,
+      "races": null,
+      "race_mask": 0,
+      "classes": null,
+      "class_mask": 0,
+      "starter_npc_ids": [
+        251487
+      ],
+      "ender_npc_ids": [
+        251487
+      ],
+      "objectives": [],
+      "text": {
+        "objectives": "Use your Skysight racial ability at the Elemental Convergence in Thendal Grove.\n \nUse Skysight near the Elemental Convergence (1)",
+        "description": "As a Windshaper, you have the ability to use the sacred skysight gifted to us by the elemental spirits. Travel to the standing stones to the northeast of the village. Find the elemental convergence there and use your gift.\n\nYou'll find that you may draw upon the skysight anywhere, but its boon is much more powerful if you do so in the presence of an elemental convergence. You may at times receive other bits of wisdom from the spirits that are drawn to such places of power, as well.",
+        "completion": "Like a muscle, your skysight must be exercised if you hope to grow stronger in the gift. Leveraging your skysight to bridge the distance between the mortal and the spiritual may prove invaluable to you in your adventures.\n\nYou'd do well to remember what you've learned here today. Our ability to use our gifts to hear what the elements tell us could be the key to our survival."
+      },
+      "rewards": {
+        "xp": 180,
+        "money": 0,
+        "items": null,
+        "choice_items": null,
+        "spells": null,
+        "reputation": [
+          [
+            2778,
+            100
+          ]
+        ],
+        "scaling": {
+          "minLevel": 4,
+          "maxLevel": 4,
+          "xp": {
+            "multiplier": 1,
+            "levels": {
+              "4": 180
+            }
+          },
+          "coin": {
+            "rewardAtCap": 0,
+            "multiplier": 1,
+            "levels": {
+              "4": 0
+            }
+          }
+        }
+      },
+      "series": {
+        "rows": [],
+        "ids": [],
+        "order": null,
+        "prev": [],
+        "next": []
+      },
+      "category": 16593,
+      "source": "https://www.wowhead.com/forever/quest=92598",
+      "page_captured": true
+    }
+  ],
+  "npcs": [
+    {
+      "id": 249363,
+      "name": "Yala Windwatcher",
+      "title": null,
+      "level": {
+        "min": 5,
+        "max": 5
+      },
+      "react": [
+        1,
+        1
+      ],
+      "displayIds": [
+        136971
+      ],
+      "coords": [
+        {
+          "zone": 16593,
+          "uiMap": 2521,
+          "percent": [
+            47.2,
+            21.8
+          ],
+          "world": {
+            "x": 4147.834069580078,
+            "y": 1605.75,
+            "z": 946.1263520502639,
+            "tile": [
+              28,
+              24
+            ],
+            "root_fdid": 7199904,
+            "z_status": "terrain"
+          },
+          "calibrated_uiMap": 2665
+        }
+      ],
+      "vendor": null,
+      "trainer": null,
+      "starts_quests": [
+        92465,
+        92469
+      ],
+      "ends_quests": [
+        92464,
+        92465
+      ],
+      "source": "https://www.wowhead.com/forever/npc=249363",
+      "page_captured": true
+    },
+    {
+      "id": 250873,
+      "name": "Juvenile Vuldren",
+      "title": null,
+      "level": {
+        "min": 1,
+        "max": 1
+      },
+      "react": [
+        0,
+        0
+      ],
+      "displayIds": [
+        136536
+      ],
+      "coords": [
+        {
+          "zone": 16593,
+          "uiMap": 2521,
+          "percent": [
+            42.4,
+            27.8
+          ],
+          "world": {
+            "x": 3925.3342722167968,
+            "y": 1872.75,
+            "z": 972.5161453743708,
+            "tile": [
+              28,
+              24
+            ],
+            "root_fdid": 7199904,
+            "z_status": "terrain"
+          },
+          "calibrated_uiMap": 2665
+        },
+        {
+          "zone": 16593,
+          "uiMap": 2521,
+          "percent": [
+            43.2,
+            25.4
+          ],
+          "world": {
+            "x": 4014.334191162109,
+            "y": 1828.2499999999995,
+            "z": 977.4487613784289,
+            "tile": [
+              28,
+              24
+            ],
+            "root_fdid": 7199904,
+            "z_status": "terrain"
+          },
+          "calibrated_uiMap": 2665
+        }
+      ],
+      "vendor": null,
+      "trainer": null,
+      "starts_quests": [],
+      "ends_quests": [],
+      "source": "https://www.wowhead.com/forever/npc=250873",
+      "page_captured": true
+    },
+    {
+      "id": 251361,
+      "name": "Rorian the Dayseeker",
+      "title": null,
+      "level": {
+        "min": 20,
+        "max": 20
+      },
+      "react": [
+        1,
+        1
+      ],
+      "displayIds": [
+        136966
+      ],
+      "coords": [
+        {
+          "zone": 16593,
+          "uiMap": 2521,
+          "percent": [
+            42,
+            23.4
+          ],
+          "world": {
+            "x": 4088.500790283203,
+            "y": 1895.0,
+            "z": 976.5145996532464,
+            "tile": [
+              28,
+              24
+            ],
+            "root_fdid": 7199904,
+            "z_status": "terrain"
+          },
+          "calibrated_uiMap": 2665
+        }
+      ],
+      "vendor": null,
+      "trainer": null,
+      "starts_quests": [
+        92461,
+        92464,
+        92471,
+        92481,
+        92482,
+        92483,
+        92484,
+        92485,
+        92532
+      ],
+      "ends_quests": [
+        92460,
+        92461,
+        92469,
+        92474
+      ],
+      "source": "https://www.wowhead.com/forever/npc=251361",
+      "page_captured": true
+    },
+    {
+      "id": 251362,
+      "name": "Ailee Farheart",
+      "title": "Rangers of Thendal Grove",
+      "level": {
+        "min": 1,
+        "max": 1
+      },
+      "react": [
+        1,
+        1
+      ],
+      "displayIds": [
+        136968
+      ],
+      "coords": [
+        {
+          "zone": 16593,
+          "uiMap": 2521,
+          "percent": [
+            42.8,
+            23.4
+          ],
+          "world": {
+            "x": 4088.500790283203,
+            "y": 1850.5,
+            "z": 976.1734898252165,
+            "tile": [
+              28,
+              24
+            ],
+            "root_fdid": 7199904,
+            "z_status": "terrain"
+          },
+          "calibrated_uiMap": 2665
+        }
+      ],
+      "vendor": null,
+      "trainer": null,
+      "starts_quests": [
+        92460
+      ],
+      "ends_quests": [],
+      "source": "https://www.wowhead.com/forever/npc=251362",
+      "page_captured": true
+    },
+    {
+      "id": 251487,
+      "name": "Ventaari Brightwish",
+      "title": "Windshapers",
+      "level": {
+        "min": 5,
+        "max": 5
+      },
+      "react": [
+        -1,
+        1
+      ],
+      "displayIds": [
+        139694
+      ],
+      "coords": [
+        {
+          "zone": 16593,
+          "uiMap": 2521,
+          "percent": [
+            42.6,
+            24.4
+          ],
+          "world": {
+            "x": 4051.417490722656,
+            "y": 1861.625,
+            "z": 977.6203985519671,
+            "tile": [
+              28,
+              24
+            ],
+            "root_fdid": 7199904,
+            "z_status": "terrain"
+          },
+          "calibrated_uiMap": 2665
+        }
+      ],
+      "vendor": null,
+      "trainer": null,
+      "starts_quests": [
+        92598
+      ],
+      "ends_quests": [
+        92598
+      ],
+      "source": "https://www.wowhead.com/forever/npc=251487",
+      "page_captured": true
+    }
+  ],
+  "objects": []
+}

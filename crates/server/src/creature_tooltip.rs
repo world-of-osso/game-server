@@ -85,7 +85,7 @@ fn tooltip_item(
         name: goods.name.clone(),
         quality: goods.quality,
         appearance_id: items
-            .get(item_id)
+            .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
             .and_then(|template| template.appearance_id),
     })
 }

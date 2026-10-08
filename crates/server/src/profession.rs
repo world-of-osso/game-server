@@ -19,6 +19,7 @@ mod trainer;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::Player;
+use shared::item_data::ItemDefinitionSource::Retail;
 use shared::profession::{MAX_PRIMARY_PROFESSIONS, ProfessionSkillLine, recipe_difficulty};
 use shared::protocol::{CraftRecipe, ProfessionChannel, ProfessionSnapshot};
 
@@ -379,7 +380,7 @@ impl Bags<'_> {
             .ok_or_else(|| format!("item {item_id} is not in content_item"))?;
         let template = self
             .templates
-            .get(item_id)
+            .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
             .ok_or_else(|| format!("item {item_id} has no template"))?;
         Ok(InventoryItemData {
             item_guid: persistence::next_id(&self.db.db, "item_instance"),
@@ -396,12 +397,20 @@ impl Bags<'_> {
     fn store(&self, model: &mut InventoryModel, item: InventoryItemData) -> Result<(), String> {
         let template = *self
             .templates
-            .get(item.item_id)
+            .get(
+                shared::item_data::ItemDefinitionSource::Retail,
+                item.item_id,
+            )
             .ok_or_else(|| format!("item {} has no template", item.item_id))?;
         let db = &self.db.db;
         let mut mint = || persistence::next_id(db, "item_instance");
         model
-            .store_item(item, template, &mut mint)
+            .store_item(
+                item,
+                shared::item_data::ItemDefinitionSource::Retail,
+                template,
+                &mut mint,
+            )
             .map_err(|error| format!("{error:?}"))
     }
 }
@@ -469,7 +478,7 @@ pub(crate) fn check_cast_items(
             .load()
             .map_err(|detail| CastFailure::Unsupported(format!("bags unavailable: {detail}")))?;
         for &(item, count) in reagents {
-            if model.bag_count(item) < count {
+            if model.bag_count(Retail, item) < count {
                 return Err(CastFailure::Reagents(bags.item_name(item)));
             }
         }
@@ -496,13 +505,13 @@ fn check_tools(
     bags: &Bags,
 ) -> Result<(), CastFailure> {
     for &item in &tools.items {
-        if model.bag_count(item) == 0 {
+        if model.bag_count(Retail, item) == 0 {
             return Err(CastFailure::Totems(bags.item_name(item)));
         }
     }
     for &category in &tools.categories {
         if !model
-            .bag_item_ids()
+            .bag_item_ids(Retail)
             .any(|item| data.item_meets_totem_category(item, category))
         {
             let name = data
@@ -528,7 +537,7 @@ pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo
     let taken = with_bags(world, caster, |bags| {
         let mut model = bags.load()?;
         for (item, count) in reagents {
-            model.destroy_bag_items(item, count)?;
+            model.destroy_bag_items(Retail, item, count)?;
         }
         save_inventory_record(&bags.db.db, bags.character_id, &model.into_record());
         Ok::<_, String>(bags.character_id)

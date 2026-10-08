@@ -150,7 +150,13 @@ fn worn_shortsword() -> Option<WeaponDamage> {
     let path = crate::test_data::world_db_path();
     let templates = crate::item_templates::load_item_templates(&path).unwrap();
     let tables = crate::item_stats::load_item_scaling_tables(&path).unwrap();
-    crate::item_stats::item_stats(templates.get(25).unwrap(), &tables).weapon
+    crate::item_stats::item_stats(
+        templates
+            .get(shared::item_data::ItemDefinitionSource::Retail, 25)
+            .unwrap(),
+        &tables,
+    )
+    .weapon
 }
 
 #[test]

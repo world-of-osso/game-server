@@ -1,0 +1,38 @@
+{
+  "CharacterLoadout": {
+    "sha256": "8a041ad8469bc1f7204c97a21ab447de73626e542a205c0b3d4c1e679333192b",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/CharacterLoadout.dbd"
+  },
+  "CharacterLoadoutItem": {
+    "sha256": "1a81c6883306836dd66dc38090f315517f1adccd9d04b706a670e57072551d80",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/CharacterLoadoutItem.dbd"
+  },
+  "Item": {
+    "sha256": "27cd6b58e6dd5166266f0f8a69f420f700c8480b584952c8f4260bf651ae3209",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/Item.dbd"
+  },
+  "ItemAppearance": {
+    "sha256": "104e9a06ebee926c178cccd2815c25f186afc75d968db32af162ad64be10472b",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemAppearance.dbd"
+  },
+  "ItemEffect": {
+    "sha256": "da7d1b971a53e814b7c68b9ab13adc63d35377d1b09808a41edfc83ac2fa9b8b",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemEffect.dbd"
+  },
+  "ItemModifiedAppearance": {
+    "sha256": "e2c6bad3dfe256326da6baf5982feb519fc555cbdf95db2dd240fb1cd18e68e5",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemModifiedAppearance.dbd"
+  },
+  "ItemSparse": {
+    "sha256": "ff87dafe875376c0ee5b6951ef4668aaae53a862d190cd9d3e6b708a9deafe9b",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemSparse.dbd"
+  },
+  "ItemXItemEffect": {
+    "sha256": "ba49e31174184dbfd42c654576fc7819e148260fed0c7c7b8f5154a54aedc337",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/ItemXItemEffect.dbd"
+  },
+  "NameGen": {
+    "sha256": "03b91a2a5d0d316f138c1aad9cf736256f5a84adcefba5cef4a851d838729393",
+    "source": "https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/NameGen.dbd"
+  }
+}

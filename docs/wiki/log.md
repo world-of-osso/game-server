@@ -7,6 +7,13 @@ Updated [merchant](systems/merchant.md): chronological wrapped buyback lists ret
 ## [2026-10-07] systems | Death logout/login persistence
 
 Updated [[persistence]] with reproduced restore → select → initial-snapshot ordering race, atomic full death-state checkpoint, exact graveyard restoration and additive saved-data compatibility. Regression boundary: reopened redb → new SelectCharacter session. Proof ledger: `/home/osso-test/Projects/world-of-osso/game-engine/data/diagnostics/deathpersist-2026-10-07/proof-ledger.txt`. No merge, push or deploy.
+## [2026-10-07] checkpoint | RandPropPoints source applicability
+
+Updated [[skyborne]] and index: Main reports faithful pinned Forever70205 RandPropPoints16 schema lacks Retail DamageReplaceStatF/DamageSecondaryF; rebased shared-loader requirement is the defect. Agent267 correction pending: Retail-only spell budgets, mandatory normal Forever scaling, empty Forever spell-budget map. Retail effect evaluator does not establish Forever item-spell support; no fabricated/borrowed data or fallback. Source-aware aura/group constructors committed at cbd588f, not proof. Targeted proof/rebuild/native pending; historical scopes retained, scratch stopped, character30/40XP preserved. Docs only; no specs, operations, delegation, push, tests or builds.
+
+## [2026-10-07] checkpoint | Rebased Skyborn source and protocol boundary
+
+Updated [[skyborne]] with Main-supplied clean90/no-skip rebase onto8b3819b0 at pushed bef3fa745, backup ref/cold data-binary target, preserved character30/40XP and conflict-resolution boundaries. Historical1448 receipt retained but changed scopes invalidated. Native auth succeeds then old-runtime48/client510 fingerprint rejection before world; no NPC/graphics or current server tests/build GREEN. Linked engine CPU/build checkpoint. Docs-only; Main owns matching desktop rebuild; no operations, tests, delegation or push.
 
 ## [2026-10-06] systems | Player resurrection and creature taps
 
@@ -65,6 +72,62 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 ## [2026-10-05] investigations | Fresh-character General grants
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
+
+## [2026-10-05] systems/spec | Reconstructed NPC coarse stat estimates
+
+Updated [[content-import]] and [contract](../specs/zephras-content.md): approved class-1/modifier-1 estimates only in reconstructed missing-stat templates, preserved captures and labelled analogue/curve provenance. Targeted Python tests cover imported fields, source retention, classification preservation, regeneration and transactional Retail-stat collisions; development proof in `target/zephras-stat-estimate-proof/`. No Rust, data publication, runtime acceptance, original scripts or Ailee texture/profile resolution.
+
+## [2026-10-05] systems/spec | Source-qualified bag requirements and unique limits
+
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): explicit model source arguments, Retail profession reagents/tools, quest progress/removal and producer-selected merchant/loot unique limits. Collision fixtures use unchanged 2947/2512/2101 IDs; native targeted RED reproduced eleven expected failures before production edits. Desktop GREEN at source commit `1a1b049`: 11 passed, 0 failed/ignored, 1434 filtered; 11.44s test time, 80.104s helper wall. Main-owned zone test patch was present but not selected. Development ledger: `target/source-requirements-proof/`. No authored reward provenance inference, legacy-marker change, broad gate or operations.
+
+## [2026-10-05] systems/spec | Frozen character equipment disk ABI
+
+Updated [[persistence]], index and [storage contract](../specs/character-customization-storage.md): private V7 DTO, frozen V3–V6 equipment fields/slot order, explicit six-writer boundary, GUID-based cache hydration and rejected unowned Forever cache writes. Temporary redb tests cover independent nonempty V7/V6 fixtures, historical migrations, wire source serialization and actual ten-pair creation/reopen. No live database, new decoder, deployment or merge-readiness claim; main owns final integration proof.
+
+## [2026-10-05] systems/spec | Isolated Forever scaling CSV import
+
+Updated [[skyborne]] and contract with the nine-table source-local scaling CLI, actual catalog fixtures, exact provenance and atomic Retail-preserving refresh. At `678c9df`, capped `python3 -m unittest discover -s scripts/tests -p test_skyborne_scaling_data.py` passed 8 tests in 24.252s after RED; [proof ledger](../../target/skyborne-scaling-proof/ledger.json). No Rust edits, canonical/live publication or runtime acceptance claim.
+
+## [2026-10-05] systems/spec | Owned source runtime boundary
+
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): source-qualified catalogs, stacking, explicit incoming origin, owner transfers, auction minted-GUID transaction markers, source-local equipped scaling and wire records. Targeted `owned_sources` RED at743482e:3/5 pass, cross-source occupied split and vanished-GUID failures. Fix4fea2d0:5/5 GREEN, no warnings; logs `/tmp/claude/owned-source-{red,green}.out`, ledger `target/owned-source-runtime/ledger.md`. No final acceptance claim. Unowned content-source and Classic-parity gaps remain explicit.
+
+## [2026-10-05] systems/spec | GUID-owned definition sources
+
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): additive immutable GUID markers preserve Retail/Forever identity independently of owner transfers without altering inventory or soulbound encodings. Targeted persistence tests cover reopen, two-owner transaction exchange, legacy Retail and invalid/changed markers; creation/runtime integration remains separate.
+
+## [2026-10-05] systems/spec | Isolated kit creation and regeneration
+
+Updated [[skyborne]] and contract: isolated shared definitions, source-local creation/count readers, exact importer-generated ten-pair redb fixture, full DB2 regeneration preservation, additive kit refresh, and standalone process-level rollback. Fixed outer-transaction gap exposed by projection collision. Native fixture proof awaits concurrent runtime catalog/constructor closure; no complete stats/transfer/tooltips claim.
+
+## [2026-10-05] systems/spec | Authored Skyborne kit source closure
+
+Updated [[skyborne]], index and contract: six pinned Forever loadouts, 45 memberships, 30 readable Item/ItemSparse definitions and selected appearance/effect parents. Strict collision/rollback tests preserve Retail loadouts. Recorded shared-ID count/type/binding conflicts and user-selected isolated Forever definitions; full ten-pair authoritative creation remains pending, not empty-kit success.
+
+## [2026-10-04 local] systems | Post-sync Forever ground and spawn recovery
+
+Updated [[ground-assets]], [[content-import]] and index after local CASC synchronization: 256 ground dependencies/zero missing; desktop ground fixtures4/4; 72 center records22supported/50holes, Python/native72/72 agree; full72-tile LOS exits0 with zero unreadable files, eye tables unchanged. Existing normalization/import recovers exactly463 eligible observations into a new scratch DB, preserving1199 previous rows and producing1662 spawns. Grounded displayIDs174→218. Quest/content gaps and reconstructed-observation semantics unchanged; no live deployment or native NPC acceptance. Revision-scoped logs/reports: `target/forever-resync/`, [ledger](../../target/zephras-content-proof/ledger.md).
+
+## [2026-10-04] systems/spec | Refreshed Forever capture and NPC appearances
+
+Updated [[content-import]], [[skyborne]] and content contract after retry: all 146 normalized quests/298 NPCs/3 objects captured; historical 403/missing-display claims superseded. NPC-page appearances are primary, including Ailee 136968/Ventaari 139694; full 235-CDI list exports all captured appearances, not just 174 grounded-spawn IDs. Scratch overlay now has 278 templates/1,199 grounded observations/278 model rows/146 quests. Approved starts and race-96 inference unchanged; 20 level omissions, 27 giver links, 49 blocked completions, 109 absent rewards and native/client asset gaps remain explicit.
+
+## [2026-10-04] systems/spec | Approved reconstructed Zephras starts and content
+
+Updated [[skyborne]], [[content-import]], index and contracts: approved starts/facing, hosted-map gate, ten-pair real-kit reopen/login/terrain proof, supported start ground, native quest acceptance/XP and level-2/event boundary. Recorded 276 templates/878 grounded observations/136 quests, atomic regeneration/provenance, unchanged source masks, 0/295 DB2 display coverage and three captured displays. Missing pages, starting-giver models, native quest-side/reputation/reward-spell/event support and full terrain closure remain explicit gaps. Scratch-only publication; no engine checkout, live world DB or player storage writes.
+
+## [2026-10-04] systems/spec | Forever Zephras reference capture
+
+Updated [[content-import]], [[skyborne]] and index; added capture contract. Recorded per-page Forever capture, explicit partial metadata, CloudFront/browser 403 block, retail-calibrated UiMap inversion, real 72-center terrain comparison and conditional start proposals. No server import, mask widening, phasing or scripted events; race-96 level-1 intro remains unsupported by captured pages.
+
+## [2026-10-04] systems/spec | Zephras ground and partial LOS
+
+Added [[ground-assets]] and its contract; reconciled [[skyborne]] prerequisites. Recorded explicit registered-map/build-selected local extraction, 203 cached dependencies with 42 unavailable, authored-grid seam correction, required shared MPY2 collision commit, three real desktop fixtures, 21 terrain regressions, all 72 center records, and 48-tile partial LOS/runtime hit proof. No invented start, live database update or full-map coverage claim.
+
+## [2026-10-04] systems | Skyborne server support
+
+Added [[skyborne]] and server spec: verified Forever race bits/classes/factions, source-decoded faction/map overlay and regeneration, ten-pair real-kit storage-reopen/login proof, unchanged Northshire placement, and map-2991 ground/LOS prerequisites. No live world database writes.
 
 ## [2026-10-03] systems | Flight Style toggle
 
@@ -603,3 +666,29 @@ Added [[dungeon-achievements]]: local CASC provenance, partial encrypted-section
 Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md): GM controls, strict hierarchy, per-rank social/bank rights, atomic member remapping and layout-2 migration. Targeted RED failed for missing rank APIs. GREEN at `26b1264`: 37 guild-related server tests and one admin test pass; protocol wire test passes at `fe5ea8d`. Additional REDs reproduced cross-guild chat with stale membership components and erased masked tab settings; both now pass. No deployment or native settings UI proof.
 
 - 2026-10-06: Investigated Algari zero-heal consumption; [[item-healing-scaling]] records item-level RandPropPoints root cause, cast/aura context fix, and consumable regressions.
+
+## [2026-10-05] docs | Preserve Retail / isolate Forever audit
+
+Reconciled [[skyborne]], index and source/race contracts against tracked factory, GUID-marker, scaling and character-ABI code plus retained proof ledgers. Supersedes stale pre-isolation kit failure as current state with bounded `e405232` ten-pair creation/reopen proof; preserves historical broad-suite failure and the 26-pass/exit-101 ABI invocation boundary. Immutable provenance across ownership/reload and frozen disk ABI are distinct from explicit wire fields. Transfer integration, unowned content provenance, bare-ID auction search, Classic mechanics and paired native E2E remain open. Docs-only; no new tests, builds, operations or full acceptance.
+
+## 2026-10-05 — Bounded Skyborne source-gap audit
+
+[[skyborne#Native entry and NPC startup source gap (2026-10-05)]] records Main-reported two-race entry, zero NPC startup, the real 1,662-spawn class0 panic and restored allowlist/explicitly ignored regression. User retains authored health/class blocker; no invented Warrior/noncombat contract. [[inventory#Bounded owned-commerce and requirement proof (2026-10-05)]] records commerce4/4 and requirements11/11 with exact scope; buyback is live-session only, not whole parity.
+
+## [2026-10-05] systems | Record estimated-stat startup and bounded native evidence
+
+[Content import](systems/content-import.md#forever-zephras-overlay) owns approved health/unit-class estimates, actual startup and fresh whole-workspace proof at c5cf88a; [Skyborne](systems/skyborne.md#native-entry-and-npc-startup-source-gap-2026-10-05) links bounded native evidence. Historical missing-stat panic/ignored regression preserved; no authored/full Classic or complete gameplay claim. Native artifact gate pending.
+
+## [2026-10-07] systems | Record matching scratch native material failure
+
+[skyborne](systems/skyborne.md) checkpoint updated from supplied evidence: server Retail-only loader3/3 and independent bounded gate; scratch prerequisite provenance retains AreaTable build UNVERIFIED and encrypted achievement gaps. Matching world entry preserves character30/40XP/log[]; Ailee12 textured batches precede Batch94/geoset3601 empty base_texture FAIL, Grove not reached. Diagnostic assertions unchanged; batch-binding investigation pending. Historical scopes retained; docs only, no runtime/test/build/push actions.
+
+## [2026-10-07] systems | Reconcile current final checkpoint; goal OPEN
+
+[skyborne](systems/skyborne.md) reconciles current independent proof and later traced native evidence: corrected type20 composition is separate from unresolved Ailee type7/full-native acceptance. Records separate shoulder scope, pending Grove291, import278 preservation/provenance limits and cleanup exclusions. Historical failures retained; prior CASC root cause unproved. Overall goal OPEN. Docs-only; no code/data/tests/build/delegation/ops/push.
+
+## [2026-10-07] audit | Reported motion fixture correction
+
+Updated [[skyborne]] with wrong-cell root cause, stronger first-tick landing assertions, pushed test-only a7616cd and retained independent bounded proof. Linked engine-owned remote handoff and current NPC RED; no new tests, operations or full-goal claim.
+
+- 2026-10-07 — Reconcile bounded corrective742 native Ailee/Grove functional DONE, mapped/build receipts, CPU13 and pending304; retain OS-exit/pixel/parity/provenance exclusions. Record final handoff metadata hash proof separately from unproved consumption/landing. Docs-only; no runtime or test operations.

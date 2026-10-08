@@ -1,5 +1,9 @@
 use shared::components::{CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot};
 
+#[path = "stored_equipment_appearance.rs"]
+mod stored_equipment;
+use stored_equipment::StoredEquipmentAppearance;
+
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq, Eq)]
 pub struct DurabilityEntryData {
     pub slot: EquipmentVisualSlot,
@@ -7,7 +11,8 @@ pub struct DurabilityEntryData {
     pub max: u32,
 }
 
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+// Runtime/wire fields must never be implicitly serialized into player storage.
+#[derive(Debug, Clone, PartialEq)]
 pub struct CharacterData {
     pub name: String,
     pub x: f32,
@@ -21,6 +26,61 @@ pub struct CharacterData {
     pub appearance: CharacterAppearance,
     pub equipment_appearance: EquipmentAppearance,
     pub durability: Vec<DurabilityEntryData>,
+}
+
+// V7 layout, unchanged by the addition of wire item definition sources.
+#[derive(bitcode::Encode, bitcode::Decode)]
+struct StoredCharacterData {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    health: f32,
+    max_health: f32,
+    race: u8,
+    class: u8,
+    level: u16,
+    appearance: CharacterAppearance,
+    equipment_appearance: StoredEquipmentAppearance,
+    durability: Vec<DurabilityEntryData>,
+}
+
+impl From<&CharacterData> for StoredCharacterData {
+    fn from(data: &CharacterData) -> Self {
+        Self {
+            name: data.name.clone(),
+            x: data.x,
+            y: data.y,
+            z: data.z,
+            health: data.health,
+            max_health: data.max_health,
+            race: data.race,
+            class: data.class,
+            level: data.level,
+            appearance: data.appearance.clone(),
+            equipment_appearance: (&data.equipment_appearance).into(),
+            durability: data.durability.clone(),
+        }
+    }
+}
+
+impl From<StoredCharacterData> for CharacterData {
+    fn from(data: StoredCharacterData) -> Self {
+        Self {
+            name: data.name,
+            x: data.x,
+            y: data.y,
+            z: data.z,
+            health: data.health,
+            max_health: data.max_health,
+            race: data.race,
+            class: data.class,
+            level: data.level,
+            appearance: data.appearance,
+            equipment_appearance: data.equipment_appearance.into(),
+            durability: data.durability,
+        }
+    }
 }
 
 // Appearance written before the Dracthyr visage form (shared-protocol 88bc3fe).
@@ -48,7 +108,7 @@ struct LegacyCharacterDataV6 {
     class: u8,
     level: u16,
     appearance: LegacyCharacterAppearanceV3,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: StoredEquipmentAppearance,
     durability: Vec<DurabilityEntryData>,
 }
 
@@ -76,7 +136,7 @@ struct LegacyCharacterDataV5 {
     class: u8,
     level: u16,
     appearance: LegacyCharacterAppearanceV2,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: StoredEquipmentAppearance,
     durability: Vec<DurabilityEntryData>,
 }
 
@@ -143,7 +203,7 @@ struct LegacyCharacterDataV3AppearanceV1 {
     class: u8,
     level: u16,
     appearance: LegacyCharacterAppearanceV1,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: StoredEquipmentAppearance,
 }
 
 #[derive(bitcode::Decode)]
@@ -158,12 +218,20 @@ struct LegacyCharacterDataV4 {
     class: u8,
     level: u16,
     appearance: LegacyCharacterAppearanceV2,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: StoredEquipmentAppearance,
 }
 
 impl CharacterData {
+    pub(crate) fn encode_stored(&self) -> Vec<u8> {
+        bitcode::encode(&StoredCharacterData::from(self))
+    }
+
+    pub(crate) fn decode_stored(bytes: &[u8]) -> Result<Self, bitcode::Error> {
+        bitcode::decode::<StoredCharacterData>(bytes).map(Into::into)
+    }
+
     pub fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
-        bitcode::decode::<CharacterData>(bytes)
+        Self::decode_stored(bytes)
             .or_else(|_| decode_legacy_character_data(bytes))
             .map_err(|error| format!("Failed to decode character data: {error}"))
     }
@@ -219,7 +287,7 @@ fn upgrade_appearance_v1(appearance: LegacyCharacterAppearanceV1) -> CharacterAp
 macro_rules! upgrade_legacy {
     ($legacy:ident, $appearance:expr, $equipment:expr) => {{
         let appearance = $appearance;
-        let equipment_appearance = $equipment;
+        let equipment_appearance = ($equipment).into();
         CharacterData {
             name: $legacy.name,
             x: $legacy.x,
@@ -344,7 +412,7 @@ mod visage_upgrade_tests {
         class: u8,
         level: u16,
         appearance: AppearanceV3,
-        equipment_appearance: EquipmentAppearance,
+        equipment_appearance: StoredEquipmentAppearance,
         durability: Vec<DurabilityEntryData>,
     }
 
@@ -373,7 +441,7 @@ mod visage_upgrade_tests {
                     choice_id: 790,
                 }],
             },
-            equipment_appearance: EquipmentAppearance::default(),
+            equipment_appearance: StoredEquipmentAppearance::default(),
             durability: Vec::new(),
         });
         let data = CharacterData::decode_compatible(&bytes).unwrap();
