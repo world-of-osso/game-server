@@ -104,6 +104,10 @@ fn another_client_sees_a_players_spec_and_its_change() {
         .unwrap()
         .send::<TalentChannel>(SetSpecialization { spec_id: SPEC_FURY });
     advance(&mut server, &mut clients, 100);
+    assert_eq!(
+        server.world().get::<ActiveSpec>(alice),
+        Some(&ActiveSpec(SPEC_FURY))
+    );
     assert_eq!(seen_spec(&mut clients[1], "Alice"), Some(SPEC_FURY));
     assert_eq!(seen_spec(&mut clients[0], "Bob"), Some(SPEC_ARMS));
 }
