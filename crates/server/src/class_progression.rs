@@ -62,9 +62,8 @@ impl KnownSpells {
     }
 }
 
-/// Active `ChrSpecialization` ID; 0 when the class has no spec data.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ActiveSpec(pub u32);
+/// Active `ChrSpecialization` ID, replicated to every client.
+pub use shared::components::ActiveSpec;
 
 /// Occupied action bar slots.
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
