@@ -19,6 +19,7 @@ fn owned_commerce_sources_auction_mints_and_settles_both_catalogs_through_mail_r
     for (&guid, source) in guids.iter().zip([Retail, Forever70205]) {
         let response = create_auction(
             &db,
+            &catalog.templates,
             &mut state,
             seller,
             crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
