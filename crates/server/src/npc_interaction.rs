@@ -64,6 +64,10 @@ pub struct ActiveInteraction {
     gossip_actions: Vec<(u32, GossipAction)>,
 }
 
+#[cfg(test)]
+#[path = "auction_house_tests/regressions.rs"]
+mod ahserver_regressions;
+
 pub struct NpcInteractionPlugin;
 
 impl Plugin for NpcInteractionPlugin {

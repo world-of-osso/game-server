@@ -43,6 +43,7 @@ fn validate_auction_request(req: &CreateAuction) -> Result<(), AuctionOperationR
 
 fn validate_create_auction(
     db: &redb::Database,
+    templates: &ItemTemplates,
     state: &AuctionHouseState,
     character_id: u64,
     req: &CreateAuction,
@@ -54,6 +55,7 @@ fn validate_create_auction(
     };
     let inventory = persistence::load_inventory(db, character_id);
     let (index, source) = find_auction_source_item(&inventory, req)?;
+    validate_auction_binding(db, templates, &source)?;
     if req.stack_count > source.stack_count {
         return Err(err("requested stack exceeds available stack"));
     }
@@ -67,6 +69,22 @@ fn validate_create_auction(
         deposit,
         inventory,
     })
+}
+
+fn validate_auction_binding(
+    db: &redb::Database,
+    templates: &ItemTemplates,
+    source: &InventoryItemData,
+) -> Result<(), AuctionOperationResponse> {
+    let binds_on_pickup = templates
+        .get(source.item_id)
+        .is_some_and(ItemTemplate::binds_on_pickup);
+    let bound =
+        persistence::inventory_store::soulbound_guids(db, std::iter::once(source.item_guid));
+    if binds_on_pickup || bound.contains(&source.item_guid) {
+        return Err(err("cannot auction a soulbound item"));
+    }
+    Ok(())
 }
 
 fn validate_auction_slot_limit(
@@ -125,12 +143,13 @@ fn validate_auction_deposit(
 
 pub(super) fn create_auction(
     db: &redb::Database,
+    templates: &ItemTemplates,
     state: &mut AuctionHouseState,
     character_id: u64,
     house: u8,
     req: &CreateAuction,
 ) -> AuctionOperationResponse {
-    let validated = match validate_create_auction(db, state, character_id, req) {
+    let validated = match validate_create_auction(db, templates, state, character_id, req) {
         Ok(validated) => validated,
         Err(response) => return response,
     };

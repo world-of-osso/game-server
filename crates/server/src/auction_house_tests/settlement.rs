@@ -13,6 +13,7 @@ fn bid_on_expired_auction_fails_gracefully() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -89,6 +90,7 @@ fn deposit_refunded_on_successful_sale() {
             .resource_mut::<crate::gold::GoldUpdateQueue>();
         let create = super::super::handlers::create_auction_with_gold_update(
             &db,
+            &ItemTemplates::default(),
             &mut state,
             seller_id,
             crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -155,6 +157,7 @@ fn auction_snapshot_independent_of_inventory_changes() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -232,6 +235,7 @@ fn seller_offline_auction_still_completes() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -279,6 +283,7 @@ fn unique_item_prevents_duplicate_listing() {
 
     let first = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -295,6 +300,7 @@ fn unique_item_prevents_duplicate_listing() {
     let remaining = persistence::load_inventory(&db, seller_id).items[0].clone();
     let second = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -322,6 +328,7 @@ fn expired_auction_with_bid_awards_winner_and_pays_seller() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -398,6 +405,7 @@ fn house_cut_deducted_on_successful_sale() {
 
         create_auction(
             &db,
+            &ItemTemplates::default(),
             &mut state,
             seller_id,
             crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -434,6 +442,7 @@ fn buyout_transfers_item_and_deducts_gold() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -488,6 +497,7 @@ fn buyout_mail_delivers_item_and_gold_taken_at_the_mailbox() {
 
     create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -562,6 +572,7 @@ fn buyout_above_the_u32_copper_range_pays_the_seller_in_full() {
 
     let created = create_auction(
         &db,
+        &ItemTemplates::default(),
         &mut state,
         seller_id,
         crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
@@ -758,6 +769,7 @@ fn atomic_concurrent_create_lists_source_item_and_charges_deposit_once() {
                 barrier.wait();
                 create_auction(
                     &db,
+                    &ItemTemplates::default(),
                     &mut AuctionHouseState::default(),
                     seller,
                     0,

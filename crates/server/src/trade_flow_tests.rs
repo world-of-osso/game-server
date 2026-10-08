@@ -620,6 +620,43 @@ fn an_offered_stack_that_left_the_bags_refuses_without_moving_anything() {
 }
 
 #[test]
+fn ahserver_bound_item_after_offer_refuses_trade_without_moving_anything() {
+    let mut h = trade_harness().expect("trade harness");
+    let (a, b) = (h.a.connection, h.b.connection);
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    let linen = h.guid(a_id, LINEN);
+    h.open_trade();
+    h.send(a, offer(0, linen, 20));
+    h.send(a, SetTradeMoney { copper: 100 });
+    h.send(b, offer(0, h.guid(b_id, PEACEBLOOM), 4));
+    {
+        use crate::persistence::inventory_store::{ITEM_INSTANCES, ItemInstanceData};
+        let txn = h.db().begin_write().unwrap();
+        txn.open_table(ITEM_INSTANCES)
+            .unwrap()
+            .insert(
+                linen,
+                bitcode::encode(&ItemInstanceData { soulbound: true }).as_slice(),
+            )
+            .unwrap();
+        txn.commit().unwrap();
+    }
+    let before = (h.inventory(a_id), h.inventory(b_id));
+    h.send(a, ConfirmTrade);
+    h.send(b, ConfirmTrade);
+    assert_eq!(
+        h.errors(a),
+        vec!["You can't trade a soulbound item.".to_string()]
+    );
+    assert_eq!(
+        h.errors(b),
+        vec!["You can't trade a soulbound item.".to_string()]
+    );
+    assert!(h.trading(a_id));
+    assert_eq!((h.inventory(a_id), h.inventory(b_id)), before);
+}
+
+#[test]
 fn offered_money_spent_before_the_exchange_refuses_it() {
     let Some(mut h) = trade_harness() else { return };
     let (a, b) = (h.a.connection, h.b.connection);

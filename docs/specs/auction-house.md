@@ -12,6 +12,11 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 - [x] Sort and paginate distinct items after global aggregation; `total_results` counts distinct matching items before pagination. Verify a second page with enough distinct items and listings spanning multiple flat pages.
 - [x] Selecting an ItemID issues the existing exact-item flat query. Bid/buyout acts on a real returned AuctionID; grouped rows are not synthetic auctions or purchase targets.
 
+### Posting eligibility
+
+- Reject soulbound item instances, bind-on-pickup items and quest items through the existing auction operation response, without changing inventory, money or listings.
+- Unbound bind-on-equip items remain auctionable. Binding checks use server template and persisted item-instance state; no wire or persistence schema change is required.
+
 ### Live acceptance
 
 - [x] Saved CLI grouped all-item pages 0/1 and Leather text query, flat name search and ItemID 2318 page 1 return meaningful populated results. [Exact ledger](../wiki/systems/auction-house.md) records 311 distinct items and final live total 300068 offers (historical sample 300075); it does not certify every filter combination.

@@ -304,6 +304,7 @@ pub(super) fn process_bid_list_requests(
 pub(super) fn process_create_requests(
     mut receivers: SessionReceiver<CreateAuction>,
     db: Option<Res<GameDatabase>>,
+    templates: Option<Res<ItemTemplates>>,
     mut state: ResMut<AuctionHouseState>,
     mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
@@ -313,8 +314,12 @@ pub(super) fn process_create_requests(
         db,
         &mut senders,
         |db, character_id, house, req| {
+            let Some(templates) = templates.as_deref() else {
+                return err("item templates unavailable");
+            };
             create_auction_with_gold_update(
                 &db.db,
+                templates,
                 &mut state,
                 character_id,
                 house,
@@ -445,13 +450,14 @@ fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(
 
 pub(super) fn create_auction_with_gold_update(
     db: &redb::Database,
+    templates: &ItemTemplates,
     state: &mut AuctionHouseState,
     character_id: u64,
     house: u8,
     request: &CreateAuction,
     gold_updates: &mut GoldUpdateQueue,
 ) -> AuctionOperationResponse {
-    let response = create_auction(db, state, character_id, house, request);
+    let response = create_auction(db, templates, state, character_id, house, request);
     record_successful_gold_updates(db, &response, [character_id], gold_updates);
     response
 }
