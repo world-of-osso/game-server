@@ -34,6 +34,7 @@ fn record(name: &str, guid: u64) -> InventoryRecord {
         equipped: vec![],
         bag_slots: vec![],
         instances: HashMap::from([(guid, ItemInstanceData { soulbound: false })]),
+        item_durability: HashMap::new(),
         definition_sources: HashMap::new(),
     }
 }

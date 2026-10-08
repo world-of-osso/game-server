@@ -743,6 +743,7 @@ fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
         slot: EquipmentVisualSlot::Head,
         item_id: Some(100),
+        definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
         display_info_id: Some(200),
         inventory_type: 1,
         hidden: false,
