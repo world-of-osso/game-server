@@ -31,7 +31,7 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - [x] Deposit All: the character bank takes tradeskill items (class 7). The Warband bank takes Warbound items (bonding 7–9), plus tradeable reagents when asked. Tabs assigned a matching `Enum.BagSlotFlags` are filled first.
 - [x] Tab settings store the name (1–15 letters, else `InvalidTabName`), the icon and the deposit flags.
 - [x] BankChannel requests must name the open banker, otherwise `NotInteracting`. The bank and the bags are written in one transaction.
-- [x] `SwapItem` and `SplitItem` on InventoryChannel accept `ItemLocation::Bank { tab, slot }` for character-bank slots. Moves require an open banker; refusals use `InventoryError`. Unbought tabs and out-of-range slots are invalid destinations. Bank↔bags and bank↔bank (same/across tabs) support exact-slot moves, swaps, merges capped at the item's stack size, and partial-stack splits. Specialty bag restrictions and nonempty-container checks apply before either direction of a swap; failure changes no item rows. GUID identity, binding and total owned count survive moves and database reopen.
+- [x] `SwapItem` and `SplitItem` on InventoryChannel accept `ItemLocation::Bank { tab, slot }` for character-bank slots ([inventory contract](inventory.md)). Moves require an open banker; refusals use `InventoryError`. Unbought tabs and out-of-range slots are invalid destinations. Bank↔bags and bank↔bank (same/across tabs) support exact-slot moves, swaps, merges capped at the item's stack size, and partial-stack splits. Specialty bag restrictions and nonempty-container checks apply before either direction of a swap; failure changes no item rows. GUID identity, binding and total owned count survive moves and database reopen.
 
 ### Guild bank
 - [x] Ranks follow TrinityCore `_CreateDefaultGuildRanks` (Guild.cpp:3184-3188): Guild Master, Officer, Veteran, Member, Initiate. Guild Master and Officer hold `GR_RIGHT_ALL` (gold withdrawal and guild repair), the others neither.
@@ -69,7 +69,7 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - `crates/server/src/game_objects_tests.rs`
 - `crates/server/src/bank_storage_tests.rs`
 - `crates/server/src/bank_tests.rs`
-- `crates/server/src/bank_move_tests.rs`, `bank_move_rule_tests.rs`: protocol-driven moves, split/merge limits, restrictions and atomic persistence/reopen.
+- `crates/server/src/bank_move_tests.rs`, `bank_move_rule_tests.rs`: protocol-driven moves, split/merge limits, restrictions and atomic persistence/reopen. Rules reference TrinityCore a352b1fa `ItemHandler.cpp::HandleSwapItem` / `CanUseBank` and `Player.cpp::SwapItem` / `SplitItem`; fetched sources are retained in `/home/osso/.worktrees/logs/tc/`.
 - `crates/server/src/guild_bank_tests.rs`
 - `crates/server/src/persistence_banks_tests.rs`: version 0 guilds get the default repair rights once, logs written before `RepairMoney` still read; `canonical_game_database_migrates` (ignored; `GAME_SERVER_MIGRATION_DB`) on a copy of a real database
 - `crates/server/src/bin/admin.rs` (`parse_guild_rank_and_bank_rights_requests`)
