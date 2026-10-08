@@ -831,3 +831,56 @@ fn ahsort_grouped_quantity_and_current_bid_order_across_page_boundary() {
         }
     }
 }
+
+#[test]
+fn ahsort_source_local_filters_and_stable_group_ties_span_two_pages() {
+    use shared::item_data::ItemDefinitionSource::{Forever70205, Retail};
+    let mut auctions = HashMap::new();
+    let mut templates = ItemTemplates::default();
+    for item in 1..=40u32 {
+        let mut template = ItemTemplate {
+            inventory_type: 5,
+            ..Default::default()
+        };
+        template.scaling.class_id = 4;
+        template.scaling.subclass_id = 1;
+        templates.retail.insert(item, template);
+        if item == 40 {
+            template.scaling.subclass_id = 2;
+        }
+        templates.forever.insert(item, template);
+        for base in [0, 1000] {
+            let id = u64::from(item) + base;
+            auctions.insert(id, offer(id, item, 3, Some(300)));
+        }
+    }
+    let source = |guid| if guid < 1000 { Retail } else { Forever70205 };
+    let expected = (1..=40)
+        .flat_map(|item| {
+            if item == 40 {
+                vec![(item, Retail)]
+            } else {
+                vec![(item, Retail), (item, Forever70205)]
+            }
+        })
+        .collect::<Vec<_>>();
+    for field in [AuctionSortField::Bid, AuctionSortField::Quantity] {
+        for dir in [AuctionSortDir::Asc, AuctionSortDir::Desc] {
+            let mut query = ahsort_query(field, dir);
+            let mut actual = Vec::new();
+            for page in 0..2 {
+                query.page = page;
+                let result = browse_for_viewer(&auctions, &query, Some(&templates), None, &source);
+                assert_eq!(result.total_results, 79);
+                assert_eq!(result.items.len(), if page == 0 { 50 } else { 29 });
+                actual.extend(
+                    result
+                        .items
+                        .into_iter()
+                        .map(|i| (i.item_id, i.definition_source)),
+                );
+            }
+            assert_eq!(actual, expected, "{field:?} {dir:?}");
+        }
+    }
+}
