@@ -13,9 +13,9 @@ use shared::components::{EquipmentAppearance, EquipmentVisualSlot, Player, UnitL
 use shared::protocol::{
     ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
     GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupPortraitAppearance,
-    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, RaidTargetIcons,
-    ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole,
-    SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
+    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, MinimapPing, MinimapPingRequest,
+    PromoteGroupLeader, RaidTargetIcons, ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck,
+    SetGroupLootMethod, SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -60,6 +60,7 @@ struct GroupCommandReceivers<'w, 's> {
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
     raid_targets: Receivers<'w, 's, SetRaidTarget>,
+    minimap_pings: Receivers<'w, 's, MinimapPingRequest>,
 }
 
 #[derive(SystemParam)]
@@ -71,6 +72,7 @@ struct GroupSenders<'w, 's> {
     cancelled_invites: Query<'w, 's, &'static mut MessageSender<GroupInviteCancelled>>,
     ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
     raid_targets: Query<'w, 's, &'static mut MessageSender<RaidTargetIcons>>,
+    minimap_pings: Query<'w, 's, &'static mut MessageSender<MinimapPing>>,
 }
 
 type OnlinePlayers<'w, 's> = Query<
@@ -217,6 +219,9 @@ fn apply_commands(
     for (from, msg) in drain(&mut rx.raid_targets, players) {
         effects.extend(registry.set_raid_target(from, msg.target, msg.icon));
     }
+    for (from, msg) in drain(&mut rx.minimap_pings, players) {
+        effects.extend(registry.minimap_ping(from, msg, online));
+    }
     effects
 }
 
@@ -297,6 +302,9 @@ fn deliver_effects(
                     inviter_name: inviter_name.clone(),
                 },
             ),
+            GroupEffect::MinimapPing { to, ping } => {
+                send_to(&mut senders.minimap_pings, connections, *to, ping.clone())
+            }
             // Applied to the player by maps::difficulty (DifficultyChanges).
             GroupEffect::DungeonDifficulty { .. } => {}
             GroupEffect::ReadyCheck(group_id) => {

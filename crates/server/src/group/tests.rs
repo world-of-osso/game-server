@@ -7,8 +7,9 @@ use shared::components::{
 };
 use shared::death::DeathState;
 use shared::protocol::{
-    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot, RAID_TARGET_SKULL,
-    RaidTargetIcons, ReadyCheckAnswer, SetRaidTarget,
+    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot,
+    MINIMAP_PING_MAP_HALFSIZE, MinimapPing, MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons,
+    ReadyCheckAnswer, SetRaidTarget,
 };
 
 use crate::death::PlayerDeathState;
@@ -42,6 +43,8 @@ fn setup_app_with(extra: impl FnOnce(&mut App)) -> App {
     app.register_message::<SetRaidTarget>();
     app.register_message::<RaidTargetIcons>();
     app.register_message::<ConvertGroupToRaid>();
+    app.register_message::<MinimapPingRequest>();
+    app.register_message::<MinimapPing>();
     app.add_plugins(GroupPlugin);
     extra(&mut app);
     app.add_systems(Update, collect_inbox);
@@ -128,6 +131,12 @@ fn connect(app: &mut App, character_id: u64, name: &str) -> Client {
                 MessageSender::<ConvertGroupToRaid>::default(),
                 MessageReceiver::<ConvertGroupToRaid>::default(),
             ),
+            (
+                MessageSender::<MinimapPingRequest>::default(),
+                MessageReceiver::<MinimapPingRequest>::default(),
+                MessageSender::<MinimapPing>::default(),
+                MessageReceiver::<MinimapPing>::default(),
+            ),
         ))
         .id();
     Client { player, conn }
@@ -152,6 +161,7 @@ struct Inbox {
     cancelled_invites: Vec<GroupInviteCancelled>,
     member_states: Vec<GroupMemberStates>,
     raid_targets: Vec<RaidTargetIcons>,
+    minimap_pings: Vec<MinimapPing>,
     inventory_errors: Vec<shared::protocol::InventoryError>,
 }
 
@@ -165,6 +175,7 @@ fn collect_inbox(
         &mut MessageReceiver<GroupInviteCancelled>,
         &mut MessageReceiver<GroupMemberStates>,
         &mut MessageReceiver<RaidTargetIcons>,
+        &mut MessageReceiver<MinimapPing>,
     )>,
 ) {
     for (
@@ -176,6 +187,7 @@ fn collect_inbox(
         mut cancels,
         mut states,
         mut raid_targets,
+        mut minimap_pings,
     ) in &mut connections
     {
         inbox.rosters.extend(rosters.receive());
@@ -185,6 +197,7 @@ fn collect_inbox(
         inbox.cancelled_invites.extend(cancels.receive());
         inbox.member_states.extend(states.receive());
         inbox.raid_targets.extend(raid_targets.receive());
+        inbox.minimap_pings.extend(minimap_pings.receive());
     }
 }
 
@@ -216,6 +229,10 @@ fn member_states(app: &mut App, client: &Client) -> Vec<GroupMemberStates> {
 
 fn raid_targets(app: &mut App, client: &Client) -> Vec<RaidTargetIcons> {
     std::mem::take(&mut inbox(app, client).raid_targets)
+}
+
+fn minimap_pings(app: &mut App, client: &Client) -> Vec<MinimapPing> {
+    std::mem::take(&mut inbox(app, client).minimap_pings)
 }
 
 fn pump(app: &mut App) {
@@ -1474,4 +1491,58 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
     );
     pump(&mut app);
     assert!(rosters(&mut app, &alice).is_empty());
+}
+
+#[test]
+fn minimap_ping_reaches_other_party_members_only() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let carol = connect(&mut app, 3, "Carol");
+    invite_and_accept(&mut app, &alice, &bob, "bob");
+
+    send(
+        &mut app,
+        &alice,
+        MinimapPingRequest {
+            x: -8913.5,
+            y: -133.25,
+        },
+    );
+    pump(&mut app);
+
+    assert_eq!(
+        minimap_pings(&mut app, &bob),
+        [MinimapPing {
+            sender: alice.player.to_bits(),
+            sender_name: "Alice".into(),
+            x: -8913.5,
+            y: -133.25,
+        }]
+    );
+    assert_eq!(minimap_pings(&mut app, &alice), []);
+    assert_eq!(minimap_pings(&mut app, &carol), []);
+}
+
+#[test]
+fn minimap_ping_off_the_map_or_while_solo_is_dropped() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let carol = connect(&mut app, 3, "Carol");
+    invite_and_accept(&mut app, &alice, &bob, "bob");
+
+    for (x, y) in [
+        (MINIMAP_PING_MAP_HALFSIZE + 1.0, 0.0),
+        (0.0, f32::NAN),
+        (f32::NEG_INFINITY, 0.0),
+    ] {
+        send(&mut app, &alice, MinimapPingRequest { x, y });
+    }
+    send(&mut app, &carol, MinimapPingRequest { x: 10.0, y: 20.0 });
+    pump(&mut app);
+
+    for client in [&alice, &bob, &carol] {
+        assert_eq!(minimap_pings(&mut app, client), []);
+    }
 }
