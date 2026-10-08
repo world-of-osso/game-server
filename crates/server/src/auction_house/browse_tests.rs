@@ -639,8 +639,14 @@ fn ahsort_fixture() -> (HashMap<u64, AuctionData>, ItemTemplates) {
         let mut auction = offer(id, id as u32, (id / 3 + 1) as u32, Some(90_000));
         auction.min_bid = 1;
         auction.current_bid = Some(9_000 - (id / 3) * 30);
-        if id == 75 { auction.current_bid = None; auction.min_bid = 100; }
-        let mut template = ItemTemplate { inventory_type: if id <= 75 { 5 } else { 1 }, ..Default::default() };
+        if id == 75 {
+            auction.current_bid = None;
+            auction.min_bid = 100;
+        }
+        let mut template = ItemTemplate {
+            inventory_type: if id <= 75 { 5 } else { 1 },
+            ..Default::default()
+        };
         template.scaling.class_id = 4;
         template.scaling.subclass_id = if id <= 80 { 1 } else { 2 };
         templates.retail.insert(id as u32, template);
@@ -652,8 +658,14 @@ fn ahsort_fixture() -> (HashMap<u64, AuctionData>, ItemTemplates) {
 fn ahsort_query(field: AuctionSortField, dir: AuctionSortDir) -> AuctionSearchQuery {
     AuctionSearchQuery {
         class_id: Some(4),
-        subcategory_filters: vec![shared::protocol::AuctionItemFilter { class_id: 4, subclass_id: Some(1), inventory_type: Some(5) }],
-        sort_field: field, sort_dir: dir, ..Default::default()
+        subcategory_filters: vec![shared::protocol::AuctionItemFilter {
+            class_id: 4,
+            subclass_id: Some(1),
+            inventory_type: Some(5),
+        }],
+        sort_field: field,
+        sort_dir: dir,
+        ..Default::default()
     }
 }
 
@@ -667,22 +679,61 @@ fn ahsort_subcategory_filters_before_flat_and_grouped_paging() {
     auctions.get_mut(&72).unwrap().item.name = "Excluded text".into();
     let mut query = ahsort_query(AuctionSortField::Name, AuctionSortDir::Asc);
     query.text = "Item".into();
-    query.subcategory_filters.push(shared::protocol::AuctionItemFilter { class_id: 4, subclass_id: Some(1), inventory_type: Some(20) });
+    query
+        .subcategory_filters
+        .push(shared::protocol::AuctionItemFilter {
+            class_id: 4,
+            subclass_id: Some(1),
+            inventory_type: Some(20),
+        });
     for page in 0..2 {
         query.page = page;
-        let grouped = browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| shared::item_data::ItemDefinitionSource::Retail);
-        let flat = super::super::handlers::search_for_viewer(&auctions, &query, Some(&templates), None, &|_| shared::item_data::ItemDefinitionSource::Retail);
-        let expected = if page == 0 { (1..=50).collect::<Vec<_>>() } else { (51..=71).chain([75]).collect() };
+        let grouped = browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        });
+        let flat = super::super::handlers::search_for_viewer(
+            &auctions,
+            &query,
+            Some(&templates),
+            None,
+            &|_| shared::item_data::ItemDefinitionSource::Retail,
+        );
+        let expected = if page == 0 {
+            (1..=50).collect::<Vec<_>>()
+        } else {
+            (51..=71).chain([75]).collect()
+        };
         assert_eq!(grouped.total_results, 72);
         assert_eq!(flat.total_results, 72);
-        assert_eq!(grouped.items.iter().map(|i| i.item_id).collect::<Vec<_>>(), expected);
-        assert_eq!(flat.results.iter().map(|i| i.item.item_id).collect::<Vec<_>>(), expected);
+        assert_eq!(
+            grouped.items.iter().map(|i| i.item_id).collect::<Vec<_>>(),
+            expected
+        );
+        assert_eq!(
+            flat.results
+                .iter()
+                .map(|i| i.item.item_id)
+                .collect::<Vec<_>>(),
+            expected
+        );
     }
     query.class_id = None; // Child filters must work without a redundant parent filter.
     query.page = 0;
-    assert_eq!(browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| shared::item_data::ItemDefinitionSource::Retail).total_results, 72);
+    assert_eq!(
+        browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        })
+        .total_results,
+        72
+    );
     query.subcategory_filters[0].inventory_type = None;
-    assert_eq!(browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| shared::item_data::ItemDefinitionSource::Retail).total_results, 77);
+    assert_eq!(
+        browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| {
+            shared::item_data::ItemDefinitionSource::Retail
+        })
+        .total_results,
+        77
+    );
 }
 
 #[test]
@@ -694,13 +745,30 @@ fn ahsort_current_bid_and_available_flat_order_across_page_boundary() {
             let mut expected = (1..=75u64).collect::<Vec<_>>();
             expected.sort_by_key(|id| {
                 let a = &auctions[id];
-                let value = if field == AuctionSortField::Bid { a.current_bid.unwrap_or(a.min_bid) } else { u64::from(a.stack_count) };
-                (if dir == AuctionSortDir::Desc { u64::MAX - value } else { value }, *id)
+                let value = if field == AuctionSortField::Bid {
+                    a.current_bid.unwrap_or(a.min_bid)
+                } else {
+                    u64::from(a.stack_count)
+                };
+                (
+                    if dir == AuctionSortDir::Desc {
+                        u64::MAX - value
+                    } else {
+                        value
+                    },
+                    *id,
+                )
             });
             let mut actual = Vec::new();
             for page in 0..2 {
                 query.page = page;
-                let result = super::super::handlers::search_for_viewer(&auctions, &query, Some(&templates), None, &|_| shared::item_data::ItemDefinitionSource::Retail);
+                let result = super::super::handlers::search_for_viewer(
+                    &auctions,
+                    &query,
+                    Some(&templates),
+                    None,
+                    &|_| shared::item_data::ItemDefinitionSource::Retail,
+                );
                 assert_eq!(result.total_results, 75);
                 assert_eq!(result.results.len(), if page == 0 { 50 } else { 25 });
                 actual.extend(result.results.into_iter().map(|i| i.auction_id));
@@ -726,15 +794,35 @@ fn ahsort_grouped_quantity_and_current_bid_order_across_page_boundary() {
         for dir in [AuctionSortDir::Asc, AuctionSortDir::Desc] {
             let mut query = ahsort_query(field, dir);
             let mut expected = (1..=75u32).collect::<Vec<_>>();
-            expected.sort_by_key(|id| {
-                let value = if field == AuctionSortField::Quantity { u64::from(auctions[&u64::from(*id)].stack_count) + 100 - u64::from(*id) }
-                    else if *id == 75 { 100 / u64::from(auctions[&75].stack_count) } else { u64::from(*id) / 3 + 1 };
-                (if dir == AuctionSortDir::Desc { u64::MAX - value } else { value }, *id)
+            let value = |id: u32| -> (u64, u64) {
+                if field == AuctionSortField::Quantity {
+                    (
+                        u64::from(auctions[&u64::from(id)].stack_count) + 100 - u64::from(id),
+                        1,
+                    )
+                } else if id == 75 {
+                    (100, u64::from(auctions[&75].stack_count))
+                } else {
+                    (u64::from(id) / 3 + 1, 1)
+                }
+            };
+            expected.sort_by(|a, b| {
+                let (an, ad) = value(*a);
+                let (bn, bd) = value(*b);
+                let order = (an * bd).cmp(&(bn * ad));
+                (if dir == AuctionSortDir::Desc {
+                    order.reverse()
+                } else {
+                    order
+                })
+                .then(a.cmp(b))
             });
             let mut actual = Vec::new();
             for page in 0..2 {
                 query.page = page;
-                let result = browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| shared::item_data::ItemDefinitionSource::Retail);
+                let result = browse_for_viewer(&auctions, &query, Some(&templates), None, &|_| {
+                    shared::item_data::ItemDefinitionSource::Retail
+                });
                 assert_eq!(result.total_results, 75);
                 assert_eq!(result.items.len(), if page == 0 { 50 } else { 25 });
                 actual.extend(result.items.into_iter().map(|i| i.item_id));
