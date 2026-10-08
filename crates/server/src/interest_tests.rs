@@ -13,13 +13,25 @@ fn ghoststate_stationary_observer_changes_recheck_ghost_visibility() {
     let target = spawn_interest_target(&mut app, pos(10.0, 0.0, 0.0));
     app.world_mut().entity_mut(target).insert(DeathState::Ghost);
     run_fixed_ticks(&mut app, 1);
-    assert_not_visible(app.world().get::<NetworkVisibility>(target).unwrap(), connection, "living observer cannot see ghost");
+    assert_not_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "living observer cannot see ghost",
+    );
     app.world_mut().entity_mut(player).insert(DeathState::Ghost);
     run_fixed_ticks(&mut app, 1);
-    assert_visible(app.world().get::<NetworkVisibility>(target).unwrap(), connection, "ghost observer sees ghost without moving");
+    assert_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "ghost observer sees ghost without moving",
+    );
     app.world_mut().entity_mut(player).insert(DeathState::Alive);
     run_fixed_ticks(&mut app, 1);
-    assert_not_visible(app.world().get::<NetworkVisibility>(target).unwrap(), connection, "resurrection hides ghosts without moving");
+    assert_not_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "resurrection hides ghosts without moving",
+    );
 }
 
 fn make_state_and_conn() -> (NetworkVisibility, Entity) {
