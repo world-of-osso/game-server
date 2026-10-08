@@ -12,8 +12,9 @@ use shared::group::{
 use shared::loot::LootMode;
 use shared::protocol::{
     GROUP_INVITE_TIMEOUT_SECS, GroupMemberSnapshot, GroupMessageCode, GroupPortraitAppearance,
-    GroupRoleSnapshot, GroupRosterSnapshot, RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS,
-    RaidTargetIcons, ReadyCheckAnswer, ReadyCheckMemberSnapshot, ReadyCheckUpdate,
+    GroupRoleSnapshot, GroupRosterSnapshot, MinimapPing, MinimapPingRequest,
+    RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS, RaidTargetIcons, ReadyCheckAnswer,
+    ReadyCheckMemberSnapshot, ReadyCheckUpdate,
 };
 
 pub type CharacterId = u64;
@@ -63,6 +64,8 @@ pub enum GroupEffect {
     TargetIcons(GroupId),
     /// Send a solo player their own raid target icons.
     SoloTargetIcons(CharacterId),
+    /// Relay a group member's minimap ping.
+    MinimapPing { to: CharacterId, ping: MinimapPing },
 }
 
 #[derive(Clone, Debug)]
@@ -758,6 +761,38 @@ impl GroupRegistry {
         }
         set_target_icon(&mut group.target_icons, target, icon);
         vec![GroupEffect::TargetIcons(group_id)]
+    }
+
+    /// `WorldSession::HandleMinimapPingOpcode` (TrinityCore a352b1fa
+    /// `GroupHandler.cpp:399-410`): a grouped sender's ping goes to its other group
+    /// members (`BroadcastPacket(..., ignoredPlayer = sender)`); ungrouped senders and
+    /// positions off the map (`MinimapPingRequest::is_valid`) are dropped.
+    pub fn minimap_ping(
+        &self,
+        from: CharacterId,
+        request: MinimapPingRequest,
+        online: &OnlineView,
+    ) -> Effects {
+        let Some(sender) = online.get(&from) else {
+            return Vec::new();
+        };
+        if !request.is_valid() {
+            return Vec::new();
+        }
+        let ping = MinimapPing {
+            sender: sender.entity,
+            sender_name: sender.name.clone(),
+            x: request.x,
+            y: request.y,
+        };
+        self.group_members(from)
+            .into_iter()
+            .filter(|&member| member != from)
+            .map(|to| GroupEffect::MinimapPing {
+                to,
+                ping: ping.clone(),
+            })
+            .collect()
     }
 
     /// The raid target icons `member` sees: its group's, or its own while solo.
