@@ -65,13 +65,16 @@ fn request_app(bonding: u8, bound: bool) -> (App, Entity, u64, u64) {
     });
     app.add_plugins(ProtocolPlugin);
     app.insert_resource(GameDatabase { db });
-    app.insert_resource(ItemTemplates(HashMap::from([(
-        6948,
-        ItemTemplate {
-            bonding,
-            ..Default::default()
-        },
-    )])));
+    app.insert_resource(ItemTemplates {
+        retail: HashMap::from([(
+            6948,
+            ItemTemplate {
+                bonding,
+                ..Default::default()
+            },
+        )]),
+        ..Default::default()
+    });
     app.init_resource::<AuctionHouseState>();
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins(AuctionHousePlugin);

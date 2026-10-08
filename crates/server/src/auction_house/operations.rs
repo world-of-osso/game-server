@@ -76,8 +76,10 @@ fn validate_auction_binding(
     templates: &ItemTemplates,
     source: &InventoryItemData,
 ) -> Result<(), AuctionOperationResponse> {
+    let definition_source =
+        persistence::inventory_store::load_item_definition_source(db, source.item_guid);
     let binds_on_pickup = templates
-        .get(source.item_id)
+        .get(definition_source, source.item_id)
         .is_some_and(ItemTemplate::binds_on_pickup);
     let bound =
         persistence::inventory_store::soulbound_guids(db, std::iter::once(source.item_guid));
