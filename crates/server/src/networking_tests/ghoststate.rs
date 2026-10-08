@@ -13,6 +13,11 @@ fn tick(server: &mut App, clients: &mut [App], duration: Duration) {
         for client in clients.iter_mut() {
             client.update();
         }
+        assert_ne!(
+            seen(&mut clients[1]),
+            Some(DeathState::Ghost),
+            "living observer must never receive a ghost-state frame"
+        );
         std::thread::sleep(Duration::from_millis(1));
     }
 }
