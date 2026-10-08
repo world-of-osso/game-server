@@ -196,6 +196,16 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - `game-server` commit `fc46567` — SQLite template name copied into spawned NPCs
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions
 
+## Player life state
+
+[Contract](../../specs/player-life-state.md). Shared `death::DeathState` is replicated separately from `PlayerStandState`: a corpse is Dead, a released player is Ghost, resurrection is Alive. `death_support::sync_replicated_life_state` projects changed `PlayerDeathState` after authoritative handlers and persisted-ghost restoration; fixed deaths project before interest updates. Login includes Alive. Unchanged states do not mark replication.
+
+The interest index retains life state with its position/map data. Target changes dirty the target; observer changes dirty its connection, so stationary release/resurrection changes visibility. Both visibility paths call shared `ghost_visible`, retaining map/distance/hidden rules and self-visibility. TC's group/corpse exceptions are deliberately not imported over the existing shared rule.
+
+TrinityCore `a352b1fa` sources: [Player.cpp:1136-1170](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Player/Player.cpp#L1136) (`Player::setDeathState` delegates to Unit); [Player.cpp:4286-4288](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Player/Player.cpp#L4286) (`BuildPlayerRepop`: body to ghost, one health); [SpellAuraEffects.cpp:1871-1894](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Spells/Auras/SpellAuraEffects.cpp#L1871) (`HandleAuraGhost` sets/removes `PLAYER_FLAGS_GHOST` and ghost visibility/detection); [Object.cpp:931-944](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Object/Object.cpp#L931) (ghost visibility mask and group exception).
+
+Targeted proof: [UDP transitions](../../../crates/server/src/networking_tests/ghoststate.rs), [stationary observer changes](../../../crates/server/src/interest_tests.rs). These exercise transport and production release/corpse handlers, not a live realm.
+
 ## See Also
 
 - [[tick-loop-audit]] — recurring networking/application polls and remaining proof limits
