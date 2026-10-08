@@ -203,6 +203,7 @@ fn compare_listing(
     now: u64,
 ) -> std::cmp::Ordering {
     let order = match query.sort_field {
+        AuctionSortField::Bid | AuctionSortField::Quantity => std::cmp::Ordering::Equal,
         AuctionSortField::Name => a.item.name.cmp(&b.item.name),
         AuctionSortField::MinBid => a.min_bid.cmp(&b.min_bid),
         AuctionSortField::Buyout => a
