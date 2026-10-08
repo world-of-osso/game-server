@@ -6,11 +6,18 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 
 ### Browse and listing selection
 
-- [x] `QueryAuctionBrowse` / `AuctionBrowseResults` provide global per-item browse without changing existing `QueryAuctions`, `AuctionSearchQuery` or `AuctionSearchResults` shapes.
+- [x] `QueryAuctionBrowse` / `AuctionBrowseResults` provide global per-item browse alongside existing `QueryAuctions` / `AuctionSearchResults`; both queries share `AuctionSearchQuery`.
 - [x] Apply exact-item, text, quality, level, class, usable-only and session-house faction filters before aggregation and pagination. Usability uses the actual viewer; house selection comes from the auctioneer session, not a client-selected cross-house proxy.
 - [x] Return one row per matching ItemID, with name, quality, required level, lowest effective unit price rounded up to copper, and total available quantity across all matching listings, not only one fetched flat page.
 - [x] Sort and paginate distinct items after global aggregation; `total_results` counts distinct matching items before pagination. Verify a second page with enough distinct items and listings spanning multiple flat pages.
 - [x] Selecting an ItemID issues the existing exact-item flat query. Bid/buyout acts on a real returned AuctionID; grouped rows are not synthetic auctions or purchase targets.
+
+### Subcategory and displayed-column sorting
+
+- Extend the existing browse/item query, not a parallel request: category nodes supply OR alternatives of item class, optional subclass and optional inventory type; other query constraints are ANDed with that selection.
+- Apply category alternatives against authoritative source-local templates before aggregation/paging. No template means no match when template filters are requested.
+- Current Bid sorts the displayed current bid, or starting minimum when no bid exists; `MinBid` remains a separate starting-bid sort. Available sorts actual auction-stack counts for flat listings and global `u64` totals for browse groups.
+- Both directions retain deterministic ascending AuctionID ties (flat), and ItemID/source ties (browse), before pagination. Prove full concatenated first/second pages, not just within-page order.
 
 ### Posting eligibility
 
@@ -66,4 +73,4 @@ Final build and twelve CLI samples are pinned to `eb649f8`; tests-only `2ec5fb3`
 
 ## Out of scope
 
-Favorites, tokens, commodity-specific purchase features and additional product policies are not authorized by this contract. This API does not replace the existing flat wire shapes.
+Favorites, tokens, commodity-specific purchase features and additional product policies are not authorized by this contract. This API retains the existing flat message types; the shared query shape evolves with protocol layout compatibility checks.
