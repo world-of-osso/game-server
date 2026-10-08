@@ -170,3 +170,101 @@ fn ahserver_bound_unbound_equip_item_remains_auctionable() {
     assert!(persistence::load_inventory(db, seller).items.is_empty());
     assert_eq!(persistence::load_auctions(db).len(), 1);
 }
+
+#[test]
+fn ahserver_money_outbid_200_copper_uses_real_denominations() {
+    assert_outbid_money(200, "0g 2s 0c");
+}
+
+#[test]
+fn ahserver_money_outbid_mixed_and_u64_amounts_keep_every_coin() {
+    for (amount, text) in [(12_345, "1g 23s 45c"), (4_294_967_395, "429496g 73s 95c")] {
+        assert_outbid_money(amount, text);
+    }
+}
+
+fn assert_outbid_money(amount: u64, formatted: &str) {
+    let (mut app, seller_connection, _, guid) = request_app(0, false);
+    assert!(post(&mut app, seller_connection, guid).success);
+    let auction_id = *app
+        .world()
+        .resource::<AuctionHouseState>()
+        .auctions
+        .keys()
+        .next()
+        .unwrap();
+    let next_bid = amount + amount.div_ceil(20);
+    let (a, a_id) = bidder_connection(&mut app, 2, "BidderA", amount + 998_800);
+    let (b, _) = bidder_connection(&mut app, 3, "BidderB", next_bid + 998_800);
+    assert!(bid(&mut app, a, auction_id, amount).success);
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!(persistence::load_inventory(db, a_id).gold, 998_800);
+    assert!(bid(&mut app, b, auction_id, next_bid).success);
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!(persistence::load_inventory(db, a_id).gold, 998_800 + amount);
+    let mail = persistence::mail_store::load_mailbox(db, a_id);
+    assert_eq!(mail.len(), 1);
+    assert_eq!(mail[0].subject, "Outbid");
+    assert_eq!(
+        mail[0].money, 0,
+        "refund was already credited, not a mail attachment"
+    );
+    assert_eq!(
+        mail[0].body,
+        format!("You have been outbid on Hearthstone. Your {formatted} has been refunded.")
+    );
+}
+
+fn bidder_connection(app: &mut App, account: u64, name: &str, copper: u64) -> (Entity, u64) {
+    let db = &app.world().resource::<GameDatabase>().db;
+    let (id, _) = persistence::create_character_with_test_bags(db, account, name, 1, 1).unwrap();
+    persistence::save_inventory(
+        db,
+        id,
+        &InventoryData {
+            gold: copper,
+            items: Vec::new(),
+        },
+    );
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            crate::auth::InWorld { character_id: id },
+            ActiveInteraction {
+                npc: Entity::PLACEHOLDER,
+                role: Some(NpcRole::AuctionHouse),
+                auction_house: Some(1),
+                gossip_actions: Vec::new(),
+            },
+            MessageSender::<PlaceBid>::default(),
+            MessageReceiver::<PlaceBid>::default(),
+            MessageSender::<AuctionOperationResponse>::default(),
+            MessageReceiver::<AuctionOperationResponse>::default(),
+        ))
+        .id();
+    (connection, id)
+}
+
+fn bid(
+    app: &mut App,
+    connection: Entity,
+    auction_id: u64,
+    amount: u64,
+) -> AuctionOperationResponse {
+    app.world_mut()
+        .entity_mut(connection)
+        .get_mut::<MessageSender<PlaceBid>>()
+        .unwrap()
+        .send::<AuctionChannel>(PlaceBid { auction_id, amount });
+    for _ in 0..3 {
+        app.update();
+    }
+    app.world_mut()
+        .resource_mut::<Responses>()
+        .0
+        .pop()
+        .expect("bid response")
+}
