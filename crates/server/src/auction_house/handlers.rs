@@ -105,7 +105,7 @@ pub(super) fn auction_matches_viewer(
         return false;
     }
     // Retail category nodes OR their class/subclass/inventory alternatives;
-    // TrinityCore a352b1fa AuctionHouseMgr.cpp:1081-1096 filters before paging.
+    // TrinityCore a352b1fa AuctionHouseMgr.cpp:1182-1198 filters before paging.
     if !query.subcategory_filters.is_empty()
         && !query.subcategory_filters.iter().any(|filter| {
             filter.class_id == template.scaling.class_id

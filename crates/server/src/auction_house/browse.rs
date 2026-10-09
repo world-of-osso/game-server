@@ -34,6 +34,7 @@ struct BrowseGroup<'a> {
     source: shared::item_data::ItemDefinitionSource,
     lowest_price: UnitPrice,
     lowest_bid: UnitPrice,
+    lowest_current_bid: UnitPrice,
     total_quantity: u64,
     earliest_expiry: u64,
 }
@@ -55,6 +56,10 @@ impl<'a> BrowseGroup<'a> {
                 quantity: auction.stack_count,
             },
             lowest_bid: bid,
+            lowest_current_bid: UnitPrice {
+                copper: auction.current_bid.unwrap_or(auction.min_bid),
+                quantity: auction.stack_count,
+            },
             total_quantity: u64::from(auction.stack_count),
             earliest_expiry: auction.expires_at_unix_secs,
         }
@@ -67,6 +72,13 @@ impl<'a> BrowseGroup<'a> {
         }
         if offer.lowest_bid.compare(self.lowest_bid).is_lt() {
             self.lowest_bid = offer.lowest_bid;
+        }
+        if offer
+            .lowest_current_bid
+            .compare(self.lowest_current_bid)
+            .is_lt()
+        {
+            self.lowest_current_bid = offer.lowest_current_bid;
         }
         self.total_quantity = self
             .total_quantity
@@ -206,7 +218,8 @@ fn compare_groups(
     now: u64,
 ) -> Ordering {
     let order = match query.sort_field {
-        AuctionSortField::Bid | AuctionSortField::Quantity => std::cmp::Ordering::Equal,
+        AuctionSortField::Bid => a.lowest_current_bid.compare(b.lowest_current_bid),
+        AuctionSortField::Quantity => a.total_quantity.cmp(&b.total_quantity),
         AuctionSortField::Name => a.item.item.name.cmp(&b.item.item.name),
         AuctionSortField::MinBid => a.lowest_bid.compare(b.lowest_bid),
         AuctionSortField::Buyout => a.lowest_price.compare(b.lowest_price),
@@ -225,7 +238,9 @@ fn compare_groups(
         AuctionSortDir::Asc => order,
         AuctionSortDir::Desc => order.reverse(),
     };
-    directed.then_with(|| a.item.item.item_id.cmp(&b.item.item.item_id))
+    directed
+        .then_with(|| a.item.item.item_id.cmp(&b.item.item.item_id))
+        .then_with(|| (a.source as u8).cmp(&(b.source as u8)))
 }
 
 #[cfg(test)]
