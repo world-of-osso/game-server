@@ -46,6 +46,10 @@ Client buff icons/combat text, live networking/realm state, timers/expiry, all s
 
 - Initial focused test development: 14 tests, 12 passed / 2 failed / 0 ignored. Log: `target/defensives-initial.log`.
 - Expanded focused test development: 17 tests, 12 passed / 5 failed / 0 ignored. Log: `target/defensives-expanded.log`. Failures above were then annotated as ignored; assertions retained.
-- Final focused suite and complete server-crate `cargo test`: pending final verification; exact results will be recorded before delivery.
+- Final focused: `cargo test -p server --bin game-server defensives_` at `5bf1365`: **12 passed, 0 failed, 5 ignored, 1580 filtered**, exit 0 (4.28 s). Log: `target/defensives-focused.log`.
+- Complete touched crate: `cargo test -p server -- --test-threads=4` at `5bf1365`: **1557 passed, 0 failed, 65 ignored, 0 filtered**, exit 0. Breakdown: main server 1532 passed / 65 ignored (175.73 s); admin 18 passed; integration binaries 4 and 3 passed. The 65 ignores include 60 pre-existing and five new defensive gaps. Log: `target/defensives-crate.log`.
+- `cargo check -p server` at `5bf1365`: exit 0, no warnings. Log: `target/defensives-check.log`. Readability inspection: no suppressions, nested branching, or oversized test helpers added.
+- `cargo fmt --all -- --check`: exit 1 solely for pre-existing module ordering at `crates/server/src/networking_tests.rs:105,117` (ghoststate placement). That file is unchanged from the base (`git diff 5b04aa9 -- crates/server/src/networking_tests.rs` is empty); unrelated formatting was not fixed. Log: `target/defensives-fmt.log`. `rustfmt --edition 2024 --check` on both changed Rust files passes (exit 0).
+- Subsequent changes only record documentation/results; they do not invalidate this code-revision proof. No independent model verification claim: the read-only Claude tool was unavailable due to expired authentication.
 
 Commands use the project `agent-run defensives` wrapper in this worktree. Ignored gap repro command: `cargo test -p server --bin game-server defensives_ -- --ignored --nocapture` (intentionally fails).
