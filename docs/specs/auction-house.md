@@ -29,6 +29,13 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 - Outbid mail states the credited refund in gold, silver and copper (`0g 2s 0c` for 200 copper), preserving the server's `u64` money range.
 - The notification does not attach the refund again: the balance credit and mail are settled together.
 
+### Expiry clock and settlement
+
+- The expiry sweep reads an injected server clock, defaulting to wall time; tests can pin it without sleeping or rewriting auction deadlines.
+- At the deadline, no-bid auctions return the item to the seller in Auction House mail with subject `Auction Expired`. Existing [unsold deposit refund policy](bot-economy.md#auction-supply-and-terms) remains unchanged.
+- Bid auctions settle the actual winning bid: seller mail contains the bid minus the house cut plus the existing deposit refund; buyer mail contains the auctioned item. Auction removal and both mails persist atomically and survive database reopen without duplicate settlement.
+- The existing same-UID `clock-advance <seconds>` admin command also advances auction expiry. It still advances instance locks; use only an owned private server for acceptance. It does not shift mail delivery/expiry, listing creation or browse clocks.
+
 ### Live acceptance
 
 - [x] Saved CLI grouped all-item pages 0/1 and Leather text query, flat name search and ItemID 2318 page 1 return meaningful populated results. [Exact ledger](../wiki/systems/auction-house.md) records 311 distinct items and final live total 300068 offers (historical sample 300075); it does not certify every filter combination.

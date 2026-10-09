@@ -12,6 +12,19 @@ fn injected_clock_bid_expiry_persists_seller_proceeds_and_buyer_item() {
     assert_clock_expiry(true);
 }
 
+fn advance_clock_through_admin(app: &mut App) {
+    use crate::admin_types::{AdminRequest, AdminResponse};
+    use crate::maps::difficulty::AdminInstances;
+    let mut system =
+        bevy::ecs::system::SystemState::<(AdminInstances, Res<GameDatabase>)>::new(app.world_mut());
+    let (mut admin, db) = system.get_mut(app.world_mut());
+    let response = admin.dispatch(&AdminRequest::ClockAdvance { seconds: 1 }, &db);
+    assert!(matches!(
+        response,
+        Some(AdminResponse::ClockAdvanced { offset_secs: 1, .. })
+    ));
+}
+
 fn assert_clock_expiry(with_bid: bool) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("auction-clock.redb");
@@ -67,8 +80,7 @@ fn assert_clock_expiry(with_bid: bool) {
     assert!(mail_store::load_mailbox(db, seller).is_empty());
     assert!(mail_store::load_mailbox(db, buyer).is_empty());
 
-    // The existing admin clock-advance changes this resource's offset too.
-    app.world_mut().resource_mut::<ServerClock>().offset_secs = 1;
+    advance_clock_through_admin(&mut app);
     app.update();
     app.update();
     assert!(

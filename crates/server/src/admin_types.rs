@@ -232,8 +232,8 @@ pub enum AdminRequest {
     Revive {
         character_name: String,
     },
-    /// Shift the instance-lock clock (`GameTime::GetSystemTime`) by `seconds`: resets
-    /// and lock expiry without waiting.
+    /// Shift the instance-lock and auction-expiry clock (`GameTime::GetSystemTime`)
+    /// by `seconds`: resets, lock expiry and auction settlement without waiting.
     ClockAdvance {
         seconds: i64,
     },
