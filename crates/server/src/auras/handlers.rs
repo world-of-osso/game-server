@@ -54,6 +54,8 @@ pub const MOD_INCREASE_MOUNTED_SPEED: u32 = 32;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
 pub const MOD_SHAPESHIFT: u32 = 36;
 pub const MOD_DECREASE_SPEED: u32 = 33;
+/// SPELL_AURA_MOD_DODGE_PERCENT: nondiminishing percentage points.
+pub const MOD_DODGE_PERCENT: u32 = 49;
 /// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
 pub const MOD_BLOCK_PERCENT: u32 = 51;
 pub const MOD_HIT_CHANCE: u32 = 54;
@@ -172,6 +174,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
+        | MOD_DODGE_PERCENT
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY

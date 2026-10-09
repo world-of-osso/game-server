@@ -150,7 +150,6 @@ fn defensives_monk_fortifying_brew_reduces_fire_20_percent() {
 }
 
 #[test]
-#[ignore = "defensive gap: aura 49 unhandled; player_defense reads rating only (auras/handlers.rs:197, stats.rs:430)"]
 fn defensives_rogue_evasion_increases_dodge() {
     let mut h =
         crate::spell_cast::test_harness::harness_with(Vec::new(), &[5277, FIREBALL], 4, true)
@@ -165,7 +164,9 @@ fn defensives_rogue_evasion_increases_dodge() {
         .dodge;
     h.cast_and_deliver(5277, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    // Evasion does not mitigate fire; its catalog effect is +200 dodge percent.
+    // TrinityCore adds aura 49 as nondiminishing percentage points. This catalog
+    // has 200 with no scaling/variance or per-level term, not a 2x encoding.
+    // Both 100 and 200 exhaust the melee hit table; fire is not mitigated.
     assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
     let after = h
         .app
