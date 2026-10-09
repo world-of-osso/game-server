@@ -144,9 +144,41 @@ fn defensives_demon_hunter_blur_trigger_reduces_fire_25_percent() {
 }
 
 #[test]
-#[ignore = "defensive gap: DUMMY effects have no Fortifying Brew script (spell_cast/scripts.rs:36-45)"]
 fn defensives_monk_fortifying_brew_reduces_fire_20_percent() {
-    assert_reduction(10, 115_203, &[], 80.0);
+    let mut h =
+        harness(Vec::new(), &[115_203, 120_954, FIREBALL], 10).expect("real world.db required");
+    // A wounded unit gains the same fixed bonus to current and max health.
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.caster)
+        .unwrap()
+        .current = 700.0;
+    h.cast_and_deliver(115_203, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), 80.0);
+    assert_eq!(incoming_melee(&mut h), 80.0);
+    let health = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(health.max, 1200.0);
+    assert_eq!(health.current, 740.0);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 120_954,
+    );
+    h.advance(3);
+    let health = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(health.max, 1000.0);
+    assert_eq!(health.current, 540.0);
+    assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
 }
 
 #[test]
@@ -234,11 +266,25 @@ fn defensives_mage_ice_block_blocks_melee() {
 }
 
 #[test]
-#[ignore = "defensive gap: melee applies health loss without absorb_damage (combat.rs:844-853)"]
 fn defensives_priest_power_word_shield_absorbs_melee() {
     let mut h = cast_defensive(5, 17, &[]);
     let before = shield_remaining(&h);
     assert!(before > INCOMING_DAMAGE);
     assert_eq!(incoming_melee(&mut h), 0.0);
     assert_eq!(shield_remaining(&h), before - INCOMING_DAMAGE);
+    h.advance(3);
+    assert!(h.inbox.log.iter().any(|event| event.spell_id.is_none()
+        && event.kind == CombatLogKind::Miss(MissKind::Absorb)
+        && event.amount == 0
+        && event.absorbed == INCOMING_DAMAGE as i32));
+    // Leave half a swing in the shield, then prove partial absorb and depletion.
+    incoming_fire(&mut h, before - INCOMING_DAMAGE - 50.0);
+    assert_eq!(incoming_melee(&mut h), 50.0);
+    assert_eq!(shield_remaining(&h), 0.0);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 17));
+    h.advance(3);
+    assert!(h.inbox.log.iter().any(|event| event.spell_id.is_none()
+        && event.kind == CombatLogKind::Damage
+        && event.amount == 50
+        && event.absorbed == 50));
 }
