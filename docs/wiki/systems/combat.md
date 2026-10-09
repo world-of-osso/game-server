@@ -130,6 +130,8 @@ Players no longer use the HP/mana/rating functions below: [[character-stats]] co
 
 ## See Also
 
+- [Class defensives audit](../../defensives-audit.md) — melee reductions work, but shield absorption and school immunity are bypassed (2026-10-09)
+
 - [[tick-model]] — combat systems run in `FixedUpdate`; no global fixed-phase pipeline is implemented
 - [[networking]] — CombatEvent broadcast over CombatChannel
 - [[creature-aggro]] — creature aggro/threat sets the creature's CombatTarget; evade stops combat and restores HP
