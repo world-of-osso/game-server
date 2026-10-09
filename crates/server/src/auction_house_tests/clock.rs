@@ -16,6 +16,7 @@ fn assert_clock_expiry(with_bid: bool) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("auction-clock.redb");
     let db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
     let (seller, _) = persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).unwrap();
     let (buyer, _) = persistence::create_character_with_test_bags(&db, 2, "Buyer", 1, 1).unwrap();
     let mut item = persistence::load_inventory(&db, seller).items[0].clone();
