@@ -104,3 +104,5 @@ Debug logs and root cause analyses.
 - [Zaralda observed native success](investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01) — saved exit0 interaction; source/import and renderer gates distinct; independent artifact gate116 scoped PASS, no whole-world PASS.
 
 - [Reported motion fixture correction](systems/skyborne.md#reported-motion-fixture-correction-2026-10-07) — adjacent-cell fixture fix a7616cd, retained exact GREEN and independent scoped gate; unchanged production/protocol, remote consumer gates open.
+
+- [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.
