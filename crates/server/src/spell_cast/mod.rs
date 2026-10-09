@@ -731,7 +731,8 @@ fn request_cast(
                 .and_then(|target| target.0)
         });
     let delay = cast_queue_delay(world, caster, &spell);
-    if delay > 0.0 && delay <= SPELL_QUEUE_WINDOW_SECS {
+    // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
+    if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
         world.entity_mut(caster).insert(QueuedSpellCast {
             spell,
             explicit,
@@ -748,7 +749,7 @@ fn request_cast(
 }
 
 /// TrinityCore a352b1fa Player.cpp:31545-31559: one request in the last 400 ms.
-const SPELL_QUEUE_WINDOW_SECS: f64 = 0.4;
+const SPELL_QUEUE_WINDOW_SECS: f32 = 0.4;
 
 /// Player-request slot, distinct from the snapshot belonging to the active cast bar.
 #[derive(Component)]

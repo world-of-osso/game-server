@@ -53,7 +53,7 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 ## Tests asserting this spec
 
 - `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`; Fireball scaling with computed Mage stats; percent mana cost from base mana; Flash Heal at a hostile kobold self-casts.
-- `crates/server/src/spell_cast/queue_tests.rs`: builder effects before real rage spender; GCD-only resource gain; deferred NotEnoughResource; immediate outside-window cast/GCD failure; last request wins; explicit stop; hostile interrupt school lock; death failure/no stale resurrection cast; deferred range validation.
+- `crates/server/src/spell_cast/queue_tests.rs`: builder effects before real rage spender; GCD-only resource gain; deferred NotEnoughResource; immediate outside-window cast/GCD failure; last request wins; explicit stop; hostile interrupt school lock; death failure/no stale resurrection cast; deferred range validation; inclusive exactly-400ms admission using the active cast's native time precision.
 - `crates/server/src/zones.rs`: NPC `UnitLevel` and empty `UnitPowers`.
 - `crates/server/src/spell_cast/class_resource_tests.rs`: fractional Essence and send cadence, charged-point addition/removal, form rates, same-tick prediction limits, rune spend/wait/completion, haste-scaled duration/rate changes and max-passive rune-count updates.
 
