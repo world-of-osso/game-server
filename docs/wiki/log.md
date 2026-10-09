@@ -698,3 +698,4 @@ Updated [[skyborne]] with wrong-cell root cause, stronger first-tick landing ass
 ## 2026-10-08 — Character-bank item moves
 
 Existing ItemLocation/SwapItem/SplitItem extended to character bank tabs; [bank system](systems/banks.md) records native cursor and transactional server behavior. Targeted proof tracked in `/home/osso/.worktrees/handoff-bankmoves.md`; no live run.
+- 2026-10-08: auction subcategory alternatives and Bid/Quantity ordering;4 targeted RED/GREEN paging/filter/source-tie tests. Updated auction-house spec/system. No live/broad gates.

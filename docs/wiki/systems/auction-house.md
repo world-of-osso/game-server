@@ -6,7 +6,7 @@ Current server source inspected October 1, 2026 at `8193d7e`, including server/s
 
 Shared browse messages remain distinct from flat search: `QueryAuctionBrowse` returns `AuctionBrowseResults` with ItemID, metadata, lowest unit price and total quantity. A grouped row has no AuctionID. Selecting its ItemID uses exact-item `QueryAuctions`; transactions use a real returned AuctionID.
 
-`browse.rs` filters expired/zero-count offers and applies item, text, quality, level, session house and viewer class/usability eligibility before global aggregation. Price comparisons retain rational stack prices until copper ceiling at serialization; quantities cover all eligible listings. Distinct-item paging follows aggregation with ItemID tie-breaking. `handlers.rs` requires the auctioneer session and overrides the requested house. Flat `queries.rs` retains listing results and AuctionID tie-breaking, using a bounded heap for shallow prefixes and partial selection for deeper pages.
+`browse.rs` filters expired/zero-count offers and applies item, text, quality, level, session house and viewer class/usability eligibility before global aggregation. Price comparisons retain rational stack prices until copper ceiling at serialization; quantities cover all eligible listings. Distinct-item paging follows aggregation with ItemID/source tie-breaking. `handlers.rs` requires the auctioneer session and overrides the requested house. Flat `queries.rs` retains listing results and AuctionID tie-breaking, using a bounded heap for shallow prefixes and partial selection for deeper pages.
 
 ## Saved proof ledger
 
@@ -91,3 +91,13 @@ Native seller/buyer/large/mail manifests (`native-seller-run3.json`, `native-buy
 - [[mail]] — settlement implementation.
 - [[npc-interaction]] — session validation.
 - [[persistence]] — durable state.
+
+## Subcategory / Current Bid / Available — 2026-10-08
+
+Existing `AuctionSearchQuery` now carries OR alternatives of class, optional subclass and optional inventory type, combined with the other filters. `handlers::auction_matches_viewer` checks authoritative source-local templates before either flat paging or global grouping. Class-only queries remain class-only; missing templates cannot match template-based restrictions. The Retail Chest node can send both inventory5 and20 without treating robes as a different class.
+
+`Bid` orders flat listings by current bid or their displayed minimum before any bid, separate from the preserved `MinBid` key. Browse `Bid` uses the lowest rational displayed unit bid across all eligible offers, without rounding away fractional-copper order. `Quantity` compares actual flat stack counts or global `u64` group totals. Directed primary ordering retains ascending AuctionID ties (flat) and ItemID/source ties (groups), before selecting pages. No new messages, client-page sorting, or transaction changes.
+
+Source: TrinityCore `a352b1fa` AuctionHouseMgr.cpp:1182-1198 filters class/subclass/inventory before browse result building;:243-273 bucket and:280-332 posting comparators handle directed primary sorts. TC posting ties use LIFO/raw-zero unbid amounts and its comparator omits Quantity; this project deliberately retains existing ascending IDs and the displayed minimum-before-first-bid contract. Cached Retail `Blizzard_AuctionHouseUI/Shared/Blizzard_AuctionHouseTableBuilder.lua:1033-1061,1094-1106` exposes `AuctionHouseSortOrder.Quantity` as Available and Bid as Current Bid; sibling [engine contract](../../../../game-engine/docs/specs/auction-house-ui.md) owns category/header actions and offline rendering.
+
+At code44cf153, `/home/osso/.worktrees/logs/ahsort-server-green.log` EXIT0:4 targeted `ahsort_` tests passed. Initial RED at d3ff2c0 was0/3 failed on unfiltered counts; filter-only source a537db4 gave1 pass/3 order/tie failures in `ahsort-server-sort-red.log`. Tests assert full concatenated50/25 pages over75 eligible items and50/29 pages over79 source-local groups, both directions, starting-vs-current bid, aggregate quantities beyond the first flat page, Chest/Robe alternatives, excluded text/unknown templates and stable source ties. Scope excludes live runs, broad suite gates and performance claims. Protocol round-trip3 and layout5 passed in sibling shared-protocol. [Current spec](../../specs/auction-house.md#subcategory-and-displayed-column-sorting) defines the contract, not historical acceptance receipts.
