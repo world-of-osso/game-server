@@ -1913,4 +1913,6 @@ mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
 #[cfg(test)]
+mod queue_tests;
+#[cfg(test)]
 mod tests;
