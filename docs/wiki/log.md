@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-09 — [Spell casting](systems/spell-casting.md): single-slot 400 ms player queue; defer full validation/costs until cast effects and GCD release. Explicit stop clears pending; hostile interrupt/death retain for revalidation, inferred from pinned TrinityCore a352b1fa. [Contract and source limits](../specs/cast-presentation.md#spell-queue-window); targeted connection RED on 2b98e75: 8 missing-queue failures, 1 outside-window control pass (`/home/osso/.worktrees/logs/spellqueue-red2.log`). No live Retail/client proof.
+
 - 2026-10-08 — [Replicated player life state](systems/networking.md#player-life-state): changed death/release/resurrection projection and stationary observer visibility, governed by shared ghost_visible; pinned TrinityCore a352b1fa sources. Targeted UDP/interest RED 0/2 followed by GREEN 2/2 at 9fcd652, including no transient decoded ghost frame for a living observer. Logs: /home/osso/.worktrees/logs/ghoststate-server-{red,green}.log. No live realm or persistence-parity claim.
 
 ## [2026-10-07] systems | Merchant sale order and bag repair
