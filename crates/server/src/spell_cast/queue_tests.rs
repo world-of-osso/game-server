@@ -21,7 +21,7 @@ fn delayed_builder() -> Harness {
     let mut builder = data.store.get(ONSLAUGHT).unwrap().clone();
     // Onslaught is instant in Retail. Only its duration is controlled here to put its
     // real 300-raw-rage effect after queue admission, at the cast-completion boundary.
-    builder.cast_time = Some(SpellCastTime {
+    builder.misc.as_mut().unwrap().cast_time = Some(SpellCastTime {
         base_ms: 1500,
         minimum_ms: 1500,
     });
