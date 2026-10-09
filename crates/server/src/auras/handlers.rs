@@ -51,6 +51,7 @@ pub const REFLECT_SPELLS: u32 = 28;
 pub const MOD_STAT: u32 = 29;
 pub const MOD_INCREASE_SPEED: u32 = 31;
 pub const MOD_INCREASE_MOUNTED_SPEED: u32 = 32;
+pub const MOD_INCREASE_HEALTH: u32 = 34;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
 pub const MOD_SHAPESHIFT: u32 = 36;
 pub const MOD_DECREASE_SPEED: u32 = 33;
@@ -145,6 +146,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT
         | MOD_SPEED_ALWAYS
+        | MOD_INCREASE_HEALTH
         | MOD_INCREASE_HEALTH_PERCENT
         | MOD_HEALING_DONE_PERCENT
         | MOD_TOTAL_STAT_PERCENTAGE

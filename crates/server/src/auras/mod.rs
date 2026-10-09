@@ -828,10 +828,30 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         .get::<StatModifiers>(unit)
         .copied()
         .unwrap_or_default();
+    change_flat_health(world, unit, stats.max_health_flat - current.max_health_flat);
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
     unit_state::reconcile(world, unit);
+}
+
+/// TrinityCore AuraEffect::HandleAuraModIncreaseHealth adds/removes the fixed
+/// bonus from both current and maximum health, never killing on removal:
+/// https://github.com/TrinityCore/TrinityCore/blob/master/src/server/game/Spells/Auras/SpellAuraEffects.cpp
+fn change_flat_health(world: &mut World, unit: Entity, delta: f32) {
+    if delta == 0.0 {
+        return;
+    }
+    let Some(mut health) = world.get_mut::<shared::components::Health>(unit) else {
+        return;
+    };
+    health.max = (health.max + delta).max(1.0);
+    if health.current > 0.0 {
+        health.current = (health.current + delta).clamp(1.0, health.max);
+    }
+    if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+        dirty.mark(unit);
+    }
 }
 
 /// `Unit::GetAuraCount`: the stacks of every aura of `spell_id` on `unit`.
