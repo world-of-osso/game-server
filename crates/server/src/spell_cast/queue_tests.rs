@@ -81,7 +81,9 @@ fn spellqueue_gcd_only_accepts_unaffordable_spender_then_real_charge_funds_it() 
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
     let charge_target = spawn_npc(&mut h.app, 10.0);
-    h.cast_and_deliver(CHARGE, Some(charge_target));
+    // A granted/off-GCD effect funds the held request; a new player intent would
+    // supersede it. Use Charge's real effect path, not a manual pool assignment.
+    super::cast_granted(h.app.world_mut(), h.caster, CHARGE, Some(charge_target)).unwrap();
     h.advance(10);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(successes(&h).contains(&SLAM));
