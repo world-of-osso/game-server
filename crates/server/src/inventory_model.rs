@@ -33,6 +33,8 @@ const TWO_HAND_TYPES: [u8; 4] = [15, 17, 25, 26];
 
 pub(crate) struct InventoryModel {
     bags: Vec<Vec<Option<InventoryItemData>>>,
+    /// Attached only for an authorized character bank move; persisted separately.
+    bank: Option<crate::persistence::banks::BankData>,
     /// Owned items with no free bag slot; kept so saving never drops them.
     overflow: Vec<InventoryItemData>,
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
@@ -75,6 +77,7 @@ impl InventoryModel {
             .collect();
         let mut model = Self {
             bags: vec![Vec::new(); usize::from(BAG_COUNT)],
+            bank: None,
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
@@ -97,6 +100,48 @@ impl InventoryModel {
         model.load_bag_items(record.inventory.items, &record.placements, mint);
         model.bind_owned_pickup_items();
         model
+    }
+
+    pub(crate) fn attach_bank(
+        &mut self,
+        db: &redb::Database,
+        templates: &ItemTemplates,
+        bank: crate::persistence::banks::BankData,
+    ) -> OpResult {
+        let guids = bank
+            .tabs
+            .iter()
+            .flat_map(|tab| tab.slots.iter().flatten())
+            .map(|item| item.item_guid);
+        let bound = crate::persistence::inventory_store::soulbound_guids(db, guids);
+        for item in bank.tabs.iter().flat_map(|tab| tab.slots.iter().flatten()) {
+            let source = crate::persistence::inventory_store::load_item_definition_source(
+                db,
+                item.item_guid,
+            );
+            let template = templates
+                .get(source, item.item_id)
+                .copied()
+                .ok_or_else(|| {
+                    error(
+                        InventoryErrorReason::ItemNotFound,
+                        format!("bank GUID {} has no definition", item.item_guid),
+                    )
+                })?;
+            self.register_definition(item, source, template);
+            self.instances.insert(
+                item.item_guid,
+                ItemInstanceData {
+                    soulbound: bound.contains(&item.item_guid),
+                },
+            );
+        }
+        self.bank = Some(bank);
+        Ok(())
+    }
+
+    pub(crate) fn take_bank(&mut self) -> Option<crate::persistence::banks::BankData> {
+        self.bank.take()
     }
 
     /// Bind-on-pickup and quest items are soulbound once owned.
@@ -429,7 +474,7 @@ impl InventoryModel {
             .into_iter()
             .filter_map(|(location, item)| match location {
                 ItemLocation::Equipment(slot) => Some(EquippedItemView { slot, item }),
-                ItemLocation::Bag { .. } => None,
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. } => None,
             })
             .collect();
         EquipmentSnapshot { items }
@@ -458,6 +503,21 @@ impl InventoryModel {
                 format!("server has no storage for equipment slot {slot:?}"),
             )),
             ItemLocation::Equipment(_) => Ok(()),
+            ItemLocation::Bank { tab, slot } => {
+                let exists = self
+                    .bank
+                    .as_ref()
+                    .and_then(|bank| bank.tabs.get(usize::from(tab)))
+                    .is_some_and(|tab| usize::from(slot) < tab.slots.len());
+                if exists {
+                    Ok(())
+                } else {
+                    Err(error(
+                        InventoryErrorReason::WrongSlot,
+                        format!("bank tab {tab} slot {slot} does not exist"),
+                    ))
+                }
+            }
         }
     }
 
@@ -467,6 +527,9 @@ impl InventoryModel {
                 self.bags[usize::from(bag)][usize::from(slot)].as_ref()
             }
             ItemLocation::Equipment(slot) => self.equipped.get(&slot),
+            ItemLocation::Bank { tab, slot } => {
+                self.bank.as_ref()?.tabs[usize::from(tab)].slots[usize::from(slot)].as_ref()
+            }
         }
     }
 
@@ -476,6 +539,9 @@ impl InventoryModel {
                 self.bags[usize::from(bag)][usize::from(slot)].take()
             }
             ItemLocation::Equipment(slot) => self.equipped.remove(&slot),
+            ItemLocation::Bank { tab, slot } => {
+                self.bank.as_mut()?.tabs[usize::from(tab)].slots[usize::from(slot)].take()
+            }
         }
     }
 
@@ -489,6 +555,10 @@ impl InventoryModel {
                     Some(item) => self.equipped.insert(slot, item),
                     None => self.equipped.remove(&slot),
                 };
+            }
+            ItemLocation::Bank { tab, slot } => {
+                self.bank.as_mut().expect("validated bank").tabs[usize::from(tab)].slots
+                    [usize::from(slot)] = item;
             }
         }
     }
@@ -614,16 +684,25 @@ impl InventoryModel {
         if from == to {
             return Ok(());
         }
-        if let (ItemLocation::Equipment(slot), ItemLocation::Bag { bag, .. }) = (from, to)
+        if let ItemLocation::Equipment(slot) = from
             && self.get(to).is_none()
         {
-            self.check_unequip_bag(slot, bag)?;
+            match to {
+                ItemLocation::Bag { bag, .. } => self.check_unequip_bag(slot, bag)?,
+                ItemLocation::Bank { .. } => {
+                    if let Some(bag) = slot.bag_index() {
+                        self.check_bag_empty(bag)?;
+                    }
+                }
+                ItemLocation::Equipment(_) => {}
+            }
         }
         match (from, to) {
             (_, ItemLocation::Equipment(slot)) => self.equip_into(from, slot),
-            (ItemLocation::Equipment(slot), ItemLocation::Bag { .. }) if self.get(to).is_some() => {
-                self.equip_into(to, slot)
-            }
+            (
+                ItemLocation::Equipment(slot),
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
+            ) if self.get(to).is_some() => self.equip_into(to, slot),
             _ if self.can_merge(from, to) => {
                 self.merge_stacks(from, to, u32::MAX);
                 Ok(())
@@ -642,14 +721,17 @@ impl InventoryModel {
         }
     }
 
-    /// Same item in two bag slots with room left in the target stack.
+    /// Same definition in two storage slots with room left in the target stack.
     fn can_merge(&self, from: ItemLocation, to: ItemLocation) -> bool {
         let (Some(source), Some(target)) = (self.get(from), self.get(to)) else {
             return false;
         };
         matches!(
             (from, to),
-            (ItemLocation::Bag { .. }, ItemLocation::Bag { .. })
+            (
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. }
+            )
         ) && self.same_definition(source, target)
             && target.stack_count < self.max_stack(target)
     }
@@ -684,31 +766,19 @@ impl InventoryModel {
     }
 
     fn merge_stacks(&mut self, from: ItemLocation, to: ItemLocation, count: u32) {
-        let (
-            ItemLocation::Bag { bag, slot },
-            ItemLocation::Bag {
-                bag: to_bag,
-                slot: to_slot,
-            },
-        ) = (from, to)
-        else {
-            return;
-        };
         let target = self.get(to).expect("merge target");
         let room = self.max_stack(target).saturating_sub(target.stack_count);
-        let source = self.bags[usize::from(bag)][usize::from(slot)]
-            .as_mut()
-            .expect("merge source");
+        let mut source = self.take(from).expect("merge source");
+        let mut target = self.take(to).expect("merge target");
         let moved = count.min(room).min(source.stack_count);
         source.stack_count -= moved;
-        if source.stack_count == 0 {
-            let removed = self.take(from).expect("merge source");
-            self.instances.remove(&removed.item_guid);
-        }
-        let target = self.bags[usize::from(to_bag)][usize::from(to_slot)]
-            .as_mut()
-            .expect("merge target");
         target.stack_count += moved;
+        if source.stack_count == 0 {
+            self.instances.remove(&source.item_guid);
+        } else {
+            self.put(from, Some(source));
+        }
+        self.put(to, Some(target));
     }
 
     /// Retail `CMSG_AUTO_EQUIP_ITEM`: equip into the first allowed slot, or store
@@ -811,7 +881,7 @@ impl InventoryModel {
         let slot = EquipmentSlot::from_bag_index(bag).expect("bag slot");
         let item = self.existing(source)?;
         self.validate_equip(item, slot)?;
-        let (cell_bag, cell) = match source {
+        match source {
             ItemLocation::Equipment(from_slot) => {
                 let from_bag = from_slot.bag_index().expect("only bag slots hold bags");
                 if let Some(previous) = self.equipped.get(&slot) {
@@ -824,9 +894,9 @@ impl InventoryModel {
                 self.bags.swap(usize::from(bag), usize::from(from_bag));
                 return Ok(());
             }
-            ItemLocation::Bag { bag, slot } => (bag, slot),
-        };
-        if cell_bag == bag {
+            ItemLocation::Bag { .. } | ItemLocation::Bank { .. } => {}
+        }
+        if matches!(source, ItemLocation::Bag { bag: source_bag, .. } if source_bag == bag) {
             return Err(error(
                 InventoryErrorReason::CantSwap,
                 format!("the bag in container {bag} cannot replace it"),
@@ -862,7 +932,7 @@ impl InventoryModel {
         let previous = self
             .equipped
             .insert(slot, moving.expect("validated source"));
-        self.bags[usize::from(cell_bag)][usize::from(cell)] = previous;
+        self.put(source, previous);
         self.bags[usize::from(bag)] = Vec::new();
         self.sync_containers();
         for (cell, content) in self.bags[usize::from(bag)].iter_mut().zip(contents) {
@@ -960,11 +1030,14 @@ impl InventoryModel {
         self.check_location(to)?;
         if !matches!(
             (from, to),
-            (ItemLocation::Bag { .. }, ItemLocation::Bag { .. })
+            (
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
+                ItemLocation::Bag { .. } | ItemLocation::Bank { .. }
+            )
         ) {
             return Err(error(
                 InventoryErrorReason::SplitFailed,
-                "stacks can only be split between bag slots",
+                "stacks can only be split between bag or bank slots",
             ));
         }
         if count == 0 || count >= source.stack_count {
@@ -997,12 +1070,9 @@ impl InventoryModel {
         if let Some(meta) = self.instances.get(&source_guid).copied() {
             self.instances.insert(new_guid, meta);
         }
-        if let ItemLocation::Bag { bag, slot } = from {
-            let remaining = self.bags[usize::from(bag)][usize::from(slot)]
-                .as_mut()
-                .expect("validated source");
-            remaining.stack_count -= count;
-        }
+        let mut remaining = self.take(from).expect("validated source");
+        remaining.stack_count -= count;
+        self.put(from, Some(remaining));
         self.put(to, Some(split));
         Ok(())
     }

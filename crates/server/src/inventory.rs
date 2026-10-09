@@ -43,18 +43,19 @@ pub struct InventoryPlugin;
 
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                send_initial_inventory,
-                process_swap_requests,
-                process_split_requests,
-                process_destroy_requests,
-                process_use_requests,
-                process_equip_requests,
-                process_sort_requests,
-            ),
-        );
+        app.init_resource::<crate::bank::ChangedCharacterBanks>()
+            .add_systems(
+                Update,
+                (
+                    send_initial_inventory,
+                    process_swap_requests,
+                    process_split_requests,
+                    process_destroy_requests,
+                    process_use_requests,
+                    process_equip_requests,
+                    process_sort_requests,
+                ),
+            );
         app.add_systems(
             PostUpdate,
             send_inventory_deltas
@@ -231,32 +232,117 @@ fn process_requests<M: lightyear::prelude::Message>(
     }
 }
 
-fn process_swap_requests(
-    mut receivers: Requests<SwapItem>,
-    store: InventoryStore,
-    mut updates: ResMut<GoldUpdateQueue>,
-    mut errors: ErrorSenders,
+type MoveRequests<'w, 's, M> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static InWorld,
+        Option<&'static crate::npc_interaction::ActiveInteraction>,
+        &'static mut MessageReceiver<M>,
+    ),
+    With<Authenticated>,
+>;
+
+#[derive(SystemParam)]
+struct MoveStore<'w, 's> {
+    store: InventoryStore<'w>,
+    updates: ResMut<'w, GoldUpdateQueue>,
+    errors: ErrorSenders<'w, 's>,
+    banks: ResMut<'w, crate::bank::ChangedCharacterBanks>,
+}
+
+/// TC a352b1fa ItemHandler.cpp `HandleSwapItem`: both bank positions require
+/// `CanUseBank`. Bank and inventory rows are saved together only on success.
+fn process_item_moves<M: lightyear::prelude::Message>(
+    receivers: &mut MoveRequests<M>,
+    store: &mut MoveStore,
+    locations: impl Fn(&M) -> (ItemLocation, ItemLocation),
+    apply: impl Fn(&mut InventoryModel, M, &Database) -> OpResult,
 ) {
-    process_requests(
+    let Some((db, templates)) = store.store.get() else {
+        return;
+    };
+    for (connection, in_world, interaction, mut receiver) in receivers.iter_mut() {
+        let character_id = in_world.character_id;
+        for request in receiver.receive() {
+            let (from, to) = locations(&request);
+            let bank_move = matches!(from, ItemLocation::Bank { .. })
+                || matches!(to, ItemLocation::Bank { .. });
+            let banker_open =
+                interaction.is_some_and(|i| i.role == Some(shared::protocol::NpcRole::Banker));
+            let result = apply_item_move(
+                db,
+                templates,
+                character_id,
+                bank_move,
+                banker_open,
+                |model| apply(model, request, db),
+            );
+            match result {
+                Ok(()) => {
+                    store.updates.record_items(character_id);
+                    if bank_move {
+                        store.banks.0.insert(connection);
+                    }
+                }
+                Err(error) => send_error(connection, &mut store.errors, error),
+            }
+        }
+    }
+}
+
+fn apply_item_move(
+    db: &Database,
+    templates: &ItemTemplates,
+    character_id: u64,
+    bank_move: bool,
+    banker_open: bool,
+    apply: impl FnOnce(&mut InventoryModel) -> OpResult,
+) -> OpResult {
+    if bank_move && !banker_open {
+        return Err(error(
+            InventoryErrorReason::CantDoRightNow,
+            "no character bank open",
+        ));
+    }
+    let mut model = load_model(db, templates, character_id)?;
+    if bank_move {
+        model.attach_bank(
+            db,
+            templates,
+            persistence::banks::load_character_bank(db, character_id),
+        )?;
+    }
+    apply(&mut model)?;
+    let bank = model.take_bank();
+    let record = model.into_record();
+    match bank {
+        Some(bank) => persistence::banks::save_bank_move(
+            db,
+            character_id,
+            persistence::banks::BankOwner::Character(character_id, &bank),
+            Some(&record),
+        ),
+        None => save_inventory_record(db, character_id, &record),
+    }
+    Ok(())
+}
+
+fn process_swap_requests(mut receivers: MoveRequests<SwapItem>, mut store: MoveStore) {
+    process_item_moves(
         &mut receivers,
-        store,
-        &mut updates,
-        &mut errors,
+        &mut store,
+        |req| (req.from, req.to),
         |model, req, _| model.swap(req.from, req.to),
     );
 }
 
-fn process_split_requests(
-    mut receivers: Requests<SplitItem>,
-    store: InventoryStore,
-    mut updates: ResMut<GoldUpdateQueue>,
-    mut errors: ErrorSenders,
-) {
-    process_requests(
+fn process_split_requests(mut receivers: MoveRequests<SplitItem>, mut store: MoveStore) {
+    process_item_moves(
         &mut receivers,
-        store,
-        &mut updates,
-        &mut errors,
+        &mut store,
+        |req| (req.from, req.to),
         |model, req, db| {
             let new_guid = persistence::next_id(db, "item_instance");
             model.split(req.from, req.to, req.count, new_guid)

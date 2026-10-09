@@ -93,6 +93,7 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
     add_inbox::<MailSent>(&mut app);
     add_inbox::<MailFailed>(&mut app);
     add_inbox::<PendingMail>(&mut app);
+    add_inbox::<InventoryError>(&mut app);
     app.insert_resource(world_db_faction_templates()?);
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
@@ -105,6 +106,7 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
         GuildBankPlugin,
         crate::guild::GuildPlugin,
         MailPlugin,
+        crate::inventory::InventoryPlugin,
     ));
     app.finish();
     app.cleanup();
@@ -195,6 +197,14 @@ fn spawn_connection(app: &mut App, peer: u64, character_id: u64, name: &str) -> 
                 pair::<PendingMail>(),
                 pair::<SendMail>(),
                 pair::<MailRequest>(),
+            ),
+            (
+                pair::<InventorySnapshot>(),
+                pair::<EquipmentSnapshot>(),
+                pair::<InventoryDelta>(),
+                pair::<InventoryError>(),
+                pair::<SwapItem>(),
+                pair::<SplitItem>(),
             ),
         ))
         .id();

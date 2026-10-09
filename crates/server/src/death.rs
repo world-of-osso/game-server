@@ -31,7 +31,9 @@ mod support;
 #[path = "death/transitions.rs"]
 mod transitions;
 
-use self::support::{build_snapshot, current_seconds, send_error, send_update};
+use self::support::{
+    build_snapshot, current_seconds, send_error, send_update, sync_replicated_life_state,
+};
 use transitions::process_player_death_transitions;
 pub(crate) use transitions::{
     PlayerDeathTransition, apply_health_damage, deal_environmental_damage,
@@ -80,7 +82,12 @@ impl Plugin for DeathPlugin {
         // the initial snapshot only after all login commands have been applied.
         app.add_systems(
             PostUpdate,
-            (restore_persisted_ghosts, send_initial_death_snapshot).chain(),
+            (
+                restore_persisted_ghosts,
+                sync_replicated_life_state,
+                send_initial_death_snapshot,
+            )
+                .chain(),
         );
         app.add_systems(Update, resurrection::receive_responses);
         app.add_systems(Update, process_death_queries);
@@ -90,9 +97,11 @@ impl Plugin for DeathPlugin {
         app.add_systems(Update, process_stuck_escape_requests);
         app.add_systems(
             FixedUpdate,
-            process_player_death_transitions
+            (process_player_death_transitions, sync_replicated_life_state)
+                .chain()
                 .after(crate::networking::apply_terrain_gravity)
-                .after(crate::combat::auto_attack_system),
+                .after(crate::combat::auto_attack_system)
+                .before(crate::interest::InterestUpdate),
         );
     }
 }
