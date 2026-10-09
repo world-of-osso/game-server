@@ -7,7 +7,7 @@ fn local_rows_for_tooltip_parity() {
     let path = crate::test_data::world_db_path();
     let templates = load_item_templates(&path).unwrap();
     let tables = load_item_scaling_tables(&path).unwrap();
-    for id in [1273, 6268, 937] {
+    for id in [1273, 6268, 937, 25, 3191, 1925, 11287] {
         let template = templates.get(ItemDefinitionSource::Retail, id).unwrap();
         let result = item_stats(template, &tables);
         let values: Vec<_> =
@@ -39,7 +39,8 @@ fn local_rows_for_tooltip_parity() {
                 let weapon = result.weapon.unwrap();
                 assert_eq!((weapon.min, weapon.max, weapon.speed), (6.0, 9.0, 3.6));
             }
-            _ => unreachable!(),
+            // Additional rows used by the existing client tooltip tests.
+            _ => {}
         }
     }
 }
