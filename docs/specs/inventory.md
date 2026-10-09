@@ -18,6 +18,7 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 - [x] Two-handers displace the off hand (and off-hand items displace an equipped two-hander) into a free bag slot.
 - [x] Equipment changes update the persisted and replicated `EquipmentAppearance` (hidden flag kept) and physical `character_equipment` ownership.
 - [x] Trade completion, auction/mail claims and profession craft/gather results emit deltas.
+- [x] Equipped item stats and tooltip values use one pure `shared::item_scaling` implementation: newest ItemSquishEra curve, RandPropPoints budget, socket cost, stamina/rating multipliers, armor and rounded weapon damage. Server loads source-local world.db DB2 tables and generated local-CASC game tables; client loads corresponding local CSV/game-table exports. No protocol message change or server formula change. Forest Chain (1273) contributes +4 Stamina and 10 Armor; cross-repo regressions also cover Pioneer Tunic (6268) and Black Duskwood Staff (937).
 
 ## Tests asserting this spec
 
@@ -34,7 +35,6 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 - [ ] Neck, finger, trinket and ranged slots have no server storage (`WRONG_SLOT`).
 - [ ] Bag-item durability is not tracked (`None`); equipped durability is the saved per-item state (max from `item_template.MaxDurability`, see [merchant](merchant.md)).
 - [ ] Items offered in an open trade are not locked; trade completion re-validates them.
-- [x] Equipped item stats and tooltip values use one pure `shared::item_scaling` implementation: newest ItemSquishEra curve, RandPropPoints budget, socket cost, stamina/rating multipliers, armor and rounded weapon damage. Server loads source-local world.db DB2 tables and generated local-CASC game tables; client loads corresponding local CSV/game-table exports. No protocol message change or server formula change. Forest Chain (1273) contributes +4 Stamina and 10 Armor; cross-repo regressions also cover Pioneer Tunic (6268) and Black Duskwood Staff (937).
 
 ## Out of scope
 
