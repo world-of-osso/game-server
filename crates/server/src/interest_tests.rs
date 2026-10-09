@@ -3,6 +3,37 @@ use super::*;
 /// Eastern Kingdoms, where the fixtures stand unless a test moves them.
 const MAP_0: InMap = InMap::continent(0);
 
+#[test]
+fn ghoststate_stationary_observer_changes_recheck_ghost_visibility() {
+    use shared::death::DeathState;
+    let mut app = setup_interest_app();
+    let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let player = app.world().get::<PlayerLink>(connection).unwrap().0;
+    app.world_mut().entity_mut(player).insert(DeathState::Alive);
+    let target = spawn_interest_target(&mut app, pos(10.0, 0.0, 0.0));
+    app.world_mut().entity_mut(target).insert(DeathState::Ghost);
+    run_fixed_ticks(&mut app, 1);
+    assert_not_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "living observer cannot see ghost",
+    );
+    app.world_mut().entity_mut(player).insert(DeathState::Ghost);
+    run_fixed_ticks(&mut app, 1);
+    assert_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "ghost observer sees ghost without moving",
+    );
+    app.world_mut().entity_mut(player).insert(DeathState::Alive);
+    run_fixed_ticks(&mut app, 1);
+    assert_not_visible(
+        app.world().get::<NetworkVisibility>(target).unwrap(),
+        connection,
+        "resurrection hides ghosts without moving",
+    );
+}
+
 fn make_state_and_conn() -> (NetworkVisibility, Entity) {
     (NetworkVisibility::default(), Entity::from_bits(1))
 }
