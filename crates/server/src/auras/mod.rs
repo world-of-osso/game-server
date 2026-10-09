@@ -857,8 +857,13 @@ fn school_or_physical(school_mask: u32) -> u32 {
 
 /// SCHOOL_IMMUNITY 39: an aura whose MiscValue school mask covers the damage.
 pub fn is_immune(world: &World, unit: Entity, school_mask: u32) -> bool {
+    immune_to_school(world.get::<ActiveAuras>(unit), school_mask)
+}
+
+/// Shared school immunity check for spell damage and queried melee targets.
+pub(crate) fn immune_to_school(auras: Option<&ActiveAuras>, school_mask: u32) -> bool {
     let school = school_or_physical(school_mask);
-    world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+    auras.is_some_and(|auras| {
         auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
             effect.aura_type == handlers::SCHOOL_IMMUNITY
                 && effect.misc_values[0] as u32 & school != 0

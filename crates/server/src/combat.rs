@@ -522,7 +522,8 @@ fn record_swing(
     mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
-    if !outcome.kind.avoided()
+    if !outcome.immune
+        && !outcome.kind.avoided()
         && let Some(pending) = params.aura_events.as_deref_mut()
     {
         pending
@@ -752,6 +753,7 @@ fn blocked_pct(
 struct SwingOutcome {
     hand: Hand,
     kind: MeleeOutcome,
+    immune: bool,
     damage: f32,
     /// `damage` in the target's health units (level scaling).
     scaled_loss: f32,
@@ -835,12 +837,14 @@ fn try_swing(
             crate::stand_state::stand_on_damage(world, target_entity)
         });
     }
+    let immune = crate::auras::immune_to_school(avoidance.1, 1);
     let (outcome_damage, blocked) = melee::outcome_damage(
         armored,
         kind,
         level_difference,
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
+    let outcome_damage = if immune { 0.0 } else { outcome_damage };
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, outcome_damage);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let overkill = crate::level_scaling::damage_overkill(damage, scaled_loss, health.current);
@@ -881,6 +885,7 @@ fn try_swing(
     Some(SwingOutcome {
         hand,
         kind,
+        immune,
         damage,
         scaled_loss,
         blocked,
@@ -966,7 +971,11 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
         periodic: false,
         extra_spell_id: None,
         timestamp_unix_ms: 0,
-        kind: swing_miss_kind(outcome.kind).map_or(CombatLogKind::Damage, CombatLogKind::Miss),
+        kind: if outcome.immune {
+            CombatLogKind::Miss(MissKind::Immune)
+        } else {
+            swing_miss_kind(outcome.kind).map_or(CombatLogKind::Damage, CombatLogKind::Miss)
+        },
     }
 }
 
