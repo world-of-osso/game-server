@@ -1,10 +1,34 @@
 # Replicated player life state
 
-- Every selected player exposes Alive, Dead (unreleased corpse), or Ghost to clients that can see it.
-- Lethal damage, spirit release, all resurrection paths, and persisted ghost restoration update this state; health alone never identifies a ghost.
-- Interest visibility combines existing distance/map/hidden-unit rules with shared `ghost_visible`. Alive observers lose Ghost targets; Ghost observers see Ghost targets. Each player still sees itself.
-- A stationary observer or target changing life state updates visibility without needing movement. Resurrection restores visibility to nearby living observers.
-- Owner death snapshots and corpse persistence remain unchanged. TrinityCore's group/corpse visibility exceptions are not new requirements; the existing shared policy governs.
+Visible players expose shared `DeathState` independently of their stand pose. Source: `crates/server/src/death{,_support}.rs` and `interest.rs`. [Implementation and TrinityCore a352b1fa audit](../wiki/systems/networking.md#player-life-state).
 
-Proof: targeted `ghoststate` server tests in `networking_tests/ghoststate.rs` (real UDP transitions and release/recovery handlers) and `interest_tests.rs` (stationary observer phase changes).
-Implementation/source audit: [networking](../wiki/systems/networking.md#player-life-state).
+## What it must do
+
+- [x] Another client observes Alive → Dead (unreleased corpse) → Ghost → Alive through lethal damage, release and corpse resurrection.
+- [x] Ghost state is explicit, never inferred from health.
+- [x] Interest combines existing map/distance/hidden rules with shared `ghost_visible`. Living observers never receive a Ghost-state frame; ghost observers see ghosts, and each player still sees itself.
+- [x] Stationary observer/target life-state changes update visibility; resurrection restores nearby living observers' visibility.
+- [ ] Spell/healer/dungeon resurrection and persisted-ghost restoration retain the same replicated-state projection; individual end-to-end fixtures are left to the lead gate.
+
+## How it works
+
+- [Changed death state and interest invalidation](../wiki/systems/networking.md#player-life-state).
+
+## Implementation inventory
+
+- `crates/server/src/auth_character.rs` — selected-player initial Alive component.
+- `crates/server/src/death.rs`, `death_support.rs` — changed authoritative state projection, including restoration and existing handlers.
+- `crates/server/src/interest.rs` — observer/target state invalidation and shared visibility policy.
+
+## Tests asserting this spec
+
+- `crates/server/src/networking_tests/ghoststate.rs` — real UDP transitions and production release/corpse handlers, no transient ghost frame for living observers.
+- `crates/server/src/interest_tests.rs` — stationary observer death-phase changes.
+
+## Known gaps (current cycle)
+
+- [ ] Lead's wider integration gate; no live realm run was authorized.
+
+## Out of scope
+
+Owner snapshot/corpse persistence changes, new corpse entities, and TrinityCore group/corpse visibility exceptions. Existing shared policy governs this realm.
