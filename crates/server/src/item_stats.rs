@@ -22,8 +22,7 @@ use crate::character_stats_data::{
 use crate::item_templates::ItemTemplate;
 
 pub use shared::item_scaling::{
-    FLAG2_CASTER_WEAPON, ItemScaling, ItemScalingTables, ItemStatAllocation, ItemStats,
-    WeaponDamage,
+    ItemScaling, ItemScalingTables, ItemStatAllocation, ItemStats, WeaponDamage,
 };
 
 #[cfg(test)]

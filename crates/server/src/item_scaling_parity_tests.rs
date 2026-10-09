@@ -17,9 +17,29 @@ fn local_rows_for_tooltip_parity() {
             "PARITY item={id} input={:?} slot={} result={result:?} allocations={values:?}",
             template.scaling, template.inventory_type
         );
-        if id == 1273 {
-            assert_eq!(result.block.primary.stamina, 4.0);
-            assert_eq!(result.block.secondary.armor, 10.0);
+        match id {
+            1273 => {
+                assert_eq!(result.item_level, 11);
+                assert_eq!(values, [(7, 4.0), (40, 7.0)]);
+                assert_eq!(result.block.primary.stamina, 4.0);
+                assert_eq!(result.block.secondary.armor, 10.0);
+            }
+            6268 => {
+                assert_eq!(result.item_level, 6);
+                assert_eq!(values, [(73, 1.0), (7, 2.0)]);
+                assert_eq!(result.block.primary.agility, 1.0);
+                assert_eq!(result.block.primary.intellect, 1.0);
+                assert_eq!(result.block.primary.stamina, 2.0);
+                assert_eq!(result.block.secondary.armor, 5.0);
+            }
+            937 => {
+                assert_eq!(result.item_level, 12);
+                assert!(values.is_empty());
+                assert_eq!(result.block, ItemStatBlock::default());
+                let weapon = result.weapon.unwrap();
+                assert_eq!((weapon.min, weapon.max, weapon.speed), (6.0, 9.0, 3.6));
+            }
+            _ => unreachable!(),
         }
     }
 }
