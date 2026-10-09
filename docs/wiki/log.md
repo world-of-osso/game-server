@@ -1,5 +1,9 @@
 # Wiki Log
 
+- 2026-10-09 — [Spell casting](systems/spell-casting.md): single-slot 400 ms player queue; defer full validation/costs until cast effects and GCD release. Explicit stop clears pending; hostile interrupt/death retain for revalidation, inferred from pinned TrinityCore a352b1fa. [Contract and source limits](../specs/cast-presentation.md#spell-queue-window); targeted connection RED on 2b98e75: 8 missing-queue failures, 1 outside-window control pass (`/home/osso/.worktrees/logs/spellqueue-red2.log`). Initial GREEN on a5a42eb: 9/9. Follow-up exact-400ms RED on 5bc4190: 0/1, exposed f32-to-f64 boundary widening; compare admission at CastState's native precision. Final GREEN on 9726ab6: 10/10, zero ignored, no warnings, EXIT0 (`/home/osso/.worktrees/logs/spellqueue-final-green.log`); changed-file rustfmt check passed. No live Retail/client proof.
+
+- 2026-10-08 — [Replicated player life state](systems/networking.md#player-life-state): changed death/release/resurrection projection and stationary observer visibility, governed by shared ghost_visible; pinned TrinityCore a352b1fa sources. Targeted UDP/interest RED 0/2 followed by GREEN 2/2 at 9fcd652, including no transient decoded ghost frame for a living observer. Logs: /home/osso/.worktrees/logs/ghoststate-server-{red,green}.log. No live realm or persistence-parity claim.
+
 ## [2026-10-07] systems | Merchant sale order and bag repair
 
 Updated [merchant](systems/merchant.md): chronological wrapped buyback lists retain physical request slots; item-guid durability survives unequipping and owned bag-item repairs save damage and payment atomically. Contract: [merchant spec](../specs/merchant.md). Live and suite proof ledger: `/home/osso-test/Projects/world-of-osso/game-engine/data/diagnostics/merchantloop-2026-10-07/proof-ledger.txt`.
@@ -692,3 +696,8 @@ Reconciled [[skyborne]], index and source/race contracts against tracked factory
 Updated [[skyborne]] with wrong-cell root cause, stronger first-tick landing assertions, pushed test-only a7616cd and retained independent bounded proof. Linked engine-owned remote handoff and current NPC RED; no new tests, operations or full-goal claim.
 
 - 2026-10-07 — Reconcile bounded corrective742 native Ailee/Grove functional DONE, mapped/build receipts, CPU13 and pending304; retain OS-exit/pixel/parity/provenance exclusions. Record final handoff metadata hash proof separately from unproved consumption/landing. Docs-only; no runtime or test operations.
+
+## 2026-10-08 — Character-bank item moves
+
+Existing ItemLocation/SwapItem/SplitItem extended to character bank tabs; [bank system](systems/banks.md) records native cursor and transactional server behavior. Targeted proof tracked in `/home/osso/.worktrees/handoff-bankmoves.md`; no live run.
+- 2026-10-08: auction subcategory alternatives and Bid/Quantity ordering;4 targeted RED/GREEN paging/filter/source-tie tests. Updated auction-house spec/system. No live/broad gates.

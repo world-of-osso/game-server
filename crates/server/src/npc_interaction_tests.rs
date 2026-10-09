@@ -240,6 +240,7 @@ impl Harness {
             query: AuctionSearchQuery {
                 item_id: None,
                 class_id: None,
+                subcategory_filters: Vec::new(),
                 text: String::new(),
                 page: 0,
                 page_size: 50,

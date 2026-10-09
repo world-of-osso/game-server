@@ -88,23 +88,30 @@ pub(crate) fn new_tab(number: usize) -> BankTabData {
     tab
 }
 
+/// Bank moves on InventoryChannel schedule a fresh character-bank snapshot.
+#[derive(Resource, Default)]
+pub(crate) struct ChangedCharacterBanks(pub std::collections::HashSet<Entity>);
+
 pub struct BankPlugin;
 
 impl Plugin for BankPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<BankTabPrices>().add_systems(
-            Update,
-            (
-                send_bank_contents,
-                process_deposits,
-                process_withdrawals,
-                process_tab_purchases,
-                process_money_transfers,
-                process_auto_deposits,
-                process_tab_settings,
-            )
-                .chain(),
-        );
+        app.init_resource::<BankTabPrices>()
+            .init_resource::<ChangedCharacterBanks>()
+            .add_systems(
+                Update,
+                (
+                    send_bank_contents,
+                    send_changed_character_banks,
+                    process_deposits,
+                    process_withdrawals,
+                    process_tab_purchases,
+                    process_money_transfers,
+                    process_auto_deposits,
+                    process_tab_settings,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -306,6 +313,29 @@ fn send_bank_contents(
             let data = vault.load_bank(&patron, bank);
             vault.send_contents(connection, bank, &data);
         }
+    }
+}
+
+fn send_changed_character_banks(
+    mut changed: ResMut<ChangedCharacterBanks>,
+    patrons: Query<(&InWorld, &Authenticated)>,
+    mut vault: Vault,
+) {
+    if !vault.ready() {
+        return;
+    }
+    for connection in changed.0.drain() {
+        let Ok((in_world, auth)) = patrons.get(connection) else {
+            continue;
+        };
+        let patron = Patron {
+            connection,
+            character_id: in_world.character_id,
+            account_id: auth.account_id,
+            banker: None,
+        };
+        let data = vault.load_bank(&patron, BankType::Character);
+        vault.send_contents(connection, BankType::Character, &data);
     }
 }
 
@@ -567,3 +597,7 @@ fn update_tab_settings(
 #[cfg(test)]
 #[path = "bank_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "bank_move_tests.rs"]
+mod move_tests;

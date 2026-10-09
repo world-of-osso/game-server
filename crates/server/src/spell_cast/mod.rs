@@ -91,6 +91,7 @@ impl Plugin for SpellCastPlugin {
                     runes::regenerate_runes,
                     advance_casts.after(crate::networking::process_player_inputs),
                     missiles::resolve_due_hits,
+                    start_queued_casts,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
                 )
@@ -729,8 +730,79 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
+    let delay = cast_queue_delay(world, caster, &spell);
+    // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
+    if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
+        world.entity_mut(caster).insert(QueuedSpellCast {
+            spell,
+            explicit,
+            witness: request.witness,
+        });
+        return Ok(());
+    }
+    if delay == 0.0 {
+        // A newer executable request supersedes the held request too.
+        world.entity_mut(caster).remove::<QueuedSpellCast>();
+    }
     start_cast(world, caster, &spell, explicit, request.witness)
         .map_err(|failure| (spell.id, failure))
+}
+
+/// TrinityCore a352b1fa Player.cpp:31545-31559: one request in the last 400 ms.
+const SPELL_QUEUE_WINDOW_SECS: f32 = 0.4;
+
+/// Player-request slot, distinct from the snapshot belonging to the active cast bar.
+#[derive(Component)]
+struct QueuedSpellCast {
+    spell: SpellInfo,
+    explicit: Option<Entity>,
+    witness: Option<WitnessRay>,
+}
+
+fn cast_queue_delay(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
+    let cast_remaining = world.get::<CastState>(caster).map_or(0.0, |cast| {
+        f64::from((cast.duration - cast.elapsed).max(0.0))
+    });
+    let gcd_ready_at = world
+        .get::<SpellHistory>(caster)
+        .and_then(|history| history.gcd_ready_at.get(&gcd_category(spell)))
+        .copied()
+        .unwrap_or(0.0);
+    cast_remaining.max((gcd_ready_at - now(world)).max(0.0))
+}
+
+/// Run after active cast completion and due missile effects, before power replication.
+fn start_queued_casts(world: &mut World) {
+    let mut pending = world.query::<(Entity, &QueuedSpellCast)>();
+    let ready: Vec<_> = pending
+        .iter(world)
+        .filter(|(caster, queued)| {
+            world.get::<CastState>(*caster).is_none()
+                && cast_queue_delay(world, *caster, &queued.spell) == 0.0
+        })
+        .map(|(caster, _)| caster)
+        .collect();
+    for caster in ready {
+        let queued = world.entity_mut(caster).take::<QueuedSpellCast>().unwrap();
+        if let Err(failure) = start_cast(
+            world,
+            caster,
+            &queued.spell,
+            queued.explicit,
+            queued.witness,
+        ) {
+            let (reason, detail) = failure.to_contract();
+            send_to_owner(
+                world,
+                caster,
+                CastFailed {
+                    spell_id: queued.spell.id,
+                    reason,
+                    detail,
+                },
+            );
+        }
+    }
 }
 
 /// Player requests are limited to known class and profession spells; NPC
@@ -1833,6 +1905,12 @@ pub(crate) fn receive_stop_requests(world: &mut World) {
         })
         .collect();
     for owner in owners {
+        // Explicit cancellation clears the held request as well as the active cast.
+        // Hostile interrupts, movement and death do not: they revalidate at release.
+        // TrinityCore a352b1fa SpellHandler.cpp:247-255.
+        if world.get::<CastState>(owner).is_some() {
+            world.entity_mut(owner).remove::<QueuedSpellCast>();
+        }
         cancel_cast(world, owner);
     }
 }
@@ -1908,6 +1986,8 @@ mod class_resource_tests;
 mod line_of_sight_tests;
 #[cfg(test)]
 mod new_class_tests;
+#[cfg(test)]
+mod queue_tests;
 #[cfg(test)]
 mod regen_tests;
 #[cfg(test)]

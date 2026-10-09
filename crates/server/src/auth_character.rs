@@ -541,6 +541,7 @@ fn build_player_runtime_components(character_id: u64, data: &CharacterData) -> i
         MovementSpeed(DEFAULT_RUN_SPEED),
         PlayerMotion::default(),
         shared::components::PlayerStandState::default(),
+        shared::death::DeathState::Alive,
         VerticalVelocity::default(),
         UnitStats::default(),
         CombatRatings::default(),

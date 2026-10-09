@@ -55,7 +55,7 @@ Server gameplay systems.
 | [[professions]] | Retail skill lines (parent + expansion child), TDB1210 trainers, crafting through the spell pipeline (reagents, tools, CREATE_ITEM, TrinityCore skill-up chances) |
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
 | [[swimming-and-breath]] | MH2O terrain liquid (client-matched sampling), swim height bounds, no gravity for swimmers, TrinityCore breath/fatigue mirror timers and drowning damage |
-| [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management |
+| [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management; [replicated player life state](systems/networking.md#player-life-state) |
 | [[persistence]] | Frozen pre-source character/equipment ABI, GUID-hydrated cache sources, redb for mutable player data; atomic death-state/HP saves, exact corpse/graveyard relog, legacy-record compatibility and initial-snapshot ordering; physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1; labelled Forever Zephras overlay, source masks/XP, captured NPC displays, labelled missing-class/health estimates, client asset needs and completion gaps |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
@@ -63,7 +63,7 @@ Server gameplay systems.
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0, charge categories), ClassSpells, raw power-cost units, load cost |
 | [[character-stats]] | Retail 12.x player stats: SimC class/race base stats, CASC hppersta/basemp/combatratings, spec main stat and mastery, `StatModifiers` aura fold-in, base-mana costs, gaps (no gear/weapon data) |
-| [[spell-casting]] | Cast pipeline (validation, cast bars/channels, costs, GCD/cooldowns/charges), implicit targets, effect handlers, combat log scope, fractional power/rate and rune replication, known-spell check |
+| [[spell-casting]] | Cast pipeline, single-slot 400 ms spell queue with start-time costs, cast bars/channels, GCD/cooldowns/charges, targets/effects, combat log, fractional power/rune replication and known-spell check |
 | [[auras]] | Aura runtime: stacking/refresh, periodic ticks, Recuperate full-health completion, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
@@ -104,3 +104,5 @@ Debug logs and root cause analyses.
 - [Zaralda observed native success](investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01) — saved exit0 interaction; source/import and renderer gates distinct; independent artifact gate116 scoped PASS, no whole-world PASS.
 
 - [Reported motion fixture correction](systems/skyborne.md#reported-motion-fixture-correction-2026-10-07) — adjacent-cell fixture fix a7616cd, retained exact GREEN and independent scoped gate; unchanged production/protocol, remote consumer gates open.
+
+- [Auction subcategory/sort proof](systems/auction-house.md#subcategory--current-bid--available--2026-10-08) — class/subclass/inventory alternatives and stable Bid/Quantity paging.

@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy_replicon::server::visibility::client_visibility::ClientVisibility;
 use lightyear::prelude::*;
 use shared::components::Position;
+use shared::death::{DeathState, ghost_visible};
 
 use crate::maps::InMap;
 use crate::networking::PlayerLink;
@@ -147,6 +148,7 @@ struct InterestIndex {
     dirty_observers: EntityHashSet,
     /// Targets no player sees (invisible units, `auras::unit_state`).
     hidden: EntityHashSet,
+    life_states: EntityHashMap<DeathState>,
 }
 
 impl InterestIndex {
@@ -169,10 +171,32 @@ impl InterestIndex {
         map: Option<InMap>,
     ) -> bool {
         observer.sees(entity, position, map)
-            && (entity == observer.player || !self.hidden.contains(&entity))
+            && (entity == observer.player
+                || (!self.hidden.contains(&entity)
+                    && self.ghost_visible_to(observer.player, entity)))
+    }
+
+    /// Shared policy intentionally governs this realm, not TC's group/corpse exceptions.
+    fn ghost_visible_to(&self, observer: Entity, target: Entity) -> bool {
+        ghost_visible(
+            self.life_states.get(&observer).copied().unwrap_or_default(),
+            self.life_states.get(&target).copied().unwrap_or_default(),
+            false,
+        )
+    }
+
+    fn update_life_state(&mut self, entity: Entity, state: DeathState) {
+        if self.life_states.insert(entity, state) == Some(state) {
+            return;
+        }
+        self.dirty_targets.insert(entity);
+        if let Some(&connection) = self.connection_by_player.get(&entity) {
+            self.dirty_observers.insert(connection);
+        }
     }
 
     fn remove_target(&mut self, entity: Entity) {
+        self.life_states.remove(&entity);
         if let Some(bucket) = self.target_buckets.remove(&entity) {
             let remove_bucket = self.buckets.get_mut(&bucket).is_some_and(|entities| {
                 entities.remove(&entity);
@@ -309,13 +333,16 @@ fn on_replication_client_added(
 
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
-    positions: Query<(&Position, Option<&InMap>)>,
+    positions: Query<(&Position, Option<&InMap>, Option<&DeathState>)>,
     connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
-    if let Ok((position, map)) = positions.get(trigger.entity) {
+    if let Ok((position, map, life_state)) = positions.get(trigger.entity) {
+        if let Some(state) = life_state {
+            index.update_life_state(trigger.entity, *state);
+        }
         if map.is_none() {
             error!(
                 "{} is replicated without an InMap: no player sees it",
@@ -355,15 +382,18 @@ fn on_network_visibility_removed(
 fn on_player_link_added(
     trigger: On<Add, PlayerLink>,
     links: Query<&PlayerLink>,
-    positions: Query<(&Position, Option<&InMap>)>,
+    positions: Query<(&Position, Option<&InMap>, Option<&DeathState>)>,
     mut index: ResMut<InterestIndex>,
 ) {
     let Ok(link) = links.get(trigger.entity) else {
         return;
     };
-    let Ok((position, map)) = positions.get(link.0) else {
+    let Ok((position, map, life_state)) = positions.get(link.0) else {
         return;
     };
+    if let Some(state) = life_state {
+        index.update_life_state(link.0, *state);
+    }
     index.add_observer(trigger.entity, link.0, *position, map.copied());
 }
 
@@ -402,12 +432,16 @@ type VisibilityTargets<'w, 's> = Query<
 
 fn update_interest(
     positions: Query<(&Position, Option<&InMap>)>,
+    life_states: Query<(Entity, &DeathState), Changed<DeathState>>,
     dirty_queue: Res<InterestDirtyQueue>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
     mut visibility_query: VisibilityTargets,
 ) {
+    for (entity, state) in &life_states {
+        index.update_life_state(entity, *state);
+    }
     for entity in dirty_queue.drain_interest() {
         if let Ok((position, map)) = positions.get(entity) {
             index.update_position(entity, *position, map.copied());
@@ -488,10 +522,17 @@ fn update_target_visibility(
         return;
     };
 
+    let target_state = index.life_states.get(&entity).copied().unwrap_or_default();
     let hidden = index.hidden.contains(&entity);
+    let life_states = &index.life_states;
     for (&connection, observer) in index.observers.iter_mut() {
-        let should_be_visible =
-            observer.sees(entity, &position, map) && (entity == observer.player || !hidden);
+        let observer_state = life_states
+            .get(&observer.player)
+            .copied()
+            .unwrap_or_default();
+        let visible_in_death_phase = ghost_visible(observer_state, target_state, false);
+        let should_be_visible = observer.sees(entity, &position, map)
+            && (entity == observer.player || (!hidden && visible_in_death_phase));
         apply_target_visibility_transition(
             &mut state,
             observer,

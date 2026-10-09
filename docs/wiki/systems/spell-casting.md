@@ -5,7 +5,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 ## Pipeline
 
 1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
-2. **Validate**, in order:
+2. **Queue or validate:** after spell resolution and known-spell admission, hold one `QueuedSpellCast` (spell snapshot, explicit target and witness) while cast/GCD remaining time is positive and at most 400 ms. New admitted requests replace it. No resource, target or cooldown validation at admission. Outside that window use immediate validation. `start_queued_casts` runs after `advance_casts` and due missile effects in the fixed chain, waits for both active cast and applicable GCD to end, takes the slot once and calls the normal start path. Full validation then runs in order:
    - player casters must know the spell (`class_progression::knows_spell` on [[class-progression]] `KnownSpells`; NPCs exempt; triggered spells skip it);
    - caster alive;
    - not stunned, silenced or pacified ([[auras]] crowd control);
@@ -39,6 +39,10 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - push proc events (cast success, one spell hit per distinct target) and spend charged spell mods.
    - A failed completion sends `CastFailed`.
 6. **Cancel:** stop requests, caster death and movement all remove `CastState`. An ended channel removes its caster's auras of that spell (`auras::channel_ended`) and the ritual objects it held (`meeting_stone::ritual::channel_ended`).
+
+### Pending cast cancellation
+
+Explicit `StopSpellCast` for an active cast removes its `QueuedSpellCast` before canceling the cast. Hostile interruption, movement and death use the existing interrupt/cancel paths and retain the pending slot: release revalidates movement, school lockout, death, targets and costs. A failed start sends owner `CastFailed` and consumes the slot. Policy, pinned sources and proof limits: [spell queue contract](../../specs/cast-presentation.md#spell-queue-window).
 
 ### Movement
 
