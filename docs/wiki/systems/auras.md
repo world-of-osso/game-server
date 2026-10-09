@@ -304,6 +304,8 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
 
 ## See Also
 
+- [Class defensives audit](../../defensives-audit.md) — real-cast spell/melee proofs, catalog presence versus reproduced gaps (2026-10-09)
+
 - [[spell-casting]] — the pipeline that applies auras and reads spell mods
 - [[spell-info]] — aura options, interrupts, class options, labels
 - [[class-progression]] — `KnownSpells` passives

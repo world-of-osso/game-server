@@ -1412,6 +1412,9 @@ fn receive_cancel_aura(world: &mut World) {
 mod tests;
 
 #[cfg(test)]
+mod defensives_tests;
+
+#[cfg(test)]
 mod polymorph_tests;
 
 #[cfg(test)]

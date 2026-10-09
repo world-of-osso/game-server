@@ -35,6 +35,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; cast-to-damage proofs and five reproduced gaps.
+
 Server gameplay systems.
 
 - [Player resurrection and creature taps](systems/player-resurrection-and-taps.md) — spell-effect consent offers, exact restoration, stable tap IDs and bandwidth; [contract](../specs/player-resurrection-and-taps.md).
