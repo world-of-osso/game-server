@@ -17,7 +17,7 @@ fn advance_clock_through_admin(app: &mut App) {
     use crate::maps::difficulty::AdminInstances;
     let mut system =
         bevy::ecs::system::SystemState::<(AdminInstances, Res<GameDatabase>)>::new(app.world_mut());
-    let (mut admin, db) = system.get_mut(app.world_mut());
+    let (mut admin, db) = system.get_mut(app.world_mut()).unwrap();
     let response = admin.dispatch(&AdminRequest::ClockAdvance { seconds: 1 }, &db);
     assert!(matches!(
         response,
