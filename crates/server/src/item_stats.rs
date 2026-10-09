@@ -204,3 +204,7 @@ fn startup_load_item_scaling_tables(mut commands: Commands) {
 #[cfg(test)]
 #[path = "item_stats_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "item_scaling_parity_tests.rs"]
+mod parity_tests;
