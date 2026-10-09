@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-08 — [Replicated player life state](systems/networking.md#player-life-state): changed death/release/resurrection projection and stationary observer visibility, governed by shared ghost_visible; pinned TrinityCore a352b1fa sources. Targeted UDP/interest RED 0/2 followed by GREEN 2/2 at 9fcd652, including no transient decoded ghost frame for a living observer. Logs: /home/osso/.worktrees/logs/ghoststate-server-{red,green}.log. No live realm or persistence-parity claim.
+
 ## [2026-10-07] systems | Merchant sale order and bag repair
 
 Updated [merchant](systems/merchant.md): chronological wrapped buyback lists retain physical request slots; item-guid durability survives unequipping and owned bag-item repairs save damage and payment atomically. Contract: [merchant spec](../specs/merchant.md). Live and suite proof ledger: `/home/osso-test/Projects/world-of-osso/game-engine/data/diagnostics/merchantloop-2026-10-07/proof-ledger.txt`.

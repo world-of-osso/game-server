@@ -1,5 +1,28 @@
 use super::*;
 
+/// Publish the authoritative death/release/resurrection state, including persisted ghosts.
+/// TrinityCore a352b1fa: Player::setDeathState and HandleAuraGhost's PLAYER_FLAGS_GHOST.
+/// One changed-state projection covers every handler without inferring release from HP.
+pub(super) fn sync_replicated_life_state(
+    players: Query<(Entity, &PlayerDeathState, Option<&DeathState>), Changed<PlayerDeathState>>,
+    mut commands: Commands,
+    interest: Option<Res<InterestDirtyQueue>>,
+    replication: Option<Res<ReplicationDirtyQueue>>,
+) {
+    for (entity, death, replicated) in &players {
+        if replicated == Some(&death.state) {
+            continue;
+        }
+        commands.entity(entity).insert(death.state);
+        if let Some(queue) = interest.as_deref() {
+            queue.mark(entity);
+        }
+        if let Some(queue) = replication.as_deref() {
+            queue.mark(entity);
+        }
+    }
+}
+
 pub(super) fn send_update(
     conn_entity: Entity,
     position: &Position,
