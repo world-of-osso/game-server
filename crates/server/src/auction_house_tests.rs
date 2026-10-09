@@ -79,6 +79,8 @@ fn text_query(text: &str) -> AuctionSearchQuery {
 mod actor_parity;
 #[path = "auction_house_tests/core.rs"]
 mod core;
+#[path = "auction_house_tests/clock.rs"]
+mod clock;
 #[path = "auction_house_tests/lifecycle.rs"]
 mod lifecycle;
 #[path = "auction_house_tests/search.rs"]
