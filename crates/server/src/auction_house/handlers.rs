@@ -406,9 +406,13 @@ pub(super) fn process_cancel_requests(
     );
 }
 
-pub(super) fn expire_auctions(db: Option<Res<GameDatabase>>, mut state: ResMut<AuctionHouseState>) {
+pub(super) fn expire_auctions(
+    db: Option<Res<GameDatabase>>,
+    mut state: ResMut<AuctionHouseState>,
+    clock: Res<crate::maps::ServerClock>,
+) {
     let Some(db) = db else { return };
-    let now = unix_now();
+    let now = clock.unix().max(0) as u64;
     let expired: Vec<u64> = state
         .auctions
         .values()
@@ -441,7 +445,7 @@ fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(
             auction.seller_character_id,
             super::operations::build_auction_mail(
                 db,
-                "Auction expired",
+                "Auction Expired",
                 &format!(
                     "Your auction for {} expired without a buyer.",
                     auction.item.name

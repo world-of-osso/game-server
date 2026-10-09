@@ -77,10 +77,10 @@ fn text_query(text: &str) -> AuctionSearchQuery {
 
 #[path = "auction_house_tests/actor_parity.rs"]
 mod actor_parity;
-#[path = "auction_house_tests/core.rs"]
-mod core;
 #[path = "auction_house_tests/clock.rs"]
 mod clock;
+#[path = "auction_house_tests/core.rs"]
+mod core;
 #[path = "auction_house_tests/lifecycle.rs"]
 mod lifecycle;
 #[path = "auction_house_tests/search.rs"]
@@ -125,6 +125,7 @@ mod bounded_slice {
         assert_eq!(mail_store::load_mailbox(&db, 3)[0].money, 0);
         app.insert_resource(GameDatabase { db });
         app.insert_resource(state);
+        app.init_resource::<crate::maps::ServerClock>();
         app.add_systems(Update, super::super::handlers::expire_auctions);
         app.update();
         app.update();

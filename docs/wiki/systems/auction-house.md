@@ -8,6 +8,16 @@ Shared browse messages remain distinct from flat search: `QueryAuctionBrowse` re
 
 `browse.rs` filters expired/zero-count offers and applies item, text, quality, level, session house and viewer class/usability eligibility before global aggregation. Price comparisons retain rational stack prices until copper ceiling at serialization; quantities cover all eligible listings. Distinct-item paging follows aggregation with ItemID/source tie-breaking. `handlers.rs` requires the auctioneer session and overrides the requested house. Flat `queries.rs` retains listing results and AuctionID tie-breaking, using a bounded heap for shallow prefixes and partial selection for deeper pages.
 
+## Injected expiry clock (2026-10-09)
+
+The sweep receives `Res<ServerClock>`; `AuctionHousePlugin` initializes it without overwriting an already pinned clock. Default time remains wall Unix time. The existing same-UID `clock-advance <seconds>` handler shifts that resource, now affecting auction expiry as well as instance locks; no new IPC command or process-global clock was added. After posting/bidding on an owned private server, advance beyond the longest desired listing duration, then allow the existing one-second sweep cadence to run. Never use the shared realm for this proof. Listing creation/browse and mail timestamps still use wall time.
+
+[Clock regressions](../../../crates/server/src/auction_house_tests/clock.rs) post real inventory, optionally place a real bid, prove no settlement one second before the persisted deadline, invoke the admin handler to reach it, sweep twice and reopen redb. Assertions cover Auction House sender, exact returned item/stack, `Auction Expired`, seller proceeds (1001 minus 50 plus deposit), buyer mail and persisted bid debit. The [spec](../../specs/auction-house.md#expiry-clock-and-settlement) owns requirements; [bot policy](../../specs/bot-economy.md#auction-supply-and-terms) owns the retained unsold-deposit refund, not Retail parity.
+
+Reference: TrinityCore `a352b1fa`, `AuctionHouseMgr.cpp`, `AuctionHouseObject::Update` branches to `SendAuctionExpired` when no bidder exists and `SendAuctionWon`/`SendAuctionSold` otherwise; the expired mail attaches the owner's item, and sold mail deducts the house cut and adds the deposit. [Pinned primary source](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/AuctionHouse/AuctionHouseMgr.cpp#L987-L1030). Exact English subject here is the requested client contract, not TrinityCore's encoded wire subject.
+
+Execution evidence: valid RED at `a999851`, both clock tests fail because the injected deadline is ignored (`red-valid.log`). Initial `red.log` failed fixture initialization and is not behavioral RED. GREEN and full server gate pending under `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/ahexpiry-2026-10-09/`; no live expiry claim.
+
 ## Saved proof ledger
 
 Evidence root: `/home/osso/.cache/economy-cli-20260930/a54a0ad0`. Files are saved observations, not commands rerun by this documentation update. The directory name is a run label, not proof that every artifact was built at revision `a54a0ad0`. Current source includes importer `13241e0`, runtime `cd9b690` and fixture follow-up `8193d7e`; saved build outputs alone do not stamp every workload with an exact Git SHA. No current-revision broad-suite certification is inferred.

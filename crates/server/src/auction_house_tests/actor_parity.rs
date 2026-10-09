@@ -83,6 +83,7 @@ fn run_expiry(db: redb::Database) -> redb::Database {
     let mut app = App::new();
     app.insert_resource(reload_auctions(&db));
     app.insert_resource(GameDatabase { db });
+    app.init_resource::<crate::maps::ServerClock>();
     app.add_systems(Update, super::super::handlers::expire_auctions);
     app.update();
     app.update();
