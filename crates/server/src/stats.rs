@@ -53,6 +53,8 @@ pub struct StatModifiers {
     pub mastery_points: f32,
     pub versatility_pct: f32,
     pub max_health_pct: f32,
+    /// MOD_INCREASE_HEALTH: fixed current/max health gained on application.
+    pub max_health_flat: f32,
     /// OVERRIDE_SPELL_POWER_BY_AP_PCT: when positive, spell and healing power are
     /// this percent of attack power.
     pub spell_power_from_ap_pct: f32,
@@ -330,7 +332,8 @@ pub fn compute_character_stats(
         ratings,
         max_health: (primary.stamina.floor()
             * HP_PER_STAMINA[level]
-            * (1.0 + mods.max_health_pct / 100.0))
+            * (1.0 + mods.max_health_pct / 100.0)
+            + mods.max_health_flat)
             .floor(),
         base_mana: base_mana.unwrap_or(0.0),
         spell_power,

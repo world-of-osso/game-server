@@ -266,6 +266,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             // Player::ApplyModOverrideSpellPowerByAPPercent adds each aura's amount
             // (AuraEffect::HandleOverrideSpellPowerByAttackPower, SpellAuraEffects.cpp:3997-4008).
             OVERRIDE_SPELL_POWER_BY_AP_PCT => stats.spell_power_from_ap_pct += amount,
+            MOD_INCREASE_HEALTH => stats.max_health_flat += amount,
             MOD_INCREASE_HEALTH_PERCENT => stats.max_health_pct += amount,
             // Unit::GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT) (StatSystem.cpp:499).
             MOD_BLOCK_PERCENT => stats.block_pct += amount,
