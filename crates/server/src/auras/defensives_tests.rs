@@ -213,17 +213,23 @@ fn defensives_unprotected_control_takes_full_fire_damage() {
 }
 
 #[test]
-#[ignore = "defensive gap: melee applies health loss without school immunity (combat.rs:844-853)"]
 fn defensives_paladin_divine_shield_blocks_melee() {
     let mut h = cast_defensive(2, 642, &[]);
     assert_eq!(incoming_melee(&mut h), 0.0);
+    h.advance(3);
+    assert!(h.inbox.log.iter().any(
+        |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Immune)
+    ));
 }
 
 #[test]
-#[ignore = "defensive gap: melee applies health loss without school immunity (combat.rs:844-853)"]
 fn defensives_mage_ice_block_blocks_melee() {
     let mut h = cast_defensive(8, 45_438, &[]);
     assert_eq!(incoming_melee(&mut h), 0.0);
+    h.advance(3);
+    assert!(h.inbox.log.iter().any(
+        |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Immune)
+    ));
 }
 
 #[test]
