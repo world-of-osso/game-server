@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10): additive61, feather105, effect-ID37 and OverrideSpellData293; authentic3050-row source, temporary permission/replicated slot list and removal semantics. Census71/1166 (3 this branch,10 earlier master gains versus historical58). Private live/client proof boundary lives in toy-effects2 handoff; no merge or protected-realm mutation.
+
 - 2026-10-10 — [Appearance acquisition](investigations/appearance-acquisition.md#never-created-account-table-regression): missing account table reads return no owner; economy helper RED→GREEN and missing/empty/multi-account reopen test. Code `f654bcc`; economy11, acquisition14, appearance4, persistence106 passed/18 ignored. Disenchant/scrap handlers re-audited absent; no profession implementation.
 
 - 2026-10-10 — [Appearance acquisition](investigations/appearance-acquisition.md): BoP binding at store, atomic account visual receipts on equip/bind/sale/destroy, all quest choices, durable owner refresh. Targeted RED/GREEN and reopen matrix in `/home/osso/.worktrees/handoff-transmog-acquire.md`; disenchant/scrap handlers and source-level/client parity remain absent. No full gate, merge or deployment.
