@@ -544,3 +544,89 @@ fn pet_battle_aquatic_dot_and_dragon_next_round() {
         .unwrap();
     assert_eq!(damage(&e), vec![120]);
 }
+
+#[test]
+fn pet_battle_missed_poison_chain_and_aura_refresh() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [152, 194, 110]);
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Stat_Accuracy").unwrap(), -100);
+    let (b, e) = b
+        .step(&c, [Action::Ability(152), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert!(damage(&e).is_empty());
+    assert!(b.auras.is_empty());
+    let mut b = b;
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Stat_Accuracy").unwrap(), 0);
+    let (b, _) = b
+        .step(&c, [Action::Ability(194), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    let (b, _) = b
+        .step(&c, [Action::Ability(194), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(
+        b.teams[0].pets[0].state(c.state_id("Mod_SpeedPercent").unwrap()),
+        100
+    );
+    assert_eq!(b.auras.len(), 1);
+    let (b, _) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+    assert_eq!(
+        b.teams[0].pets[0].state(c.state_id("Mod_SpeedPercent").unwrap()),
+        0
+    );
+    assert!(b.auras.is_empty());
+}
+#[test]
+fn pet_battle_defeat_cancels_fainted_pet_attack() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [110, 119, 123]);
+    b.teams[0].pets[0].stats.speed = 200;
+    for pet in &mut b.teams[1].pets {
+        pet.health = 0;
+    }
+    b.teams[1].pets[0].health = 1;
+    let (b, e) = b
+        .step(&c, [Action::Ability(110); 2], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(b.outcome, Some(Outcome::Winner(0)));
+    assert_eq!(b.teams[0].pets[0].health, 10000);
+    assert_eq!(
+        e.iter().filter(|e| matches!(e, Event::Used { .. })).count(),
+        1
+    );
+    assert!(b.step(&c, [Action::Pass; 2], &mut NoDraw).is_err());
+}
+#[test]
+fn pet_battle_catalog_inventory_and_admission() {
+    let c = catalog();
+    assert_eq!(c.effects.len(), 2829);
+    assert_eq!(c.abilities.len(), 1404);
+    assert_eq!(c.turns.len(), 1650);
+    // Undefined metadata is retained, not silently interpreted as stats/opcodes.
+    let values: Vec<_> = c
+        .unresolved_states
+        .iter()
+        .filter(|r| r.owner == 2999 && r.state == 183)
+        .map(|r| r.value)
+        .collect();
+    assert_eq!(values, vec![2343, 1303]);
+    // Identical state20=50 rows are not summed: (1700+50)*.65*25/100=>284.
+    assert_eq!(calculate_stats(&c, 4597, 3, 3, 25).unwrap().speed, 284);
+    let admitted: std::collections::BTreeSet<_> = c
+        .abilities
+        .keys()
+        .copied()
+        .filter(|id| validate_ability(&c, *id).is_ok())
+        .collect();
+    let coverage:Vec<_>=c.property_counts().into_iter().map(|(property,rows)| {
+        let admitted_rows=c.effects.values().filter(|e|e.property==property && admitted.contains(&c.turns[&e.turn].ability)).count();
+        serde_json::json!({"property":property,"rows":rows,"handler":supported_property(property),"admitted_rows":admitted_rows})
+    }).collect();
+    println!(
+        "PET_BATTLE_COVERAGE={}",
+        serde_json::json!({"properties":coverage,"admitted_abilities":admitted.len(),"total_abilities":c.abilities.len(),"unresolved_states":c.unresolved_states.len()})
+    );
+}
