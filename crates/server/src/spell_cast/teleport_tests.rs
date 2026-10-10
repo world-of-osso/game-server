@@ -91,3 +91,38 @@ fn spell_teleport_blink_stops_before_real_map_zero_abbey_wall() {
             .clear(InMap::continent(0), start + Vec3::Y, end + Vec3::Y)
     );
 }
+
+#[test]
+fn spell_teleport_hearthstone_returns_to_persisted_bind() {
+    let mut h = harness(Vec::new(), &[8690], 8).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("bind.redb");
+    {
+        let db = redb::Database::create(&path).unwrap();
+        super::homebind::save_bind(
+            &db,
+            7,
+            crate::maps::WorldLocation {
+                map_id: 0,
+                position: Vec3::new(-8949.0, -132.0, 83.0),
+                orientation: 1.2,
+            },
+        );
+    }
+    let db = redb::Database::open(&path).unwrap();
+    let bind = super::homebind::load_bind(&db, 7).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((shared::components::CombatStatus(false), bind));
+    h.cast(8690, None);
+    h.advance(250);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let position = h.app.world().get::<Position>(h.caster).unwrap();
+    assert_eq!(*position, bind.0.bevy_position());
+    assert!(
+        (h.app.world().get::<Rotation>(h.caster).unwrap().y - (1.2 + std::f32::consts::FRAC_PI_2))
+            .abs()
+            < 0.01
+    );
+}

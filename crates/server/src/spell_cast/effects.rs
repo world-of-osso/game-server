@@ -902,6 +902,40 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
 /// 252 TELEPORT_UNITS (`Spell::EffectTeleportUnits`): the unit moves to the effect's
 /// destination facing its orientation (`NearTeleportTo`).
 fn teleport_units(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if effect.implicit_targets.contains(&17) {
+        let destination = world
+            .resource::<super::teleport_positions::SpellTargetPositions>()
+            .0
+            .get(&(ctx.spell.id, effect.index))
+            .copied();
+        if let Some(destination) = destination {
+            crate::maps::teleport_to(
+                world,
+                target,
+                destination,
+                crate::maps::TeleportOptions::default(),
+            );
+        } else {
+            error!(
+                "Spell {}: effect {} has no fixed destination",
+                ctx.spell.id, effect.index
+            );
+        }
+        return;
+    }
+    if effect.implicit_targets.contains(&9) {
+        if let Some(bind) = world.get::<super::homebind::HomeBind>(target).copied() {
+            crate::maps::teleport_to(
+                world,
+                target,
+                bind.0,
+                crate::maps::TeleportOptions::default(),
+            );
+        } else {
+            error!("Spell {}: target has no homebind", ctx.spell.id);
+        }
+        return;
+    }
     let destination = if effect.implicit_targets.contains(&55) {
         super::teleport::forward_destination(world, ctx, target)
     } else {

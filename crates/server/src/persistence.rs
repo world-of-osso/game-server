@@ -317,6 +317,8 @@ pub(crate) fn create_tables(db: &Database) {
     txn.open_table(CHARACTER_DEATH_STATES)
         .expect("Failed to create character death states table");
     let _ = txn.open_table(crate::maps::persistence::CHARACTER_MAPS);
+    txn.open_table(crate::spell_cast::homebind::HOME_BINDS)
+        .expect("Failed to create character homebinds");
     txn.open_table(crate::maps::persistence::NORMAL_INSTANCE_LOCKS)
         .expect("Failed to create normal instance locks");
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
