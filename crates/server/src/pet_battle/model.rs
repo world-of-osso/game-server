@@ -149,6 +149,8 @@ pub struct Aura {
     pub turn: u32,
     pub applied_round: u32,
     pub tick_first: bool,
+    /// Property63 is a team-pad trigger (Wish); other admitted auras bind to a pet.
+    pub team_bound: bool,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Battle {

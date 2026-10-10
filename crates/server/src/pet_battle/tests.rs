@@ -398,3 +398,77 @@ fn pet_battle_unsupported_effect_rejects_before_rng() {
     let result = b.step(&c, [Action::Ability(70), Action::Pass], &mut Fixed(500000));
     assert!(result.unwrap_err().contains("385"));
 }
+
+#[test]
+fn pet_battle_curse_of_doom_waits_four_rounds_real_id218() {
+    let c = catalog();
+    let b = battle(&c, 3, 7, [218, 110, 123]);
+    // aura217 has dummy turns1..4 then40points*6=240 onturn5.
+    let (mut b, e) = b
+        .step(&c, [Action::Ability(218), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert!(damage(&e).is_empty());
+    for _ in 0..3 {
+        let (next, e) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+        assert!(damage(&e).is_empty());
+        b = next;
+    }
+    let (b, e) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+    assert_eq!(damage(&e), vec![240]);
+    assert!(b.auras.is_empty());
+}
+#[test]
+fn pet_battle_wish_heals_current_active_after_swap_real_id273() {
+    let c = catalog();
+    let mut b = battle(&c, 5, 7, [273, 110, 123]);
+    b.teams[0].pets[0].health = 1000;
+    b.teams[0].pets[1].health = 1000;
+    // property63 applies aura274:dummy turn1, percent50 healturn2.
+    let (b, e) = b
+        .step(&c, [Action::Ability(273), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert!(!e.iter().any(|e| matches!(e, Event::Heal { .. })));
+    let (b, e) = b
+        .step(&c, [Action::Swap(1), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert!(e.contains(&Event::Heal {
+        target: PetRef { team: 0, slot: 1 },
+        amount: 5000
+    }));
+    assert_eq!(b.teams[0].pets[0].health, 1000);
+    assert_eq!(b.teams[0].pets[1].health, 6000);
+}
+#[test]
+fn pet_battle_fainted_replacement_does_not_advance_combat() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [110, 119, 123]);
+    b.teams[0].pets[0].health = 0;
+    let (next, e) = b
+        .step(&c, [Action::Swap(1), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(next.round, b.round);
+    assert_eq!(e, vec![Event::Swapped { team: 0, slot: 1 }]);
+}
+#[test]
+fn pet_battle_unimplemented_object_aura_is_rejected() {
+    let c = catalog();
+    let b = battle(&c, 2, 7, [190, 110, 123]);
+    let err = b
+        .step(&c, [Action::Ability(190), Action::Pass], &mut Fixed(500000))
+        .unwrap_err();
+    assert!(err.contains("object"));
+}
+#[test]
+fn pet_battle_deep_breath_state_and_humanoid_recovery() {
+    let c = catalog();
+    let b = battle(&c, 0, 7, [169, 110, 123]);
+    let (b, e) = b
+        .step(&c, [Action::Ability(169), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert!(damage(&e).is_empty());
+    let mut b = b;
+    b.teams[0].pets[0].health = 1000;
+    let (b, e) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+    assert_eq!(damage(&e), vec![300]);
+    assert_eq!(b.teams[0].pets[0].health, 1400);
+}

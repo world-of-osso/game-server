@@ -28,6 +28,44 @@ fn validate_ability_graph(
     if !catalog.abilities.contains_key(&ability) {
         return Err(format!("missing ability {ability}"));
     }
+    if let Some(states) = catalog.ability_states.get(&ability) {
+        for state in states.keys() {
+            let name = &catalog.states[state];
+            if name == "Mechanic_IsObject" {
+                return Err(format!("ability {ability}: unsupported object/team aura"));
+            }
+            if !matches!(
+                *state,
+                21 | 22 | 23 | 24 | 25 | 29 | 30 | 33 | 34 | 35 | 36 | 40 | 41 | 42
+                    ..=51
+                        | 64
+                        | 65
+                        | 66
+                        | 68
+                        | 71
+                        | 72
+                        | 73
+                        | 77
+                        | 82
+                        | 84
+                        | 85
+                        | 98
+                        | 113
+                        | 114
+                        | 128
+                        | 129
+                        | 149
+                        | 158
+                        | 176
+                        | 196
+                        | 199
+            ) {
+                return Err(format!(
+                    "ability {ability}: unsupported aura state {state} {name}"
+                ));
+            }
+        }
+    }
     for turn in catalog.ability_turns(ability) {
         if (turn.kind == 0 && (turn.event != 255 || turn.order == 0))
             || (turn.kind == 1 && !matches!(turn.event, 0 | 5 | 6 | 7 | 8 | 10 | 11))
@@ -40,6 +78,9 @@ fn validate_ability_graph(
         }
         for effect in catalog.turn_effects(turn.id) {
             validate_effect(catalog, effect)?;
+            if matches!(effect.property, 24 | 222) && catalog.abilities[&ability].family < 0 {
+                return Err(format!("ability {ability}: damage has no family"));
+            }
             if effect.aura != 0 {
                 validate_ability_graph(catalog, effect.aura, seen)?;
             }
