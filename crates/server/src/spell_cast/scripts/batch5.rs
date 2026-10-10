@@ -27,7 +27,6 @@ const VIRULENT_PLAGUE: u32 = 191587;
 const DREAD_PLAGUE: u32 = 1240996;
 const OUTBREAK: u32 = 77575;
 const FLAME_SHOCK: u32 = 188389;
-const MAELSTROM: u32 = 343725;
 
 /// 162243 names258876s3/s4 as additional Fury, gated by the applied rank.
 pub(super) fn demons_bite(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
@@ -157,12 +156,4 @@ pub(super) fn epidemic_splash(
 
 pub(super) fn lava_burst_crit(world: &World, target: Entity) -> Option<f32> {
     crate::auras::has_aura(world, target, FLAME_SHOCK).then_some(100.0)
-}
-
-/// 51505 names343725s3: Maelstrom only with the applied Elemental passive.
-pub(super) fn lava_burst(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
-    if crate::auras::has_aura(world, caster, MAELSTROM) {
-        let amount = script_effect_value(world, caster, MAELSTROM, 2);
-        spell_cast::powers::change_power(world, caster, PowerType::Maelstrom, amount);
-    }
 }

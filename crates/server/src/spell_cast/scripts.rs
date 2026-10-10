@@ -81,7 +81,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch5::SHURIKEN_STORM, 0) => Some(batch5::shuriken_storm),
         (batch5::DEATHS_CARESS, 0) => Some(batch5::deaths_caress),
         (batch5::EPIDEMIC, 0) => Some(batch5::epidemic),
-        (batch5::LAVA_BURST_DAMAGE, 0) => Some(batch5::lava_burst),
         (batch4::RENEWING_MIST_CAST, 0) => Some(batch4::renewing_mist),
         (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
         (batch4::CHAIN_LIGHTNING, 0) => Some(batch4::chain_lightning),

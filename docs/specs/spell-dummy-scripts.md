@@ -61,7 +61,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - [x] Shuriken Storm197835 generates its authored combo points per enemy hit, not for allies or out-of-radius enemies.
 - [x] Death's Caress195292 adds its authored two Bone Shield195181 stacks, capped by the catalog, while retaining damage/Blood Plague.
 - [x] Epidemic207317 erupts owned Virulent Plagues through212739 with distinct primary/nearby damage and extends owned Dread/Virulent Plagues by77575's authored1000ms.
-- [x] Lava Burst51505's damage child285452 guarantees a critical strike against Flame Shock, scales damage with crit percentage, and with343725 generates eight Maelstrom per landed hit.
+- [x] Lava Burst51505's damage child285452 guarantees a critical strike against Flame Shock, scales damage with crit percentage, and retains its existing generic343725-modified eight Maelstrom generation (not a new resource script).
 
 ## How it works
 
