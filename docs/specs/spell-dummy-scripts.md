@@ -100,7 +100,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 
 - `crates/server/src/spell_cast/dummy5_tests.rs` —14 per-spell authentic catalog cast functions with chance/ownership/rank/cap gates. Full spell_cast207/207 at`f6b842a`; [census and proof](../wiki/systems/spell-casting.md#fifth-batch-local-retail-rows).
 
-- `crates/server/src/spell_cast/dummy6_tests.rs` — per-spell real catalog casts for the nine bounded paths; [scope and current proof](../wiki/systems/spell-casting.md#sixth-batch-local-retail-rows).
+- `crates/server/src/spell_cast/dummy6_tests.rs` — 17 real catalog cast functions for the nine bounded paths, full spell_cast224/224 at`7cff842`; [scope and current proof](../wiki/systems/spell-casting.md#sixth-batch-local-retail-rows).
 
 ## Known gaps (current cycle)
 
