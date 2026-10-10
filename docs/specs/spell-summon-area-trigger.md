@@ -4,10 +4,11 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 
 ## What it must do
 
-- [ ] SUMMON resolves MiscValue as creature and MiscValueB as SummonProperties, spawns at the caster/target destination, records caster ownership and expires at spell duration.
+- [x] SUMMON resolves MiscValue as creature and MiscValueB as SummonProperties, spawns at the caster/target destination, records caster ownership and expires at spell duration.
 - [ ] Guardians share the existing pet owner/follow representation without occupying a persisted hunter stable slot.
-- [ ] CREATE_AREATRIGGER spawns once at its destination, uses spell radius/duration, applies a supplied trigger spell on enter or at its supplied period, excludes units outside its radius, and expires.
-- [ ] Missing creature, SummonProperties or trigger metadata is reported rather than invented.
+- [x] CREATE_AREATRIGGER spawns once at its destination, uses spell radius/duration, applies a supplied trigger spell on enter or at its supplied period, excludes units outside its radius, and expires.
+- [ ] Missing creature and SummonProperties are reported rather than invented.
+- [x] Missing matrix trigger bindings do not acquire fictional actions; five available matrix area roots produce lifecycle-only entities.
 
 ## How it works
 
