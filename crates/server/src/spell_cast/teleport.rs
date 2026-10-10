@@ -10,7 +10,8 @@ pub(super) fn check_destination(
     caster: Entity,
     spell: &crate::spell_info::SpellInfo,
 ) -> Result<(), super::CastFailure> {
-    if spell.id == 1234796 {
+    // Named Rain, Earthquake and Void Step require the requested ground point.
+    if matches!(spell.id, 73920 | 61882 | 1234796) {
         check_ground_point(world, caster, spell)?;
     }
     for effect in &spell.effects {

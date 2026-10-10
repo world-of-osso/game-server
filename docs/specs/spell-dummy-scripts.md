@@ -115,6 +115,8 @@ These ten paths are bounded, not whole-ability parity. Reap soul collection/opti
 - [ ] Radiance194509 applies194384 Atonement to its selected allies for60% of normal duration (9000ms), keeping foreign marks independent.
 - [ ] Tranquility740's self shield absorbs up to its named60% of caster maximum health, ending with the channel.
 
+Rain, Earthquake and Void Step require a finite requested destination within the native spell range; missing or invalid destinations fail before cost/cooldown rather than silently centering on the caster.
+
 These nine paths do not certify whole abilities. Rain tooltip total-healing expression references six two-second intervals while current native duration is18sec; native duration/period drive this bounded path. Rain's14/magic-reduction markers and1298679 child; Quake chance/knockdown; Blossom child markers/talent variations; Winter absent child radius and root25 marker; Scourge plague eruption/spread and3 marker; Fracture souls/root marker and Meta periodic marker; Atonement transfer and other Dummy fields; Tranquility soft-cap/HoT extension/ally marker remain unresolved. Sources are only local Mainline DB2/imported read-only rows and inherited TDB1210 routing, not unavailable TrinityCore C++ bodies. [Scope and proof](../wiki/systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks).
 
 ## How it works
