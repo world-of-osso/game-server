@@ -305,6 +305,11 @@ fn make_fighting_creature(h: &mut Harness) {
     h.app.world_mut().entity_mut(h.npc).insert((
         shared::components::ThreatTable::default(),
         crate::creature_ai::CreatureState::Idle,
+        // Session timing and pushback require landed swings, not random misses.
+        crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..Default::default()
+        },
     ));
 }
 
