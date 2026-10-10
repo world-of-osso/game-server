@@ -10,8 +10,10 @@ GROUND_DIR="${STATE_DIR}/ground"
 GROUND_LIST="$(mktemp)"
 trap 'rm -f "$GROUND_LIST"' EXIT
 
-echo "Building release..."
-cargo build --release -p server
+echo "Building release (Debian bookworm, glibc 2.36: runs on sakuin's older glibc)..."
+# A host `cargo build` links against the deploying machine's glibc (Arch: 2.43),
+# which sakuin's NixOS glibc cannot load.
+python3 ../game-engine/scripts/desktop-server-build.py --root "$PWD" --release
 
 ssh "$SERVER_HOST" "mkdir -p ${STATE_DIR}/bin ${STATE_DIR}/data/economy ${GROUND_DIR}"
 
