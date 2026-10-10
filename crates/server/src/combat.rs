@@ -741,7 +741,11 @@ fn roll_outcome(
             dual_wield: false,
         },
     };
-    let mut chances = melee::swing_chances(swinger, victim, can_avoid);
+    let mut chances = if !attacker.creature && attacker.stats.is_none() {
+        melee::MeleeChances::default()
+    } else {
+        melee::swing_chances(swinger, victim, can_avoid)
+    };
     // Unit::MeleeSpellMissChance: victim's attacker-hit modifier, not attacker hit.
     let hit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_HIT_CHANCE)

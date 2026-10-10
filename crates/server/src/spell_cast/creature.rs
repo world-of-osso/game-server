@@ -16,7 +16,7 @@ use super::{
     validate_target,
 };
 use crate::creature_ai::CreatureState;
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::SpellStore;
 
 /// Triggered casts resolve without proc events (`TRIGGERED_DISALLOW_PROC_EVENTS`).
 const TRIGGERED_DEPTH: u8 = 1;
