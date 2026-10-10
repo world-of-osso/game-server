@@ -2033,6 +2033,8 @@ mod line_of_sight_tests;
 #[cfg(test)]
 mod new_class_tests;
 #[cfg(test)]
+mod override_queue_tests;
+#[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
 mod regen_tests;

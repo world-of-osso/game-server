@@ -60,37 +60,6 @@ fn spell_override_animation_and_actionbar_values_replicate_until_expiry() {
 }
 
 #[test]
-fn spell_override_queue_resolves_after_aura_expiry_not_at_admission() {
-    let mut h = harness(Vec::new(), &[1719, 85288, 335097], 1).unwrap();
-    apply(&mut h, 1719);
-    h.advance(235);
-    let now = crate::spell_cast::now(h.app.world());
-    h.app
-        .world_mut()
-        .get_mut::<crate::spell_cast::SpellHistory>(h.caster)
-        .unwrap()
-        .gcd_ready_at
-        .insert(133, now + 0.4);
-    h.cast(85288, Some(h.npc));
-    h.advance(15);
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(
-        h.inbox
-            .log
-            .iter()
-            .any(|e| e.kind == CombatLogKind::CastSuccess && e.spell_id == Some(85288)),
-        "{:?}",
-        h.inbox.log
-    );
-    assert!(
-        !h.inbox
-            .log
-            .iter()
-            .any(|e| e.kind == CombatLogKind::CastSuccess && e.spell_id == Some(335097))
-    );
-}
-
-#[test]
 fn spell_override_recklessness_replaces_raging_blow_and_restores_after_removal() {
     // Actual matrix1719 rows: MiscValue85288 -> amount335097.
     let mut h = harness(Vec::new(), &[1719, 85288, 335097], 1).unwrap();
