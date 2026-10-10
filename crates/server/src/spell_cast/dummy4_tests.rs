@@ -167,6 +167,26 @@ fn dummy4_vivify_without_rank_does_not_splash() {
     vivify(false);
 }
 
+#[test]
+fn dummy4_renewing_mist_cast_applies_catalog_hot_and_expires() {
+    let mut h = harness(Vec::new(), &[115151, 119611], 10).expect("real catalog");
+    let target = spawn_player(&mut h.app, 10, 3.0);
+    let unmarked = spawn_player(&mut h.app, 10, 5.0);
+    for unit in [target, unmarked] {
+        h.app.world_mut().get_mut::<Health>(unit).unwrap().current = 100.0;
+    }
+    h.cast_and_deliver(115151, Some(target));
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), target, 119611));
+    let before = h.health(target);
+    h.advance(42);
+    assert!(varied(19.665).contains(&(h.health(target) - before)));
+    assert_eq!(h.health(unmarked), 100.0);
+    h.advance(410);
+    assert!(!crate::auras::has_aura(h.app.world(), target, 119611));
+}
+
 fn chain_lightning(with_rank: bool) {
     let mut ids = vec![188443];
     if with_rank {

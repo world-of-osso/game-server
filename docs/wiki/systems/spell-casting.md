@@ -256,6 +256,19 @@ Batch3 census (verified2026-10-10, code `c7a69c7`): Dummy-bearing core roots **1
 Native proof:16 new cast tests. `dummy-integration.log` at `d80ba12` passes51; only its three Garrote tests were invalidated by the later silence-immunity fix, renewed and expanded to four passing Garrote tests at `c7a69c7`. Thus52 unique Dummy tests have surviving proof. Separate29 generic cast regressions survive the Garrote-only change; final format/check exit0, warning-free. Readability manually inspected; independent artifact verifier failed OAuth refresh, so no independent or PR-ready claim. No live realm/client proof. SQL opens mode=ro;21 actual IDs' descriptions and effects match raw local DB2 CSVs (`raw-db2-receipts.json`). No missing imports required for these bounded paths.
 
 
+### Fourth-batch local Retail rows
+
+`spell_cast/scripts/batch4.rs` adds ten bounded paths: eight ranked Dummy-root candidates and supplementary Vivify/Eruption behavior. Sources exclusively local Retail12.1.0.69933 descriptions/effects; no older-expansion scripts imported. [Contract and exclusions](../../specs/spell-dummy-scripts.md#fourth-batch-locally-derived-paths).
+
+-85222s2 caps healing at five injured allies after its normal radius selection. Current Mainline description says "radius around you", not an older cone; nearest-first ordering is retained, not invented injury ranking. Additional Dummy2 remains unresolved.
+-56641 references77443s1=20 Focus.53351s2 supplies the strict20% admission threshold before cost/cooldown. Steady cooldown/level normalization and Kill Shot talent overrides remain unimplemented.
+-33917/231064 gates its20% bonus on an applied bleed mechanic15.115151 names119611o1/d; only child effect0 is applied. Overheal travel and231606 tick procs remain unimplemented.
+-116670/274586 names425804, whose own132/31 area selection is narrowed to caster-owned119611 marks. Triggering one unrestricted child per mark incorrectly healed unmarked allies; one narrowed child plan fixes that boundary. Foreign/far/unmarked allies receive no splash.
+-188443 with343725 reads passive effect4=two Maelstrom per damage-hit target; rank absent produces none.49184 applies55095's base periodic effect to hit enemies only; CAP/secondary damage and Frost Fever resource procs remain separate gaps.
+-34861s3 supplies six seconds removed after596 completes; only running timers change.395160 gates Ebon Might extension on395153s1=1000ms, once after cast; existing finite owned395152/395296 expiries extend without creating buffs or changing tick clocks.
+
+Native cast proofs and census receipts: `game-engine/data/diagnostics/spell-dummy4-2026-10-10/`. Pending final scoped proof/census at this milestone; no live realm/full-parity claim.
+
 See [contract](../../specs/spell-dummy-scripts.md). Effect-hit scripts bridge Shield Block2565 to132404, Bloodthirst23881 to117313 and a chance-based184362, and Rampage184367 to184362. Damage/resource effects continue through normal dispatch. Bloodthirst reads modified effect2 base points, not ProcChance101 or PPM; local DB2 has no PPM entry for these casts.
 
 Sources: TrinityCore `a352b1fa` `src/server/scripts/Spells/spell_warrior.cpp` (`spell_warr_shield_block`, `spell_warr_bloodthirst`, `spell_warr_bloodthirst_enrage`); Retail12.1.0.69933 `spell`/`spell_effect` rows2565,132404,23881,117313,184367,184362 in read-only `data/world.db`. Rampage's tooltip states "Enrages you"; its existing effect triggers name the attack spells. Fresh Meat and other optional talent variants remain unproved.
