@@ -39,6 +39,9 @@ const ENRAGE: u32 = 184_362;
 const HOLY_SHOCK: u32 = 20_473;
 const HOLY_SHOCK_DAMAGE: u32 = 25_912;
 const HOLY_SHOCK_HEAL: u32 = 25_914;
+const PENANCE: u32 = 47_540;
+const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
+const PENANCE_HEAL_CHANNEL: u32 = 47_757;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -51,6 +54,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (BLOODTHIRST, 0) => Some(bloodthirst),
         (RAMPAGE, 0) => Some(rampage),
         (HOLY_SHOCK, 0) => Some(holy_shock),
+        (PENANCE, 0) => Some(penance),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -76,6 +80,32 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_priest.cpp:3070-3125,5546, spell_pri_penance:
+/// DUMMY 0 starts the 47757 friendly or 47758 hostile channel. Unlike full-mask
+/// generic triggers, TC preserves channel state. Both children have no costs;
+/// their real periodic triggers supply bolt timing and TARGET_UNIT_CHANNEL_TARGET.
+fn penance(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let child = if relation_matches(world, caster, target, Relation::Ally) {
+        PENANCE_HEAL_CHANNEL
+    } else {
+        PENANCE_DAMAGE_CHANNEL
+    };
+    let Some(spell) = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(child)
+        .cloned()
+    else {
+        warn!("Penance requires channel spell {child}");
+        return;
+    };
+    if depth >= super::effects::MAX_TRIGGER_DEPTH {
+        warn!("Penance channel skipped: trigger depth {depth} exhausted");
+        return;
+    }
+    super::start_channel(world, caster, &spell, Some(target));
+    super::cast_triggered(world, caster, child, Some(target), depth + 1);
 }
 
 /// TC a352b1fa spell_paladin.cpp:1261-1311, spell_pal_holy_shock:
