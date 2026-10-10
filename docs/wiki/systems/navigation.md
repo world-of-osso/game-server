@@ -36,6 +36,31 @@ Continents select exactly the existing LOS tile filenames; globals select the WD
 
 Artifacts: `data/ground/navmesh/<map>/<row>_<col>.nav` (versioned envelope of native little-endian, 64-bit-polyref Detour subtiles), per-map `report.txt`; Stockade additionally `data/ground/los/34/*.los`. Zero-byte `.nav` means baked but no walkable region, not absent data. Exact output inventory/size and proof ledger: `/home/osso/.worktrees/handoff-navmesh.md`. Deploy these directories beside existing server ground/LOS; do not commit them.
 
+## Final local bake inventory
+
+Verified2026-10-10, profile `OSSONAV3`; every full bake exited0 and reports zero missing/unreadable inputs. Map0/2991 filenames exactly match their existing LOS tile sets. Data is uncommitted under canonical server `data/ground/`.
+
+| Files relative to `data/ground` | Count | Exact bytes |
+|---|---:|---:|
+| `navmesh/0/*.nav` |1176|6,192,886,016|
+| `navmesh/2991/*.nav` |72|128,093,016|
+| `navmesh/34/*.nav` |4|2,054,988|
+| `navmesh/{0,2991,34}/report.txt` |3|30,777|
+| `los/34/*.los` |4|5,140,924|
+
+Navigation payload total **6,323,034,020bytes**; full new shipping set including reports and Stockade LOS **6,328,205,721bytes**. Map2991 has39 authored empty/nonwalkable tile files (zero bytes), which remain baked/blocked, not legacy maps. Exact filenames, sizes and SHA256: engine `data/diagnostics/navmesh-2026-10-10/bake-files.tsv`; summarized counts/profile: `bake-inventory.json` there. Nine representative rebakes are byte-identical across the collector refactor.
+
+## Lead-owned shipping
+
+No deploy, release build or server restart performed by this task.
+
+1. Preserve server `.cargo/config.toml` and the full tracked `vendor/recastnavigation-sys/` tree in the engine release snapshot. Current `scripts/depot-build.py::allowed` used by `desktop-server-build.py` omits hidden Cargo config, CMakeLists/templates and `inline.cc`; a native pass does not prove this bookworm release path. The existing Dockerfile already supplies clang/libclang/CMake; no host installs are needed.
+2. From the canonical server checkout, promote the Stockade LOS supplement before normal deploy: `rsync -a data/ground/los/34/ ../game-engine/data/los/34/`. Otherwise `deploy.sh`'s LOS `--delete` sync removes it. Preserve existing eye tables and other LOS maps.
+3. Pre-stage navmesh before the lead's normal restart: `rsync -a --delete data/ground/navmesh/ sakuin:/var/lib/game-server/ground/navmesh/`. The server reads `<GAME_SERVER_GROUND_DIR>/navmesh`; deploying after a map was cached as unbaked requires restart.
+4. Use the normal lead-owned bookworm/deploy workflow after source-snapshot/protocol integration; ensure new directories have the existing game-server ownership. Current native proof uses original shared-protocol `8f5580c`; unrelated concurrent sibling changes require the lead's normal integration, not navigation-specific protocol edits.
+
+Whole-workspace `cargo fmt --check` has an inherited `networking_tests.rs` module-order failure; changed first-party Rust formatting passes. Proof is bounded native tests, not a full CI/release/Retail-parity claim.
+
 ## Sources
 
 - recastnavigation-sys 1.0.3 README and bundled upstream source, Cargo.lock pins the dependency.

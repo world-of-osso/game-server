@@ -728,3 +728,5 @@ Added [deployment SSOT](../deploy.md) from `0dcaa23`/`6bfd7b6`; linked developme
 - 2026-10-10: Added [navigation](systems/navigation.md) bake/profile contract and shared collision/global-WMO collector; runtime/AI proof pending.
 
 - 2026-10-10: Navigation query and chase/home/waypoint/repath/evade proven on real Stockade; corrected M2 obstacle support and modern LiquidObject42 parsing. Existing map bake and Stormwind acceptance remain active.
+
+- 2026-10-10: Completed1252 navigation tiles for existing LOS maps0/2991 plus Stockade34, zero bake input gaps; recorded6,323,034,020bytes and lead-owned release/shipping boundaries. Native96-test proof, exact-floor movement assertions, and9/9 representative byte-equivalence evidence preserved.
