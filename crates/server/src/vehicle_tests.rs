@@ -18,7 +18,8 @@ fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
     std::os::unix::fs::symlink(
         crate::ground::ground_data_dir().join("models"),
         root.path().join("models"),
-    ).unwrap();
+    )
+    .unwrap();
     let store = super::load_store(root.path(), &conn).unwrap();
     assert_eq!(store.creature_vehicles[&32633], 312);
     assert_eq!(store.creature_vehicles[&32286], 318);
@@ -56,9 +57,19 @@ fn vehicle_real_mammoth_passenger_position_matches_the_rendered_mount_frame() {
 #[test]
 fn vehicle_catalog_names_missing_world_tables() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
-    assert!(super::load_vehicle_catalog(&conn).err().unwrap().contains("world.db vehicle:"));
+    assert!(
+        super::load_vehicle_catalog(&conn)
+            .err()
+            .unwrap()
+            .contains("world.db vehicle:")
+    );
     conn.execute_batch("CREATE TABLE vehicle (ID INTEGER, SeatID_0 INTEGER, SeatID_1 INTEGER, SeatID_2 INTEGER, SeatID_3 INTEGER, SeatID_4 INTEGER, SeatID_5 INTEGER, SeatID_6 INTEGER, SeatID_7 INTEGER)").unwrap();
-    assert!(super::load_vehicle_catalog(&conn).err().unwrap().contains("world.db vehicle_seat:"));
+    assert!(
+        super::load_vehicle_catalog(&conn)
+            .err()
+            .unwrap()
+            .contains("world.db vehicle_seat:")
+    );
 }
 
 #[test]
