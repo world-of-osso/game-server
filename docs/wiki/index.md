@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Shared resource spell mechanics](systems/spell-casting.md#shared-resource-mechanics) — optional raw spend, native combo durations and authored charge formulas; eight focused functions,168 retained Dummy roots, all40-spec table and explicit actor/transfer/data limits.
+
 - [Class spell batch11](systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths) — eight bounded low-count paths,13 native functions,168 retained Dummy roots/all40-spec table; named Lashing Flames271 specificity, preserved Colossus base contract.
 
 - [Class spell batch10](systems/spell-casting.md#tenth-batch-low-count-spec-paths) — eight low-count spec paths,11 native functions,170→168 Dummy roots and full40-spec before/after table; talent/transfer/actor gaps retained.
