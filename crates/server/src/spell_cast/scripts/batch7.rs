@@ -82,7 +82,13 @@ pub(super) fn radiance_plan(
     vec![PlannedEffect {
         index,
         units,
-        dest: targets::effect_dest(world, caster, explicit, &spell.effects[index]),
+        dest: targets::effect_dest(
+            world,
+            caster,
+            explicit,
+            &spell.effects[index],
+            spell.cast_destination,
+        ),
         chain_multipliers: Vec::new(),
     }]
 }
