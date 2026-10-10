@@ -2,6 +2,7 @@
 //! spell's DB2 effects do not carry.
 
 mod batch10;
+mod batch11;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -11,6 +12,7 @@ mod batch8;
 mod batch9;
 
 pub(super) use batch9::{cast_effect, update_ground_pulses};
+pub(super) use batch11::effect_enabled;
 
 use bevy::prelude::*;
 
@@ -82,6 +84,11 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch11::VOID_VOLLEY, 0) => Some(batch11::volley),
+        (batch11::VOIDFORM, 0) => Some(batch11::initial_volley),
+        (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
+        (batch3::SHRED, 2) => Some(batch11::shred_points),
+        (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
         (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
@@ -142,6 +149,24 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(spell_id)
+                .expect("Shred spell");
+            let base = world
+                .get::<crate::stats::CharacterStats>(caster)
+                .map_or(0.0, |stats| stats.crit_pct);
+            Some(
+                2.0 * crate::auras::spell_mods::modify(
+                    world,
+                    caster,
+                    spell,
+                    crate::auras::SpellModOp::CritChance,
+                    base,
+                ),
+            )
+        }
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         FIRE_BLAST | batch5::CHAOS_BOLT => Some(100.0),
         batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
@@ -153,7 +178,8 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
-        batch3::SHRED => Some(batch3::shred_damage),
+        batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
+        batch3::SHRED => Some(batch11::shred_damage),
         batch7::RAKE => Some(batch7::rake_initial_damage),
         batch4::MANGLE => Some(batch4::mangle_damage),
         batch5::CHAOS_BOLT | batch5::LAVA_BURST_DAMAGE => Some(batch5::crit_scaled_damage),
@@ -274,6 +300,7 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        batch11::VOID_VOLLEY => Some((Relation::Enemy, batch11::volley_plan)),
         batch8::SANCTIFY => Some((Relation::Ally, batch8::sanctify_plan)),
         batch8::PROVOKE_SINGLE => Some((Relation::Enemy, batch8::provoke_plan)),
         batch8::PROVOKE_AREA => Some((Relation::Any, batch8::provoke_plan)),

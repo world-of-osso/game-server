@@ -8,6 +8,8 @@ use bevy::prelude::*;
 use shared::components::Health;
 
 pub(super) const HEALING_RAIN: u32 = 73920;
+pub(super) const RAIN_OF_FIRE: u32 = 5740;
+const RAIN_OF_FIRE_DAMAGE: u32 = 42223;
 pub(super) const CONSECRATION: u32 = 26573;
 const CONSECRATION_DAMAGE: u32 = 81297;
 pub(super) const EARTHQUAKE: u32 = 61882;
@@ -25,7 +27,9 @@ const ATONEMENT: u32 = 194384;
 
 pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<CastEffectHandler> {
     match (spell_id, index) {
-        (HEALING_RAIN, 0) | (EARTHQUAKE, 2) | (EMERALD_BLOSSOM, 0) => Some(spawn_ground_pulses),
+        (HEALING_RAIN, 0) | (EARTHQUAKE, 2) | (EMERALD_BLOSSOM, 0) | (RAIN_OF_FIRE, 1) => {
+            Some(spawn_ground_pulses)
+        }
         (VOID_STEP, 0) => Some(teleport_void_step),
         _ => None,
     }
@@ -74,6 +78,14 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
     let now = crate::auras::aura_now(world);
     let duration = f64::from(spell_cast::duration_ms(world, ctx.caster, ctx.spell)) / 1000.0;
     let (child, radius, cap, relation, period) = match ctx.spell.id {
+        //5740 names42223m1*8; duration8000, period1000 from effect2.
+        RAIN_OF_FIRE => (
+            RAIN_OF_FIRE_DAMAGE,
+            targets::effect_radius(&ctx.spell.effects[0]),
+            0,
+            targets::Relation::Enemy,
+            f64::from(ctx.spell.effects[2].aura_period_ms) / 1000.0,
+        ),
         CONSECRATION => (
             CONSECRATION_DAMAGE,
             targets::radius(
@@ -144,6 +156,28 @@ pub(super) fn spawn_consecration(
         chain_multiplier: 1.0,
     };
     spawn_ground_pulses(world, &ctx, &spell.effects[0]);
+}
+
+///53595's condition is positional and owner-specific, not just an aura flag.
+pub(super) fn inside_owned_consecration(world: &mut World, caster: Entity) -> bool {
+    let Some(position) = targets::position(world, caster) else {
+        return false;
+    };
+    let now = crate::auras::aura_now(world);
+    world
+        .query::<(
+            &GroundPulses,
+            &shared::components::Position,
+            &crate::maps::InMap,
+        )>()
+        .iter(world)
+        .any(|(field, anchor, map)| {
+            field.caster == caster
+                && field.root == CONSECRATION
+                && field.expires_at > now
+                && Some(map) == world.get::<crate::maps::InMap>(caster)
+                && position.distance(Vec3::new(anchor.x, anchor.y, anchor.z)) <= field.radius
+        })
 }
 
 fn replace_owned_field(world: &mut World, caster: Entity, root: u32) {

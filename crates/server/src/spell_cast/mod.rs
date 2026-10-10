@@ -22,6 +22,8 @@ mod disenchant_tests;
 #[cfg(test)]
 mod dummy10_tests;
 #[cfg(test)]
+mod dummy11_tests;
+#[cfg(test)]
 mod dummy2_tests;
 #[cfg(test)]
 mod dummy3_tests;
@@ -1621,6 +1623,9 @@ fn resolve_effects(
             index, units, dest, ..
         } = planned;
         let effect = &spell.effects[*index];
+        if !scripts::effect_enabled(world, caster, spell.id, effect.index) {
+            continue;
+        }
         let ctx = EffectCtx {
             caster,
             spell,
