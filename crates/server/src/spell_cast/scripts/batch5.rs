@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use shared::components::PowerType;
 
 use super::script_effect_value;
+use crate::auras::handlers::{PERIODIC_DAMAGE, PERIODIC_DAMAGE_PERCENT};
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
 use crate::spell_cast::{self, targets};
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -27,6 +28,7 @@ const VIRULENT_PLAGUE: u32 = 191587;
 const DREAD_PLAGUE: u32 = 1240996;
 const OUTBREAK: u32 = 77575;
 const FLAME_SHOCK: u32 = 188389;
+const PERIODIC_HEALTH_LEECH: u32 = 53;
 
 /// 162243 names258876s3/s4 as additional Fury, gated by the applied rank.
 pub(super) fn demons_bite(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
@@ -82,7 +84,12 @@ fn damaging_periodic_count(world: &World, caster: Entity, target: Entity) -> usi
             .iter()
             .filter(|aura| aura.caster == caster)
             .flat_map(|aura| &aura.effects)
-            .filter(|effect| matches!(effect.aura_type, 3 | 53 | 89))
+            .filter(|effect| {
+                matches!(
+                    effect.aura_type,
+                    PERIODIC_DAMAGE | PERIODIC_HEALTH_LEECH | PERIODIC_DAMAGE_PERCENT
+                )
+            })
             .count()
     })
 }
