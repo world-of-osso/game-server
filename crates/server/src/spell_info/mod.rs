@@ -48,6 +48,9 @@ pub struct SpellInfo {
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
     pub(crate) cast_item_level: Option<u16>,
+    /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
+    #[serde(skip)]
+    pub(crate) cast_destination: Option<[f32; 3]>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,

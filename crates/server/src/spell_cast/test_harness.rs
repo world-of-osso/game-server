@@ -352,6 +352,7 @@ impl Harness {
             .get_mut::<MessageSender<SpellCastIntent>>(self.connection)
             .unwrap()
             .send::<CombatChannel>(SpellCastIntent {
+                destination: None,
                 spell_id: Some(spell_id),
                 spell: String::new(),
                 target_entity: target.map(Entity::to_bits),

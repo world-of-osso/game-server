@@ -90,6 +90,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
             crate::death::resurrection::send_offer
         }
         EFFECT_ENERGIZE => energize,
+        41 => super::teleport::jump_to_unit,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
@@ -120,6 +121,7 @@ pub type CastEffectHandler = fn(&mut World, &EffectCtx, &SpellEffect);
 /// whatever units the effect's targets select.
 pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
     Some(match effect_id {
+        254 => super::teleport::jump_to_destination,
         crate::meeting_stone::ritual::EFFECT_TRANS_DOOR => {
             crate::meeting_stone::ritual::effect_trans_door
         }
@@ -901,7 +903,12 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
 
 /// 252 TELEPORT_UNITS (`Spell::EffectTeleportUnits`): the unit moves to the effect's
 /// destination facing its orientation (`NearTeleportTo`).
-fn teleport_units(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+pub(super) fn teleport_units(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+) {
     if effect.implicit_targets.contains(&17) {
         let destination = world
             .resource::<super::teleport_positions::SpellTargetPositions>()

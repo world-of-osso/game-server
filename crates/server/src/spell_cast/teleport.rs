@@ -11,6 +11,25 @@ pub(super) fn check_destination(
     spell: &crate::spell_info::SpellInfo,
 ) -> Result<(), super::CastFailure> {
     for effect in &spell.effects {
+        if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+            let point = spell
+                .cast_destination
+                .map(Vec3::from_array)
+                .ok_or(super::CastFailure::NoTarget)?;
+            let origin =
+                super::targets::position(world, caster).ok_or(super::CastFailure::InvalidTarget)?;
+            if !point.is_finite() {
+                return Err(super::CastFailure::InvalidTarget);
+            }
+            let (min, max) = super::targets::spell_range(spell, false);
+            let distance = origin.distance(point);
+            if distance > max {
+                return Err(super::CastFailure::OutOfRange);
+            }
+            if distance < min {
+                return Err(super::CastFailure::TooClose);
+            }
+        }
         if !matches!(effect.effect, 15 | 252 | 29) {
             continue;
         }
@@ -31,6 +50,46 @@ pub(super) fn check_destination(
         }
     }
     Ok(())
+}
+
+pub(super) fn jump_to_unit(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+    target: Entity,
+) {
+    let Some(position) = super::targets::position(world, target) else {
+        return;
+    };
+    let context = EffectCtx {
+        caster: ctx.caster,
+        spell: ctx.spell,
+        depth: ctx.depth,
+        dest: Some(Dest {
+            position,
+            orientation: super::targets::orientation(world, ctx.caster),
+        }),
+        chain_multiplier: ctx.chain_multiplier,
+    };
+    jump_to_destination(world, &context, effect);
+}
+
+pub(super) fn jump_to_destination(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+) {
+    let Some(destination) = forward_destination(world, ctx, ctx.caster) else {
+        return;
+    };
+    let context = EffectCtx {
+        caster: ctx.caster,
+        spell: ctx.spell,
+        depth: ctx.depth,
+        dest: Some(destination),
+        chain_multiplier: ctx.chain_multiplier,
+    };
+    super::effects::teleport_units(world, &context, effect, ctx.caster);
 }
 
 const WALL_CLEARANCE: f32 = 0.5;

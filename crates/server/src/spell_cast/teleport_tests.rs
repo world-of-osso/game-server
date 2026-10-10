@@ -6,6 +6,99 @@ use shared::components::{MovementControl, Position, Rotation};
 const BLINK: u32 = 1953;
 
 #[test]
+fn spell_teleport_matrix_infernal_strike_uses_requested_ground_destination() {
+    use lightyear::prelude::*;
+    let mut h = harness(Vec::new(), &[189110], 12).unwrap();
+    h.app
+        .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+            33.0, 33.0, 2.0,
+        ));
+    let dir = std::path::Path::new("/home/osso/Projects/world-of-osso/game-engine/data/los");
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(dir).unwrap());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        Position {
+            x: 10.0,
+            y: 2.0,
+            z: -10.0,
+        },
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    let request: shared::protocol::SpellCastIntent = serde_json::from_value(serde_json::json!({
+        "spell_id":189110,"spell":"","target_entity":null,"witness":null,"destination":[30.0,2.0,-10.0]
+    })).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::SpellCastIntent>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(request);
+    h.advance(4);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        Position {
+            x: 30.0,
+            y: 2.0,
+            z: -10.0
+        }
+    );
+}
+
+#[test]
+fn spell_teleport_matrix_harpoon_and_feral_lunge_move_caster_not_target() {
+    for id in [186260, 196884] {
+        // Harpoon190925 trigger and matrix Feral Lunge.
+        let mut h = harness(Vec::new(), &[id], 7).unwrap();
+        h.app
+            .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+                33.0, 33.0, 2.0,
+            ));
+        let dir = std::path::Path::new("/home/osso/Projects/world-of-osso/game-engine/data/los");
+        h.app
+            .insert_resource(crate::line_of_sight::LineOfSight::load(dir).unwrap());
+        let start = Position {
+            x: 10.0,
+            y: 2.0,
+            z: -10.0,
+        };
+        let destination = Position {
+            x: 30.0,
+            y: 2.0,
+            z: -10.0,
+        };
+        h.app.world_mut().entity_mut(h.caster).insert((
+            start,
+            Rotation {
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
+        h.app.world_mut().entity_mut(h.npc).insert(destination);
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(id)
+            .unwrap()
+            .clone();
+        let plan =
+            super::plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), true).unwrap();
+        super::resolve_effects(h.app.world_mut(), h.caster, &spell, &plan, 0);
+        assert_eq!(
+            *h.app.world().get::<Position>(h.caster).unwrap(),
+            destination,
+            "spell{id}"
+        );
+        assert_eq!(*h.app.world().get::<Position>(h.npc).unwrap(), destination);
+    }
+}
+
+#[test]
 fn spell_teleport_blink_lands_twenty_yards_forward_on_ground() {
     let mut h = harness(Vec::new(), &[BLINK], 8).unwrap();
     h.app
