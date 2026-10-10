@@ -26,13 +26,14 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 
 ### Refund notifications
 
-- Outbid mail states the credited refund in gold, silver and copper (`0g 2s 0c` for 200 copper), preserving the server's `u64` money range.
+- Retail Mainline owns auction text. Send the GlobalStrings subject tag and item name, not final English; outbid/removed/expired letters have empty bodies. Sold/won bodies carry invoice data (participant, bid, buyout, deposit, consignment, count) for the native client to render. See [mail-text contract](auction-mail-text.md).
+- Outbid still credits the exact `u64` refund directly; it does not invent a refund-denomination letter.
 - The notification does not attach the refund again: the balance credit and mail are settled together.
 
 ### Expiry clock and settlement
 
 - The expiry sweep reads an injected server clock, defaulting to wall time; tests can pin it without sleeping or rewriting auction deadlines.
-- At the deadline, no-bid auctions return the item to the seller in Auction House mail with subject `Auction Expired`. Existing [unsold deposit refund policy](bot-economy.md#auction-supply-and-terms) remains unchanged.
+- At the deadline, no-bid auctions return the item to the seller in Auction House mail with subject tag `AUCTION_EXPIRED_MAIL_SUBJECT` plus the item name. Existing [unsold deposit refund policy](bot-economy.md#auction-supply-and-terms) remains unchanged.
 - Bid auctions settle the actual winning bid: seller mail contains the bid minus the house cut plus the existing deposit refund; buyer mail contains the auctioned item. Auction removal and both mails persist atomically and survive database reopen without duplicate settlement.
 - The existing same-UID `clock-advance <seconds>` admin command also advances auction expiry. It still advances instance locks; use only an owned private server for acceptance. It does not shift mail delivery/expiry, listing creation or browse clocks.
 
