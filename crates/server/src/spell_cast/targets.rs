@@ -50,6 +50,8 @@ enum Selector {
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
+    /// Destination moved backward by this target slot's DB2 radius (79).
+    DestBack,
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
     ForwardLeap,
     /// Area center = explicit target (DEST_TARGET_*).
@@ -88,6 +90,7 @@ fn selector(id: u32) -> Option<Selector> {
         25 => Selector::Explicit(Any),
         18 | 22 => Selector::CenterCaster,
         138 | 148 => Selector::ExistingDest,
+        79 => Selector::DestBack,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
@@ -109,7 +112,9 @@ pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
         let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
         let ground_target = id == 87 && effect.effect == 254;
-        selector(id).is_none() && !item_target && !ground_target
+        let unsupported_back =
+            id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
+        unsupported_back || (selector(id).is_none() && !item_target && !ground_target)
     })
 }
 
@@ -292,6 +297,9 @@ pub fn select_targets(
         if id == 87 && effect.effect == 254 {
             continue;
         }
+        if id == 79 && unsupported_target(effect) == Some(79) {
+            return Err(79);
+        }
         let selector = selector(id).ok_or(id)?;
         match selector {
             Selector::None | Selector::ExistingDest | Selector::ForwardLeap => {}
@@ -316,6 +324,11 @@ pub fn select_targets(
             }
             Selector::DestTargetBack => {
                 center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
+            }
+            Selector::DestBack => {
+                center = center.map(|point| {
+                    offset_destination_back(point, orientation(world, caster), radius(effect, slot))
+                });
             }
             Selector::ChannelTarget => {
                 selected_any = true;
@@ -548,6 +561,13 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
     ))
 }
 
+/// TC SelectImplicitDestDestTargets: TARGET_DEST_DEST_BACK uses the destination's
+/// facing +pi and this slot's CalcRadius. Gnoll/Market/Expedition Tent uses2yd.
+fn offset_destination_back(point: Vec3, facing: f32, distance: f32) -> Vec3 {
+    let angle = facing + std::f32::consts::PI;
+    point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
+}
+
 /// The unit the caster channels at (`Spell::m_targets` of its channel).
 fn channel_target(world: &World, caster: Entity) -> Option<Entity> {
     let cast = world.get::<CastState>(caster)?;
@@ -571,6 +591,9 @@ pub fn effect_dest(
             Selector::CenterCaster => position(world, caster),
             Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
             Selector::ExistingDest => dest.map(|dest: Dest| dest.position),
+            Selector::DestBack => dest.map(|dest: Dest| {
+                offset_destination_back(dest.position, dest.orientation, radius(effect, slot))
+            }),
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
             Selector::DestTargetBack => {
                 explicit.and_then(|target| behind(world, target, radius(effect, slot)))

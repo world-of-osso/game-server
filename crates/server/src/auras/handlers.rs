@@ -39,6 +39,8 @@ pub enum AuraKind {
     HitDefense,
     /// Read by cast selection and included in aura replication.
     Override,
+    /// Trigger a summon on application and remove it with its aura.
+    LinkedSummon,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -152,6 +154,8 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
+pub const LINKED_SUMMON: u32 = 428;
+pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -165,6 +169,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         SCREEN_EFFECT => ClientVisual,
+        LINKED_SUMMON => LinkedSummon,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT

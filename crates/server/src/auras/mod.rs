@@ -16,6 +16,7 @@
 
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
+pub(crate) mod linked_summon;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod periodic;
@@ -762,6 +763,7 @@ pub(crate) fn apply_aura_with_spell(
             shapeshift::remove_other_forms(world, target, id);
         }
         scripts::run_apply(world, target, &aura);
+        linked_summon::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
@@ -890,6 +892,7 @@ pub enum RemoveReason {
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
     scripts::run_remove(world, unit, aura);
+    linked_summon::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }

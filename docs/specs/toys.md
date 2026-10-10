@@ -23,6 +23,10 @@
 - Aura226 with a nonzero DB2 period and trigger runs a data-backed triggered cast on each due tick, retaining a channel's original target. Script hooks retain ownership of scripted effects. Missing trigger/period and conditional consuming triggers remain unsupported; cosmetic appearance alone does not prove a periodic no-op.
 - Aura321 prevents casts whose SpellCategories.PreventionType includes NO_ACTIONS (4), interrupts those active casts on application, and restores eligibility after the last such aura leaves. MiscValue is not the prevention mask (authentic toy values include0 and85). Reference: TC a352b1fa HandleAuraModNoActions, SharedDefines.h.
 
+- Aura428 LINKED_SUMMON makes the aura target cast its DB2 summon trigger on first application. Refresh does not duplicate it; removal despawns one matching owned creature per summon effect, without removing another owner's summon. Missing trigger/creature/properties and unsupported summon controls remain blocked. Authentic linked toy templates/models/addons must be prepared from local TDB data, not synthesized. Reference: TC a352b1fa HandleLinkedSummon.
+- Tent summons support the fully data-defined destination pair18/79: caster destination followed by a backward offset using the nonzero DB2 radius. Other destination-back forms remain unavailable. Reference: TC a352b1fa SelectImplicitDestDestTargets.
+- Aura258 remains unavailable when transmitted-gameobject/fishing behavior or replacement object templates are missing. Its MiscValue0/1 replaces a summoned gameobject entry; it is not a linked creature summon (TC a352b1fa EffectTransmitted).
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.
