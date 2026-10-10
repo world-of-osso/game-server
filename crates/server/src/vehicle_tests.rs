@@ -168,7 +168,11 @@ fn vehicle_rejects_non_group_boarding_and_full_vehicle_without_state_changes() {
                 y: 2.0,
                 z: 20.0,
             },
-            Rotation::default(),
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             InMap::continent(0),
             shared::components::Zone { id: 12 },
             MovementControl::default(),
