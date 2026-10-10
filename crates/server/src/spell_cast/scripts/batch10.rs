@@ -4,7 +4,7 @@ use shared::components::PowerType;
 
 use super::{batch8, script_effect_value};
 use crate::auras::{AuraApplication, AuraSource};
-use crate::spell_cast::{self, targets};
+use crate::spell_cast;
 use crate::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const BLADE_FLURRY: u32 = 13877;

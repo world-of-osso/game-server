@@ -27,12 +27,51 @@ fn apply(h: &mut Harness, id: u32) {
         },
     );
 }
+fn remove_passive(h: &mut Harness, id: u32) {
+    let known = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .iter()
+        .filter(|&spell| spell != id)
+        .collect();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(known));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == id,
+    );
+}
+fn assert_buffed_hit(h: &mut Harness, spell_id: u32, multiplier: f32) {
+    let spell = world_db().unwrap().store.get(spell_id).unwrap();
+    let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
+    super::cast_triggered(h.app.world_mut(), h.caster, spell_id, Some(h.npc), 1);
+    h.advance(25);
+    let damage: i32 = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(spell_id) && e.kind == CombatLogKind::Damage)
+        .map(|e| e.amount)
+        .sum();
+    assert!(
+        varied(base * multiplier).contains(&(damage as f32)),
+        "{spell_id} {base} {damage}"
+    );
+}
 #[test]
 fn dummy10_blade_flurry_initial_strike_caps_five_or_eight_with_rank() {
     for rank in [false, true] {
         let mut h = harness(Vec::new(), &[13877, 331850, 272026], 4).unwrap();
         if rank {
             apply(&mut h, 272026);
+        } else {
+            remove_passive(&mut h, 272026);
         }
         let near: Vec<_> = (0..8)
             .map(|i| spawn_npc(&mut h.app, 1.0 + i as f32 * 0.5))
@@ -58,6 +97,8 @@ fn dummy10_blade_flurry_generates_combo_points_only_with_deft_maneuvers() {
         spawn_npc(&mut h.app, 3.0);
         if talent {
             apply(&mut h, 381878);
+        } else {
+            remove_passive(&mut h, 381878);
         }
         h.cast_and_deliver(13877, None);
         h.advance(8);
@@ -109,36 +150,24 @@ fn dummy10_feral_lunge_launches_named_bite_only_at_hit_enemy() {
 }
 #[test]
 fn dummy10_voidform_applies_named_damage_buff_for_native_duration() {
-    let mut h = harness(Vec::new(), &[228260, 194249], 5).unwrap();
+    let mut h = harness(Vec::new(), &[228260, 194249, 8092], 5).unwrap();
     h.cast_and_deliver(228260, Some(h.npc));
     h.advance(45);
     landed(&h);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, 194249));
-    let mods = h
-        .app
-        .world()
-        .get::<crate::auras::AuraStatMods>(h.caster)
-        .unwrap();
-    assert!(mods.damage_done(32) > 1.0);
+    assert_buffed_hit(&mut h, 8092, 1.2);
     h.advance(700);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 194249));
 }
 #[test]
 fn dummy10_arcane_surge_applies_named_buff_after_cast_not_before() {
-    let mut h = harness(Vec::new(), &[365350, 365362], 8).unwrap();
+    let mut h = harness(Vec::new(), &[365350, 365362, 133], 8).unwrap();
     h.cast_and_deliver(365350, Some(h.npc));
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 365362));
     h.advance(70);
     landed(&h);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, 365362));
-    assert!(
-        h.app
-            .world()
-            .get::<crate::auras::AuraStatMods>(h.caster)
-            .unwrap()
-            .damage_done(64)
-            > 1.0
-    );
+    assert_buffed_hit(&mut h, 133, 1.35);
     h.advance(500);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 365362));
 }
@@ -149,6 +178,8 @@ fn dummy10_protection_judgment_generates_holy_power_only_with_rank() {
         h.set_power(PowerType::HolyPower, 0.0);
         if rank {
             apply(&mut h, 315867);
+        } else {
+            remove_passive(&mut h, 315867);
         }
         h.cast_and_deliver(275779, Some(h.npc));
         h.advance(25);
@@ -194,6 +225,8 @@ fn dummy10_lightning_bolt_grants_rank_maelstrom_once_per_successful_cast() {
         h.set_power(PowerType::Maelstrom, 0.0);
         if rank {
             apply(&mut h, 343725);
+        } else {
+            remove_passive(&mut h, 343725);
         }
         h.cast_and_deliver(188196, Some(h.npc));
         h.advance(70);
