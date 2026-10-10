@@ -2186,6 +2186,8 @@ mod class_resource_tests;
 #[cfg(test)]
 mod line_of_sight_tests;
 #[cfg(test)]
+mod mechanics_talent_tests;
+#[cfg(test)]
 mod mechanics_tests;
 #[cfg(test)]
 mod new_class_tests;
