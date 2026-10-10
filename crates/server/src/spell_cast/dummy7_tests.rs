@@ -342,7 +342,7 @@ fn whirlwind(rank: bool, enemies: usize) {
             .iter()
             .find(|a| a.spell_id == 85739)
             .unwrap();
-        assert_eq!(aura.stacks, 2);
+        assert_eq!(aura.stacks, 4); // Mainline85739 CumulativeAura=4.
     }
     assert_eq!(logged(&h, 199667, ally, CombatLogKind::Damage), 0);
 }
