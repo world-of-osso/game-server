@@ -28,7 +28,6 @@ pub(crate) struct VehicleStore {
 #[derive(Component)]
 struct PassengerOrigin {
     map: InMap,
-    zone: u32,
     display: u32,
 }
 
@@ -99,7 +98,6 @@ pub(crate) fn board(world: &mut World, passenger: Entity, driver: Entity) -> Res
     };
     let origin = PassengerOrigin {
         map: *world.get::<InMap>(driver).unwrap(),
-        zone: world.get::<shared::components::Zone>(driver).unwrap().id,
         display: mounted.mount_display_id,
     };
     world.get_mut::<Mounted>(driver).unwrap().seats[index] = Some(passenger.to_bits());
@@ -127,12 +125,6 @@ fn validate_board(world: &World, passenger: Entity, driver: Entity) -> Result<()
         .ok_or("Passenger is transferring maps")?;
     if Some(map) != world.get::<InMap>(driver) {
         return Err("Riders must share a map copy".into());
-    }
-    let zone = world
-        .get::<shared::components::Zone>(passenger)
-        .ok_or("Passenger has no zone")?;
-    if Some(zone) != world.get::<shared::components::Zone>(driver) {
-        return Err("Riders must share a zone".into());
     }
     if world.get::<Rotation>(driver).is_none() {
         return Err("Driver has no rotation".into());
@@ -187,12 +179,6 @@ fn valid_seat(
         && alive(world, driver)
         && world.get::<InMap>(passenger) == Some(&origin.map)
         && world.get::<InMap>(driver) == Some(&origin.map)
-        && world
-            .get::<shared::components::Zone>(passenger)
-            .is_some_and(|zone| zone.id == origin.zone)
-        && world
-            .get::<shared::components::Zone>(driver)
-            .is_some_and(|zone| zone.id == origin.zone)
         && mounted.is_some_and(|mount| {
             mount.mount_display_id == origin.display
                 && mount.seats[usize::from(seat.seat_index)] == Some(passenger.to_bits())
