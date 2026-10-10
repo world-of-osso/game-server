@@ -2,7 +2,6 @@ use crate::vehicle::{Seat, VehicleStore, board, exit, reconcile_passengers};
 use crate::{
     group::{GroupRegistry, OnlineMember, OnlineView},
     maps::InMap,
-    persistence::ClientId,
 };
 use bevy::prelude::*;
 use shared::components::{Health, Mounted, MovementControl, Position, Rotation, VehiclePassenger};
@@ -48,35 +47,61 @@ fn vehicle_real_mammoth_passenger_position_matches_the_rendered_mount_frame() {
     );
 }
 
+fn spawn_logged_in_player(world: &mut World, id: u64) -> Entity {
+    let data = crate::persistence::CharacterData {
+        name: format!("Fbvehicle{id}"),
+        // Persisted WoW coordinates produce server position (10, 2, 20).
+        x: -20.0,
+        y: -10.0,
+        z: 2.0,
+        health: 100.0,
+        max_health: 100.0,
+        race: 1,
+        class: 1,
+        level: 80,
+        appearance: default(),
+        equipment_appearance: default(),
+        durability: Vec::new(),
+    };
+    let init = crate::auth_character::PlayerInitState {
+        gold: 0,
+        professions: default(),
+        achievements: default(),
+        pvp: default(),
+        world_map: default(),
+        friends: default(),
+        ignore_list: default(),
+        collections: crate::collection::PlayerCollectionState {
+            mounts: Vec::new(),
+            pets: Vec::new(),
+        },
+        currencies: default(),
+        reputation: shared::reputation::CharacterReputation::new_for_race(
+            &shared::reputation::default_faction_registry(),
+            1,
+        ),
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, world);
+    let player = crate::auth_character::spawn_player_entity(
+        &mut commands,
+        &data,
+        InMap::continent(0),
+        id,
+        None,
+        init,
+    );
+    queue.apply(world);
+    player
+}
+
 fn setup() -> (World, Entity, Entity, Entity) {
     let mut world = World::new();
-    let spawn = |world: &mut World, id| {
-        world
-            .spawn((
-                ClientId(id),
-                Health {
-                    current: 100.0,
-                    max: 100.0,
-                },
-                Position {
-                    x: 10.0,
-                    y: 2.0,
-                    z: 20.0,
-                },
-                Rotation {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                InMap::continent(0),
-                shared::components::Zone { id: 12 },
-                MovementControl::default(),
-            ))
-            .id()
-    };
-    let driver = spawn(&mut world, 1);
-    let passenger = spawn(&mut world, 2);
-    let outsider = spawn(&mut world, 3);
+    let driver = spawn_logged_in_player(&mut world, 1);
+    let passenger = spawn_logged_in_player(&mut world, 2);
+    let outsider = spawn_logged_in_player(&mut world, 3);
+    // Facing changes through normal movement; keep the authored seat-frame tests axis-aligned.
+    world.get_mut::<Rotation>(driver).unwrap().y = 0.0;
     let online: OnlineView = [
         (1, driver, "Driver"),
         (2, passenger, "Passenger"),
@@ -134,6 +159,48 @@ fn setup() -> (World, Entity, Entity, Entity) {
 }
 
 #[test]
+fn vehicle_boards_players_from_production_login_spawn_without_npc_zone() {
+    let (mut world, driver, passenger, _) = setup();
+    assert_eq!(board(&mut world, passenger, driver), Ok(()));
+    reconcile_passengers(&mut world);
+    assert_eq!(
+        world.get::<VehiclePassenger>(passenger).unwrap().driver,
+        driver.to_bits()
+    );
+}
+
+#[test]
+fn vehicle_rejects_other_maps_instances_transfers_and_out_of_range_players() {
+    for cause in 0..4 {
+        let (mut world, driver, passenger, _) = setup();
+        match cause {
+            0 => {
+                world.entity_mut(passenger).insert(InMap::continent(1));
+            }
+            1 => {
+                world.entity_mut(passenger).insert(InMap {
+                    map_id: 0,
+                    instance_id: 1,
+                });
+            }
+            2 => {
+                world.entity_mut(passenger).remove::<InMap>();
+            }
+            _ => {
+                world.get_mut::<Position>(passenger).unwrap().x += 20.0;
+            }
+        }
+        assert!(
+            board(&mut world, passenger, driver).is_err(),
+            "cause {cause}"
+        );
+        assert!(world.get::<VehiclePassenger>(passenger).is_none());
+        assert!(!world.get::<MovementControl>(passenger).unwrap().controlled);
+        assert_eq!(world.get::<Mounted>(driver).unwrap().seats, [None; 8]);
+    }
+}
+
+#[test]
 fn vehicle_boards_group_member_into_sparse_empty_seat_and_exit_frees_it() {
     let (mut world, driver, passenger, _) = setup();
     assert_eq!(board(&mut world, passenger, driver), Ok(()));
@@ -156,28 +223,7 @@ fn vehicle_boards_group_member_into_sparse_empty_seat_and_exit_frees_it() {
 fn vehicle_rejects_non_group_boarding_and_full_vehicle_without_state_changes() {
     let (mut world, driver, passenger, outsider) = setup();
     assert!(board(&mut world, outsider, driver).is_err());
-    let overflow = world
-        .spawn((
-            ClientId(4),
-            Health {
-                current: 100.0,
-                max: 100.0,
-            },
-            Position {
-                x: 10.0,
-                y: 2.0,
-                z: 20.0,
-            },
-            Rotation {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            InMap::continent(0),
-            shared::components::Zone { id: 12 },
-            MovementControl::default(),
-        ))
-        .id();
+    let overflow = spawn_logged_in_player(&mut world, 4);
     let online: OnlineView = [
         (1, driver, "Driver"),
         (2, passenger, "Passenger"),
@@ -261,8 +307,8 @@ fn vehicle_passenger_follows_driver_rotation_and_translation() {
 }
 
 #[test]
-fn vehicle_ejects_on_dismount_death_disconnect_and_zone_transfer() {
-    for cause in 0..5 {
+fn vehicle_ejects_on_dismount_death_disconnect_map_and_instance_transfer() {
+    for cause in 0..6 {
         let (mut world, driver, passenger, _) = setup();
         board(&mut world, passenger, driver).unwrap();
         match cause {
@@ -279,9 +325,14 @@ fn vehicle_ejects_on_dismount_death_disconnect_and_zone_transfer() {
                 world.entity_mut(driver).insert(InMap::continent(1));
             }
             _ => {
-                world
-                    .entity_mut(driver)
-                    .insert(shared::components::Zone { id: 13 });
+                if cause == 4 {
+                    world.entity_mut(driver).insert(InMap {
+                        map_id: 0,
+                        instance_id: 1,
+                    });
+                } else {
+                    world.entity_mut(passenger).remove::<InMap>();
+                }
             }
         }
         reconcile_passengers(&mut world);
