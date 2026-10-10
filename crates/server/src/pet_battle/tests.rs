@@ -472,3 +472,75 @@ fn pet_battle_deep_breath_state_and_humanoid_recovery() {
     assert_eq!(damage(&e), vec![300]);
     assert_eq!(b.teams[0].pets[0].health, 1400);
 }
+
+struct NoDraw;
+impl BattleRng for NoDraw {
+    fn draw(&mut self) -> u32 {
+        panic!("rejected action consumed RNG")
+    }
+}
+#[test]
+fn pet_battle_rejected_action_preserves_rng() {
+    let c = catalog();
+    let b = battle(&c, 7, 7, [110, 119, 123]);
+    assert!(
+        b.step(&c, [Action::Ability(2551), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
+    assert!(
+        b.step(&c, [Action::Swap(9), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
+    assert_eq!(
+        b.step(&c, [Action::Forfeit, Action::Pass], &mut NoDraw)
+            .unwrap()
+            .0
+            .outcome,
+        Some(Outcome::Winner(1))
+    );
+}
+#[test]
+fn pet_battle_resilient_does_not_block_root_real_grasp249() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [249, 110, 123]);
+    b.teams[1].pets[0]
+        .states
+        .insert(c.state_id("resilient").unwrap(), 1);
+    let (b, e) = b
+        .step(&c, [Action::Ability(249), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert!(!e.iter().any(|e| matches!(e, Event::Immune { .. })));
+    assert_eq!(
+        b.teams[1].pets[0].state(c.state_id("swapOutLock").unwrap()),
+        1
+    );
+    assert!(
+        b.step(&c, [Action::Pass, Action::Swap(1)], &mut NoDraw)
+            .is_err()
+    );
+}
+#[test]
+fn pet_battle_aquatic_dot_and_dragon_next_round() {
+    let c = catalog();
+    let mut b = battle(&c, 8, 8, [152, 110, 123]);
+    // Both aquatic passives: periodic30*1.25*.5=18.75 =>18; direct60 unaffected.
+    let (next, e) = b
+        .step(&c, [Action::Ability(152), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(damage(&e), vec![60, 18]);
+    assert_eq!(next.teams[1].pets[0].health, 9922);
+    b = battle(&c, 1, 7, [110, 119, 123]);
+    b.teams[1].pets[0].health = 5100;
+    let (b, e) = b
+        .step(&c, [Action::Ability(110), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(damage(&e), vec![120]);
+    let (b, e) = b
+        .step(&c, [Action::Ability(110), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(damage(&e), vec![180]);
+    let (_, e) = b
+        .step(&c, [Action::Ability(110), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(damage(&e), vec![120]);
+}
