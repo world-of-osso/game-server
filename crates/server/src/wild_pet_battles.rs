@@ -285,7 +285,7 @@ impl Encounter {
         next.participated.insert(next.battle.teams[0].active);
         let mut text = events
             .iter()
-            .filter_map(format_combat_event)
+            .filter_map(|event| format_combat_event(event, catalog))
             .collect::<Vec<_>>();
         if decision == WildPetBattleAction::Trap {
             text.insert(0, "Trap failed; next attempt has increased chance".into());
@@ -519,8 +519,9 @@ fn combat_feedback(event: &Event) -> Option<BattleCombatFeedback> {
         healing,
     })
 }
-fn format_combat_event(event: &Event) -> Option<String> {
+fn format_combat_event(event: &Event, catalog: &WildCatalog) -> Option<String> {
     Some(match event {
+        Event::Used { ability, .. } => format!("{} used", catalog.ability_art[ability].0),
         Event::Damage {
             amount, critical, ..
         } => format!(
@@ -531,8 +532,8 @@ fn format_combat_event(event: &Event) -> Option<String> {
         Event::Miss { .. } => "Miss".into(),
         Event::Fainted(_) => "Pet fainted".into(),
         Event::Swapped { team, slot } => format!("Team {} swapped to pet {}", team + 1, slot + 1),
-        Event::AuraApplied { ability, .. } => format!("Aura {ability} applied"),
-        Event::AuraRemoved { ability, .. } => format!("Aura {ability} expired"),
+        Event::AuraApplied { ability, .. } => format!("{} applied", catalog.ability_art[ability].0),
+        Event::AuraRemoved { ability, .. } => format!("{} expired", catalog.ability_art[ability].0),
         Event::Immune { .. } => "Immune".into(),
         _ => return None,
     })
