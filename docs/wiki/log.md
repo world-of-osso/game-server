@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Pet effects2](systems/pet-battle-engine.md#effect-continuation--petbattle-effects2):15 added handlers; recursive rows1568→1727, admitted ability records913→987. Ranked99 hosted-map wild candidates;83 admit.17 new real-ID cases, corrected unsupported-object regression,72 engine +7 wild/startup tests pass after feature-branch master merge. Original partial handlers and90% admission remain unfinished; unknown semantics recorded, no DB writes/live realm/deployment/master merge.
+
 - 2026-10-10 — [Class spell scripts batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths): Reap destination line, real Provoke threat/victim/owned-statue path and eight additional bounded spell paths. Per-spell RED/GREEN, owner-only Breath damage reduction, requested-ground Sanctify cap, post-master census172→171. No database writes, fabricated IDs, deployment, master merge or realm process.
 
 - 2026-10-10 — [Class spell scripts batch7](systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations): TDB1210 script/proc/link mining and Mainline effect chains derive eight bounded paths;21 native functions pass after correcting Bear mitigation in Survival's fixture. Census172 retained,70 reviewed/partial/deferred. No database writes, deployment, merge or guessed projectile/taunt bridge.
