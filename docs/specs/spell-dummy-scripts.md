@@ -86,7 +86,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 
 - `crates/server/src/spell_cast/dummy4_tests.rs` —17 cast tests across ten paths, including passive/bleed/ownership gates, strict threshold, area cap/radius, ticking/expiry and existing-timer-only updates. [Census and proof](../wiki/systems/spell-casting.md#fourth-batch-local-retail-rows).
 
-- `crates/server/src/spell_cast/dummy5_tests.rs` — per-spell authentic catalog casts and chance/ownership/rank/cap gates; proof ledger in the batch5 handoff.
+- `crates/server/src/spell_cast/dummy5_tests.rs` —14 per-spell authentic catalog cast functions with chance/ownership/rank/cap gates. Full spell_cast207/207 at`f6b842a`; [census and proof](../wiki/systems/spell-casting.md#fifth-batch-local-retail-rows).
 
 ## Known gaps (current cycle)
 
@@ -99,5 +99,5 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - Second-batch optional/uncertified paths: Teachings/normalization, Find Weakness, Volatility, Unholy Vigor, Chain Heal additional-jump LOS/talent range, Calcified Spikes/Retaliation, Fire Blast parallel casting/Hot Streak.
 - Third-batch unimplemented variants: Improved Garrote windows/other concealment spells; Prayer selection injury priority/LOS beyond ordinary cast validation; Prayer-to-Serenity optional1246517; Shred stealth/Thrash variants; Thunder Clap reduced damage beyond five targets/root variant; Moonfire second target, damage reduction and Astral Power variants. Unknown root/descendant markers are not certified by base-path proof.
 - Fourth-batch limits: unknown Dummy metadata remains unresolved. Steady Shot Marksmanship cooldown/level curve, Kill Shot enabling talents, Mangle marker, Renewing Mist overheal jumps/rank231606 procs, Vivify tooltip multiplier/talent variants, Chain Lightning Maelstrom Weapon/target-count marker, Howling Blast secondary damage/CAP/Frost Fever resource procs, Sanctify target cap/extra marker, Ebon Might stat distribution and extension caps are not certified.
-- Fifth-batch limits: unidentified Demon's Bite/Chaos Strike/Disintegrate/Chaos Bolt markers; Shuriken soft-cap/stealth/talent fields; Bone Shield consumption/haste/armor parity and Blood Plague leech; latent plague talent effects. Crash Lightning remains deferred because its native selector104 is unsupported. No alternate cone substituted. These base-path tests do not certify full class rotations.
+- Fifth-batch limits: unidentified Demon's Bite/Disintegrate/Chaos Bolt markers; Chaos Strike's30 mirror is not separately consumed; Shuriken soft-cap/stealth/talent fields; Bone Shield consumption/haste/armor parity and Blood Plague leech; latent plague talent effects. Crash Lightning remains deferred because its native selector104 is unsupported. No alternate cone substituted. These base-path tests do not certify full class rotations.
 - Realm UDP 5000, deployment and merging.

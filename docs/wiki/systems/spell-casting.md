@@ -239,6 +239,28 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
+### Fifth batch: local Retail rows
+
+Implementation: `spell_cast/scripts/batch5.rs`; [contract](../../specs/spell-dummy-scripts.md#fifth-batch-locally-derived-paths). Sources exclusively local Mainline12.1.0.69933 DB2, cross-checked against read-only SQLite. No fabricated IDs or external source fetches. Eight ranked paths plus supplementary Lava Burst favor DH, Evoker, Warlock, Rogue and DK over previously frequent Mage/Monk additions; Shaman receives the Lava Burst path.
+
+| Root | Authored action / native proof | Retained limits |
+|---|---|---|
+|162243 Demon's Bite|Applied258876's s3/s4 grant5–10 additional Fury; two casts prove rank/base25.|Root Dummy0 unidentified; full talent damage parity not certified.|
+|162794 Chaos Strike|Tooltip197125h=20% rolls once on root hit, refunds193840s1=20 Fury. Chance100/0 catalog clones prove two weapon hits and one/no refund.|Root30 value is not separately consumed; ordinary probability frequency and talent variants not certified.|
+|356995 Disintegrate|Own370898s1/d applies50% slow at channel application, not each tick; one cast proves damage ticks and3sec expiry.|Caster-side zero-valued aura4 remains unidentified.|
+|116858 Chaos Bolt|Own description guarantees crit and crit-percentage scaling; zero/30% stat casts prove858/1116 damage within catalog variance.|Root Dummy1 Base20 remains unresolved.|
+|324536 Malefic Rapture|Own324540s1 reference; count owned periodic damage/leech/percent effects, not heals/foreign auras. One cast proves one/two effects, ally/foreign/heal exclusions.|Base root E3 action closed, not full talent variants.|
+|197835 Shuriken Storm|Own s2=one combo point per target hit. One cast proves two enemies→two points and ally/far exclusion.|Dummy2 stealth50 and Dummy3 soft-cap8 remain unimplemented.|
+|195292 Death's Caress|Own s3=two Bone Shield195181 stacks. Two casts prove initial2 and9→10 cap while retaining damage/Blood Plague.|Child Bone Shield marker/consumption/haste/armor and Blood Plague leech not certified.|
+|207317 Epidemic|Own212739s1/s2 gives infected-primary/other-nearby96/39 damage (AP100), only owned Virulent Plague. Own77575s3 extends owned Dread/Virulent by1000ms.|One cast proves ownership/radius/ally and Virulent expiry; separate Dread tick-clock assertion absent. Latent plague variants unimplemented.|
+|51505 Lava Burst (supplement)|Own Flame Shock condition guarantees child285452 crit and own description scales with crit stats. Two casts prove condition/no condition and preserved8/0 Maelstrom.|343725 already adds8 to parent effect1 through generic PointsIndex1; no extra Energize script. No full talent/overload parity claim.|
+
+At Rust revision`f6b842a`, the requested full `cargo test --locked -p server --bin game-server spell_cast` ran once:207/207 pass, including14 new functions and the updated deterministic gross-cost Chaos Strike fixture. Format/check exit0, warning-free. These are native process/App proofs, not live realm or independent integration proof; parent owns that gate.
+
+Census baseline reproduces176 exactly; after173. Script-owned E3 actions close162794/324536/207317, not every numeric field or optional talent. E3 admissible IDs/memberships121/129→118/126; a4=57/65, a226=14/15 unchanged. Remaining173:56 reviewed/partial/deferred,117 un-derived; class/spec scope unchanged13/40,630 book IDs/1551 memberships,302 core IDs/355 memberships. Source parser now recognizes qualified `batchN::NAME` registrations; the unchanged baseline still reproduces176. No no-op registrations.
+
+Crash Lightning187874 was attempted then deferred: native RED rejects selector104. No invented cone/weapon-proc substitute. Durable before/after snapshots, ranked reasons, raw34-ID receipts, census generator and proof logs: `game-engine/data/diagnostics/spell-dummy5-2026-10-10/`. Delivery/remote/release receipts: `/home/osso/.worktrees/handoff-spell-dummy5.md`.
+
 ### Third batch: local Retail rows
 
 Implementation: `spell_cast/scripts/batch3.rs`; [contract](../../specs/spell-dummy-scripts.md#third-batch-locally-derived-paths). Sources are read-only local Retail12.1.0.69933 `spell`, `spell_effect`, duration/radius/category/aura-options/PPM rows, not older expansion assumptions. Durable receipts/proofs: `game-engine/data/diagnostics/spell-dummy3-2026-10-10/`; pending proof status is tracked in `/home/osso/.worktrees/handoff-spell-dummy3.md`.
