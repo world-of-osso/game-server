@@ -142,16 +142,16 @@ impl NavigationMap {
         if result & DT_BUFFER_TOO_SMALL != 0 {
             return Err("corner buffer exhausted".into());
         }
-        self.sample_corner_heights(
+        self.project_corner_surfaces(
             &corners[..count as usize * 3],
             &references[..count as usize],
             corridor[corridor.len() - 1],
         )
     }
 
-    /// Funnel portals use coarse polygon vertex heights. Detail triangles retain the
-    /// actual stair/terrain surface, so sample them before movement follows corners.
-    fn sample_corner_heights(
+    /// Project interpolated portals onto their polygon's approximate detail surface.
+    /// Actual chase/home feet are corrected by the server's exact ground query.
+    fn project_corner_surfaces(
         &self,
         corners: &[f32],
         references: &[dtPolyRef],
