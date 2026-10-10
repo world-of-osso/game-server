@@ -979,6 +979,45 @@ INSERT INTO "skyborne_item_x_item_effect" VALUES(136845,97708,4540);
 INSERT INTO "skyborne_item_x_item_effect" VALUES(136849,97715,4536);
 INSERT INTO "skyborne_item_x_item_effect" VALUES(137315,98264,6948);
 INSERT INTO "skyborne_item_x_item_effect" VALUES(137897,98985,117);
+CREATE TABLE spell_effect (
+  ID INTEGER PRIMARY KEY,
+  EffectAura INTEGER NOT NULL DEFAULT 0,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  EffectIndex INTEGER NOT NULL DEFAULT 0,
+  Effect INTEGER NOT NULL DEFAULT 0,
+  EffectAmplitude REAL NOT NULL DEFAULT 0,
+  EffectAttributes INTEGER NOT NULL DEFAULT 0,
+  EffectAuraPeriod INTEGER NOT NULL DEFAULT 0,
+  EffectBonusCoefficient REAL NOT NULL DEFAULT 0,
+  EffectChainAmplitude REAL NOT NULL DEFAULT 0,
+  EffectChainTargets INTEGER NOT NULL DEFAULT 0,
+  EffectItemType INTEGER NOT NULL DEFAULT 0,
+  EffectMechanic INTEGER NOT NULL DEFAULT 0,
+  EffectPointsPerResource REAL NOT NULL DEFAULT 0,
+  EffectPos_facing REAL NOT NULL DEFAULT 0,
+  EffectRealPointsPerLevel REAL NOT NULL DEFAULT 0,
+  EffectTriggerSpell INTEGER NOT NULL DEFAULT 0,
+  BonusCoefficientFromAP REAL NOT NULL DEFAULT 0,
+  PvpMultiplier REAL NOT NULL DEFAULT 0,
+  Coefficient REAL NOT NULL DEFAULT 0,
+  Variance REAL NOT NULL DEFAULT 0,
+  ResourceCoefficient REAL NOT NULL DEFAULT 0,
+  GroupSizeBasePointsCoefficient REAL NOT NULL DEFAULT 0,
+  EffectBasePointsF REAL NOT NULL DEFAULT 0,
+  ScalingClass INTEGER NOT NULL DEFAULT 0,
+  Node__Field_12_0_0_63534_001 INTEGER NOT NULL DEFAULT 0,
+  EffectMiscValue_0 INTEGER NOT NULL DEFAULT 0,
+  EffectMiscValue_1 INTEGER NOT NULL DEFAULT 0,
+  EffectRadiusIndex_0 INTEGER NOT NULL DEFAULT 0,
+  EffectRadiusIndex_1 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_0 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_1 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_2 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_3 INTEGER NOT NULL DEFAULT 0,
+  ImplicitTarget_0 INTEGER NOT NULL DEFAULT 0,
+  ImplicitTarget_1 INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE spell_name (
   ID INTEGER PRIMARY KEY,
   Name_lang TEXT NOT NULL DEFAULT ''
@@ -998,6 +1037,7 @@ CREATE TABLE tdb_playercreateinfo_item (
   amount INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (race, class, itemid)
 );
+CREATE INDEX spell_effect_spell_id ON spell_effect(SpellID);
 CREATE INDEX item_modified_appearance_item_id ON item_modified_appearance(ItemID);
 CREATE UNIQUE INDEX content_item_id ON content_item(ID);
 CREATE UNIQUE INDEX skyborne_content_item_id ON skyborne_content_item(ID);
