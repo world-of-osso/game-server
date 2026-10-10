@@ -14,6 +14,7 @@
 
 pub mod area_aura;
 pub mod area_trigger;
+pub(crate) mod cosmetic;
 pub mod creature;
 pub mod effects;
 mod hit;
@@ -396,6 +397,7 @@ fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info
 /// nothing instead of failing the cast.
 fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effects::is_handled(effect)
+        || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }

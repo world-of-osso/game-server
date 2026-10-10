@@ -99,6 +99,7 @@ pub(crate) struct Harness {
 #[derive(Default)]
 pub(crate) struct Inbox {
     pub(crate) failed: Vec<CastFailed>,
+    pub(crate) go: Vec<SpellGo>,
     pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
     pub(crate) charges: Vec<SpellChargesUpdate>,
     pub(crate) bars: Vec<shared::protocol::ActionBarSnapshot>,
@@ -404,6 +405,9 @@ impl Harness {
             inbox
                 .failed
                 .extend(drain::<CastFailed>(&mut self.app, self.connection));
+            inbox
+                .go
+                .extend(drain::<SpellGo>(&mut self.app, self.connection));
             inbox
                 .cooldowns
                 .extend(drain::<SpellCooldownUpdate>(&mut self.app, self.connection));
