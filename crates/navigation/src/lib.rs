@@ -19,7 +19,7 @@ pub const AGENT_CLIMB: f32 = 1.6;
 pub const AGENT_SLOPE: f32 = 50.0;
 pub const WATER_AREA: u8 = 2;
 pub const WALK_FLAG: u16 = 1;
-pub const MAGIC: &[u8; 8] = b"OSSONAV1";
+pub const MAGIC: &[u8; 8] = b"OSSONAV2";
 
 pub fn tile_bounds((row, col): (u32, u32)) -> (f32, f32) {
     let center = 32.0 * TILE_SIZE;

@@ -9,6 +9,7 @@ use crate::grid_activity::GridDormant;
 use crate::ground::{GroundMap, GroundProbe};
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::maps::InMap;
+use crate::navigation::{Goal, MoveRequest, Navigation, Step};
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
 use shared::casting::CastState;
@@ -445,19 +446,21 @@ fn waypoint_system(
     time: Res<Time>,
     world_data: Res<WorldData>,
     queues: MoveQueues,
+    mut nav: Option<ResMut<Navigation>>,
     mut query: Query<
         (
             Entity,
             &mut Position,
             &mut WaypointState,
             Option<&CreatureState>,
+            Option<&InMap>,
             Bearing,
         ),
         Roaming,
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, mut state, creature_state, bearing) in &mut query {
+    for (entity, mut pos, mut state, creature_state, map, bearing) in &mut query {
         state.moved = 0.0;
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
@@ -468,7 +471,33 @@ fn waypoint_system(
         if path.points.is_empty() {
             continue;
         }
-        let (next_position, orientation) = tick_waypoint(*pos, &mut state, path, dt);
+        let (next_position, orientation) = match (nav.as_deref_mut(), map) {
+            (Some(nav), Some(map)) => {
+                let path_id = state.path_id;
+                tick_waypoint_with_travel(
+                    *pos,
+                    &mut state,
+                    path,
+                    dt,
+                    |from, to, distance, index| {
+                        let request = MoveRequest {
+                            map_id: map.map_id,
+                            goal: Goal::Waypoint(path_id, index),
+                            from,
+                            to,
+                            distance,
+                            reach: 0.0,
+                        };
+                        match nav.advance(entity, request) {
+                            Step::Unbaked => direct_leg(from, to, distance),
+                            Step::Moved { position, reached } => (position, reached),
+                            Step::Blocked => (from, false),
+                        }
+                    },
+                )
+            }
+            _ => tick_waypoint(*pos, &mut state, path, dt),
+        };
         let leg = &path.points[state.current_index % path.points.len()];
         let speed = state.speed(leg.move_type);
         let mut stride = Stride::moving(*pos, next_position, leg_motion(leg.move_type), speed);
@@ -494,10 +523,32 @@ fn leg_motion(move_type: WaypointMoveType) -> CreatureMotion {
 /// next leg, wrapping after the last point. Returns the new position and the
 /// point's orientation when it is to be faced (arrival with a delay).
 fn tick_waypoint(
+    position: Position,
+    state: &mut WaypointState,
+    path: &WaypointPath,
+    dt: f32,
+) -> (Position, Option<f32>) {
+    tick_waypoint_with_travel(position, state, path, dt, |from, to, distance, _| {
+        direct_leg(from, to, distance)
+    })
+}
+
+fn direct_leg(mut from: Position, to: Position, distance: f32) -> (Position, bool) {
+    let (reached, x, z) = move_toward(from.x, from.z, to.x, to.z, distance);
+    from.x = x;
+    from.z = z;
+    if reached {
+        from.y = to.y;
+    }
+    (from, reached)
+}
+
+fn tick_waypoint_with_travel(
     mut position: Position,
     state: &mut WaypointState,
     path: &WaypointPath,
     dt: f32,
+    mut travel: impl FnMut(Position, Position, f32, usize) -> (Position, bool),
 ) -> (Position, Option<f32>) {
     if state.delay_remaining > 0.0 {
         state.delay_remaining -= dt;
@@ -512,10 +563,18 @@ fn tick_waypoint(
     // Waypoint data is WoW coords; convert target to Bevy for movement.
     let (tx, ty, tz) = wow_to_bevy(point.position_x, point.position_y, point.position_z);
     let step = state.speed(point.move_type) * dt;
-    let (reached, nx, nz) = move_toward(position.x, position.z, tx, tz, step);
-    state.moved = (nx - position.x).hypot(nz - position.z);
-    position.x = nx;
-    position.z = nz;
+    let (next, reached) = travel(
+        position,
+        Position {
+            x: tx,
+            y: ty,
+            z: tz,
+        },
+        step,
+        state.current_index,
+    );
+    state.moved = (next.x - position.x).hypot(next.z - position.z);
+    position = next;
     if !reached {
         return (position, None);
     }
@@ -633,6 +692,8 @@ pub(crate) fn chase_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
+    mut nav: Option<ResMut<Navigation>>,
+    mut commands: Commands,
     mut units: ParamSet<(Query<Chaser, ActiveUncontrolled>, Query<&Position>)>,
 ) {
     let dt = time.delta_secs();
@@ -656,10 +717,37 @@ pub(crate) fn chase_system(
             continue; // target despawned or invalid
         };
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
-        let mut next_position = chase_step(*pos, target_pos, run_speed * dt);
+        let mut next_position = match (nav.as_deref_mut(), map) {
+            (Some(nav), Some(map)) => match nav.advance(
+                entity,
+                MoveRequest {
+                    map_id: map.map_id,
+                    goal: Goal::Chase(target),
+                    from: *pos,
+                    to: *target_pos,
+                    distance: run_speed * dt,
+                    reach: CHASE_REACH,
+                },
+            ) {
+                Step::Unbaked => chase_step(*pos, target_pos, run_speed * dt),
+                Step::Moved { position, .. } => position,
+                Step::Blocked => {
+                    let stride = Stride::still(*pos);
+                    queues.apply(entity, &mut pos, bearing, stride);
+                    commands.queue(move |world: &mut World| {
+                        crate::creature_aggro::enter_evade_mode(world, entity)
+                    });
+                    continue;
+                }
+            },
+            _ => chase_step(*pos, target_pos, run_speed * dt),
+        };
         if next_position != *pos {
-            let feet = Vec3::new(next_position.x, pos.y, next_position.z);
-            next_position.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y);
+            let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
+            next_position.y = run_ground(
+                probe_ground(ground.as_deref_mut(), map, feet),
+                next_position.y,
+            );
         }
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
         if stride.facing.is_none() {
@@ -1076,6 +1164,7 @@ fn return_to_spawn_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
+    mut nav: Option<ResMut<Navigation>>,
     mut query: Query<
         (
             Entity,
@@ -1102,18 +1191,40 @@ fn return_to_spawn_system(
             continue;
         }
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let (reached, new_x, new_z) = move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
-        let y = if reached {
-            spawn.y
-        } else {
-            let feet = Vec3::new(new_x, pos.y, new_z);
-            run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y)
+        let home = Position {
+            x: spawn.x,
+            y: spawn.y,
+            z: spawn.z,
         };
-        let next_position = Position {
-            x: new_x,
-            y,
-            z: new_z,
+        let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
+            (Some(nav), Some(map)) => match nav.advance(
+                entity,
+                MoveRequest {
+                    map_id: map.map_id,
+                    goal: Goal::Home,
+                    from: *pos,
+                    to: home,
+                    distance: speed * dt,
+                    reach: 0.0,
+                },
+            ) {
+                Step::Unbaked => direct_leg(*pos, home, speed * dt),
+                Step::Moved { position, reached } => (position, reached),
+                Step::Blocked => {
+                    let stride = Stride::still(*pos);
+                    queues.apply(entity, &mut pos, bearing, stride);
+                    continue;
+                }
+            },
+            _ => direct_leg(*pos, home, speed * dt),
         };
+        if !reached {
+            let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
+            next_position.y = run_ground(
+                probe_ground(ground.as_deref_mut(), map, feet),
+                next_position.y,
+            );
+        }
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, speed);
         if reached {
             stride.motion = CreatureMotion::Still;

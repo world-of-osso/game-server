@@ -12,14 +12,21 @@ const RADIUS_CELLS: i32 = 2;
 /// A WoW tile contains 4×4 Detour tiles to keep peak voxelization memory bounded.
 /// `triangles` includes neighboring geometry: border erosion must see across tile seams.
 pub fn bake_tile(triangles: &[[Vec3; 3]], tile: (u32, u32)) -> Result<Vec<u8>, String> {
-    bake_tile_with_water(triangles, &[], tile)
+    let geometry = los::bake::CollectedGeometry {
+        triangles: triangles.to_vec(),
+        obstacles: Vec::new(),
+    };
+    bake_collected(&geometry, &[], tile)
 }
 
-pub fn bake_tile_with_water(
-    triangles: &[[Vec3; 3]],
+pub fn bake_collected(
+    geometry: &los::bake::CollectedGeometry,
     water: &[(Vec3, Vec3)],
     tile: (u32, u32),
 ) -> Result<Vec<u8>, String> {
+    let triangles = &geometry.triangles;
+    let obstacles: std::collections::HashSet<_> =
+        geometry.obstacles.iter().map(triangle_key).collect();
     if triangles.iter().flatten().any(|p| !p.is_finite()) {
         return Err("non-finite collision vertex".into());
     }
@@ -36,7 +43,7 @@ pub fn bake_tile_with_water(
                 (63 - tile.1) * SUBDIVISIONS + col,
                 tile.0 * SUBDIVISIONS + row,
             );
-            let packet = bake_subtile(triangles, water, min, coords)?;
+            let packet = bake_subtile(triangles, &obstacles, water, min, coords)?;
             if !packet.is_empty() {
                 packets.push(packet);
             }
@@ -63,7 +70,11 @@ struct RasterInput {
 }
 
 impl RasterInput {
-    fn clipped(triangles: &[[Vec3; 3]], origin: Vec3) -> Self {
+    fn clipped(
+        triangles: &[[Vec3; 3]],
+        obstacles: &std::collections::HashSet<[u32; 9]>,
+        origin: Vec3,
+    ) -> Self {
         let border = BORDER_CELLS as f32 * CELL_SIZE;
         let mut min = origin - Vec3::new(border, 0.0, border);
         let mut max = origin + Vec3::new(SUBTILE_SIZE + border, 0.0, SUBTILE_SIZE + border);
@@ -86,7 +97,8 @@ impl RasterInput {
             max.y = max.y.max(tmax.y);
             let normal = (tri[1] - tri[0]).cross(tri[2] - tri[0]).normalize_or_zero();
             // Ground collision is two-sided, as shared::ground::WmoGroupCollision is.
-            let walkable = normal.y.abs() >= AGENT_SLOPE.to_radians().cos();
+            let walkable = normal.y.abs() >= AGENT_SLOPE.to_radians().cos()
+                && !obstacles.contains(&triangle_key(tri));
             input.areas.push(if walkable {
                 RC_WALKABLE_AREA
             } else {
@@ -170,7 +182,8 @@ impl RecastBuild {
                 ),
                 "rasterization",
             )?;
-            rcFilterLowHangingWalkableObstacles(self.context, CLIMB_CELLS, self.heightfield);
+            // Do not promote steep/vertical obstacle faces to walkable just because
+            // their top lies inside the 1.6-yard grounded step budget.
             rcFilterLedgeSpans(self.context, HEIGHT_CELLS, CLIMB_CELLS, self.heightfield);
             rcFilterWalkableLowHeightSpans(self.context, HEIGHT_CELLS, self.heightfield);
             require(
@@ -312,13 +325,22 @@ fn require(ok: bool, step: &str) -> Result<(), String> {
     }
 }
 
+fn triangle_key(tri: &[Vec3; 3]) -> [u32; 9] {
+    let mut key = [0; 9];
+    for (i, point) in tri.iter().enumerate() {
+        key[i * 3..i * 3 + 3].copy_from_slice(&point.to_array().map(f32::to_bits));
+    }
+    key
+}
+
 fn bake_subtile(
     triangles: &[[Vec3; 3]],
+    obstacles: &std::collections::HashSet<[u32; 9]>,
     water: &[(Vec3, Vec3)],
     origin: Vec3,
     coords: (u32, u32),
 ) -> Result<Vec<u8>, String> {
-    let input = RasterInput::clipped(triangles, origin);
+    let input = RasterInput::clipped(triangles, obstacles, origin);
     if input.areas.is_empty() {
         return Ok(Vec::new());
     }

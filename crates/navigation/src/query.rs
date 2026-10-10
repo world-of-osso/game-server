@@ -302,6 +302,22 @@ mod tests {
 
     #[test]
     #[ignore = "requires nav-bake map34 from local Stockade assets"]
+    fn stockade_repath_to_other_cell_has_clear_segments() {
+        let mut map = NavigationMap::open(&ground_dir().join("navmesh/34")).unwrap();
+        let path = map
+            .path(wow(128.5, 52.0, -33.86), wow(103.0, 76.0, -34.86))
+            .unwrap();
+        let mut los = los::LosMap::new(&ground_dir().join("los/34"));
+        for pair in path.windows(2) {
+            assert!(
+                los.clear(pair[0] + Vec3::Y, pair[1] + Vec3::Y).unwrap(),
+                "blocked path segment {pair:?}; full {path:?}"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires nav-bake map34 from local Stockade assets"]
     fn stockade_path_routes_around_real_walls() {
         let mut map = NavigationMap::open(&ground_dir().join("navmesh/34")).unwrap();
         let a = wow(115.646, 46.6108, -34.8562);

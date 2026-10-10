@@ -1,6 +1,6 @@
 //! Reproducible local-CASC bake; selection comes from the existing LOS tile directory.
 use los::bake::{Baker, DEFAULT_THICKNESS_CUTOFF, index_triangles};
-use navigation::bake::bake_tile_with_water;
+use navigation::bake::bake_collected;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -38,10 +38,16 @@ fn run() -> Result<(), String> {
     std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
     let mut report = String::from("tile\ttriangles\tbytes\tmilliseconds\n");
     if let Some(global) = baker.collect_global(wdt)? {
-        let all: Vec<_> = global
-            .iter()
-            .flat_map(|(_, tris)| tris.iter().copied())
-            .collect();
+        let all = los::bake::CollectedGeometry {
+            triangles: global
+                .iter()
+                .flat_map(|(_, g)| g.triangles.iter().copied())
+                .collect(),
+            obstacles: global
+                .iter()
+                .flat_map(|(_, g)| g.obstacles.iter().copied())
+                .collect(),
+        };
         for (tile, _) in &global {
             write_tile(&dir, *tile, &all, &[], &mut report)?;
         }
@@ -87,12 +93,12 @@ fn run() -> Result<(), String> {
 fn write_tile(
     dir: &Path,
     tile: (u32, u32),
-    triangles: &[[glam::Vec3; 3]],
+    geometry: &los::bake::CollectedGeometry,
     water: &[(glam::Vec3, glam::Vec3)],
     report: &mut String,
 ) -> Result<(), String> {
     let started = Instant::now();
-    let bytes = bake_tile_with_water(triangles, water, tile)?;
+    let bytes = bake_collected(geometry, water, tile)?;
     // Write even empty tiles: an authored unnavigable tile is not an unbaked map.
     std::fs::write(dir.join(format!("{}_{}.nav", tile.0, tile.1)), &bytes)
         .map_err(|err| err.to_string())?;
@@ -100,7 +106,7 @@ fn write_tile(
         "{},{}\t{}\t{}\t{}\n",
         tile.0,
         tile.1,
-        triangles.len(),
+        geometry.triangles.len(),
         bytes.len(),
         started.elapsed().as_millis()
     );
@@ -115,7 +121,7 @@ fn bake_global_los(args: &Args, wdt: u32) -> Result<(), String> {
     let dir = args.out.join("los").join(args.map.to_string());
     std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
     for (tile, triangles) in geometry {
-        let (vertices, indexed) = index_triangles(&triangles);
+        let (vertices, indexed) = index_triangles(&triangles.triangles);
         let bytes = los::LosTile::build(tile.0, tile.1, vertices, indexed).to_bytes();
         std::fs::write(dir.join(format!("{}_{}.los", tile.0, tile.1)), bytes)
             .map_err(|err| err.to_string())?;

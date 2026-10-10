@@ -1,3 +1,4 @@
 [env]
 # Always build the pinned Recast source, never an unversioned host library.
 RECAST_VENDOR = { value = "true", force = true }
+RECAST_NO_VENDOR = { value = "false", force = true }

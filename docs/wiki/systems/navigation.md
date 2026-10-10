@@ -1,6 +1,6 @@
 # Creature navigation
 
-Contract: [navigation](../../specs/navigation.md). Phase 1 uses the same offline `los::bake::Baker` asset/placement collector as LOS, with collision selection: terrain fans/holes, shared ground MOPY/MPY2 WMO collision faces, M2 bounding hulls instead of render batches. No new geometry extractor or CDN access. Shared MH2O parsing lives in `los::liquid` and is re-exported by server ground.
+Contract: [navigation](../../specs/navigation.md). Phase 1 uses the same offline `los::bake::Baker` asset/placement collector as LOS, with collision selection: terrain fans/holes, shared ground MOPY/MPY2 WMO collision faces, M2 bounding hulls instead of render batches. No new geometry extractor or CDN access. Shared MH2O parsing lives in `los::liquid` and is re-exported by server ground. Modern LiquidObject IDs (>=42) resolve LVF from the exact authored vertex block size; real ocean root776382 stores81depth bytes, not81float heights.
 
 ## Choice and profile
 
@@ -8,9 +8,19 @@ Evaluated pure-Rust landmark/waymark 0.1.0 (wowemulation-dev/recast-rs, Recast/D
 
 Profile: radius **0.388** from shared LOS `BODY_RADIUS` (not an invented 0.3889 constant), climb **1.6** from shared ground `STEP_UP_HEIGHT`, slope **50°** from shared movement `MAX_SLOPE_ANGLE`. Height **2.0** is the selected phase-1 humanoid clearance profile: no universal creature collision-height constant was found. Larger displays require future profiles, not silently scaled clearance. Voxel XZ size is 533.3333/2048 yd, Y size 0.2 yd, radius erosion rounds up to two cells, height ten cells, climb eight cells. Each WoW tile packages sixteen 512-cell Detour subtiles with a five-cell neighbor border. This bounds per-build memory while preserving cross-WoW-tile connectivity. Ground's two-sided walkable-normal rule is preserved. Water marks submerged terrain spans as area 2; movement-mode policy is not added.
 
+## Geometry correction from real Stockade proof
+
+M2 bounding hulls are obstacles, not ground-support surfaces: `GroundMap` supports terrain/WMO floors only. Treating a1.2-yard Stockade M2 crate top as a floor produced a path through its side under the1.6-yard step budget. The collector now retains obstacle classification; Recast never promotes those hulls to walkable floors. Real alternate-cell query and movement paths are LOS-clear. Ground's walkable terrain/WMO surfaces still use the shared climb/slope budget.
+
 ## Runtime query
 
 `NavigationMap` owns the Detour mesh/query scratch memory and lazily reads tiles under endpoint bounds plus one neighbor ring. Complete endpoint artifacts are mandatory. Query snaps to nearby polygons (XZ0.8,Y2.0 yd), finds a complete corridor, and rejects partial paths, exhausted nodes/buffers and missing endpoints. String pulling retains polygon crossings for terrain/stair height changes. Maps are serialized by the server resource; no mutable-query sharing across threads. Native `.nav` packets are trusted offline outputs, not a network input format; envelope/header lengths are validated before Detour loads them.
+
+## Creature movement
+
+Server `Navigation` caches routes per entity/map/goal, replanning when target displacement exceeds1yard or the creature was repositioned by more than2horizontal yards. Chase stops on the actual victim's two-yard reach circle on the final funnel leg (including intermediate polygon crossings), not two yards from a snapped nav endpoint. Home and waypoint legs use the same corner follower. Ground corrects chase/home floor height; waypoint arrival delays/orientation/wrap remain unchanged.
+
+A failed chase invokes existing `creature_aggro::enter_evade_mode` (`CreatureAI::EnterEvadeMode` comment at that function): threat, target and combat clear, state becomes Returning, then home movement completes normal reset. No new evade timer/health behavior invented. Failed home/patrol paths hold and log rather than teleporting or crossing obstacles. Missing tiles, corrupt artifacts and incomplete paths are errors on any baked map. An entirely unbaked map logs once and explicitly retains old movement; this is the only compatibility boundary. Despawned creatures' route caches are pruned.
 
 ## Reproduce
 

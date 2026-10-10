@@ -53,12 +53,54 @@ pub fn parse_mh2o(payload: &[u8]) -> Result<Vec<ChunkLiquid>, String> {
     if payload.len() < CHUNK_COUNT * CHUNK_HEADER_SIZE {
         return Err(format!("MH2O too small: {} bytes", payload.len()));
     }
+    let boundaries = liquid_boundaries(payload)?;
     (0..CHUNK_COUNT)
-        .map(|index| parse_chunk(payload, index * CHUNK_HEADER_SIZE))
+        .map(|index| parse_chunk(payload, index * CHUNK_HEADER_SIZE, &boundaries))
         .collect()
 }
 
-fn parse_chunk(payload: &[u8], header: usize) -> Result<ChunkLiquid, String> {
+/// Modern MH2O values >=42 are LiquidObject IDs, not direct vertex formats.
+/// Infer the authored LVF from its exact vertex block size (1/5/8/9 bytes per
+/// vertex), as documented by warcraft-rs MH2O; do not read an ID as height data.
+fn liquid_boundaries(payload: &[u8]) -> Result<std::collections::BTreeSet<usize>, String> {
+    let mut boundaries = std::collections::BTreeSet::from([payload.len()]);
+    for index in 0..CHUNK_COUNT {
+        let header = index * CHUNK_HEADER_SIZE;
+        let instances = read_u32(payload, header)? as usize;
+        let count = read_u32(payload, header + 4)? as usize;
+        let attributes = read_u32(payload, header + 8)? as usize;
+        if attributes != 0 {
+            boundaries.insert(attributes);
+        }
+        if count == 0 {
+            continue;
+        }
+        if instances == 0
+            || instances
+                .checked_add(count * INSTANCE_SIZE)
+                .is_none_or(|end| end > payload.len())
+        {
+            return Err(format!("invalid MH2O instance range for chunk {index}"));
+        }
+        boundaries.insert(instances);
+        for layer in 0..count {
+            let offset = instances + layer * INSTANCE_SIZE;
+            for field in [16, 20] {
+                let start = read_u32(payload, offset + field)? as usize;
+                if start != 0 {
+                    boundaries.insert(start);
+                }
+            }
+        }
+    }
+    Ok(boundaries)
+}
+
+fn parse_chunk(
+    payload: &[u8],
+    header: usize,
+    boundaries: &std::collections::BTreeSet<usize>,
+) -> Result<ChunkLiquid, String> {
     let instances = read_u32(payload, header)? as usize;
     let layer_count = read_u32(payload, header + 4)? as usize;
     let attributes = read_u32(payload, header + 8)? as usize;
@@ -71,13 +113,17 @@ fn parse_chunk(payload: &[u8], header: usize) -> Result<ChunkLiquid, String> {
         Vec::new()
     } else {
         (0..layer_count)
-            .map(|layer| parse_instance(payload, instances + layer * INSTANCE_SIZE))
+            .map(|layer| parse_instance(payload, instances + layer * INSTANCE_SIZE, boundaries))
             .collect::<Result<_, _>>()?
     };
     Ok(ChunkLiquid { layers, deep })
 }
 
-fn parse_instance(payload: &[u8], offset: usize) -> Result<WaterLayer, String> {
+fn parse_instance(
+    payload: &[u8],
+    offset: usize,
+    boundaries: &std::collections::BTreeSet<usize>,
+) -> Result<WaterLayer, String> {
     let bytes = payload
         .get(offset..offset + INSTANCE_SIZE)
         .ok_or_else(|| format!("MH2O instance out of bounds at {offset:#x}"))?;
@@ -87,6 +133,8 @@ fn parse_instance(payload: &[u8], offset: usize) -> Result<WaterLayer, String> {
     let (x_offset, y_offset, width, height) = (bytes[12], bytes[13], bytes[14], bytes[15]);
     let exists_offset = u32::from_le_bytes(bytes[16..20].try_into().unwrap()) as usize;
     let vertex_offset = u32::from_le_bytes(bytes[20..24].try_into().unwrap()) as usize;
+    let vertex_format =
+        resolve_vertex_format(vertex_format, vertex_offset, width, height, boundaries)?;
     Ok(WaterLayer {
         liquid_type,
         min_height,
@@ -97,6 +145,38 @@ fn parse_instance(payload: &[u8], offset: usize) -> Result<WaterLayer, String> {
         exists: read_exists(payload, exists_offset, width, height)?,
         heights: read_heights(payload, vertex_offset, vertex_format, width, height)?,
     })
+}
+
+fn resolve_vertex_format(
+    encoded: u16,
+    offset: usize,
+    width: u8,
+    height: u8,
+    boundaries: &std::collections::BTreeSet<usize>,
+) -> Result<u16, String> {
+    if encoded < 42 || offset == 0 {
+        return Ok(encoded);
+    }
+    let end = *boundaries
+        .range((offset + 1)..)
+        .next()
+        .ok_or("MH2O vertex block has no end")?;
+    let count = (usize::from(width) + 1) * (usize::from(height) + 1);
+    let length = end - offset;
+    if length % count != 0 {
+        return Err(format!(
+            "LiquidObject {encoded} vertex block has {length} bytes for {count} vertices"
+        ));
+    }
+    match length / count {
+        1 => Ok(2),
+        5 => Ok(0),
+        8 => Ok(1),
+        9 => Ok(3),
+        stride => Err(format!(
+            "LiquidObject {encoded} has unknown vertex stride {stride}"
+        )),
+    }
 }
 
 /// No bitmap: every quad of the `width × height` rectangle exists.
@@ -250,4 +330,29 @@ fn read_u64(data: &[u8], offset: usize) -> Result<u64, String> {
 
 fn read_f32(data: &[u8], offset: usize) -> Result<f32, String> {
     read_u32(data, offset).map(f32::from_bits)
+}
+
+#[cfg(all(test, feature = "bake"))]
+mod tests {
+    use super::*;
+    #[test]
+    #[ignore = "requires real local-CASC root ADT776382"]
+    fn modern_ocean_liquid_object_42_is_depth_only() {
+        let data = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../game-engine/data/terrain/776382.adt");
+        let root = std::fs::read(data).unwrap();
+        let payload = crate::bake::chunks::find_reversed(&root, b"MH2O").unwrap();
+        let liquids = parse_mh2o(payload).unwrap();
+        assert_eq!(liquids.len(), 256);
+        for chunk in liquids {
+            assert_eq!(chunk.layers.len(), 1);
+            let layer = &chunk.layers[0];
+            assert_eq!(layer.liquid_type, 2);
+            assert!(
+                layer.heights.is_empty(),
+                "ocean stores81depth bytes, not81float heights"
+            );
+            assert_eq!(layer.level_at(4.5, 4.5), Some(0.0));
+        }
+    }
 }
