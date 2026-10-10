@@ -6,6 +6,75 @@ use shared::protocol::CombatLogKind;
 use super::test_harness::*;
 
 #[test]
+fn dummy_paladin_holy_shock_damages_enemy_and_generates_holy_power() {
+    let mut h = harness(Vec::new(), &[20473, 25912, 25914], 2).expect("real world.db required");
+    h.cast_and_deliver(20473, Some(h.npc));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(216.0).contains(&(5000.0 - h.health(h.npc))));
+    assert_eq!(h.power(PowerType::HolyPower), 1.0);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(25912)
+                && event.target == Some(h.npc.to_bits()))
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal)
+    );
+}
+
+#[test]
+fn dummy_paladin_holy_shock_heals_ally_and_generates_holy_power() {
+    let mut h = harness(Vec::new(), &[20473, 25912, 25914], 2).expect("real world.db required");
+    let ally = spawn_player(&mut h.app, 1, 2.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 100.0,
+        max: 5000.0,
+    };
+    h.cast_and_deliver(20473, Some(ally));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(1117.0).contains(&(h.health(ally) - 100.0)));
+    assert_eq!(h.power(PowerType::HolyPower), 1.0);
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(25914)
+                && event.target == Some(ally.to_bits()))
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage)
+    );
+}
+
+#[test]
+fn dummy_paladin_holy_shock_heals_self() {
+    let mut h = harness(Vec::new(), &[20473, 25912, 25914], 2).expect("real world.db required");
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.cast_and_deliver(20473, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.health(h.caster), 1000.0);
+    assert_eq!(h.power(PowerType::HolyPower), 1.0);
+}
+
+#[test]
 fn dummy_warrior_shield_block_applies_six_second_block_aura() {
     let mut h = harness(Vec::new(), &[2565, 132404], 1).expect("real world.db required");
     h.set_power(PowerType::Rage, 1000.0);

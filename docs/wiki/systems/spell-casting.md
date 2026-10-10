@@ -242,3 +242,5 @@ Damage and heal side effects:
 See [contract](../../specs/spell-dummy-scripts.md). Effect-hit scripts bridge Shield Block2565 to132404, Bloodthirst23881 to117313 and a chance-based184362, and Rampage184367 to184362. Damage/resource effects continue through normal dispatch. Bloodthirst reads modified effect2 base points, not ProcChance101 or PPM; local DB2 has no PPM entry for these casts.
 
 Sources: TrinityCore `a352b1fa` `src/server/scripts/Spells/spell_warrior.cpp` (`spell_warr_shield_block`, `spell_warr_bloodthirst`, `spell_warr_bloodthirst_enrage`); Retail12.1.0.69933 `spell`/`spell_effect` rows2565,132404,23881,117313,184367,184362 in read-only `data/world.db`. Rampage's tooltip states "Enrages you"; its existing effect triggers name the attack spells. Fresh Meat and other optional talent variants remain unproved.
+
+Holy Shock20473 branches on ally/enemy to25914/25912; parent ENERGIZE retains1 Holy Power. Sources: TC `a352b1fa` `spell_paladin.cpp:1261-1311`, `spell_pal_holy_shock`; Retail tooltip `$25912s1`/`$25914s1`, local SP coefficients2.16/11.17, no PPM row. Conditional talent272906 crit bonus is not covered.

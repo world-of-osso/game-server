@@ -7,6 +7,7 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 - [ ] Shield Block 2565 casts 132404 on the caster, granting the catalog block aura for six seconds.
 - [ ] Bloodthirst 23881 retains its damage and 80 raw Rage, heals through 117313 for 3% maximum health, and rolls effect 2's modified chance to apply Enrage 184362.
 - [ ] Rampage 184367 spends its catalog cost, retains the catalog attack triggers, and applies Enrage 184362.
+- [ ] Holy Shock 20473 casts 25912 at enemies or 25914 at allies (including self), using their catalog damage/heal formulas and retaining its one Holy Power gain.
 - [ ] Unknown Dummy fields remain unsupported rather than receiving generic no-op handlers.
 
 ## How it works
@@ -20,7 +21,7 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 
 ## Tests asserting this spec
 
-- `crates/server/src/spell_cast/dummy_tests.rs` — `dummy_warrior_*`; Bloodthirst chance endpoints use explicitly labelled catalog clones, while the ordinary cast uses unchanged data.
+- `crates/server/src/spell_cast/dummy_tests.rs` — `dummy_warrior_*`, `dummy_paladin_*`; Bloodthirst chance endpoints use explicitly labelled catalog clones, while the ordinary cast uses unchanged data.
 
 ## Known gaps (current cycle)
 
