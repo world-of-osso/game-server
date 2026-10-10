@@ -592,7 +592,8 @@ pub fn effect_dest(
         orientation: orientation(world, caster),
     });
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
-        let point = match selector(id)? {
+        let selector = selector(id)?;
+        let point = match selector {
             Selector::CenterCaster => position(world, caster),
             Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
             // TC CheckDst supplies the caster when no destination was provided.
@@ -611,10 +612,15 @@ pub fn effect_dest(
             }
             _ => continue,
         };
-        let facing = explicit.map_or_else(
-            || orientation(world, caster),
-            |target| orientation(world, target),
-        );
+        let facing = match selector {
+            Selector::ExistingDest => {
+                dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
+            }
+            _ => explicit.map_or_else(
+                || orientation(world, caster),
+                |target| orientation(world, target),
+            ),
+        };
         dest = point.map(|position| Dest {
             position,
             orientation: facing,

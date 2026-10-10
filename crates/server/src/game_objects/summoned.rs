@@ -79,7 +79,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
 pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObjectTemplates> {
     let mut query = conn.prepare("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
         d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5
-        FROM content_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
+        FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
         WHERE t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)")?;
     let templates = query
         .query_map([], template_from_row)?
