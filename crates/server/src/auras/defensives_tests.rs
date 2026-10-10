@@ -358,14 +358,26 @@ fn defensives_priest_power_word_shield_absorbs_melee() {
         && event.kind == CombatLogKind::Miss(MissKind::Absorb)
         && event.amount == 0
         && event.absorbed == INCOMING_DAMAGE as i32));
-    // Leave half a swing in the shield, then prove partial absorb and depletion.
+    // Capacity is fractional (catalog coefficient 4.638), while spell damage
+    // rounds to whole points. Measure the remainder instead of assuming 50.
     incoming_fire(&mut h, before - INCOMING_DAMAGE - 50.0);
-    assert_eq!(incoming_melee(&mut h), 50.0);
+    let remaining = shield_remaining(&h);
+    assert!(remaining > 0.0 && remaining < INCOMING_DAMAGE);
+    let expected_damage = (INCOMING_DAMAGE - remaining).round();
+    assert_eq!(incoming_melee(&mut h), expected_damage);
     assert_eq!(shield_remaining(&h), 0.0);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 17));
     h.advance(3);
-    assert!(h.inbox.log.iter().any(|event| event.spell_id.is_none()
-        && event.kind == CombatLogKind::Damage
-        && event.amount == 50
-        && event.absorbed == 50));
+    assert!(
+        h.inbox.log.iter().any(|event| event.spell_id.is_none()
+            && event.kind == CombatLogKind::Damage
+            && event.amount == expected_damage as i32
+            && event.absorbed == remaining as i32),
+        "partial melee logs: {:?}",
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id.is_none())
+            .collect::<Vec<_>>()
+    );
 }
