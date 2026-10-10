@@ -75,7 +75,7 @@ enum Selector {
 fn selector(id: u32) -> Option<Selector> {
     use Relation::*;
     Some(match id {
-        0 => Selector::None,
+        0 | 9 | 17 => Selector::None, // Homebind / spell database destinations handled by teleport.
         1 | 56 | 120 => Selector::Caster,
         5 => Selector::Pet,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),

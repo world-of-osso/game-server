@@ -76,6 +76,8 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 const POWER_HEALTH: i32 = -2;
 
 pub(crate) mod teleport;
+pub(crate) mod homebind;
+mod teleport_positions;
 
 pub struct SpellCastPlugin;
 
@@ -83,6 +85,8 @@ impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
+            .init_resource::<teleport_positions::SpellTargetPositions>()
+            .add_systems(Startup, teleport_positions::load_positions_startup)
             .init_resource::<missiles::PendingSpellHits>()
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
@@ -874,6 +878,7 @@ fn validate_start(
         return Err(CastFailure::CrowdControlled(block));
     }
     validate_caster_state(world, caster, spell)?;
+    teleport::check_destination(world, caster, spell)?;
     if world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }

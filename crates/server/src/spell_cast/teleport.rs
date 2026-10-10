@@ -5,6 +5,34 @@ use super::{effects::EffectCtx, targets::Dest};
 use crate::maps::InMap;
 use bevy::prelude::*;
 
+pub(super) fn check_destination(
+    world: &World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+) -> Result<(), super::CastFailure> {
+    for effect in &spell.effects {
+        if !matches!(effect.effect, 15 | 252 | 29) {
+            continue;
+        }
+        if effect.implicit_targets.contains(&9)
+            && world.get::<super::homebind::HomeBind>(caster).is_none()
+        {
+            return Err(super::CastFailure::Unsupported("missing homebind".into()));
+        }
+        if effect.implicit_targets.contains(&17)
+            && !world
+                .resource::<super::teleport_positions::SpellTargetPositions>()
+                .0
+                .contains_key(&(spell.id, effect.index))
+        {
+            return Err(super::CastFailure::Unsupported(
+                "missing SpellTargetPosition row".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
 const WALL_CLEARANCE: f32 = 0.5;
 const COLLISION_SEARCH_STEPS: usize = 16;
 

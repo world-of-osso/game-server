@@ -2,6 +2,12 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Teleports and aura overrides
+
+[Contract](../../specs/spell-teleports-overrides.md). Retail Blink1953 uses effect29 and target55's second radius (20yd); legacy teleport15 and current252 share dispatch. Forward movement samples GroundMap and stops 0.5yd before the first blocking baked LOS triangle using monotonic prefix queries. Missing ground/LOS never becomes an unchecked move. Same-map players use MovementControl's teleport epoch; cross-map moves reuse NewWorld/WorldPortAck.
+
+Target9 uses HomeBind, persisted separately in redb character_home_binds and loaded at login. Characters without a row initialize once at the existing race creation start, not logout position; innkeeper binding UI is not part of this change. Target17 uses authored spell_target_position (ID/EffectIndex, MapID, PositionX/Y/Z/Orientation); local world.db currently lacks that table, so such spells fail explicitly rather than inventing coordinates. Source: TrinityCore a352b1fa Spell.cpp destination selection, SpellEffects.cpp EffectLeap/EffectTeleportUnits.
+
 ## Temporary summons and spell area triggers
 
 [Contract](../../specs/spell-summon-area-trigger.md). Effect 28 dispatches once per cast through `summon.rs`; `summon_properties` is loaded from world.db. `scripts/db2.py extract/import` adds local CASC SummonProperties (FDID 1345276, WDC5 layout A4CA5ECF). Missing metadata/template is logged, never synthesized. `SummonedCreature` records owner and SummonProperties; `UnitSummonedBy`, faction and `FollowOwner` reuse pet ownership/movement conventions without modifying PetStable. Positive durations expire on the aura clock; zero/negative durations are untimed. Owner removal/map departure also removes the summon.
