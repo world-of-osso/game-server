@@ -161,9 +161,11 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      s.ContainerSlots, s.BagFamily \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
      LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
-      ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY e.LegacySlotIndex, e.ID) AS slot \
+      ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY CASE WHEN e.TriggerType = 6 THEN 0 ELSE 1 END, e.LegacySlotIndex, e.ID) AS slot \
       FROM item_x_item_effect x JOIN item_effect e ON e.ID = x.ItemEffectID \
-      WHERE e.TriggerType = 0 AND e.SpellID > 0) u ON u.ItemID = c.ID AND u.slot = 1";
+      WHERE e.SpellID > 0 AND (e.TriggerType = 0 OR (e.TriggerType = 6 AND EXISTS \
+      (SELECT 1 FROM spell_effect pet WHERE pet.SpellID = e.SpellID AND pet.Effect = 28 \
+       AND pet.EffectMiscValue_1 = 3221)))) u ON u.ItemID = c.ID AND u.slot = 1";
 const FIRST_STAT_COLUMN: usize = 16;
 const APPEARANCE_COLUMN: usize = FIRST_STAT_COLUMN + 10 * 3;
 

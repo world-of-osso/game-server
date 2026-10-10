@@ -442,6 +442,18 @@ fn use_item(
                 .and_then(|target| target.0)
         });
     let spell = on_use.spell_id;
+    let learned_pet = crate::battle_pets::learn_companion_from_item(world, player, spell, 1)
+        .map_err(|message| error(InventoryErrorReason::CantDoRightNow, message))?;
+    if learned_pet {
+        let (db, templates) = use_store(world)?;
+        let mut model = load_model(db, templates, character_id)?;
+        model.destroy(request.location, 1)?;
+        save_inventory_record(db, character_id, &model.into_record());
+        world
+            .resource_mut::<GoldUpdateQueue>()
+            .record_items(character_id);
+        return Ok(());
+    }
     if let Err(failure) = crate::spell_cast::cast_item_spell(
         world,
         player,
