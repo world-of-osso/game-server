@@ -130,6 +130,8 @@ pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
 pub const MOD_SPEED_SLOW_ALL: u32 = 252;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
+/// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
+pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
@@ -168,6 +170,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_ROOT
         | MOD_ROOT_2
         | MOD_STAT
+        | MOD_ARMOR_PCT_FROM_STAT
         | MOD_INCREASE_SPEED
         | MOD_DECREASE_SPEED
         | MOD_CASTING_SPEED_NOT_STACK
