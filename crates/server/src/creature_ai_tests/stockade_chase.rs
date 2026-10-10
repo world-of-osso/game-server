@@ -188,6 +188,8 @@ fn navigation_unreachable_stockade_target_evades_and_clears_threat() {
 
 /// Live-supported narrow arch, above the cell floor and on a disconnected nav island.
 const ARCH_PERCH: (f32, f32, f32) = (125.0, 46.0, -30.936_882);
+/// Exact floor under PLAYER_ON_FLOOR, observed in the private rendered run.
+const CELL_FEET: (f32, f32, f32) = (128.5, 52.0, -33.939_564);
 
 fn no_path_perch_fixture() -> (App, Entity, Entity) {
     let mut app = nav_stockade_app();
@@ -198,7 +200,7 @@ fn no_path_perch_fixture() -> (App, Entity, Entity) {
             target: target.to_bits(),
         },
     );
-    *app.world_mut().get_mut::<Position>(mob).unwrap() = bevy(PLAYER_ON_FLOOR);
+    *app.world_mut().get_mut::<Position>(mob).unwrap() = bevy(CELL_FEET);
     let mut threat = shared::components::ThreatTable::default();
     threat.add_damage_threat(target.to_bits(), 100.0, 1.0);
     app.world_mut().entity_mut(mob).insert(threat);
@@ -213,10 +215,7 @@ fn assert_waiting_on_perch(app: &App, target: Entity, mob: Entity) {
         },
         "Retail no-path grace must not evade before five seconds"
     );
-    assert_eq!(
-        *app.world().get::<Position>(mob).unwrap(),
-        bevy(PLAYER_ON_FLOOR)
-    );
+    assert_eq!(*app.world().get::<Position>(mob).unwrap(), bevy(CELL_FEET));
     assert!(
         !app.world()
             .get::<shared::components::ThreatTable>(mob)
