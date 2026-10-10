@@ -51,8 +51,8 @@ fn spawn_logged_in_player(world: &mut World, id: u64) -> Entity {
     let data = crate::persistence::CharacterData {
         name: format!("Fbvehicle{id}"),
         // Persisted WoW coordinates produce server position (10, 2, 20).
-        x: -20.0,
-        y: -10.0,
+        x: 10.0,
+        y: -20.0,
         z: 2.0,
         health: 100.0,
         max_health: 100.0,
