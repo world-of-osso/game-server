@@ -63,6 +63,188 @@ fn slayer(app: &mut App, state: CreatureState) -> Entity {
         .id()
 }
 
+fn nav_ground_dir() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground")
+}
+
+fn nav_stockade_app() -> App {
+    let mut app = stockade_app();
+    app.insert_resource(crate::navigation::Navigation::new(
+        &nav_ground_dir().join("navmesh"),
+    ));
+    app
+}
+
+fn clear_step(los: &mut los::LosMap, from: Position, to: Position) {
+    let point = |p: Position| Vec3::new(p.x, p.y + 1.0, p.z);
+    assert!(
+        los.clear(point(from), point(to)).unwrap(),
+        "movement crossed a wall: {from:?} -> {to:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_stockade_chase_routes_around_walls() {
+    let mut app = nav_stockade_app();
+    let target = player(&mut app, PLAYER_ON_FLOOR);
+    let chaser = slayer(
+        &mut app,
+        CreatureState::Pursuing {
+            target: target.to_bits(),
+        },
+    );
+    let mut los = los::LosMap::new(&nav_ground_dir().join("los/34"));
+    let mut last = bevy(SLAYER_SPAWN);
+    let mut travelled = 0.0;
+    for _ in 0..200 {
+        app.update();
+        let pos = *app.world().get::<Position>(chaser).unwrap();
+        clear_step(&mut los, last, pos);
+        travelled += (pos.x - last.x).hypot(pos.z - last.z);
+        last = pos;
+    }
+    let goal = bevy(PLAYER_ON_FLOOR);
+    assert!(
+        ((last.x - goal.x).hypot(last.z - goal.z) - 2.0).abs() < 0.05,
+        "stopped {last:?}, target {goal:?}"
+    );
+    let spawn = bevy(SLAYER_SPAWN);
+    let direct = (goal.x - spawn.x).hypot(goal.z - spawn.z) - 2.0;
+    assert!(
+        travelled > direct + 1.0,
+        "wall detour length {travelled} vs direct {direct}"
+    );
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_stockade_home_return_routes_around_walls() {
+    let mut app = nav_stockade_app();
+    let mob = slayer(&mut app, CreatureState::Returning);
+    *app.world_mut().get_mut::<Position>(mob).unwrap() = bevy(PLAYER_ON_FLOOR);
+    let mut los = los::LosMap::new(&nav_ground_dir().join("los/34"));
+    let mut last = bevy(PLAYER_ON_FLOOR);
+    for _ in 0..200 {
+        app.update();
+        let pos = *app.world().get::<Position>(mob).unwrap();
+        clear_step(&mut los, last, pos);
+        last = pos;
+    }
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Idle
+    );
+    let home = bevy(SLAYER_SPAWN);
+    assert!((last.x - home.x).hypot(last.z - home.z) < 0.05);
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_unreachable_stockade_target_evades_and_clears_threat() {
+    use shared::components::ThreatTable;
+    let mut app = nav_stockade_app();
+    // Real unsupported rock column from ground_tests::stockade_fall_points.
+    let target = player(&mut app, (97.0, 76.0, -34.86));
+    let mob = slayer(
+        &mut app,
+        CreatureState::Pursuing {
+            target: target.to_bits(),
+        },
+    );
+    let mut threat = ThreatTable::default();
+    threat.add_damage_threat(target.to_bits(), 100.0, 1.0);
+    app.world_mut().entity_mut(mob).insert(threat);
+    app.update();
+    assert!(
+        !matches!(
+            *app.world().get::<CreatureState>(mob).unwrap(),
+            CreatureState::Pursuing { .. }
+        ),
+        "unreachable chase must evade"
+    );
+    assert!(app.world().get::<ThreatTable>(mob).unwrap().is_empty());
+    for _ in 0..200 {
+        app.update();
+    }
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Idle
+    );
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_stockade_waypoint_leg_routes_around_walls() {
+    let mut app = nav_stockade_app();
+    app.world_mut()
+        .resource_mut::<WorldData>()
+        .waypoints
+        .insert(
+            1,
+            WaypointPath {
+                points: vec![WaypointPoint {
+                    position_x: PLAYER_ON_FLOOR.0,
+                    position_y: PLAYER_ON_FLOOR.1,
+                    position_z: PLAYER_ON_FLOOR.2,
+                    delay: 10000,
+                    move_type: WaypointMoveType::Run,
+                    ..Default::default()
+                }],
+            },
+        );
+    let mob = slayer(&mut app, CreatureState::Idle);
+    let spawn = bevy(SLAYER_SPAWN);
+    app.world_mut()
+        .entity_mut(mob)
+        .insert(WaypointState::new(1, 1.0, 1.14286, (spawn.x, spawn.z)));
+    let mut los = los::LosMap::new(&nav_ground_dir().join("los/34"));
+    let mut last = spawn;
+    for _ in 0..150 {
+        app.update();
+        let pos = *app.world().get::<Position>(mob).unwrap();
+        clear_step(&mut los, last, pos);
+        last = pos;
+    }
+    assert!(app.world().get::<WaypointState>(mob).unwrap().arrived);
+    let goal = bevy(PLAYER_ON_FLOOR);
+    assert!((last.x - goal.x).hypot(last.z - goal.z) < 0.1);
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_stockade_repaths_when_target_moves() {
+    let mut app = nav_stockade_app();
+    let target = player(&mut app, PLAYER_ON_FLOOR);
+    let mob = slayer(
+        &mut app,
+        CreatureState::Pursuing {
+            target: target.to_bits(),
+        },
+    );
+    for _ in 0..30 {
+        app.update();
+    }
+    let new_goal = bevy((103.0, 76.0, -34.86));
+    *app.world_mut().get_mut::<Position>(target).unwrap() = new_goal;
+    let mut los = los::LosMap::new(&nav_ground_dir().join("los/34"));
+    let mut last = *app.world().get::<Position>(mob).unwrap();
+    for _ in 0..300 {
+        app.update();
+        let pos = *app.world().get::<Position>(mob).unwrap();
+        clear_step(&mut los, last, pos);
+        last = pos;
+    }
+    assert!(matches!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Pursuing { .. }
+    ));
+    assert!(
+        ((last.x - new_goal.x).hypot(last.z - new_goal.z) - 2.0).abs() < 0.1,
+        "stopped {last:?}, target {new_goal:?}"
+    );
+}
+
 /// The floor under `pos`, `None` in the columns of the cell walls and bars, which have no
 /// floor face (the straight chase line crosses them).
 fn floor_under(ground: &mut GroundMap, pos: Position) -> Option<f32> {

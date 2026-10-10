@@ -26,7 +26,14 @@ use chunks::Result;
 /// Default doodad thickness cutoff in yards (spec: "start near 1 yd").
 pub const DEFAULT_THICKNESS_CUTOFF: f32 = 1.0;
 
-pub type GlobalGeometry = Vec<((u32, u32), Vec<[Vec3; 3]>)>;
+/// Collision geometry retains which triangles cannot support runtime ground.
+#[derive(Default)]
+pub struct CollectedGeometry {
+    pub triangles: Vec<[Vec3; 3]>,
+    /// M2 collision hulls are obstacles: runtime GroundMap has no M2 floor support.
+    pub obstacles: Vec<[Vec3; 3]>,
+}
+pub type GlobalGeometry = Vec<((u32, u32), CollectedGeometry)>;
 
 /// A model's opaque triangles in model-local Bevy space and their bounds.
 pub struct ModelGeometry {
@@ -180,10 +187,17 @@ impl Baker {
                 tile,
                 border: if self.collision { 2.0 } else { 0.0 },
                 triangles: Vec::new(),
+                obstacles: Vec::new(),
                 stats: TileStats::default(),
             };
             self.place_wmo_at(&placement, world, &mut build);
-            geometry.push((tile, build.triangles));
+            geometry.push((
+                tile,
+                CollectedGeometry {
+                    triangles: build.triangles,
+                    obstacles: build.obstacles,
+                },
+            ));
         }
         Ok(Some(geometry))
     }
@@ -288,7 +302,7 @@ impl Baker {
         let Some((triangles, stats)) = self.collect_tile(tiles, (row, col))? else {
             return Ok(None);
         };
-        let (vertices, indexed) = index_triangles(&triangles);
+        let (vertices, indexed) = index_triangles(&triangles.triangles);
         Ok(Some((LosTile::build(row, col, vertices, indexed), stats)))
     }
 
@@ -297,7 +311,7 @@ impl Baker {
         &mut self,
         tiles: &[TileFiles],
         (row, col): (u32, u32),
-    ) -> Result<Option<(Vec<[Vec3; 3]>, TileStats)>> {
+    ) -> Result<Option<(CollectedGeometry, TileStats)>> {
         let files = tiles[(col * MAP_TILES + row) as usize];
         if files.root == 0 {
             return Ok(None);
@@ -314,6 +328,7 @@ impl Baker {
                 ..TileStats::default()
             },
             triangles: terrain,
+            obstacles: Vec::new(),
         };
         if self.collision {
             for r in row.saturating_sub(1)..=(row + 1).min(MAP_TILES - 1) {
@@ -348,7 +363,13 @@ impl Baker {
             };
             self.place_doodad(&doodad, &mut build);
         }
-        Ok(Some((build.triangles, build.stats)))
+        Ok(Some((
+            CollectedGeometry {
+                triangles: build.triangles,
+                obstacles: build.obstacles,
+            },
+            build.stats,
+        )))
     }
 
     /// MDDF and MODF placements of the tile's and its neighbours' `_obj0`, each unique id
@@ -453,7 +474,13 @@ impl Baker {
         let thickness = model.thickness(doodad.scale);
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
+            let before = build.triangles.len();
             build.stats.doodad_triangles += build.add(&model.triangles, doodad.world);
+            if self.collision {
+                build
+                    .obstacles
+                    .extend_from_slice(&build.triangles[before..]);
+            }
             return;
         }
         build.stats.thin_doodads += 1;
@@ -564,6 +591,7 @@ struct TileBuild {
     tile: (u32, u32),
     border: f32,
     triangles: Vec<[Vec3; 3]>,
+    obstacles: Vec<[Vec3; 3]>,
     stats: TileStats,
 }
 

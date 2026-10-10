@@ -65,6 +65,7 @@ mod melee;
 mod merchant;
 mod messaging;
 mod mirror_timers;
+mod navigation;
 mod networking;
 mod npc_interaction;
 #[cfg(test)]
@@ -216,6 +217,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(ground::GroundPlugin)
         .add_plugins(line_of_sight::LineOfSightPlugin)
+        .add_plugins(navigation::NavigationPlugin)
         .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
