@@ -13,7 +13,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         Vec::new(),
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
-            99104,
+            99104, 304370,
         ],
         8,
     )
@@ -469,6 +469,115 @@ fn toyfx_cosmetic_dummy_and_script_deliver_spell_go() {
         );
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     }
+}
+
+#[test]
+fn toyfx_screen_effect_replicates_and_cancel_removes_it() {
+    // Shadescale170187 has no runtime content_item, so its actual UseToy must
+    // remain unavailable. The authentic on-use spell proves the aura mechanism.
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    assert!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .iter()
+            .find(|t| t.item_id == 170187)
+            .unwrap()
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("content_item")
+    );
+    assert!(toy_catalog::unsupported_types(h.app.world(), 304370).is_empty());
+    h.cast_and_deliver(304370, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap();
+    let aura = auras.iter().find(|a| a.spell_id == 304370).unwrap();
+    assert_eq!(aura.effects[0].aura_type, 260);
+    assert_eq!(aura.effects[0].misc_values, [1720, 7]);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 304370)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 304370 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 304370)
+    );
+}
+
+#[test]
+fn toyfx_transform_changes_display_and_cancel_restores_native() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(h.caster)
+            .is_none()
+    );
+    learn(&mut h, 0); // Time-Lost Figurine32782, real transform creature23423.
+    assert_eq!(activate(&mut h, FIGURINE)[0].error, None);
+    let template = &h
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .templates[&23423];
+    let display = h
+        .app
+        .world()
+        .get::<shared::components::ModelDisplay>(h.caster)
+        .expect("transform must change display")
+        .display_id;
+    assert!(
+        template
+            .models
+            .iter()
+            .any(|model| model.display_id == display)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+            spell_id: TRANSFORM,
+        });
+    h.advance(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(h.caster)
+            .is_none(),
+        "native race/sex display restored by removing transform model"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == TRANSFORM)
+    );
 }
 
 #[test]

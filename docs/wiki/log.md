@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Toy effects](systems/toys.md#data-backed-toy-effects-2026-10-10): generic client-owned ScreenEffect260 aura support; strengthened concrete Time-Lost Figurine display/cancel/revert proof. Shadescale's authentic spell has mechanism proof only because its runtime item is absent.
+
 - 2026-10-10 — [Toy effects](systems/toys.md#data-backed-toy-effects-2026-10-10): audited visual-only dummy/aura/script path; shared runtime/preflight summon data gates, wild faction and companion follow/immunity/slot semantics. Missing Retail creature templates and real toy scripts remain explicit; CPU/loopback proof ledger in `/home/osso/.worktrees/handoff-toy-effects.md`. No rendered-client, merge or deployment claim.
 
 - 2026-10-10 — [[toys]] server/protocol foundation: local-CASC Toy1166, unresolved joins retained; atomic account learning/consumption and favourites, all-character account broadcasts, UseToy spell/item/category dispatch and explicit unsupported preflight. CPU/loopback toys8/0 and item-use regressions11/0; no UI, live realm or effect-completeness claim. [Contract](../specs/toys.md).

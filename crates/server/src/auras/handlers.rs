@@ -29,6 +29,8 @@ pub enum AuraKind {
     CastBlock,
     /// Unit state reconciled on every aura change (`unit_state.rs`).
     UnitState,
+    /// Client-owned effect selected by replicated aura spell data; no server action.
+    ClientVisual,
     /// Chance to reflect a spell back to its caster (`reflect_chance`).
     Reflect,
     /// Read by incoming hit selection (`spell_cast::hit`, `combat`).
@@ -118,6 +120,8 @@ pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
 pub const PERIODIC_DUMMY: u32 = 226;
 pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
 pub const MOD_SPEED_SLOW_ALL: u32 = 252;
+/// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
+pub const SCREEN_EFFECT: u32 = 260;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
@@ -147,6 +151,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
+        SCREEN_EFFECT => ClientVisual,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2
