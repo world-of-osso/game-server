@@ -72,7 +72,6 @@ pub const IGNORE_HIT_DIRECTION: u32 = 288;
 /// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
 pub const MOD_BLOCK_PERCENT: u32 = 51;
 pub const MOD_HIT_CHANCE: u32 = 54;
-pub const MECHANIC_IMMUNITY: u32 = 77;
 pub const MOUNTED: u32 = 78;
 pub const TRANSFORM: u32 = 56;
 pub const SCHOOL_IMMUNITY: u32 = 39;
@@ -217,8 +216,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
-        MECHANIC_IMMUNITY
-        | MOD_ATTACKER_MELEE_HIT_CHANCE
+        MOD_ATTACKER_MELEE_HIT_CHANCE
         | MOD_ATTACKER_RANGED_HIT_CHANCE
         | MOD_ATTACKER_SPELL_HIT_CHANCE
         | DEFLECT_SPELLS

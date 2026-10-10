@@ -692,7 +692,7 @@ pub(crate) fn apply_aura_with_spell(
             .iter()
             .find(|effect| effect.index == stored.index)
             .expect("applied aura effect belongs to spell");
-        let immune = mechanic_immunity::blocks_effect(world, target, spell, effect);
+        let immune = mechanic_immunity::blocks_mechanic(world, target, spell, effect.mechanic);
         if immune {
             let ctx = crate::spell_cast::effects::EffectCtx {
                 caster: application.caster,
