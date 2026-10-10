@@ -9,7 +9,7 @@ Data-driven server displacement and matrix aura overrides in `crates/server/src/
 - [x] Hearthstone 8690 returns to a persisted homebind, including NewWorld/WorldPortAck across maps.
 - [x] New characters persist actual creation binds, preserved after logout-position changes and reopening redb.
 - [ ] Existing characters without a stored bind must fail explicitly; no inferred migration location.
-- [x] Target17 teleports consume authored spell_target_position rows, never infer destination coordinates from spell IDs. Matrix18960 fixture proves loader/routing, not Retail Moonglade coordinates.
+- [x] Target17 teleports consume authored spell_target_position rows, never infer destination coordinates from spell IDs. Import the established TDB1210.26091 source as tdb_spell_target_position, preserving OrderIndex and nullable Orientation. Target17 consumes point0; NULL facing uses Retail SpellEffect facing (degrees above 2π convert to radians). Mage teleport3567 must reach the authored Orgrimmar row through NewWorld/WorldPortAck.
 - [x] Harpoon190925's child186260 and Feral Lunge196884 move the caster, not the enemy target. Infernal Strike189110 accepts a finite, in-range explicit ground point.
 - [x] Aura332 selects its data-specified replacement spell while active and restores the base after removal/expiry.
 - [x] Aura312 exposes its animation replacement set through aura replication; client consumption is a separate task.
@@ -27,7 +27,7 @@ Data-driven server displacement and matrix aura overrides in `crates/server/src/
 - `spell_cast/effects.rs`, `targets.rs`: dispatch and target selection.
 - `auth_character.rs`, `persistence.rs`: homebind login/table lifecycle.
 - `auras/overrides.rs`, `auras/mod.rs`: live spell substitution and aura wire values.
-- `scripts/spell_target_position_schema.sql`: authored destination import schema.
+- `scripts/tdb_schema.sql`, `scripts/import-azerothcore.sh`: prefixed authored destination import.
 
 ## Tests asserting this spec
 
@@ -39,7 +39,7 @@ Data-driven server displacement and matrix aura overrides in `crates/server/src/
 
 ## Known gaps (current cycle)
 
-- [ ] Local world.db has no spell_target_position table/rows; import pinned Retail-authored destinations before claiming fixed-spell gameplay proof.
+- Ordered nearby-destination selection (target106) is outside this fixed-destination import; all ordered rows remain stored.
 - [ ] Client must consume AuraView.overrides and supply SpellCastIntent.destination for ground-point leaps. Companion shared-protocol branch required; existing clients need protocol literal initializers updated.
 
 ## Out of scope

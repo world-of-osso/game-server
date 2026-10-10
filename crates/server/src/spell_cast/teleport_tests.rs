@@ -48,11 +48,16 @@ fn spell_teleport_fixed_destination_consumes_authored_fixture() {
         .unwrap()
         .index;
     let conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.execute_batch(include_str!(
-        "../../../../scripts/spell_target_position_schema.sql"
-    ))
+    conn.execute_batch(include_str!("../../../../scripts/tdb_schema.sql"))
+        .unwrap();
+    conn.execute_batch(include_str!("../../../../scripts/db2_schema.sql"))
+        .unwrap();
+    conn.execute(
+        "INSERT INTO spell_effect (ID,SpellID,EffectIndex) VALUES (1,18960,?1)",
+        [index],
+    )
     .unwrap();
-    conn.execute("INSERT INTO spell_target_position (ID,EffectIndex,MapID,PositionX,PositionY,PositionZ,Orientation) VALUES (?1,?2,0,-8949,-132,83,1.2)",rusqlite::params![18960,index]).unwrap();
+    conn.execute("INSERT INTO tdb_spell_target_position (ID,EffectIndex,MapID,PositionX,PositionY,PositionZ,Orientation) VALUES (?1,?2,0,-8949,-132,83,1.2)",rusqlite::params![18960,index]).unwrap();
     h.app
         .insert_resource(super::teleport_positions::load_positions(&conn).unwrap());
     h.app
@@ -71,6 +76,112 @@ fn spell_teleport_fixed_destination_consumes_authored_fixture() {
         }
         .bevy_position()
     );
+}
+
+#[test]
+fn spell_teleport_tdb_loader_preserves_authored_facing_and_order_zero() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let positions = super::teleport_positions::load_positions(&conn).unwrap();
+    assert_eq!(positions.0[&(12885, 0)].orientation, 4.71);
+    // TDB9268 NULL facing takes the real Retail degree-valued SpellEffect facing.
+    assert!((positions.0[&(9268, 0)].orientation - 184.454_f32.to_radians()).abs() < 0.00001);
+    // Real multi-point spell102207: the fixed-destination loader uses point0,
+    // not whichever ordered point happens to overwrite the (ID, EffectIndex) key.
+    let point: (f32, f32, f32) = conn
+        .query_row(
+            "SELECT PositionX,PositionY,PositionZ FROM tdb_spell_target_position
+             WHERE ID=102207 AND EffectIndex=0 AND OrderIndex=0",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        positions.0[&(102207, 0)].position,
+        Vec3::new(point.0, point.1, point.2)
+    );
+}
+
+#[test]
+fn spell_teleport_tdb_orgrimmar_cast_transfers_to_authored_city_position() {
+    use lightyear::prelude::*;
+    use shared::protocol::{NewWorld, TransferChannel, WorldPortAck};
+
+    const TELEPORT_ORGRIMMAR: u32 = 3567;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let positions = super::teleport_positions::load_positions(&conn).unwrap();
+    let destination = positions.0[&(TELEPORT_ORGRIMMAR, 0)];
+    // Exact TDB1210.26091 row; NULL orientation uses Retail SpellEffect facing.
+    assert_eq!(destination.map_id, 1);
+    assert_eq!(destination.position, Vec3::new(1445.21, -4499.56, 18.31));
+    assert!((destination.orientation - 1.672898).abs() < 0.00001);
+
+    let mut h = harness(Vec::new(), &[TELEPORT_ORGRIMMAR], 8).unwrap();
+    h.app.insert_resource(positions);
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    h.app.init_resource::<crate::maps::InstanceManager>();
+    h.app
+        .add_systems(Update, crate::maps::transfer::receive_world_port_acks);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::persistence::ClientId(3567),
+        shared::components::CombatStatus(false),
+        MovementControl::default(),
+    ));
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<NewWorld>::default(),
+        MessageReceiver::<NewWorld>::default(),
+        MessageSender::<WorldPortAck>::default(),
+        MessageReceiver::<WorldPortAck>::default(),
+    ));
+    h.cast(TELEPORT_ORGRIMMAR, None);
+    h.advance(250);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.spell_id == TELEPORT_ORGRIMMAR)
+    );
+    let transfer = h
+        .app
+        .world()
+        .get::<crate::maps::MapTransfer>(h.caster)
+        .unwrap();
+    assert_eq!(transfer.destination, destination);
+    assert!(h.app.world().get::<InMap>(h.caster).is_none());
+    let messages = super::test_harness::drain::<NewWorld>(&mut h.app, h.connection);
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].map_id, 1);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<WorldPortAck>>(h.connection)
+        .unwrap()
+        .send::<TransferChannel>(WorldPortAck);
+    h.advance(4);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::maps::MapTransfer>(h.caster)
+            .is_none()
+    );
+    assert_eq!(
+        *h.app.world().get::<InMap>(h.caster).unwrap(),
+        InMap::continent(1)
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        destination.bevy_position()
+    );
+    let rotation = h.app.world().get::<Rotation>(h.caster).unwrap();
+    assert!((rotation.y - destination.orientation - std::f32::consts::FRAC_PI_2).abs() < 0.00001);
 }
 
 #[test]
