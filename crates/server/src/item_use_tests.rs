@@ -13,6 +13,15 @@ use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::spell_cast::test_harness::*;
 
 const MAGE: u8 = 8;
+
+/// Toy.csv ID 1: Orb of Deception; learning consumes one item, not the toy spell.
+#[test]
+fn toys_learning_consumes_orb_of_deception() {
+    let mut eater = eater_with_spells(&[1973], 1, &[], MAGE).expect("real spell data");
+    use_slot(&mut eater, 0);
+    assert!(errors(&mut eater).is_empty());
+    assert_eq!(count_of(&eater, 1973), 0);
+}
 /// Tough Hunk of Bread: on use Food 1291822 (category 11 "Item - Food", 1 s category
 /// cooldown, expendable).
 const BREAD: u32 = 4540;
@@ -59,6 +68,12 @@ fn eater_with_spells(items: &[u32], count: u32, spells: &[u32], class: u8) -> Op
     let app = &mut h.app;
     app.insert_resource(crate::persistence::GameDatabase { db });
     app.insert_resource(templates);
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::toy_catalog::load(&conn).unwrap());
     app.init_resource::<crate::gold::GoldUpdateQueue>();
     app.add_systems(Update, process_use_requests);
     app.world_mut().entity_mut(h.connection).insert((

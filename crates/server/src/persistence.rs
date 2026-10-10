@@ -22,6 +22,8 @@ pub(crate) mod pet_store;
 pub(crate) mod quest_store;
 #[path = "persistence_taxi.rs"]
 pub(crate) mod taxi_store;
+#[path = "persistence_toys.rs"]
+pub(crate) mod toy_store;
 
 pub use self::persistence_runtime::{ClientId, save_live_character};
 use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
@@ -326,6 +328,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_REST);
     banks::create_bank_tables(&txn);
     appearance_store::create_appearance_tables(&txn);
+    toy_store::create_tables(&txn);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);

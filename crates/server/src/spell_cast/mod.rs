@@ -710,6 +710,51 @@ pub(crate) fn cast_item_spell(
     Ok(())
 }
 
+/// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
+/// the per-item recovery omitted by the older consumable-item path.
+pub(crate) fn cast_toy_spell(
+    world: &mut World,
+    caster: Entity,
+    toy: &crate::toy_catalog::Toy,
+    target: Option<Entity>,
+    item_level: u16,
+) -> Result<(), CastFailure> {
+    let spell_id = toy.snapshot.spell_id.ok_or(CastFailure::UnknownSpell)?;
+    let mut spell = world
+        .resource::<SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or(CastFailure::UnknownSpell)?;
+    spell.cast_item_level = Some(item_level);
+    let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
+    if toy.item_cooldown_ms >= 0 {
+        cooldowns.recovery_ms = toy.item_cooldown_ms as u32;
+    }
+    if toy.category_cooldown_ms >= 0 {
+        cooldowns.category_recovery_ms = toy.category_cooldown_ms as u32;
+    }
+    if toy.category != 0 || toy.category_cooldown_ms >= 0 {
+        spell
+            .categories
+            .get_or_insert_with(Default::default)
+            .category = toy.category;
+    }
+    let result = start_cast(world, caster, &spell, target, None);
+    if let Err(failure) = &result {
+        let (reason, detail) = failure.to_contract();
+        send_to_owner(
+            world,
+            caster,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        );
+    }
+    result
+}
+
 fn request_cast(
     world: &mut World,
     caster: Entity,

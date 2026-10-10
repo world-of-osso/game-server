@@ -563,7 +563,10 @@ impl InventoryModel {
         }
     }
 
-    fn existing(&self, location: ItemLocation) -> Result<&InventoryItemData, InventoryError> {
+    pub(crate) fn existing(
+        &self,
+        location: ItemLocation,
+    ) -> Result<&InventoryItemData, InventoryError> {
         self.check_location(location)?;
         self.get(location).ok_or_else(|| {
             error(

@@ -370,7 +370,7 @@ fn process_destroy_requests(
 /// is cast as a spell the item grants (no spellbook check) at the requested target,
 /// else the player's current target. Refusals answer `InventoryError`; the cast path
 /// answers its own `CastFailed`.
-fn process_use_requests(world: &mut World) {
+pub(crate) fn process_use_requests(world: &mut World) {
     let mut receivers = world.query_filtered::<(
         Entity,
         &InWorld,
@@ -409,6 +409,9 @@ fn use_item(
     player: Entity,
     request: &UseItem,
 ) -> Result<(), InventoryError> {
+    if crate::toys::learn_item(world, character_id, player, request.location)? {
+        return Ok(());
+    }
     let (db, templates) = use_store(world)?;
     let model = load_model(db, templates, character_id)?;
     let (on_use, item_scaling) = model.use_spell(request.location)?;
