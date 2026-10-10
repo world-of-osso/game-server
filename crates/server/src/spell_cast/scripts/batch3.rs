@@ -82,7 +82,7 @@ pub(super) fn shred_damage(world: &World, caster: Entity, target: Entity, amount
     }
 }
 
-fn is_bleeding(world: &World, target: Entity) -> bool {
+pub(super) fn is_bleeding(world: &World, target: Entity) -> bool {
     const BLEED_MECHANIC: u32 = 15;
     let Some(auras) = world.get::<crate::auras::ActiveAuras>(target) else {
         return false;
