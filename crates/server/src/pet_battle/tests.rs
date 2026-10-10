@@ -591,8 +591,13 @@ fn pet_battle_catalog_inventory_and_admission() {
         let admitted_rows=c.effects.values().filter(|e|e.property==property && admitted.contains(&c.turns[&e.turn].ability)).count();
         serde_json::json!({"property":property,"rows":rows,"handler":supported_property(property),"admitted_rows":admitted_rows})
     }).collect();
+    let admission: Vec<_> = c
+        .abilities
+        .keys()
+        .map(|id| serde_json::json!({"ability": id, "error": validate_ability(&c, *id).err()}))
+        .collect();
     println!(
         "PET_BATTLE_COVERAGE={}",
-        serde_json::json!({"properties":coverage,"admitted_abilities":admitted.len(),"total_abilities":c.abilities.len(),"unresolved_states":c.unresolved_states.len()})
+        serde_json::json!({"properties":coverage,"admitted_abilities":admitted.len(),"total_abilities":c.abilities.len(),"unresolved_states":c.unresolved_states.len(),"admission":admission})
     );
 }
