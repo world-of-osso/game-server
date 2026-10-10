@@ -103,6 +103,8 @@ mod terrain_height;
 #[cfg(test)]
 mod test_data;
 mod threat_updates;
+mod toy_catalog;
+mod toys;
 mod trade;
 mod trait_config;
 mod unit_target;
@@ -194,6 +196,7 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(economy::EconomyPlugin)
         .add_plugins(collection::CollectionPlugin)
+        .add_plugins(toys::ToysPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(durability::DurabilityPlugin)
         .add_plugins(death::DeathPlugin)

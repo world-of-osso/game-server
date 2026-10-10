@@ -100,6 +100,9 @@ fn setup_app_with(db: Database, extra: impl FnOnce(&mut App)) -> App {
     app.insert_resource(GameDatabase { db });
     app.init_resource::<GoldUpdateQueue>();
     app.insert_resource(test_templates());
+    // This inventory fixture contains no toy definitions; item use still needs
+    // the catalog owned by ToysPlugin in the production app.
+    app.init_resource::<crate::toy_catalog::ToyCatalog>();
     app.add_plugins(InventoryPlugin);
     app.add_plugins(crate::trade::TradePlugin);
     extra(&mut app);
