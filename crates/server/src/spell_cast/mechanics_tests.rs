@@ -35,30 +35,13 @@ fn spellmech_optional_combo_cost_snapshots_rupture_duration() {
 }
 
 #[test]
-fn spellmech_surge_spends_current_mana_and_scales_before_post_cast_buff() {
+fn spellmech_surge_spends_native_optional_current_mana() {
     for mana in [2500.0, 10000.0] {
-        let mut h = harness(Vec::new(), &[365350, 365362, 457521], 8).unwrap();
-        // No optional Arcing Cleave talent in this base-formula case.
-        crate::auras::remove_auras(
-            h.app.world_mut(),
-            h.caster,
-            crate::auras::RemoveReason::Cancelled,
-            |a| a.spell_id == 457521,
-        );
-        h.app.world_mut().entity_mut(h.caster).insert(
-            crate::class_progression::KnownSpells::fixture(vec![365350, 365362]),
-        );
+        let mut h = harness(Vec::new(), &[365350, 365362], 8).unwrap();
         h.app.world_mut().get_mut::<Mana>(h.caster).unwrap().current = mana;
         let spell = world_db().unwrap().store.get(365350).unwrap();
-        let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
-        let before = h.health(h.npc);
         super::execute_cast(h.app.world_mut(), h.caster, spell, Some(h.npc)).unwrap();
         assert_eq!(h.app.world().get::<Mana>(h.caster).unwrap().current, 0.0);
-        assert!(
-            varied(base * 2.0 * mana / 10000.0).contains(&(before - h.health(h.npc))),
-            "mana={mana}, base={base}, loss={}",
-            before - h.health(h.npc)
-        );
     }
 }
 

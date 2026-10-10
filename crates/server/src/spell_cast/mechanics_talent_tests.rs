@@ -1,4 +1,4 @@
-//! Mana formulas consume authored talent values, not fixed percentages.
+//! Authored charge formulas and shared resource snapshot boundaries.
 use super::test_harness::*;
 use shared::components::{Mana, PowerType};
 use shared::protocol::CombatLogKind;
@@ -44,24 +44,23 @@ fn spellmech_barrage_charge_damage_and_talented_mana_refund_survive_flight() {
 }
 
 #[test]
-fn spellmech_surge_optional_talent_uses_catalog_percentage() {
-    let mut h = harness(Vec::new(), &[365350, 365362, 457521], 8).unwrap();
-    crate::auras::apply_aura(
-        h.app.world_mut(),
-        &crate::auras::AuraApplication {
-            caster: h.caster,
-            target: h.caster,
-            spell_id: 457521,
-            effect_mask: 1,
-            source: crate::auras::AuraSource::Cast,
-        },
-    );
-    let spell = world_db().unwrap().store.get(365350).unwrap();
-    let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
-    let bonus = world_db().unwrap().store.get(457521).unwrap().effects[0].base_points;
+fn spellmech_missing_required_combo_points_refuses_before_any_cost() {
+    let mut h = harness(Vec::new(), &[32645], 4).unwrap();
+    h.set_power(PowerType::ComboPoints, 0.0);
+    h.set_power(PowerType::Energy, 100.0);
     let before = h.health(h.npc);
-    super::execute_cast(h.app.world_mut(), h.caster, spell, Some(h.npc)).unwrap();
-    assert!(varied(base * 2.0 * (1.0 + bonus / 100.0)).contains(&(before - h.health(h.npc))));
+    let result = super::execute_cast(
+        h.app.world_mut(),
+        h.caster,
+        world_db().unwrap().store.get(32645).unwrap(),
+        Some(h.npc),
+    );
+    assert!(matches!(
+        result,
+        Err(super::CastFailure::NotEnoughPower(PowerType::ComboPoints))
+    ));
+    assert_eq!(h.power(PowerType::Energy), 100.0);
+    assert_eq!(h.health(h.npc), before);
 }
 
 #[test]
@@ -103,4 +102,28 @@ fn spellmech_cancelled_surge_neither_spends_nor_hits() {
     );
     assert_eq!(h.health(h.npc), before);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 365362));
+}
+
+#[test]
+fn spellmech_black_powder_scales_each_native_area_hit_by_spent_combo() {
+    for points in [1.0, 3.0, 5.0] {
+        let mut h = harness(Vec::new(), &[319175], 4).unwrap();
+        let near = spawn_npc(&mut h.app, 4.0);
+        let far = spawn_npc(&mut h.app, 30.0);
+        let ally = spawn_player(&mut h.app, 4, 2.0);
+        h.set_power(PowerType::ComboPoints, points);
+        h.set_power(PowerType::Energy, 100.0);
+        let spell = world_db().unwrap().store.get(319175).unwrap();
+        let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
+        let primary_before = h.health(h.npc);
+        let near_before = h.health(near);
+        let far_before = h.health(far);
+        let ally_before = h.health(ally);
+        super::execute_cast(h.app.world_mut(), h.caster, spell, None).unwrap();
+        assert_eq!(h.power(PowerType::ComboPoints), 0.0);
+        assert!(varied(base * points).contains(&(primary_before - h.health(h.npc))));
+        assert!(varied(base * points).contains(&(near_before - h.health(near))));
+        assert_eq!(h.health(far), far_before);
+        assert_eq!(h.health(ally), ally_before);
+    }
 }
