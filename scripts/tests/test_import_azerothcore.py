@@ -155,6 +155,29 @@ def run_db2_import(csv_root, db_path):
     )
 
 
+class SpellTargetPositionImportTests(unittest.TestCase):
+    def test_tdb_excerpt_preserves_destination_order_and_nullable_facing(self):
+        # Exact TDB1210.26091 Orgrimmar teleport row; import the real excerpt.
+        with tempfile.TemporaryDirectory() as temporary:
+            db_path = Path(temporary) / "world.db"
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(db_path),
+                 "--schema", str(SCRIPTS / "tdb_schema.sql"), "--prefix", "tdb_",
+                 f"spell_target_position={TDB_DIR / 'spell_target_position.sql'}"],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            with closing(sqlite3.connect(db_path)) as conn:
+                self.assertEqual(
+                    conn.execute("SELECT * FROM tdb_spell_target_position WHERE ID=3567").fetchall(),
+                    [(3567, 0, 0, 1, 1445.21, -4499.56, 18.31, None, 45745)],
+                )
+                self.assertGreater(
+                    conn.execute("SELECT COUNT(*) FROM tdb_spell_target_position WHERE OrderIndex<>0").fetchone()[0],
+                    0,
+                )
+
+
 class DisenchantLootImportTests(unittest.TestCase):
     def test_disenchant_excerpt_imports_material_chances_and_counts(self):
         # Exact TDB1210.26091 entry 3 rows (Retail uncommon Classic weapon).
