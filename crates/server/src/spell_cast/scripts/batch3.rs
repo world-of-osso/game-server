@@ -134,8 +134,23 @@ pub(super) fn garrote(world: &mut World, caster: Entity, target: Entity, depth: 
     {
         return;
     }
-    for child in [GARROTE_SILENCE, GARROTE_DAMAGE_REDUCTION] {
-        spell_cast::cast_triggered(world, caster, child, Some(target), depth + 1);
+    spell_cast::cast_triggered(world, caster, GARROTE_SILENCE, Some(target), depth + 1);
+    let silenced = world
+        .get::<crate::auras::ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == GARROTE_SILENCE && aura.caster == caster)
+        });
+    // 196861: only enemies actually silenced by Garrote receive256148.
+    if silenced {
+        spell_cast::cast_triggered(
+            world,
+            caster,
+            GARROTE_DAMAGE_REDUCTION,
+            Some(target),
+            depth + 1,
+        );
     }
 }
 
