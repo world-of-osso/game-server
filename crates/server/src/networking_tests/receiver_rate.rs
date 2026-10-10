@@ -186,6 +186,32 @@ fn nan_or_infinite_reported_positions_do_not_move_the_player() {
 }
 
 #[test]
+fn passenger_seat_input_cannot_translate_or_turn_the_player() {
+    let (mut app, player, connection) = receiver_app();
+    app.world_mut()
+        .entity_mut(player)
+        .insert(shared::components::VehiclePassenger {
+            driver: 99,
+            seat_index: 1,
+            seat_id: 2764,
+        });
+    app.world_mut()
+        .get_mut::<shared::components::MovementControl>(player)
+        .unwrap()
+        .controlled = true;
+    let before = *app
+        .world()
+        .get::<shared::components::Rotation>(player)
+        .unwrap();
+    deliver_and_tick(&mut app, connection, run_north(1..=5));
+    assert_position(&app, player, [0.0; 3]);
+    assert_eq!(
+        app.world().get::<shared::components::Rotation>(player),
+        Some(&before)
+    );
+}
+
+#[test]
 fn input_from_before_a_teleport_is_dropped() {
     let (mut app, player, connection) = receiver_app();
     app.world_mut()
