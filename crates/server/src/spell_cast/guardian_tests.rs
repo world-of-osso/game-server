@@ -177,6 +177,43 @@ fn guardians_sacrifice_splits_real_auto_attack_damage() {
 }
 
 #[test]
+fn guardians_boundary_dead_victim_cannot_transfer_direct_damage() {
+    let (mut h, ally) = sacrifice();
+    h.app.world_mut().get_mut::<Health>(ally).unwrap().current = 0.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, ally, 100.0);
+    assert_eq!(h.health(h.caster), 1000.0);
+}
+
+#[test]
+fn guardians_boundary_same_tick_swings_share_one_native_health_floor_budget() {
+    let (mut h, ally) = sacrifice();
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 210.0;
+    let mut attackers = vec![h.npc];
+    for _ in 0..3 {
+        attackers.push(spawn_npc(&mut h.app, 3.0));
+    }
+    for attacker in attackers {
+        h.app
+            .world_mut()
+            .entity_mut(attacker)
+            .remove::<crate::stats::CharacterStats>()
+            .insert(crate::combat::AutoAttack::new(ally));
+    }
+    h.advance(2);
+    assert_eq!(
+        h.health(h.caster),
+        200.0,
+        "queued swings must not each spend the same floor budget"
+    );
+    assert_eq!(h.health(ally), 970.0);
+    assert!(!crate::auras::has_aura(h.app.world(), ally, 6940));
+}
+
+#[test]
 fn guardians_sacrifice_splits_direct_damage_and_excludes_foreign_map() {
     let (mut h, ally) = sacrifice();
     crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, ally, 100.0);
