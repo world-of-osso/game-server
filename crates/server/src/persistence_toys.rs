@@ -1,6 +1,6 @@
 //! Account-wide Toy Box, outside frozen character serialization.
 use super::inventory_store::{InventoryRecord, write_inventory_record};
-use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use std::collections::BTreeMap;
 
 pub(crate) const ACCOUNT_TOYS: TableDefinition<u64, &[u8]> = TableDefinition::new("account_toys");
