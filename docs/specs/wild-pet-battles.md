@@ -9,6 +9,8 @@ Server-authoritative wild PvE encounters in `crates/server/src/wild_pet_battles.
 - [x] Deliver final authoritative health/state before the terminal outcome, including defeated wins and captures.
 - [x] Release encounter claims and use the existing creature despawn/respawn lifecycle after wins.
 
+- [x] Supply authoritative species portrait/quality/XP, ability family, aura icon and per-event target/amount feedback for the client HUD; terminal rewards include the new level XP threshold. No client-side combat inference.
+
 ## How it works
 - [Turn catalog and semantics](../wiki/systems/pet-battle-engine.md).
 - [Native client contract](../../../game-engine/docs/specs/wild-pet-battles.md).
