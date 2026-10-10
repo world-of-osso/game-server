@@ -28,18 +28,18 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 - `pet_battle/catalog.rs` — own typed SQLite loader, raw unresolved-state retention and admission inventory.
 - `pet_battle/stats.rs`, `model.rs` — stats and battle/team/pet/aura/action/event representation.
 - `pet_battle/rules.rs`, `engine.rs`, `effects.rs` — opcode admission, deterministic round sequencing and effect execution.
-- `pet_battle/tests.rs` — real CSV→SQLite fixture and23 behavioral/inventory tests.
+- `pet_battle/tests.rs`, `property_tests.rs` — isolated shipped-table fixtures, real ability IDs, fixed RNG and hand-derived behavioral assertions.
 
 ## Tests asserting this spec
 
-`crates/server/src/pet_battle/tests.rs`; native `agent-run petbattle cargo test --locked -p server pet_battle`. Set `PET_BATTLE_DB2` to authenticated export directory. Existing server master requires shared master75fe6a4; current sibling3facd18 and stale declared8c16175 each have unrelated compile incompatibilities. Exact isolated dependency override and successful all-target filtered command are in the coverage report.23/23 pass, format/check pass at code2f99296; no full suite or live runtime claim.
+`crates/server/src/pet_battle/{tests,property_tests}.rs`; native `agent-run pbfx cargo test --locked -p server pet_battle`. Tests copy battle tables from shipped world.db, without CSV environment overrides. Exact revisions, counts, format/check evidence and remaining parity boundaries are in the [coverage report](../pet-battle-effect-coverage.md).
 
 ## Known gaps (current cycle)
 
-- [ ] pets-server-fix/DB producer must import ten battle tables under the documented schema; world.db currently contains species metadata only.
+- [x] Runtime DB producer imported the ten battle tables; tests read the shipped SQLite tables without mutating them.
 - [ ] Independent verification could not run because Claude OAuth expired; no paid substitute used.
 - [x] Assert Elemental negative-weather immunity and replacement/expiry on all six slots with Darkness256 and Moonfire595.
 
 ## Out of scope
 
-Networking, wild encounter spawning, UI, capture/XP, journal persistence, deployment, merges and UDP5000 operations belong to later steps. This engine is not wired into runtime battles while effect/parity coverage remains bounded.
+This effect-expansion cycle does not change networking, wild spawning, HUD, capture/XP, journal persistence, deployment or protected services. The [wild runtime](wild-pet-battles.md) already consumes this library; effect/parity coverage remains bounded.
