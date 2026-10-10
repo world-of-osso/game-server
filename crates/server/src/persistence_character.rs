@@ -716,6 +716,10 @@ pub(crate) fn remove_character(
         traits
             .remove(character_id)
             .expect("remove character traits");
+        txn.open_table(crate::persistence_progression::CHARACTER_TRAIT_LOADOUTS)
+            .expect("open character trait loadouts")
+            .remove(character_id)
+            .expect("remove character trait loadouts");
         let mut xp = txn
             .open_table(crate::persistence_progression::CHARACTER_XP)
             .expect("open character xp");

@@ -150,12 +150,14 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     add_inbox::<ActionBarSnapshot>(&mut app);
     add_inbox::<TraitConfigSnapshot>(&mut app);
     add_inbox::<TraitCommitResult>(&mut app);
+    add_inbox::<shared::protocol::TraitLoadoutsSnapshot>(&mut app);
     add_inbox::<shared::protocol::LogXpGain>(&mut app);
     add_inbox::<shared::protocol::PlayerXpUpdate>(&mut app);
     add_inbox::<shared::protocol::RestStateUpdate>(&mut app);
     app.register_message::<SetSpecialization>();
     app.register_message::<SetActionButton>();
     app.register_message::<CommitTraitConfig>();
+    app.register_message::<shared::protocol::TraitLoadoutRequest>();
     app.insert_resource(GameDatabase { db });
     app.insert_resource(classes);
     app.add_plugins((ClassProgressionPlugin, crate::profession::ProfessionPlugin));
@@ -214,6 +216,10 @@ fn spawn_player(app: &mut App, character_id: u64, race: u8, class: u8, level: u8
             MessageReceiver::<TraitCommitResult>::default(),
             MessageSender::<CommitTraitConfig>::default(),
             MessageReceiver::<CommitTraitConfig>::default(),
+            MessageSender::<shared::protocol::TraitLoadoutRequest>::default(),
+            MessageReceiver::<shared::protocol::TraitLoadoutRequest>::default(),
+            MessageSender::<shared::protocol::TraitLoadoutsSnapshot>::default(),
+            MessageReceiver::<shared::protocol::TraitLoadoutsSnapshot>::default(),
         ),
     ));
     player
@@ -258,6 +264,7 @@ fn drain(app: &mut App, player: Entity) {
     received::<SpecializationChanged>(app, player);
     received::<ActionBarSnapshot>(app, player);
     received::<TraitConfigSnapshot>(app, player);
+    received::<shared::protocol::TraitLoadoutsSnapshot>(app, player);
 }
 
 fn stored(app: &App, character_id: u64) -> ProgressionData {
@@ -1369,6 +1376,9 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
         ]
     );
 }
+
+#[path = "class_progression_loadout_tests.rs"]
+mod loadouts;
 
 #[path = "class_progression_new_class_tests.rs"]
 mod new_classes;
