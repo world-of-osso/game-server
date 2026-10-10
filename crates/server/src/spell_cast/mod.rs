@@ -75,6 +75,8 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
+pub(crate) mod teleport;
+
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
@@ -2001,5 +2003,7 @@ mod queue_tests;
 mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
+#[cfg(test)]
+mod teleport_tests;
 #[cfg(test)]
 mod tests;
