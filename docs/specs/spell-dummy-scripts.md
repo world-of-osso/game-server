@@ -57,7 +57,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 
 - `crates/server/src/spell_cast/dummy2_tests.rs` — 24 native cast tests across nine class scripts, including tooltip level curves, conditional ranks, timer changes, cancellation/death and live armor changes.
 
-- `crates/server/src/spell_cast/dummy3_tests.rs` — per-spell cast tests, chance endpoints and threshold/condition boundaries.
+- `crates/server/src/spell_cast/dummy3_tests.rs` — 16 per-spell cast tests, chance endpoints, radius/threshold/condition boundaries and Garrote silence immunity. [Census and surviving proof](../wiki/systems/spell-casting.md#third-batch-local-retail-rows).
 
 ## Known gaps (current cycle)
 
