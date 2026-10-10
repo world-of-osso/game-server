@@ -7,7 +7,7 @@ impl BattleRng for Fixed {
         self.0
     }
 }
-fn catalog() -> WildCatalog {
+pub(super) fn catalog() -> WildCatalog {
     let db = Connection::open_with_flags(
         concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db"),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
