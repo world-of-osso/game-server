@@ -2172,6 +2172,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 }
 
 #[cfg(test)]
+mod mechanics_tests;
+#[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]
 mod line_of_sight_tests;
