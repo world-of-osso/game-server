@@ -31,7 +31,7 @@ pub fn calculate_stats(
         .qualities
         .get(&quality)
         .ok_or_else(|| format!("missing quality {quality}"))?;
-    let scale = |name: &str, divisor: f64| -> Result<i32, String> {
+    let scale = |name: &str, divisor: f32| -> Result<i32, String> {
         let state = catalog.state_id(name)?;
         let base = breed
             .get(&state)
@@ -40,7 +40,8 @@ pub fn calculate_stats(
         if raw <= 0 {
             return Err(format!("nonpositive base stat {name}: {raw}"));
         }
-        Ok((f64::from(raw) * multiplier * f64::from(level) / divisor).round() as i32)
+        // DB2 multiplier is float32; preserve client/runtime precision at half boundaries.
+        Ok((raw as f32 * *multiplier as f32 * f32::from(level) / divisor).round() as i32)
     };
     Ok(Stats {
         health: scale("Stat_Stamina", 20.0)? + 100,
