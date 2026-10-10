@@ -14,9 +14,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     176457, // Fruit Basket
     176594, // Touch of the Naaru
     185712, // Seafarer's Slidewhistle
-    203533, // Black Ice
     203657, // Noble's Eternal Elementium Signet
-    203820, // Eternal Black Diamond Ring
     217708, // Gravil Goldbraid's Famous Sausage Hat
     231129, 231142, 231143, 231144,  // Falcosaur accessories
     261981,  // Spitzy
