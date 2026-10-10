@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Class spell scripts batch6](systems/spell-casting.md#sixth-batch-local-retail-rows): Sunfire, Verdict, Ice Lance, Starfire, Keg Smash, Butchery, Wild Growth, SWDeath backlash and capped owned Starfall extensions; local source receipts, per-spell cast proof and retained limits. No database writes, deployment, master merge or guessed selector104.
+
 - 2026-10-10 — [Class spell scripts batch3](systems/spell-casting.md#third-batch-local-retail-rows): eight bounded local-Retail paths (Prayer, Garrote, Serenity, Scorch, Shred, Thunder Clap, Devastate, Moonfire); per-spell cast proof/status and unresolved variants in `handoff-spell-dummy3.md`. No database writes, deployment or merge.
 
 - 2026-10-10 — [Disenchant](systems/disenchant.md): Retail item-GUID casts, authentic eligibility/TDB rolls, atomic unbound disposal receipts and shared personal loot; six native gameplay tests plus metadata1/loot27/known-spell1 pass. Companion protocol/client required; no merges/services/live proof.

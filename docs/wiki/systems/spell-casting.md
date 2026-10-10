@@ -239,6 +239,26 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
+### Sixth batch: local Retail rows
+
+Implementation [batch6.rs](../../../crates/server/src/spell_cast/scripts/batch6.rs); [bounded contract](../../specs/spell-dummy-scripts.md#sixth-batch-locally-derived-paths). Eight ranked paths plus supplementary Ice Lance, emphasizing Balance/Resto, Ret, Brewmaster, Survival, Shadow and Frost. Local Mainline12.1.0.69933 DB2 descriptions/effects are checked against read-only SQLite; description newline normalization is not semantic drift. No external sources, invented IDs or world.db imports.
+
+| Root | Authored action | Remaining boundary |
+|---|---|---|
+|93402 Sunfire|164815s1/o2/d base bridge;231050 explicitly spreads only the DoT through its native child area.|Root Dummy1 marker and optional child271/537 effects remain open.|
+|85256 Templar's Verdict|224266s1 damage bridge; apply only child effect0.|Unknown parent/child Dummy markers remain open.|
+|30455 Ice Lance (supplement)|228598s1 damage bridge.|Freezing/shatter unimplemented; not a Dummy census closure.|
+|194153 Starfire|s3=70% secondary damage; native area/destination/resource retained.|429523 variant, soft-cap8 and effect3/77 semantics remain open.|
+|121253 Keg Smash|s8=50% primary bonus; native secondary damage/slow retained.|Root markers, Shuffle/Brew reduction and damage soft cap remain open.|
+|212436 Butchery|294029 grants s2=3000ms per damaging target, at most s3=5; existing259495 recharge only.|Damage soft-cap formula/talent bleed not certified; recharge proof is not Wildfire Bomb damage proof.|
+|48438 Wild Growth|s2=5 injured allies inside native target-centered area; existing periodic aura execution.|Declining tick curve/Tree of Life target additions unimplemented.|
+|32379 Shadow Word: Death|s6=5% caster-max-health backlash after target survives, ordinary damage/absorb/death/log path.|Other damage-effect/execute variants not certified.|
+|191034 Starfall|327541s1=3sec owned Moonfire/Sunfire extension, s2=28sec remaining cap; do not reset ticks.|Base overlap/tick-child contracts remain open.|
+
+Source receipts, RED/GREEN and final proof ledger: `game-engine/data/diagnostics/spell-dummy6-2026-10-10/`; delivery state: `/home/osso/.worktrees/handoff-spell-dummy6.md`. Initial14 cast functions reproduced11 missing-path failures and3 negative gates; implementation is committed before GREEN/final verification. Current results and census will be recorded after their gates, not inferred from code. Parent owns independent integration proof.
+
+Selector104 remains unsupported. Allowed local DB2/TDB sources identify numeric selectors/radii but did not establish a Retail-correct universal caster-to-destination cone selection algorithm. No forward-cone guess; existing unsupported104 fixture stays unchanged. Augmentation candidates need healer-role/selection, stat-distribution or empower/flight contracts beyond these bounded derivations.
+
 ### Fifth batch: local Retail rows
 
 Implementation: `spell_cast/scripts/batch5.rs`; [contract](../../specs/spell-dummy-scripts.md#fifth-batch-locally-derived-paths). Sources exclusively local Mainline12.1.0.69933 DB2, cross-checked against read-only SQLite. No fabricated IDs or external source fetches. Eight ranked paths plus supplementary Lava Burst favor DH, Evoker, Warlock, Rogue and DK over previously frequent Mage/Monk additions; Shaman receives the Lava Burst path.
