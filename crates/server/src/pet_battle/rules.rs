@@ -27,7 +27,9 @@ pub fn supported_property(property: u32) -> bool {
             | 68
             | 79
             | 80
+            | 85
             | 104
+            | 111
             | 116
             | 135
             | 136
@@ -38,6 +40,11 @@ pub fn supported_property(property: u32) -> bool {
             | 158
             | 177
             | 178
+            | 169
+            | 170
+            | 171
+            | 246
+            | 373
             | 222
             | 384
             | 385
@@ -164,6 +171,21 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         }
         136 => matches!(p[0], 0 | 1) && p[1..].iter().all(|v| *v == 0),
         139 | 145 => p[1..].iter().all(|v| *v == 0),
+        85 => catalog.states.contains_key(&(p[0] as u32)),
+        111 => p[0] > 0 && p[0] <= 100 && p[2..].iter().all(|v| *v == 0),
+        169 | 171 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && p[5] == 0
+        }
+        170 => catalog.states.contains_key(&(p[2] as u32)) && p[5] == 0,
+        246 => (1..=3).contains(&p[0]) && p[1..].iter().all(|v| *v == 0),
+        373 => {
+            (0..3).contains(&p[0])
+                && catalog.abilities.contains_key(&(p[1] as u32))
+                && p[2..].iter().all(|v| *v == 0)
+        }
         116 => true, // No named parameters; recalculates priority from current speed.
         158 => p.iter().all(|v| *v == 0),
         24 => p[3..].iter().all(|v| *v == 0),
@@ -186,7 +208,7 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         }
         222 => p[3..].iter().all(|v| *v == 0) && p[2] >= 0,
         31 => catalog.states.contains_key(&(p[0] as u32)),
-        49 => effect.aura != 0 && p[1..].iter().all(|v| *v == 0),
+        49 => effect.aura != 0 && p[2..].iter().all(|v| *v == 0),
         26 => {
             effect.aura != 0
                 && p[2] >= -1

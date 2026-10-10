@@ -7,6 +7,7 @@ const RULE_STATES: &[&str] = &[
     "Stat_Dodge",
     "Mod_SpeedPercent",
     "Mod_MaxHealthPercent",
+    "Weather_ArcaneStorm",
     "Mod_PetType_ID",
     "Mod_PetTypeDamageDealtPercent",
     "Mod_PetTypeDamageTakenPercent",
@@ -391,8 +392,11 @@ impl<R: BattleRng> Runtime<'_, R> {
     fn trigger_for_pet(&mut self, pet: PetRef, event: u32) -> Result<(), String> {
         let auras = self.battle.auras.clone();
         for aura in auras {
-            if aura.target == pet {
-                self.cast_turn(aura.caster, aura.target, aura.ability, 0, event)?;
+            if aura.target == pet || aura.team_bound && aura.target.team == pet.team {
+                let previous = self.healing_target;
+                self.healing_target = (aura.caster.team == pet.team).then_some(pet);
+                self.cast_turn(aura.caster, pet, aura.ability, 0, event)?;
+                self.healing_target = previous;
             }
         }
         Ok(())

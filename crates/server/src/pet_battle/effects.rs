@@ -18,6 +18,63 @@ impl<R: BattleRng> Runtime<'_, R> {
         match effect.property {
             22 | 116 | 157 | 158 | 177 => Ok(true),
             68 => self.percent_damage(caster, target, ability, effect),
+            85 => self.reset_aura_state(p[0] as u32),
+            111 => {
+                let pet = self.battle.pet_mut(caster);
+                pet.health = pet.stats.health * p[0] / 100;
+                pet.states.insert(self.catalog.state_id("Is_Dead")?, 0);
+                self.events.push(Event::Revived(caster));
+                Ok(true)
+            }
+            169 => {
+                let wearer = if ability == 171 {
+                    self.battle.active(if effect.order == 1 {
+                        caster.team
+                    } else {
+                        1 - caster.team
+                    })
+                } else {
+                    target
+                };
+                if p[2] != 0 && self.battle.pet(caster).state(p[2] as u32) == 0
+                    || p[3] != 0 && self.battle.pet(wearer).state(p[3] as u32) != 0
+                {
+                    return Ok(false);
+                }
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[2] = p[4];
+                self.damage_effect(caster, wearer, ability, &damage)
+            }
+            170 => {
+                if self.battle.pet(caster).state(p[2] as u32) == 0 {
+                    return Ok(false);
+                }
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[2] = p[4];
+                self.damage_effect(caster, target, ability, &damage)
+            }
+            171 => {
+                let recipient = self.healing_target.unwrap_or(caster);
+                if !self.required_states(caster, recipient, p[2], p[3]) {
+                    return Ok(false);
+                }
+                let mut heal = effect.clone();
+                heal.property = 23;
+                heal.params[2] = p[4];
+                self.heal_effect(caster, &heal)
+            }
+            246 => {
+                let recipient = self.healing_target.unwrap_or(caster);
+                let id = self.battle.pet(recipient).abilities[(p[0] - 1) as usize];
+                self.battle.pet_mut(recipient).cooldowns.remove(&id);
+                Ok(true)
+            }
+            373 => {
+                self.battle.pet_mut(caster).abilities[p[0] as usize] = p[1] as u32;
+                Ok(true)
+            }
             104 => {
                 if !self.required_states(caster, target, p[2], p[3]) {
                     return Ok(false);
@@ -31,7 +88,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             136 => self.cleanse(caster),
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
-                let target = if ability == 404 && effect.property == 24 {
+                let target = if matches!(ability, 404 | 419) && effect.property == 24 {
                     // Sunlight404's three15-point effects target the three enemy slots.
                     PetRef {
                         team: target.team,
@@ -119,6 +176,24 @@ impl<R: BattleRng> Runtime<'_, R> {
                 effect.property, effect.id
             )),
         }
+    }
+    fn reset_aura_state(&mut self, state: u32) -> Result<bool, String> {
+        let serials: Vec<_> = self
+            .battle
+            .auras
+            .iter()
+            .filter(|a| {
+                self.catalog
+                    .ability_states
+                    .get(&a.ability)
+                    .is_some_and(|s| s.get(&state).copied().unwrap_or(0) != 0)
+            })
+            .map(|a| a.serial)
+            .collect();
+        for serial in serials {
+            self.remove_aura(serial)?;
+        }
+        Ok(true)
     }
     fn percent_damage(
         &mut self,
@@ -613,7 +688,11 @@ impl<R: BattleRng> Runtime<'_, R> {
     ) -> Result<bool, String> {
         let positive = matches!(effect.property, 26 | 28 | 63);
         let wearer = if positive { caster } else { target };
-        if self.battle.pet(wearer).health <= 0 || !self.hit(caster, wearer, effect) {
+        // Bend Time1905 uses Accuracy0 for its unconditional next-swap team trigger.
+        let unconditional = effect.aura == 1904 && effect.params[1] == 0;
+        if self.battle.pet(wearer).health <= 0
+            || !unconditional && !self.hit(caster, wearer, effect)
+        {
             return Ok(false);
         }
         if matches!(effect.property, 52 | 178) && self.control_immune(wearer, effect.aura) {
@@ -667,7 +746,8 @@ impl<R: BattleRng> Runtime<'_, R> {
                     .expect("checked rule state");
                 states.get(&lock).copied().unwrap_or(0) > 0
             });
-        (has_control && self.state(wearer, "Passive_Critter") != 0)
+        (has_control && self.state(wearer, "Weather_ArcaneStorm") != 0)
+            || (has_control && self.state(wearer, "Passive_Critter") != 0)
             || (locks_turn && self.state(wearer, "resilient") != 0)
     }
     fn apply_or_refresh_aura(
@@ -721,7 +801,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             turn: 1,
             applied_round: self.battle.round,
             tick_first,
-            team_bound: effect.property == 63 && effect.aura != 267 || effect.aura == 333,
+            team_bound: effect.property == 63 && effect.aura != 267
+                || matches!(effect.aura, 333 | 1904),
             weather: effect.property == 80,
             charges: self
                 .catalog
@@ -742,7 +823,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         self.cast_turn(caster, target, effect.aura, 0, 0)
     }
     fn remove_aura_effect(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
-        if !self.roll(effect.params[0]) {
+        if effect.params[0] != 0 && !self.roll(effect.params[0]) {
             return Ok(false);
         }
         let serials: Vec<_> = self
