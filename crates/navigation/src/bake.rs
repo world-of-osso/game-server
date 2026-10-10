@@ -4,10 +4,16 @@ use glam::Vec3;
 use recastnavigation_sys::*;
 
 const SUBTILE_CELLS: i32 = 512;
-const BORDER_CELLS: i32 = 5; // ceil(radius / cell size) + 3, Recast tiled bake border.
-const HEIGHT_CELLS: i32 = 10;
-const CLIMB_CELLS: i32 = 8;
-const RADIUS_CELLS: i32 = 2;
+const BORDER_CELLS: i32 = RADIUS_CELLS + 3;
+const HEIGHT_CELLS: i32 = ceil_cells(AGENT_HEIGHT, CELL_HEIGHT);
+const CLIMB_CELLS: i32 = (AGENT_CLIMB / CELL_HEIGHT) as i32;
+const RADIUS_CELLS: i32 = ceil_cells(AGENT_RADIUS, CELL_SIZE);
+
+const fn ceil_cells(value: f32, size: f32) -> i32 {
+    let ratio = value / size;
+    let floor = ratio as i32;
+    floor + (ratio > floor as f32) as i32
+}
 
 /// A WoW tile contains 4×4 Detour tiles to keep peak voxelization memory bounded.
 /// `triangles` includes neighboring geometry: border erosion must see across tile seams.
