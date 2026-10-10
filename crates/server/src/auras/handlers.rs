@@ -133,6 +133,7 @@ pub const SCREEN_EFFECT: u32 = 260;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
+pub const OVERRIDE_SPELLS: u32 = 293;
 pub const MASTERY: u32 = 318;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
@@ -162,7 +163,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         SCREEN_EFFECT => ClientVisual,
-        ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS => Override,
+        ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2

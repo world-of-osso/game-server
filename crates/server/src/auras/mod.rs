@@ -64,6 +64,7 @@ const ATTR5_EXTRA_INITIAL_PERIOD: u32 = 0x200;
 /// `DispelType` 7 matches every dispel type.
 const DISPEL_ALL: u32 = 7;
 
+pub(crate) mod override_spell_data;
 pub(crate) mod overrides;
 
 pub struct AuraPlugin;
@@ -80,6 +81,7 @@ impl Plugin for AuraPlugin {
                 (
                     shapeshift::load_shapeshift_forms_startup,
                     mount::load_mount_store_startup,
+                    override_spell_data::load_startup,
                 ),
             )
             .add_systems(

@@ -18,6 +18,8 @@
 
 - Aura37 EFFECT_IMMUNITY prevents only the spell effect ID in MiscValue, including friendly summon offers, at target filtering and effect application. Spell/effect NoImmunity attributes bypass it. Ordinary UnitAuras transport/presentation and removal restore eligibility; unsupported puppet/script effects remain blocked. References: TC a352b1fa SpellInfo::LoadImmunityInfo, Unit::IsImmunedToSpellEffect.
 
+- Aura293 OVERRIDE_SPELLS loads MiscValue's ordered10-spell OverrideSpellData record from local CASC. AuraView.overrides carries the list using existing aura332 transport; the Retail six-button main-bar override replaces even empty/item slots without rebinding. Only active set spells gain temporary server cast permission; removal restores base slots/permissions. Missing override records/spells stay unavailable; underlying ability scripts are not implemented by swapping buttons. References: TC a352b1fa HandleAuraOverrideSpells; cached Retail OverrideActionBar.lua:42/Setup; WoWDBDefs layout297CBDC8.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.

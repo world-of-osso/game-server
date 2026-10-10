@@ -900,6 +900,7 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
         .expect("plain component query always validates");
     crate::class_progression::knows_spell(&known, caster, spell_id)
         || taught_by_known_spell(world, caster, spell_id)
+        || crate::auras::overrides::grants_spell(world, caster, spell_id)
         || world.get::<KnownSpells>(caster).is_some_and(|known| {
             known
                 .iter()
