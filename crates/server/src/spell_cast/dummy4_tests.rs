@@ -76,7 +76,11 @@ fn dummy4_kill_shot_is_usable_strictly_below_twenty_percent() {
 }
 
 fn mangle(with_rank: bool, bleeding: bool) -> f32 {
-    let mut h = harness(Vec::new(), &[33917, 5487, 231064, 703], 11).expect("real catalog");
+    let mut ids = vec![33917, 5487, 703];
+    if with_rank {
+        ids.push(231064);
+    }
+    let mut h = harness(Vec::new(), &ids, 11).expect("real catalog");
     let caster = h.caster;
     let npc = h.npc;
     aura(&mut h, caster, caster, 5487);
@@ -112,18 +116,24 @@ fn dummy4_mangle_rank_without_bleed_keeps_base_damage() {
 }
 
 fn vivify(with_rank: bool) {
-    let mut h = harness(Vec::new(), &[116670, 274586, 119611, 425804], 10).expect("real catalog");
+    let mut ids = vec![116670, 119611, 425804];
+    if with_rank {
+        ids.push(274586);
+    }
+    let mut h = harness(Vec::new(), &ids, 10).expect("real catalog");
     let primary = spawn_player(&mut h.app, 10, 2.0);
     let owned = spawn_player(&mut h.app, 10, 4.0);
     let foreign = spawn_player(&mut h.app, 10, 5.0);
     let unmarked = spawn_player(&mut h.app, 10, 6.0);
+    let far = spawn_player(&mut h.app, 10, 150.0);
     let caster = h.caster;
     if with_rank {
         aura(&mut h, caster, caster, 274586);
     }
     aura(&mut h, caster, owned, 119611);
+    aura(&mut h, caster, far, 119611);
     aura(&mut h, foreign, foreign, 119611);
-    for u in [primary, owned, foreign, unmarked] {
+    for u in [primary, owned, foreign, unmarked, far] {
         h.app.world_mut().get_mut::<Health>(u).unwrap().current = 100.0;
     }
     h.cast_and_deliver(116670, Some(primary));
@@ -138,6 +148,10 @@ fn vivify(with_rank: bool) {
         .count();
     assert_eq!(splash, usize::from(with_rank));
     assert_eq!(h.health(unmarked), 100.0);
+    assert!(h.health(owned) > if with_rank { 400.0 } else { 100.0 });
+    // Only HoT ticks, never the323-point Vivify splash, reach foreign/far marks.
+    assert!(h.health(foreign) < 200.0);
+    assert!(h.health(far) < 200.0);
 }
 
 #[test]
@@ -150,7 +164,11 @@ fn dummy4_vivify_without_rank_does_not_splash() {
 }
 
 fn chain_lightning(with_rank: bool) {
-    let mut h = harness(Vec::new(), &[188443, 343725], 7).expect("real catalog");
+    let mut ids = vec![188443];
+    if with_rank {
+        ids.push(343725);
+    }
+    let mut h = harness(Vec::new(), &ids, 7).expect("real catalog");
     let near = spawn_npc(&mut h.app, 6.0);
     let far = spawn_npc(&mut h.app, 80.0);
     let caster = h.caster;
@@ -277,4 +295,65 @@ fn dummy4_eruption_extends_only_owned_active_ebon_might_with_rank() {
     assert_eq!(expiry(&h, caster), own + 1.0);
     assert_eq!(expiry(&h, ally), other + 1.0);
     assert_eq!(expiry(&h, foreign), untouched);
+}
+
+#[test]
+fn dummy4_prayer_does_not_start_ready_sanctify_cooldown() {
+    let mut h = harness(Vec::new(), &[596, 98367, 34861], 5).expect("real catalog");
+    h.cast_and_deliver(596, Some(h.caster));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(!h.inbox.charges.iter().any(|event| event.spell_id == 34861));
+    assert!(
+        !h.inbox
+            .cooldowns
+            .iter()
+            .any(|event| event.spell_id == 34861)
+    );
+}
+
+#[test]
+fn dummy4_eruption_without_rank_keeps_owned_buff_duration() {
+    let mut h = harness(Vec::new(), &[395160, 395296], 13).expect("real catalog");
+    let caster = h.caster;
+    aura(&mut h, caster, caster, 395296);
+    let before = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 395296)
+        .unwrap()
+        .expires_at;
+    h.set_power(PowerType::Essence, 5.0);
+    h.cast_and_deliver(395160, Some(h.npc));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let after = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 395296)
+        .unwrap()
+        .expires_at;
+    assert_eq!(before, after);
+}
+
+#[test]
+fn dummy4_light_of_dawn_excludes_injured_allies_behind_caster() {
+    let mut h = harness(Vec::new(), &[85222], 2).expect("real catalog");
+    let front = spawn_player(&mut h.app, 2, 3.0);
+    let behind = spawn_player(&mut h.app, 2, -3.0);
+    for unit in [front, behind] {
+        h.app.world_mut().get_mut::<Health>(unit).unwrap().current = 100.0;
+    }
+    h.set_power(PowerType::HolyPower, 5.0);
+    h.cast_and_deliver(85222, None);
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.health(front) > 100.0);
+    assert_eq!(h.health(behind), 100.0);
 }

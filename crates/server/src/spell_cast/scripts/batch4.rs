@@ -94,24 +94,37 @@ pub(super) fn vivify(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     if !crate::auras::has_aura(world, caster, VIVIFY_RANK) {
         return;
     }
-    let units: Vec<Entity> = world
-        .query::<(Entity, &crate::auras::ActiveAuras)>()
-        .iter(world)
-        .filter(|(_, auras)| {
-            auras
-                .iter()
-                .any(|aura| aura.spell_id == RENEWING_MIST && aura.caster == caster)
-        })
-        .map(|(unit, _)| unit)
-        .filter(|&unit| {
-            targets::is_alive(world, unit)
-                && targets::same_map(world, caster, unit)
-                && targets::relation_matches(world, caster, unit, Relation::Ally)
-        })
-        .collect();
-    for unit in units {
-        spell_cast::cast_triggered(world, caster, VIVIFY_SPLASH, Some(unit), 1);
-    }
+    let child = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(VIVIFY_SPLASH)
+        .expect("Vivify requires425804")
+        .clone();
+    let index = child
+        .effects
+        .iter()
+        .position(|effect| effect.index == 0)
+        .expect("Vivify splash heal");
+    // Keep425804's catalog area/radius, narrowed to the root's owned marks.
+    let mut units =
+        targets::select_targets(world, caster, None, &child, &child.effects[index], 0, false)
+            .expect("Vivify catalog selectors");
+    units.retain(|&unit| {
+        world
+            .get::<crate::auras::ActiveAuras>(unit)
+            .is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == RENEWING_MIST && aura.caster == caster)
+            })
+    });
+    let mut plan = vec![PlannedEffect {
+        index,
+        units,
+        dest: None,
+        chain_multipliers: Vec::new(),
+    }];
+    spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
+    spell_cast::missiles::launch(world, caster, &child, plan, 1);
 }
 
 /// 188443: 343725s5 Maelstrom for each successful target hit, only with passive.
