@@ -63,6 +63,8 @@ const ATTR5_EXTRA_INITIAL_PERIOD: u32 = 0x200;
 /// `DispelType` 7 matches every dispel type.
 const DISPEL_ALL: u32 = 7;
 
+pub(crate) mod overrides;
+
 pub struct AuraPlugin;
 
 impl Plugin for AuraPlugin {
@@ -207,6 +209,7 @@ impl AuraInstance {
             flags |= AuraView::FLAG_FROM_PLAYER;
         }
         AuraView {
+            overrides: Vec::new(),
             instance_id: self.instance_id,
             spell_id: self.spell_id,
             caster: Some(self.caster.to_bits()),
@@ -1476,13 +1479,30 @@ fn sync_unit_auras(
     units: &mut QueryState<(Entity, &mut ActiveAuras, &mut UnitAuras), Without<GridDormant>>,
 ) {
     let now = aura_now(world);
+    let mut views_by_unit: std::collections::HashMap<_, _> = units
+        .iter(world)
+        .filter(|(_, auras, _)| auras.dirty)
+        .map(|(entity, auras, _)| {
+            let views = auras
+                .iter()
+                .map(|aura| {
+                    let mut view = aura.view(now);
+                    view.overrides = overrides::view_overrides(world, entity, aura);
+                    view
+                })
+                .collect::<Vec<_>>();
+            (entity, views)
+        })
+        .collect();
     let mut changed = Vec::new();
     for (entity, mut auras, mut view) in units.iter_mut(world) {
         if !auras.dirty {
             continue;
         }
         auras.bypass_change_detection().dirty = false;
-        let views: Vec<AuraView> = auras.iter().map(|aura| aura.view(now)).collect();
+        let views = views_by_unit
+            .remove(&entity)
+            .expect("dirty unit has a prepared aura view");
         if view.auras != views {
             view.auras = views;
             changed.push(entity);
@@ -1532,6 +1552,8 @@ mod tests;
 #[cfg(test)]
 mod defensives_tests;
 
+#[cfg(test)]
+mod override_tests;
 #[cfg(test)]
 mod spell_auras_tests;
 

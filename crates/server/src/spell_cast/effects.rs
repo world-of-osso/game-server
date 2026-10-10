@@ -58,6 +58,8 @@ pub const EFFECT_FORCE_CAST: u32 = 140;
 /// TC a352b1fa SharedDefines.h:1549; SpellEffects.cpp:295 uses EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
+pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
+pub const EFFECT_LEAP: u32 = 29;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 
 /// Triggered spells may trigger further spells up to this depth.
@@ -88,6 +90,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
             crate::death::resurrection::send_offer
         }
         EFFECT_ENERGIZE => energize,
+        41 => super::teleport::jump_to_unit,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
@@ -98,7 +101,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
         EFFECT_REMOVE_AURA_2 => remove_aura,
-        EFFECT_TELEPORT_UNITS => teleport_units,
+        EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
@@ -118,6 +121,7 @@ pub type CastEffectHandler = fn(&mut World, &EffectCtx, &SpellEffect);
 /// whatever units the effect's targets select.
 pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
     Some(match effect_id {
+        254 => super::teleport::jump_to_destination,
         crate::meeting_stone::ritual::EFFECT_TRANS_DOOR => {
             crate::meeting_stone::ritual::effect_trans_door
         }
@@ -899,8 +903,52 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
 
 /// 252 TELEPORT_UNITS (`Spell::EffectTeleportUnits`): the unit moves to the effect's
 /// destination facing its orientation (`NearTeleportTo`).
-fn teleport_units(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
-    let Some(dest) = ctx.dest else {
+pub(super) fn teleport_units(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+) {
+    if effect.implicit_targets.contains(&17) {
+        let destination = world
+            .resource::<super::teleport_positions::SpellTargetPositions>()
+            .0
+            .get(&(ctx.spell.id, effect.index))
+            .copied();
+        if let Some(destination) = destination {
+            crate::maps::teleport_to(
+                world,
+                target,
+                destination,
+                crate::maps::TeleportOptions::default(),
+            );
+        } else {
+            error!(
+                "Spell {}: effect {} has no fixed destination",
+                ctx.spell.id, effect.index
+            );
+        }
+        return;
+    }
+    if effect.implicit_targets.contains(&9) {
+        if let Some(bind) = world.get::<super::homebind::HomeBind>(target).copied() {
+            crate::maps::teleport_to(
+                world,
+                target,
+                bind.0,
+                crate::maps::TeleportOptions::default(),
+            );
+        } else {
+            error!("Spell {}: target has no homebind", ctx.spell.id);
+        }
+        return;
+    }
+    let destination = if effect.implicit_targets.contains(&55) {
+        super::teleport::forward_destination(world, ctx, target)
+    } else {
+        ctx.dest
+    };
+    let Some(dest) = destination else {
         debug!(
             "Spell {}: TELEPORT_UNITS without a destination",
             ctx.spell.id

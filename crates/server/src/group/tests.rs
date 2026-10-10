@@ -844,6 +844,7 @@ fn member_states_carry_live_health_power_death_and_debuffs_for_every_member() {
     );
 
     let debuff = AuraView {
+        overrides: Vec::new(),
         instance_id: 1,
         spell_id: 589,
         caster: None,
