@@ -359,7 +359,8 @@ fn flying_to_sentinel_hill_pays_rides_the_gryphon_and_lands_on_the_path_end() {
     assert_eq!(
         h.app.world().get::<Mounted>(h.player),
         Some(&Mounted {
-            mount_display_id: 6852
+            mount_display_id: 6852,
+            ..Default::default()
         }),
         "Riding Gryphon"
     );

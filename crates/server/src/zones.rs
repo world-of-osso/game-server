@@ -426,6 +426,7 @@ fn insert_addon_components(entity: &mut EntityCommands, addon: &CreatureAddon) {
     if addon.mount != 0 {
         entity.insert(Mounted {
             mount_display_id: addon.mount,
+            ..Default::default()
         });
     }
     if !addon.auras.is_empty() {
