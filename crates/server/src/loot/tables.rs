@@ -138,14 +138,17 @@ impl LootTables {
         entry: u32,
         items: &ItemTemplates,
         rng: &mut impl Rng,
-    ) -> RolledLoot {
+    ) -> Option<RolledLoot> {
         let template = &self.disenchant[&entry];
         let mut drops = Vec::new();
         self.process(template, items, &|_| false, rng, &mut drops);
-        RolledLoot {
+        if drops.is_empty() {
+            return None;
+        }
+        Some(RolledLoot {
             items: drops,
             copper: 0,
-        }
+        })
     }
 
     /// The loot id and money of `entry` in a copy at `difficulty_id` (0 outside
