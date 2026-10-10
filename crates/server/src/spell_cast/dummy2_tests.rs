@@ -111,12 +111,17 @@ fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(100784, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(
-        h.inbox
-            .cooldowns
-            .iter()
-            .any(|update| update.spell_id == 113656)
+    let update = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|update| update.spell_id == 113656)
+        .expect("Fists of Fury cooldown update");
+    assert_eq!(
+        update.duration_ms, 24000,
+        "keep full timer duration for the client sweep"
     );
+    assert!(update.remaining_ms < update.duration_ms);
     let after = h
         .app
         .world()
