@@ -1,5 +1,106 @@
 use super::*;
 
+#[test]
+fn pet_battle_arcane_explosion_follows_active_slot_and_other_slots() {
+    let c = catalog();
+    for active in 0..3 {
+        let mut b = battle(&c, 5, 7, [299, 110, 123]);
+        b.teams[1].active = active;
+        let (b, e) = use_ability(&b, &c, 299);
+        assert_eq!(damage(&e), vec![60, 36, 36]);
+        for slot in 0..3 {
+            assert_eq!(
+                b.teams[1].pets[slot].health,
+                10000 - if slot == active { 60 } else { 36 }
+            );
+        }
+    }
+}
+
+#[test]
+fn pet_battle_deep_burn_bonus_requires_burning_target() {
+    let c = catalog();
+    for (burning, expected) in [(0, 78), (1, 156)] {
+        let mut b = battle(&c, 6, 7, [1407, 110, 123]);
+        b.teams[1].pets[0]
+            .states
+            .insert(c.state_id("Mechanic_IsBurning").unwrap(), burning);
+        assert_eq!(damage(&use_ability(&b, &c, 1407).1), vec![expected]);
+    }
+}
+
+#[test]
+fn pet_battle_kick_interrupts_only_when_acting_first() {
+    let c = catalog();
+    for (speed, interrupted) in [(200, true), (50, false)] {
+        let mut b = battle(&c, 0, 7, [307, 110, 123]);
+        b.teams[0].pets[0].stats.speed = speed;
+        let (_, e) = b
+            .step(
+                &c,
+                [Action::Ability(307), Action::Ability(110)],
+                &mut Fixed(500000),
+            )
+            .unwrap();
+        assert_eq!(
+            e.contains(&Event::Skipped(PetRef { team: 1, slot: 0 })),
+            interrupted
+        );
+        assert_eq!(damage(&e).len(), if interrupted { 1 } else { 2 });
+    }
+}
+
+#[test]
+fn pet_battle_deep_freeze_chilled_stun_and_critter_immunity() {
+    let c = catalog();
+    for (family, chilled, skipped) in [(7, 0, false), (7, 1, true), (4, 1, false)] {
+        let mut b = battle(&c, 6, family, [481, 110, 123]);
+        b.teams[0].pets[0].stats.speed = 200;
+        b.teams[1].pets[0]
+            .states
+            .insert(c.state_id("Mechanic_IsChilled").unwrap(), chilled);
+        let (_, e) = b
+            .step(
+                &c,
+                [Action::Ability(481), Action::Ability(110)],
+                &mut Fixed(500000),
+            )
+            .unwrap();
+        assert_eq!(
+            e.contains(&Event::Skipped(PetRef { team: 1, slot: 0 })),
+            skipped
+        );
+    }
+}
+
+#[test]
+fn pet_battle_leech_life_heals_after_hit_only_and_web_doubles() {
+    let c = catalog();
+    for (webbed, accuracy, expected) in [(0, 0, 60), (1, 0, 120), (1, -100, 0)] {
+        let mut b = battle(&c, 7, 7, [383, 110, 123]);
+        b.teams[0].pets[0].health = 8000;
+        b.teams[0].pets[0]
+            .states
+            .insert(c.state_id("Stat_Accuracy").unwrap(), accuracy);
+        b.teams[1].pets[0]
+            .states
+            .insert(c.state_id("Mechanic_IsWebbed").unwrap(), webbed);
+        let (b, e) = use_ability(&b, &c, 383);
+        assert_eq!(b.teams[0].pets[0].health, 8000 + expected);
+        if expected > 0 {
+            let dealt = e
+                .iter()
+                .position(|e| matches!(e, Event::Damage { .. }))
+                .unwrap();
+            let healed = e
+                .iter()
+                .position(|e| matches!(e, Event::Heal { .. }))
+                .unwrap();
+            assert!(dealt < healed);
+        }
+    }
+}
+
 fn use_ability(b: &Battle, c: &Catalog, id: u32) -> (Battle, Vec<Event>) {
     b.step(c, [Action::Ability(id), Action::Pass], &mut Fixed(500000))
         .unwrap()
