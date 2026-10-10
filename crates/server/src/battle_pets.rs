@@ -462,6 +462,66 @@ mod tests {
     }
 
     #[test]
+    fn companion_follows_owner_on_authoritative_movement_ticks() {
+        use shared::components::Position;
+        let (mut app, owner, id) = follower_app();
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(100),
+        ));
+        app.init_resource::<ReplicationDirtyQueue>();
+        app.init_resource::<crate::interest::InterestDirtyQueue>();
+        crate::creature_ai::install_follow_fixture(&mut app);
+        let pet = summon_companion(app.world_mut(), owner, id).unwrap();
+        app.update();
+        let before = *app.world().get::<Position>(pet).unwrap();
+        app.world_mut().get_mut::<Position>(owner).unwrap().x += 20.0;
+        for _ in 0..10 {
+            app.update();
+        }
+        let after = app.world().get::<Position>(pet).unwrap();
+        assert!(
+            after.x > before.x + 1.0,
+            "follower did not move: {before:?} -> {after:?}"
+        );
+        assert_eq!(after.y, before.y);
+    }
+
+    #[test]
+    fn another_character_loads_the_same_authenticated_account_journal() {
+        let db = crate::persistence::temp_database();
+        let (first, _) = crate::persistence::create_character(&db, 42, "Petone", 1, 1).unwrap();
+        let (second, _) = crate::persistence::create_character(&db, 42, "Pettwo", 1, 1).unwrap();
+        assert_ne!(first, second);
+        let mut journal = PetJournal::default();
+        journal.add_with_breed(39, 7, PetQuality::Rare, 4).unwrap();
+        save_journal(&db, 42, &journal);
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(GameDatabase { db });
+        app.insert_resource(PetCatalog::load(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../data/battle-pets.json"
+        )));
+        app.add_systems(Update, load_account_journals);
+        let owner = app
+            .world_mut()
+            .spawn(crate::collection::default_collection_state())
+            .id();
+        app.world_mut().spawn((
+            Authenticated { account_id: 42 },
+            InWorld {
+                character_id: second,
+            },
+            PlayerLink(owner),
+        ));
+        app.update();
+        let loaded = &app.world().get::<AccountPetJournal>(owner).unwrap().journal;
+        assert_eq!(loaded, &journal);
+        assert_eq!(loaded.pets[0].level, 7);
+        assert_eq!(loaded.pets[0].quality, PetQuality::Rare);
+    }
+
+    #[test]
     fn account_journal_survives_database_close_and_character_change() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("journal.redb");
