@@ -32,7 +32,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(false);
         }
         match effect.property {
-            22 | 116 | 157 | 158 | 177 => Ok(true),
+            22 | 116 | 157 | 158 | 159 | 177 => Ok(true),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -172,7 +172,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             136 => self.cleanse(caster),
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
-                let target = if super::rules::damages_enemy_team(ability) && effect.property == 24 {
+                let target = if super::rules::damages_enemy_team(ability) {
                     other_team_slot(target, effect.order)
                 } else {
                     target
@@ -257,7 +257,14 @@ impl<R: BattleRng> Runtime<'_, R> {
                 Ok(true)
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
-            26 | 28 | 50 | 52 | 54 | 63 => self.add_aura_effect(caster, target, effect),
+            26 | 28 | 50 | 52 | 54 | 63 => {
+                let target = if matches!(ability, 527 | 1010) && effect.property == 50 {
+                    other_team_slot(target, effect.order.div_ceil(2))
+                } else {
+                    target
+                };
+                self.add_aura_effect(caster, target, effect)
+            }
             49 => self.remove_aura_effect(caster, effect),
             _ => Err(format!(
                 "unsupported property {} effect {}",
@@ -933,7 +940,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             applied_round: self.battle.round,
             tick_first,
             team_bound: effect.property == 63 && effect.aura != 267
-                || matches!(effect.aura, 333 | 1904),
+                || matches!(effect.aura, 189 | 333 | 1904),
             weather: effect.property == 80,
             charges: self
                 .catalog

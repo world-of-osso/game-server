@@ -57,13 +57,15 @@ pub fn supported_property(property: u32) -> bool {
             | 131
             | 172
             | 226
+            | 159
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
 pub(super) fn damages_enemy_team(ability: u32) -> bool {
     matches!(
         ability,
-        299 | 404
+        189 | 299
+            | 404
             | 419
             | 923
             | 1031
@@ -102,7 +104,7 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            if name == "Mechanic_IsObject" && ability != 333 {
+            if name == "Mechanic_IsObject" && !matches!(ability, 189 | 333) {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
             if !matches!(
@@ -235,6 +237,10 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
     }
     let supported = match effect.property {
         22 => true, // Points fields supply tooltip variables, not an HP operation.
+        // Only the two described three-enemy Stench graphs establish these selectors.
+        159 => {
+            p.iter().all(|v| *v == 0) && matches!(catalog.turns[&effect.turn].ability, 527 | 1010)
+        }
         131 => effect.aura != 0 && p[0] == 0 && p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
         172 => {
             effect.aura != 0
