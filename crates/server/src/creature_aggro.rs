@@ -290,6 +290,7 @@ type Engaged<'w, 's> = Query<
         Option<&'static mut CombatTarget>,
         &'static InMap,
         Option<&'static crate::scripted_ai::ReactState>,
+        Option<&'static crate::auras::ActiveAuras>,
         (
             Option<&'static SpawnPoint>,
             Option<&'static LastDamagedTime>,
@@ -319,7 +320,7 @@ pub(crate) fn note_damage_taken(world: &mut World, victim: Entity) {
 /// unless it took direct damage in the last `MAX_AGGRO_RESET_SECS`, a creature only
 /// keeps attacking a victim within `HOME_REACH` of its home. A rooted or stationary
 /// creature thus drops a player who walks away and, with no victim left, evades.
-/// Not modelled: world bosses (always checked), taunt auras, `CanNotReachTarget`
+/// Not modelled: world bosses (always checked), `CanNotReachTarget`
 /// (no path data).
 pub(crate) fn within_reach_of_home(
     home: Option<&SpawnPoint>,
@@ -362,6 +363,7 @@ pub(crate) fn update_victim_system(
         combat_target,
         map,
         react,
+        auras,
         (home, last_damaged),
     ) in &mut engaged
     {
@@ -400,7 +402,19 @@ pub(crate) fn update_victim_system(
         let top_in_melee = Entity::try_from_bits(top)
             .and_then(|top| victims.get(top).ok())
             .is_some_and(|(top_pos, ..)| distance(position, top_pos) <= ATTACK_DISTANCE);
-        let Some(victim) = threat.aggro_target(current, top_in_melee) else {
+        let taunted = auras.and_then(|auras| {
+            auras
+                .iter()
+                .filter(|aura| {
+                    aura.effects
+                        .iter()
+                        .any(|effect| effect.aura_type == crate::auras::handlers::MOD_TAUNT)
+                        && valid(aura.caster.to_bits())
+                })
+                .last()
+                .map(|aura| aura.caster.to_bits())
+        });
+        let Some(victim) = taunted.or_else(|| threat.aggro_target(current, top_in_melee)) else {
             continue;
         };
         let attacking = combat_target
@@ -548,7 +562,19 @@ pub(crate) fn add_school_threat(
     amount: f32,
     school: u32,
 ) {
-    let amount = amount * threat_multiplier(world, attacker, school);
+    let taunt_multiplier = world
+        .get::<crate::auras::ActiveAuras>(creature)
+        .map_or(1.0, |auras| {
+            auras
+                .iter()
+                .filter(|aura| aura.caster == attacker)
+                .flat_map(|aura| &aura.effects)
+                .filter(|effect| effect.aura_type == crate::auras::handlers::MOD_TAUNT)
+                .fold(1.0, |multiplier, effect| {
+                    multiplier * (1.0 + effect.amount / 100.0)
+                })
+        });
+    let amount = amount * threat_multiplier(world, attacker, school) * taunt_multiplier;
     if creature == attacker || !can_engage(world, creature) {
         return;
     }
@@ -575,6 +601,31 @@ pub(crate) fn add_school_threat(
             crate::scripted_ai::Hook::JustEngagedWith(attacker),
         );
     }
+}
+
+///114 ATTACK_ME: match the highest threat without adding arbitrary threat,
+///then attack the caster. Aura11 holds selection independently until removal.
+///Units without a creature threat list (including players) cannot be forced.
+pub(crate) fn taunt(world: &mut World, creature: Entity, caster: Entity) {
+    if !can_engage(world, creature) {
+        return;
+    }
+    let table = world
+        .get::<ThreatTable>(creature)
+        .expect("engageable threat list");
+    let top = table.top_threat().map_or(0.0, |entry| entry.threat);
+    let delta = (top - table.threat_for(caster.to_bits())).max(0.0);
+    world
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .add_threat(caster.to_bits(), delta);
+    attack_start(world, creature, caster);
+    world.entity_mut(creature).insert((
+        CreatureState::Pursuing {
+            target: caster.to_bits(),
+        },
+        CombatTarget(Some(caster)),
+    ));
 }
 
 /// `Unit::Attack`: "Remove emote and stand state - will be restored on creature reset"

@@ -74,8 +74,39 @@ const BRAMBLES: u32 = 203_953;
 const BRAMBLES_DAMAGE: u32 = 213_709;
 const DRAIN_SOUL: u32 = 198_590;
 const DRAIN_SOUL_ENERGIZE: u32 = 205_292;
+const SURVIVAL_INSTINCTS: u32 = 61336;
+const SURVIVAL_INSTINCTS_BUFF: u32 = 50322;
+const BREATH_OF_FIRE_BURN: u32 = 123725;
+
+///115181 names123725s2 as reduced damage dealt to the casting Monk.
+///Consume that named field for this spell only; do not redefine generic269.
+pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, victim: Entity) -> f32 {
+    world
+        .get::<super::ActiveAuras>(attacker)
+        .map_or(1.0, |auras| {
+            auras
+                .iter()
+                .filter(|aura| aura.spell_id == BREATH_OF_FIRE_BURN && aura.caster == victim)
+                .flat_map(|aura| &aura.effects)
+                .filter(|effect| effect.index == 1)
+                .map(|effect| 1.0 + effect.amount / 100.0)
+                .product()
+        })
+}
+
+pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
+    spell_id == BREATH_OF_FIRE_BURN && effect_index == 1
+}
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        SURVIVAL_INSTINCTS,
+        AuraScript {
+            on_apply: Some(apply_survival_instincts),
+            on_remove: Some(remove_survival_instincts),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         DRAIN_SOUL,
         AuraScript {
@@ -142,6 +173,32 @@ fn drain_soul_shard_on_death(
             1,
         );
     }
+}
+
+/// TDB/TC spell_dru_survival_instincts:61336 effect0 owns50322's
+/// base damage reduction for the parent's lifetime. Exclude unknown Dummy2.
+fn apply_survival_instincts(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+    super::apply_aura(
+        world,
+        &super::AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: SURVIVAL_INSTINCTS_BUFF,
+            effect_mask: 1,
+            source: super::AuraSource::Cast,
+        },
+    );
+}
+
+fn remove_survival_instincts(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    reason: super::RemoveReason,
+) {
+    super::remove_auras(world, unit, reason, |aura| {
+        aura.spell_id == SURVIVAL_INSTINCTS_BUFF && aura.caster == unit
+    });
 }
 
 fn remove_turtle_pacify(
