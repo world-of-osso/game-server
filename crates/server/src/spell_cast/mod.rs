@@ -146,6 +146,7 @@ impl Plugin for SpellCastPlugin {
                     summon::expire_summons.after(advance_casts),
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
+                    scripts::update_ground_pulses.after(advance_casts),
                 ),
             );
     }
@@ -441,6 +442,7 @@ fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
+        || scripts::cast_effect(spell.id, effect.index).is_some()
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
@@ -1637,7 +1639,9 @@ fn resolve_effects(
             }
             continue;
         }
-        if let Some(handler) = effects::cast_handler(effect.effect) {
+        if let Some(handler) = scripts::cast_effect(spell.id, effect.index)
+            .or_else(|| effects::cast_handler(effect.effect))
+        {
             handler(world, &ctx, effect);
             continue;
         }

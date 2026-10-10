@@ -104,6 +104,7 @@ fn selector(id: u32) -> Option<Selector> {
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
         28 => Selector::DynObj(Enemy),
+        29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
         77 => Selector::ChannelTarget,
         60 => Selector::ConeEntry,
