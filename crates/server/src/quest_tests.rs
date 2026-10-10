@@ -581,6 +581,47 @@ fn transmogacq_quest_rewards_collect_chosen_and_unchosen_appearances() {
 }
 
 #[test]
+fn transmogacq_quest_does_not_collect_unchosen_cosmetic_rewards() {
+    let mut app = setup_app().unwrap();
+    let client = spawn_client(&mut app, 10);
+    // Can't Get Enough Turkey (14048), Ellen Moore (34708), 20 Slow-Roasted Turkey (44838).
+    let giver = spawn_npc(&mut app, 34708, 2.0);
+    let mut inventory = persistence::load_inventory(db(&app), client.character_id);
+    inventory.items.push(InventoryItemData {
+        item_guid: persistence::next_id(db(&app), "item_instance"),
+        item_id: 44838,
+        name: "Slow-Roasted Turkey".into(),
+        quality: 1,
+        required_level: 0,
+        stack_count: 20,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    });
+    persistence::save_inventory(db(&app), client.character_id, &inventory);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, giver, 14048);
+    let errors = received::<QuestFailed>(&mut app, &client);
+    assert!(errors.is_empty(), "{errors:?}");
+    turn_in(&mut app, &client, giver, 14048, Some(3));
+    let errors = received::<QuestFailed>(&mut app, &client);
+    assert!(errors.is_empty(), "{errors:?}");
+    assert!(
+        bag_items(&app, &client).contains(&(46824, 1)),
+        "selected Pilgrim's Robe"
+    );
+    let appearances = crate::persistence::appearance_store::load_account_appearances(db(&app), 1);
+    assert!(
+        appearances.has(11705),
+        "selected BoP cosmetic is learned by ownership"
+    );
+    assert!(
+        !appearances.has(11702),
+        "unchosen Pilgrim's Attire is cosmetic, excluded from all-option grants"
+    );
+    crate::appearance_collection::tests::assert_restart(app, 1, &[(11705, true), (11702, false)]);
+}
+
+#[test]
 fn abandoning_beating_them_back_removes_it_and_mcbride_offers_it_again() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
