@@ -182,6 +182,55 @@ fn defensives_monk_fortifying_brew_reduces_fire_20_percent() {
 }
 
 #[test]
+fn defensives_monk_brew_health_survives_stat_updates() {
+    let mut h = crate::spell_cast::test_harness::harness_with(
+        Vec::new(),
+        &[115_203, 120_954, FIREBALL],
+        10,
+        true,
+    )
+    .expect("real world.db and computed stats required");
+    h.advance(3);
+    let base_max = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap()
+        .max;
+    let wounded = (base_max * 0.7).floor();
+    let bonus = (base_max * 0.2).floor();
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.caster)
+        .unwrap()
+        .current = wounded;
+    h.cast_and_deliver(115_203, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(3);
+    let health = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(health.max, base_max + bonus);
+    assert_eq!(health.current, wounded + bonus);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 120_954,
+    );
+    h.advance(3);
+    let health = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(health.max, base_max);
+    assert_eq!(health.current, wounded);
+}
+
+#[test]
 fn defensives_rogue_evasion_increases_dodge() {
     let mut h =
         crate::spell_cast::test_harness::harness_with(Vec::new(), &[5277, FIREBALL], 4, true)
@@ -208,6 +257,27 @@ fn defensives_rogue_evasion_increases_dodge() {
         .defense
         .dodge;
     assert_eq!(after - before, 200.0);
+    assert_eq!(incoming_melee(&mut h), 0.0);
+    h.advance(3);
+    assert!(h.inbox.log.iter().any(
+        |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Dodge)
+    ));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 5277,
+    );
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .defense
+            .dodge,
+        before
+    );
 }
 
 fn shield_remaining(h: &Harness) -> f32 {

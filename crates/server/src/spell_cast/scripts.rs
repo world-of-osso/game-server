@@ -80,43 +80,12 @@ fn chaos_strike_initial(world: &mut World, caster: Entity, target: Entity, depth
 /// RoleplayCore spell_monk_fortifying_brew::HandleDummy:
 /// https://github.com/KamiliaBlow/RoleplayCore/blob/master/src/server/scripts/Spells/spell_monk.cpp
 fn fortifying_brew(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
-    let store = world.resource::<crate::spell_info::SpellStore>();
-    let (Some(cast), Some(buff)) = (store.get(FORTIFYING_BREW), store.get(FORTIFYING_BREW_BUFF))
-    else {
-        warn!("Fortifying Brew requires spells 115203 and 120954");
+    let Some(buff) = customize_fortifying_brew(world, caster) else {
+        warn!(
+            "Fortifying Brew requires caster health and spells 115203/120954 with health/damage effects"
+        );
         return;
     };
-    let (Some(health_effect), Some(damage_effect)) = (
-        cast.effects.iter().find(|effect| effect.index == 0),
-        cast.effects.iter().find(|effect| effect.index == 1),
-    ) else {
-        warn!("Fortifying Brew requires health and damage DUMMY effects");
-        return;
-    };
-    let health_percent = health_effect.base_points;
-    let damage_percent = damage_effect.base_points;
-    let mut buff = buff.clone();
-    let Some(health) = world.get::<shared::components::Health>(caster) else {
-        return;
-    };
-    let existing = world
-        .get::<crate::auras::ActiveAuras>(caster)
-        .and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == FORTIFYING_BREW_BUFF)
-        });
-    let previous_bonus = existing
-        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
-        .map_or(0.0, |effect| effect.amount);
-    let health_bonus = ((health.max - previous_bonus) * health_percent / 100.0).floor();
-    for effect in &mut buff.effects {
-        match effect.index {
-            0 => effect.base_points = health_bonus,
-            1 => effect.base_points = damage_percent,
-            _ => {}
-        }
-    }
     // Only the two requested defensive effects; stagger, talents and cosmetic
     // size effects are not implemented by this bounded bridge.
     crate::auras::apply_aura_from_spell(
@@ -130,6 +99,46 @@ fn fortifying_brew(world: &mut World, caster: Entity, _target: Entity, _depth: u
         },
         &buff,
     );
+}
+
+fn customize_fortifying_brew(world: &World, caster: Entity) -> Option<SpellInfo> {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let cast = store.get(FORTIFYING_BREW)?;
+    let mut buff = store.get(FORTIFYING_BREW_BUFF)?.clone();
+    let health_percent = cast
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)?
+        .base_points;
+    let damage_percent = cast
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)?
+        .base_points;
+    let health_bonus = snapshot_brew_health_bonus(world, caster, health_percent)?;
+    for effect in &mut buff.effects {
+        match effect.index {
+            0 => effect.base_points = health_bonus,
+            1 => effect.base_points = damage_percent,
+            _ => {}
+        }
+    }
+    Some(buff)
+}
+
+fn snapshot_brew_health_bonus(world: &World, caster: Entity, percent: f32) -> Option<f32> {
+    let health = world.get::<shared::components::Health>(caster)?;
+    let existing = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == FORTIFYING_BREW_BUFF)
+        });
+    let previous_bonus = existing
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    Some(((health.max - previous_bonus) * percent / 100.0).floor())
 }
 
 /// Switch Flight Style 436854 (the Riding skill line's ability, spelldesc
