@@ -135,7 +135,10 @@ fn check_selection(items: &[u64]) -> Result<(), ScrapFailure> {
     Ok(())
 }
 
-pub(crate) fn check_items(world: &World, request: &ScrapRequest) -> Result<(), ScrapFailure> {
+pub(crate) fn load_and_check_bag_items(
+    world: &World,
+    request: &ScrapRequest,
+) -> Result<(), ScrapFailure> {
     check_selection(&request.items)?;
     let character = world
         .get::<ClientId>(request.player)
@@ -182,7 +185,7 @@ fn reject_unavailable_scrap_requests(world: &mut World) {
         .collect();
     for request in requests {
         let result = check_machine(world, &request)
-            .and_then(|()| check_items(world, &request))
+            .and_then(|()| load_and_check_bag_items(world, &request))
             .and(Err(ScrapFailure::LootUnavailable));
         let response = ScrapResponse {
             player: request.player,

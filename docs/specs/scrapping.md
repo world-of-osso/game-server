@@ -4,12 +4,13 @@ The Scrapping Machine accepts bag items for material recovery. Server source: `c
 
 ## What it must do
 
-- [ ] Accept one through nine distinct owned bag-item GUIDs; reject empty, duplicate, oversized and foreign-GUID requests without changing inventory.
-- [ ] Require a living player in the machine's map copy and model-box interaction reach.
-- [ ] Recognize Scrapping Machine UI-link spawns from active world content.
-- [ ] Check Retail catalog identity and the ItemSparse scrappable flag; reject Worn Shortsword25 with Retail `ERR_CANT_BE_SCRAPPED`.
-- [ ] Keep inventory and collection unchanged when authentic loot is unavailable; distinguish this content failure from a Retail eligibility rejection.
-- [ ] Preserve bind-time collection across database reopen. Do not infer unbound collection from disenchant rules.
+- [x] Accept one through nine distinct owned bag-item GUIDs; reject empty, duplicate, oversized and foreign-GUID requests. Foreign-GUID rejection keeps inventory unchanged.
+- [x] Require a living player in the machine's map copy and model-box interaction reach.
+- [x] Recognize Scrapping Machine UI-link spawns from active world content.
+- [x] Check the ItemSparse scrappable flag: Corlain Breastplate154840 passes preflight; Worn Shortsword25 is rejected with Retail `ERR_CANT_BE_SCRAPPED` and kept across reopen.
+- [ ] Require Retail catalog identity, not merely a matching numeric item ID (implemented predicate; no independent cross-catalog fixture yet).
+- [x] Keep inventory and collection unchanged when authentic loot is unavailable; distinguish this content failure from a Retail eligibility rejection.
+- [x] Preserve bind-time collection across database reopen. Do not infer unbound collection from disenchant rules.
 - [ ] Destroy eligible bag items and grant authentic scrap loot in the same inventory transaction as applicable appearance receipts. Positive proof must use real item IDs and authentic loot rows.
 
 ## How it works

@@ -149,7 +149,7 @@ fn scrapping_scrappable_boe_passes_preflight_but_missing_loot_keeps_item_and_app
     let guid = h.add_item(CORLAIN_BREASTPLATE);
     let request = h.request(vec![guid]);
     assert!(check_machine(h.app.world(), &request).is_ok());
-    check_items(h.app.world(), &request).expect("eligible owned Corlain breastplate");
+    load_and_check_bag_items(h.app.world(), &request).expect("eligible owned Corlain breastplate");
     let before = h.inventory();
     assert!(matches!(h.send(vec![guid]), ScrapFailure::LootUnavailable));
     assert_eq!(h.inventory(), before);
