@@ -22,7 +22,7 @@ TABLES = {
 
 
 def column_type(name):
-    if name.endswith('_lang') or name.startswith('ParamLabel_') or name == 'LuaName':
+    if name.endswith('_lang') or name.startswith('ParamLabel_') or name in ('LuaName', 'SceneScriptFunction'):
         return 'TEXT'
     if name == 'StateMultiplier':
         return 'REAL'
@@ -54,11 +54,31 @@ def read_export(path):
 
 def import_tables(source: Path, database: Path) -> dict[str, int]:
     exports = [(table, *read_export(source / f'{name}.csv')) for name, table in TABLES.items()]
+    return import_exports(exports, database)
+
+
+def import_wild_tables(source: Path, xp_file: Path, database: Path) -> dict[str, int]:
+    tables = {
+        'BattlePetSpecies': 'battle_pet_species_metadata',
+        'BattlePetDisplayOverride': 'battle_pet_display_override',
+        'BattlePetVisual': 'battle_pet_visual',
+    }
+    exports = [(table, *read_export(source / f'{name}.csv')) for name, table in tables.items()]
+    with xp_file.open(newline='') as handle:
+        xp_rows = [[int(row['LEVEL']), int(row['wins']) * int(row['xp'])]
+                   for row in csv.DictReader(handle, delimiter='\t')]
+    if any(level < 1 or xp <= 0 for level, xp in xp_rows):
+        raise ValueError(f'{xp_file}: invalid pet XP level/threshold')
+    exports.append(('battle_pet_xp', ['level', 'next_level_xp'], xp_rows))
+    return import_exports(exports, database)
+
+
+def import_exports(exports, database):
     counts = {}
     with sqlite3.connect(database) as db:
         db.execute('BEGIN IMMEDIATE')
         for table, headers, rows in exports:
-            columns = ','.join(f'"{h}" {column_type(h)} NOT NULL' + (' PRIMARY KEY' if h == 'ID' else '') for h in headers)
+            columns = ','.join(f'"{h}" {column_type(h)} NOT NULL' + (' PRIMARY KEY' if h in ('ID', 'level') else '') for h in headers)
             db.execute(f'DROP TABLE IF EXISTS {table}')
             db.execute(f'CREATE TABLE {table} ({columns})')
             parameters = ','.join('?' for _ in headers)
@@ -71,8 +91,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('csv_directory', type=Path)
     parser.add_argument('database', type=Path)
+    parser.add_argument('--wild-xp', type=Path, help='Also import species metadata, visuals and this local BattlePetXP game table')
     args = parser.parse_args()
-    print(json.dumps(import_tables(args.csv_directory, args.database), sort_keys=True))
+    counts = import_tables(args.csv_directory, args.database)
+    if args.wild_xp:
+        counts.update(import_wild_tables(args.csv_directory, args.wild_xp, args.database))
+    print(json.dumps(counts, sort_keys=True))
 
 
 if __name__ == '__main__':

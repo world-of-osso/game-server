@@ -27,6 +27,8 @@ class BattleTableImportTests(unittest.TestCase):
             'BattlePetAbilityState': dict(ID=1, BattlePetStateID=18, Value=0, BattlePetAbilityID=110),
         }
         self.write_exports()
+        self.xp_table = self.root / 'BattlePetXP.txt'
+        self.xp_table.write_text('LEVEL\twins\txp\n1\t1\t50\n2\t2\t55\n')
         with sqlite3.connect(self.database) as db:
             db.execute('CREATE TABLE toy(ID INTEGER PRIMARY KEY)')
             db.execute('INSERT INTO toy VALUES(99)')
@@ -63,6 +65,23 @@ class BattleTableImportTests(unittest.TestCase):
             self.module.import_tables(self.root, self.database)
         with sqlite3.connect(self.database) as db:
             self.assertEqual(db.execute('SELECT Name_lang FROM battle_pet_ability').fetchone()[0], 'Bite')
+
+    def test_wild_metadata_and_xp_import_preserve_existing_journal_species(self):
+        self.rows.update({
+            'BattlePetSpecies': dict(ID=378, CreatureID=61080, PetTypeEnum=4, Flags=26, SourceTypeEnum=4, IconFileDataID=254857),
+            'BattlePetDisplayOverride': dict(ID=1, PlayerConditionID=0, CreatureDisplayInfoID=328, PriorityCategory=0, BattlePetSpeciesID=378),
+            'BattlePetVisual': dict(ID=1, SceneScriptFunction='Play', SpellVisualID=0, CastMilliSeconds=0, ImpactMilliSeconds=0, RangeTypeEnum=0, Flags=0, SceneScriptPackageID=0),
+        })
+        self.write_exports()
+        with sqlite3.connect(self.database) as db:
+            db.execute('CREATE TABLE battle_pet_species(species_id INTEGER PRIMARY KEY, name TEXT)')
+            db.execute("INSERT INTO battle_pet_species VALUES(39, 'Mechanical Squirrel')")
+        counts = self.module.import_wild_tables(self.root, self.xp_table, self.database)
+        self.assertEqual(counts['battle_pet_species_metadata'], 1)
+        with sqlite3.connect(self.database) as db:
+            self.assertEqual(db.execute('SELECT CreatureID,PetTypeEnum,SourceTypeEnum FROM battle_pet_species_metadata').fetchone(), (61080, 4, 4))
+            self.assertEqual(db.execute('SELECT level,next_level_xp FROM battle_pet_xp ORDER BY level').fetchall(), [(1, 50), (2, 110)])
+            self.assertEqual(db.execute('SELECT name FROM battle_pet_species').fetchone()[0], 'Mechanical Squirrel')
 
     def test_missing_export_fails_without_creating_partial_tables(self):
         (self.root / 'BattlePetAbilityState.csv').unlink()
