@@ -49,6 +49,94 @@ fn hits(h: &Harness, id: u32, unit: Entity) -> Vec<i32> {
         .map(|e| e.amount)
         .collect()
 }
+fn ground(h: &mut Harness, point: [f32; 3]) {
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SpellCastIntent>>(h.connection)
+        .unwrap()
+        .send::<CombatChannel>(SpellCastIntent {
+            spell_id: Some(5740),
+            spell: String::new(),
+            target_entity: None,
+            destination: Some(point),
+            target_item_guid: None,
+            witness: None,
+        });
+    h.advance(3);
+}
+
+#[test]
+fn dummy11_rain_of_fire_overlaps_keep_independent_clocks() {
+    let mut h = harness(Vec::new(), &[5740, 42223], 9).unwrap();
+    let first = spawn_npc(&mut h.app, 21.0);
+    let second = spawn_npc(&mut h.app, 41.0);
+    h.set_power(PowerType::SoulShards, 50.0);
+    ground(&mut h, [20.0, 0.0, 0.0]);
+    h.advance(35);
+    h.set_power(PowerType::SoulShards, 50.0);
+    ground(&mut h, [40.0, 0.0, 0.0]);
+    landed(&h);
+    h.advance(180);
+    assert_eq!(hits(&h, 42223, first), vec![60; 8]);
+    assert_eq!(hits(&h, 42223, second), vec![60; 8]);
+}
+
+#[test]
+fn dummy11_cancelled_voidform_never_launches_volley() {
+    let mut h = harness(Vec::new(), &[228260, 194249, 1242173, 1242189], 5).unwrap();
+    h.cast_and_deliver(228260, Some(h.npc));
+    super::cancel_cast(h.app.world_mut(), h.caster);
+    h.advance(60);
+    assert!(hits(&h, 1242189, h.npc).is_empty());
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 194249));
+}
+
+#[test]
+fn dummy11_shred_doubles_modified_crit_chance() {
+    let mut h = harness(Vec::new(), &[5221, 768, 5215, 343232], 11).unwrap();
+    cat(&mut h);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 50.0;
+    let c = h.caster;
+    apply(&mut h, c, c, 5215, 1);
+    h.cast_and_deliver(5221, Some(h.npc));
+    h.advance(3);
+    landed(&h);
+    let strike = h
+        .inbox
+        .log
+        .iter()
+        .find(|e| e.spell_id == Some(5221) && e.kind == CombatLogKind::Damage)
+        .unwrap();
+    assert!(strike.crit);
+    assert!(varied(260.48 * 1.6 * 2.0).contains(&(strike.amount as f32)));
+}
+
+#[test]
+fn dummy11_lashing_flames_excludes_foreign_caster_and_ends_on_expiry() {
+    let mut h = harness(Vec::new(), &[60103, 334046, 334168, 188389], 7).unwrap();
+    h.cast_and_deliver(60103, Some(h.npc));
+    h.advance(3);
+    landed(&h);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 334168));
+    let foreign = spawn_player(&mut h.app, 7, 0.0);
+    let spell = world_db().unwrap().store.get(188389).unwrap();
+    let base = super::effects::scaled_amount(h.app.world(), foreign, spell, &spell.effects[0]);
+    super::cast_triggered(h.app.world_mut(), foreign, 188389, Some(h.npc), 1);
+    h.advance(3);
+    assert!(varied(base).contains(&(hits(&h, 188389, h.npc).iter().sum::<i32>() as f32)));
+    h.advance(410);
+    assert!(!crate::auras::has_aura(h.app.world(), h.npc, 334168));
+    h.inbox.log.clear();
+    let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
+    super::cast_triggered(h.app.world_mut(), h.caster, 188389, Some(h.npc), 1);
+    h.advance(3);
+    assert!(varied(base).contains(&(hits(&h, 188389, h.npc).iter().sum::<i32>() as f32)));
+}
+
 fn landed(h: &Harness) {
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
 }

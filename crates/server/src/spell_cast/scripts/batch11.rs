@@ -19,6 +19,7 @@ const BLADE_TALENT: u32 = 403826;
 const THRASH_BLEED: u32 = 405233;
 const SHRED_STEALTH_RANK: u32 = 343232;
 const POUNCING_STRIKES: u32 = 405834;
+const STEALTH_AURA: u32 = 16;
 
 /// SpellXDescriptionVariables193315 ->338: exactly the authored level curve.
 pub(super) fn sinister_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
@@ -108,16 +109,27 @@ pub(super) fn volley(world: &mut World, caster: Entity, primary: Entity, depth: 
             VOID_VOLLEY,
             if unit == primary { 0 } else { 2 },
         ) as usize;
-        for _ in 0..count {
-            let mut plan = vec![PlannedEffect {
-                index: 0,
-                units: vec![unit],
-                dest: None,
-                chain_multipliers: Vec::new(),
-            }];
-            spell_cast::hit::remove_defended_targets(world, caster, &bolt, &mut plan);
-            spell_cast::missiles::launch(world, caster, &bolt, plan, depth + 1);
-        }
+        launch_bolts(world, caster, unit, &bolt, count, depth + 1);
+    }
+}
+
+fn launch_bolts(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    bolt: &SpellInfo,
+    count: usize,
+    depth: u8,
+) {
+    for _ in 0..count {
+        let mut plan = vec![PlannedEffect {
+            index: 0,
+            units: vec![unit],
+            dest: None,
+            chain_multipliers: Vec::new(),
+        }];
+        spell_cast::hit::remove_defended_targets(world, caster, bolt, &mut plan);
+        spell_cast::missiles::launch(world, caster, bolt, plan, depth);
     }
 }
 
@@ -161,7 +173,7 @@ pub(super) fn shred_stealth_bonus(world: &World, caster: Entity) -> bool {
         || crate::auras::has_aura(world, caster, POUNCING_STRIKES);
     let stealth = world
         .get::<ActiveAuras>(caster)
-        .is_some_and(|auras| auras.has_type(16));
+        .is_some_and(|auras| auras.has_type(STEALTH_AURA));
     rank && stealth
 }
 
