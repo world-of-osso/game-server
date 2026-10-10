@@ -106,8 +106,20 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
         BACKSTAB => Some(backstab_damage),
         DRAIN_SOUL => Some(drain_soul_damage),
+        COBRA_SHOT => Some(cobra_shot_damage),
         _ => None,
     }
+}
+
+/// Retail SpellXDescriptionVariables193455 ->331: unconditional $mult
+/// = (min(player_level-1,19)*12+112)/340, unity from level20 onward.
+fn cobra_shot_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
+    let level = world
+        .get::<shared::components::Level>(caster)
+        .expect("class spell caster requires Level")
+        .0;
+    let multiplier = ((f32::from(level) - 1.0).min(19.0) * 12.0 + 112.0) / 340.0;
+    amount * multiplier
 }
 
 /// TC a352b1fa spell_warlock.cpp:840-849: evaluate the execute threshold

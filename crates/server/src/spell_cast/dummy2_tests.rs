@@ -19,7 +19,7 @@ fn dummy2_hunter_cobra_shot_damages_and_reduces_kill_command_cooldown() {
     h.cast_and_deliver(193455, Some(h.npc));
     h.advance(5);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(varied(390.4).contains(&(5000.0 - h.health(h.npc))));
+    assert!(varied(390.4 * 220.0 / 340.0).contains(&(5000.0 - h.health(h.npc))));
     assert!(
         h.inbox
             .charges
@@ -553,4 +553,21 @@ fn dummy2_dh_demon_spikes_armor_tracks_agility_changes_while_active() {
     assert_eq!(after.armor, (after.primary.agility * 0.75).floor());
     assert!(after.armor < before.armor);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, 203819));
+}
+
+#[test]
+fn dummy2_hunter_cobra_shot_level_curve_reaches_unity_at_twenty() {
+    for (level, multiplier) in [(19, 328.0 / 340.0), (20, 1.0), (80, 1.0)] {
+        let mut h = harness(Vec::new(), &[193455, 34026], 3).expect("real world.db required");
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Level>(h.caster)
+            .unwrap()
+            .0 = level;
+        h.set_power(PowerType::Focus, 100.0);
+        h.cast_and_deliver(193455, Some(h.npc));
+        h.advance(5);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(varied(390.4 * multiplier).contains(&(5000.0 - h.health(h.npc))));
+    }
 }
