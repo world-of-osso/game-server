@@ -45,6 +45,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
+
 - [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
 
 Server gameplay systems.
