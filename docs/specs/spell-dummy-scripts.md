@@ -70,7 +70,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - [x] Ice Lance30455 resolves its named228598 damage child; Freezing/shatter is not certified.
 - [x] Starfire194153 deals full primary damage and its authored70% secondary damage inside the native area.
 - [x] Keg Smash121253 deals its authored50% primary-target bonus while retaining native area damage and slow.
-- [x] Butchery212436 with294029 reduces Wildfire Bomb259495's existing recharge by its authored3000ms per damaging hit, up to five hits; no rank or ready recharge means no change.
+- [x] Butchery212436 with294029 reduces Wildfire Bomb259495's existing recharge by its authored3000ms per successful damage-effect hit (including full absorption), up to five hits; no rank or ready recharge means no change.
 - [x] Wild Growth48438 applies its base periodic heal to at most five injured allies in the native target-centered area; healthy units do not consume slots.
 - [x] Shadow Word: Death32379 applies its authored5% caster-max-health backlash if the target survives the damage, not on a kill.
 - [x] Starfall191034 with327541 extends owned Moonfire164812/Sunfire164815 by three seconds, capped at28 seconds remaining, preserving existing tick clocks and foreign marks.

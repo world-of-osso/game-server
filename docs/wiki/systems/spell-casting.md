@@ -250,7 +250,7 @@ Implementation [batch6.rs](../../../crates/server/src/spell_cast/scripts/batch6.
 |30455 Ice Lance (supplement)|228598s1 damage bridge.|Freezing/shatter unimplemented; not a Dummy census closure.|
 |194153 Starfire|s3=70% secondary damage; native area/destination/resource retained.|429523 variant, soft-cap8 and effect3/77 semantics remain open.|
 |121253 Keg Smash|s8=50% primary bonus; native secondary damage/slow retained.|Root markers, Shuffle/Brew reduction and damage soft cap remain open.|
-|212436 Butchery|294029 grants s2=3000ms per damaging target, at most s3=5; existing259495 recharge only.|Damage soft-cap formula/talent bleed not certified; recharge proof is not Wildfire Bomb damage proof.|
+|212436 Butchery|294029 grants s2=3000ms per successful damage-effect target (including full absorption), at most s3=5; existing259495 recharge only.|Damage soft-cap formula/talent bleed not certified; recharge proof is not Wildfire Bomb damage proof.|
 |48438 Wild Growth|s2=5 injured allies inside native target-centered area; existing periodic aura execution.|Declining tick curve/Tree of Life target additions unimplemented.|
 |32379 Shadow Word: Death|s6=5% caster-max-health backlash after target survives, ordinary damage/absorb/death/log path.|Other damage-effect/execute variants not certified.|
 |191034 Starfall|327541s1=3sec owned Moonfire/Sunfire extension, s2=28sec remaining cap; do not reset ticks.|Base overlap/tick-child contracts remain open.|
