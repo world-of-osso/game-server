@@ -463,6 +463,7 @@ impl Encounter {
             wild_creature: self.creature,
             can_trap: self.can_trap(journal),
             turn_time_ms: 0,
+            initial_selection_required: false,
             replacement_required: self.battle.teams[0].pets[self.battle.teams[0].active].health
                 <= 0,
             feedback: self.feedback.clone(),

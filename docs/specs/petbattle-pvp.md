@@ -26,7 +26,8 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 
 ## Known gaps (current cycle)
 
-- [ ] Initial active-pet selection, proposal/round deadlines and PvP XP rewards remain unimplemented.
+- [x] Both owners select a living initial front pet (including the current pet); combat waits for both choices without spending a round or applying swap effects. Duplicate choices and pre-selection combat actions are rejected.
+- [ ] Proposal/turn deadlines and PvP XP: no numerical policy established from local Retail UI Lua, GlobalStrings or available BattlePet DB2 exports; remain unset, not guessed. `Blizzard_PetBattleUI/Shared/Blizzard_PetBattleUI.lua:523` obtains duration from `C_PetBattles.GetTurnTimeInfo()`, not a Lua constant. `StaticPopupSpecial.xml:54` uses `CanAcceptQueuedPVPMatch()`, not a proposal duration. UI XP reads (`:264`) do not specify a PvP award formula.
 - [ ] Draw delivery has no dedicated production-boundary assertion.
 - [ ] Native controls and private both-skin proof.
 - [ ] Exact Retail rating/level tolerance, countdown/penalty and reward policy require source evidence; exact equal level profiles currently match.
