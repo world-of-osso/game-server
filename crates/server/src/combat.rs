@@ -969,26 +969,41 @@ fn distance(a: &Position, b: &Position) -> f32 {
 /// block with the damage that got through, a hit (glancing included), or the avoidance
 /// without an amount.
 fn build_swing_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> CombatEvent {
-    let event_type = match outcome.kind {
-        MeleeOutcome::Miss => CombatEventType::Miss,
-        MeleeOutcome::Dodge => CombatEventType::Dodge,
-        MeleeOutcome::Parry => CombatEventType::Parry,
-        MeleeOutcome::Crit => CombatEventType::CriticalHit,
-        MeleeOutcome::Block => CombatEventType::Block,
-        MeleeOutcome::Glancing | MeleeOutcome::Hit => CombatEventType::MeleeDamage,
+    let event_type = match swing_miss_kind(outcome) {
+        Some(MissKind::Immune) => CombatEventType::Miss,
+        Some(MissKind::Absorb) => CombatEventType::Absorb,
+        _ => match outcome.kind {
+            MeleeOutcome::Miss => CombatEventType::Miss,
+            MeleeOutcome::Dodge => CombatEventType::Dodge,
+            MeleeOutcome::Parry => CombatEventType::Parry,
+            MeleeOutcome::Crit => CombatEventType::CriticalHit,
+            MeleeOutcome::Block => CombatEventType::Block,
+            MeleeOutcome::Glancing | MeleeOutcome::Hit => CombatEventType::MeleeDamage,
+        },
+    };
+    let amount = if event_type == CombatEventType::Absorb {
+        outcome.absorbed
+    } else {
+        outcome.damage
     };
     CombatEvent {
         attacker: attacker.to_bits(),
         target: target.to_bits(),
-        amount: outcome.damage,
+        amount,
         spell_id: 0,
         event_type,
     }
 }
 
 /// The combat log `MissKind` of an avoided swing.
-fn swing_miss_kind(outcome: MeleeOutcome) -> Option<MissKind> {
-    match outcome {
+fn swing_miss_kind(outcome: &SwingOutcome) -> Option<MissKind> {
+    if outcome.immune {
+        return Some(MissKind::Immune);
+    }
+    if outcome.damage == 0.0 && outcome.absorbed > 0.0 {
+        return Some(MissKind::Absorb);
+    }
+    match outcome.kind {
         MeleeOutcome::Miss => Some(MissKind::Miss),
         MeleeOutcome::Dodge => Some(MissKind::Dodge),
         MeleeOutcome::Parry => Some(MissKind::Parry),
@@ -1009,19 +1024,17 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
         overflow: outcome.overkill as i32,
         absorbed: outcome.absorbed as i32,
         resisted: 0,
-        blocked: outcome.blocked as i32,
-        crit: outcome.kind == MeleeOutcome::Crit,
-        glancing: outcome.kind == MeleeOutcome::Glancing,
+        blocked: if outcome.immune {
+            0
+        } else {
+            outcome.blocked as i32
+        },
+        crit: !outcome.immune && outcome.kind == MeleeOutcome::Crit,
+        glancing: !outcome.immune && outcome.kind == MeleeOutcome::Glancing,
         periodic: false,
         extra_spell_id: None,
         timestamp_unix_ms: 0,
-        kind: if outcome.immune {
-            CombatLogKind::Miss(MissKind::Immune)
-        } else if outcome.damage == 0.0 && outcome.absorbed > 0.0 {
-            CombatLogKind::Miss(MissKind::Absorb)
-        } else {
-            swing_miss_kind(outcome.kind).map_or(CombatLogKind::Damage, CombatLogKind::Miss)
-        },
+        kind: swing_miss_kind(outcome).map_or(CombatLogKind::Damage, CombatLogKind::Miss),
     }
 }
 
