@@ -449,7 +449,9 @@ fn build_effect(
     effect: &SpellEffect,
     now: f64,
 ) -> AuraEffectState {
-    let amount = if handlers::scales_with_power(effect.aura) {
+    let amount = if let Some(amount) = scripts::absorb_amount(world, caster, spell, effect) {
+        amount
+    } else if handlers::scales_with_power(effect.aura) {
         crate::spell_cast::effects::scaled_amount(world, caster, spell, effect)
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
@@ -504,7 +506,9 @@ fn build_instance(
         .effects
         .iter()
         .filter(|effect| {
-            is_aura_effect(effect) && application.effect_mask & (1 << effect.index) != 0
+            is_aura_effect(effect)
+                && application.effect_mask & (1 << effect.index) != 0
+                && scripts::effect_enabled(world, caster, spell.id, effect.index)
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();

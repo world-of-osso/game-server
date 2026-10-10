@@ -79,7 +79,7 @@ fn dummy9_healing_rain_recast_replaces_only_owners_previous_ground_field() {
     let old = injured(&mut h, 0.0);
     let new = injured(&mut h, 25.0);
     ground(&mut h, 73920, [0.0, 0.0, 0.0]);
-    h.advance(82);
+    h.advance(220);
     landed(&h);
     h.app.world_mut().get_mut::<Health>(old).unwrap().current = 50.0;
     ground(&mut h, 73920, [25.0, 0.0, 0.0]);
@@ -222,7 +222,11 @@ fn dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury() {
         (false, true, 25.0),
         (true, true, 40.0),
     ] {
-        let mut h = harness(Vec::new(), &[263642, 225919, 225921, 187827, 321068], 12).unwrap();
+        let mut ids = vec![263642, 225919, 225921, 187827];
+        if rank {
+            ids.push(321068);
+        }
+        let mut h = harness(Vec::new(), &ids, 12).unwrap();
         let caster = h.caster;
         if meta {
             apply(&mut h, caster, caster, 187827, u32::MAX);
