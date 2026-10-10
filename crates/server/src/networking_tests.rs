@@ -102,6 +102,8 @@ mod death;
 mod flight;
 #[path = "networking_tests/forced_disconnect.rs"]
 mod forced_disconnect;
+#[path = "networking_tests/ghoststate.rs"]
+mod ghoststate;
 #[path = "networking_tests/misc.rs"]
 mod misc;
 #[path = "networking_tests/movement.rs"]
@@ -114,8 +116,6 @@ mod player_motion;
 mod receiver_rate;
 #[path = "networking_tests/regen.rs"]
 mod regen;
-#[path = "networking_tests/ghoststate.rs"]
-mod ghoststate;
 #[path = "networking_tests/sheet_stats.rs"]
 mod sheet_stats;
 #[path = "networking_tests/skyriding.rs"]

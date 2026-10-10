@@ -78,6 +78,12 @@ fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
     crate::appearance_collection::tests::install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.insert_resource(item_templates());
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("open quest item-use toy catalog");
+    app.insert_resource(crate::toy_catalog::load(&conn).expect("load quest item-use toy catalog"));
     app.insert_resource(quests);
     app.add_plugins(crate::inventory::InventoryPlugin);
     app.add_plugins(QuestPlugin);
