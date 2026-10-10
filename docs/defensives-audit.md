@@ -1,8 +1,8 @@
 # Class defensives audit
 
-Blur/Turtle follow-up: branch `blur-turtle`, base `c5432a4`. Batched RED: 18 passed / 6 failed; implementation committed before GREEN verification. See follow-up ledger below. Earlier proof remains historical.
+Blur/Turtle follow-up: branch `blur-turtle`, base `c5432a4`. Batched RED: 18 passed / 6 failed; initial GREEN: 24 passed / 0 failed. See follow-up ledger below. Blur's catalog dodge amount remains zero, so nonzero Retail Blur dodge is not claimed. Final suite pending.
 
-Verified: 2026-10-09. Audit base: `5b04aa931720d441aaea1f99d3c11dc2a69bba40`; reproduction branch tip: `41fe1be7c`. Worktree: `/home/osso/.worktrees/game-server-rest`, branch `defensives`. Five reproduced gaps are fixed on this branch. Final focused and complete server-crate tests pass at `e86c038`; no gap tests remain ignored. No merge, runtime or deployment changes.
+Updated: 2026-10-09. Original audit base: `5b04aa931720d441aaea1f99d3c11dc2a69bba40`; reproduction tip: `41fe1be7c`. The five earlier fixes passed focused/full tests at `e86c038` and landed in master `c5432a4`. Follow-up worktree: `/home/osso/.worktrees/game-server-rest`, branch `blur-turtle`; no runtime or deployment changes.
 
 ## Results
 
@@ -51,7 +51,9 @@ Pinned [TrinityCore aura definitions](https://github.com/TrinityCore/TrinityCore
 ### Follow-up ledger
 
 - RED: `target/blur-turtle-red2-tests.log`, base c5432a4 plus behavioral tests: **18 passed / 6 failed / 0 ignored**, exit 101. Failures: Turtle melee, magic/ranged miss logs, pacify, silence immunity, generic deflection, generic parry. An earlier RED attempt had one test enum-construction compile error, corrected before this behavioral run.
-- GREEN and final full server suite: pending. Full suite is run once, skipping `query_300k_listings_under_200ms` as requested. Logs remain untracked under `target/`.
+- Initial GREEN at `350924f`: `target/blur-turtle-green-tests.log`, **24 passed / 0 failed / 0 ignored**, exit 0. One unused import warning was subsequently removed; parry expiry assertion now checks restored baseline chance rather than a probabilistic single swing. The no-stats attacker path retains its prior avoidance behavior.
+- Final full server suite: pending, once after follow-up fixes, skipping `query_300k_listings_under_200ms` as requested. Logs remain untracked under `target/`.
+- Independent artifact verifier unavailable: Claude OAuth expired; no independent-model verification claim. Main-thread readability inspection extracted effect filtering/miss chance, kept chance numbers data-driven, and introduced no suppressions or dependencies.
 
 ## Proof boundary
 

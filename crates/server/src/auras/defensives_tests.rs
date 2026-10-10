@@ -569,6 +569,13 @@ fn defensives_catalog_parry_prevents_melee_until_expiry() {
             )],
         });
     h.advance(3);
+    let baseline_parry = h
+        .app
+        .world()
+        .get::<CharacterStats>(h.caster)
+        .unwrap()
+        .defense
+        .parry;
     h.cast_and_deliver(118038, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(incoming_melee(&mut h).health_loss, 0.0);
@@ -576,7 +583,16 @@ fn defensives_catalog_parry_prevents_melee_until_expiry() {
         |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Parry)
     ));
     expire_defensive(&mut h, 118038);
-    assert!(incoming_melee(&mut h).health_loss > 0.0);
+    // Natural weapon parry remains; a single random post-expiry swing could parry.
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .defense
+            .parry,
+        baseline_parry
+    );
 }
 
 #[test]

@@ -31,6 +31,25 @@ pub(super) fn remove_defended_targets(
             roll_defense(world, caster, spell, unit, negative).map(|kind| (unit, kind))
         })
         .collect();
+    let immune_units = remove_immune_effect_targets(world, spell, plan, negative, &misses);
+    let immune_misses = immune_units
+        .into_iter()
+        .map(|unit| (unit, MissKind::Immune));
+    for (unit, kind) in misses.into_iter().chain(immune_misses) {
+        log_event(
+            world,
+            cast_event(caster, Some(unit), spell, CombatLogKind::Miss(kind)),
+        );
+    }
+}
+
+fn remove_immune_effect_targets(
+    world: &World,
+    spell: &SpellInfo,
+    plan: &mut TargetPlan,
+    negative: u32,
+    misses: &[(Entity, MissKind)],
+) -> Vec<Entity> {
     let mut immune_units = Vec::new();
     for planned in plan.iter_mut() {
         let effect = &spell.effects[planned.index];
@@ -52,16 +71,7 @@ pub(super) fn remove_defended_targets(
     }
     immune_units.sort_unstable();
     immune_units.dedup();
-    for (unit, kind) in misses.into_iter().chain(
-        immune_units
-            .into_iter()
-            .map(|unit| (unit, MissKind::Immune)),
-    ) {
-        log_event(
-            world,
-            cast_event(caster, Some(unit), spell, CombatLogKind::Miss(kind)),
-        );
-    }
+    immune_units
 }
 
 fn immune_to_mechanic(world: &World, unit: Entity, mechanic: u32) -> bool {
@@ -100,22 +110,10 @@ fn roll_defense(
         .categories
         .as_ref()
         .map_or(0, |categories| categories.defense_type);
-    if attributes(spell, 7) & ATTR7_NO_ATTACK_MISS == 0 {
-        let baseline = if defense == DEFENSE_MELEE
-            && world.get::<shared::components::Npc>(caster).is_some()
-            && targets::is_hostile(world, caster, unit)
-        {
-            crate::combat::creature_miss_chance(world.get::<crate::auras::AuraStatMods>(caster))
-        } else {
-            0.0
-        };
-        let modifier = auras.map_or(0.0, |auras| {
-            attacker_hit_modifier(auras, defense, spell.school_mask())
-        });
-        let miss = baseline - modifier;
-        if roll_percent(miss) {
-            return Some(MissKind::Miss);
-        }
+    let can_miss = attributes(spell, 7) & ATTR7_NO_ATTACK_MISS == 0;
+    let chance = incoming_miss_chance(world, caster, spell, unit, defense);
+    if can_miss && roll_percent(chance) {
+        return Some(MissKind::Miss);
     }
     let auras = auras?;
     let deflectable = matches!(defense, DEFENSE_MAGIC | DEFENSE_RANGED);
@@ -128,6 +126,27 @@ fn roll_defense(
         return Some(MissKind::Deflect);
     }
     None
+}
+
+fn incoming_miss_chance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    unit: Entity,
+    defense: u32,
+) -> f32 {
+    let creature_melee = defense == DEFENSE_MELEE
+        && world.get::<shared::components::Npc>(caster).is_some()
+        && targets::is_hostile(world, caster, unit);
+    let baseline = if creature_melee {
+        crate::combat::creature_miss_chance(world.get::<crate::auras::AuraStatMods>(caster))
+    } else {
+        0.0
+    };
+    let modifier = world.get::<ActiveAuras>(unit).map_or(0.0, |auras| {
+        attacker_hit_modifier(auras, defense, spell.school_mask())
+    });
+    baseline - modifier
 }
 
 fn attacker_hit_modifier(auras: &ActiveAuras, defense: u32, school: u32) -> f32 {
