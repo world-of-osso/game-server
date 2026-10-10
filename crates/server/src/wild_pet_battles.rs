@@ -487,7 +487,7 @@ impl Encounter {
         }
     }
 }
-fn aura_snapshot(aura: &crate::pet_battle::Aura, catalog: &WildCatalog) -> BattleAuraSnapshot {
+fn aura_snapshot(aura: &::server::pet_battle::Aura, catalog: &WildCatalog) -> BattleAuraSnapshot {
     let (name, icon) = &catalog.ability_art[&aura.ability];
     BattleAuraSnapshot {
         ability_id: aura.ability,
