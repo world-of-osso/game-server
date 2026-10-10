@@ -17,6 +17,7 @@ struct PvpBattle {
     encounter: Encounter,
     owners: [Entity; 2],
     decisions: [Option<Action>; 2],
+    initial_pets: Option<[Option<usize>; 2]>,
     rng: RuntimeRng,
 }
 #[derive(Component, Clone, Copy)]
@@ -252,6 +253,7 @@ fn start_match(world: &mut World, id: u64, owners: [Entity; 2]) -> Result<(), St
         encounter,
         owners,
         decisions: [None; 2],
+        initial_pets: Some([None; 2]),
         rng: RuntimeRng(rand::rngs::StdRng::from_entropy()),
     };
     for (team, owner) in owners.iter().enumerate() {
@@ -277,6 +279,7 @@ fn snapshot(world: &World, battle: &PvpBattle, team: usize) -> WildPetBattleSnap
         .encounter
         .snapshot(world.resource::<WildCatalog>(), journal);
     state.can_trap = false;
+    state.initial_selection_required = battle.initial_pets.is_some();
     if team == 1 {
         state.teams.swap(0, 1);
         state.active.swap(0, 1);
@@ -344,6 +347,9 @@ pub(super) fn advance(
         actions[team] = action;
         return resolve_round(world, participant.id, battle, actions);
     }
+    if battle.initial_pets.is_some() {
+        return select_initial_pet(world, participant.id, battle, team, action);
+    }
     validate_decision(world.resource::<WildCatalog>(), &battle, team, action)?;
     battle.decisions[team] = Some(action);
     for side in 0..2 {
@@ -369,6 +375,46 @@ pub(super) fn advance(
         Ok(())
     }
 }
+fn select_initial_pet(
+    world: &mut World,
+    id: u64,
+    mut battle: PvpBattle,
+    team: usize,
+    action: Action,
+) -> Result<(), String> {
+    let Action::Swap(slot) = action else {
+        return Err("choose an initial pet before taking a turn".into());
+    };
+    let pets = &battle.encounter.battle.teams[team].pets;
+    if pets.get(slot).is_none_or(|pet| pet.health <= 0) {
+        return Err("initial pet must be alive".into());
+    }
+    let choices = battle
+        .initial_pets
+        .as_mut()
+        .expect("selection phase checked");
+    if choices[team].is_some() {
+        return Err("initial pet already selected".into());
+    }
+    choices[team] = Some(slot);
+    if let [Some(a), Some(b)] = *choices {
+        for (team, slot) in [a, b].into_iter().enumerate() {
+            battle.encounter.battle.teams[team].active = slot;
+        }
+        battle.initial_pets = None;
+        for side in 0..2 {
+            let state = snapshot(world, &battle, side);
+            let connection = connection(world, battle.owners[side])?;
+            send_update(world, connection, WildPetBattleUpdate::State(state));
+        }
+    }
+    world
+        .resource_mut::<Matchmaker>()
+        .battles
+        .insert(id, battle);
+    Ok(())
+}
+
 fn player_action(
     encounter: &Encounter,
     team: usize,

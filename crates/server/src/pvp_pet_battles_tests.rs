@@ -64,6 +64,69 @@ fn player(app: &mut App, account: u64) -> (Entity, Entity) {
     (owner, connection)
 }
 #[test]
+fn petbattle_pvp_initial_choices_wait_for_both_without_spending_a_round() {
+    let mut app = app();
+    let [a, b] = proposed(&mut app);
+    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
+    let round = app.world().resource::<Matchmaker>().battles[&id]
+        .encounter
+        .battle
+        .round;
+    assert!(
+        snapshot(
+            app.world(),
+            &app.world().resource::<Matchmaker>().battles[&id],
+            0
+        )
+        .initial_selection_required
+    );
+    assert!(
+        advance(
+            app.world_mut(),
+            a,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Ability(1)
+            }
+        )
+        .is_err()
+    );
+    for (owner, slot) in [(a, 3), (b, 2)] {
+        advance(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Swap(slot),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            app.world().resource::<Matchmaker>().battles[&id]
+                .encounter
+                .battle
+                .round,
+            round
+        );
+    }
+    let battle = &app.world().resource::<Matchmaker>().battles[&id];
+    assert!(!snapshot(app.world(), battle, 0).initial_selection_required);
+    assert!(!snapshot(app.world(), battle, 1).initial_selection_required);
+    assert_eq!(battle.encounter.battle.teams[0].active, 2);
+    assert_eq!(battle.encounter.battle.teams[1].active, 1);
+    assert!(
+        battle
+            .encounter
+            .battle
+            .teams
+            .iter()
+            .all(|t| t.pets.iter().all(|p| p.health == p.stats.health))
+    );
+}
+
+#[test]
 fn petbattle_pvp_find_battle_queues_once_and_can_leave() {
     let mut app = app();
     let (owner, _) = player(&mut app, 41);
@@ -75,6 +138,28 @@ fn petbattle_pvp_find_battle_queues_once_and_can_leave() {
 }
 
 fn matched(app: &mut App) -> [Entity; 2] {
+    let owners = proposed(app);
+    let id = app.world().get::<PvpParticipant>(owners[0]).unwrap().id;
+    let round = app.world().resource::<Matchmaker>().battles[&id]
+        .encounter
+        .battle
+        .round;
+    for owner in owners {
+        advance(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Swap(1),
+            },
+        )
+        .unwrap();
+    }
+    owners
+}
+
+fn proposed(app: &mut App) -> [Entity; 2] {
     let a = player(app, 41).0;
     let b = player(app, 42).0;
     for owner in [a, b] {
