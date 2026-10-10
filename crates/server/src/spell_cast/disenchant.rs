@@ -143,6 +143,13 @@ pub(crate) fn check_cast(
             eligibility.loot_id
         )));
     }
+    if !world
+        .resource::<DisenchantData>()
+        .loot
+        .disenchant_has_materials(eligibility.loot_id, world.resource::<ItemTemplates>())
+    {
+        return Err(CastFailure::CantBeDisenchanted);
+    }
     Ok(())
 }
 
