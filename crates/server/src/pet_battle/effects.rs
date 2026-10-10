@@ -2,6 +2,22 @@ use super::engine::Runtime;
 use super::rules::{BASE_VARIANCE, CRITICAL_MULTIPLIER, POWER_COEFFICIENT, type_multiplier};
 use super::{Aura, BattleRng, Effect, Event, PetRef};
 
+/// First row follows the active pet; the next two address its other team members.
+fn other_team_slot(active: PetRef, order: u32) -> PetRef {
+    let slot = if order == 1 {
+        active.slot
+    } else {
+        (0..3)
+            .filter(|slot| *slot != active.slot)
+            .nth((order - 2) as usize)
+            .expect("admitted three-pet routing")
+    };
+    PetRef {
+        team: active.team,
+        slot,
+    }
+}
+
 impl<R: BattleRng> Runtime<'_, R> {
     pub fn execute_effect(
         &mut self,
@@ -46,6 +62,46 @@ impl<R: BattleRng> Runtime<'_, R> {
             76 => self.charged_damage(caster, target, ability, effect),
             96 => self.damage_effect(caster, target, ability, effect),
             100 => self.heal_other_ally(caster, effect),
+            131 => {
+                let first = self
+                    .events
+                    .iter()
+                    .find_map(|e| match e {
+                        Event::Order(order) => Some(order[0]),
+                        _ => None,
+                    })
+                    .expect("round order precedes effects");
+                if caster.team != first {
+                    return Ok(false);
+                }
+                let mut control = effect.clone();
+                control.property = 52;
+                self.add_aura_effect(caster, target, &control)
+            }
+            172 => {
+                if p[4] != 0 && failed {
+                    return Ok(false);
+                }
+                let bonus = p[1] != 0 && self.battle.pet(caster).state(p[1] as u32) != p[0]
+                    || p[3] != 0 && self.battle.pet(target).state(p[3] as u32) != p[0];
+                let mut control = effect.clone();
+                control.property = 52;
+                control.params[1] = if bonus { 100 } else { p[5] };
+                self.add_aura_effect(caster, target, &control)
+            }
+            226 => {
+                let bonus = if self.battle.pet(target).state(p[3] as u32) != 0 {
+                    p[2]
+                } else {
+                    0
+                };
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[0] += bonus;
+                damage.params[2] = p[4];
+                damage.params[3] = 0;
+                self.damage_effect(caster, target, ability, &damage)
+            }
             85 => self.reset_aura_state(p[0] as u32),
             111 => {
                 let pet = self.battle.pet_mut(caster);
@@ -116,12 +172,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             136 => self.cleanse(caster),
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
-                let target = if matches!(ability, 404 | 419) && effect.property == 24 {
-                    // Sunlight404's three15-point effects target the three enemy slots.
-                    PetRef {
-                        team: target.team,
-                        slot: (effect.order - 1) as usize,
-                    }
+                let target = if super::rules::damages_enemy_team(ability) && effect.property == 24 {
+                    other_team_slot(target, effect.order)
                 } else {
                     target
                 };
@@ -238,11 +290,7 @@ impl<R: BattleRng> Runtime<'_, R> {
     }
     fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
         let p = effect.params;
-        let slots: Vec<_> = (0..3).filter(|slot| *slot != caster.slot).collect();
-        let recipient = PetRef {
-            team: caster.team,
-            slot: slots[(effect.order - 2) as usize],
-        };
+        let recipient = other_team_slot(caster, effect.order);
         if p[2] != 0 && self.battle.pet(caster).family + 1 != p[2] as usize
             || self.battle.pet(recipient).family + 1 != p[3] as usize
         {

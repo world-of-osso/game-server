@@ -382,6 +382,11 @@ impl<R: BattleRng> Runtime<'_, R> {
                     break;
                 }
                 let success = self.execute_effect(caster, target, ability, effect, failed)?;
+                // Leech Life383 explicitly restores health on damage dealt. Its
+                // event2 contains only healing/state guards, not recursive attacks.
+                if ability == 383 && event == 255 && effect.property == 24 && success {
+                    self.cast_turn(caster, target, ability, 0, 2)?;
+                }
                 failed |= !success;
             }
         }
