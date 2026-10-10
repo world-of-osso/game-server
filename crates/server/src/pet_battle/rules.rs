@@ -48,6 +48,12 @@ pub fn supported_property(property: u32) -> bool {
             | 222
             | 384
             | 385
+            | 44
+            | 59
+            | 66
+            | 76
+            | 96
+            | 100
     )
 }
 /// Recursive admission: every turn and referenced aura must be executable before RNG draws.
@@ -164,7 +170,7 @@ fn validate_ability_graph(
             }
             if matches!(
                 effect.property,
-                24 | 27 | 29 | 62 | 68 | 141 | 169 | 170 | 222 | 384 | 385
+                24 | 27 | 29 | 59 | 62 | 66 | 68 | 76 | 96 | 141 | 169 | 170 | 222 | 384 | 385
             ) && catalog.abilities[&ability].family < 0
             {
                 return Err(format!("ability {ability}: damage has no family"));
@@ -186,6 +192,25 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
     }
     let supported = match effect.property {
         22 => true, // Points fields supply tooltip variables, not an HP operation.
+        44 | 59 => p[0] >= 0 && p[2..].iter().all(|v| *v == 0),
+        // The three authenticated low-health attacks all specify below25%/double.
+        66 => p[0] >= 0 && p[2] == 100 && p[3..].iter().all(|v| *v == 0),
+        76 => effect.aura != 0 && p[0] >= 0 && p[2..].iter().all(|v| *v == 0),
+        96 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && matches!(p[4], 0 | 1)
+                && p[5] == 0
+        }
+        100 => {
+            (0..=10).contains(&p[2])
+                && (1..=10).contains(&p[3])
+                && p[4] >= 0
+                && p[5] == 0
+                && (2..=3).contains(&effect.order)
+                && matches!(catalog.turns[&effect.turn].ability, 533 | 922 | 1956)
+        }
         27 => {
             p[0] >= 0
                 && p[2] >= 0

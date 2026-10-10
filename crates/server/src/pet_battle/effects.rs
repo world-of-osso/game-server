@@ -18,6 +18,34 @@ impl<R: BattleRng> Runtime<'_, R> {
         match effect.property {
             22 | 116 | 157 | 158 | 177 => Ok(true),
             68 => self.percent_damage(caster, target, ability, effect),
+            44 => {
+                if !self.hit(caster, caster, effect) {
+                    return Ok(false);
+                }
+                let amount =
+                    f64::from(self.state(caster, "Last_HitTaken")) * f64::from(p[0]) / 100.0;
+                self.heal_pet(caster, amount);
+                Ok(true)
+            }
+            59 => {
+                if self.battle.pet(caster).health >= self.battle.pet(target).health {
+                    return Ok(false);
+                }
+                self.damage_effect(caster, target, ability, effect)
+            }
+            66 => {
+                let mut damage = effect.clone();
+                if i64::from(self.battle.pet(target).health) * 4
+                    < i64::from(self.battle.pet(target).stats.health)
+                {
+                    damage.params[0] *= 2;
+                }
+                damage.params[2] = 0;
+                self.damage_effect(caster, target, ability, &damage)
+            }
+            76 => self.charged_damage(caster, target, ability, effect),
+            96 => self.damage_effect(caster, target, ability, effect),
+            100 => self.heal_other_ally(caster, effect),
             85 => self.reset_aura_state(p[0] as u32),
             111 => {
                 let pet = self.battle.pet_mut(caster);
@@ -184,6 +212,50 @@ impl<R: BattleRng> Runtime<'_, R> {
                 effect.property, effect.id
             )),
         }
+    }
+    fn charged_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let charge = self
+            .battle
+            .auras
+            .iter()
+            .find(|a| a.target == caster && a.ability == effect.aura)
+            .map(|a| a.serial);
+        if let Some(serial) = charge {
+            let hit = self.damage_effect(caster, target, ability, effect)?;
+            self.remove_aura(serial)?;
+            return Ok(hit);
+        }
+        let mut charge = effect.clone();
+        charge.property = 26;
+        charge.params[2] = -1;
+        self.add_aura_effect(caster, target, &charge)
+    }
+    fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let p = effect.params;
+        let slots: Vec<_> = (0..3).filter(|slot| *slot != caster.slot).collect();
+        let recipient = PetRef {
+            team: caster.team,
+            slot: slots[(effect.order - 2) as usize],
+        };
+        if p[2] != 0 && self.battle.pet(caster).family + 1 != p[2] as usize
+            || self.battle.pet(recipient).family + 1 != p[3] as usize
+        {
+            return Ok(false);
+        }
+        let previous = self.healing_target;
+        self.healing_target = Some(recipient);
+        let mut heal = effect.clone();
+        heal.property = 23;
+        heal.params[2] = p[4];
+        let result = self.heal_effect(caster, &heal);
+        self.healing_target = previous;
+        result
     }
     fn reset_aura_state(&mut self, state: u32) -> Result<bool, String> {
         let serials: Vec<_> = self
@@ -423,7 +495,9 @@ impl<R: BattleRng> Runtime<'_, R> {
         let chance = effect.params[1] + self.state(caster, "Stat_Accuracy")
             - self.state(target, "Stat_Dodge");
         let untargetable = caster != target && self.state(target, "untargettable") != 0;
-        if untargetable || !self.roll(chance) {
+        let guaranteed = effect.property == 96
+            && self.required_states(caster, target, effect.params[2], effect.params[3]);
+        if untargetable || !guaranteed && !self.roll(chance) {
             self.events.push(Event::Miss {
                 effect: effect.id,
                 target,
@@ -457,7 +531,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             self.battle.pet_mut(caster).states.insert(last, 0);
             return Ok(false);
         }
-        let periodic = effect.property == 24 && effect.params[2] != 0;
+        let periodic = effect.property == 24 && effect.params[2] != 0
+            || effect.property == 96 && effect.params[4] != 0;
         if !periodic && caster != target && self.block_attack(target)? {
             return Ok(false);
         }
