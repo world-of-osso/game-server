@@ -60,16 +60,66 @@ fn navigation_stormwind_stairs_reach_upper_landing() {
         path.last().unwrap().y - path[0].y > 4.0,
         "stairs must rise to landing: {path:?}"
     );
+    // Recast spans/contours approximate the support surface. The server's existing
+    // ground correction must put the moving creature on the actual collision floor.
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins)
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(50),
+        ))
+        .insert_resource(crate::world_data::WorldData::default())
+        .insert_resource(ground())
+        .insert_resource(Navigation::new(&ground_dir().join("navmesh")))
+        .add_plugins(crate::creature_ai::CreatureAiPlugin);
+    app.update();
+    let from = wow(-8737.0, 993.0, 79.5);
+    let goal = wow(-8737.0, 971.0, 85.3);
+    let target = app.world_mut().spawn(position(goal)).id();
+    let mob = app
+        .world_mut()
+        .spawn((
+            position(from),
+            crate::creature_ai::SpawnPoint {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            },
+            crate::creature_ai::CreatureState::Pursuing {
+                target: target.to_bits(),
+            },
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
     let mut ground = ground();
-    for p in path {
+    let mut los = los::LosMap::new(&engine_data().join("los/0"));
+    let mut last = from;
+    for tick in 0..160 {
+        app.update();
+        let p = point(*app.world().get::<Position>(mob).unwrap());
         let GroundProbe::Supported(floor) = ground.ground_at(0, p) else {
-            panic!("unsupported stair corner {p:?}");
+            panic!("unsupported stair movement {p:?}");
         };
         assert!(
-            (p.y - floor).abs() < 0.5,
-            "stair navigation {p:?}, floor {floor}"
+            (p.y - floor).abs() < 0.05,
+            "tick{tick} actual feet {p:?} vs floor{floor}"
         );
+        assert!(
+            los.clear(last + Vec3::Y, p + Vec3::Y).unwrap(),
+            "tick{tick} crossed stairs {last:?}->{p:?}"
+        );
+        last = p;
     }
+    assert!(
+        last.y - from.y > 4.0,
+        "creature reached upper landing: {last:?}"
+    );
+    assert!(
+        ((last.x - goal.x).hypot(last.z - goal.z) - 2.0).abs() < 0.05,
+        "stops in reach on the landing: {last:?}"
+    );
 }
 
 #[test]
