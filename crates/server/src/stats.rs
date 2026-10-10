@@ -53,9 +53,13 @@ pub struct StatModifiers {
     pub mastery_points: f32,
     pub versatility_pct: f32,
     pub max_health_pct: f32,
+    /// MOD_INCREASE_HEALTH: fixed current/max health gained on application.
+    pub max_health_flat: f32,
     /// OVERRIDE_SPELL_POWER_BY_AP_PCT: when positive, spell and healing power are
     /// this percent of attack power.
     pub spell_power_from_ap_pct: f32,
+    /// MOD_DODGE_PERCENT: nondiminishing percentage points.
+    pub dodge_pct: f32,
     /// MOD_BLOCK_PERCENT: added to block chance (`player_defense`).
     pub block_pct: f32,
 }
@@ -328,7 +332,8 @@ pub fn compute_character_stats(
         ratings,
         max_health: (primary.stamina.floor()
             * HP_PER_STAMINA[level]
-            * (1.0 + mods.max_health_pct / 100.0))
+            * (1.0 + mods.max_health_pct / 100.0)
+            + mods.max_health_flat)
             .floor(),
         base_mana: base_mana.unwrap_or(0.0),
         spell_power,
@@ -381,13 +386,15 @@ pub struct DefenseInputs {
     pub has_weapon: bool,
     /// The equipped shield's armor, if any.
     pub shield_armor: Option<f32>,
+    /// Σ MOD_DODGE_PERCENT (`StatModifiers::dodge_pct`).
+    pub dodge_pct: f32,
     /// Σ MOD_BLOCK_PERCENT (`StatModifiers::block_pct`).
     pub block_pct: f32,
 }
 
 /// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
 /// `UpdateParryPercentage` and `UpdateBlockPercentage` (StatSystem.cpp:490-507,
-/// 657-715); of their aura modifiers only MOD_BLOCK_PERCENT. Dodge is its rating after diminishing returns
+/// 657-715). Dodge is MOD_DODGE_PERCENT plus its rating after diminishing returns
 /// (`GetDodgeFromAgility` gives nothing, Player.cpp:5031); parry 5% plus its rating after
 /// diminishing returns, for a class with a parry cap that can parry and holds a weapon;
 /// block 5% plus MOD_BLOCK_PERCENT plus its rating, for one that can block and holds a
@@ -427,7 +434,14 @@ pub fn player_defense(
     };
     let shield_armor = inputs.shield_armor.filter(|_| inputs.can_block);
     PlayerDefense {
-        dodge: diminished(dodge_cap, 0.0, ratings.dodge / DODGE_RATING[level]),
+        // TrinityCore master, StatSystem.cpp Player::UpdateDodgePercentage:
+        // https://github.com/TrinityCore/TrinityCore/blob/master/src/server/game/Entities/Unit/StatSystem.cpp
+        // Aura points are not halved or subject to rating diminishing returns.
+        dodge: diminished(
+            dodge_cap,
+            inputs.dodge_pct,
+            ratings.dodge / DODGE_RATING[level],
+        ),
         parry,
         block: shield_armor.map_or(0.0, |_| {
             BASE_BLOCK_PCT + inputs.block_pct + ratings.block / BLOCK_RATING[level]
@@ -667,6 +681,7 @@ pub(crate) fn update_character_stats(
                 can_block: knows_effect(known, spells.as_deref(), EFFECT_BLOCK),
                 has_weapon: gear.has_weapon,
                 shield_armor: gear.shield_armor,
+                dodge_pct: mods.map_or(0.0, |mods| mods.dodge_pct),
                 block_pct: mods.map_or(0.0, |mods| mods.block_pct),
             },
         );

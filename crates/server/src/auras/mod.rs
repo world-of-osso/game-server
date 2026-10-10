@@ -828,10 +828,30 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         .get::<StatModifiers>(unit)
         .copied()
         .unwrap_or_default();
+    change_flat_health(world, unit, stats.max_health_flat - current.max_health_flat);
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
     unit_state::reconcile(world, unit);
+}
+
+/// TrinityCore AuraEffect::HandleAuraModIncreaseHealth adds/removes the fixed
+/// bonus from both current and maximum health, never killing on removal:
+/// https://github.com/TrinityCore/TrinityCore/blob/master/src/server/game/Spells/Auras/SpellAuraEffects.cpp
+fn change_flat_health(world: &mut World, unit: Entity, delta: f32) {
+    if delta == 0.0 {
+        return;
+    }
+    let Some(mut health) = world.get_mut::<shared::components::Health>(unit) else {
+        return;
+    };
+    health.max = (health.max + delta).max(1.0);
+    if health.current > 0.0 {
+        health.current = (health.current + delta).clamp(1.0, health.max);
+    }
+    if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+        dirty.mark(unit);
+    }
 }
 
 /// `Unit::GetAuraCount`: the stacks of every aura of `spell_id` on `unit`.
@@ -857,8 +877,13 @@ fn school_or_physical(school_mask: u32) -> u32 {
 
 /// SCHOOL_IMMUNITY 39: an aura whose MiscValue school mask covers the damage.
 pub fn is_immune(world: &World, unit: Entity, school_mask: u32) -> bool {
+    immune_to_school(world.get::<ActiveAuras>(unit), school_mask)
+}
+
+/// Shared school immunity check for spell damage and queried melee targets.
+pub(crate) fn immune_to_school(auras: Option<&ActiveAuras>, school_mask: u32) -> bool {
     let school = school_or_physical(school_mask);
-    world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+    auras.is_some_and(|auras| {
         auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
             effect.aura_type == handlers::SCHOOL_IMMUNITY
                 && effect.misc_values[0] as u32 & school != 0
@@ -920,45 +945,73 @@ pub fn damage_taken_multiplier(
 /// oldest aura first; a depleted absorb removes its aura. Returns
 /// `(damage left, absorbed)`.
 pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: f32) -> (f32, f32) {
+    let result = consume_absorbs(
+        world
+            .get_mut::<ActiveAuras>(unit)
+            .as_mut()
+            .map(|auras| auras.bypass_change_detection()),
+        school_mask,
+        amount,
+    );
+    let damage = (result.remaining, result.absorbed);
+    finish_absorbs(world, unit, result);
+    damage
+}
+
+/// Capacity is consumed immediately, even when melee's world-side cleanup is queued.
+pub(crate) struct AbsorbResult {
+    pub remaining: f32,
+    pub absorbed: f32,
+    depleted: Vec<u32>,
+    contributions: Vec<(Entity, f32)>,
+}
+
+pub(crate) fn consume_absorbs(
+    auras: Option<&mut ActiveAuras>,
+    school_mask: u32,
+    amount: f32,
+) -> AbsorbResult {
     let school = school_or_physical(school_mask);
-    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
-        return (amount, 0.0);
+    let mut result = AbsorbResult {
+        remaining: amount,
+        absorbed: 0.0,
+        depleted: Vec::new(),
+        contributions: Vec::new(),
     };
-    let mut left = amount;
-    let mut depleted = Vec::new();
-    let mut touched = false;
-    let mut contributions = Vec::new();
-    for aura in auras.bypass_change_detection().auras.iter_mut() {
+    let Some(auras) = auras else {
+        return result;
+    };
+    for aura in &mut auras.auras {
         for effect in aura.effects.iter_mut().filter(|effect| {
             effect.aura_type == handlers::SCHOOL_ABSORB
                 && effect.misc_values[0] as u32 & school != 0
                 && effect.absorb_remaining > 0.0
         }) {
-            if left <= 0.0 {
+            if result.remaining <= 0.0 {
                 break;
             }
-            let soaked = left.min(effect.absorb_remaining);
+            let soaked = result.remaining.min(effect.absorb_remaining);
             effect.absorb_remaining -= soaked;
-            left -= soaked;
-            contributions.push((aura.caster, soaked));
-            touched = true;
+            result.remaining -= soaked;
+            result.contributions.push((aura.caster, soaked));
             if effect.absorb_remaining <= 0.0 {
-                depleted.push(aura.instance_id);
+                result.depleted.push(aura.instance_id);
             }
         }
     }
-    if !touched {
-        return (amount, 0.0);
-    }
-    for (caster, soaked) in contributions {
+    result.absorbed = amount - result.remaining;
+    result
+}
+
+pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
+    for (caster, soaked) in result.contributions {
         crate::damage_meter::record_absorb(world, caster, soaked);
     }
-    if !depleted.is_empty() {
+    if !result.depleted.is_empty() {
         remove_auras(world, unit, RemoveReason::Consumed, |aura| {
-            depleted.contains(&aura.instance_id)
+            result.depleted.contains(&aura.instance_id)
         });
     }
-    (left, amount - left)
 }
 
 /// Why crowd control forbids `spell` now: MOD_STUN 12 blocks every spell
@@ -1410,6 +1463,9 @@ fn receive_cancel_aura(world: &mut World) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod defensives_tests;
 
 #[cfg(test)]
 mod polymorph_tests;

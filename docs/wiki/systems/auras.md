@@ -119,7 +119,7 @@ Crits:
 - Chance = `CharacterStats.crit_pct` (base, rating and MOD_CRIT_PCT auras) + CritChance mods.
 - A crit adds 100% of the amount, scaled by CritDamageAndHealing mods.
 
-Melee auto-attack (`combat.rs`) takes the attacker's physical `damage_done` × `autoattack_damage_mult` (344) and the target's physical `damage_taken`. It does not apply absorbs or immunity: the swing path is a query system outside the World-based damage path.
+Melee auto-attack (`combat.rs`) takes the attacker's physical `damage_done` × `autoattack_damage_mult` (344) and the target's physical `damage_taken`. It shares school immunity and absorb consumption with spell damage; query reads and target capacity mutations are separated by `ParamSet`. See [defensives audit](../../defensives-audit.md) for outcomes, Brew's health effect and verification limits.
 
 ## Procs
 
@@ -303,6 +303,8 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
 - TrinityCore master `a96d8977` `SpellAuras.cpp`, `SpellMgr.cpp` (`CanSpellTriggerProcOnEvent`, proc autogeneration), `SpellDefines.h` (`SpellModOp`, `SpellAuraInterruptFlags`)
 
 ## See Also
+
+- [Class defensives audit](../../defensives-audit.md) — real-cast spell/melee proofs, catalog presence versus reproduced gaps (2026-10-09)
 
 - [[spell-casting]] — the pipeline that applies auras and reads spell mods
 - [[spell-info]] — aura options, interrupts, class options, labels

@@ -28,6 +28,8 @@ const SWITCH_TO_SKYRIDING: u32 = 460_002;
 const SWITCH_TO_STEADY: u32 = 460_003;
 /// Azure Strike (Blue): DUMMY 0 (the target count), SCHOOL_DAMAGE 1 in an area.
 const AZURE_STRIKE: u32 = 362_969;
+const FORTIFYING_BREW: u32 = 115_203;
+const FORTIFYING_BREW_BUFF: u32 = 120_954;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -35,6 +37,7 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (FORTIFYING_BREW, 0) => Some(fortifying_brew),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -66,6 +69,76 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
 /// casts Chaos Strike 162794 at the hit unit, triggered.
 fn chaos_strike_initial(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     super::cast_triggered(world, caster, CHAOS_STRIKE, Some(target), depth + 1);
+}
+
+/// Fortifying Brew's DUMMY cast applies 120954 with custom health and damage
+/// amounts from 115203 (local catalog: +20%, -20%). Retail snapshots a fixed
+/// health gain at cast time and removes that same gain when the buff expires:
+/// simulationcraft/simc, midnight, buffs::fortifying_brew_t::trigger/expire_override
+/// https://github.com/simulationcraft/simc/blob/midnight/engine/class_modules/monk/sc_monk.cpp
+/// The 115203 -> 120954 DUMMY bridge also exists in the TrinityCore-derived
+/// RoleplayCore spell_monk_fortifying_brew::HandleDummy:
+/// https://github.com/KamiliaBlow/RoleplayCore/blob/master/src/server/scripts/Spells/spell_monk.cpp
+fn fortifying_brew(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    let Some(buff) = customize_fortifying_brew(world, caster) else {
+        warn!(
+            "Fortifying Brew requires caster health and spells 115203/120954 with health/damage effects"
+        );
+        return;
+    };
+    // Only the two requested defensive effects; stagger, talents and cosmetic
+    // size effects are not implemented by this bounded bridge.
+    crate::auras::apply_aura_with_spell(
+        world,
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: FORTIFYING_BREW_BUFF,
+            effect_mask: 0b11,
+            source: crate::auras::AuraSource::Cast,
+        },
+        &buff,
+    );
+}
+
+fn customize_fortifying_brew(world: &World, caster: Entity) -> Option<SpellInfo> {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let cast = store.get(FORTIFYING_BREW)?;
+    let mut buff = store.get(FORTIFYING_BREW_BUFF)?.clone();
+    let health_percent = cast
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)?
+        .base_points;
+    let damage_percent = cast
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)?
+        .base_points;
+    let health_bonus = snapshot_brew_health_bonus(world, caster, health_percent)?;
+    for effect in &mut buff.effects {
+        match effect.index {
+            0 => effect.base_points = health_bonus,
+            1 => effect.base_points = damage_percent,
+            _ => {}
+        }
+    }
+    Some(buff)
+}
+
+fn snapshot_brew_health_bonus(world: &World, caster: Entity, percent: f32) -> Option<f32> {
+    let health = world.get::<shared::components::Health>(caster)?;
+    let existing = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == FORTIFYING_BREW_BUFF)
+        });
+    let previous_bonus = existing
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    Some(((health.max - previous_bonus) * percent / 100.0).floor())
 }
 
 /// Switch Flight Style 436854 (the Riding skill line's ability, spelldesc
