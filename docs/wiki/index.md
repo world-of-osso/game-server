@@ -47,7 +47,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Class spell batch11](systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths) — eight bounded low-count paths,13 native functions,168 retained Dummy roots/all40-spec table; aura271 spell-family specificity.
+- [Class spell batch11](systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths) — eight bounded low-count paths,13 native functions,168 retained Dummy roots/all40-spec table; named Lashing Flames271 specificity, preserved Colossus base contract.
 
 - [Class spell batch10](systems/spell-casting.md#tenth-batch-low-count-spec-paths) — eight low-count spec paths,11 native functions,170→168 Dummy roots and full40-spec before/after table; talent/transfer/actor gaps retained.
 
