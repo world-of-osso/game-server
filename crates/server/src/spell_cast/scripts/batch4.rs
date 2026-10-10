@@ -40,6 +40,22 @@ pub(super) fn light_of_dawn_plan(
         .iter()
         .position(|effect| effect.index == 0)
         .expect("Dawn heal");
+    let units = select_dawn_allies(world, caster, spell, explicit, index);
+    vec![PlannedEffect {
+        index,
+        units,
+        dest: None,
+        chain_multipliers: Vec::new(),
+    }]
+}
+
+fn select_dawn_allies(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    index: usize,
+) -> Vec<Entity> {
     let mut units = targets::select_targets(
         world,
         caster,
@@ -56,12 +72,7 @@ pub(super) fn light_of_dawn_plan(
             .is_some_and(|health| health.current < health.max)
     });
     units.truncate(script_effect_value(world, caster, LIGHT_OF_DAWN, 1) as usize);
-    vec![PlannedEffect {
-        index,
-        units,
-        dest: None,
-        chain_multipliers: Vec::new(),
-    }]
+    units
 }
 
 /// 56641 explicitly references 77443s1 Focus; no guessed resource ID/amount.
@@ -119,9 +130,26 @@ pub(super) fn vivify(world: &mut World, caster: Entity, _spell: &SpellInfo) {
         .iter()
         .position(|effect| effect.index == 0)
         .expect("Vivify splash heal");
+    let units = select_vivify_allies(world, caster, &child, index);
+    let mut plan = vec![PlannedEffect {
+        index,
+        units,
+        dest: None,
+        chain_multipliers: Vec::new(),
+    }];
+    spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
+    spell_cast::missiles::launch(world, caster, &child, plan, 1);
+}
+
+fn select_vivify_allies(
+    world: &mut World,
+    caster: Entity,
+    child: &SpellInfo,
+    index: usize,
+) -> Vec<Entity> {
     // Keep425804's catalog area/radius, narrowed to the root's owned marks.
     let mut units =
-        targets::select_targets(world, caster, None, &child, &child.effects[index], 0, false)
+        targets::select_targets(world, caster, None, child, &child.effects[index], 0, false)
             .expect("Vivify catalog selectors");
     units.retain(|&unit| {
         world
@@ -132,14 +160,7 @@ pub(super) fn vivify(world: &mut World, caster: Entity, _spell: &SpellInfo) {
                     .any(|aura| aura.spell_id == RENEWING_MIST && aura.caster == caster)
             })
     });
-    let mut plan = vec![PlannedEffect {
-        index,
-        units,
-        dest: None,
-        chain_multipliers: Vec::new(),
-    }];
-    spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
-    spell_cast::missiles::launch(world, caster, &child, plan, 1);
+    units
 }
 
 /// 188443: 343725s5 Maelstrom for each successful target hit, only with passive.
