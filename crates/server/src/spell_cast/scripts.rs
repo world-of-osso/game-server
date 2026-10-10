@@ -42,6 +42,28 @@ const HOLY_SHOCK_HEAL: u32 = 25_914;
 const PENANCE: u32 = 47_540;
 const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
+const COBRA_SHOT: u32 = 193_455;
+const KILL_COMMAND: u32 = 34_026;
+const BLACKOUT_KICK: u32 = 100_784;
+const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
+const RISING_SUN_KICK: u32 = 107_428;
+const FISTS_OF_FURY: u32 = 113_656;
+const BACKSTAB: u32 = 53;
+const PYRE_IMPACT: u32 = 393_568;
+const PYRE_DAMAGE: u32 = 357_212;
+const DRAIN_SOUL: u32 = 198_590;
+const FIRE_BLAST: u32 = 108_853;
+const DEATH_COIL: u32 = 47_541;
+const DEATH_COIL_DAMAGE: u32 = 47_632;
+const DEATH_COIL_HEAL: u32 = 47_633;
+const LICHBORNE: u32 = 49_039;
+const OUTBREAK: u32 = 77_575;
+const DREAD_PLAGUE: u32 = 1_240_996;
+const VIRULENT_PLAGUE: u32 = 191_587;
+const CHAIN_HEAL: u32 = 1_064;
+const DEMON_SPIKES: u32 = 203_720;
+const DEMON_SPIKES_AURA: u32 = 203_819;
+const DEFLECTING_SPIKES: u32 = 321_028;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -55,12 +77,86 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (RAMPAGE, 0) => Some(rampage),
         (HOLY_SHOCK, 0) => Some(holy_shock),
         (PENANCE, 0) => Some(penance),
+        (COBRA_SHOT, 1) => Some(cobra_shot),
+        (BLACKOUT_KICK, 0) => Some(blackout_kick),
+        (PYRE_IMPACT, 0) => Some(pyre),
+        (DEATH_COIL, 0) => Some(death_coil),
+        (DEMON_SPIKES, 0) => Some(demon_spikes),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
         (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
         (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
         _ => None,
+    }
+}
+
+/// TC a352b1fa spell_mage.cpp:804-815 overrides Fire Blast's crit chance
+/// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
+pub fn crit_chance(spell_id: u32) -> Option<f32> {
+    match spell_id {
+        FIRE_BLAST => Some(100.0),
+        _ => None,
+    }
+}
+
+pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
+
+pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
+    match spell_id {
+        BACKSTAB => Some(backstab_damage),
+        DRAIN_SOUL => Some(drain_soul_damage),
+        COBRA_SHOT => Some(cobra_shot_damage),
+        _ => None,
+    }
+}
+
+/// Retail SpellXDescriptionVariables193455 ->331: unconditional $mult
+/// = (min(player_level-1,19)*12+112)/340, unity from level20 onward.
+fn cobra_shot_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
+    let level = world
+        .get::<shared::components::Level>(caster)
+        .expect("class spell caster requires Level")
+        .0;
+    let multiplier = ((f32::from(level) - 1.0).min(19.0) * 12.0 + 112.0) / 340.0;
+    amount * multiplier
+}
+
+/// TC a352b1fa spell_warlock.cpp:840-849: evaluate the execute threshold
+/// each tick, not at application. Retail $s2=100% and $s3=20%.
+fn drain_soul_damage(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    let Some(health) = world.get::<shared::components::Health>(target) else {
+        return amount;
+    };
+    let threshold = script_effect_value(world, caster, DRAIN_SOUL, 2);
+    if health.current < health.max * threshold / 100.0 {
+        let percent = script_effect_value(world, caster, DRAIN_SOUL, 1);
+        amount * (1.0 + percent / 100.0)
+    } else {
+        amount
+    }
+}
+
+/// TC a352b1fa spell_rogue.cpp:225-251, spell_rog_backstab: effect 3
+/// increases damage only in the target's rear half-plane. Retail $s4=20%.
+fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    // SpellXDescriptionVariables53 ->339 supplies unconditional $mult.
+    let level = world
+        .get::<shared::components::Level>(caster)
+        .expect("class spell caster requires Level")
+        .0;
+    let early_levels = (f32::from(level) - 10.0).clamp(0.0, 10.0);
+    let amount = amount * (early_levels * 11.0 + 260.0) / 370.0;
+    let from = super::targets::position(world, target).expect("Backstab target requires position");
+    let to = super::targets::position(world, caster).expect("Backstab caster requires position");
+    let angle = super::targets::orientation(world, target);
+    let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
+    let behind = forward.dot(to - from) < 0.0;
+    if behind {
+        let percent = script_effect_value(world, caster, BACKSTAB, 3);
+        amount * (1.0 + percent / 100.0)
+    } else {
+        amount
     }
 }
 
@@ -80,6 +176,329 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_dh.cpp:1035-1055 bridges203720 to203819;
+/// spell_dh_deflecting_spikes:891-910 excludes parry effect0 without321028.
+fn demon_spikes(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    let mut effect_mask = u32::MAX;
+    if !crate::auras::has_aura(world, caster, DEFLECTING_SPIKES) {
+        effect_mask &= !1;
+    }
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: DEMON_SPIKES_AURA,
+            effect_mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+}
+
+pub(super) type TargetPlanHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> super::TargetPlan;
+
+/// Script-owned target plans still use normal validation, hit and effect paths.
+pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    match spell_id {
+        CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
+        _ => None,
+    }
+}
+
+/// Retail1064 $s2/$s3 supply falloff and jump radius; effect0 supplies four
+/// total targets. TC a352b1fa Spell.cpp:2273-2322 chooses greatest HP deficit,
+/// then moves the next jump's source. Its old 12.5yd default is NOT Retail's20yd.
+fn chain_heal_plan(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> super::TargetPlan {
+    let primary = explicit.expect("Chain Heal has a validated ally target");
+    let jumps = spell.effects[0].chain_targets.saturating_sub(1) as usize;
+    let radius = script_effect_value(world, caster, CHAIN_HEAL, 2);
+    let amplitude = 1.0 - script_effect_value(world, caster, CHAIN_HEAL, 1) / 100.0;
+    let mut units = vec![primary];
+    units.extend(chain_heal_jumps(world, caster, primary, radius, jumps));
+    let chain_multipliers =
+        std::iter::successors(Some(1.0), |multiplier| Some(multiplier * amplitude))
+            .zip(&units)
+            .map(|(multiplier, &unit)| (unit, multiplier))
+            .collect();
+    vec![super::PlannedEffect {
+        index: 0,
+        units,
+        dest: None,
+        chain_multipliers,
+    }]
+}
+
+fn chain_heal_jumps(
+    world: &mut World,
+    caster: Entity,
+    primary: Entity,
+    radius: f32,
+    jumps: usize,
+) -> Vec<Entity> {
+    let center = super::targets::position(world, primary).expect("validated target position");
+    let mut candidates = super::targets::area_units(
+        world,
+        caster,
+        center,
+        radius * jumps as f32,
+        Relation::Ally,
+        0,
+    );
+    candidates.retain(|&unit| unit != primary);
+    let mut source = primary;
+    let mut chain = Vec::new();
+    while chain.len() < jumps {
+        let from = super::targets::position(world, source).expect("chain source position");
+        let Some(slot) = most_injured_within(world, &candidates, from, radius) else {
+            break;
+        };
+        source = candidates.remove(slot);
+        chain.push(source);
+    }
+    chain
+}
+
+fn most_injured_within(
+    world: &World,
+    candidates: &[Entity],
+    from: Vec3,
+    radius: f32,
+) -> Option<usize> {
+    candidates
+        .iter()
+        .enumerate()
+        .filter_map(|(slot, &unit)| {
+            let distance = super::targets::position(world, unit)?.distance(from);
+            let health = world.get::<shared::components::Health>(unit)?;
+            (distance <= radius).then_some((slot, health.max - health.current))
+        })
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(slot, _)| slot)
+}
+
+/// Validate before spending costs: Retail47541 heals only an Undead ally.
+/// Lichborne49039 explicitly makes its bearer Undead; undead NPC type is 6.
+pub fn check_target(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Result<(), super::CastFailure> {
+    if spell_id != DEATH_COIL {
+        return Ok(());
+    }
+    let enemy = relation_matches(world, caster, target, Relation::Enemy);
+    let undead_ally =
+        relation_matches(world, caster, target, Relation::Ally) && is_undead(world, target);
+    if enemy || undead_ally {
+        Ok(())
+    } else {
+        Err(super::CastFailure::InvalidTarget)
+    }
+}
+
+fn is_undead(world: &World, target: Entity) -> bool {
+    if crate::auras::has_aura(world, target, LICHBORNE) {
+        return true;
+    }
+    world
+        .get::<shared::components::Npc>(target)
+        .and_then(|npc| {
+            world
+                .get_resource::<crate::world_data::WorldData>()?
+                .templates
+                .get(&npc.template_id)
+        })
+        .is_some_and(|template| template.creature_type == 6)
+}
+
+/// TC a352b1fa spell_dk.cpp:589-609 names the 47632 damage bridge.
+/// Retail47541 additionally names47633 healing and $77575s3 plague extension.
+fn death_coil(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let child = if relation_matches(world, caster, target, Relation::Ally) {
+        DEATH_COIL_HEAL
+    } else {
+        DEATH_COIL_DAMAGE
+    };
+    super::cast_triggered(world, caster, child, Some(target), depth + 1);
+    let milliseconds = script_effect_value(world, caster, OUTBREAK, 2)
+        .max(0.0)
+        .round() as u32;
+    crate::auras::extend_owned_duration(
+        world,
+        caster,
+        target,
+        &[DREAD_PLAGUE, VIRULENT_PLAGUE],
+        milliseconds,
+    );
+}
+
+/// TC a352b1fa spell_evoker.cpp:601-618 spell_evo_pyre casts 357212 at
+/// the hit unit's position. Its real radius/coefficients define the explosion;
+/// target 87 is a scripted destination, not a generic unit-target substitution.
+fn pyre(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if depth >= super::effects::MAX_TRIGGER_DEPTH {
+        warn!("Pyre trigger depth exhausted");
+        return;
+    }
+    let Some(center) = super::targets::position(world, target) else {
+        return;
+    };
+    let child = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(PYRE_DAMAGE)
+        .expect("Pyre requires catalog damage 357212")
+        .clone();
+    let mut plan = pyre_explosion_plan(world, caster, &child, center);
+    super::hit::remove_defended_targets(world, caster, &child, &mut plan);
+    super::missiles::launch(world, caster, &child, plan, depth + 1);
+}
+
+fn pyre_explosion_plan(
+    world: &mut World,
+    caster: Entity,
+    child: &SpellInfo,
+    center: Vec3,
+) -> super::TargetPlan {
+    let radius = super::targets::radius(&child.effects[0], 1);
+    let units = super::targets::area_units(
+        world,
+        caster,
+        center,
+        radius,
+        Relation::Enemy,
+        super::max_targets(child),
+    );
+    vec![super::PlannedEffect {
+        index: 0,
+        units,
+        dest: Some(super::targets::Dest {
+            position: center,
+            orientation: super::targets::orientation(world, caster),
+        }),
+        chain_multipliers: Vec::new(),
+    }]
+}
+
+/// Retail 100784/261917: rank two reduces Rising Sun Kick and Fists of Fury
+/// by $100784m3/1000 seconds. Effect 2 stores milliseconds, not a proc chance.
+fn blackout_kick(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    if crate::auras::has_aura(world, caster, BLACKOUT_KICK_RANK_TWO) {
+        let milliseconds = script_effect_value(world, caster, BLACKOUT_KICK, 2);
+        for spell in [RISING_SUN_KICK, FISTS_OF_FURY] {
+            reduce_cooldown(world, caster, spell, f64::from(milliseconds) / 1000.0);
+        }
+    }
+}
+
+/// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."
+/// Effect 2 supplies that duration (1 second); no proc/PPM roll is authored.
+/// Run once on the damage hit, not on each Dummy metadata effect.
+fn cobra_shot(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    let seconds = script_effect_value(world, caster, COBRA_SHOT, 2);
+    reduce_cooldown(world, caster, KILL_COMMAND, f64::from(seconds));
+}
+
+fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .expect("script spell must exist in SpellStore");
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .expect("script requires its documented catalog effect");
+    super::effects::modded_base_points(world, caster, spell, effect)
+}
+
+/// Reduce the currently running recharge or spell cooldown; never start one.
+fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
+    let now = super::now(world);
+    let charge_category = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .and_then(|spell| spell.categories.as_ref())
+        .map_or(0, |category| category.charge_category);
+    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+        return;
+    };
+    let (charges, remaining_ms) =
+        reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
+    if let Some(charges) = charges {
+        super::send_charges(world, caster, &charges, now);
+    }
+    if let Some(remaining_ms) = remaining_ms {
+        send_reduced_cooldown(world, caster, spell_id, remaining_ms);
+    }
+}
+
+fn reduce_running_timers(
+    history: &mut super::SpellHistory,
+    charge_category: u32,
+    spell_id: u32,
+    now: f64,
+    seconds: f64,
+) -> (Option<super::ChargeState>, Option<u32>) {
+    let charges = history
+        .charges
+        .get_mut(&charge_category)
+        .filter(|charges| charges.used > 0)
+        .map(|charges| {
+            charges.next_ready_at -= seconds;
+            charges.refresh(now);
+            *charges
+        });
+    let remaining_ms = history
+        .spell_ready_at
+        .get_mut(&spell_id)
+        .filter(|ready| **ready > now)
+        .map(|ready| {
+            *ready = (*ready - seconds).max(now);
+            ((*ready - now) * 1000.0).round() as u32
+        });
+    (charges, remaining_ms)
+}
+
+/// Keep the full cooldown duration separate from remaining time: the client
+/// computes its sweep from remaining/duration and must not restart it at100%.
+fn send_reduced_cooldown(world: &mut World, caster: Entity, spell_id: u32, remaining_ms: u32) {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .expect("running cooldown spell must be in the catalog");
+    let base = spell
+        .cooldowns
+        .as_ref()
+        .map_or(0, |cooldown| cooldown.recovery_ms);
+    let duration_ms = super::modify(
+        world,
+        caster,
+        spell,
+        crate::auras::spell_mods::SpellModOp::Cooldown,
+        base as f32,
+    )
+    .max(0.0)
+    .round() as u32;
+    super::send_to_owner(
+        world,
+        caster,
+        shared::protocol::SpellCooldownUpdate {
+            spell_id,
+            category: 0,
+            duration_ms,
+            remaining_ms,
+            is_gcd: false,
+        },
+    );
 }
 
 /// TC a352b1fa spell_priest.cpp:3070-3125,5546, spell_pri_penance:

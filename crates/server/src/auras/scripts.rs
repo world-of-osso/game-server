@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use super::AuraInstance;
 
 pub type AuraHook = fn(&mut World, Entity, &AuraInstance);
+pub type RemoveHook = fn(&mut World, Entity, &AuraInstance, super::RemoveReason);
 /// Also receives the ticking effect index.
 pub type PeriodicHook = fn(&mut World, Entity, &AuraInstance, u8);
 /// Also receives the other party of the proc event.
@@ -18,7 +19,7 @@ pub type ProcHook = fn(&mut World, Entity, &AuraInstance, Option<Entity>);
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AuraScript {
     pub on_apply: Option<AuraHook>,
-    pub on_remove: Option<AuraHook>,
+    pub on_remove: Option<RemoveHook>,
     pub on_periodic: Option<PeriodicHook>,
     pub on_proc: Option<ProcHook>,
 }
@@ -38,9 +39,14 @@ pub(super) fn run_apply(world: &mut World, unit: Entity, aura: &AuraInstance) {
     }
 }
 
-pub(super) fn run_remove(world: &mut World, unit: Entity, aura: &AuraInstance) {
+pub(super) fn run_remove(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    reason: super::RemoveReason,
+) {
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_remove) {
-        run(world, unit, aura);
+        run(world, unit, aura, reason);
     }
 }
 
@@ -66,8 +72,17 @@ const TURTLE_PACIFY: u32 = 205_769;
 const BARKSKIN: u32 = 22_812;
 const BRAMBLES: u32 = 203_953;
 const BRAMBLES_DAMAGE: u32 = 213_709;
+const DRAIN_SOUL: u32 = 198_590;
+const DRAIN_SOUL_ENERGIZE: u32 = 205_292;
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        DRAIN_SOUL,
+        AuraScript {
+            on_remove: Some(drain_soul_shard_on_death),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         BARKSKIN,
         AuraScript {
@@ -110,7 +125,31 @@ fn apply_turtle_pacify(world: &mut World, unit: Entity, _aura: &AuraInstance) {
     );
 }
 
-fn remove_turtle_pacify(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+/// TC a352b1fa spell_warlock.cpp:831-848: only death removal awards
+/// 205292 (10 raw Soul Shards = one whole shard). Expiry/cancellation do not.
+fn drain_soul_shard_on_death(
+    world: &mut World,
+    _unit: Entity,
+    aura: &AuraInstance,
+    reason: super::RemoveReason,
+) {
+    if reason == super::RemoveReason::Death {
+        crate::spell_cast::cast_triggered(
+            world,
+            aura.caster,
+            DRAIN_SOUL_ENERGIZE,
+            Some(aura.caster),
+            1,
+        );
+    }
+}
+
+fn remove_turtle_pacify(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    _reason: super::RemoveReason,
+) {
     super::remove_auras(world, unit, super::RemoveReason::Cancelled, |aura| {
         aura.spell_id == TURTLE_PACIFY && aura.caster == unit
     });

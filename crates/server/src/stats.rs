@@ -64,6 +64,10 @@ pub struct StatModifiers {
     pub parry_pct: f32,
     /// MOD_BLOCK_PERCENT: added to block chance (`player_defense`).
     pub block_pct: f32,
+    /// MOD_ARMOR_PCT_FROM_STAT268: additive percentages of live primary stats.
+    pub armor_from_stat_pct: UnitStats,
+    /// MiscValue -2 selects the specialization's primary stat.
+    pub armor_from_primary_stat_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -293,6 +297,23 @@ fn tertiary_rating_value(rating: f32, per_point: f32) -> f32 {
     curve_value(&TERTIARY_DR_CURVE, rating / per_point)
 }
 
+/// TC a352b1fa StatSystem.cpp:255-276, Player::UpdateArmor: live stat
+/// percentages add to armor, rather than snapshotting agility at aura apply.
+fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatModifiers) -> f32 {
+    let pct = &mods.armor_from_stat_pct;
+    let explicit = primary.strength * pct.strength
+        + primary.agility * pct.agility
+        + primary.stamina * pct.stamina
+        + primary.intellect * pct.intellect;
+    let main_value = match main {
+        Some(PrimaryStat::Strength) => primary.strength,
+        Some(PrimaryStat::Agility) => primary.agility,
+        Some(PrimaryStat::Intellect) => primary.intellect,
+        None => 0.0,
+    };
+    ((explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0).floor()
+}
+
 /// Retail stats for `input`, with aura `mods` folded in. `None` for a class
 /// or level outside the tables (1..=13, 1..=90).
 pub fn compute_character_stats(
@@ -349,7 +370,7 @@ pub fn compute_character_stats(
         leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
-        armor: ratings.armor,
+        armor: ratings.armor + armor_from_stats(&primary, input.primary_stat, &mods),
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
         defense: PlayerDefense::default(),
