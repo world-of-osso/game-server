@@ -418,9 +418,10 @@ fn pet_battle_fainted_replacement_does_not_advance_combat() {
 #[test]
 fn pet_battle_unimplemented_object_aura_is_rejected() {
     let c = catalog();
-    let b = battle(&c, 2, 7, [190, 110, 123]);
+    // Cyclone190 is supported; Volcano176/175 still has undetermined object semantics.
+    let b = battle(&c, 2, 7, [176, 110, 123]);
     let err = b
-        .step(&c, [Action::Ability(190), Action::Pass], &mut Fixed(500000))
+        .step(&c, [Action::Ability(176), Action::Pass], &mut NoDraw)
         .unwrap_err();
     assert!(err.contains("object"));
 }
