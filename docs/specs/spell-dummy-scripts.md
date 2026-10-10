@@ -88,6 +88,21 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 
 These are bounded paths, not whole abilities. Colossus optional343/In for the Kill, Survival child Dummy2, Heart Strike rank316575/front-arc targeting, Radiance actual Atonement/raid-pet priority, Raging Blow other reset talents, Whirlwind copied cleave/consumption and soft cap, Verdant flight/primary heal, and Rake periodic snapshot remain uncertified. Sources: read-only TDB1210.26091 archive registrations/proc/link rows, TC a352b1fa, and local Mainline12.1.0.69933 descriptions/effects. Archive names route investigation; they are not standalone behavior proof. No spell_bonus_data table exists in this archive; DB2 SP/AP/scaling fields supply its numerical equivalents.
 
+### Eighth-batch locally derived paths
+
+- [x] Reap1226019 launches1225827 along its87/134 caster-to-destination line using the authored radius/width. Multiple hostile units ahead can be hit; allies, units behind, beyond radius and in another map are excluded.
+- [x] Provoke115546 rejects ordinary allies and foreign Black Ox statues61146 before cooldown/cost.116189 actually equalizes highest threat, changes the creature victim and holds it for the catalog6000ms, with800% increased threat from that Monk. An owned statue uses118635's catalog area, excluding allies/far enemies; removal/expiry ends the hold and threat bonus.
+- [x] Demonbolt264178 grants280127's20 raw Soul Shards once AfterCast while retaining native damage.
+- [x] Crash Lightning187874 uses its authored120-degree destination-directed cone/radius8 and grants187878's12-second enhancement. Current Mainline's unconditional tooltip takes precedence over the older TDB two-target gate.
+- [x] Breath of Fire115181 uses its90-degree destination-directed cone/radius12. Targets carrying this Monk's Keg Smash121253 gain123725 periodic damage and deal its authored5% less damage to that Monk until expiry; foreign marks and enemies behind are excluded. This consumes a spell-specific named field, not a generic redefinition of aura269.
+- [x] Fan of Knives51723 awards its authored one combo point once per cast with a successful damage hit, not per enemy; an empty area awards none.
+- [x] Holy Word: Sanctify34861 heals at most five injured allies in its requested ground area; healthy units do not consume slots. Existing Prayer recharge reduction remains.
+- [x] Incinerate29722 generates244670's two base Soul Shard Fragments once for root damage, not per splash target.
+- [x] Unstable Affliction30108 applies233490's named base periodic damage to the enemy, ticks and expires normally.
+- [x] Arcane Barrage44425 consumes all Arcane Charges AfterCast.
+
+These ten paths are bounded, not whole-ability parity. Reap soul collection/optional Fury; Provoke optional speed/overlapping or reapplied taunts; Demonbolt zero/460553 markers; Crash cleave consumption/procs/split damage; Breath secondary falloff and combat-reach geometry; Fan poisons/soft cap; Sanctify Dummy3; Incinerate critical/talent additions; Affliction five-instance accumulation/vulnerability/dispel/death-refund; Barrage charge-scaled damage/secondary hits/mana refund remain uncertified or unimplemented. Sources: local Mainline12.1.0.69933 CSV/imported rows and TDB1210 archive routing; no invented IDs or world.db writes. [Census and proof](../wiki/systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths).
+
 ## How it works
 
 - [Spell scripts and coverage boundaries](../wiki/systems/spell-casting.md#class-dummy-scripts)
@@ -98,8 +113,8 @@ These are bounded paths, not whole abilities. Colossus optional343/In for the Ki
 - `spell_cast/mod.rs`, `spell_cast/effects.rs` — validation, channel construction and normal effect execution.
 - `auras/scripts.rs`, `auras/mod.rs` — periodic/removal callbacks and owned-duration extension.
 - `stats.rs`, `auras/{handlers,stat_mods}.rs` — live stat-derived armor.
-- `spell_cast/scripts/{batch3,batch4,batch5,batch6,batch7}.rs` — locally sourced bounded paths.
-- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests,dummy4_tests,dummy5_tests,dummy6_tests,dummy7_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
+- `spell_cast/scripts/{batch3,batch4,batch5,batch6,batch7,batch8}.rs` — locally sourced bounded paths.
+- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests,dummy4_tests,dummy5_tests,dummy6_tests,dummy7_tests,dummy8_tests,dummy8_defense_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
 
 ## Tests asserting this spec
 
@@ -117,6 +132,8 @@ These are bounded paths, not whole abilities. Colossus optional343/In for the Ki
 
 - `crates/server/src/spell_cast/dummy7_tests.rs` —21 authentic-data cast functions, including100 Survival variance samples and one-charge/oldest-recharge preservation. Full filter ran once244/245; Bear's existing3% Fire mitigation corrected in the sole failing fixture, then batch21/21 at`81c2bf6`. No245/245 broad-pass claim; [census and proof](../wiki/systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations).
 
+- `crates/server/src/spell_cast/dummy8_tests.rs`, `dummy8_defense_tests.rs` —13 cast functions plus one real incoming-damage/expiry function across ten paths. Targeted13/13 at`70c4f20`, defense1/1 at`2d883e8`; single post-master broad spell_cast run261/261 at`2fb37d8`. Format/check pass; [census and proof](../wiki/systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths).
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
@@ -127,7 +144,7 @@ These are bounded paths, not whole abilities. Colossus optional343/In for the Ki
 - Penance Atonement, Power of the Dark Side and Dark Reprimand variants are not certified by the base-channel tests.
 - Second-batch optional/uncertified paths: Teachings/normalization, Find Weakness, Volatility, Unholy Vigor, Chain Heal additional-jump LOS/talent range, Calcified Spikes/Retaliation, Fire Blast parallel casting/Hot Streak.
 - Third-batch unimplemented variants: Improved Garrote windows/other concealment spells; Prayer selection injury priority/LOS beyond ordinary cast validation; Prayer-to-Serenity optional1246517; Shred stealth/Thrash variants; Thunder Clap reduced damage beyond five targets/root variant; Moonfire second target, damage reduction and Astral Power variants. Unknown root/descendant markers are not certified by base-path proof.
-- Fourth-batch limits: unknown Dummy metadata remains unresolved. Steady Shot Marksmanship cooldown/level curve, Kill Shot enabling talents, Mangle marker, Renewing Mist overheal jumps/rank231606 procs, Vivify tooltip multiplier/talent variants, Chain Lightning Maelstrom Weapon/target-count marker, Howling Blast secondary damage/CAP/Frost Fever resource procs, Sanctify target cap/extra marker, Ebon Might stat distribution and extension caps are not certified.
-- Fifth-batch limits: unidentified Demon's Bite/Disintegrate/Chaos Bolt markers; Chaos Strike's30 mirror is not separately consumed; Shuriken soft-cap/stealth/talent fields; Bone Shield consumption/haste/armor parity and Blood Plague leech; latent plague talent effects. Crash Lightning remains deferred because its native selector104 is unsupported. No alternate cone substituted. These base-path tests do not certify full class rotations.
-- Sixth-batch limits: unknown root/child markers; Starfire/Keg/Butchery reduced-damage curves beyond their soft caps; Starfire429523 variant; Keg Shuffle/Brew reduction; Wild Growth declining tick curve/Tree of Life targets; Shadow Word: Death execute/damage-effect variants; Ice Lance Freezing/shatter; Starfall overlap/base tick child contracts. Selector104 remains unsupported: no Retail selector definition derived from the allowed local sources. No cone substitute or scope-wide rotation claim.
+- Fourth-batch limits: unknown Dummy metadata remains unresolved. Steady Shot Marksmanship cooldown/level curve, Kill Shot enabling talents, Mangle marker, Renewing Mist overheal jumps/rank231606 procs, Vivify tooltip multiplier/talent variants, Chain Lightning Maelstrom Weapon/target-count marker, Howling Blast secondary damage/CAP/Frost Fever resource procs, Sanctify extra marker (target cap completed in batch8), Ebon Might stat distribution and extension caps are not certified.
+- Fifth-batch limits: unidentified Demon's Bite/Disintegrate/Chaos Bolt markers; Chaos Strike's30 mirror is not separately consumed; Shuriken soft-cap/stealth/talent fields; Bone Shield consumption/haste/armor parity and Blood Plague leech; latent plague talent effects. Crash Lightning's native104 cone and initial enhancement are completed in batch8; cleave/proc damage remains uncertified. These base-path tests do not certify full class rotations.
+- Sixth-batch limits: unknown root/child markers; Starfire/Keg/Butchery reduced-damage curves beyond their soft caps; Starfire429523 variant; Keg Shuffle/Brew reduction; Wild Growth declining tick curve/Tree of Life targets; Shadow Word: Death execute/damage-effect variants; Ice Lance Freezing/shatter; Starfall overlap/base tick child contracts. Selector104's authored destination-directed cone is exercised by batch8 Crash Lightning/Breath of Fire; unit-center geometry does not certify combat-reach edge expansion or scope-wide rotations.
 - Realm UDP 5000, deployment and merging.

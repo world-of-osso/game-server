@@ -47,11 +47,14 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.
+
 - [Audited toy attachments and sounds](systems/toys.md#audited-attachment-and-sound-toys-2026-10-10) — eight source-backed visual-only admissions, actual target/cast/lifetime proofs, preserved race restrictions and unbound-ring refusals; census103/1166.
 
 - [Transmitted toy objects](systems/toys.md#transmitted-toy-objects-and-viewer-local-models-2026-10-10) — actual effect50 decoration/chair/mailbox summons, destination87, explicit unsupported object semantics and client-owned233.
 
 - [Generic toy aura effects](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10) — data-backed226, cast prevention321, linked summons428, explicit bobber258 gaps and authentic template preparation; earlier61/105/37/293 support.
+
 - [Class spell batch7](systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations) — eight TDB-routed bounded paths;21 cast functions pass,172 roots retained with seven additional reviewed/derived candidates and latent markers explicit.
 
 - [Class spell batch6](systems/spell-casting.md#sixth-batch-local-retail-rows) — eight ranked bounded paths plus Ice Lance;17 new cast functions, spell_cast224/224, Dummy roots173→172; retained variants explicit.
