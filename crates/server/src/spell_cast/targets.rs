@@ -48,6 +48,8 @@ enum Selector {
     Explicit(Relation),
     /// Area center = caster (SRC/DEST_CASTER).
     CenterCaster,
+    /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
+    ExistingDest,
     /// Area center = explicit target (DEST_TARGET_*).
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
@@ -74,15 +76,20 @@ fn selector(id: u32) -> Option<Selector> {
         0 => Selector::None,
         1 | 56 | 120 => Selector::Caster,
         5 => Selector::Pet,
-        32 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
+        47 => Selector::CasterOffset(0.0),
+        49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
+        50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
         18 | 22 => Selector::CenterCaster,
+        138 => Selector::ExistingDest,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
         63 => Selector::CenterExplicit(Any),
-        15 => Selector::AreaAroundSrc(Enemy),
+        15 | 151 => Selector::AreaAroundSrc(Enemy),
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
@@ -281,7 +288,7 @@ pub fn select_targets(
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         let selector = selector(id).ok_or(id)?;
         match selector {
-            Selector::None => {}
+            Selector::None | Selector::ExistingDest => {}
             Selector::Caster => {
                 selected_any = true;
                 units.push(caster);
@@ -556,6 +563,7 @@ pub fn effect_dest(
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         let point = match selector(id)? {
             Selector::CenterCaster => position(world, caster),
+            Selector::ExistingDest => dest.map(|dest: Dest| dest.position),
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
             Selector::DestTargetBack => {
                 explicit.and_then(|target| behind(world, target, radius(effect, slot)))
@@ -572,6 +580,18 @@ pub fn effect_dest(
         dest = point.map(|position| Dest {
             position,
             orientation: facing,
+        });
+    }
+    if dest.is_none()
+        && matches!(
+            effect.effect,
+            super::summon::EFFECT_SUMMON | super::area_trigger::EFFECT_CREATE_AREATRIGGER
+        )
+    {
+        let unit = explicit.unwrap_or(caster);
+        dest = position(world, unit).map(|position| Dest {
+            position,
+            orientation: orientation(world, unit),
         });
     }
     dest

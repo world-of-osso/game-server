@@ -664,7 +664,7 @@ fn imp_spell_power(world: &World) -> PowerType {
 /// `Guardian::InitStatsForLevel` without `pet_levelstats` (not imported): ExpectedStat
 /// CreatureHealth at the pet's level × the template's HealthModifier; an untuned
 /// AzerothCore template takes `creature_classlevelstats` (`CreatureBaseStats::GenerateHealth`).
-fn pet_max_health(data: &WorldData, template: &CreatureTemplate, level: u8) -> f32 {
+pub(crate) fn pet_max_health(data: &WorldData, template: &CreatureTemplate, level: u8) -> f32 {
     if let Some(tuning) = &template.tuning {
         return tuning.stats.max_health(level).max(1.0);
     }
