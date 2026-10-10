@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use shared::casting::CastState;
 use shared::components::{CombatStatus, Health, Position};
 use shared::protocol::{DamageMeterSnapshot, ProtocolPlugin};
 
@@ -357,11 +358,57 @@ fn a_session_against_a_creature_ends_at_its_death_not_five_seconds_later() {
     let current = latest_current(&mut client);
     assert!(!current.active);
     assert_eq!(current.total_amount, first + second);
-    // From the first launch to the kill: one Frostbolt cycle (63 frames, 3.15 s) plus
-    // the flight at 3 yd (counted as 5 yd: 5 / 35 = 0.14 s).
-    assert!((3.2..3.4).contains(&current.duration_secs), "{current:?}");
+    // First launch to kill: 63-frame cycle + one 500 ms melee pushback on the
+    // second cast (TrinityCore a352b1fa Spell::Delayed, max two per cast) + flight.
+    // Flight at 3 yd uses the 5 yd minimum: ceil((5 / 35) / 0.05) = 3 ticks.
+    // Thus (63 + 10 + 3) * 0.05 = 3.8 s, not another 5 s after the lethal hit.
+    assert!((current.duration_secs - 3.8).abs() < 1e-4, "{current:?}");
     let dps = current.sources[0].amount_per_second;
     assert!((dps - (first + second) as f32 / current.duration_secs).abs() < 1e-3);
+}
+
+#[test]
+fn damage_meter_melee_damage_delays_frostbolt_launch_by_ten_ticks() {
+    let mut client = frostbolt_client().unwrap();
+    make_fighting_creature(&mut client.h);
+    client.frostbolt_hit();
+    let mut h = client.h;
+    let (caster, npc) = (h.caster, h.npc);
+    let health_before = h.health(caster);
+
+    h.cast_and_deliver(FROSTBOLT, Some(npc));
+    let original_duration = h.app.world().get::<CastState>(caster).unwrap().duration;
+    assert_eq!(original_duration, 1.75);
+    // The real NPC swing arrives at frame 20, 0.9 s into the second cast.
+    h.advance(17);
+    assert_eq!(health_before - h.health(caster), 10.0);
+    let cast = h.app.world().get::<CastState>(caster).unwrap();
+    assert_eq!(cast.pushback_count, 1);
+    assert_eq!(cast.duration, original_duration + 0.5);
+
+    // Without pushback it launches at frame 38. A damaging melee swing adds
+    // 500 ms (TrinityCore a352b1fa Spell::Delayed): ten 50 ms simulation ticks.
+    h.advance(18);
+    assert!(h.app.world().get::<CastState>(caster).is_some());
+    h.advance(9);
+    assert!(h.app.world().get::<CastState>(caster).is_some());
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::CastSuccess)
+    );
+    h.advance(1);
+    assert!(h.app.world().get::<CastState>(caster).is_none());
+    let launches = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(FROSTBOLT)
+        })
+        .count();
+    assert_eq!(launches, 1);
 }
 
 #[test]
