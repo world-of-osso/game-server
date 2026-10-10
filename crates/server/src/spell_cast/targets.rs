@@ -391,6 +391,7 @@ pub fn select_targets(
             Selector::AreaAroundDest(relation) => {
                 selected_any = true;
                 let dest = center
+                    .or_else(|| spell.cast_destination.map(Vec3::from_array))
                     .or_else(|| explicit.and_then(|target| position(world, target)))
                     .unwrap_or(caster_pos);
                 units.extend(area_units(
