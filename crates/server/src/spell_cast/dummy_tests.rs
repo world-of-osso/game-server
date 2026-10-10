@@ -6,6 +6,61 @@ use shared::protocol::CombatLogKind;
 use super::test_harness::*;
 
 #[test]
+fn dummy_druid_barkskin_with_brambles_pulses_catalog_damage_each_second() {
+    let mut h = harness(Vec::new(), &[22812, 203953, 213709], 11).expect("real world.db required");
+    let ally = spawn_player(&mut h.app, 1, 2.0);
+    h.cast_and_deliver(22812, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(10);
+    assert_eq!(h.health(h.npc), 5000.0, "no pulse before one second");
+    h.advance(12);
+    assert!(varied(7.5).contains(&(5000.0 - h.health(h.npc))));
+    h.advance(20);
+    assert!(h.health(h.npc) < 5000.0 - 8.0, "second pulse");
+    let pulses: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(213709))
+        .collect();
+    assert_eq!(pulses.len(), 2);
+    assert!(
+        pulses
+            .iter()
+            .all(|event| varied(7.5).contains(&(event.amount as f32)))
+    );
+    assert_eq!(h.health(ally), 1000.0, "friendly unit is not hit");
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 22812,
+    );
+    let after = h.health(h.npc);
+    h.advance(30);
+    assert_eq!(
+        h.health(h.npc),
+        after,
+        "pulses stop when Barkskin is removed"
+    );
+}
+
+#[test]
+fn dummy_druid_barkskin_without_brambles_does_not_pulse() {
+    let mut h = harness(Vec::new(), &[22812, 213709], 11).expect("real world.db required");
+    h.cast_and_deliver(22812, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(45);
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(213709))
+    );
+}
+
+#[test]
 fn dummy_paladin_holy_shock_damages_enemy_and_generates_holy_power() {
     let mut h = harness(Vec::new(), &[20473, 25912, 25914], 2).expect("real world.db required");
     h.cast_and_deliver(20473, Some(h.npc));
