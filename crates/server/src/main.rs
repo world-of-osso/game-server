@@ -13,6 +13,7 @@ mod bank_storage;
 #[cfg(test)]
 mod bank_test_harness;
 mod barber_shop;
+mod battle_pets;
 mod calendar;
 mod chair;
 mod character_stats_data;

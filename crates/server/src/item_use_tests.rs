@@ -12,6 +12,48 @@ use crate::auras::ActiveAuras;
 use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::spell_cast::test_harness::*;
 
+#[test]
+fn companion_item_learns_three_instances_and_keeps_fourth_item() {
+    let mut eater = eater_with_spells(&[4401], 4, &[4055], MAGE)
+        .expect("local Mechanical Squirrel item/spell data");
+    let connection = eater.h.connection;
+    let owner = eater.h.caster;
+    let account = eater
+        .h
+        .app
+        .world()
+        .get::<Authenticated>(connection)
+        .unwrap()
+        .account_id;
+    eater
+        .h
+        .app
+        .insert_resource(crate::battle_pets::load_test_catalog());
+    bevy::app::Plugin::build(&crate::battle_pets::BattlePetPlugin, &mut eater.h.app);
+    app_world(&mut eater.h)
+        .entity_mut(owner)
+        .insert(crate::collection::default_collection_state());
+    let character_id = eater.character_id;
+    app_world(&mut eater.h)
+        .entity_mut(connection)
+        .remove::<InWorld>()
+        .insert(InWorld { character_id });
+    eater.h.advance(1);
+    for _ in 0..3 {
+        use_slot(&mut eater, 0);
+    }
+    assert!(errors(&mut eater).is_empty());
+    assert_eq!(count_of(&eater, 4401), 1);
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    let journal = crate::battle_pets::load_journal(db, account);
+    assert_eq!(journal.count_species(39), 3);
+    assert_eq!(journal.pets[0].level, 1);
+    assert_eq!(journal.pets[0].breed_id, 3);
+    use_slot(&mut eater, 0);
+    assert_eq!(errors(&mut eater).len(), 1);
+    assert_eq!(count_of(&eater, 4401), 1);
+}
+
 const MAGE: u8 = 8;
 
 /// Toy.csv ID 1: Orb of Deception; learning consumes one item, not the toy spell.

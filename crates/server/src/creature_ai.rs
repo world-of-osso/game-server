@@ -865,6 +865,11 @@ struct Leader {
 /// owner's speed scaled by `Unit::UpdateSpeed`'s catch-up factor: 0.75 + 0.05 per yard
 /// beyond `PET_FOLLOW_DIST`, within 1-1.3. It holds still while it cannot move, casts
 /// a spell movement would interrupt, or is dead. Paths are straight (no `PathGenerator`).
+#[cfg(test)]
+pub(crate) fn install_follow_fixture(app: &mut App) {
+    app.add_systems(Update, follow_owner_system);
+}
+
 fn follow_owner_system(
     time: Res<Time>,
     queues: MoveQueues,

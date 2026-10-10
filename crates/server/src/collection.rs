@@ -183,7 +183,9 @@ impl CollectionRequest for SummonPet {
         collection: &mut PlayerCollectionState,
         request: &Self,
     ) -> Result<CollectionChange, String> {
-        let message = summon_pet(collection, request.pet_id)?;
+        let species_id =
+            u32::try_from(request.pet_id).map_err(|_| "unknown pet species".to_string())?;
+        let message = summon_pet(collection, species_id)?;
         Ok(CollectionChange::pet(message))
     }
 }
@@ -202,11 +204,9 @@ pub struct CollectionPlugin;
 
 impl Plugin for CollectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, send_initial_collection_state);
+        app.add_plugins(crate::battle_pets::BattlePetPlugin);
         app.add_systems(Update, process_collection_requests::<SummonMount>);
         app.add_systems(Update, process_collection_requests::<DismissMount>);
-        app.add_systems(Update, process_collection_requests::<SummonPet>);
-        app.add_systems(Update, process_collection_requests::<DismissPet>);
     }
 }
 
@@ -226,47 +226,7 @@ pub fn default_collection_state() -> PlayerCollectionState {
                 active: false,
             },
         ],
-        pets: vec![
-            CollectionPet {
-                pet_id: 202,
-                name: "Brown Rabbit".into(),
-                known: true,
-                active: false,
-            },
-            CollectionPet {
-                pet_id: 203,
-                name: "Blue Moth".into(),
-                known: false,
-                active: false,
-            },
-        ],
-    }
-}
-
-type NewInWorldLink<'w, 's> =
-    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
-
-fn send_initial_collection_state(
-    connections: NewInWorldLink,
-    collections: Query<&PlayerCollectionState>,
-    mut senders: Query<&mut MessageSender<CollectionStateUpdate>>,
-) {
-    for (conn_entity, link) in &connections {
-        let Ok(collection) = collections.get(link.0) else {
-            send_collection_error(
-                conn_entity,
-                &mut senders,
-                "collections unavailable for player",
-            );
-            continue;
-        };
-        send_collection_update(
-            conn_entity,
-            collection,
-            Some("collections loaded".into()),
-            None,
-            &mut senders,
-        );
+        pets: vec![],
     }
 }
 
@@ -430,7 +390,7 @@ fn clear_active_entries<T: CollectionEntry>(entries: &mut [T]) {
     }
 }
 
-fn build_collection_snapshot(collection: &PlayerCollectionState) -> CollectionSnapshot {
+pub(crate) fn build_collection_snapshot(collection: &PlayerCollectionState) -> CollectionSnapshot {
     CollectionSnapshot {
         mounts: collection
             .mounts
@@ -469,6 +429,8 @@ fn send_collection_update(
         snapshot: Some(build_collection_snapshot(collection)),
         message,
         error,
+        pet_journal: None,
+        summoned_pet_id: None,
     });
 }
 
@@ -484,6 +446,8 @@ fn send_collection_error(
         snapshot: None,
         message: None,
         error: Some(error.into()),
+        pet_journal: None,
+        summoned_pet_id: None,
     });
 }
 
