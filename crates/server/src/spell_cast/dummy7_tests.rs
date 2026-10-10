@@ -244,6 +244,58 @@ fn dummy7_raging_blow_rank_success_restores_one_charge_and_notifies_owner() {
     raging_blow(100.0, true);
 }
 #[test]
+fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
+    let ids = [85288, 96103, 85384, 280270, 383854];
+    let mut root = world_db().unwrap().store.get(85288).unwrap().clone();
+    root.effects
+        .iter_mut()
+        .find(|e| e.index == 0)
+        .unwrap()
+        .base_points = 0.0;
+    let mut h = harness(vec![root.clone()], &ids, 1).unwrap();
+    h.cast_and_deliver(85288, Some(h.npc));
+    h.advance(4);
+    landed(&h);
+    let cat = root.categories.as_ref().unwrap().charge_category;
+    let oldest = h
+        .app
+        .world()
+        .get::<super::SpellHistory>(h.caster)
+        .unwrap()
+        .charges[&cat]
+        .next_ready_at;
+    h.advance(35);
+    root.effects
+        .iter_mut()
+        .find(|e| e.index == 0)
+        .unwrap()
+        .base_points = 100.0;
+    let spells = ids
+        .into_iter()
+        .map(|id| {
+            if id == 85288 {
+                root.clone()
+            } else {
+                world_db().unwrap().store.get(id).unwrap().clone()
+            }
+        })
+        .collect();
+    h.app
+        .world_mut()
+        .insert_resource(crate::spell_info::SpellStore::fixture(spells));
+    h.cast_and_deliver(85288, Some(h.npc));
+    h.advance(4);
+    landed(&h);
+    let charges = &h
+        .app
+        .world()
+        .get::<super::SpellHistory>(h.caster)
+        .unwrap()
+        .charges[&cat];
+    assert_eq!(charges.used, 1);
+    assert_eq!(charges.next_ready_at, oldest);
+}
+#[test]
 fn dummy7_raging_blow_rank_zero_chance_keeps_recharge() {
     raging_blow(0.0, true);
 }
@@ -281,6 +333,17 @@ fn whirlwind(rank: bool, enemies: usize) {
         crate::auras::has_aura(h.app.world(), h.caster, 85739),
         rank && enemies > 0
     );
+    if rank && enemies > 0 {
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 85739)
+            .unwrap();
+        assert_eq!(aura.stacks, 2);
+    }
     assert_eq!(logged(&h, 199667, ally, CombatLogKind::Damage), 0);
 }
 #[test]
@@ -332,11 +395,9 @@ fn dummy7_verdant_embrace_without_panacea_does_not_self_heal() {
     panacea(false);
 }
 
-fn rake(stealth: bool, rank: bool) {
+fn rake(stealth: bool, rank: Option<u32>) {
     let mut ids = vec![1822, 155722, 163505, 768, 5215];
-    if rank {
-        ids.push(231052);
-    }
+    ids.extend(rank);
     let mut h = harness(Vec::new(), &ids, 11).unwrap();
     let c = h.caster;
     h.cast_and_deliver(768, Some(c));
@@ -348,7 +409,7 @@ fn rake(stealth: bool, rank: bool) {
     h.cast_and_deliver(1822, Some(h.npc));
     h.advance(3);
     landed(&h);
-    let bonus = stealth && rank;
+    let bonus = stealth && rank.is_some();
     let amount = if bonus { 46.56 } else { 29.1 };
     assert!(varied(amount).contains(&(logged(&h, 1822, h.npc, CombatLogKind::Damage) as f32)));
     assert_eq!(crate::auras::has_aura(h.app.world(), h.npc, 163505), bonus);
@@ -357,13 +418,17 @@ fn rake(stealth: bool, rank: bool) {
 }
 #[test]
 fn dummy7_rake_stealth_and_rank_grant_initial_bonus_and_stun() {
-    rake(true, true);
+    rake(true, Some(231052));
+}
+#[test]
+fn dummy7_rake_pouncing_strikes_also_gates_stealth_bonus() {
+    rake(true, Some(405834));
 }
 #[test]
 fn dummy7_rake_stealth_without_rank_keeps_base_initial_damage() {
-    rake(true, false);
+    rake(true, None);
 }
 #[test]
 fn dummy7_rake_rank_without_stealth_keeps_base_initial_damage() {
-    rake(false, true);
+    rake(false, Some(231052));
 }
