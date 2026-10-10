@@ -19,6 +19,8 @@ pub enum AuraKind {
     SchoolImmunity,
     /// Rejects matching spell/effect mechanics and removes matching auras.
     MechanicImmunity,
+    /// Rejects SpellEffects IDs in aura37 MiscValue.
+    EffectImmunity,
     /// Damage taken from the aura's caster (`damage_taken_multiplier`).
     DamageFromCaster,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
@@ -62,6 +64,7 @@ pub const MOD_INCREASE_MOUNTED_SPEED: u32 = 32;
 pub const MOD_INCREASE_HEALTH: u32 = 34;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
 pub const MOD_SHAPESHIFT: u32 = 36;
+pub const EFFECT_IMMUNITY: u32 = 37;
 pub const MOD_DECREASE_SPEED: u32 = 33;
 /// SPELL_AURA_MOD_DODGE_PERCENT: nondiminishing percentage points.
 pub const MOD_DODGE_PERCENT: u32 = 49;
@@ -228,6 +231,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY => MechanicImmunity,
+        EFFECT_IMMUNITY => EffectImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
