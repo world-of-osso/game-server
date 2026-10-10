@@ -50,6 +50,8 @@ External resources, tooling, data sources, development workflow.
 - [Transmitted toy objects](systems/toys.md#transmitted-toy-objects-and-viewer-local-models-2026-10-10) — actual effect50 decoration/chair/mailbox summons, destination87, explicit unsupported object semantics and client-owned233.
 
 - [Generic toy aura effects](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10) — data-backed226, cast prevention321, linked summons428, explicit bobber258 gaps and authentic template preparation; earlier61/105/37/293 support.
+- [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.
+
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
 - [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, 40 property handlers, weather/team state and fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
 

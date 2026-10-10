@@ -2,6 +2,7 @@
 //! spell's DB2 effects do not carry.
 
 mod batch3;
+mod batch4;
 
 use bevy::prelude::*;
 
@@ -73,6 +74,10 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch4::RENEWING_MIST_CAST, 0) => Some(batch4::renewing_mist),
+        (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
+        (batch4::CHAIN_LIGHTNING, 0) => Some(batch4::chain_lightning),
+        (batch4::HOWLING_BLAST, 0) => Some(batch4::howling_blast),
         (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
         (batch3::THUNDER_CLAP, 0) => Some(batch3::thunder_clap),
         (batch3::DEVASTATE, 0) => Some(batch3::devastate),
@@ -111,6 +116,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
         batch3::SHRED => Some(batch3::shred_damage),
+        batch4::MANGLE => Some(batch4::mangle_damage),
         BACKSTAB => Some(backstab_damage),
         DRAIN_SOUL => Some(drain_soul_damage),
         COBRA_SHOT => Some(cobra_shot_damage),
@@ -171,11 +177,13 @@ fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
-    if spell_id == batch3::FLASH_HEAL {
-        Some(batch3::flash_heal)
-    } else {
-        shared::skyriding::ability_impulse(spell_id)
-            .map(|_| crate::skyriding::flap as AfterCastHook)
+    match spell_id {
+        batch3::FLASH_HEAL => Some(batch3::flash_heal),
+        batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
+        batch4::VIVIFY => Some(batch4::vivify),
+        batch4::ERUPTION => Some(batch4::eruption),
+        _ => shared::skyriding::ability_impulse(spell_id)
+            .map(|_| crate::skyriding::flap as AfterCastHook),
     }
 }
 
@@ -216,6 +224,7 @@ pub(super) type TargetPlanHook =
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
         batch3::PRAYER_OF_HEALING => Some((Relation::Ally, batch3::prayer_plan)),
+        batch4::LIGHT_OF_DAWN => Some((Relation::Ally, batch4::light_of_dawn_plan)),
         CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
         _ => None,
     }
@@ -305,6 +314,9 @@ pub fn check_target(
     spell_id: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
+    if spell_id == batch4::KILL_SHOT && !batch4::kill_shot_allowed(world, caster, target) {
+        return Err(super::CastFailure::InvalidTarget);
+    }
     if spell_id != DEATH_COIL {
         return Ok(());
     }
