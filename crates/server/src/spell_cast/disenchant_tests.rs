@@ -97,6 +97,10 @@ fn setup(item_id: u32, enchanting: bool) -> (Harness, tempfile::TempDir, u64, u3
         MessageReceiver::<LootResponse>::default(),
         MessageSender::<LootUnit>::default(),
         MessageReceiver::<LootUnit>::default(),
+        MessageSender::<shared::protocol::LootSlotRequest>::default(),
+        MessageReceiver::<shared::protocol::LootSlotRequest>::default(),
+        MessageSender::<shared::protocol::LootRelease>::default(),
+        MessageReceiver::<shared::protocol::LootRelease>::default(),
         MessageSender::<shared::protocol::LootClosed>::default(),
         MessageSender::<shared::protocol::LootSlotRemoved>::default(),
         MessageSender::<shared::protocol::LootFailed>::default(),
@@ -198,6 +202,104 @@ fn disenchant_unbound_uncommon_rolls_real_materials_and_persists_appearance() {
             .iter()
             .all(|item| item.item_guid != guid)
     );
+}
+
+#[test]
+fn disenchant_materials_can_be_taken_manually() {
+    let (mut h, _directory, guid, _) = setup(727, true);
+    cast_item(&mut h, guid);
+    let response = h
+        .app
+        .world()
+        .resource::<LootInbox>()
+        .0
+        .last()
+        .unwrap()
+        .clone();
+    for slot in &response.slots {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::LootSlotRequest>>(h.connection)
+            .unwrap()
+            .send::<LootChannel>(shared::protocol::LootSlotRequest {
+                corpse: response.corpse,
+                slot: slot.slot,
+            });
+    }
+    h.advance(5);
+    let model = crate::inventory::load_model(
+        &h.app.world().resource::<GameDatabase>().db,
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        1,
+    )
+    .unwrap();
+    for slot in response.slots {
+        let LootContent::Item { item_id, count, .. } = slot.content else {
+            unreachable!()
+        };
+        assert_eq!(model.bag_count(Retail, item_id), count);
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<crate::loot::ActiveLoot>(h.connection)
+            .is_none()
+    );
+}
+
+#[test]
+fn disenchant_release_finishes_personal_loot_and_allows_the_next_item() {
+    // TC a352b1fa LootHandler.cpp:310-335 discards unclaimed non-openable item loot.
+    let (mut h, _directory, guid, _) = setup(727, true);
+    cast_item(&mut h, guid);
+    let response = h
+        .app
+        .world()
+        .resource::<LootInbox>()
+        .0
+        .last()
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::LootRelease>>(h.connection)
+        .unwrap()
+        .send::<LootChannel>(shared::protocol::LootRelease {
+            corpse: response.corpse,
+        });
+    h.advance(5);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let templates = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    let model = crate::inventory::load_model(db, templates, 1).unwrap();
+    for slot in response.slots {
+        let LootContent::Item { item_id, .. } = slot.content else {
+            unreachable!()
+        };
+        assert_eq!(model.bag_count(Retail, item_id), 0);
+    }
+    crate::inventory::grant_item(
+        db,
+        templates,
+        h.app.world().resource::<crate::merchant::VendorCatalog>(),
+        1,
+        (727, 1),
+    )
+    .unwrap();
+    let next = crate::inventory::load_model(db, templates, 1)
+        .unwrap()
+        .bag_items()
+        .find(|item| item.item_id == 727)
+        .unwrap()
+        .item_guid;
+    cast_item(&mut h, next);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(!owns(&h, next));
+    assert_eq!(h.app.world().resource::<LootInbox>().0.len(), 2);
 }
 
 #[test]
