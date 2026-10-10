@@ -33,7 +33,14 @@ rsync -a --files-from="$GROUND_LIST" ../game-engine/data/ "${SERVER_HOST}:${GROU
 echo "Uploading line of sight (los-bake output beside the ground; docs/specs/line-of-sight.md)..."
 # The server refuses to start without the eye table; a map without tiles has no LOS geometry.
 test -f ../game-engine/data/los/eye_heights.tsv || { echo "No LOS bake: run los-bake (docs/specs/line-of-sight.md)" >&2; exit 1; }
+# Stockade supplement must be promoted into this cache before this --delete sync.
+test -d ../game-engine/data/los/34 || { echo "Missing Stockade LOS: copy data/ground/los/34/ into ../game-engine/data/los/34/" >&2; exit 1; }
 rsync -a --delete ../game-engine/data/los/ "${SERVER_HOST}:${GROUND_DIR}/los/"
+
+echo "Uploading navigation (incremental nav-bake output)..."
+test -d data/ground/navmesh || { echo "No navigation bake: run nav-bake (docs/specs/navigation.md)" >&2; exit 1; }
+# Delete stale navigation artifacts only, never neighboring ground/LOS assets.
+rsync -a --delete data/ground/navmesh/ "${SERVER_HOST}:${GROUND_DIR}/navmesh/"
 
 ssh "$SERVER_HOST" "chown -R game-server:game-server ${STATE_DIR}"
 

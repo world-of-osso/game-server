@@ -10,7 +10,7 @@ Run the repository's `./deploy.sh` from its checkout. The script ships binaries/
 
 - `0dcaa23` selects sakuin and `/var/lib/game-server`, uploads `game-server` and `game-server-admin` into `bin/`, and places `world.db` and economy configuration under `data/`.
 - `6bfd7b6` replaces host Cargo compilation with `../game-engine/scripts/desktop-server-build.py --root "$PWD" --release`: Debian bookworm/glibc 2.36 output avoids the observed Arch `GLIBC_2.43 not found` failure on sakuin's glibc 2.42.
-- Ground inputs come from `scripts/ground_files.py` into `ground/`; LOS bake output goes into `ground/los/`. The script requires `los/eye_heights.tsv`, assigns ownership to `game-server:game-server`, restarts the system unit and prints its status. It does not upload account/character redb state.
+- Ground inputs come from `scripts/ground_files.py` into `ground/`; LOS bake output goes into `ground/los/`. Promote Stockade with `rsync -a data/ground/los/34/ ../game-engine/data/los/34/` before deploying: the LOS sync deletes stale destination files. Navigation ships incrementally from `data/ground/navmesh/` into `ground/navmesh/`, with `--delete` scoped only to that directory; see [navigation inventory](wiki/systems/navigation.md#final-local-bake-inventory). Merge the engine `navmesh-release` snapshot fix before building the navigation release. The script requires `los/eye_heights.tsv`, assigns ownership to `game-server:game-server`, restarts the system unit and prints its status. It does not upload account/character redb state.
 
 A landed script is not new deployment-health proof. Retain existing runtime receipts separately; no build, upload or service operation was performed for this docs update.
 

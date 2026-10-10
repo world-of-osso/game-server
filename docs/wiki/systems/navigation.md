@@ -52,14 +52,13 @@ Navigation payload total **6,323,034,020bytes**; full new shipping set including
 
 ## Lead-owned shipping
 
-No deploy, release build or server restart performed by this task.
+`deploy.sh` now incrementally syncs `data/ground/navmesh/` with `--delete` restricted to the destination navigation directory, before ownership and restart. LOS still comes from the engine cache; its Stockade map34 supplement must be promoted first. See [deployment](../../deploy.md).
 
-1. Preserve server `.cargo/config.toml` and the full tracked `vendor/recastnavigation-sys/` tree in the engine release snapshot. Current `scripts/depot-build.py::allowed` used by `desktop-server-build.py` omits hidden Cargo config, CMakeLists/templates and `inline.cc`; a native pass does not prove this bookworm release path. The existing Dockerfile already supplies clang/libclang/CMake; no host installs are needed.
-2. From the canonical server checkout, promote the Stockade LOS supplement before normal deploy: `rsync -a data/ground/los/34/ ../game-engine/data/los/34/`. Otherwise `deploy.sh`'s LOS `--delete` sync removes it. Preserve existing eye tables and other LOS maps.
-3. Pre-stage navmesh before the lead's normal restart: `rsync -a --delete data/ground/navmesh/ sakuin:/var/lib/game-server/ground/navmesh/`. The server reads `<GAME_SERVER_GROUND_DIR>/navmesh`; deploying after a map was cached as unbaked requires restart.
-4. Use the normal lead-owned bookworm/deploy workflow after source-snapshot/protocol integration; ensure new directories have the existing game-server ownership. Current native proof uses original shared-protocol `8f5580c`; unrelated concurrent sibling changes require the lead's normal integration, not navigation-specific protocol edits.
+The engine `navmesh-release` branch preserves server `.cargo/config.toml` and the full tracked `vendor/recastnavigation-sys/` release snapshot, including CMake/templates and inline C++. The existing Dockerfile supplies clang/libclang/CMake; no host installs are needed.
 
-Whole-workspace `cargo fmt --check` has an inherited `networking_tests.rs` module-order failure; changed first-party Rust formatting passes. Proof is bounded native tests, not a full CI/release/Retail-parity claim.
+On2026-10-10 the four Stockade LOS files (5,140,924bytes) were copied into canonical engine `data/los/34/`, preserving eye tables and other maps. Exact hashes and integration/release proof are in `/home/osso/.worktrees/handoff-navmesh.md`. Rebased navigation uses normal sibling shared-protocol master75fe6a4; frozen proof overrides are no longer required. Whole-workspace formatting passes on both current master and navigation; no formatting-only fix needed.
+
+No deploy or server restart authorized/performed. Native/release proof is not full CI or live gameplay certification.
 
 ## Sources
 
