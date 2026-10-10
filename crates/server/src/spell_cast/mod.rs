@@ -184,6 +184,10 @@ impl CastFailure {
                 crate::auras::CastBlock::Stunned => (R::Stunned, None),
                 crate::auras::CastBlock::Silenced => (R::Silenced, None),
                 crate::auras::CastBlock::Pacified => (R::Pacified, None),
+                // Existing detail contract, as with Confused; no protocol ABI change.
+                crate::auras::CastBlock::NoActions => {
+                    (R::NotSupported, Some("Can't do that right now".into()))
+                }
                 // SPELL_FAILED_CONFUSED has no CastFailReason in shared-protocol yet.
                 crate::auras::CastBlock::Confused => {
                     (R::NotSupported, Some("Can't do that while confused".into()))

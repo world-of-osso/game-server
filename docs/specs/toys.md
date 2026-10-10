@@ -20,6 +20,9 @@
 
 - Aura293 OVERRIDE_SPELLS loads MiscValue's ordered10-spell OverrideSpellData record from local CASC. AuraView.overrides carries the list using existing aura332 transport; the Retail six-button main-bar override replaces even empty/item slots without rebinding. Only active set spells gain temporary server cast permission; removal restores base slots/permissions. Missing override records/spells stay unavailable; underlying ability scripts are not implemented by swapping buttons. References: TC a352b1fa HandleAuraOverrideSpells; cached Retail OverrideActionBar.lua:42/Setup; WoWDBDefs layout297CBDC8.
 
+- Aura226 with a nonzero DB2 period and trigger runs a data-backed triggered cast on each due tick, retaining a channel's original target. Script hooks retain ownership of scripted effects. Missing trigger/period and conditional consuming triggers remain unsupported; cosmetic appearance alone does not prove a periodic no-op.
+- Aura321 prevents casts whose SpellCategories.PreventionType includes NO_ACTIONS (4), interrupts those active casts on application, and restores eligibility after the last such aura leaves. MiscValue is not the prevention mask (authentic toy values include0 and85). Reference: TC a352b1fa HandleAuraModNoActions, SharedDefines.h.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.

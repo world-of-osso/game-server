@@ -161,20 +161,53 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             Some(unit),
             TICK_TRIGGER_DEPTH,
         ),
-        PERIODIC_DUMMY => {
-            let aura = world
-                .get::<ActiveAuras>(unit)
-                .and_then(|auras| auras.get(tick.instance_id))
-                .cloned();
-            if let Some(aura) = aura {
-                scripts::run_periodic(world, unit, &aura, tick.effect_index);
-            }
-        }
+        PERIODIC_DUMMY => run_dummy_tick(world, unit, spell, tick),
         other => debug!(
             "Spell {}: periodic aura type {other} has no tick handler",
             spell.id
         ),
     }
+}
+
+fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+    let scripted = world
+        .get_resource::<scripts::AuraScripts>()
+        .and_then(|scripts| scripts.0.get(&spell.id))
+        .is_some_and(|script| script.on_periodic.is_some());
+    if scripted {
+        let aura = world
+            .get::<ActiveAuras>(unit)
+            .and_then(|auras| auras.get(tick.instance_id))
+            .cloned();
+        if let Some(aura) = aura {
+            scripts::run_periodic(world, unit, &aura, tick.effect_index);
+        }
+        return;
+    }
+    let Some(effect) = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == tick.effect_index)
+    else {
+        return;
+    };
+    let Ok(trigger) = super::periodic_dummy_trigger(world, effect) else {
+        return;
+    };
+    // Self-applied channel auras retain the channel's original unit target.
+    // Non-channel auras trigger at their unit, as periodic aura23 does.
+    let target = world
+        .get::<CastState>(tick.caster)
+        .filter(|cast| cast.spell_id == spell.id && cast.cast_type == CastType::Channel)
+        .and_then(|cast| Entity::try_from_bits(cast.target))
+        .unwrap_or(unit);
+    crate::spell_cast::cast_triggered(
+        world,
+        tick.caster,
+        trigger,
+        Some(target),
+        TICK_TRIGGER_DEPTH,
+    );
 }
 
 /// `AuraEffect::HandleObsModPowerAuraTick` (SpellAuraEffects.cpp): the amount percent

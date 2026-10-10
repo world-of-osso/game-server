@@ -141,6 +141,11 @@ fn classify(
             };
             reasons.insert(format!("{kind} {id}"));
         }
+        if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
+            if let Err(reason) = crate::auras::periodic_dummy_trigger(world, effect) {
+                reasons.insert(reason.into());
+            }
+        }
         if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
             if let Some(reason) = crate::spell_cast::summon::unsupported_reason(world, effect) {
                 reasons.insert(reason);
@@ -178,6 +183,9 @@ fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
     if effect.aura == crate::auras::handlers::OVERRIDE_SPELLS {
         return effect.misc_values[0] > 0
             && crate::auras::override_spell_data::supported(world, effect.misc_values[0] as u32);
+    }
+    if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
+        return crate::auras::periodic_dummy_trigger(world, effect).is_ok();
     }
     if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
         return effect.misc_values[0] > 0;
