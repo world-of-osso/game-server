@@ -74,7 +74,11 @@ fn selector(id: u32) -> Option<Selector> {
         0 => Selector::None,
         1 | 56 | 120 => Selector::Caster,
         5 => Selector::Pet,
-        32 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
+        47 => Selector::CasterOffset(0.0),
+        49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
+        50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
@@ -82,7 +86,7 @@ fn selector(id: u32) -> Option<Selector> {
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
         63 => Selector::CenterExplicit(Any),
-        15 => Selector::AreaAroundSrc(Enemy),
+        15 | 151 => Selector::AreaAroundSrc(Enemy),
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
@@ -572,6 +576,13 @@ pub fn effect_dest(
         dest = point.map(|position| Dest {
             position,
             orientation: facing,
+        });
+    }
+    if dest.is_none() && effect.effect == super::summon::EFFECT_SUMMON {
+        let unit = explicit.unwrap_or(caster);
+        dest = position(world, unit).map(|position| Dest {
+            position,
+            orientation: orientation(world, unit),
         });
     }
     dest

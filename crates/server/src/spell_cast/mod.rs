@@ -21,6 +21,9 @@ pub mod powers;
 mod reflect;
 pub mod runes;
 pub mod scripts;
+pub mod summon;
+#[cfg(test)]
+mod summon_at_tests;
 pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
@@ -78,6 +81,8 @@ impl Plugin for SpellCastPlugin {
         app.init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
             .init_resource::<missiles::PendingSpellHits>()
+            .init_resource::<summon::SummonPropertiesStore>()
+            .add_systems(Startup, summon::load_summon_properties_startup)
             .add_systems(Startup, powers::load_power_type_table_startup)
             .add_systems(
                 Update,
@@ -105,6 +110,7 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_creature_health,
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
+                    summon::expire_summons.after(advance_casts),
                 ),
             );
     }
