@@ -7,6 +7,27 @@ use crate::{
 use bevy::prelude::*;
 use shared::components::{Health, Mounted, MovementControl, Position, Rotation, VehiclePassenger};
 
+#[test]
+fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::spell_info::WORLD_DB_PATH,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = super::load_store(&crate::ground::ground_data_dir(), &conn).unwrap();
+    assert_eq!(store.creature_vehicles[&32633], 312);
+    assert_eq!(store.creature_vehicles[&32286], 318);
+    assert_eq!(store.vehicles[&312], [0, 2764, 2765, 0, 0, 0, 0, 0]);
+    let left = store.poses[&(27237, 2764)];
+    let right = store.poses[&(27237, 2765)];
+    assert!(left.y > 3.0 && right.y > 3.0);
+    assert!(
+        left.z * right.z < 0.0,
+        "opposite passenger sides: {left:?} / {right:?}"
+    );
+    assert!(store.poses.contains_key(&(25870, 2804)));
+}
+
 fn setup() -> (World, Entity, Entity, Entity) {
     let mut world = World::new();
     let spawn = |world: &mut World, id| {
