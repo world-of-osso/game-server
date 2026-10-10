@@ -36,6 +36,8 @@ mod dummy8_defense_tests;
 #[cfg(test)]
 mod dummy8_tests;
 #[cfg(test)]
+mod dummy9_tests;
+#[cfg(test)]
 mod dummy_tests;
 pub mod effects;
 mod hit;
