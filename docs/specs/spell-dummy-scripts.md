@@ -156,7 +156,7 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 
 - [x] Blade Flurry13877 launches the named331850 initial strike in its native8yd area: five targets, eight with active272026. Active381878 grants its s2 combo points per landed initial hit. Subsequent28% damage transfer and unknown markers remain unsupported.
 - [x] Consecration26573 creates one owned fixed-position81297 damage field; native8yd area, t1=1000ms, native duration, tooltip1.05 coefficient; recast replaces only that owner's field. Optional slow/Radiant variants and summoned actor parity remain open.
-- [x] Feral Lunge196884 launches215802 at the selected enemy. This does not implement effect254 movement.
+- [x] Feral Lunge196884 launches215802 at the selected enemy and preserves existing generic254 endpoint movement; traversal/visual parity is not certified.
 - [x] Voidform228260 applies the named194249 damage effects for their native duration after cast; no guessed Volley/replacement charge behavior.
 - [x] Arcane Surge365350 applies named365362 damage/regeneration effects after cast. Mana-spent damage, soft-cap and Clearcasting remain open.
 - [x] Protection Judgment275779 with active315867 launches220637 Holy Power once on its damage hit; no rank means no resource award.
@@ -165,7 +165,7 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 
 Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodies or invented child IDs. Divine Storm's reduced-damage formula and Glacial Advance's advancing geometry were not derivable from these sources and remain deferred.
 
-- `crates/server/src/spell_cast/dummy10_tests.rs` —11 native functions across eight paths at`83512eb`: actual damage/area/resources/buff expiry, absent passives, owner-only replacement and cancelled casts. [Census and full40-spec table](../wiki/systems/spell-casting.md#tenth-batch-low-count-spec-paths).
+- `crates/server/src/spell_cast/dummy10_tests.rs` —11 native functions across eight paths at`83512eb`: actual damage/area/resources/buff expiry, absent passives, owner-only replacement and cancelled casts. Single post-master `cargo test -p server --bin game-server spell_cast` at`4b281cf`: **286/286**. [Census and full40-spec table](../wiki/systems/spell-casting.md#tenth-batch-low-count-spec-paths).
 
 ## Known gaps (current cycle)
 

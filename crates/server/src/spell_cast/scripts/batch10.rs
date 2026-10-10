@@ -63,7 +63,8 @@ pub(super) fn energize_flurry(world: &mut World, caster: Entity, target: Entity,
     }
 }
 
-///196884 names215802. The effect254 movement path remains a separate gap.
+///196884 names215802. Existing generic254 endpoint movement is preserved;
+///this bridge does not certify the lunge's traversal/visual parity.
 pub(super) fn bite_lunge(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     spell_cast::cast_triggered(world, caster, LUNGE_BITE, Some(target), depth + 1);
 }

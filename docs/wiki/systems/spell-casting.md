@@ -247,7 +247,7 @@ Damage and heal side effects:
 |---|---|---|
 |13877 Blade Flurry|331850 initial8yd strike caps five/eight with272026;381878 grants one combo point per actual initial hit. Far/allied exclusions and absent-rank/talent proofs.|Subsequent28% damage transfer, independent root markers/cap4.|
 |26573 Consecration|Fixed-position81297 field:8yd,1000ms,12000ms; original caster position survives movement. Recast replaces only owner's old field; foreign field continues. Tooltip1.05 multiplier retained.|204054 slow/405289 Radiant variants, summoned actor parity.|
-|196884 Feral Lunge|Named215802 bite hits only selected enemy beyond native minimum range.|Effect254 movement; Dummy bridge closure is not movement parity.|
+|196884 Feral Lunge|Named215802 bite hits only selected enemy beyond native minimum range; inherited generic254 endpoint movement remains covered by its existing terrain/LOS fixture.|Full traversal/visual parity; named-bite proof alone is not movement certification.|
 |228260 Voidform|Named194249 damage effects apply after1500ms cast; actual Mind Blast+20%, native expiry and cancellation exclusion.|Volley/replacement charges, root/child markers.|
 |365350 Arcane Surge|Named365362 damage/regeneration effects apply after2500ms cast; actual Fireball+35%, expiry and cancellation exclusion.|Mana-spent damage, reduced-damage formula, Clearcasting.|
 |275779 Protection Judgment|315867 gate launches220637 for one Holy Power on native damage hit; no-rank case generates none.|Other Judgment/talent variants.|
@@ -303,7 +303,7 @@ Script-presence table preserves batch9's exact method/baseline: closure intersec
 | Evoker Augmentation (1473) | 6→6 | 3→3 | 4→4 |
 | Demon Hunter Devourer (1480) | 4→4 | 2→2 | 3→3 |
 
-Native proof at`83512eb`: **11/11** batch10 functions, warning-free. Initial RED0/9 plus corrected Lunge range RED0/1; negative-rank fixtures remove KnownSpells passives and their aura (omitting apply() alone leaves auto-synchronized passives active). Damage buffs are proven through actual spell damage, not school-only AuraStatMods. Shared-protocol compilation drift resolved by merging origin/master before implementation. Requested final post-master filter and format/check are recorded in the handoff after execution.
+Native proof at`83512eb`: **11/11** batch10 functions, warning-free. Initial RED0/9 plus corrected Lunge range RED0/1; negative-rank fixtures remove KnownSpells passives and their aura (omitting apply() alone leaves auto-synchronized passives active). Damage buffs are proven through actual spell damage, not school-only AuraStatMods. Shared-protocol compilation drift resolved by merging origin/master before implementation. Requested post-master `cargo test -p server --bin game-server spell_cast` ran **once**, at`4b281cf`: **286/286**, including all11 new functions and inherited Feral Lunge movement. Format/check results are recorded in the handoff.
 
 Durable receipts, frozen source tars, generator, exact40-spec inventories, census and proof ledger: `game-engine/data/diagnostics/spell-dummy10-2026-10-10/`; worker handoff `/home/osso/.worktrees/handoff-spell-dummy10.md`. Parent retains integration/live acceptance; no independent verifier/rotation claim.
 
