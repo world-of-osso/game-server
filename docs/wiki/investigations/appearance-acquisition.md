@@ -8,6 +8,10 @@ Verified 2026-10-10. The acquisition audit corrected pre-Warbands assumptions an
 
 Inventory models now carry a transient account owner and appearance-grant receipt into `InventoryRecord`. Successful store operations bind BoP items before saving. The record writer merges grants with the existing account collection inside its inventory transaction; these receipt fields are not added to serialized inventory/character data. Explicit destroy and vendor sale add disposed-item visuals, while generic ownership transfers do not. Quest completion writes its non-cosmetic reward-option visuals, selected BoP cosmetics, inventory and quest log together; unchosen cosmetics remain uncollected. The connection refresh reads durable collection state so a removed item still produces an owner update.
 
+### Never-created account table regression
+
+The acquisition receipt added an account lookup to `load_inventory_record`, whose write transaction creates inventory tables lazily. That lookup opens a separate **read** transaction; a never-created `account_characters` table therefore panicked. Normal server startup creates the account schema, but standalone persistence/economy helpers also support databases without accounts. The lookup now treats only `TableDoesNotExist` as no owner, consistent with `economy::store::load_state`; other open/decode errors still fail explicitly. The economy record-helper regression and a missing/empty/populated account-table test (including reopen and multiple accounts) prove this boundary without manufacturing fixture accounts.
+
 ## Proof and limits
 
 Real IDs: Worn Shortsword 25 / visual154, Verigan's Fist6953 /2288, Gaudy Winter Veil Sweater70923 /15791, Large Round Shield2129 /684, Urchin's Pants2238 /763 and unchosen Militia Buckler2249 /356. `transmogacq` fixtures exercise actual message handlers or AH settlement/mail claims and reopen redb. Existing equip/world-entry tests exercise account-alt collection snapshots. Exact commands/revisions/results are in `/home/osso/.worktrees/handoff-transmog-acquire.md`; full integration gate belongs to the lead.
@@ -19,6 +23,7 @@ No disenchant/scrap gameplay handler, source-specific collection, refund/loot-tr
 - [Appearance contract](../../specs/appearance-collection.md) — Blizzard links and local Retail UI references.
 - [Inventory model](../../../crates/server/src/inventory_model.rs) — binding and disposal receipts.
 - [Inventory persistence](../../../crates/server/src/persistence_inventory.rs) — atomic receipt merge.
+- [Account lookup](../../../crates/server/src/persistence_character.rs) and [economy store](../../../crates/server/src/economy/store.rs) — optional-table read semantics and standalone-helper boundary.
 - [Appearance plugin](../../../crates/server/src/appearance_collection.rs) — durable-state owner refresh.
 - [Quest requests](../../../crates/server/src/quest_requests.rs) — all-option reward acquisition.
 
