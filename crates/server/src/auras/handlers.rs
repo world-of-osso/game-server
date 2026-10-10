@@ -33,6 +33,8 @@ pub enum AuraKind {
     Reflect,
     /// Read by incoming hit selection (`spell_cast::hit`, `combat`).
     HitDefense,
+    /// Read by cast selection and included in aura replication.
+    Override,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -122,6 +124,8 @@ pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const MASTERY: u32 = 318;
+pub const ANIM_REPLACEMENT_SET: u32 = 312;
+pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
 pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
 /// SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT (SpellAuraDefines.h, TrinityCore a352b1fa).
@@ -147,6 +151,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
+        ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2

@@ -75,8 +75,8 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
-pub(crate) mod teleport;
 pub(crate) mod homebind;
+pub(crate) mod teleport;
 mod teleport_positions;
 
 pub struct SpellCastPlugin;
@@ -745,11 +745,18 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
+    let requested_spell = spell.clone();
+    let effective_id = crate::auras::overrides::resolve_spell(world, caster, spell.id);
+    let spell = world
+        .resource::<SpellStore>()
+        .get(effective_id)
+        .expect("resolved spell exists")
+        .clone();
     let delay = cast_queue_delay(world, caster, &spell);
     // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
         world.entity_mut(caster).insert(QueuedSpellCast {
-            spell,
+            spell: requested_spell,
             explicit,
             witness: request.witness,
         });
@@ -799,10 +806,16 @@ fn start_queued_casts(world: &mut World) {
         .collect();
     for caster in ready {
         let queued = world.entity_mut(caster).take::<QueuedSpellCast>().unwrap();
+        let effective_id = crate::auras::overrides::resolve_spell(world, caster, queued.spell.id);
+        let effective_spell = world
+            .resource::<SpellStore>()
+            .get(effective_id)
+            .expect("resolved queued spell exists")
+            .clone();
         if let Err(failure) = start_cast(
             world,
             caster,
-            &queued.spell,
+            &effective_spell,
             queued.explicit,
             queued.witness,
         ) {
@@ -836,6 +849,11 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
         .expect("plain component query always validates");
     crate::class_progression::knows_spell(&known, caster, spell_id)
         || taught_by_known_spell(world, caster, spell_id)
+        || world.get::<KnownSpells>(caster).is_some_and(|known| {
+            known
+                .iter()
+                .any(|base| crate::auras::overrides::resolve_spell(world, caster, base) == spell_id)
+        })
 }
 
 /// `AuraEffect::HandleLearnSpell` (SpellAuraEffects.cpp:5248-5261): a known spell's

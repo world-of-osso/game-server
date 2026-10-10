@@ -63,6 +63,8 @@ const ATTR5_EXTRA_INITIAL_PERIOD: u32 = 0x200;
 /// `DispelType` 7 matches every dispel type.
 const DISPEL_ALL: u32 = 7;
 
+pub(crate) mod overrides;
+
 pub struct AuraPlugin;
 
 impl Plugin for AuraPlugin {
@@ -1532,6 +1534,8 @@ mod tests;
 #[cfg(test)]
 mod defensives_tests;
 
+#[cfg(test)]
+mod override_tests;
 #[cfg(test)]
 mod spell_auras_tests;
 

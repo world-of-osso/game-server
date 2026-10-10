@@ -94,7 +94,11 @@ fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> 
 
 /// `AuraEffect::IsAffectingSpell` (SpellAuraEffects.cpp:1286-1296): `spell` is of the
 /// aura's `SpellClassSet` and shares a bit of the effect's `SpellClassMask`.
-fn class_mask_affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+pub(super) fn class_mask_affects(
+    aura: &AuraInstance,
+    effect: &AuraEffectState,
+    spell: &SpellInfo,
+) -> bool {
     let Some(options) = spell.class_options.as_ref() else {
         return false;
     };
