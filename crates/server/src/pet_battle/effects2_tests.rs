@@ -1,6 +1,63 @@
 use super::*;
 
 #[test]
+fn pet_battle_consumption_speed_bonus_is_strict_and_uses_modified_speed() {
+    let c = catalog();
+    for (id, speed, expected) in [
+        (2024, 50, 300),
+        (2024, 100, 120),
+        (2024, 200, 120),
+        (2026, 50, 120),
+        (2026, 100, 120),
+        (2026, 200, 300),
+    ] {
+        let mut b = battle(&c, 7, 7, [id, 110, 123]);
+        b.teams[0].pets[0].stats.speed = speed;
+        assert_eq!(damage(&use_ability(&b, &c, id).1), vec![expected]);
+    }
+}
+
+#[test]
+fn pet_battle_creeping_fungus_ticks_moonlight_bonus() {
+    let c = catalog();
+    for (moonlight, expected) in [(0, 42), (1, 60)] {
+        let mut b = battle(&c, 7, 7, [743, 110, 123]);
+        b.teams[0].pets[0]
+            .states
+            .insert(c.state_id("Weather_Moonlight").unwrap(), moonlight);
+        assert_eq!(damage(&use_ability(&b, &c, 743).1), vec![expected]);
+    }
+}
+
+#[test]
+fn pet_battle_weakening_blow_cannot_faint_or_trigger_mechanical_revive() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 9, [826, 110, 123]);
+    b.teams[1].pets[0].health = 100;
+    let (b, e) = use_ability(&b, &c, 826);
+    assert_eq!(b.teams[1].pets[0].health, 1);
+    assert!(!b.teams[1].pets[0].resurrection_used);
+    assert!(
+        !e.iter()
+            .any(|e| matches!(e, Event::Revived(_) | Event::Fainted(_)))
+    );
+    assert_eq!(use_ability(&b, &c, 826).0.teams[1].pets[0].health, 1);
+}
+
+#[test]
+fn pet_battle_eat_the_fly_below_health_threshold_heal() {
+    let c = catalog();
+    for (health, expected) in [(3300, 3360), (3299, 3539)] {
+        let mut b = battle(&c, 7, 7, [2206, 110, 123]);
+        b.teams[0].pets[0].health = health;
+        assert_eq!(
+            use_ability(&b, &c, 2206).0.teams[0].pets[0].health,
+            expected
+        );
+    }
+}
+
+#[test]
 fn pet_battle_stench_applies_to_each_enemy_slot_and_expires() {
     let c = catalog();
     let mut b = battle(&c, 7, 7, [527, 110, 123]);

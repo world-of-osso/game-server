@@ -60,7 +60,35 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             76 => self.charged_damage(caster, target, ability, effect),
-            96 => self.damage_effect(caster, target, ability, effect),
+            96 | 149 => self.damage_effect(caster, target, ability, effect),
+            45 | 97 => {
+                let caster_speed = self.speed(caster);
+                let target_speed = self.speed(target);
+                let bonus = if effect.property == 45 {
+                    caster_speed < target_speed
+                } else {
+                    caster_speed > target_speed
+                };
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[0] += if bonus { p[0] * p[2] / 100 } else { 0 };
+                damage.params[2] = 0;
+                self.damage_effect(caster, target, ability, &damage)
+            }
+            254 => {
+                let recipient = self.healing_target.unwrap_or(caster);
+                let below_threshold = i64::from(self.battle.pet(recipient).health) * 100
+                    < i64::from(self.battle.pet(recipient).stats.health) * i64::from(p[2]);
+                let mut heal = effect.clone();
+                heal.property = 23;
+                heal.params[0] += if below_threshold {
+                    p[0] * p[3] / 100
+                } else {
+                    0
+                };
+                heal.params[2] = p[4];
+                self.heal_effect(caster, &heal)
+            }
             100 => self.heal_other_ally(caster, effect),
             131 => {
                 let first = self
@@ -89,8 +117,13 @@ impl<R: BattleRng> Runtime<'_, R> {
                 control.params[1] = if bonus { 100 } else { p[5] };
                 self.add_aura_effect(caster, target, &control)
             }
-            226 => {
-                let bonus = if self.battle.pet(target).state(p[3] as u32) != 0 {
+            65 | 226 => {
+                let checked_pet = if effect.property == 65 {
+                    caster
+                } else {
+                    target
+                };
+                let bonus = if self.battle.pet(checked_pet).state(p[3] as u32) != 0 {
                     p[2]
                 } else {
                     0
@@ -615,6 +648,11 @@ impl<R: BattleRng> Runtime<'_, R> {
             / divisor
             * if critical { CRITICAL_MULTIPLIER } else { 1.0 };
         let amount = damage.floor().max(0.0) as i32;
+        let amount = if effect.property == 149 {
+            amount.min(self.battle.pet(target).health - 1)
+        } else {
+            amount
+        };
         self.damage_pet(caster, target, amount, critical, periodic)?;
         Ok(amount > 0)
     }

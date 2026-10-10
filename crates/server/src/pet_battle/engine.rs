@@ -218,7 +218,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         Ok(())
     }
-    fn speed(&self, pet: PetRef) -> i32 {
+    pub(super) fn speed(&self, pet: PetRef) -> i32 {
         let data = self.battle.pet(pet);
         let flying =
             if self.state(pet, "Passive_Flying") != 0 && data.health * 2 > data.stats.health {
