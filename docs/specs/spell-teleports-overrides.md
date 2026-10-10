@@ -7,7 +7,8 @@ Data-driven server displacement and matrix aura overrides in `crates/server/src/
 - [x] Blink 1953 moves 20 yards forward from target55's radius and snaps to ground.
 - [x] Blink stops before real map0 wall geometry and bumps the movement teleport epoch.
 - [x] Hearthstone 8690 returns to a persisted homebind, including NewWorld/WorldPortAck across maps.
-- [ ] New characters persist actual creation binds; missing existing bind rows fail explicitly rather than infer locations.
+- [x] New characters persist actual creation binds, preserved after logout-position changes and reopening redb.
+- [ ] Existing characters without a stored bind must fail explicitly; no inferred migration location.
 - [x] Target17 teleports consume authored spell_target_position rows, never infer destination coordinates from spell IDs. Matrix18960 fixture proves loader/routing, not Retail Moonglade coordinates.
 - [x] Harpoon190925's child186260 and Feral Lunge196884 move the caster, not the enemy target. Infernal Strike189110 accepts a finite, in-range explicit ground point.
 - [x] Aura332 selects its data-specified replacement spell while active and restores the base after removal/expiry.
