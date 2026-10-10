@@ -251,10 +251,11 @@ pub(crate) fn learn_item(
     let templates = world.resource::<crate::item_templates::ItemTemplates>();
     let record = crate::persistence::inventory_store::load_inventory_record(db, character_id)
         .ok_or_else(|| fail("character inventory missing".into()))?;
-    let mut model =
-        crate::inventory_model::InventoryModel::from_record(record, templates, &mut || {
-            crate::persistence::next_id(db, "item_instance")
-        });
+    let mut model = crate::inventory::inventory_model::InventoryModel::from_record(
+        record,
+        templates,
+        &mut || crate::persistence::next_id(db, "item_instance"),
+    );
     let item = model.existing(location)?;
     if model.definition_source(item.item_guid) != shared::item_data::ItemDefinitionSource::Retail
         || !world.resource::<ToyCatalog>().0.contains_key(&item.item_id)
