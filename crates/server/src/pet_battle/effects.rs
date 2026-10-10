@@ -279,8 +279,19 @@ impl<R: BattleRng> Runtime<'_, R> {
                     states.get(&id).copied().unwrap_or(0) > 0
                 })
             });
-        has_control
-            && (self.state(wearer, "Passive_Critter") != 0 || self.state(wearer, "resilient") != 0)
+        let locks_turn = self
+            .catalog
+            .ability_states
+            .get(&ability)
+            .is_some_and(|states| {
+                let lock = self
+                    .catalog
+                    .state_id("turnLock")
+                    .expect("checked rule state");
+                states.get(&lock).copied().unwrap_or(0) > 0
+            });
+        (has_control && self.state(wearer, "Passive_Critter") != 0)
+            || (locks_turn && self.state(wearer, "resilient") != 0)
     }
     fn apply_or_refresh_aura(
         &mut self,
