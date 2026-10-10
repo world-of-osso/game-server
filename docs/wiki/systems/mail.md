@@ -26,4 +26,4 @@ How the server implements mail. The contract is in [mail spec](../../specs/mail.
 4. `send_changed_mailboxes`: resends the inbox to open mailboxes of changed characters.
 
 ## Auction House
-`auction_house::operations::deliver_mail` builds an instant `MailSender::AuctionHouse` mail. The old `QueryAuctionMailbox` / `ClaimAuctionMail` path is gone; auction results are taken at a mailbox.
+`auction_house::operations::build_auction_mail` stages instant `MailSender::AuctionHouse` mail inside the market transaction. [Retail auction-text contract](../../specs/auction-mail-text.md) owns the structured tag/item subjects and numeric invoice bodies that the native client formats. The old `QueryAuctionMailbox` / `ClaimAuctionMail` path is gone; auction results are taken at a mailbox.
