@@ -155,6 +155,35 @@ def run_db2_import(csv_root, db_path):
     )
 
 
+class DisenchantLootImportTests(unittest.TestCase):
+    def test_disenchant_excerpt_imports_material_chances_and_counts(self):
+        # Exact TDB1210.26091 entry 3 rows (Retail uncommon Classic weapon).
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            dump = root / "disenchant_loot_template.sql"
+            dump.write_text(
+                "INSERT INTO `disenchant_loot_template` VALUES "
+                "(3,0,10940,20,0,1,1,1,2,NULL),"
+                "(3,0,10938,80,0,1,1,1,2,NULL);\n"
+            )
+            db_path = root / "world.db"
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(db_path),
+                 "--schema", str(SCRIPTS / "tdb_schema.sql"), "--prefix", "tdb_",
+                 f"disenchant_loot_template={dump}"],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            with closing(sqlite3.connect(db_path)) as conn:
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT Entry, ItemType, Item, Chance, LootMode, GroupId, MinCount, MaxCount "
+                        "FROM tdb_disenchant_loot_template ORDER BY Item"
+                    ).fetchall(),
+                    [(3, 0, 10938, 80.0, 1, 1, 1, 2), (3, 0, 10940, 20.0, 1, 1, 1, 2)],
+                )
+
+
 class CreatureEventImportTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -729,24 +758,6 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SpellName.csv", result.stderr)
         self.assertEqual(self.db.read_bytes(), before)
-
-    def test_disenchant_loot_excerpt_survives_full_import(self):
-        # TDB1210.26091 entry 3: Retail uncommon Classic weapon, item level 1-8.
-        rows = [
-            "(3,0,10940,20,0,1,1,1,2,NULL)",
-            "(3,0,10938,80,0,1,1,1,2,NULL)",
-        ]
-        write_tdb(self.tdb, "disenchant_loot_template", rows)
-        result = self.run_import()
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        with closing(sqlite3.connect(self.root / "data/world.db")) as conn:
-            self.assertEqual(
-                conn.execute(
-                    "SELECT Entry, ItemType, Item, Chance, LootMode, GroupId, MinCount, MaxCount "
-                    "FROM tdb_disenchant_loot_template ORDER BY Item"
-                ).fetchall(),
-                [(3, 0, 10938, 80.0, 1, 1, 1, 2), (3, 0, 10940, 20.0, 1, 1, 1, 2)],
-            )
 
     def test_tdb_trainer_rows_load_and_azerothcore_trainers_are_not_imported(self):
         (self.tdb / "trainer.sql").write_text("INSERT INTO `trainer` VALUES (163,2,'TDB greeting',0);\n")
