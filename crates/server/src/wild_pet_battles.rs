@@ -636,7 +636,7 @@ fn start_encounter(
     };
     let level = world
         .get::<UnitLevel>(creature)
-        .map_or(1, |l| l.level.clamp(1, 25) as u8);
+        .map_or(1, |level| level.0.clamp(1, 25) as u8);
     let catalog = world.resource::<WildCatalog>();
     let encounter = Encounter::start(catalog, &journal, species, level, bits, id)?;
     let snapshot = encounter.snapshot(catalog, &journal);
