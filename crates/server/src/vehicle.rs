@@ -286,61 +286,42 @@ fn load_vehicle_store(mut commands: Commands) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .expect("Open world.db for mount vehicles");
-    let store = load_store(&root, &conn).expect("Load local mount vehicle data");
+    let store = load_store(&root, &conn)
+        .expect("Load mount vehicles from world.db; run scripts/import-vehicles.py first");
     commands.insert_resource(store);
 }
 
-fn numeric_rows(path: &std::path::Path) -> Result<Vec<HashMap<String, String>>, String> {
-    let data =
-        std::fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
-    let mut lines = data.lines();
-    let header: Vec<_> = lines
-        .next()
-        .ok_or("Empty numeric CSV")?
-        .split(',')
-        .collect();
-    lines
-        .map(|line| {
-            let values: Vec<_> = line.split(',').collect();
-            if values.len() != header.len() {
-                return Err(format!("{}: CSV width mismatch", path.display()));
-            }
-            Ok(header
-                .iter()
-                .zip(values)
-                .map(|(key, value)| (key.to_string(), value.to_string()))
-                .collect())
-        })
-        .collect()
+fn load_vehicle_catalog(conn: &rusqlite::Connection) -> Result<VehicleStore, String> {
+    let mut store = VehicleStore::default();
+    let mut query = conn
+        .prepare("SELECT ID,SeatID_0,SeatID_1,SeatID_2,SeatID_3,SeatID_4,SeatID_5,SeatID_6,SeatID_7 FROM vehicle")
+        .map_err(|error| format!("world.db vehicle: {error}"))?;
+    let rows = query.query_map([], |row| {
+        let mut seats = [0; 8];
+        for (index, seat) in seats.iter_mut().enumerate() {
+            *seat = row.get(index + 1)?;
+        }
+        Ok((row.get(0)?, seats))
+    }).map_err(|error| error.to_string())?;
+    store.vehicles = rows.collect::<Result<_, _>>().map_err(|error| error.to_string())?;
+    store.seats = load_seats(conn)?;
+    Ok(store)
 }
-fn number<T: std::str::FromStr>(row: &HashMap<String, String>, key: &str) -> Result<T, String> {
-    row.get(key)
-        .ok_or_else(|| format!("Missing {key}"))?
-        .parse()
-        .map_err(|_| format!("Invalid {key}"))
+
+fn load_seats(conn: &rusqlite::Connection) -> Result<HashMap<u32, Seat>, String> {
+    let mut query = conn
+        .prepare("SELECT ID,Flags,AttachmentOffset_0,AttachmentOffset_1,AttachmentOffset_2 FROM vehicle_seat")
+        .map_err(|error| format!("world.db vehicle_seat: {error}"))?;
+    let rows = query.query_map([], |row| {
+        let flags = row.get::<_, i64>(1)? as u32;
+        let offset = Vec3::new(row.get(2)?, row.get(4)?, -row.get::<_, f32>(3)?);
+        Ok((row.get(0)?, Seat { flags, offset }))
+    }).map_err(|error| error.to_string())?;
+    rows.collect::<Result<_, _>>().map_err(|error| error.to_string())
 }
 
 fn load_store(root: &std::path::Path, conn: &rusqlite::Connection) -> Result<VehicleStore, String> {
-    let mut store = VehicleStore::default();
-    let db2 = root.join("db2/12.1.0.69933");
-    for row in numeric_rows(&db2.join("Vehicle.csv"))? {
-        let mut seats = [0; 8];
-        for (index, seat) in seats.iter_mut().enumerate() {
-            *seat = number(&row, &format!("SeatID_{index}"))?;
-        }
-        store.vehicles.insert(number(&row, "ID")?, seats);
-    }
-    for row in numeric_rows(&db2.join("VehicleSeat.csv"))? {
-        let flags = number::<i64>(&row, "Flags")? as u32;
-        let offset = Vec3::new(
-            number(&row, "AttachmentOffset_0")?,
-            number(&row, "AttachmentOffset_2")?,
-            -number::<f32>(&row, "AttachmentOffset_1")?,
-        );
-        store
-            .seats
-            .insert(number(&row, "ID")?, Seat { flags, offset });
-    }
+    let mut store = load_vehicle_catalog(conn)?;
     let mut query = conn
         .prepare("SELECT entry,VehicleId FROM creature_template WHERE VehicleId<>0")
         .map_err(|e| e.to_string())?;
@@ -360,27 +341,16 @@ fn load_mount_poses(
     conn: &rusqlite::Connection,
     store: &mut VehicleStore,
 ) -> Result<(), String> {
-    let db2 = root.join("db2/12.1.0.69933");
-    let displays: HashMap<u32, _> = numeric_rows(&db2.join("CreatureDisplayInfo.csv"))?
-        .into_iter()
-        .map(|row| {
-            Ok((
-                number(&row, "ID")?,
-                (
-                    number::<u32>(&row, "ModelID")?,
-                    number::<f32>(&row, "CreatureModelScale")?,
-                ),
-            ))
-        })
-        .collect::<Result<_, String>>()?;
-    let models: HashMap<u32, u32> = numeric_rows(&db2.join("CreatureModelData.csv"))?
-        .into_iter()
-        .map(|row| Ok((number(&row, "ID")?, number(&row, "FileDataID")?)))
-        .collect::<Result<_, String>>()?;
-    let seat_records: HashMap<u32, _> = numeric_rows(&db2.join("VehicleSeat.csv"))?
-        .into_iter()
-        .map(|row| Ok((number(&row, "ID")?, number::<i32>(&row, "AttachmentID")?)))
-        .collect::<Result<_, String>>()?;
+    let mut display_query = conn
+        .prepare("SELECT ID,ModelID,CreatureModelScale FROM creature_display_info")
+        .map_err(|error| format!("world.db creature_display_info: {error}"))?;
+    let displays: HashMap<u32, (u32, f32)> = display_query
+        .query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))
+        .map_err(|error| error.to_string())?
+        .collect::<Result<_, _>>()
+        .map_err(|error| error.to_string())?;
+    let models: HashMap<u32, u32> = load_catalog_ids(conn, "SELECT ID,FileDataID FROM creature_model_data")?;
+    let seat_records: HashMap<u32, i32> = load_catalog_ids(conn, "SELECT ID,AttachmentID FROM vehicle_seat")?;
     let mut query=conn.prepare("SELECT DISTINCT x.CreatureDisplayInfoID,c.VehicleId FROM mount m JOIN mount_x_display x ON x.MountID=m.ID JOIN spell_effect e ON e.SpellID=m.SourceSpellID JOIN creature_template c ON c.entry=e.EffectMiscValue_0 WHERE e.EffectAura=78 AND e.DifficultyID=0 AND c.VehicleId<>0").map_err(|e|e.to_string())?;
     let rows = query
         .query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))
@@ -426,6 +396,14 @@ fn load_mount_poses(
         }
     }
     Ok(())
+}
+
+fn load_catalog_ids<T: rusqlite::types::FromSql>(conn: &rusqlite::Connection, sql: &str) -> Result<HashMap<u32, T>, String> {
+    let mut query = conn.prepare(sql).map_err(|error| format!("world.db {sql}: {error}"))?;
+    query.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|error| error.to_string())?
+        .collect::<Result<_, _>>()
+        .map_err(|error| error.to_string())
 }
 
 fn read_u32(data: &[u8], offset: usize) -> Result<u32, String> {
