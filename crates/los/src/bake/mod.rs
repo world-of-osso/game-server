@@ -26,6 +26,8 @@ use chunks::Result;
 /// Default doodad thickness cutoff in yards (spec: "start near 1 yd").
 pub const DEFAULT_THICKNESS_CUTOFF: f32 = 1.0;
 
+pub type GlobalGeometry = Vec<((u32, u32), Vec<[Vec3; 3]>)>;
+
 /// A model's opaque triangles in model-local Bevy space and their bounds.
 pub struct ModelGeometry {
     pub triangles: Vec<[Vec3; 3]>,
@@ -83,6 +85,7 @@ pub struct Baker {
     data: PathBuf,
     listfile: Option<rusqlite::Connection>,
     pub cutoff: f32,
+    collision: bool,
     m2s: HashMap<u32, Option<Rc<ModelGeometry>>>,
     wmos: HashMap<u32, Option<Rc<WmoModel>>>,
     /// Dropped thin doodads by model, counted once per (placement unique id, model): the
@@ -105,11 +108,20 @@ impl Baker {
             data: data.to_path_buf(),
             listfile,
             cutoff,
+            collision: false,
             m2s: HashMap::new(),
             wmos: HashMap::new(),
             dropped: HashMap::new(),
             dropped_placements: HashSet::new(),
             problems: Vec::new(),
+        }
+    }
+
+    /// The same placement/asset collector, selecting ground collision rather than LOS render faces.
+    pub fn for_navigation(data: &Path) -> Self {
+        Self {
+            collision: true,
+            ..Self::new(data, 0.0)
         }
     }
 
@@ -127,6 +139,102 @@ impl Baker {
             .read("terrain", &format!("{wdt_fdid}.wdt"))
             .map_err(|err| format!("terrain/{wdt_fdid}.wdt: {err}"))?;
         adt::wdt_tiles(&wdt)
+    }
+
+    /// A global WMO uses the ground system's origin-relative placement, split into the
+    /// same tiles as continents. Both LOS and navigation consume this collector.
+    pub fn collect_global(&mut self, wdt_fdid: u32) -> Result<Option<GlobalGeometry>> {
+        let wdt = self
+            .read("terrain", &format!("{wdt_fdid}.wdt"))
+            .map_err(|err| err.to_string())?;
+        let Some(placement) = adt::global_wmo(&wdt)? else {
+            return Ok(None);
+        };
+        let ModelRef::Fdid(fdid) = placement.model else {
+            unreachable!()
+        };
+        let model = self
+            .wmo(fdid)
+            .ok_or_else(|| format!("missing global WMO {fdid}"))?;
+        let position = shared::ground::global_wmo_placement_position(placement.position);
+        let world = Affine3A::from_scale_rotation_translation(
+            Vec3::splat(placement.scale),
+            adt::placement_rotation(placement.rotation),
+            position,
+        );
+        let mut tiles = std::collections::BTreeSet::new();
+        for tri in transformed(&model.geometry.triangles, world) {
+            let min = tri[0].min(tri[1]).min(tri[2]);
+            let max = tri[0].max(tri[1]).max(tri[2]);
+            let (r0, c1) = tile_of(min.x, min.z);
+            let (r1, c0) = tile_of(max.x, max.z);
+            for row in r0..=r1 {
+                for col in c0..=c1 {
+                    tiles.insert((row, col));
+                }
+            }
+        }
+        let mut geometry = Vec::new();
+        for tile in tiles {
+            let mut build = TileBuild {
+                tile,
+                border: if self.collision { 2.0 } else { 0.0 },
+                triangles: Vec::new(),
+                stats: TileStats::default(),
+            };
+            self.place_wmo_at(&placement, world, &mut build);
+            geometry.push((tile, build.triangles));
+        }
+        Ok(Some(geometry))
+    }
+
+    /// Authored terrain-water quads, using the same MH2O parser as runtime ground.
+    /// Bounds mark submerged walkable spans; water is not substituted for collision.
+    pub fn collect_water(&self, files: TileFiles) -> Result<Vec<(Vec3, Vec3)>> {
+        if files.root == 0 {
+            return Ok(Vec::new());
+        }
+        let root = self
+            .read("terrain", &format!("{}.adt", files.root))
+            .map_err(|err| err.to_string())?;
+        let Some(payload) = chunks::find_reversed(&root, b"MH2O") else {
+            return Ok(Vec::new());
+        };
+        let liquids = crate::liquid::parse_mh2o(payload)?;
+        let mut bounds = Vec::new();
+        for (tag, chunk) in chunks::chunks(&root) {
+            if &tag != b"KNCM" {
+                continue;
+            }
+            let x_index = chunks::u32_at(chunk, 4)? as usize;
+            let y_index = chunks::u32_at(chunk, 8)? as usize;
+            let Some(liquid) = liquids.get(y_index * 16 + x_index) else {
+                continue;
+            };
+            let x = chunks::f32_at(chunk, 0x68)?;
+            let z = -chunks::f32_at(chunk, 0x6c)?;
+            for layer in &liquid.layers {
+                for row in 0..8 {
+                    for col in 0..8 {
+                        if let Some(level) = layer.level_at(row as f32 + 0.5, col as f32 + 0.5) {
+                            let step = (100.0 / 3.0) / 8.0;
+                            let min = Vec3::new(
+                                x - (row + 1) as f32 * step,
+                                -2000.0,
+                                z + col as f32 * step,
+                            );
+                            let max = Vec3::new(
+                                x - row as f32 * step,
+                                level,
+                                z + (col + 1) as f32 * step,
+                            );
+                            bounds.push((min, max));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(bounds)
     }
 
     /// Thin doodads dropped so far, thinnest first.
@@ -177,6 +285,19 @@ impl Baker {
         tiles: &[TileFiles],
         (row, col): (u32, u32),
     ) -> Result<Option<(LosTile, TileStats)>> {
+        let Some((triangles, stats)) = self.collect_tile(tiles, (row, col))? else {
+            return Ok(None);
+        };
+        let (vertices, indexed) = index_triangles(&triangles);
+        Ok(Some((LosTile::build(row, col, vertices, indexed), stats)))
+    }
+
+    /// World triangles and counts, before LOS BVH or navigation voxelization.
+    pub fn collect_tile(
+        &mut self,
+        tiles: &[TileFiles],
+        (row, col): (u32, u32),
+    ) -> Result<Option<(Vec<[Vec3; 3]>, TileStats)>> {
         let files = tiles[(col * MAP_TILES + row) as usize];
         if files.root == 0 {
             return Ok(None);
@@ -187,12 +308,30 @@ impl Baker {
         let terrain = adt::terrain_triangles(&root)?;
         let mut build = TileBuild {
             tile: (row, col),
+            border: if self.collision { 2.0 } else { 0.0 },
             stats: TileStats {
                 terrain_triangles: terrain.len(),
                 ..TileStats::default()
             },
             triangles: terrain,
         };
+        if self.collision {
+            for r in row.saturating_sub(1)..=(row + 1).min(MAP_TILES - 1) {
+                for c in col.saturating_sub(1)..=(col + 1).min(MAP_TILES - 1) {
+                    if (r, c) == (row, col) {
+                        continue;
+                    }
+                    let root = tiles[(c * MAP_TILES + r) as usize].root;
+                    if root == 0 {
+                        continue;
+                    }
+                    let data = self
+                        .read("terrain", &format!("{root}.adt"))
+                        .map_err(|err| format!("terrain/{root}.adt: {err}"))?;
+                    build.add(&adt::terrain_triangles(&data)?, Affine3A::IDENTITY);
+                }
+            }
+        }
         let (doodads, wmos) = self.neighbourhood_placements(tiles, (row, col))?;
         for placement in &wmos {
             self.place_wmo(placement, &mut build);
@@ -209,11 +348,7 @@ impl Baker {
             };
             self.place_doodad(&doodad, &mut build);
         }
-        let (vertices, indexed) = index_triangles(&build.triangles);
-        Ok(Some((
-            LosTile::build(row, col, vertices, indexed),
-            build.stats,
-        )))
+        Ok(Some((build.triangles, build.stats)))
     }
 
     /// MDDF and MODF placements of the tile's and its neighbours' `_obj0`, each unique id
@@ -271,14 +406,15 @@ impl Baker {
     }
 
     fn place_wmo(&mut self, placement: &Placement, build: &mut TileBuild) {
+        self.place_wmo_at(placement, placement.world_from_local(), build);
+    }
+
+    fn place_wmo_at(&mut self, placement: &Placement, world: Affine3A, build: &mut TileBuild) {
         let ModelRef::Fdid(fdid) = placement.model else {
             return;
         };
-        let Some(model) = self.wmo(fdid) else {
-            return;
-        };
-        let world = placement.world_from_local();
-        if overlaps_tile(&model.geometry, world, build.tile) {
+        let Some(model) = self.wmo(fdid) else { return };
+        if overlaps_tile(&model.geometry, world, build.tile, build.border) {
             build.stats.wmo_triangles += build.add(&model.geometry.triangles, world);
             build.stats.alpha_or_blended_triangles += model.geometry.dropped_triangles;
         }
@@ -309,7 +445,9 @@ impl Baker {
         let Some(model) = self.m2(doodad.fdid) else {
             return;
         };
-        if model.triangles.is_empty() || !overlaps_tile(&model, doodad.world, build.tile) {
+        if model.triangles.is_empty()
+            || !overlaps_tile(&model, doodad.world, build.tile, build.border)
+        {
             return;
         }
         let thickness = model.thickness(doodad.scale);
@@ -354,6 +492,9 @@ impl Baker {
             .read("models", &format!("{fdid}.m2"))
             .map_err(|err| err.to_string())?;
         let file = m2::M2File::parse(&data)?;
+        if self.collision {
+            return Ok(ModelGeometry::new(file.collision_triangles()?, 0));
+        }
         let skin = primary_skin(&self.data.join("models"), fdid, file.skin_fdid)?;
         let (triangles, dropped) = file.opaque_triangles(&skin)?;
         let triangles = triangles
@@ -392,9 +533,13 @@ impl Baker {
                     continue;
                 }
             };
-            let (group_triangles, group_dropped) = root
-                .group_triangles(&group_data)
-                .map_err(|err| format!("group {group}: {err}"))?;
+            let (group_triangles, group_dropped) = if self.collision {
+                let collision = shared::ground::WmoGroupCollision::parse(&group_data)?;
+                (collision.collidable_triangles().collect(), 0)
+            } else {
+                root.group_triangles(&group_data)
+                    .map_err(|err| format!("group {group}: {err}"))?
+            };
             triangles.extend(group_triangles);
             dropped += group_dropped;
         }
@@ -417,6 +562,7 @@ struct PlacedDoodad {
 /// The triangles one tile keeps and its counts.
 struct TileBuild {
     tile: (u32, u32),
+    border: f32,
     triangles: Vec<[Vec3; 3]>,
     stats: TileStats,
 }
@@ -426,10 +572,21 @@ impl TileBuild {
     fn add(&mut self, triangles: &[[Vec3; 3]], world: Affine3A) -> usize {
         let before = self.triangles.len();
         let tile = self.tile;
+        let border = self.border;
         self.triangles
             .extend(transformed(triangles, world).filter(|tri| {
-                let centroid = (tri[0] + tri[1] + tri[2]) / 3.0;
-                tile_of(centroid.x, centroid.z) == tile
+                if border == 0.0 {
+                    let centroid = (tri[0] + tri[1] + tri[2]) / 3.0;
+                    return tile_of(centroid.x, centroid.z) == tile;
+                }
+                let center = 32.0 * TILE_SIZE;
+                let x0 = center - (tile.1 + 1) as f32 * TILE_SIZE - border;
+                let x1 = center - tile.1 as f32 * TILE_SIZE + border;
+                let z0 = tile.0 as f32 * TILE_SIZE - center - border;
+                let z1 = (tile.0 + 1) as f32 * TILE_SIZE - center + border;
+                let min = tri[0].min(tri[1]).min(tri[2]);
+                let max = tri[0].max(tri[1]).max(tri[2]);
+                max.x >= x0 && min.x <= x1 && max.z >= z0 && min.z <= z1
             }));
         self.triangles.len() - before
     }
@@ -442,7 +599,12 @@ fn transformed(triangles: &[[Vec3; 3]], world: Affine3A) -> impl Iterator<Item =
 }
 
 /// Whether the placed model's bounds reach into the tile's XZ footprint.
-fn overlaps_tile(model: &ModelGeometry, world: Affine3A, (row, col): (u32, u32)) -> bool {
+fn overlaps_tile(
+    model: &ModelGeometry,
+    world: Affine3A,
+    (row, col): (u32, u32),
+    border: f32,
+) -> bool {
     if model.triangles.is_empty() {
         return false;
     }
@@ -472,11 +634,11 @@ fn overlaps_tile(model: &ModelGeometry, world: Affine3A, (row, col): (u32, u32))
         center - (col + 1) as f32 * TILE_SIZE,
         center - col as f32 * TILE_SIZE,
     );
-    max.x >= x0 && min.x <= x1 && max.z >= z0 && min.z <= z1
+    max.x >= x0 - border && min.x <= x1 + border && max.z >= z0 - border && min.z <= z1 + border
 }
 
 /// Shared vertices for identical corners.
-fn index_triangles(triangles: &[[Vec3; 3]]) -> (Vec<Vec3>, Vec<[u32; 3]>) {
+pub fn index_triangles(triangles: &[[Vec3; 3]]) -> (Vec<Vec3>, Vec<[u32; 3]>) {
     let mut vertices = Vec::new();
     let mut lookup: HashMap<[u32; 3], u32> = HashMap::new();
     let indexed = triangles

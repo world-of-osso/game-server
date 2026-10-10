@@ -724,3 +724,5 @@ Existing ItemLocation/SwapItem/SplitItem extended to character bank tabs; [bank 
 ## [2026-10-09] docs | Landed-state reconciliation
 
 Added [deployment SSOT](../deploy.md) from `0dcaa23`/`6bfd7b6`; linked development commands without duplicating unit/state/build policy. Reconciled BankChannel versus InventoryChannel closed-bank responses (`8ac442f`, merge `104ae6a`) in [[banks]] and its spec. Indexed existing auction ServerClock/escrow proof (`9927e77`, `ab4cd69`, merge `137c462`) and defensive fixes/limits (`e86c038`, gate `9f54920`, merge `c5432a4`) rather than copying their ledgers. Docs-only inspection; no build, deployment, service or live validation.
+
+- 2026-10-10: Added [navigation](systems/navigation.md) bake/profile contract and shared collision/global-WMO collector; runtime/AI proof pending.

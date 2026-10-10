@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/server", "crates/client", "crates/integration-tests", "crates/los"]
+members = ["crates/server", "crates/client", "crates/integration-tests", "crates/los", "crates/navigation"]
 exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication"]
 
 [workspace.package]
@@ -26,4 +26,7 @@ lightyear_replication = { path = "vendor/lightyear_replication" }
 # The bake parses every model of a tile and the real-geometry tests bake tiles;
 # unoptimized both take minutes.
 [profile.dev.package.los]
+opt-level = 2
+
+[profile.dev.package.navigation]
 opt-level = 2

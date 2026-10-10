@@ -1,0 +1,355 @@
+//! Recast voxelization of the LOS/ground collector's world collision triangles.
+use crate::*;
+use glam::Vec3;
+use recastnavigation_sys::*;
+
+const SUBTILE_CELLS: i32 = 512;
+const BORDER_CELLS: i32 = 5; // ceil(radius / cell size) + 3, Recast tiled bake border.
+const HEIGHT_CELLS: i32 = 10;
+const CLIMB_CELLS: i32 = 8;
+const RADIUS_CELLS: i32 = 2;
+
+/// A WoW tile contains 4×4 Detour tiles to keep peak voxelization memory bounded.
+/// `triangles` includes neighboring geometry: border erosion must see across tile seams.
+pub fn bake_tile(triangles: &[[Vec3; 3]], tile: (u32, u32)) -> Result<Vec<u8>, String> {
+    bake_tile_with_water(triangles, &[], tile)
+}
+
+pub fn bake_tile_with_water(
+    triangles: &[[Vec3; 3]],
+    water: &[(Vec3, Vec3)],
+    tile: (u32, u32),
+) -> Result<Vec<u8>, String> {
+    if triangles.iter().flatten().any(|p| !p.is_finite()) {
+        return Err("non-finite collision vertex".into());
+    }
+    let (x, z) = tile_bounds(tile);
+    let mut packets = Vec::new();
+    for row in 0..SUBDIVISIONS {
+        for col in 0..SUBDIVISIONS {
+            let min = Vec3::new(
+                x + col as f32 * SUBTILE_SIZE,
+                0.0,
+                z + row as f32 * SUBTILE_SIZE,
+            );
+            let coords = (
+                (63 - tile.1) * SUBDIVISIONS + col,
+                tile.0 * SUBDIVISIONS + row,
+            );
+            let packet = bake_subtile(triangles, water, min, coords)?;
+            if !packet.is_empty() {
+                packets.push(packet);
+            }
+        }
+    }
+    if packets.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut bytes = MAGIC.to_vec();
+    bytes.extend_from_slice(&(packets.len() as u32).to_le_bytes());
+    for packet in packets {
+        bytes.extend_from_slice(&(packet.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&packet);
+    }
+    Ok(bytes)
+}
+
+struct RasterInput {
+    vertices: Vec<f32>,
+    indices: Vec<i32>,
+    areas: Vec<u8>,
+    min: [f32; 3],
+    max: [f32; 3],
+}
+
+impl RasterInput {
+    fn clipped(triangles: &[[Vec3; 3]], origin: Vec3) -> Self {
+        let border = BORDER_CELLS as f32 * CELL_SIZE;
+        let mut min = origin - Vec3::new(border, 0.0, border);
+        let mut max = origin + Vec3::new(SUBTILE_SIZE + border, 0.0, SUBTILE_SIZE + border);
+        min.y = f32::MAX;
+        max.y = f32::MIN;
+        let mut input = Self {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            areas: Vec::new(),
+            min: [0.0; 3],
+            max: [0.0; 3],
+        };
+        for tri in triangles {
+            let tmin = tri[0].min(tri[1]).min(tri[2]);
+            let tmax = tri[0].max(tri[1]).max(tri[2]);
+            if tmax.x < min.x || tmin.x > max.x || tmax.z < min.z || tmin.z > max.z {
+                continue;
+            }
+            min.y = min.y.min(tmin.y);
+            max.y = max.y.max(tmax.y);
+            let normal = (tri[1] - tri[0]).cross(tri[2] - tri[0]).normalize_or_zero();
+            // Ground collision is two-sided, as shared::ground::WmoGroupCollision is.
+            let walkable = normal.y.abs() >= AGENT_SLOPE.to_radians().cos();
+            input.areas.push(if walkable {
+                RC_WALKABLE_AREA
+            } else {
+                RC_NULL_AREA
+            });
+            for point in tri {
+                input.indices.push((input.vertices.len() / 3) as i32);
+                input.vertices.extend_from_slice(&point.to_array());
+            }
+        }
+        min.y -= CELL_HEIGHT;
+        max.y += AGENT_HEIGHT;
+        input.min = min.to_array();
+        input.max = max.to_array();
+        input
+    }
+}
+
+/// Owns every Recast allocation, including on a failed pipeline step.
+struct RecastBuild {
+    context: *mut rcContext,
+    heightfield: *mut rcHeightfield,
+    compact: *mut rcCompactHeightfield,
+    contours: *mut rcContourSet,
+    mesh: *mut rcPolyMesh,
+    detail: *mut rcPolyMeshDetail,
+}
+
+impl RecastBuild {
+    fn allocate() -> Result<Self, String> {
+        // SAFETY: upstream allocators return newly owned allocations or null.
+        let build = unsafe {
+            Self {
+                context: CreateContext(false),
+                heightfield: rcAllocHeightfield(),
+                compact: rcAllocCompactHeightfield(),
+                contours: rcAllocContourSet(),
+                mesh: rcAllocPolyMesh(),
+                detail: rcAllocPolyMeshDetail(),
+            }
+        };
+        let failed = build.context.is_null()
+            || build.heightfield.is_null()
+            || build.compact.is_null()
+            || build.contours.is_null()
+            || build.mesh.is_null()
+            || build.detail.is_null();
+        if failed {
+            return Err("Recast allocation failed".into());
+        }
+        Ok(build)
+    }
+
+    fn rasterize(&self, input: &RasterInput) -> Result<(), String> {
+        let side = SUBTILE_CELLS + 2 * BORDER_CELLS;
+        // SAFETY: buffers are complete triangle soup; indices address those vertices.
+        unsafe {
+            require(
+                rcCreateHeightfield(
+                    self.context,
+                    self.heightfield,
+                    side,
+                    side,
+                    input.min.as_ptr(),
+                    input.max.as_ptr(),
+                    CELL_SIZE,
+                    CELL_HEIGHT,
+                ),
+                "heightfield",
+            )?;
+            require(
+                rcRasterizeTriangles(
+                    self.context,
+                    input.vertices.as_ptr(),
+                    (input.vertices.len() / 3) as i32,
+                    input.indices.as_ptr(),
+                    input.areas.as_ptr(),
+                    input.areas.len() as i32,
+                    self.heightfield,
+                    CLIMB_CELLS,
+                ),
+                "rasterization",
+            )?;
+            rcFilterLowHangingWalkableObstacles(self.context, CLIMB_CELLS, self.heightfield);
+            rcFilterLedgeSpans(self.context, HEIGHT_CELLS, CLIMB_CELLS, self.heightfield);
+            rcFilterWalkableLowHeightSpans(self.context, HEIGHT_CELLS, self.heightfield);
+            require(
+                rcBuildCompactHeightfield(
+                    self.context,
+                    HEIGHT_CELLS,
+                    CLIMB_CELLS,
+                    self.heightfield,
+                    self.compact,
+                ),
+                "compact heightfield",
+            )?;
+            require(
+                rcErodeWalkableArea(self.context, RADIUS_CELLS, self.compact),
+                "radius erosion",
+            )?;
+        }
+        Ok(())
+    }
+
+    fn polygonize(&self, water: &[(Vec3, Vec3)]) -> Result<(), String> {
+        // SAFETY: the previous pipeline step populated compact; every output is owned.
+        unsafe {
+            for (min, max) in water {
+                rcMarkBoxArea(
+                    self.context,
+                    min.to_array().as_ptr(),
+                    max.to_array().as_ptr(),
+                    WATER_AREA,
+                    self.compact,
+                );
+            }
+            require(
+                rcBuildDistanceField(self.context, self.compact),
+                "distance field",
+            )?;
+            require(
+                rcBuildRegions(self.context, self.compact, BORDER_CELLS, 8 * 8, 20 * 20),
+                "regions",
+            )?;
+            require(
+                rcBuildContours(
+                    self.context,
+                    self.compact,
+                    0.5,
+                    48,
+                    self.contours,
+                    rcBuildContoursFlags_RC_CONTOUR_TESS_WALL_EDGES as i32,
+                ),
+                "contours",
+            )?;
+            require(
+                rcBuildPolyMesh(self.context, self.contours, 6, self.mesh),
+                "polygon mesh",
+            )?;
+            if (*self.mesh).npolys > 0 {
+                require(
+                    rcBuildPolyMeshDetail(
+                        self.context,
+                        self.mesh,
+                        self.compact,
+                        CELL_SIZE * 6.0,
+                        CELL_HEIGHT,
+                        self.detail,
+                    ),
+                    "detail mesh",
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    fn encode_detour(&self, coords: (u32, u32)) -> Result<Vec<u8>, String> {
+        // SAFETY: polygonization completed; slices use upstream's allocation counts.
+        let (mesh, detail) = unsafe { (&*self.mesh, &*self.detail) };
+        if mesh.npolys == 0 {
+            return Ok(Vec::new());
+        }
+        let flags = vec![WALK_FLAG; mesh.npolys as usize];
+        let mut params: dtNavMeshCreateParams = unsafe { std::mem::zeroed() };
+        params.verts = mesh.verts;
+        params.vertCount = mesh.nverts;
+        params.polys = mesh.polys;
+        params.polyFlags = flags.as_ptr();
+        params.polyAreas = mesh.areas;
+        params.polyCount = mesh.npolys;
+        params.nvp = mesh.nvp;
+        params.detailMeshes = detail.meshes;
+        params.detailVerts = detail.verts;
+        params.detailVertsCount = detail.nverts;
+        params.detailTris = detail.tris;
+        params.detailTriCount = detail.ntris;
+        params.tileX = coords.0 as i32;
+        params.tileY = coords.1 as i32;
+        params.bmin = mesh.bmin;
+        params.bmax = mesh.bmax;
+        params.walkableHeight = AGENT_HEIGHT;
+        params.walkableRadius = AGENT_RADIUS;
+        params.walkableClimb = AGENT_CLIMB;
+        params.cs = CELL_SIZE;
+        params.ch = CELL_HEIGHT;
+        params.buildBvTree = true;
+        let mut data = std::ptr::null_mut();
+        let mut size = 0;
+        // SAFETY: params references owned Recast arrays; Detour copies them.
+        unsafe {
+            require(
+                dtCreateNavMeshData(&mut params, &mut data, &mut size),
+                "Detour serialization",
+            )?;
+            let bytes = std::slice::from_raw_parts(data, size as usize).to_vec();
+            dtFree(data.cast());
+            Ok(bytes)
+        }
+    }
+}
+
+impl Drop for RecastBuild {
+    fn drop(&mut self) {
+        // SAFETY: all pointers are individually owned; upstream free accepts null.
+        unsafe {
+            rcFreePolyMeshDetail(self.detail);
+            rcFreePolyMesh(self.mesh);
+            rcFreeContourSet(self.contours);
+            rcFreeCompactHeightfield(self.compact);
+            rcFreeHeightField(self.heightfield);
+            if !self.context.is_null() {
+                DeleteContext(self.context);
+            }
+        }
+    }
+}
+
+fn require(ok: bool, step: &str) -> Result<(), String> {
+    if ok {
+        Ok(())
+    } else {
+        Err(format!("Recast {step} failed"))
+    }
+}
+
+fn bake_subtile(
+    triangles: &[[Vec3; 3]],
+    water: &[(Vec3, Vec3)],
+    origin: Vec3,
+    coords: (u32, u32),
+) -> Result<Vec<u8>, String> {
+    let input = RasterInput::clipped(triangles, origin);
+    if input.areas.is_empty() {
+        return Ok(Vec::new());
+    }
+    let build = RecastBuild::allocate()?;
+    build.rasterize(&input)?;
+    build.polygonize(water)?;
+    build.encode_detour(coords)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn floor_bakes_deterministically_and_steep_surface_is_excluded() {
+        let floor = [
+            [
+                Vec3::new(10.0, 0.0, 10.0),
+                Vec3::new(10.0, 0.0, 30.0),
+                Vec3::new(30.0, 0.0, 30.0),
+            ],
+            [
+                Vec3::new(10.0, 0.0, 10.0),
+                Vec3::new(30.0, 0.0, 30.0),
+                Vec3::new(30.0, 0.0, 10.0),
+            ],
+        ];
+        let bytes = bake_tile(&floor, (32, 31)).expect("walkable floor must bake");
+        assert!(!bytes.is_empty());
+        assert_eq!(bytes, bake_tile(&floor, (32, 31)).unwrap());
+        let steep = floor.map(|tri| tri.map(|point| Vec3::new(point.x, point.x * 3.0, point.z)));
+        assert!(bake_tile(&steep, (32, 31)).unwrap().is_empty());
+    }
+}

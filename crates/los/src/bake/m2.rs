@@ -60,6 +60,33 @@ impl<'a> M2File<'a> {
         })
     }
 
+    /// MD20 bounding triangles/vertices (0xD8/0xE0), the authored static collision hull.
+    /// No render-mesh substitution: an empty hull does not collide.
+    pub fn collision_triangles(&self) -> Result<Vec<[Vec3; 3]>> {
+        let indices = records(self.md20, array_at(self.md20, 0xD8)?, 2, u16_at)?;
+        let vertices = records(self.md20, array_at(self.md20, 0xE0)?, 12, f32x3_at)?;
+        indices
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|tri| {
+                let corner = |index: u16| {
+                    vertices
+                        .get(usize::from(index))
+                        .copied()
+                        .map(super::adt::file_to_bevy)
+                        .ok_or_else(|| {
+                            format!(
+                                "M2 collision index {index} past {} vertices",
+                                vertices.len()
+                            )
+                        })
+                };
+                Ok([corner(tri[0])?, corner(tri[1])?, corner(tri[2])?])
+            })
+            .collect()
+    }
+
     /// The top centre of the model's bounding box (a flat model's box has no height); an
     /// error for an inverted box, which a model without geometry has.
     pub fn bounds_top(&self) -> Result<Vec3> {

@@ -1,0 +1,23 @@
+[package]
+name = "navigation"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+glam = "0.32"
+# Pinned upstream Recast voxel bake and Detour tiled query, built from bundled source.
+recastnavigation-sys = { version = "=1.0.3", default-features = false, features = ["detour", "detour_large_nav_meshes"] }
+los = { path = "../los", optional = true, features = ["bake"] }
+rusqlite = { version = "0.35", optional = true, features = ["bundled"] }
+
+[features]
+bake = ["recastnavigation-sys/recast", "dep:los", "dep:rusqlite"]
+
+[[bin]]
+name = "nav-bake"
+path = "src/bin/nav-bake.rs"
+required-features = ["bake"]
+
+[dev-dependencies]
+tempfile = "3"

@@ -46,6 +46,28 @@ pub fn wdt_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
         .collect()
 }
 
+/// The WDT's global-WMO MODF; unlike ADT MODF its model id is always an FDID.
+pub fn global_wmo(wdt: &[u8]) -> Result<Option<Placement>> {
+    let mphd = find_reversed(wdt, b"MPHD").ok_or("WDT has no MPHD")?;
+    if u32_at(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO == 0 {
+        return Ok(None);
+    }
+    let entry = find_reversed(wdt, b"MODF").ok_or("global WDT has no MODF")?;
+    let flags = u16_at(entry, 56)?;
+    Ok(Some(Placement {
+        model: ModelRef::Fdid(u32_at(entry, 0)?),
+        unique_id: u32_at(entry, 4)?,
+        position: f32x3_at(entry, 8)?,
+        rotation: f32x3_at(entry, 20)?,
+        scale: if flags & MODF_FLAG_HAS_SCALE != 0 {
+            f32::from(u16_at(entry, 62)?) / 1024.0
+        } else {
+            1.0
+        },
+        doodad_set: u16_at(entry, 58)?,
+    }))
+}
+
 /// Bevy world position of an ADT MODF/MDDF placement position
 /// (`shared::ground::placement_position`).
 pub fn placement_position(raw: [f32; 3]) -> Vec3 {

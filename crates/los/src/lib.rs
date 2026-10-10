@@ -4,6 +4,7 @@
 //! `shared::los`, which the server and the client link.
 
 pub use shared::los::*;
+pub mod liquid;
 
 #[cfg(feature = "bake")]
 pub mod bake;
