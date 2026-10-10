@@ -3,6 +3,7 @@
 
 mod batch3;
 mod batch4;
+mod batch5;
 
 use bevy::prelude::*;
 
@@ -74,6 +75,13 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch5::DEMONS_BITE, 1) => Some(batch5::demons_bite),
+        (batch5::CHAOS_STRIKE, 0) => Some(batch5::chaos_strike),
+        (batch5::RAPTURE, 0) => Some(batch5::rapture),
+        (batch5::SHURIKEN_STORM, 0) => Some(batch5::shuriken_storm),
+        (batch5::DEATHS_CARESS, 0) => Some(batch5::deaths_caress),
+        (batch5::EPIDEMIC, 0) => Some(batch5::epidemic),
+        (batch5::LAVA_BURST_DAMAGE, 0) => Some(batch5::lava_burst),
         (batch4::RENEWING_MIST_CAST, 0) => Some(batch4::renewing_mist),
         (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
         (batch4::CHAIN_LIGHTNING, 0) => Some(batch4::chain_lightning),
@@ -106,7 +114,8 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
-        FIRE_BLAST => Some(100.0),
+        FIRE_BLAST | batch5::CHAOS_BOLT => Some(100.0),
+        batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
         _ => None,
     }
 }
@@ -117,6 +126,8 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
         batch3::SHRED => Some(batch3::shred_damage),
         batch4::MANGLE => Some(batch4::mangle_damage),
+        batch5::CHAOS_BOLT | batch5::LAVA_BURST_DAMAGE => Some(batch5::crit_scaled_damage),
+        batch5::RAPTURE_DAMAGE => Some(batch5::rapture_damage),
         BACKSTAB => Some(backstab_damage),
         DRAIN_SOUL => Some(drain_soul_damage),
         COBRA_SHOT => Some(cobra_shot_damage),
@@ -194,6 +205,7 @@ pub type AreaTargetFilter = fn(&SpellInfo, Option<Entity>, &mut Vec<Entity>);
 pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
     match (spell_id, effect_index) {
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
+        (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),
         _ => None,
     }
 }
@@ -779,6 +791,7 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         batch3::GARROTE => Some(batch3::garrote),
+        batch5::DISINTEGRATE => Some(batch5::disintegrate),
         FROSTBOLT => Some(frostbolt_chilled),
         _ => None,
     }
