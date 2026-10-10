@@ -424,13 +424,7 @@ fn directed_units(
     cap: u32,
 ) -> Result<Vec<Entity>, u32> {
     let origin = position(world, caster).expect("directional caster position");
-    let angle = destination
-        .filter(|point| point.x != origin.x || point.z != origin.z)
-        .map_or_else(
-            || orientation(world, caster),
-            |point| (origin.z - point.z).atan2(point.x - origin.x),
-        );
-    let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
+    let forward = direction_to_destination(origin, destination, orientation(world, caster));
     let restrictions = spell
         .target_restrictions
         .as_ref()
@@ -447,18 +441,43 @@ fn directed_units(
     );
     units.retain(|&unit| {
         let offset = position(world, unit).expect("area unit position") - origin;
-        let along = offset.dot(forward);
-        let across = (offset.x * forward.z - offset.z * forward.x).abs();
-        if effect.implicit_targets[slot] == 134 {
-            along >= 0.0 && across <= width
-        } else {
-            across.atan2(along) <= half_arc
-        }
+        within_directed_shape(
+            offset,
+            forward,
+            effect.implicit_targets[slot] == 134,
+            width,
+            half_arc,
+        )
     });
     if cap > 0 {
         units.truncate(cap as usize);
     }
     Ok(units)
+}
+
+fn direction_to_destination(origin: Vec3, destination: Option<Vec3>, facing: f32) -> Vec3 {
+    let angle = destination
+        .filter(|point| point.x != origin.x || point.z != origin.z)
+        .map_or(facing, |point| {
+            (origin.z - point.z).atan2(point.x - origin.x)
+        });
+    Vec3::new(angle.cos(), 0.0, -angle.sin())
+}
+
+fn within_directed_shape(
+    offset: Vec3,
+    forward: Vec3,
+    line: bool,
+    width: f32,
+    half_arc: f32,
+) -> bool {
+    let along = offset.dot(forward);
+    let across = (offset.x * forward.z - offset.z * forward.x).abs();
+    if line {
+        along >= 0.0 && across <= width
+    } else {
+        across.atan2(along) <= half_arc
+    }
 }
 
 /// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):
