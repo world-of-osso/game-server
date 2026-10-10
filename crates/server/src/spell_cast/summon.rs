@@ -1,0 +1,277 @@
+//! SPELL_EFFECT_SUMMON (28): TC a352b1fa Spell::EffectSummonType and
+//! Map::SummonCreature. SummonProperties supplies control/title/faction/slot;
+//! creature identity and lifetime come from SpellEffect and SpellDuration.
+//! Temporary guardians share UnitSummonedBy / FollowOwner with hunter pets,
+//! not their persisted stable slot (several guardians can coexist with a pet).
+use super::effects::EffectCtx;
+use crate::maps::InMap;
+use crate::spell_info::SpellEffect;
+use bevy::prelude::*;
+use lightyear::prelude::*;
+use rusqlite::Connection;
+use shared::components::{
+    CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
+    Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
+};
+use shared::protocol::NpcFlags;
+use std::collections::HashMap;
+
+pub const EFFECT_SUMMON: u32 = 28;
+const CONTROL_ALLY: u32 = 1;
+const CONTROL_PET: u32 = 2;
+const TITLE_PET: u32 = 1;
+const TITLE_GUARDIAN: u32 = 2;
+const TITLE_MINION: u32 = 3;
+const TITLE_RUNEBLADE: u32 = 6;
+
+#[derive(Debug, Clone, Copy)]
+pub struct SummonProperties {
+    pub control: u32,
+    pub faction: u32,
+    pub title: u32,
+    pub slot: i32,
+}
+
+impl SummonProperties {
+    fn follows_owner(self) -> bool {
+        self.control == CONTROL_PET
+            || matches!(
+                self.title,
+                TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE
+            )
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct SummonPropertiesStore(pub HashMap<u32, SummonProperties>);
+
+pub fn load_summon_properties(conn: &Connection) -> rusqlite::Result<SummonPropertiesStore> {
+    let mut stmt =
+        conn.prepare("SELECT ID, Control, Faction, Title, Slot FROM summon_properties")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get(0)?,
+            SummonProperties {
+                control: row.get(1)?,
+                faction: row.get(2)?,
+                title: row.get(3)?,
+                slot: row.get(4)?,
+            },
+        ))
+    })?;
+    Ok(SummonPropertiesStore(
+        rows.collect::<rusqlite::Result<_>>()?,
+    ))
+}
+
+pub(super) fn load_summon_properties_startup(mut commands: Commands) {
+    let path = std::path::Path::new(crate::spell_info::WORLD_DB_PATH);
+    if !path.exists() {
+        warn!("world.db not found: SummonProperties table empty");
+        return;
+    }
+    let conn = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("open world.db for SummonProperties");
+    let exists: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='summon_properties')", [], |row| row.get(0))
+        .expect("check SummonProperties table");
+    if !exists {
+        warn!(
+            "SummonProperties is not imported: effect 28 cannot spawn creatures; extract/import SummonProperties with scripts/db2.py"
+        );
+        return;
+    }
+    commands.insert_resource(load_summon_properties(&conn).expect("load SummonProperties"));
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct SummonedCreature {
+    pub owner: Entity,
+    pub spell_id: u32,
+    pub properties_id: u32,
+    pub properties: SummonProperties,
+    pub expires_at: Option<f64>,
+}
+
+pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    let properties_id = effect.misc_values[1] as u32;
+    let Some(properties) = world
+        .resource::<SummonPropertiesStore>()
+        .0
+        .get(&properties_id)
+        .copied()
+    else {
+        warn!(
+            "Spell {}: missing SummonProperties {properties_id}",
+            ctx.spell.id
+        );
+        return;
+    };
+    if properties.control > CONTROL_PET {
+        warn!(
+            "Spell {}: summon control {} unsupported",
+            ctx.spell.id, properties.control
+        );
+        return;
+    }
+    let entry = effect.misc_values[0] as u32;
+    let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
+    let Some(template) = read_summon_template(world, entry, level) else {
+        warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
+        return;
+    };
+    let Some(dest) = ctx.dest else {
+        warn!("Spell {}: summon has no destination", ctx.spell.id);
+        return;
+    };
+    replace_slotted_summon(world, ctx.caster, properties);
+    spawn_summon(world, ctx, properties_id, properties, &template, dest);
+}
+
+fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonProperties) {
+    // Slot 0 / -1 does not claim a fixed totem slot. No persistent pet slot is touched.
+    if properties.slot <= 0 {
+        return;
+    }
+    let previous: Vec<_> = world
+        .query::<(Entity, &SummonedCreature)>()
+        .iter(world)
+        .filter(|(_, summon)| summon.owner == owner && summon.properties.slot == properties.slot)
+        .map(|(entity, _)| entity)
+        .collect();
+    for entity in previous {
+        despawn_summon(world, entity);
+    }
+}
+
+struct SummonTemplate {
+    entry: u32,
+    name: String,
+    health: f32,
+    faction: u32,
+    classification: CreatureClassification,
+    display_id: u32,
+}
+
+fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTemplate> {
+    let data = world.get_resource::<crate::world_data::WorldData>()?;
+    let template = data.template_for(entry, 0)?;
+    Some(SummonTemplate {
+        entry,
+        name: template.name.clone(),
+        health: crate::hunter_pet::pet_max_health(data, template, level),
+        faction: u32::from(template.faction),
+        classification: CreatureClassification::from_rank(template.rank)
+            .expect("validated creature rank"),
+        display_id: crate::zones::template_display_id(template, &mut rand::thread_rng()),
+    })
+}
+
+fn spawn_summon(
+    world: &mut World,
+    ctx: &EffectCtx,
+    properties_id: u32,
+    properties: SummonProperties,
+    template: &SummonTemplate,
+    dest: super::targets::Dest,
+) {
+    let owner = ctx.caster;
+    let Some(map) = world.get::<InMap>(owner).copied() else {
+        return;
+    };
+    let level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let health = template.health;
+    let faction = if properties.faction != 0 {
+        properties.faction
+    } else {
+        world
+            .get::<UnitFactionTemplate>(owner)
+            .map_or(template.faction, |faction| faction.0)
+    };
+    let duration = super::duration_ms(world, owner, ctx.spell);
+    let expires_at =
+        (duration > 0).then(|| crate::auras::aura_now(world) + f64::from(duration) / 1000.0);
+    let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
+    let replicate = world.get::<Replicate>(owner).is_some();
+    let display_id = template.display_id;
+    let mut entity = world.spawn((
+        (
+            Position {
+                x: dest.position.x,
+                y: dest.position.y,
+                z: dest.position.z,
+            },
+            Rotation {
+                x: 0.0,
+                y: dest.orientation + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+            Npc {
+                template_id: template.entry,
+                name: template.name.clone(),
+            },
+            Health {
+                current: health,
+                max: health,
+            },
+            ModelDisplay { display_id },
+            zone,
+            map,
+        ),
+        (
+            UnitLevel(level),
+            template.classification,
+            UnitFactionTemplate(faction),
+            UnitSummonedBy(owner.to_bits()),
+            NpcFlags(0),
+            CreatureMotion::Still,
+            MovementSpeed(0.0),
+            crate::networking::CombatTarget::default(),
+            SummonedCreature {
+                owner,
+                spell_id: ctx.spell.id,
+                properties_id,
+                properties,
+                expires_at,
+            },
+        ),
+    ));
+    if properties.control == CONTROL_ALLY || properties.control == CONTROL_PET {
+        entity.insert(UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED));
+    }
+    if properties.follows_owner() {
+        entity.insert(crate::creature_ai::FollowOwner::new(owner));
+    }
+    if replicate {
+        entity.insert((
+            Replicate::to_clients(NetworkTarget::All),
+            crate::interest::NetworkVisibility::default(),
+        ));
+    }
+}
+
+pub(super) fn expire_summons(world: &mut World) {
+    let now = crate::auras::aura_now(world);
+    let expired: Vec<_> = world
+        .query::<(Entity, &SummonedCreature, &InMap)>()
+        .iter(world)
+        .filter(|(_, summon, map)| {
+            summon.expires_at.is_some_and(|expiry| now >= expiry)
+                || world.get::<InMap>(summon.owner) != Some(*map)
+        })
+        .map(|(entity, _, _)| entity)
+        .collect();
+    for entity in expired {
+        despawn_summon(world, entity);
+    }
+}
+
+fn despawn_summon(world: &mut World, entity: Entity) {
+    if let Some(summon) = world.get::<SummonedCreature>(entity) {
+        debug!(
+            "Despawn summon {entity}: spell {}, properties {}",
+            summon.spell_id, summon.properties_id
+        );
+    }
+    crate::combat::combat_stop(world, entity);
+    world.entity_mut(entity).despawn();
+}

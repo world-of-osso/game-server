@@ -46,6 +46,7 @@ TABLES = [
     "Spell",
     "SpellMisc",
     "SpellEffect",
+    "SummonProperties",
     "SpellPower",
     "SpellCastTimes",
     "SpellRange",
@@ -163,6 +164,7 @@ TABLES = [
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
 LOCAL_TABLES = {
+    "SummonProperties": (1345276, 0xA4CA5ECF),
     "ContentTuning": (1962930, 0xA3E13004),
     "QuestMoneyReward": (1139047, 0x01D6219A),
     "ExpectedStat": (1937326, 0x0FD90F9C),

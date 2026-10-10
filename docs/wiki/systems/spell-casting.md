@@ -2,6 +2,16 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Temporary summons and spell area triggers
+
+[Contract](../../specs/spell-summon-area-trigger.md). Effect 28 dispatches once per cast through `summon.rs`; `summon_properties` is loaded from world.db. `scripts/db2.py extract/import` adds local CASC SummonProperties (FDID 1345276, WDC5 layout A4CA5ECF). Missing metadata/template is logged, never synthesized. `SummonedCreature` records owner and SummonProperties; `UnitSummonedBy`, faction and `FollowOwner` reuse pet ownership/movement conventions without modifying PetStable. Positive durations expire on the aura clock; zero/negative durations are untimed. Owner removal/map departure also removes the summon.
+
+Reference: TrinityCore a352b1fa `SpellEffects.cpp::EffectSummonType` / `SharedDefines.h::SummonTitle`. Matrix probe 49028 uses creature 27893, SummonProperties 3242 (ally/runeblade), duration 8000 ms. Other six summon roots' creatures are absent from current world data.
+
+Effect 179 dispatches once per cast through `area_trigger.rs`. Radius is the first supplied SpellRadius (including the second radius slot); duration comes from the cast spell. An explicit EffectTriggerSpell executes through the normal triggered pipeline, on entry when EffectAuraPeriod is zero, periodically otherwise. Inside selection uses caster map, living units, radius and the trigger's explicit relation; depth and casting item level survive delayed area execution. Missing trigger/radius logs a lifecycle-only entity, not an invented action.
+
+The nine matrix roots all lack trigger bindings, including Wildfire Bomb's child 265163. Purging Breath 1287715 → 1287711 supplies an authentic non-matrix damage binding for engine proof. Local AreaTriggerCreateProperties (FDID 1937227) contains none of these matrix create-property IDs: their server actions/scripts cannot be reconstructed from that client table. Selector 87 stays unsupported because the protocol supplies no arbitrary ground-point destination; ground selection and moving orbs are not claimed.
+
 ## Pipeline
 
 1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
