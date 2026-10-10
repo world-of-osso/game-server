@@ -120,6 +120,12 @@ pub(super) fn absorb_amount(
     Some(health.max * percent / 100.0)
 }
 
+/// Tranquility's channel owns its aura lifetime, not its shield capacity.
+/// Removing the whole aura on depletion would also stop its healing ticks.
+pub(super) fn absorb_ends_aura(spell_id: u32) -> bool {
+    spell_id != 740
+}
+
 ///321068 explicitly gates187827s4's extra Shear/Fracture Fury modifier.
 pub(super) fn effect_enabled(
     world: &World,

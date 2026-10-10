@@ -1205,7 +1205,7 @@ pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResu
     }
     if !result.depleted.is_empty() {
         remove_auras(world, unit, RemoveReason::Consumed, |aura| {
-            result.depleted.contains(&aura.instance_id)
+            result.depleted.contains(&aura.instance_id) && scripts::absorb_ends_aura(aura.spell_id)
         });
     }
 }
