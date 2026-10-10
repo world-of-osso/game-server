@@ -474,7 +474,8 @@ pub fn create_character_with_appearance(
     let data = default_character_data(name, race, class, appearance);
     let progression = kit.starting_progression(race, class)?;
     let mut mint = || next_id(db, "item_instance");
-    let inventory = kit.starting_inventory(data, &mut mint)?;
+    let mut inventory = kit.starting_inventory(data, &mut mint)?;
+    inventory.appearance_account = Some(account_id);
     save_inventory_record(db, character_id, &inventory);
     save_new_character(db, account_id, character_id, name, &inventory.character);
     crate::maps::persistence::save_character_map(db, character_id, start_location(race).map_id);

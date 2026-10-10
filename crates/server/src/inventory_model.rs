@@ -45,6 +45,8 @@ pub(crate) struct InventoryModel {
     templates: HashMap<(ItemDefinitionSource, u32), ItemTemplate>,
     character: CharacterData,
     gold: u64,
+    appearance_account: Option<u64>,
+    appearance_grants: Vec<u32>,
 }
 
 pub(crate) fn error(reason: InventoryErrorReason, detail: impl Into<String>) -> InventoryError {
@@ -86,6 +88,8 @@ impl InventoryModel {
             templates: owned_templates,
             character: record.character,
             gold: record.inventory.gold,
+            appearance_account: record.appearance_account,
+            appearance_grants: record.appearance_grants,
         };
         for entry in record.equipped {
             model
@@ -296,7 +300,13 @@ impl InventoryModel {
         }
     }
 
-    pub(crate) fn into_record(self) -> InventoryRecord {
+    pub(crate) fn into_record(mut self) -> InventoryRecord {
+        let appearances: Vec<u32> = self
+            .appearance_sources()
+            .into_iter()
+            .filter_map(|(source, id)| self.templates.get(&(source, id))?.appearance_id)
+            .collect();
+        self.appearance_grants.extend(appearances);
         let mut items = Vec::new();
         let mut placements = Vec::new();
         for (bag, cells) in self.bags.into_iter().enumerate() {
@@ -332,6 +342,8 @@ impl InventoryModel {
             instances: self.instances,
             item_durability: self.item_durability,
             definition_sources: self.definition_sources,
+            appearance_account: self.appearance_account,
+            appearance_grants: self.appearance_grants,
         }
     }
 
@@ -1091,6 +1103,8 @@ impl InventoryModel {
         {
             self.check_bag_empty(bag)?;
         }
+        let item = item.clone();
+        self.collect_disposed_appearance(&item);
         if count == 0 || count >= item.stack_count {
             let removed = self.take(location).expect("validated item");
             self.instances.remove(&removed.item_guid);
@@ -1257,6 +1271,17 @@ impl InventoryModel {
             .chain(soulbound)
             .map(|item| (self.definition_source(item.item_guid), item.item_id))
             .collect()
+    }
+
+    /// Retail Warbands: selling/deleting/disenchanting also learns an unbound item.
+    /// Transfer helpers intentionally do not call this.
+    pub(crate) fn collect_disposed_appearance(&mut self, item: &InventoryItemData) {
+        if let Some(appearance) = self
+            .template(item)
+            .and_then(|template| template.appearance_id)
+        {
+            self.appearance_grants.push(appearance);
+        }
     }
 
     pub(crate) fn is_soulbound(&self, item_guid: u64) -> bool {

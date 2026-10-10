@@ -543,6 +543,7 @@ fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResu
         .take_bag_item(req.item_guid, count, &mut mint)
         .map_err(|_| MerchantError::ItemNotFound)?;
     drop(mint);
+    model.collect_disposed_appearance(&sold);
     model.set_gold(model.gold() + money);
     shop.save(customer.character_id, model);
     let sold_at = shop.now();

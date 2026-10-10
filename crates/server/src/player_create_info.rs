@@ -366,6 +366,8 @@ impl NewCharacterKit<'_> {
             instances: HashMap::new(),
             item_durability: HashMap::new(),
             definition_sources: HashMap::new(),
+            appearance_account: None,
+            appearance_grants: Vec::new(),
         };
         let mut model = InventoryModel::from_record(empty, self.templates, mint);
         for &(item_id, count) in &info.items {

@@ -451,10 +451,9 @@ impl<'a> QuestSession<'a, '_, '_> {
             grant_item(&mut inventory, self.db, self.quests, item_id, count);
         }
         inventory.gold = gold;
-        self.save_inventory(&inventory, money != 0);
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
-        self.save_log(&log);
+        self.persist_reward(&inventory, &log, self.reward_appearances(quest));
         // `RewardQuest`: no XP at the cap.
         let level = self.requester.player.level;
         let xp = if level >= MAX_LEVEL {
@@ -489,6 +488,57 @@ impl<'a> QuestSession<'a, '_, '_> {
         );
         self.offer_next_quest(npc, quest.reward_next_quest, &log);
         Ok(())
+    }
+
+    fn persist_reward(
+        &mut self,
+        inventory: &InventoryData,
+        log: &QuestLogData,
+        appearances: Vec<u32>,
+    ) {
+        let character = self.character();
+        let account = persistence::find_account_id_for_character(self.db, character)
+            .expect("quest reward character has an account");
+        let txn = self.db.begin_write().expect("begin quest reward write");
+        persistence::appearance_store::learn_account_appearances_in(&txn, account, appearances);
+        txn.open_table(persistence::INVENTORIES)
+            .expect("open inventories")
+            .insert(character, bitcode::encode(inventory).as_slice())
+            .expect("write reward inventory");
+        txn.open_table(crate::persistence::quest_store::QUEST_LOGS)
+            .expect("open quest logs")
+            .insert(character, bitcode::encode(log).as_slice())
+            .expect("write rewarded quest log");
+        txn.commit().expect("commit quest reward");
+        self.io
+            .effects
+            .inventories
+            .record(character, inventory.gold);
+        self.io.effects.dirty.0.insert(character);
+    }
+
+    /// Retail 11.0.5 grants non-cosmetic appearances from every reward option,
+    /// not just the item selected or an armor type the character can equip.
+    fn reward_appearances(&self, quest: &QuestTemplate) -> Vec<u32> {
+        if quest.reward_items.is_empty() && quest.choice_items.is_empty() {
+            return Vec::new();
+        }
+        let templates = self
+            .io
+            .effects
+            .templates
+            .as_ref()
+            .expect("quest rewards need item templates");
+        quest
+            .reward_items
+            .iter()
+            .chain(&quest.choice_items)
+            .filter_map(|&(id, _)| {
+                let template =
+                    templates.get(shared::item_data::ItemDefinitionSource::Retail, id)?;
+                template.appearance_id
+            })
+            .collect()
     }
 
     /// Retail follows a turn-in with the chain's next quest when the same giver

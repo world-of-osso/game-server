@@ -201,6 +201,8 @@ fn character_disk_abi_owned_sources_hydrate_by_guid_not_race_after_reopen() {
                 } else {
                     HashMap::from([(id * 100, source)])
                 },
+                appearance_account: None,
+                appearance_grants: Vec::new(),
             };
             save_inventory_record(&db, id, &record);
         }
