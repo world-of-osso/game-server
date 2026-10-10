@@ -374,9 +374,8 @@ pub fn select_targets(
                     effect,
                     slot,
                     destination,
-                    matches!(selector, Selector::LineToDest),
                     max_targets,
-                ));
+                )?);
             }
             Selector::ConeEntry => {
                 selected_any = true;
@@ -422,9 +421,8 @@ fn directed_units(
     effect: &SpellEffect,
     slot: usize,
     destination: Option<Vec3>,
-    line: bool,
     cap: u32,
-) -> Vec<Entity> {
+) -> Result<Vec<Entity>, u32> {
     let origin = position(world, caster).expect("directional caster position");
     let angle = destination
         .filter(|point| point.x != origin.x || point.z != origin.z)
@@ -436,7 +434,7 @@ fn directed_units(
     let restrictions = spell
         .target_restrictions
         .as_ref()
-        .expect("directional spell requires catalog restrictions");
+        .ok_or(effect.implicit_targets[slot])?;
     let half_arc = restrictions.cone_degrees.to_radians() / 2.0;
     let width = restrictions.width;
     let mut units = area_units(
@@ -451,7 +449,7 @@ fn directed_units(
         let offset = position(world, unit).expect("area unit position") - origin;
         let along = offset.dot(forward);
         let across = (offset.x * forward.z - offset.z * forward.x).abs();
-        if line {
+        if effect.implicit_targets[slot] == 134 {
             along >= 0.0 && across <= width
         } else {
             across.atan2(along) <= half_arc
@@ -460,7 +458,7 @@ fn directed_units(
     if cap > 0 {
         units.truncate(cap as usize);
     }
-    units
+    Ok(units)
 }
 
 /// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):

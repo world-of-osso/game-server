@@ -564,7 +564,9 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        if handlers::is_handled(effect.aura_type) {
+        if handlers::is_handled(effect.aura_type)
+            || scripts::consumes_named_field(aura.spell_id, effect.index)
+        {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
@@ -1126,7 +1128,7 @@ pub fn damage_taken_multiplier(
             })
             .product()
     });
-    taken * from_caster
+    taken * from_caster * scripts::outgoing_to_owner_multiplier(world, attacker, target)
 }
 
 /// SCHOOL_ABSORB 69: matching absorbs (MiscValue school mask) soak damage,
