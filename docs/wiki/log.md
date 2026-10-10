@@ -738,3 +738,7 @@ Added [deployment SSOT](../deploy.md) from `0dcaa23`/`6bfd7b6`; linked developme
 - 2026-10-10: Restored authentic TDB1210.26091 disenchant loot excerpt and importer/schema; reference-loot full-row equality and canonical backup/import verified. [Content import](systems/content-import.md#disenchant-source-restoration-2026-10-10). Retail zero-skill metadata and absent item-target/error contract block gameplay continuation pending decisions.
 
 - 2026-10-10: Imported established TDB1210.26091 spell_target_position; documented prefixed loader, OrderIndex0 fixed destinations and nullable Retail effect facing in [[spell-casting]].
+
+## 2026-10-10 — class Dummy script coverage
+
+Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hooks](systems/auras.md#script-hooks) and [contract](../specs/spell-dummy-scripts.md): six real-ID class-script paths, twelve RED/GREEN cast tests and nine bounded channel regressions. Source/data citations and unsupported variants remain explicit. The 40-spec matrix retains unresolved markers; dispatch is not full gameplay parity.
