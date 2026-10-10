@@ -17,12 +17,15 @@ use shared::protocol::NpcFlags;
 use std::collections::HashMap;
 
 pub const EFFECT_SUMMON: u32 = 28;
+const CONTROL_WILD: u32 = 0;
 const CONTROL_ALLY: u32 = 1;
 const CONTROL_PET: u32 = 2;
 const TITLE_PET: u32 = 1;
 const TITLE_GUARDIAN: u32 = 2;
 const TITLE_MINION: u32 = 3;
+const TITLE_COMPANION: u32 = 5;
 const TITLE_RUNEBLADE: u32 = 6;
+const IMMUNE_TO_PC_AND_NPC: u32 = 0x100 | 0x200;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SummonProperties {
@@ -37,8 +40,19 @@ impl SummonProperties {
         self.control == CONTROL_PET
             || matches!(
                 self.title,
-                TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE
+                TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_COMPANION | TITLE_RUNEBLADE
             )
+    }
+
+    pub(crate) fn is_supported(self) -> bool {
+        match self.control {
+            CONTROL_PET => true,
+            CONTROL_WILD | CONTROL_ALLY => matches!(
+                self.title,
+                0 | TITLE_PET | TITLE_GUARDIAN | TITLE_MINION | TITLE_COMPANION | TITLE_RUNEBLADE
+            ),
+            _ => false, // Puppet/vehicle controls and specialized titles require their own runtime.
+        }
     }
 }
 
@@ -92,6 +106,29 @@ pub struct SummonedCreature {
     pub expires_at: Option<f64>,
 }
 
+/// Same category/data gate for runtime and Toy Box preflight. Missing IDs remain
+/// explicit; no creature or summon classification is inferred from spell names.
+pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<String> {
+    let properties_id = effect.misc_values[1] as u32;
+    let properties = world
+        .get_resource::<SummonPropertiesStore>()
+        .and_then(|store| store.0.get(&properties_id));
+    let Some(properties) = properties else {
+        return Some(format!("missing SummonProperties {properties_id}"));
+    };
+    if !properties.is_supported() {
+        return Some(format!(
+            "summon control {} title {}",
+            properties.control, properties.title
+        ));
+    }
+    let entry = effect.misc_values[0] as u32;
+    let exists = world
+        .get_resource::<crate::world_data::WorldData>()
+        .is_some_and(|data| data.templates.contains_key(&entry));
+    (!exists).then(|| format!("missing summon creature {entry}"))
+}
+
 pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     let properties_id = effect.misc_values[1] as u32;
     let Some(properties) = world
@@ -106,10 +143,10 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         );
         return;
     };
-    if properties.control > CONTROL_PET {
+    if !properties.is_supported() {
         warn!(
-            "Spell {}: summon control {} unsupported",
-            ctx.spell.id, properties.control
+            "Spell {}: summon control {} / title {} unsupported",
+            ctx.spell.id, properties.control, properties.title
         );
         return;
     }
@@ -182,6 +219,8 @@ fn spawn_summon(
     let health = template.health;
     let faction = if properties.faction != 0 {
         properties.faction
+    } else if properties.control == CONTROL_WILD && !properties.follows_owner() {
+        template.faction
     } else {
         world
             .get::<UnitFactionTemplate>(owner)
@@ -240,6 +279,13 @@ fn spawn_summon(
     }
     if properties.follows_owner() {
         entity.insert(crate::creature_ai::FollowOwner::new(owner));
+    }
+
+    if properties.title == TITLE_COMPANION {
+        // TC EffectSummonType: companions are minions immune to both players and NPCs.
+        entity.insert(UnitFlags(
+            IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2,
+        ));
     }
     if replicate {
         entity.insert((
