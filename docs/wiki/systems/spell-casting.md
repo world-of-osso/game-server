@@ -239,13 +239,62 @@ Damage and heal side effects:
 
 ## Eleventh batch: local Mainline low-count paths
 
-Implementation in `spell_cast/scripts/batch11.rs` and the existing fixed-field helper; [contract](../../specs/spell-dummy-scripts.md#eleventh-batch-bounded-low-count-paths). Native proof and census pending in `game-engine/data/diagnostics/spell-dummy11-2026-10-10/`.
+Implementation in `spell_cast/scripts/batch11.rs` and the existing fixed-field helper; [contract](../../specs/spell-dummy-scripts.md#eleventh-batch-bounded-low-count-paths). Native batch13/13 at`f8b38cf`; post-master broad gate pending. Reproducible census/receipts in `game-engine/data/diagnostics/spell-dummy11-2026-10-10/`.198 compared local raw/imported rows have zero semantic drift;17 CRLF/LF-only string differences recorded separately.
 
 Local Mainline12.1.0.69933 sources:193315 description-variable338 defines `(clamp(level-10,0,10)*8+195)/275`;228260 names1242173, whose s1/s3 name ten/one1242189 bolts and s2 retains1000 raw Insanity. Native bolt travel/defense remains shared; no guessed inter-bolt cadence/replacement charges.5740 names42223m1*8: duration8000ms, effect2 period1000ms, effect0 radius8yd. Fixed fields reuse the independently clocked batch9 implementation; overlap is not replacement.
 
 184575's native404358 trigger is conditional on403826; script admission no longer grants untalented splash. The native radius is8yd although the local tooltip says6yd; use the native row and retain this discrepancy.53595 names88263 for OTHER enemies, conditioned on caster position inside owned26573; field ownership/map/expiry/radius determine that condition. Only the named damage effect executes, not its unknown markers/talent child.
 
 5221's343232/405834 stealth condition derives60% extra damage, double crit chance and343232s1 extra point; earlier bleeding-rank bonus composes.106830 names405233's3000ms bleed.60103/334046 name334168's100% Flame Shock vulnerability; the existing generic42 proc already applies it, so no redundant apply hook was added. Existing generic aura271 wrongly amplified ALL spells from its owner despite a nonempty class mask; matching now uses existing `class_mask_affects`, preserving unrestricted empty masks and foreign-caster exclusion. Optional Flame Shock spread, weapon-item Flametongue state, Shred405300/Thrash429523 and unknown Dummy markers remain open.
+
+Census frozen before`3b25ebe`:168 Dummy-bearing core roots,83 reviewed/85 un-derived. After merged Rust`59a273b`: **168**,84 reviewed/84 un-derived. Shred5221 closes its entire E3 field; Hammer53595 exposes latent88263 E3 instead of hiding it. E3 remains120 IDs/128 memberships, a4 remains67/75; a226 falls19/20→18/19 through the Rain clock. Scope13 classes/40 specs,630 book IDs/1551 memberships and302 core IDs/355 memberships unchanged. This is not whole-ability parity.
+
+Selection raises core script presence: Outlaw1→2, Retribution1→2, Protection2→3, Destruction2→3, Feral3→4. Shadow's already-bound Voidform improves without inflating its root count. Enhancement improves bounded Core A4→5 via the generic271 correction, not a fabricated per-spell binding. Transfer, imps/pet actors, mana scaling and unavailable source/geometry contracts remain open.
+
+All40-spec before/after table preserves batch10's exact baseline method; book/core closure intersects explicit scripts/consumed fields. Generic271 correction adds proof, not a script count.
+
+| Spec | Book script roots before→after | Core script roots before→after | Core A before→after |
+|---|---:|---:|---:|
+| Mage Arcane (62) | 2→2 | 2→2 | 3→3 |
+| Mage Fire (63) | 1→1 | 2→2 | 4→4 |
+| Mage Frost (64) | 1→1 | 2→2 | 4→4 |
+| Paladin Holy (65) | 1→1 | 2→2 | 4→4 |
+| Paladin Protection (66) | 2→2 | 2→3 | 3→4 |
+| Paladin Retribution (70) | 2→2 | 1→2 | 2→3 |
+| Warrior Arms (71) | 1→1 | 1→1 | 5→5 |
+| Warrior Fury (72) | 2→2 | 4→4 | 6→6 |
+| Warrior Protection (73) | 2→2 | 3→3 | 4→4 |
+| Druid Balance (102) | 5→5 | 5→5 | 5→5 |
+| Druid Feral (103) | 4→4 | 3→4 | 3→4 |
+| Druid Guardian (104) | 4→4 | 3→3 | 4→4 |
+| Druid Restoration (105) | 4→4 | 3→3 | 3→3 |
+| Death Knight Blood (250) | 2→2 | 2→2 | 3→3 |
+| Death Knight Frost (251) | 2→2 | 2→2 | 4→4 |
+| Death Knight Unholy (252) | 2→2 | 3→3 | 4→4 |
+| Hunter Beast Mastery (253) | 2→2 | 2→2 | 3→3 |
+| Hunter Marksmanship (254) | 2→2 | 3→3 | 3→3 |
+| Hunter Survival (255) | 2→2 | 2→2 | 2→2 |
+| Priest Discipline (256) | 2→2 | 3→3 | 6→6 |
+| Priest Holy (257) | 1→1 | 4→4 | 6→6 |
+| Priest Shadow (258) | 1→1 | 2→2 | 5→5 |
+| Rogue Assassination (259) | 2→2 | 2→2 | 4→4 |
+| Rogue Outlaw (260) | 1→2 | 1→2 | 3→4 |
+| Rogue Subtlety (261) | 2→2 | 2→2 | 4→4 |
+| Shaman Elemental (262) | 1→1 | 4→4 | 5→5 |
+| Shaman Enhancement (263) | 2→2 | 3→3 | 4→5 |
+| Shaman Restoration (264) | 1→1 | 2→2 | 3→3 |
+| Warlock Affliction (265) | 0→0 | 3→3 | 5→5 |
+| Warlock Demonology (266) | 0→0 | 2→2 | 4→4 |
+| Warlock Destruction (267) | 1→1 | 2→3 | 4→5 |
+| Monk Brewmaster (268) | 3→3 | 5→5 | 6→6 |
+| Monk Windwalker (269) | 3→3 | 2→2 | 3→3 |
+| Monk Mistweaver (270) | 4→4 | 3→3 | 3→3 |
+| Demon Hunter Havoc (577) | 4→4 | 2→2 | 3→3 |
+| Demon Hunter Vengeance (581) | 3→3 | 3→3 | 3→3 |
+| Evoker Devastation (1467) | 4→4 | 4→4 | 5→5 |
+| Evoker Preservation (1468) | 4→4 | 3→3 | 4→4 |
+| Evoker Augmentation (1473) | 6→6 | 3→3 | 4→4 |
+| Demon Hunter Devourer (1480) | 4→4 | 2→2 | 3→3 |
 
 ## Class Dummy scripts
 
