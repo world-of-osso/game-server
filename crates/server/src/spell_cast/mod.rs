@@ -26,6 +26,8 @@ mod dummy3_tests;
 #[cfg(test)]
 mod dummy4_tests;
 #[cfg(test)]
+mod dummy5_tests;
+#[cfg(test)]
 mod dummy_tests;
 pub mod effects;
 mod hit;
@@ -1399,6 +1401,7 @@ fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     spend_costs(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
     start_cooldowns(world, caster, spell);

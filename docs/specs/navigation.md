@@ -9,7 +9,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Include collision-bearing WMO floors, walls and open doorways, terrain holes and M2 doodad collision hulls, with agent clearance/radius/climb; mark authored terrain water as a distinct area.
 - [x] Query connected tiles and return string-pulled corners; reject incomplete/unreachable routes instead of crossing obstacles.
 - [x] Chase, return-home and waypoint legs follow paths; chase replans after its target moves more than one yard.
-- [x] Failed chase reachability enters the existing evade lifecycle (threat/combat cleared, return-home).
+- [x] Continuous failed chase reachability holds movement, then enters the existing evade lifecycle after five seconds outside raids (threat/combat cleared, return-home). A reachable path or new victim resets the timeout; raid maps do not use this timeout.
 - [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
 - [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
 
@@ -29,7 +29,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 - `crates/navigation/src/bake.rs` — deterministic walkable floor and steep-slope rejection.
 - `crates/navigation/src/query.rs` — real Stockade obstacle detours with LOS-clear path segments (opt-in).
-- `crates/server/src/creature_ai_tests/stockade_chase.rs` — real chase/home/waypoint/repath/unreachable-evade fixtures (opt-in).
+- `crates/server/src/creature_ai_tests/stockade_chase.rs` — real chase/home/waypoint/repath/unreachable-evade fixtures (opt-in), including the supported narrow arch's exact five-second boundary, reachability/victim resets and raid exemption.
 - `crates/los/src/liquid.rs` — real modern ocean LiquidObject42 regression (opt-in).
 - `crates/server/src/navigation_tests.rs` — real Stormwind auction-house floor, per-tick stair support/LOS, cross-tile terrain portals, and missing/unbaked/empty/corrupt artifact boundaries.
 
