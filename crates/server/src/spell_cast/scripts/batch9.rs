@@ -181,7 +181,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         .get(pulses.child)
         .expect("named ground spell child")
         .clone();
-    let plan = vec![PlannedEffect {
+    let mut plan = vec![PlannedEffect {
         index: 0,
         units,
         dest: Some(targets::Dest {
@@ -191,7 +191,8 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         chain_multipliers: Vec::new(),
     }];
     // Named damage/heal effect only: Earthquake's knockdown77 remains unsupported.
-    spell_cast::resolve_effects(world, pulses.caster, &child, &plan, pulses.depth);
+    spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);
+    spell_cast::missiles::launch(world, pulses.caster, &child, plan, pulses.depth);
 }
 
 fn teleport_void_step(world: &mut World, ctx: &EffectCtx, effect: &crate::spell_info::SpellEffect) {

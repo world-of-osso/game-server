@@ -354,3 +354,76 @@ fn dummy9_tranquility_shield_absorbs_sixty_percent_max_health_and_ends_with_chan
     super::effects::deal_damage(h.app.world_mut(), &ctx, h.caster, 200.0, false, false);
     assert_eq!(h.health(h.caster), 500.0);
 }
+
+#[test]
+fn dummy9_earthquake_overlapping_casts_keep_independent_pulse_clocks() {
+    let mut h = harness(Vec::new(), &[61882, 77478], 7).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        Health {
+            current: 2000.0,
+            max: 2000.0,
+        },
+    ));
+    h.set_power(PowerType::Maelstrom, 100.0);
+    ground(&mut h, 61882, [20.0, 0.0, 0.0]);
+    h.advance(40);
+    h.set_power(PowerType::Maelstrom, 100.0);
+    ground(&mut h, 61882, [20.0, 0.0, 0.0]);
+    h.advance(140);
+    landed(&h);
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(|e| e.spell_id == Some(77478)
+                && e.target == Some(h.npc.to_bits())
+                && e.kind == CombatLogKind::Damage)
+            .count(),
+        12
+    );
+}
+#[test]
+fn dummy9_healing_rain_created_in_empty_area_heals_ally_walking_in_later() {
+    let mut h = harness(Vec::new(), &[73920, 73921, 1298679], 7).unwrap();
+    ground(&mut h, 73920, [20.0, 0.0, 0.0]);
+    h.advance(42);
+    landed(&h);
+    let ally = injured(&mut h, 20.0);
+    h.advance(42);
+    assert!(h.health(ally) > 50.0);
+    h.app.world_mut().entity_mut(ally).insert(Position {
+        x: 40.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    h.app.world_mut().get_mut::<Health>(ally).unwrap().current = 50.0;
+    h.advance(45);
+    assert_eq!(h.health(ally), 50.0);
+}
+#[test]
+fn dummy9_tranquility_cancellation_removes_unspent_shield() {
+    let mut h = harness(Vec::new(), &[740, 157982, 133], 11).unwrap();
+    h.cast_and_deliver(740, None);
+    h.advance(3);
+    landed(&h);
+    let fire = world_db().unwrap().store.get(133).unwrap().clone();
+    let ctx = super::effects::EffectCtx {
+        caster: h.npc,
+        spell: &fire,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    super::effects::deal_damage(h.app.world_mut(), &ctx, h.caster, 200.0, false, false);
+    assert_eq!(h.health(h.caster), 1000.0);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 740));
+    super::cancel_cast(h.app.world_mut(), h.caster);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 740));
+    super::effects::deal_damage(h.app.world_mut(), &ctx, h.caster, 200.0, false, false);
+    assert_eq!(h.health(h.caster), 800.0);
+}
