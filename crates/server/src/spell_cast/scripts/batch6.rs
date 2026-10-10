@@ -110,17 +110,7 @@ fn plan_primary_damage(
             let units = targets::select_targets(world, caster, explicit, spell, effect, 0, false)
                 .expect("class spell catalog selectors");
             let chain_multipliers = if effect.index == damage_index {
-                units
-                    .iter()
-                    .map(|&unit| {
-                        let multiplier = if Some(unit) == explicit {
-                            multipliers.0
-                        } else {
-                            multipliers.1
-                        };
-                        (unit, multiplier)
-                    })
-                    .collect()
+                primary_damage_multipliers(&units, explicit, multipliers)
             } else {
                 Vec::new()
             };
@@ -130,6 +120,24 @@ fn plan_primary_damage(
                 dest: targets::effect_dest(world, caster, explicit, effect),
                 chain_multipliers,
             }
+        })
+        .collect()
+}
+
+fn primary_damage_multipliers(
+    units: &[Entity],
+    explicit: Option<Entity>,
+    (primary, secondary): (f32, f32),
+) -> Vec<(Entity, f32)> {
+    units
+        .iter()
+        .map(|&unit| {
+            let multiplier = if Some(unit) == explicit {
+                primary
+            } else {
+                secondary
+            };
+            (unit, multiplier)
         })
         .collect()
 }
@@ -195,16 +203,9 @@ pub(super) fn wild_growth_plan(
         .iter()
         .position(|effect| effect.index == 0)
         .unwrap();
-    let mut units = targets::select_targets(
-        world,
-        caster,
-        explicit,
-        spell,
-        &spell.effects[index],
-        0,
-        false,
-    )
-    .expect("Wild Growth catalog selectors");
+    let effect = &spell.effects[index];
+    let mut units = targets::select_targets(world, caster, explicit, spell, effect, 0, false)
+        .expect("Wild Growth catalog selectors");
     units.retain(|&unit| {
         world
             .get::<Health>(unit)
@@ -214,7 +215,7 @@ pub(super) fn wild_growth_plan(
     vec![PlannedEffect {
         index,
         units,
-        dest: targets::effect_dest(world, caster, explicit, &spell.effects[index]),
+        dest: targets::effect_dest(world, caster, explicit, effect),
         chain_multipliers: Vec::new(),
     }]
 }
