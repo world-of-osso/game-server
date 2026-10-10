@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Class spell scripts batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks): nine local Mainline paths and per-spec scripted census;171→170 roots. Ground fields, owned Atonement/base plague, rank-gated Meta Fury, Void Step and shield lifetime.14 native functions; requested broad gate once274/275, obsolete Blossom no-action fixture corrected/focused1/1; separate depletion RED and absorb5/5/Tranquility2/2. Final format/check pass. No DB writes, invented IDs, realm process or master merge.
+
 - 2026-10-10 — [Class spell scripts batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths): Reap destination line, real Provoke threat/victim/owned-statue path and eight additional bounded spell paths. Per-spell RED/GREEN, owner-only Breath damage reduction, requested-ground Sanctify cap, post-master census172→171. No database writes, fabricated IDs, deployment, master merge or realm process.
 
 - 2026-10-10 — [Class spell scripts batch7](systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations): TDB1210 script/proc/link mining and Mainline effect chains derive eight bounded paths;21 native functions pass after correcting Bear mitigation in Survival's fixture. Census172 retained,70 reviewed/partial/deferred. No database writes, deployment, merge or guessed projectile/taunt bridge.

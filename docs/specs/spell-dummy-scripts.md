@@ -105,15 +105,15 @@ These ten paths are bounded, not whole-ability parity. Reap soul collection/opti
 
 ### Ninth-batch locally derived paths
 
-- [ ] Healing Rain73920 pulses73921 at its fixed requested ground center every authored2000ms, for the catalog18000ms, healing at most six injured allies inside the authored11yd radius. Recasting replaces only that caster's previous field.
-- [ ] Earthquake61882 pulses77478's damage at the requested ground center every1000ms for six seconds in the authored8yd radius; separate casts overlap. Knockdown is not substituted with damage or an invented stun.
-- [ ] Emerald Blossom355913 anchors at its selected ally's original location, then after1500ms heals at most three injured allies within its authored10yd radius through355916.
-- [ ] Remorseless Winter196770 damage child196771 applies211793's base20% slow only to enemies actually hit; the slow expires natively. Missing local child radius remains an uncertified range boundary.
-- [ ] Scourge Strike55090 applies191587's base periodic effect if this caster has no existing Virulent Plague on its enemy; existing marks are not refreshed as a substitute for spreading.
-- [ ] Metamorphosis187827's additional15 Fury modifier for Fracture263642 requires321068; absent Metamorphosis or the rank preserves base25 Fury. Soul Fragment creation is separate.
-- [ ] Void Step1234796 teleports to the validated requested same-map destination; missing/out-of-range destinations fail before cooldown or cost.
-- [ ] Radiance194509 applies194384 Atonement to its selected allies for60% of normal duration (9000ms), keeping foreign marks independent.
-- [ ] Tranquility740's self shield absorbs up to its named60% of caster maximum health, ending with the channel. Shield depletion does not stop the channel's healing.
+- [x] Healing Rain73920 pulses73921 at its fixed requested ground center every authored2000ms, for the catalog18000ms, healing at most six injured allies inside the authored11yd radius. Recasting replaces only that caster's previous field.
+- [x] Earthquake61882 pulses77478's damage at the requested ground center every1000ms for six seconds in the authored8yd radius; separate casts overlap. Knockdown is not substituted with damage or an invented stun.
+- [x] Emerald Blossom355913 anchors at its selected ally's original location, then after1500ms heals at most three injured allies within its authored10yd radius through355916.
+- [x] Remorseless Winter196770 damage child196771 applies211793's base20% slow only to enemies actually hit; the slow expires natively. Missing local child radius remains an uncertified range boundary.
+- [x] Scourge Strike55090 applies191587's base periodic effect if this caster has no existing Virulent Plague on its enemy; existing marks are not refreshed as a substitute for spreading.
+- [x] Metamorphosis187827's additional15 Fury modifier for Fracture263642 requires321068; absent Metamorphosis or the rank preserves base25 Fury. Soul Fragment creation is separate.
+- [x] Void Step1234796 teleports to the validated requested same-map destination; missing/out-of-range destinations fail before cooldown or cost.
+- [x] Radiance194509 applies194384 Atonement to its selected allies for60% of normal duration (9000ms), keeping foreign marks independent.
+- [x] Tranquility740's self shield absorbs up to its named60% of caster maximum health, ending with the channel. Shield depletion does not stop the channel's healing.
 
 Rain, Earthquake and Void Step require a finite requested destination within the native spell range; missing or invalid destinations fail before cost/cooldown rather than silently centering on the caster.
 
@@ -149,6 +149,8 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 - `crates/server/src/spell_cast/dummy7_tests.rs` —21 authentic-data cast functions, including100 Survival variance samples and one-charge/oldest-recharge preservation. Full filter ran once244/245; Bear's existing3% Fire mitigation corrected in the sole failing fixture, then batch21/21 at`81c2bf6`. No245/245 broad-pass claim; [census and proof](../wiki/systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations).
 
 - `crates/server/src/spell_cast/dummy8_tests.rs`, `dummy8_defense_tests.rs` —13 cast functions plus one real incoming-damage/expiry function across ten paths. Targeted13/13 at`70c4f20`, defense1/1 at`2d883e8`; single post-master broad spell_cast run261/261 at`2fb37d8`. Format/check pass; [census and proof](../wiki/systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths).
+
+- `crates/server/src/spell_cast/dummy9_tests.rs` —14 native functions across nine bounded paths. Requested post-master `spell_cast` filter ran once at`314a8f1`:274/275 (all14 new functions passed). The sole obsolete Blossom no-action fixture was corrected at`521455e` and passes its focused rerun. Separate shield-depletion RED at`43701c9` led to`e78fad0`; absorb regressions5/5 and both Tranquility functions2/2 pass, with final format/check. No fresh275/275 broad-pass claim; [census and proof](../wiki/systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks).
 
 ## Known gaps (current cycle)
 
