@@ -62,6 +62,12 @@ fn assert_clock_expiry(with_bid: bool) {
         );
     }
     let auction = state.auctions[&auction_id].clone();
+    assert_eq!(auction.item.item_id, item.item_id);
+    assert_eq!(auction.item.stack_count, 2);
+    assert_ne!(
+        auction.item.item_guid, item.item_guid,
+        "posting creates an escrow item instance"
+    );
     let mut app = App::new();
     app.insert_resource(GameDatabase { db });
     app.insert_resource(state);
@@ -110,7 +116,7 @@ fn assert_clock_expiry(with_bid: bool) {
         assert_eq!(buyer_mail[0].subject, "Auction won");
         assert_eq!(buyer_mail[0].money, 0);
         assert_eq!(buyer_mail[0].items.len(), 1);
-        assert_eq!(buyer_mail[0].items[0].item, item);
+        assert_eq!(buyer_mail[0].items[0].item, auction.item);
         assert_eq!(
             persistence::load_inventory(&db, buyer).gold,
             buyer_gold - 1_001
@@ -119,7 +125,7 @@ fn assert_clock_expiry(with_bid: bool) {
         assert_eq!(seller_mail[0].subject, "Auction Expired");
         assert_eq!(seller_mail[0].money, auction.deposit);
         assert_eq!(seller_mail[0].items.len(), 1);
-        assert_eq!(seller_mail[0].items[0].item, item);
+        assert_eq!(seller_mail[0].items[0].item, auction.item);
         assert!(mail_store::load_mailbox(&db, buyer).is_empty());
         assert_eq!(persistence::load_inventory(&db, buyer).gold, buyer_gold);
     }
