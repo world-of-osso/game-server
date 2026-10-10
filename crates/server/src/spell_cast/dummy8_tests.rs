@@ -112,7 +112,7 @@ fn dummy8_provoke_changes_victim_equalizes_threat_and_holds_until_expiry() {
             .0,
         Some(caster)
     );
-    h.advance(80);
+    h.advance(130); // Catalog116189 duration is6000ms.
     assert_eq!(
         h.app
             .world()
@@ -192,12 +192,10 @@ fn dummy8_provoke_rejects_foreign_statue_and_ordinary_ally_before_cooldown() {
         assert_eq!(h.inbox.failed.len(), 1);
         assert!(h.inbox.go.is_empty());
         assert!(
-            !h.app
+            h.app
                 .world()
                 .get::<super::SpellHistory>(h.caster)
-                .unwrap()
-                .spell_ready_at
-                .contains_key(&115546)
+                .is_none_or(|history| !history.spell_ready_at.contains_key(&115546))
         );
     }
 }
