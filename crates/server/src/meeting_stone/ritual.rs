@@ -30,8 +30,6 @@ use crate::spell_cast::effects::EffectCtx;
 use crate::spell_cast::{cast_triggered, duration_ms, end_cast, now};
 use crate::spell_info::SpellEffect;
 
-pub(crate) const EFFECT_TRANS_DOOR: u32 = 50;
-
 /// A ritual in progress on its object.
 #[derive(Component, Debug, Clone, PartialEq)]
 pub(crate) struct Ritual {

@@ -12,6 +12,10 @@ use std::collections::HashMap;
 pub const EFFECT_DISENCHANT: u32 = 99;
 const ENCHANTING: u32 = 333;
 
+/// One checked, nonempty roll held between completion validation and effect99.
+#[derive(Component)]
+struct PendingDisenchantLoot(crate::loot::RolledLoot);
+
 #[derive(Clone, Copy)]
 struct Eligibility {
     loot_id: u32,
@@ -132,30 +136,60 @@ pub(crate) fn check_cast(
     {
         return Err(CastFailure::InProgress);
     }
-    if !world
-        .resource::<DisenchantData>()
-        .loot
-        .disenchant
-        .contains_key(&eligibility.loot_id)
-    {
+    validate_materials(
+        world.resource::<DisenchantData>(),
+        world.resource::<ItemTemplates>(),
+        eligibility.loot_id,
+    )
+}
+
+fn validate_materials(
+    data: &DisenchantData,
+    items: &ItemTemplates,
+    loot_id: u32,
+) -> Result<(), CastFailure> {
+    if !data.loot.disenchant.contains_key(&loot_id) {
         return Err(CastFailure::Unsupported(format!(
-            "Disenchant loot {} unavailable",
-            eligibility.loot_id
+            "Disenchant loot {loot_id} unavailable"
         )));
     }
+    if !data.loot.disenchant_has_materials(loot_id, items) {
+        return Err(CastFailure::CantBeDisenchanted);
+    }
+    Ok(())
+}
+
+pub(crate) fn roll_cast_loot(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    rng: &mut impl rand::Rng,
+) -> Result<(), CastFailure> {
+    if !is_disenchant(spell) {
+        return Ok(());
+    }
+    let (_, _, _, eligibility) = load_target(world, caster, spell)?;
+    let rolled = world
+        .resource::<DisenchantData>()
+        .loot
+        .roll_disenchant(eligibility.loot_id, world.resource::<ItemTemplates>(), rng)
+        .ok_or(CastFailure::CantBeDisenchanted)?;
+    world
+        .entity_mut(caster)
+        .insert(PendingDisenchantLoot(rolled));
     Ok(())
 }
 
 pub(crate) fn effect_disenchant(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
     // Cast completion checked the same inventory immediately before effect resolution.
-    let (id, mut model, guid, eligibility) =
+    let (id, mut model, guid, _) =
         load_target(world, ctx.caster, ctx.spell).expect("validated disenchant target");
     let item = model.bag_item(guid).expect("validated bag item").clone();
-    let rolled = world.resource::<DisenchantData>().loot.roll_disenchant(
-        eligibility.loot_id,
-        world.resource::<ItemTemplates>(),
-        &mut rand::thread_rng(),
-    );
+    let rolled = world
+        .entity_mut(ctx.caster)
+        .take::<PendingDisenchantLoot>()
+        .expect("Disenchant completion checked its material roll")
+        .0;
     model.collect_disposed_appearance(&item);
     model
         .take_bag_item(guid, 0, &mut || {

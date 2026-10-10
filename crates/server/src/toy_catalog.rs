@@ -141,6 +141,26 @@ fn classify(
             };
             reasons.insert(format!("{kind} {id}"));
         }
+        if effect.aura == crate::auras::handlers::LINKED_SUMMON {
+            if let Some(reason) =
+                crate::auras::linked_summon::unsupported_reason(world, effect.trigger_spell)
+            {
+                reasons.insert(reason);
+            }
+        }
+        if effect.aura == crate::auras::handlers::OVERRIDE_SUMMONED_OBJECT {
+            reasons.insert(format!("summoned-object override {} -> {} requires transmitted-object/fishing runtime and object template", effect.misc_values[0], effect.misc_values[1]));
+        }
+        if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
+            if let Err(reason) = crate::auras::periodic_dummy_trigger(world, effect) {
+                reasons.insert(reason.into());
+            }
+        }
+        if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
+            if let Some(reason) = crate::game_objects::summoned::unsupported_reason(world, effect) {
+                reasons.insert(reason);
+            }
+        }
         if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
             if let Some(reason) = crate::spell_cast::summon::unsupported_reason(world, effect) {
                 reasons.insert(reason);
@@ -179,12 +199,22 @@ fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
         return effect.misc_values[0] > 0
             && crate::auras::override_spell_data::supported(world, effect.misc_values[0] as u32);
     }
+    if effect.aura == crate::auras::handlers::LINKED_SUMMON {
+        return crate::auras::linked_summon::unsupported_reason(world, effect.trigger_spell)
+            .is_none();
+    }
+    if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
+        return crate::auras::periodic_dummy_trigger(world, effect).is_ok();
+    }
     if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
         return effect.misc_values[0] > 0;
     }
     if crate::auras::is_aura_effect(effect) {
         return crate::auras::handlers::kind(effect.aura)
             .is_some_and(|kind| kind != AuraKind::Script);
+    }
+    if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
+        return crate::game_objects::summoned::unsupported_reason(world, effect).is_none();
     }
     if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
         return crate::spell_cast::summon::unsupported_reason(world, effect).is_none();

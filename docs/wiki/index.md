@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Disenchant](systems/disenchant.md) — Retail bag-item cast/loot pipeline and bounded native proof.
+- [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
 
 ## October 9 reconciliation
 
@@ -51,13 +51,17 @@ External resources, tooling, data sources, development workflow.
 
 - [Class spell batch6](systems/spell-casting.md#sixth-batch-local-retail-rows) — eight ranked bounded paths plus Ice Lance;17 new cast functions, spell_cast224/224, Dummy roots173→172; retained variants explicit.
 
+- [Transmitted toy objects](systems/toys.md#transmitted-toy-objects-and-viewer-local-models-2026-10-10) — actual effect50 decoration/chair/mailbox summons, destination87, explicit unsupported object semantics and client-owned233.
+
+- [Generic toy aura effects](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10) — data-backed226, cast prevention321, linked summons428, explicit bobber258 gaps and authentic template preparation; earlier61/105/37/293 support.
 - [Class spell batch5](systems/spell-casting.md#fifth-batch-local-retail-rows) — eight ranked paths plus Lava Burst;14 new native functions, full spell_cast207/207; Dummy roots176→173.
 
 - [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.
 
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
+- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, 40 property handlers, weather/team state and fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
 
-- [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
+- [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 
 - [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
 

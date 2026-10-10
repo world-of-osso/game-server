@@ -161,13 +161,20 @@ fn navigation_unreachable_stockade_target_evades_and_clears_threat() {
     let mut threat = ThreatTable::default();
     threat.add_damage_threat(target.to_bits(), 100.0, 1.0);
     app.world_mut().entity_mut(mob).insert(threat);
+    for _ in 0..99 {
+        app.update();
+        assert!(matches!(
+            *app.world().get::<CreatureState>(mob).unwrap(),
+            CreatureState::Pursuing { .. }
+        ));
+    }
     app.update();
     assert!(
         !matches!(
             *app.world().get::<CreatureState>(mob).unwrap(),
             CreatureState::Pursuing { .. }
         ),
-        "unreachable chase must evade"
+        "unreachable chase must evade after five seconds"
     );
     assert!(app.world().get::<ThreatTable>(mob).unwrap().is_empty());
     for _ in 0..200 {
@@ -177,6 +184,153 @@ fn navigation_unreachable_stockade_target_evades_and_clears_threat() {
         *app.world().get::<CreatureState>(mob).unwrap(),
         CreatureState::Idle
     );
+}
+
+/// Live-supported narrow arch, above the cell floor and on a disconnected nav island.
+const ARCH_PERCH: (f32, f32, f32) = (125.0, 46.0, -30.936_882);
+/// Exact floor under PLAYER_ON_FLOOR, observed in the private rendered run.
+const CELL_FEET: (f32, f32, f32) = (128.5, 52.0, -33.939_564);
+
+fn no_path_perch_fixture() -> (App, Entity, Entity) {
+    let mut app = nav_stockade_app();
+    let target = player(&mut app, ARCH_PERCH);
+    let mob = slayer(
+        &mut app,
+        CreatureState::Pursuing {
+            target: target.to_bits(),
+        },
+    );
+    *app.world_mut().get_mut::<Position>(mob).unwrap() = bevy(CELL_FEET);
+    let mut threat = shared::components::ThreatTable::default();
+    threat.add_damage_threat(target.to_bits(), 100.0, 1.0);
+    app.world_mut().entity_mut(mob).insert(threat);
+    (app, target, mob)
+}
+
+fn assert_waiting_on_perch(app: &App, target: Entity, mob: Entity) {
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Pursuing {
+            target: target.to_bits()
+        },
+        "Retail no-path grace must not evade before five seconds"
+    );
+    assert_eq!(*app.world().get::<Position>(mob).unwrap(), bevy(CELL_FEET));
+    assert!(
+        !app.world()
+            .get::<shared::components::ThreatTable>(mob)
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_no_path_stationary_arch_evades_after_five_seconds_then_returns_home() {
+    let (mut app, target, mob) = no_path_perch_fixture();
+    let mut ground = stockade_ground();
+    let floor = floor_under(&mut ground, bevy(ARCH_PERCH)).expect("arch supports stationary feet");
+    assert!((floor - ARCH_PERCH.2).abs() < 0.05);
+    for _ in 0..99 {
+        app.update();
+        assert_waiting_on_perch(&app, target, mob);
+        assert_eq!(
+            *app.world().get::<Position>(target).unwrap(),
+            bevy(ARCH_PERCH)
+        );
+    }
+    app.update();
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Returning
+    );
+    assert!(
+        app.world()
+            .get::<shared::components::ThreatTable>(mob)
+            .unwrap()
+            .is_empty()
+    );
+    for _ in 0..200 {
+        app.update();
+    }
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Idle
+    );
+    let at = *app.world().get::<Position>(mob).unwrap();
+    let home = bevy(SLAYER_SPAWN);
+    assert!((at.x - home.x).hypot(at.z - home.z) < 0.05);
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_no_path_reachable_target_resets_the_timeout() {
+    let (mut app, target, mob) = no_path_perch_fixture();
+    for _ in 0..80 {
+        app.update();
+    }
+    *app.world_mut().get_mut::<Position>(target).unwrap() = bevy(PLAYER_ON_FLOOR);
+    app.update();
+    *app.world_mut().get_mut::<Position>(target).unwrap() = bevy(ARCH_PERCH);
+    for _ in 0..99 {
+        app.update();
+        assert_waiting_on_perch(&app, target, mob);
+    }
+    app.update();
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Returning
+    );
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_no_path_new_victim_starts_a_fresh_timeout() {
+    let (mut app, _, mob) = no_path_perch_fixture();
+    for _ in 0..80 {
+        app.update();
+    }
+    let target = player(&mut app, ARCH_PERCH);
+    *app.world_mut().get_mut::<CreatureState>(mob).unwrap() = CreatureState::Pursuing {
+        target: target.to_bits(),
+    };
+    for _ in 0..99 {
+        app.update();
+        assert_waiting_on_perch(&app, target, mob);
+    }
+    app.update();
+    assert_eq!(
+        *app.world().get::<CreatureState>(mob).unwrap(),
+        CreatureState::Returning
+    );
+}
+
+#[test]
+#[ignore = "requires nav-bake map34 from local Stockade geometry"]
+fn navigation_no_path_raid_does_not_apply_the_timeout() {
+    use crate::maps::store::{InstanceType, MapEntry, MapStore};
+    let (mut app, target, mob) = no_path_perch_fixture();
+    let mut maps = MapStore::default();
+    maps.maps.insert(
+        STOCKADE,
+        MapEntry {
+            id: STOCKADE,
+            directory: "stormwindjail".into(),
+            name: "Raid policy fixture on real Stockade geometry".into(),
+            instance_type: InstanceType::Raid,
+            area_table_id: 0,
+            parent_map_id: -1,
+            corpse_map_id: 0,
+            corpse: (0.0, 0.0),
+            max_players: 40,
+            wdt_file_data_id: STOCKADE_WDT_FDID,
+        },
+    );
+    app.insert_resource(maps);
+    for _ in 0..200 {
+        app.update();
+        assert_waiting_on_perch(&app, target, mob);
+    }
 }
 
 #[test]

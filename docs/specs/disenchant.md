@@ -8,6 +8,7 @@ Spell13262/effect99 consumes an owned bag item and opens personal material loot.
 - [x] Destroy an eligible uncommon unbound BoE, roll its TDB1210.26091 entry, and expose materials to LootFrame/manual or automatic taking.
 - [x] Persist disposal appearance collection and item removal in one inventory transaction, including unbound items; survive redb reopen.
 - [x] Refuse a grey item with CantBeDisenchanted, and a caster without Enchanting with NotKnown; retain the item.
+- [x] Refuse an eligible metadata entry with no deliverable Retail material, or an actual roll with no materials, using CantBeDisenchanted before disposal/success; retain item/appearance state, create no empty personal loot session, and allow the next valid cast.
 
 ## How it works
 - [Disenchant pipeline and provenance](../wiki/systems/disenchant.md)
@@ -23,7 +24,7 @@ Spell13262/effect99 consumes an owned bag item and opens personal material loot.
 - `crates/server/src/spell_cast/disenchant_tests.rs`: real727/25, refusal, completion ownership, automatic loot and reopen.
 
 ## Known gaps (current cycle)
-No current gameplay test gap; native rendered/client integration and full-suite proof are not claimed.
+Both-skin private live entry3 disposal/materials/manual-loot/appearance/refusal proof is recorded in [the engine wiki](../../../game-engine/docs/wiki/systems/disenchant.md#private-live-proof--2026-10-10). Full-suite proof is not claimed. Stale TDB references are not recreated as fabricated materials; [census and compatibility policy](../wiki/systems/disenchant.md#stale-material-compatibility--2026-10-10) distinguish wholly and partially unavailable entries.
 
 ## Out of scope
 - Scrap, source-aware wardrobe state, item bonus-list quality/level overrides and ItemCurrencyCost-only eligibility; existing inventory model does not provide these inputs.
