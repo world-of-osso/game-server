@@ -41,7 +41,7 @@ pub struct SpeciesAbility {
     pub species: u32,
     pub ability: u32,
     pub level: u8,
-    pub slot: u8,
+    pub slot: i32,
 }
 #[derive(Debug, Clone, Default)]
 pub struct Catalog {
@@ -322,7 +322,7 @@ impl Catalog {
     pub fn available_abilities(&self, species: u32, level: u8) -> BTreeSet<u32> {
         self.species_abilities
             .iter()
-            .filter(|a| a.species == species && a.level <= level)
+            .filter(|a| a.species == species && a.level <= level && a.slot >= 0)
             .map(|a| a.ability)
             .collect()
     }
