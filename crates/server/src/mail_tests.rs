@@ -63,6 +63,52 @@ fn run_mail_tick(h: &mut Harness) {
 }
 
 #[test]
+fn transmogacq_receiving_player_mail_keeps_boe_uncollected() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Maila").unwrap();
+    let recipient = h.create_alt("Mailb");
+    let mut inventory = persistence::load_inventory(h.db(), h.character_id);
+    let guid = persistence::next_id(h.db(), "item_instance");
+    inventory.items.push(persistence::InventoryItemData {
+        item_guid: guid,
+        item_id: 25,
+        name: "Worn Shortsword".into(),
+        quality: 1,
+        required_level: 1,
+        stack_count: 1,
+        vendor_sell_price: 1,
+        unique_auction: false,
+    });
+    persistence::save_inventory(h.db(), h.character_id, &inventory);
+    let mailbox = h.open_mailbox();
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![guid],
+            ..letter("Mailb")
+        },
+    );
+    assert!(failures(&mut h).is_empty());
+    let mail_id = load_mailbox(h.db(), recipient)[0].mail_id;
+    h.play_as(recipient);
+    let mailbox = h.open_mailbox();
+    act(
+        &mut h,
+        mailbox,
+        mail_id,
+        MailAction::TakeAttachment { slot: 0 },
+    );
+    assert!(failures(&mut h).is_empty());
+    assert_eq!(h.count_of(25), 1);
+    assert!(!crate::persistence::appearance_store::load_account_appearances(h.db(), 1).has(154));
+    drop(h);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    persistence::create_tables(&reopened);
+    assert!(!crate::persistence::appearance_store::load_account_appearances(&reopened, 1).has(154));
+}
+
+#[test]
 fn item_and_money_to_another_account_arrive_after_an_hour_and_are_taken_at_the_mailbox() {
     let Some(mut h) = harness() else { return };
     let recipient = h.create_on_account(2, "Tradeb", 1);

@@ -109,4 +109,4 @@ fn learn_appearances(
 
 #[cfg(test)]
 #[path = "appearance_collection_tests.rs"]
-mod tests;
+pub(crate) mod tests;

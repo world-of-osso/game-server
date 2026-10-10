@@ -101,9 +101,7 @@ fn harness() -> Option<Harness> {
     app.insert_resource(world_db_faction_templates()?);
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    crate::appearance_collection::tests::install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((NpcInteractionPlugin, MerchantPlugin));
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
@@ -477,6 +475,83 @@ fn brother_danil_water_comes_five_per_purchase_and_stacks_to_twenty() {
     h.sell(danil, guid, 0);
     assert_eq!(h.failures(), vec![MerchantError::NotInterested]);
     assert_eq!(h.count_of(SPRING_WATER), vec![20, 5]);
+}
+
+#[test]
+fn transmogacq_buying_bop_collects_its_appearance() {
+    let mut h = harness().unwrap();
+    h.set_gold(100_000);
+    // Wulmort Jinglepocket sells the BoP Gaudy Winter Veil Sweater.
+    let entry = 13433;
+    let slot = h
+        .app
+        .world()
+        .resource::<VendorCatalog>()
+        .items(entry)
+        .iter()
+        .position(|item| item.item_id == 70923)
+        .unwrap() as u32;
+    let npc = h.open(entry);
+    h.buy(npc, slot, 70923, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(h.count_of(70923), vec![1]);
+    assert!(
+        crate::persistence::appearance_store::load_account_appearances(
+            &h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .has(15791)
+    );
+    crate::appearance_collection::tests::assert_restart(h.app, 1, &[(15791, true)]);
+}
+
+#[test]
+fn transmogacq_buying_an_unbound_boe_does_not_collect() {
+    let mut h = harness().unwrap();
+    h.set_gold(100_000);
+    let npc = h.open(GODRIC_ROTHGAR);
+    h.buy(npc, SHIELD_SLOT, LARGE_ROUND_SHIELD, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(h.count_of(LARGE_ROUND_SHIELD), vec![1]);
+    assert!(
+        !crate::persistence::appearance_store::load_account_appearances(
+            &h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .has(684)
+    );
+    crate::appearance_collection::tests::assert_restart(h.app, 1, &[(684, false)]);
+}
+
+#[test]
+fn transmogacq_selling_an_unbound_boe_collects_its_appearance() {
+    let mut h = harness().unwrap();
+    h.grant(25, 1);
+    let npc = h.open(GODRIC_ROTHGAR);
+    let guid = h
+        .inventory()
+        .items
+        .iter()
+        .find(|item| item.item_id == 25)
+        .unwrap()
+        .item_guid;
+    assert!(
+        !crate::persistence::appearance_store::load_account_appearances(
+            &h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .has(154)
+    );
+    h.sell(npc, guid, 0);
+    assert!(h.inventory().items.iter().all(|item| item.item_id != 25));
+    assert!(
+        crate::persistence::appearance_store::load_account_appearances(
+            &h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .has(154)
+    );
+    crate::appearance_collection::tests::assert_restart(h.app, 1, &[(154, true)]);
 }
 
 #[test]
