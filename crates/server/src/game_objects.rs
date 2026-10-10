@@ -15,6 +15,8 @@
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
+pub(crate) mod summoned;
+
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::prelude::*;

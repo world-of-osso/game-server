@@ -89,7 +89,7 @@ fn selector(id: u32) -> Option<Selector> {
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
         18 | 22 => Selector::CenterCaster,
-        138 | 148 => Selector::ExistingDest,
+        87 | 138 | 148 => Selector::ExistingDest,
         79 => Selector::DestBack,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
@@ -111,10 +111,9 @@ fn selector(id: u32) -> Option<Selector> {
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
         let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
-        let ground_target = id == 87 && effect.effect == 254;
         let unsupported_back =
             id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
-        unsupported_back || (selector(id).is_none() && !item_target && !ground_target)
+        unsupported_back || (selector(id).is_none() && !item_target)
     })
 }
 
@@ -294,15 +293,17 @@ pub fn select_targets(
     let mut units = Vec::new();
     let mut selected_any = false;
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
-        if id == 87 && effect.effect == 254 {
-            continue;
-        }
         if id == 79 && unsupported_target(effect) == Some(79) {
             return Err(79);
         }
         let selector = selector(id).ok_or(id)?;
         match selector {
-            Selector::None | Selector::ExistingDest | Selector::ForwardLeap => {}
+            Selector::None | Selector::ForwardLeap => {}
+            Selector::ExistingDest => {
+                center = center
+                    .or_else(|| spell.cast_destination.map(Vec3::from_array))
+                    .or(Some(caster_pos));
+            }
             Selector::Caster => {
                 selected_any = true;
                 units.push(caster);
@@ -584,13 +585,20 @@ pub fn effect_dest(
     caster: Entity,
     explicit: Option<Entity>,
     effect: &SpellEffect,
+    requested: Option<[f32; 3]>,
 ) -> Option<Dest> {
-    let mut dest = None;
+    let mut dest = requested.map(|point| Dest {
+        position: Vec3::from_array(point),
+        orientation: orientation(world, caster),
+    });
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         let point = match selector(id)? {
             Selector::CenterCaster => position(world, caster),
             Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
-            Selector::ExistingDest => dest.map(|dest: Dest| dest.position),
+            // TC CheckDst supplies the caster when no destination was provided.
+            Selector::ExistingDest => dest
+                .map(|dest: Dest| dest.position)
+                .or_else(|| position(world, caster)),
             Selector::DestBack => dest.map(|dest: Dest| {
                 offset_destination_back(dest.position, dest.orientation, radius(effect, slot))
             }),

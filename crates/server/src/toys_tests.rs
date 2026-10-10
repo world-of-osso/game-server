@@ -15,7 +15,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 99659, 289277, 384585,
         ],
         8,
     )
@@ -46,6 +46,8 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app
         .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
     h.app
@@ -1023,6 +1025,144 @@ fn toyfx3_bobber_overrides_remain_explicitly_unsupported() {
 }
 
 #[test]
+fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
+    // DB2/TDB: Stormwind Banner45011->62736->194274 (generic),
+    // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605.
+    for (item, spell, entry, go_type, display, scale, offset, lifetime_seconds) in [
+        (45011, 62736, 194274, 5, 8623, 1.0, 0.0, 180),
+        (33223, 42766, 186475, 7, 7467, 1.0, 2.0, 300),
+        (40768, 54710, 191605, 19, 8171, 0.5, 3.0, 600),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        let conn = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::Rotation {
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            });
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        h.advance(100); // includes real cast time for MOLL-E.
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let objects: Vec<_> = world
+            .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+            .iter(world)
+            .filter(|(_, info)| info.entry == entry)
+            .map(|(e, info)| (e, info.clone()))
+            .collect();
+        assert_eq!(objects.len(), 1, "toy {item} must create its real object");
+        let (object, info) = &objects[0];
+        assert_eq!(
+            (info.go_type, info.display_id, info.scale),
+            (go_type, display, scale)
+        );
+        let pos = world.get::<shared::components::Position>(*object).unwrap();
+        assert!((pos.x - offset).abs() < 0.001, "{pos:?}");
+        assert_eq!((pos.y, pos.z), (0.0, 0.0));
+        assert_eq!(
+            world.get::<crate::maps::InMap>(*object),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert_eq!(
+            world
+                .get::<shared::components::Rotation>(*object)
+                .unwrap()
+                .y,
+            std::f32::consts::FRAC_PI_2
+        );
+        if go_type == 7 {
+            assert!(world.get::<crate::chair::Chair>(*object).is_some());
+        }
+        h.advance(lifetime_seconds * 20 - 200); // survives normal cast completion.
+        assert!(h.app.world().get_entity(*object).is_ok());
+        h.advance(130);
+        assert!(h.app.world().get_entity(*object).is_err());
+    }
+}
+
+#[test]
+fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    // Goblin Gumbo needs spellcaster object interaction, not ritual semantics.
+    learn_effect_toy(&mut h, character, 33219);
+    let error = activate(&mut h, 33219)[0].error.clone().unwrap();
+    assert!(
+        error.contains("186472") && error.contains("type 22"),
+        "{error}"
+    );
+    assert!(!h.inbox.cooldowns.iter().any(|c| c.spell_id == 42753));
+    // Moonkin Hatchling's Moonkin Stone has no runtime template; registry50
+    // alone previously classified this toy as usable despite spawning nothing.
+    learn_effect_toy(&mut h, character, 70161);
+    let error = activate(&mut h, 70161)[0].error.clone().unwrap();
+    assert!(error.contains("gameobject template"), "{error}");
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 99659));
+}
+
+#[test]
+fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
+    for (item, spell, payload) in [(166678, 289277, [4076, 155]), (198227, 384585, [6409, 170])] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None);
+        h.advance(10);
+        let active = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap();
+        let aura = active.iter().find(|a| a.spell_id == spell).unwrap();
+        assert_eq!(aura.effects[0].aura_type, 233);
+        assert_eq!(aura.effects[0].misc_values, payload);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::ModelDisplay>(h.caster)
+                .is_none()
+        );
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |a| a.spell_id == spell,
+        );
+        h.advance(3);
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     use std::collections::{BTreeMap, BTreeSet};
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -1030,6 +1170,8 @@ fn toys_effect_census() {
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
+    world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
+    world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
     world.insert_resource(crate::world_data::load_world_data(
         &crate::test_data::world_db_path(),
