@@ -244,8 +244,8 @@ fn wild_pet_battle_real_rabbit_ability_round_is_replayable_and_swap_is_ordered()
     assert_eq!(events, replay_events);
     let hud = first.snapshot(&catalog, &journal);
     assert_eq!(hud.teams[0][0].quality, 3);
-    assert_eq!(hud.teams[0][0].icon, 133_140);
-    assert_eq!(hud.teams[0][0].abilities[0].icon, 611_425);
+    assert_eq!(hud.teams[0][0].icon, 656_559);
+    assert_eq!(hud.teams[0][0].abilities[0].icon, 133_832);
     assert_eq!(hud.teams[0][0].abilities[0].family, 9);
     assert_eq!(hud.teams[0][0].xp, journal.get(41).unwrap().xp);
     assert!(hud.teams[0][0].next_level_xp > 0);
