@@ -252,6 +252,7 @@ fn an_early_swimming_input_dismounts_and_the_latest_running_controls_speed() {
     let (mut app, player, connection) = receiver_app();
     app.world_mut().entity_mut(player).insert(Mounted {
         mount_display_id: 123,
+        ..Default::default()
     });
     let swum = DEFAULT_SWIM_SPEED * TEST_STEP_SECS;
     let swim = PlayerInput {

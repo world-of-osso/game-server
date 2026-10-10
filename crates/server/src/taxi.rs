@@ -312,6 +312,7 @@ fn process_activate_taxi(
                 TaxiFlight { points, next: 0 },
                 Mounted {
                     mount_display_id: mount,
+                    ..Default::default()
                 },
                 MovementSpeed(FLIGHT_SPEED),
             ));

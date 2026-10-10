@@ -642,7 +642,7 @@ fn insert_spawn_mount_state(
         return;
     };
     commands.entity(entity).insert((
-        shared::components::Mounted { mount_display_id },
+        shared::components::Mounted { mount_display_id, ..Default::default() },
         MovementSpeed(crate::collection::movement_speed_for_mount(true)),
     ));
 }
