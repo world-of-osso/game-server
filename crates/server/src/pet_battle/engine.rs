@@ -73,6 +73,7 @@ impl Battle {
             catalog,
             rng,
             events: Vec::new(),
+            healing_target: None,
         };
         if rt.replace_fainted(actions)? {
             return Ok((rt.battle, rt.events));
@@ -94,6 +95,7 @@ pub(super) struct Runtime<'a, R> {
     pub catalog: &'a Catalog,
     pub rng: &'a mut R,
     pub events: Vec<Event>,
+    pub healing_target: Option<PetRef>,
 }
 impl<R: BattleRng> Runtime<'_, R> {
     pub fn state(&self, pet: PetRef, name: &str) -> i32 {
@@ -152,9 +154,19 @@ impl<R: BattleRng> Runtime<'_, R> {
     }
     fn begin_round(&mut self) {
         self.battle.round += 1;
+        let damaged = self
+            .catalog
+            .state_id("Condition_WasDamagedThisTurn")
+            .expect("checked state");
+        let did_damage = self
+            .catalog
+            .state_id("Condition_DidDamageThisRound")
+            .expect("checked state");
         for team in &mut self.battle.teams {
             for pet in &mut team.pets {
                 pet.dealt_damage = false;
+                pet.states.insert(damaged, 0);
+                pet.states.insert(did_damage, 0);
                 for cooldown in pet.cooldowns.values_mut() {
                     *cooldown = cooldown.saturating_sub(1);
                 }
@@ -189,7 +201,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             Action::Forfeit => Ok(()),
         }
     }
-    fn validate_swap(&self, current: PetRef, slot: usize) -> Result<(), String> {
+    pub(super) fn validate_swap(&self, current: PetRef, slot: usize) -> Result<(), String> {
         if slot >= 3 || slot == current.slot {
             return Err("invalid swap slot".into());
         }
@@ -239,8 +251,11 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.swap_pet(team, slot)?;
             }
         }
+        let actors = [self.battle.active(0), self.battle.active(1)];
         for team in order {
-            self.execute_action(team, actions[team])?;
+            if self.battle.active(team) == actors[team] {
+                self.execute_action(team, actions[team])?;
+            }
         }
         self.tick_auras()?;
         self.trigger_all(7)?;
@@ -268,7 +283,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         Ok(())
     }
-    fn swap_pet(&mut self, team: usize, slot: usize) -> Result<(), String> {
+    pub(super) fn swap_pet(&mut self, team: usize, slot: usize) -> Result<(), String> {
         let old = self.battle.active(team);
         self.trigger_for_pet(old, 11)?;
         self.battle.teams[team].active = slot;
@@ -347,8 +362,14 @@ impl<R: BattleRng> Runtime<'_, R> {
                 if effect.property == 158 && failed {
                     break;
                 }
-                if effect.property == 177
-                    && self.battle.pet(target).state(effect.params[0] as u32) != effect.params[1]
+                let checked_pet = if effect.property == 157 {
+                    caster
+                } else {
+                    target
+                };
+                if matches!(effect.property, 157 | 177)
+                    && self.battle.pet(checked_pet).state(effect.params[0] as u32)
+                        != effect.params[1]
                 {
                     break;
                 }
@@ -393,18 +414,16 @@ impl<R: BattleRng> Runtime<'_, R> {
                 .max()
                 .unwrap_or(1);
             let order = if max == 1 { 1 } else { aura.turn };
-            let caster = if aura.team_bound {
-                self.battle.active(aura.caster.team)
-            } else {
-                aura.caster
-            };
+            let caster = aura.caster;
             let target = if aura.team_bound {
                 self.battle.active(aura.target.team)
             } else {
                 aura.target
             };
+            self.healing_target = (caster.team == target.team).then_some(target);
             self.cast_turn(caster, target, aura.ability, order, 255)?;
             self.cast_turn(caster, target, aura.ability, 0, 8)?;
+            self.healing_target = None;
             let Some(current) = self
                 .battle
                 .auras
@@ -443,6 +462,13 @@ impl<R: BattleRng> Runtime<'_, R> {
         let targets: Vec<_> = if aura.weather {
             (0..2)
                 .flat_map(|team| (0..3).map(move |slot| PetRef { team, slot }))
+                .collect()
+        } else if aura.team_bound && aura.charges > 0 {
+            (0..3)
+                .map(|slot| PetRef {
+                    team: aura.target.team,
+                    slot,
+                })
                 .collect()
         } else {
             vec![aura.target]

@@ -155,6 +155,7 @@ pub struct Aura {
     /// Property63 is a team-pad trigger (Wish); other admitted auras bind to a pet.
     pub team_bound: bool,
     pub weather: bool,
+    pub charges: i32,
     /// Exact state deltas admitted at application, including Elemental exemptions.
     pub state_deltas: Vec<(PetRef, u32, i32)>,
 }
