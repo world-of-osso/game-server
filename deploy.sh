@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The game-server unit, its env and UDP 5000 are declared in the sakuin repo
+# (ops/nixos/game-server.nix); this script only ships the binary and data.
 SERVER_HOST="sakuin"
-SERVER_DIR="/opt/game-server"
+STATE_DIR="/var/lib/game-server"
 # Client asset cache the ground loads from (GAME_SERVER_GROUND_DIR, crates/server/src/ground.rs).
-GROUND_DIR="/opt/game-engine/data"
+GROUND_DIR="${STATE_DIR}/ground"
 GROUND_LIST="$(mktemp)"
 trap 'rm -f "$GROUND_LIST"' EXIT
 
 echo "Building release..."
 cargo build --release -p server
 
-echo "Uploading binary..."
-scp target/release/game-server "${SERVER_HOST}:${SERVER_DIR}/server.new"
-ssh "$SERVER_HOST" "mv ${SERVER_DIR}/server.new ${SERVER_DIR}/server"
+ssh "$SERVER_HOST" "mkdir -p ${STATE_DIR}/bin ${STATE_DIR}/data/economy ${GROUND_DIR}"
 
-echo "Uploading data..."
-scp data/world.db "${SERVER_HOST}:${SERVER_DIR}/data/world.db"
+echo "Uploading binaries..."
+for bin in game-server game-server-admin; do
+	scp "target/release/${bin}" "${SERVER_HOST}:${STATE_DIR}/bin/${bin}.new"
+	ssh "$SERVER_HOST" "mv ${STATE_DIR}/bin/${bin}.new ${STATE_DIR}/bin/${bin}"
+done
+
+echo "Uploading data (world.db and economy config are read relative to ${STATE_DIR})..."
+scp data/world.db "${SERVER_HOST}:${STATE_DIR}/data/world.db"
+scp data/economy/config.json "${SERVER_HOST}:${STATE_DIR}/data/economy/config.json"
 
 echo "Uploading ground (WDTs, ADTs and WMOs of the spawned maps)..."
 python3 scripts/ground_files.py --world-db data/world.db --cache ../game-engine/data > "$GROUND_LIST"
@@ -25,8 +32,8 @@ echo "Uploading line of sight (los-bake output beside the ground; docs/specs/lin
 # The server refuses to start without the eye table; a map without tiles has no LOS geometry.
 test -f ../game-engine/data/los/eye_heights.tsv || { echo "No LOS bake: run los-bake (docs/specs/line-of-sight.md)" >&2; exit 1; }
 rsync -a --delete ../game-engine/data/los/ "${SERVER_HOST}:${GROUND_DIR}/los/"
-# The binary's default ground path is this checkout's; without the variable it refuses to start.
-ssh "$SERVER_HOST" "mkdir -p /etc/systemd/system/game-server.service.d && printf '[Service]\nEnvironment=GAME_SERVER_GROUND_DIR=${GROUND_DIR}\n' > /etc/systemd/system/game-server.service.d/ground.conf && systemctl daemon-reload"
+
+ssh "$SERVER_HOST" "chown -R game-server:game-server ${STATE_DIR}"
 
 echo "Restarting service..."
 ssh "$SERVER_HOST" "systemctl restart game-server"

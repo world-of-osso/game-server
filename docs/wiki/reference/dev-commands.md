@@ -9,7 +9,7 @@ Development workflow commands for the game-server project.
 ## Admin CLI
 
 ```bash
-ssh sakuin /opt/game-server/game-server-admin <command>
+ssh sakuin GAME_SERVER_ADMIN_SOCKET=/run/game-server/admin.sock /var/lib/game-server/bin/game-server-admin <command>
 ```
 
 Runs on the `sakuin` host. Communicates with the server via a Unix IPC socket (`admin_ipc.rs`, `admin_ipc_server.rs`). Source for the admin binary: `crates/server/src/bin/admin.rs`.
