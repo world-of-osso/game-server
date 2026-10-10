@@ -243,7 +243,7 @@ enum AdminRequest {
     Revive {
         character_name: String,
     },
-    /// Shift the instance-lock clock by `seconds`.
+    /// Shift the instance-lock and auction-expiry clock by `seconds`.
     ClockAdvance {
         seconds: i64,
     },

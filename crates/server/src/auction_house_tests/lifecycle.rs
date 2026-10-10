@@ -694,6 +694,7 @@ fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
         auctions: [(91, auction.clone())].into(),
         ..Default::default()
     });
+    app.init_resource::<crate::maps::ServerClock>();
     app.add_systems(Update, super::super::handlers::expire_auctions);
     app.update();
     assert_eq!(
@@ -721,6 +722,7 @@ fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
         auctions: [(91, auction.clone())].into(),
         ..Default::default()
     });
+    app.init_resource::<crate::maps::ServerClock>();
     app.add_systems(Update, super::super::handlers::expire_auctions);
     app.update();
     app.world_mut()
