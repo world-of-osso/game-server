@@ -15,6 +15,8 @@
 
 Content catalog for the game-server wiki.
 
+[Appearance acquisition](investigations/appearance-acquisition.md) — Retail Warbands disposal/quest rules, atomic collection receipts, real-item acquisition/reopen proofs and missing-path limits.
+
 [Group roster portrait transport](../group-roster-portraits.md) — cached head appearance, cross-zone/offline lifecycle, behavioral fixtures and deferred native-client hookup.
 
 ## design/

@@ -118,9 +118,7 @@ fn harness(level: u8) -> Option<Harness> {
     app.insert_resource(load_item_templates(&path).unwrap());
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
     app.insert_resource(load_profession_data(&conn).unwrap());
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    crate::appearance_collection::tests::install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((
         NpcInteractionPlugin,
@@ -660,7 +658,7 @@ fn unknown_recipe_cannot_be_crafted() {
 }
 
 #[test]
-fn white_linen_shirt_bought_at_rank_one_is_craftable() {
+fn transmogacq_crafting_an_unbound_shirt_does_not_collect() {
     let Some(mut h) = harness(10) else { return };
     let npc = h.learn_tailoring();
     h.buy(npc, WHITE_LINEN_SHIRT);
@@ -674,4 +672,17 @@ fn white_linen_shirt_bought_at_rank_one_is_craftable() {
 
     assert_eq!(h.bag_count(2576), 1, "White Linen Shirt");
     assert_eq!(h.bag_count(2996) + h.bag_count(2320) + h.bag_count(2324), 0);
+    let templates = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    let appearance = templates
+        .get(shared::item_data::ItemDefinitionSource::Retail, 2576)
+        .unwrap()
+        .appearance_id
+        .expect("shirt has an appearance");
+    assert!(
+        !crate::persistence::appearance_store::load_account_appearances(h.db(), 1).has(appearance)
+    );
+    crate::appearance_collection::tests::assert_restart(h.app, 1, &[(appearance, false)]);
 }

@@ -478,6 +478,21 @@ fn brother_danil_water_comes_five_per_purchase_and_stacks_to_twenty() {
 }
 
 #[test]
+fn transmogacq_receiving_a_bop_grant_collects_without_waiting_for_a_frame() {
+    let mut h = harness().unwrap();
+    h.grant(6953, 1);
+    assert_eq!(h.count_of(6953), vec![1]);
+    assert!(
+        crate::persistence::appearance_store::load_account_appearances(
+            &h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .has(2288)
+    );
+    crate::appearance_collection::tests::assert_restart(h.app, 1, &[(2288, true)]);
+}
+
+#[test]
 fn transmogacq_buying_bop_collects_its_appearance() {
     let mut h = harness().unwrap();
     h.set_gold(100_000);
