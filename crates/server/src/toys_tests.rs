@@ -15,7 +15,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333, 62736, 42766, 54710, 42753, 99659, 289277, 384585,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585,
         ],
         8,
     )
@@ -1029,7 +1029,7 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
     // DB2/TDB: Stormwind Banner45011->62736->194274 (generic),
     // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605.
     for (item, spell, entry, go_type, display, scale, offset, lifetime_seconds) in [
-        (45011, 62736, 194274, 5, 8623, 1.0, 0.0, 180),
+        (45011, 62736, 194274, 5, 10483, 1.0, 0.0, 180),
         (33223, 42766, 186475, 7, 7467, 1.0, 2.0, 300),
         (40768, 54710, 191605, 19, 8171, 0.5, 3.0, 600),
     ] {
@@ -1087,9 +1087,79 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         }
         h.advance(lifetime_seconds * 20 - 200); // survives normal cast completion.
         assert!(h.app.world().get_entity(*object).is_ok());
-        h.advance(130);
-        assert!(h.app.world().get_entity(*object).is_err());
+        h.advance(200); // chair's timer begins after its real3000ms cast.
+        assert!(h.app.world().get_entity(*object).is_err(), "toy {item}");
     }
+}
+
+#[test]
+fn toyfx4_destination_request_does_not_select_a_unit_or_use_target_facing() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: 1.2 + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: 2.0 + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::SpellCastIntent>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::SpellCastIntent {
+            spell_id: Some(62736),
+            spell: String::new(),
+            target_entity: Some(h.npc.to_bits()),
+            destination: Some([7.0, 4.0, -2.0]),
+            target_item_guid: None,
+            witness: None,
+        });
+    h.advance(7);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let world = h.app.world_mut();
+    let objects: Vec<_> = world
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(world)
+        .filter(|(_, info)| info.entry == 194274)
+        .map(|(e, _)| e)
+        .collect();
+    assert_eq!(objects.len(), 1);
+    assert_eq!(
+        *world
+            .get::<shared::components::Position>(objects[0])
+            .unwrap(),
+        shared::components::Position {
+            x: 7.0,
+            y: 4.0,
+            z: -2.0
+        }
+    );
+    assert!(
+        (world
+            .get::<shared::components::Rotation>(objects[0])
+            .unwrap()
+            .y
+            - (1.2 + std::f32::consts::FRAC_PI_2))
+            .abs()
+            < 0.001
+    );
+    assert_eq!(
+        world
+            .get::<crate::game_objects::summoned::SummonedObject>(objects[0])
+            .unwrap()
+            .owner,
+        h.caster
+    );
 }
 
 #[test]
@@ -1104,12 +1174,11 @@ fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
         "{error}"
     );
     assert!(!h.inbox.cooldowns.iter().any(|c| c.spell_id == 42753));
-    // Moonkin Hatchling's Moonkin Stone has no runtime template; registry50
-    // alone previously classified this toy as usable despite spawning nothing.
-    learn_effect_toy(&mut h, character, 70161);
-    let error = activate(&mut h, 70161)[0].error.clone().unwrap();
+    // Actual DB2 toy199767/388088 references381317, absent in local TDB1210.
+    learn_effect_toy(&mut h, character, 199767);
+    let error = activate(&mut h, 199767)[0].error.clone().unwrap();
     assert!(error.contains("gameobject template"), "{error}");
-    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 99659));
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 388088));
 }
 
 #[test]
@@ -1119,7 +1188,7 @@ fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
         learn_effect_toy(&mut h, character, item);
         assert_eq!(activate(&mut h, item)[0].error, None);
-        h.advance(10);
+        h.advance(60); // Brynja has a real2500ms cast; goggles are instant.
         let active = h
             .app
             .world()
