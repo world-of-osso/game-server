@@ -19,6 +19,47 @@ fn apply(h: &mut Harness, id: u32) {
 }
 
 #[test]
+fn spell_override_animation_and_actionbar_values_replicate_until_expiry() {
+    let mut h = harness(Vec::new(), &[1719, 85288, 335097, 406732], 1).unwrap();
+    apply(&mut h, 1719);
+    apply(&mut h, 406732);
+    h.advance(3);
+    let view = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(h.caster)
+        .unwrap();
+    let json = serde_json::to_value(view).unwrap();
+    let auras = json["auras"].as_array().unwrap();
+    let recklessness = auras.iter().find(|a| a["spell_id"] == 1719).unwrap();
+    assert!(
+        recklessness["overrides"].as_array().is_some_and(|list| list
+            .contains(&serde_json::json!({"ActionBar": {"spell_id":85288,"replacement":335097}}))),
+        "{json}"
+    );
+    let paradox = auras.iter().find(|a| a["spell_id"] == 406732).unwrap();
+    assert_eq!(
+        paradox["overrides"],
+        serde_json::json!([{"Animation":1013}])
+    );
+    h.advance(500);
+    let view = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(h.caster)
+        .unwrap();
+    assert!(
+        view.auras
+            .iter()
+            .all(|a| a.spell_id != 1719 && a.spell_id != 406732)
+    );
+    assert_eq!(
+        super::overrides::resolve_spell(h.app.world(), h.caster, 85288),
+        85288
+    );
+}
+
+#[test]
 fn spell_override_recklessness_replaces_raging_blow_and_restores_after_removal() {
     // Actual matrix1719 rows: MiscValue85288 -> amount335097.
     let mut h = harness(Vec::new(), &[1719, 85288, 335097], 1).unwrap();
