@@ -357,10 +357,10 @@ fn handle_select(
         guild.as_ref(),
         build_player_init_state(state),
     );
-    commands.entity(player_entity).insert((
-        dungeon_difficulty,
-        crate::spell_cast::homebind::load_or_initialize_bind(&db.db, character_id, data.race),
-    ));
+    commands.entity(player_entity).insert(dungeon_difficulty);
+    if let Some(bind) = crate::spell_cast::homebind::load_bind(&db.db, character_id) {
+        commands.entity(player_entity).insert(bind);
+    }
     if let Some(death) = saved_death {
         commands.entity(player_entity).insert(death);
     } else if data.health <= 0.0 {
