@@ -384,7 +384,10 @@ pub(super) fn on_applied(world: &mut World, unit: Entity, aura: &AuraInstance) {
         .map_or(effect.misc_values[1] as u32, |mount| mount.mount_type);
     match mount_display(world, unit, aura, creature) {
         Some(mount_display_id) => {
-            world.entity_mut(unit).insert(Mounted { mount_display_id, ..Default::default() });
+            world.entity_mut(unit).insert(Mounted {
+                mount_display_id,
+                ..Default::default()
+            });
             mark_dirty(world, unit);
         }
         None => warn!(
