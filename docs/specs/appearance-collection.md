@@ -6,6 +6,7 @@ Account-wide appearance state uses shared-protocol `transmog::AppearanceCollecti
 
 - Blizzard [Warbands Preview, April 17, 2024](https://worldofwarcraft.blizzard.com/en-us/news/24061008/the-war-within-warbands-previe) and [Get the Band Together, July 11, 2024](https://worldofwarcraft.blizzard.com/en-us/news/24115313/get-the-band-together-for-warbands): collecting no longer requires the character to equip that armor type. Selling, deleting or disenchanting an unbound item also collects it. Collecting does not remove restrictions on *using* appearances.
 - Blizzard [11.0.5 update notes, October 22, 2024](https://worldofwarcraft.blizzard.com/en-us/news/24145980/20th-anniversary-celebration-content-update-notes), Items: other classes collect non-cosmetic class-restricted gear; completing a quest grants every non-cosmetic reward appearance, including unseen/unselectable choices. Retail also applies these changes retroactively.
+- Pinned [TrinityCore a352b1fa CollectionMgr.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Player/CollectionMgr.cpp#L611-L782): owned items require soulbinding, refundable/loot-tradeable sources are temporary, permanent collection is keyed by `ItemModifiedAppearance` ID, and `CanAddAppearance` has additional source/visual eligibility checks. This emulator reference corroborates the binding/source distinction; Blizzard's explicit Warbands disposal rule controls unbound sale/delete/disenchant behavior. Downloaded reference files are under engine `data/diagnostics/transmog-acquire-2026-10-10/`.
 - Local Retail `GlobalStrings.csv` build 12.1.0.69933, lines 13499–13501: collected appearance, unknown appearance, and appearance collected from a different item are distinct tooltip states. `Blizzard_Collections/Mainline/Blizzard_Wardrobe.lua:1221–1241` distinguishes `visualID` and `sourceID`.
 
 ## Required behavior
@@ -19,8 +20,8 @@ Account-wide appearance state uses shared-protocol `transmog::AppearanceCollecti
 ## Scope gaps (not parity claims)
 
 - No disenchant or scrapping acquisition handlers exist in the audited server. Explicit scrapping wording was not found in the Blizzard references; destruction equivalence is an inference, not verified Retail evidence.
-- Refund/loot-trade timers, reversible collection, retroactive completed-quest backfill, cosmetic-specific eligibility, variant sources and source-level persistence remain missing.
-- Native Wardrobe browsing/applying and collected toasts remain unimplemented; existing native tooltips receive appearance-level state.
+- Refund/loot-trade timers, reversible collection, retroactive completed-quest backfill, additional `CanAddAppearance` source/visual eligibility exclusions, cosmetic-specific eligibility, variant sources and source-level persistence remain missing.
+- Native Wardrobe browsing/applying and collected toasts remain unimplemented. Native NPC vendor/drop tooltip marks consume appearance-level state; ordinary item tooltips do not render Retail's collection-status lines. Native IPC `appearance_known` still tests physical ownership, not collection.
 
 ## Behavioral proof
 
