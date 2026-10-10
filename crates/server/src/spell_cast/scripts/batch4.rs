@@ -5,7 +5,6 @@ use shared::components::{Health, PowerType};
 use super::{reduce_cooldown, script_effect_value};
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use crate::spell_info::SpellInfo;
-use targets::Relation;
 
 pub(super) const LIGHT_OF_DAWN: u32 = 85222;
 pub(super) const STEADY_SHOT: u32 = 56641;
@@ -27,7 +26,7 @@ const ERUPTION_EXTENSION: u32 = 395153;
 const EBON_MIGHT: u32 = 395152;
 const EBON_SELF: u32 = 395296;
 
-/// 85222s2: injured allies only, capped after ordinary cone/radius selection.
+/// 85222s2: injured allies only, capped after ordinary area/radius selection.
 /// Data does not define injury priority; retain native nearest-first ordering.
 pub(super) fn light_of_dawn_plan(
     world: &mut World,

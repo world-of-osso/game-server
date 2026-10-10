@@ -148,7 +148,11 @@ fn vivify(with_rank: bool) {
         .count();
     assert_eq!(splash, usize::from(with_rank));
     assert_eq!(h.health(unmarked), 100.0);
-    assert!(h.health(owned) > if with_rank { 400.0 } else { 100.0 });
+    if with_rank {
+        assert!(h.health(owned) > 400.0);
+    } else {
+        assert!(h.health(owned) < 200.0);
+    }
     // Only HoT ticks, never the323-point Vivify splash, reach foreign/far marks.
     assert!(h.health(foreign) < 200.0);
     assert!(h.health(far) < 200.0);
@@ -343,7 +347,7 @@ fn dummy4_eruption_without_rank_keeps_owned_buff_duration() {
 }
 
 #[test]
-fn dummy4_light_of_dawn_excludes_injured_allies_behind_caster() {
+fn dummy4_light_of_dawn_mainline_radius_includes_allies_behind_caster() {
     let mut h = harness(Vec::new(), &[85222], 2).expect("real catalog");
     let front = spawn_player(&mut h.app, 2, 3.0);
     let behind = spawn_player(&mut h.app, 2, -3.0);
@@ -355,5 +359,6 @@ fn dummy4_light_of_dawn_excludes_injured_allies_behind_caster() {
     h.advance(5);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.health(front) > 100.0);
-    assert_eq!(h.health(behind), 100.0);
+    // Current Mainline tooltip says "radius around you", not a cone.
+    assert!(h.health(behind) > 100.0);
 }
