@@ -464,7 +464,7 @@ fn triggered_spell_chain_is_bounded() {
 #[test]
 fn unsupported_implicit_target_fails_the_cast() {
     let mut spell = trigger_chain(1).remove(0);
-    spell.effects[0].implicit_targets = [87, 16];
+    spell.effects[0].implicit_targets = [104, 16];
     let Some(mut h) = harness(vec![spell], &[], 1) else {
         return;
     };
@@ -473,7 +473,7 @@ fn unsupported_implicit_target_fails_the_cast() {
     assert_eq!(failed[0].reason, CastFailReason::NotSupported);
     assert_eq!(
         failed[0].detail.as_deref(),
-        Some("implicit target 87 not supported")
+        Some("implicit target 104 not supported")
     );
     assert_eq!(h.power(PowerType::Rage), 0.0);
 }
