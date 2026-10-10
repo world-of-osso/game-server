@@ -263,6 +263,10 @@ fn open_navigation(mut commands: Commands) {
     ));
 }
 
+#[cfg(test)]
+#[path = "navigation_tests.rs"]
+mod tests;
+
 fn prune_routes(
     mut nav: ResMut<Navigation>,
     creatures: Query<Entity, With<crate::creature_ai::CreatureState>>,
