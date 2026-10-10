@@ -12,15 +12,16 @@ use shared::components::{Level, Player, UnitLevel};
 use shared::protocol::{
     ActionBarSnapshot, ActionRef, CommitTraitConfig, KnownSpellsSnapshot, SetActionButton,
     SetSpecialization, SpecializationChanged, SpellsLearned, SpellsUnlearned, TalentChannel,
-    TraitCommitResult, TraitConfigSnapshot, TraitEntrySelection,
+    TraitCommitResult, TraitConfigSnapshot, TraitEntrySelection, TraitLoadoutInfo,
+    TraitLoadoutOperation, TraitLoadoutRequest, TraitLoadoutsSnapshot,
 };
 
 use crate::auth::Authenticated;
 use crate::networking::PlayerLink;
 use crate::persistence::{ClientId, GameDatabase};
 use crate::persistence_progression::{
-    ActionRefData, ProgressionData, load_progression, load_trait_configs, save_progression,
-    save_trait_config,
+    ActionRefData, ProgressionData, TraitConfigsData, load_progression, load_trait_configs,
+    save_progression, save_trait_config, save_trait_configs,
 };
 use crate::profession::PlayerProfessions;
 use crate::race_class::race_mask_allows;
@@ -525,6 +526,7 @@ struct ProgressionSenders<'w, 's> {
     bar: Query<'w, 's, &'static mut MessageSender<ActionBarSnapshot>>,
     traits: Query<'w, 's, &'static mut MessageSender<TraitConfigSnapshot>>,
     commit: Query<'w, 's, &'static mut MessageSender<TraitCommitResult>>,
+    loadouts: Query<'w, 's, &'static mut MessageSender<TraitLoadoutsSnapshot>>,
     /// The replicated `ActiveSpec` reaches clients only once its entity is marked.
     replication: Option<Res<'w, ReplicationDirtyQueue>>,
 }
@@ -591,6 +593,11 @@ fn init_player_progression(
                 &mut senders.traits,
                 connection,
                 trait_snapshot(spec, &evaluated.traits),
+            );
+            send(
+                &mut senders.loadouts,
+                connection,
+                loadout_snapshot(&load_trait_configs(&db.db, client_id.0), spec.0),
             );
         }
         send(
@@ -710,6 +717,11 @@ fn refresh_player(
             connection,
             trait_snapshot(new_spec, &traits),
         );
+        send(
+            &mut senders.loadouts,
+            connection,
+            loadout_snapshot(&load_trait_configs(&db.db, client_id.0), new_spec.0),
+        );
     }
     if spec_changed || bar_changed {
         save_progression(&db.db, client_id.0, &progression_data(*spec, &bar));
@@ -795,42 +807,82 @@ fn validate_spec_request(
 fn process_commit_trait_config(
     db: Option<Res<GameDatabase>>,
     classes: Option<Res<ClassSpells>>,
-    mut receivers: Query<(Entity, &PlayerLink, &mut MessageReceiver<CommitTraitConfig>)>,
+    mut commits: Query<(Entity, &PlayerLink, &mut MessageReceiver<CommitTraitConfig>)>,
+    mut loadouts: Query<(
+        Entity,
+        &PlayerLink,
+        &mut MessageReceiver<TraitLoadoutRequest>,
+    )>,
     mut players: Query<ProgressionPlayer>,
     mut senders: ProgressionSenders,
 ) {
     let (Some(db), Some(classes)) = (db, classes) else {
         return;
     };
-    for (connection, link, mut receiver) in &mut receivers {
-        for request in receiver.receive() {
-            let Ok(entry) = players.get_mut(link.0) else {
-                continue;
-            };
-            let spec_id = entry.3.0;
-            let purchases = match commit_purchases(&classes, entry.0, entry.1.0, spec_id, &request)
-            {
-                Ok(purchases) => purchases,
-                Err(reason) => {
-                    warn!(
-                        "Rejected CommitTraitConfig for spec {}: {reason}",
-                        request.spec_id
-                    );
-                    let result = TraitCommitResult {
+    // Typed buffers must not reorder an Apply followed by a loadout switch.
+    let mut requests = Vec::new();
+    for (connection, link, mut receiver) in &mut commits {
+        requests.extend(receiver.receive_with_tick().map(|message| {
+            (
+                connection,
+                link.0,
+                message.message_id,
+                TraitMutation::Commit(message.data),
+            )
+        }));
+    }
+    for (connection, link, mut receiver) in &mut loadouts {
+        requests.extend(receiver.receive_with_tick().map(|message| {
+            (
+                connection,
+                link.0,
+                message.message_id,
+                TraitMutation::Loadout(message.data),
+            )
+        }));
+    }
+    requests.sort_by_key(|(connection, _, id, _)| (*connection, *id));
+    for (connection, player, _, request) in requests {
+        let Ok(entry) = players.get_mut(player) else {
+            continue;
+        };
+        let spec_id = entry.3.0;
+        let mut configs = load_trait_configs(&db.db, entry.2.0);
+        let refresh_allocation = match update_trait_configs(
+            &classes,
+            entry.0,
+            entry.1.0,
+            spec_id,
+            &mut configs,
+            request,
+        ) {
+            Ok(refresh_allocation) => refresh_allocation,
+            Err(reason) => {
+                warn!("Rejected trait loadout mutation: {reason}");
+                send(
+                    &mut senders.commit,
+                    connection,
+                    TraitCommitResult {
                         ok: false,
                         reason: Some(reason),
-                    };
-                    send(&mut senders.commit, connection, result);
-                    continue;
-                }
-            };
-            save_trait_config(&db.db, entry.2.0, spec_id, purchases.clone());
-            let result = TraitCommitResult {
+                    },
+                );
+                continue;
+            }
+        };
+        save_trait_configs(&db.db, entry.2.0, &configs);
+        send(
+            &mut senders.commit,
+            connection,
+            TraitCommitResult {
                 ok: true,
                 reason: None,
-            };
-            send(&mut senders.commit, connection, result);
-            let evaluated = evaluate(&classes, entry.0, entry.1.0, spec_id, |_| purchases);
+            },
+        );
+        if refresh_allocation {
+            let evaluated = evaluate(&classes, entry.0, entry.1.0, spec_id, |spec| {
+                configs.spec(spec).to_vec()
+            });
             refresh_player(
                 entry,
                 evaluated,
@@ -840,7 +892,97 @@ fn process_commit_trait_config(
                 connection,
                 &mut senders,
             );
+        } else {
+            // Rename/delete are metadata, not a rollback of the client's staged ranks.
+            send(
+                &mut senders.loadouts,
+                connection,
+                loadout_snapshot(&configs, spec_id),
+            );
         }
+    }
+}
+
+enum TraitMutation {
+    Commit(CommitTraitConfig),
+    Loadout(TraitLoadoutRequest),
+}
+fn update_trait_configs(
+    classes: &ClassSpells,
+    player: &Player,
+    level: u8,
+    active_spec: u32,
+    configs: &mut TraitConfigsData,
+    request: TraitMutation,
+) -> Result<bool, String> {
+    let request = match request {
+        TraitMutation::Commit(request) => {
+            let purchases = commit_purchases(classes, player, level, active_spec, &request)?;
+            configs.spec_mut(active_spec).replace_active(purchases);
+            return Ok(true);
+        }
+        TraitMutation::Loadout(request) => request,
+    };
+    if request.spec_id != active_spec {
+        return Err(format!(
+            "spec {} is not the active spec {active_spec}",
+            request.spec_id
+        ));
+    }
+    let refresh_allocation = match request.operation {
+        TraitLoadoutOperation::Create { name, entries } => {
+            let purchases = commit_purchases(
+                classes,
+                player,
+                level,
+                active_spec,
+                &CommitTraitConfig {
+                    spec_id: active_spec,
+                    entries,
+                },
+            )?;
+            configs.create(active_spec, name, purchases)?;
+            true
+        }
+        TraitLoadoutOperation::Rename { id, name } => {
+            configs.rename(active_spec, id, name)?;
+            false
+        }
+        TraitLoadoutOperation::Delete { id } => {
+            configs.delete(active_spec, id)?;
+            false
+        }
+        TraitLoadoutOperation::Activate { id } => {
+            configs.activate(active_spec, id)?;
+            let class = class_info(classes, player.class).ok_or("Class has no trait tree")?;
+            build_config(
+                &class.traits,
+                TraitContext {
+                    spec_id: active_spec,
+                    level,
+                },
+                configs.spec(active_spec),
+            )?;
+            true
+        }
+    };
+    Ok(refresh_allocation)
+}
+
+fn loadout_snapshot(configs: &TraitConfigsData, spec_id: u32) -> TraitLoadoutsSnapshot {
+    let spec = configs.specs.iter().find(|spec| spec.spec_id == spec_id);
+    TraitLoadoutsSnapshot {
+        spec_id,
+        selected_id: spec.map_or(0, |spec| spec.selected_id),
+        configs: spec.map_or_else(Vec::new, |spec| {
+            spec.configs
+                .iter()
+                .map(|config| TraitLoadoutInfo {
+                    id: config.id,
+                    name: config.name.clone(),
+                })
+                .collect()
+        }),
     }
 }
 
