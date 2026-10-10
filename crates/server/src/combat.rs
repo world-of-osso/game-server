@@ -1220,6 +1220,20 @@ pub(crate) fn despawn_creature(world: &mut World, creature: Entity) {
 /// multiplier for the attacker, both enter combat, the victim's threat and
 /// `DamageTaken` follow, and a lethal hit kills it.
 pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: Entity, damage: f32) {
+    let damage = crate::auras::damage_transfer::route(world, attacker, victim, 1, damage);
+    deal_health_damage(world, attacker, victim, damage, 1, None, 0.0);
+}
+
+/// Health application for an already-mitigated direct or redirected hit.
+pub(crate) fn deal_health_damage(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    damage: f32,
+    school: u32,
+    spell_id: Option<u32>,
+    absorbed: f32,
+) {
     if !crate::spell_cast::targets::is_alive(world, victim) {
         return;
     }
@@ -1246,11 +1260,11 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
         CombatLogEvent {
             source: Some(attacker.to_bits()),
             target: Some(victim.to_bits()),
-            spell_id: None,
-            school_mask: 1,
+            spell_id,
+            school_mask: school,
             amount: damage as i32,
             overflow: (loss - before).max(0.0) as i32,
-            absorbed: 0,
+            absorbed: absorbed as i32,
             resisted: 0,
             blocked: 0,
             crit: false,
