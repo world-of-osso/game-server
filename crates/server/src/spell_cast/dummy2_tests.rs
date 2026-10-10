@@ -379,3 +379,79 @@ fn dummy2_dk_death_coil_extends_both_outbreak_plagues_by_one_second() {
         assert_eq!(after, before + 1.0);
     }
 }
+
+#[test]
+fn dummy2_shaman_chain_heal_chooses_injured_allies_and_falls_off_each_jump() {
+    let mut h = harness(Vec::new(), &[1064], 7).expect("real world.db required");
+    let primary = spawn_player(&mut h.app, 1, 2.0);
+    let near = spawn_player(&mut h.app, 1, 4.0);
+    let first = spawn_player(&mut h.app, 1, 17.0);
+    let second = spawn_player(&mut h.app, 1, 35.0);
+    let third = spawn_player(&mut h.app, 1, 53.0);
+    for (unit, current, max) in [
+        (primary, 1000.0, 5000.0),
+        (near, 800.0, 1000.0),
+        (first, 1000.0, 4000.0),
+        (second, 1000.0, 6000.0),
+        (third, 1000.0, 7000.0),
+    ] {
+        *h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(unit)
+            .unwrap() = shared::components::Health { current, max };
+    }
+    h.cast_and_deliver(1064, Some(primary));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    for (unit, base) in [
+        (primary, 231.0),
+        (first, 231.0 * 0.7),
+        (second, 231.0 * 0.7 * 0.7),
+        (third, 231.0 * 0.7 * 0.7 * 0.7),
+    ] {
+        assert!(
+            varied(base).contains(&(h.health(unit) - 1000.0)),
+            "unit {unit:?}: {}",
+            h.health(unit)
+        );
+    }
+    assert_eq!(
+        h.health(near),
+        800.0,
+        "most injured takes priority over nearest"
+    );
+    assert_eq!(h.health(h.npc), 5000.0);
+    let targets: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(1064) && event.kind == shared::protocol::CombatLogKind::Heal
+        })
+        .map(|event| event.target)
+        .collect();
+    assert_eq!(
+        targets,
+        [primary, first, second, third].map(|unit| Some(unit.to_bits()))
+    );
+}
+
+#[test]
+fn dummy2_shaman_chain_heal_uses_catalog_twenty_yard_jump_radius() {
+    let mut h = harness(Vec::new(), &[1064], 7).expect("real world.db required");
+    let primary = spawn_player(&mut h.app, 1, 2.0);
+    let edge = spawn_player(&mut h.app, 1, 22.0);
+    let beyond = spawn_player(&mut h.app, 1, 45.0);
+    for unit in [primary, edge, beyond] {
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(unit)
+            .unwrap()
+            .current = 100.0;
+    }
+    h.cast_and_deliver(1064, Some(primary));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.health(edge) > 100.0);
+    assert_eq!(h.health(beyond), 100.0);
+}
