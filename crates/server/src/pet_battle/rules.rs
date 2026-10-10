@@ -9,7 +9,45 @@ pub const CRITICAL_MULTIPLIER: f64 = 1.5; // Blizzard5.3 accuracy article.
 pub fn supported_property(property: u32) -> bool {
     matches!(
         property,
-        22 | 23 | 24 | 26 | 31 | 49 | 50 | 52 | 53 | 54 | 63 | 222
+        22 | 23
+            | 24
+            | 26
+            | 27
+            | 28
+            | 29
+            | 31
+            | 32
+            | 49
+            | 50
+            | 52
+            | 53
+            | 54
+            | 62
+            | 63
+            | 68
+            | 79
+            | 80
+            | 85
+            | 104
+            | 111
+            | 116
+            | 135
+            | 136
+            | 139
+            | 145
+            | 157
+            | 141
+            | 158
+            | 177
+            | 178
+            | 169
+            | 170
+            | 171
+            | 246
+            | 373
+            | 222
+            | 384
+            | 385
     )
 }
 /// Recursive admission: every turn and referenced aura must be executable before RNG draws.
@@ -31,16 +69,26 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            if name == "Mechanic_IsObject" {
+            if name == "Mechanic_IsObject" && ability != 333 {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
             if !matches!(
                 *state,
                 21 | 22 | 23 | 24 | 25 | 29 | 30 | 33 | 34 | 35 | 36 | 40 | 41 | 42
                     ..=51
+                        | 52..=62
+                        | 87
+                        | 88
+                        | 89
+                        | 99
                         | 64
                         | 65
                         | 66
+                        | 67
+                        | 69
+                        | 74
+                        | 75
+                        | 20
                         | 68
                         | 71
                         | 72
@@ -78,7 +126,47 @@ fn validate_ability_graph(
         }
         for effect in catalog.turn_effects(turn.id) {
             validate_effect(catalog, effect)?;
-            if matches!(effect.property, 24 | 222) && catalog.abilities[&ability].family < 0 {
+            let description = catalog.abilities[&ability].description.to_ascii_lowercase();
+            let ambiguous_team_target = [
+                "all enemy pets",
+                "all enemies",
+                "enemy team",
+                "enemy's pets",
+                "backline",
+                "back line",
+                "both teams",
+            ]
+            .iter()
+            .any(|phrase| description.contains(phrase));
+            if matches!(effect.property, 24 | 222)
+                && ambiguous_team_target
+                && !matches!(ability, 404 | 419)
+                || matches!(effect.property, 23 | 53 | 111) && matches!(ability, 70 | 295 | 714)
+            {
+                return Err(format!(
+                    "ability {ability}: undetermined team target routing"
+                ));
+            }
+            if effect.property == 135 && !matches!(ability, 282 | 663 | 2209) {
+                return Err(format!(
+                    "ability {ability}: undetermined kill target/passive semantics"
+                ));
+            }
+            if effect.property == 80
+                && catalog
+                    .ability_states
+                    .get(&effect.aura)
+                    .is_some_and(|s| s.contains_key(&71) || s.contains_key(&72))
+            {
+                return Err(format!(
+                    "ability {ability}: undetermined weather flat-modifier power ownership"
+                ));
+            }
+            if matches!(
+                effect.property,
+                24 | 27 | 29 | 62 | 68 | 141 | 169 | 170 | 222 | 384 | 385
+            ) && catalog.abilities[&ability].family < 0
+            {
                 return Err(format!("ability {ability}: damage has no family"));
             }
             if effect.aura != 0 {
@@ -97,18 +185,84 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         ));
     }
     let supported = match effect.property {
-        22 => p[0] == 0 && p[2..].iter().all(|v| *v == 0),
+        22 => true, // Points fields supply tooltip variables, not an HP operation.
+        27 => {
+            p[0] >= 0
+                && p[2] >= 0
+                && p[3] >= p[0]
+                && (p[4] == 0 || catalog.states.contains_key(&(p[4] as u32)))
+                && p[5] == 0
+        }
+        32 => p[2..].iter().skip(1).all(|v| *v == 0),
+        79 | 157 | 177 => catalog.states.contains_key(&(p[0] as u32)),
+        28 => effect.aura != 0 && p[2] >= -1 && p[4..].iter().all(|v| *v == 0),
+        68 => p[2..].iter().all(|v| *v == 0),
+        104 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && p[4] >= 0
+                && p[5] == 0
+        }
+        135 => {
+            matches!(p[1], 0 | 100) && p[2] == 0 && p[3] == 0 && matches!(p[4], 0 | 1) && p[5] == 0
+        }
+        136 => matches!(p[0], 0 | 1) && p[1..].iter().all(|v| *v == 0),
+        139 | 145 => p[1..].iter().all(|v| *v == 0),
+        85 => catalog.states.contains_key(&(p[0] as u32)),
+        111 => p[0] > 0 && p[0] <= 100 && p[2..].iter().all(|v| *v == 0),
+        169 | 171 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && p[5] == 0
+        }
+        170 => catalog.states.contains_key(&(p[2] as u32)) && p[5] == 0,
+        246 => (1..=3).contains(&p[0]) && p[1..].iter().all(|v| *v == 0),
+        373 => {
+            (0..3).contains(&p[0])
+                && catalog.abilities.contains_key(&(p[1] as u32))
+                && p[2..].iter().all(|v| *v == 0)
+        }
+        116 => true, // No named parameters; recalculates priority from current speed.
+        158 => p.iter().all(|v| *v == 0),
         24 => p[3..].iter().all(|v| *v == 0),
+        29 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && p[5] == 0
+        }
+        62 | 384 | 385 => p[2..].iter().all(|v| *v == 0),
+        80 => effect.aura != 0 && p[2] > 0 && p[4..].iter().all(|v| *v == 0),
+        141 => {
+            (p[2] == 0 || catalog.states.contains_key(&(p[2] as u32)))
+                && p[4..].iter().all(|v| *v == 0)
+        }
+        178 => {
+            effect.aura != 0
+                && p[2] >= 0
+                && (p[3] == 0 || catalog.states.contains_key(&(p[3] as u32)))
+        }
         222 => p[3..].iter().all(|v| *v == 0) && p[2] >= 0,
         31 => catalog.states.contains_key(&(p[0] as u32)),
-        49 => effect.aura != 0 && p[1..].iter().all(|v| *v == 0),
+        49 => effect.aura != 0 && p[2..].iter().all(|v| *v == 0),
         26 => {
             effect.aura != 0
+                && (p[1] != 0 || effect.aura == 1904)
                 && p[2] >= -1
                 && matches!(p[3], 0 | 1)
                 && p[4..].iter().all(|v| *v == 0)
         }
-        50 | 54 => effect.aura != 0 && p[2] >= -1 && p[3] >= 0 && p[4..].iter().all(|v| *v == 0),
+        50 => {
+            effect.aura != 0
+                && p[2] >= -1
+                && p[3] >= 0
+                && [p[4], p[5]]
+                    .iter()
+                    .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+        }
+        54 => effect.aura != 0 && p[2] >= -1 && p[3] >= 0 && p[4..].iter().all(|v| *v == 0),
         52 | 63 => effect.aura != 0 && p[2] >= -1 && p[3..].iter().all(|v| *v == 0),
         23 => p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
         53 => p[2..].iter().all(|v| *v == 0),

@@ -6,6 +6,19 @@ const RULE_STATES: &[&str] = &[
     "Stat_Accuracy",
     "Stat_Dodge",
     "Mod_SpeedPercent",
+    "Mod_MaxHealthPercent",
+    "Weather_ArcaneStorm",
+    "Mod_PetType_ID",
+    "Mod_PetTypeDamageDealtPercent",
+    "Mod_PetTypeDamageTakenPercent",
+    "Passive_Elemental",
+    "Stat_Speed",
+    "Last_HitDealt",
+    "Last_HitTaken",
+    "Condition_WasDamagedThisTurn",
+    "Condition_DidDamageThisRound",
+    "Ramping_DamageID",
+    "Ramping_DamageUses",
     "Mod_DamageDealtPercent",
     "Mod_DamageTakenPercent",
     "Mod_HealingDealtPercent",
@@ -61,6 +74,7 @@ impl Battle {
             catalog,
             rng,
             events: Vec::new(),
+            healing_target: None,
         };
         if rt.replace_fainted(actions)? {
             return Ok((rt.battle, rt.events));
@@ -82,6 +96,7 @@ pub(super) struct Runtime<'a, R> {
     pub catalog: &'a Catalog,
     pub rng: &'a mut R,
     pub events: Vec<Event>,
+    pub healing_target: Option<PetRef>,
 }
 impl<R: BattleRng> Runtime<'_, R> {
     pub fn state(&self, pet: PetRef, name: &str) -> i32 {
@@ -140,9 +155,19 @@ impl<R: BattleRng> Runtime<'_, R> {
     }
     fn begin_round(&mut self) {
         self.battle.round += 1;
+        let damaged = self
+            .catalog
+            .state_id("Condition_WasDamagedThisTurn")
+            .expect("checked state");
+        let did_damage = self
+            .catalog
+            .state_id("Condition_DidDamageThisRound")
+            .expect("checked state");
         for team in &mut self.battle.teams {
             for pet in &mut team.pets {
                 pet.dealt_damage = false;
+                pet.states.insert(damaged, 0);
+                pet.states.insert(did_damage, 0);
                 for cooldown in pet.cooldowns.values_mut() {
                     *cooldown = cooldown.saturating_sub(1);
                 }
@@ -177,7 +202,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             Action::Forfeit => Ok(()),
         }
     }
-    fn validate_swap(&self, current: PetRef, slot: usize) -> Result<(), String> {
+    pub(super) fn validate_swap(&self, current: PetRef, slot: usize) -> Result<(), String> {
         if slot >= 3 || slot == current.slot {
             return Err("invalid swap slot".into());
         }
@@ -208,7 +233,12 @@ impl<R: BattleRng> Runtime<'_, R> {
     fn turn_order(&mut self) -> [usize; 2] {
         let left = self.speed(self.battle.active(0));
         let right = self.speed(self.battle.active(1));
-        let first = if left == right {
+        // Quick Attack563 and SpeedPriority853 promise first strike, not a finite
+        // displayed-speed increment. Base speed/tie RNG ranks equal priorities.
+        let priority = [0, 1].map(|team| self.state(self.battle.active(team), "Stat_Speed") > 0);
+        let first = if priority[0] != priority[1] {
+            usize::from(priority[1])
+        } else if left == right {
             usize::from(self.draw() >= RANDOM_SCALE / 2)
         } else {
             usize::from(right > left)
@@ -216,25 +246,52 @@ impl<R: BattleRng> Runtime<'_, R> {
         [first, 1 - first]
     }
     fn execute_round(&mut self, actions: [Action; 2]) -> Result<(), String> {
+        let pending =
+            [0, 1].map(|team| {
+                let caster = self.battle.active(team);
+                let ability = self.battle.pet(caster).continuation.map(|(id, _)| id).or(
+                    match actions[team] {
+                        Action::Ability(id) => Some(id),
+                        _ => None,
+                    },
+                );
+                ability.map(|ability| (caster, ability))
+            });
+        self.trigger_actions(pending, 6)?;
+        self.trigger_all(6)?;
         let order = self.turn_order();
         self.events.push(Event::Order(order));
-        self.trigger_all(6)?;
         // Voluntary swaps precede attacks. Replacement swaps consume no combat round.
         for team in order {
             if let Action::Swap(slot) = actions[team] {
                 self.swap_pet(team, slot)?;
             }
         }
+        let actors = [self.battle.active(0), self.battle.active(1)];
         for team in order {
-            self.execute_action(team, actions[team])?;
+            if self.battle.active(team) == actors[team] {
+                self.execute_action(team, actions[team])?;
+            }
         }
         self.tick_auras()?;
         self.trigger_all(7)?;
+        self.trigger_actions(pending, 7)?;
         self.finish_passives()?;
         self.finish_battle();
         Ok(())
     }
-    fn swap_pet(&mut self, team: usize, slot: usize) -> Result<(), String> {
+    fn trigger_actions(
+        &mut self,
+        pending: [Option<(PetRef, u32)>; 2],
+        event: u32,
+    ) -> Result<(), String> {
+        for (caster, ability) in pending.into_iter().flatten() {
+            let target = self.battle.active(1 - caster.team);
+            self.cast_turn(caster, target, ability, 0, event)?;
+        }
+        Ok(())
+    }
+    pub(super) fn swap_pet(&mut self, team: usize, slot: usize) -> Result<(), String> {
         let old = self.battle.active(team);
         self.trigger_for_pet(old, 11)?;
         self.battle.teams[team].active = slot;
@@ -310,6 +367,20 @@ impl<R: BattleRng> Runtime<'_, R> {
                 continue;
             }
             for effect in self.catalog.turn_effects(turn.id) {
+                if effect.property == 158 && failed {
+                    break;
+                }
+                let checked_pet = if effect.property == 157 {
+                    caster
+                } else {
+                    target
+                };
+                if matches!(effect.property, 157 | 177)
+                    && self.battle.pet(checked_pet).state(effect.params[0] as u32)
+                        != effect.params[1]
+                {
+                    break;
+                }
                 let success = self.execute_effect(caster, target, ability, effect, failed)?;
                 failed |= !success;
             }
@@ -328,8 +399,11 @@ impl<R: BattleRng> Runtime<'_, R> {
     fn trigger_for_pet(&mut self, pet: PetRef, event: u32) -> Result<(), String> {
         let auras = self.battle.auras.clone();
         for aura in auras {
-            if aura.target == pet {
-                self.cast_turn(aura.caster, aura.target, aura.ability, 0, event)?;
+            if aura.target == pet || aura.team_bound && aura.target.team == pet.team {
+                let previous = self.healing_target;
+                self.healing_target = (aura.caster.team == pet.team).then_some(pet);
+                self.cast_turn(aura.caster, pet, aura.ability, 0, event)?;
+                self.healing_target = previous;
             }
         }
         Ok(())
@@ -351,18 +425,16 @@ impl<R: BattleRng> Runtime<'_, R> {
                 .max()
                 .unwrap_or(1);
             let order = if max == 1 { 1 } else { aura.turn };
-            let caster = if aura.team_bound {
-                self.battle.active(aura.caster.team)
-            } else {
-                aura.caster
-            };
+            let caster = aura.caster;
             let target = if aura.team_bound {
                 self.battle.active(aura.target.team)
             } else {
                 aura.target
             };
+            self.healing_target = (caster.team == target.team).then_some(target);
             self.cast_turn(caster, target, aura.ability, order, 255)?;
             self.cast_turn(caster, target, aura.ability, 0, 8)?;
+            self.healing_target = None;
             let Some(current) = self
                 .battle
                 .auras
@@ -386,7 +458,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(());
         };
         let aura = self.battle.auras.remove(index);
-        self.apply_aura_states(&aura, -1);
+        for (pet, state, value) in &aura.state_deltas {
+            *self.battle.pet_mut(*pet).states.entry(*state).or_default() -= value;
+            self.refresh_max_health(*pet);
+        }
         self.events.push(Event::AuraRemoved {
             target: aura.target,
             ability: aura.ability,
@@ -394,17 +469,45 @@ impl<R: BattleRng> Runtime<'_, R> {
         // Aura-local positive effects on removal belong to the wearer, e.g. Resilient924.
         self.cast_turn(aura.target, aura.target, aura.ability, 0, 5)
     }
-    pub fn apply_aura_states(&mut self, aura: &Aura, sign: i32) {
-        if let Some(states) = self.catalog.ability_states.get(&aura.ability) {
+    pub fn apply_aura_states(&mut self, aura: &mut Aura) {
+        let targets: Vec<_> = if aura.weather {
+            (0..2)
+                .flat_map(|team| (0..3).map(move |slot| PetRef { team, slot }))
+                .collect()
+        } else if aura.team_bound && aura.charges > 0 {
+            (0..3)
+                .map(|slot| PetRef {
+                    team: aura.target.team,
+                    slot,
+                })
+                .collect()
+        } else {
+            vec![aura.target]
+        };
+        let Some(states) = self.catalog.ability_states.get(&aura.ability) else {
+            return;
+        };
+        for pet in targets {
             for (state, value) in states {
-                *self
-                    .battle
-                    .pet_mut(aura.target)
-                    .states
-                    .entry(*state)
-                    .or_default() += value * sign;
+                let negative_weather =
+                    *value < 0 || matches!(*state, 21 | 22 | 34 | 36 | 52 | 64 | 82);
+                if aura.weather && negative_weather && self.state(pet, "Passive_Elemental") != 0 {
+                    continue;
+                }
+                *self.battle.pet_mut(pet).states.entry(*state).or_default() += value;
+                aura.state_deltas.push((pet, *state, *value));
             }
+            self.refresh_max_health(pet);
         }
+    }
+    fn refresh_max_health(&mut self, pet: PetRef) {
+        let multiplier = self.percent(pet, "Mod_MaxHealthPercent");
+        let max = (f64::from(self.battle.pet(pet).base_health) * multiplier)
+            .floor()
+            .max(1.0) as i32;
+        let data = self.battle.pet_mut(pet);
+        data.stats.health = max;
+        data.health = data.health.min(max);
     }
     fn finish_passives(&mut self) -> Result<(), String> {
         for team in 0..2 {
