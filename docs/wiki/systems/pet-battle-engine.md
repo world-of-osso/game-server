@@ -49,9 +49,13 @@ Weather is one global aura, not six independently ticking copies. Its exact appl
 
 Current data distinguishes Vicious Fang156/Huge Fang930 ramp-on-hit from other ramp-on-use descriptions. Tail Sweep122 picks first/last conditional branches. Unknown kill routing is rejected rather than treating every135 row as self-kill. Source fields and per-property tests are linked in the [coverage report](../../pet-battle-effect-coverage.md).
 
+### Effect continuation — petbattle-effects2
+
+Read-only hosted-map spawn/species joins rank99 wild ability candidates; the [coverage report](../../pet-battle-effect-coverage.md) owns exact counts and remaining blockers. New paths include last-hit healing, lower-health/speed/state bonuses, charged attacks, guaranteed accuracy, typed bench heals and nonlethal attacks. Three-row team attacks follow the actual active slot instead of assuming slot0. Cyclone189 is enemy-team-bound through swaps and object-reset cleanup; Stench527/1010 addresses each enemy separately. Leech Life383 alone runs its healing/state event2 immediately after its successful damage row; generic reactive dispatch remains excluded.
+
 ### Limits
 
-40 property handlers reference2605/2829 rows (92.08%); this is **not** executable or all-row behavioral coverage. The [matrix](../../pet-battle-effect-coverage.md) records recursive admission separately.64 unsupported IDs, unknown OverrideIndex/target routing, most object/special-stat auras and proc events1..4/9/12 remain rejected. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. The separate wild consumer has bounded wire/UI integration; this is not a full Retail parity claim.
+Handler references are **not** executable or all-row behavioral coverage. The [matrix](../../pet-battle-effect-coverage.md) records recursive admission separately.49 unsupported IDs, unknown OverrideIndex/target routing, most object/special-stat auras and proc events1..4/9/12 (except bounded Leech Life383) remain rejected. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. The separate wild consumer has bounded wire/UI integration; this is not a full Retail parity claim.
 
 ## Wild runtime consumer — verified 2026-10-10
 `crates/server/src/wild_pet_battles.rs` wraps the immutable turn library with authenticated account loadouts, wild creature claims, seeded RNG, trap decisions and persisted rewards. It reads species metadata/display overrides/visuals and pet XP thresholds already imported into canonical world.db; no reimport is needed for the current branch. [Wild contract](../../specs/wild-pet-battles.md) owns requirements and exact acceptance.
