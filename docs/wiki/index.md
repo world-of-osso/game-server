@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Disenchant](systems/disenchant.md) — Retail bag-item cast/loot pipeline and bounded native proof.
+
 ## October 9 reconciliation
 
 - [Deployment](../deploy.md) — sakuin NixOS unit/state SSOT; layout `0dcaa23`, bookworm compatibility `6bfd7b6`. Desktop/local workflows are private development.

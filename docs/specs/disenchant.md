@@ -3,11 +3,11 @@
 Spell13262/effect99 consumes an owned bag item and opens personal material loot. See [implementation](../wiki/systems/disenchant.md).
 
 ## What it must do
-- [ ] Validate owned Retail bag GUID, eligible ItemDisenchantLoot metadata, and learned Disenchant at cast start and completion.
-- [ ] Compare authentic SkillRequired generically; current166 rows all require0. No invented skill thresholds or synthetic low-skill test.
-- [ ] Destroy an eligible uncommon unbound BoE, roll its TDB1210.26091 entry, and expose materials to LootFrame/manual or automatic taking.
-- [ ] Persist disposal appearance collection and item removal in one inventory transaction, including unbound items; survive redb reopen.
-- [ ] Refuse a grey item with CantBeDisenchanted, and a caster without Enchanting with NotKnown; retain the item.
+- [x] Validate owned Retail bag GUID, eligible ItemDisenchantLoot metadata, and learned Disenchant at cast start and completion.
+- [x] Compare authentic SkillRequired generically; current166 rows all require0. No invented skill thresholds or synthetic low-skill test.
+- [x] Destroy an eligible uncommon unbound BoE, roll its TDB1210.26091 entry, and expose materials to LootFrame/manual or automatic taking.
+- [x] Persist disposal appearance collection and item removal in one inventory transaction, including unbound items; survive redb reopen.
+- [x] Refuse a grey item with CantBeDisenchanted, and a caster without Enchanting with NotKnown; retain the item.
 
 ## How it works
 - [Disenchant pipeline and provenance](../wiki/systems/disenchant.md)
@@ -23,7 +23,7 @@ Spell13262/effect99 consumes an owned bag item and opens personal material loot.
 - `crates/server/src/spell_cast/disenchant_tests.rs`: real727/25, refusal, completion ownership, automatic loot and reopen.
 
 ## Known gaps (current cycle)
-- [ ] Native targeted tests pending.
+No current gameplay test gap; native rendered/client integration and full-suite proof are not claimed.
 
 ## Out of scope
 - Scrap, source-aware wardrobe state, item bonus-list quality/level overrides and ItemCurrencyCost-only eligibility; existing inventory model does not provide these inputs.
