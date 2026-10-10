@@ -9,11 +9,13 @@ use crate::grid_activity::GridDormant;
 use crate::ground::{GroundMap, GroundProbe};
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::maps::InMap;
+use crate::maps::store::{InstanceType, MapStore};
 use crate::navigation::{Goal, MoveRequest, Navigation, Step};
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
 use shared::casting::CastState;
 use shared::ground::STEP_UP_HEIGHT;
+use std::time::Duration;
 
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
@@ -24,6 +26,15 @@ const LEASH_DISTANCE: f32 = 40.0;
 /// Horizontal distance a chaser closes to (yards), inside the 5 yard
 /// melee range (`ATTACK_DISTANCE`) so auto-attacks land.
 const CHASE_REACH: f32 = 2.0;
+/// TrinityCore a352b1fa `CREATURE_NOPATH_EVADE_TIME` (CreatureData.h).
+const NO_PATH_EVADE_TIME: Duration = Duration::from_secs(5);
+
+/// `Creature::SetCannotReachTarget`: continuous failed reachability for one chase.
+#[derive(Component)]
+pub(crate) struct CannotReachTarget {
+    target: u64,
+    elapsed: Duration,
+}
 /// Idle pause range in seconds after reaching a wander destination.
 const IDLE_MIN_SECS: f32 = 2.0;
 const IDLE_MAX_SECS: f32 = 5.0;
@@ -47,12 +58,19 @@ pub struct CreatureAiPlugin;
 
 impl Plugin for CreatureAiPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<MapStore>();
         app.add_systems(
             FixedUpdate,
             (
                 wander_system,
                 (waypoint_system, formation_system).chain(),
-                (chase_system, leash_check_system, return_to_spawn_system).chain(),
+                (
+                    chase_system,
+                    no_path_evade_system,
+                    leash_check_system,
+                    return_to_spawn_system,
+                )
+                    .chain(),
                 confused_movement_system,
                 follow_owner_system,
                 pet_motion_system,
@@ -714,8 +732,18 @@ pub(crate) fn chase_system(
 ) {
     let dt = time.delta_secs();
     let targets = victim_positions(&mut units);
-    for (entity, mut pos, spawn, state, cast, mods, map, bearing, combat_move_disabled) in
-        &mut units.p0()
+    for (
+        entity,
+        mut pos,
+        spawn,
+        state,
+        cast,
+        mods,
+        map,
+        bearing,
+        combat_move_disabled,
+        cannot_reach,
+    ) in &mut units.p0()
     {
         let CreatureState::Pursuing { target } = *state else {
             continue;
@@ -750,14 +778,20 @@ pub(crate) fn chase_system(
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);
-                    commands.queue(move |world: &mut World| {
-                        crate::creature_aggro::enter_evade_mode(world, entity)
-                    });
+                    if cannot_reach.is_none_or(|blocked| blocked.target != target) {
+                        commands.entity(entity).insert(CannotReachTarget {
+                            target,
+                            elapsed: Duration::ZERO,
+                        });
+                    }
                     continue;
                 }
             },
             _ => chase_step(*pos, target_pos, run_speed * dt),
         };
+        if cannot_reach.is_some() {
+            commands.entity(entity).remove::<CannotReachTarget>();
+        }
         if next_position != *pos {
             let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
             next_position.y = run_ground(
@@ -784,7 +818,48 @@ type Chaser = (
     Option<&'static InMap>,
     Bearing,
     Option<&'static crate::scripted_ai::smart_ai::CombatMovementDisabled>,
+    Option<&'static CannotReachTarget>,
 );
+
+/// `Creature::Update`: no-path evade after five seconds, never on raid maps.
+/// Reachable paths remove the flag; a new chase records a fresh timeout.
+fn no_path_evade_system(
+    time: Res<Time>,
+    maps: Res<MapStore>,
+    mut blocked: Query<
+        (
+            Entity,
+            &mut CannotReachTarget,
+            &CreatureState,
+            Option<&InMap>,
+        ),
+        ActiveUncontrolled,
+    >,
+    mut commands: Commands,
+) {
+    for (entity, mut blocked, state, map) in &mut blocked {
+        if *state
+            != (CreatureState::Pursuing {
+                target: blocked.target,
+            })
+        {
+            commands.entity(entity).remove::<CannotReachTarget>();
+            continue;
+        }
+        if map
+            .and_then(|map| maps.map(map.map_id))
+            .is_some_and(|map| map.instance_type == InstanceType::Raid)
+        {
+            continue;
+        }
+        blocked.elapsed += time.delta();
+        if blocked.elapsed >= NO_PATH_EVADE_TIME {
+            commands.queue(move |world: &mut World| {
+                crate::creature_aggro::enter_evade_mode(world, entity);
+            });
+        }
+    }
+}
 
 /// Where each chased unit stands at the start of the chase step. A victim may be a
 /// creature that moves in the same step (a soldier and the worg it fights).
