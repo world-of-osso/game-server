@@ -196,7 +196,7 @@ fn dummy8_provoke_rejects_foreign_statue_and_ordinary_ally_before_cooldown() {
                 .world()
                 .get::<super::SpellHistory>(h.caster)
                 .unwrap()
-                .cooldowns
+                .spell_ready_at
                 .contains_key(&115546)
         );
     }
