@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-10
 
-Source: game-server spell-guardians code revision `e0c73d5`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
+Source: game-server spell-guardians code revision `a3e37621eefe8c23c34cbbce5c4067f7759a194d`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
 
 ## Scope and classification
 
