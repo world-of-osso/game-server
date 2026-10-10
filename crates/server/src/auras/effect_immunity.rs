@@ -1,6 +1,10 @@
 //! TC a352b1fa SpellInfo.cpp:3555/3804, Unit.cpp:7934:
 //! aura37 MiscValue is a SpellEffects ID, independent of school/mechanic/positivity.
 use super::{ActiveAuras, handlers};
+
+const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
+/// TrinityCore a352b1fa DBCEnums.h:2418.
+const EFFECT_NO_IMMUNITY: u32 = 0x0000_0001;
 use crate::spell_info::{SpellEffect, SpellInfo};
 use bevy::prelude::*;
 
@@ -11,7 +15,9 @@ pub(crate) fn blocks_effect(
     effect: &SpellEffect,
 ) -> bool {
     // SPELL_ATTR0_NO_IMMUNITIES and SpellEffectAttributes::NoImmunity (DBCEnums.h).
-    if super::attributes(spell, 0) & 0x2000_0000 != 0 || effect.attributes & 1 != 0 {
+    if super::attributes(spell, 0) & ATTR0_NO_IMMUNITIES != 0
+        || effect.attributes & EFFECT_NO_IMMUNITY != 0
+    {
         return false;
     }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
