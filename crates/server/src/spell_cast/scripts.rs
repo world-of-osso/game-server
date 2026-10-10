@@ -342,17 +342,27 @@ fn pyre(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         .get(PYRE_DAMAGE)
         .expect("Pyre requires catalog damage 357212")
         .clone();
-    let effect = &child.effects[0];
-    let radius = super::targets::radius(effect, 1);
+    let mut plan = pyre_explosion_plan(world, caster, &child, center);
+    super::hit::remove_defended_targets(world, caster, &child, &mut plan);
+    super::missiles::launch(world, caster, &child, plan, depth + 1);
+}
+
+fn pyre_explosion_plan(
+    world: &mut World,
+    caster: Entity,
+    child: &SpellInfo,
+    center: Vec3,
+) -> super::TargetPlan {
+    let radius = super::targets::radius(&child.effects[0], 1);
     let units = super::targets::area_units(
         world,
         caster,
         center,
         radius,
         Relation::Enemy,
-        super::max_targets(&child),
+        super::max_targets(child),
     );
-    let mut plan = vec![super::PlannedEffect {
+    vec![super::PlannedEffect {
         index: 0,
         units,
         dest: Some(super::targets::Dest {
@@ -360,9 +370,7 @@ fn pyre(world: &mut World, caster: Entity, target: Entity, depth: u8) {
             orientation: super::targets::orientation(world, caster),
         }),
         chain_multipliers: Vec::new(),
-    }];
-    super::hit::remove_defended_targets(world, caster, &child, &mut plan);
-    super::missiles::launch(world, caster, &child, plan, depth + 1);
+    }]
 }
 
 /// Retail 100784/261917: rank two reduces Rising Sun Kick and Fists of Fury
@@ -408,6 +416,23 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
     let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
         return;
     };
+    let (charges, remaining_ms) =
+        reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
+    if let Some(charges) = charges {
+        super::send_charges(world, caster, &charges, now);
+    }
+    if let Some(remaining_ms) = remaining_ms {
+        send_reduced_cooldown(world, caster, spell_id, remaining_ms);
+    }
+}
+
+fn reduce_running_timers(
+    history: &mut super::SpellHistory,
+    charge_category: u32,
+    spell_id: u32,
+    now: f64,
+    seconds: f64,
+) -> (Option<super::ChargeState>, Option<u32>) {
     let charges = history
         .charges
         .get_mut(&charge_category)
@@ -425,22 +450,40 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
             *ready = (*ready - seconds).max(now);
             ((*ready - now) * 1000.0).round() as u32
         });
-    if let Some(charges) = charges {
-        super::send_charges(world, caster, &charges, now);
-    }
-    if let Some(remaining_ms) = remaining_ms {
-        super::send_to_owner(
-            world,
-            caster,
-            shared::protocol::SpellCooldownUpdate {
-                spell_id,
-                category: 0,
-                duration_ms: remaining_ms,
-                remaining_ms,
-                is_gcd: false,
-            },
-        );
-    }
+    (charges, remaining_ms)
+}
+
+/// Keep the full cooldown duration separate from remaining time: the client
+/// computes its sweep from remaining/duration and must not restart it at100%.
+fn send_reduced_cooldown(world: &mut World, caster: Entity, spell_id: u32, remaining_ms: u32) {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .expect("running cooldown spell must be in the catalog");
+    let base = spell
+        .cooldowns
+        .as_ref()
+        .map_or(0, |cooldown| cooldown.recovery_ms);
+    let duration_ms = super::modify(
+        world,
+        caster,
+        spell,
+        crate::auras::spell_mods::SpellModOp::Cooldown,
+        base as f32,
+    )
+    .max(0.0)
+    .round() as u32;
+    super::send_to_owner(
+        world,
+        caster,
+        shared::protocol::SpellCooldownUpdate {
+            spell_id,
+            category: 0,
+            duration_ms,
+            remaining_ms,
+            is_gcd: false,
+        },
+    );
 }
 
 /// TC a352b1fa spell_priest.cpp:3070-3125,5546, spell_pri_penance:
