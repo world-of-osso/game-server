@@ -239,6 +239,27 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
+### Seventh batch: TDB-routed Retail derivations
+
+Implementation [batch7.rs](../../../crates/server/src/spell_cast/scripts/batch7.rs), Survival lifecycle in [aura scripts](../../../crates/server/src/auras/scripts.rs); [bounded contract](../../specs/spell-dummy-scripts.md#seventh-batch-locally-derived-paths). TDB1210.26091 registrations route investigation, not behavior inference from names alone. Across the172 ranked roots,88 have exact script bindings, one has a proc override and four have linked rows. No spell_bonus_data table exists: local Mainline12.1.0.69933 SpellEffect SP/AP/scaling/resource coefficients provide numerical equivalents. Pinned TC a352b1fa hooks plus local descriptions/effect chains derive the selected paths;217 CSV rows across38 IDs match read-only SQLite with no semantic drift.
+
+| Root | Runtime hook / source | Retained boundary |
+|---|---|---|
+|167105 Colossus Smash|After damage0, apply only208086 aura271; ordinary caster-owned damage multiplier and expiry execute it.|Child343/self marker, soft cap and optional talents.|
+|61336 Survival Instincts|Aura apply/remove owns50322 effect0, excluding its unknown Dummy2.|Parent marker/child Dummy2; no full Druid-form parity.|
+|206930 Heart Strike|Dummy0 on each native chain target,221536 gate,210738 energize.|Rank316575, extra mirrors and native chain front-arc limit.|
+|194509 Radiance|Spell-owned native heal plan, s3 additional cap; stable owned-Atonement priority within injured allies.|Actual Atonement duration/application; raid/pet priority.|
+|85288 Raging Blow|Root s1 roll with383854,280270 application, restore one latest charge and notify owner.|Marker may be consumed by root proc; other reset talents.|
+|190411 Whirlwind|Caster Dummy1 before weapon children; select count from Dummy0 native area, generate modified280715 and apply85739 maximum stacks.|Cleave copies/consumption and damage soft cap.|
+|360995 Verdant Embrace|AfterCast Panacea387761 gates387763 self heal.|Flight, primary heal and root Dummy0.|
+|1822 Rake|Initial damage and stun hooks require stealth plus231052 or405834, reading s4.|Child periodic snapshot remains open; s4 stays counted.|
+
+Native proof:21 batch7 functions pass at Rust`81c2bf6`, including100 Survival variance samples, two real Raging casts preserving oldest recharge, both Rake rank IDs, Whirlwind four-stack catalog cap, ownership/rank/radius/expiry exclusions. Format/check exit0, warning-free. The requested full spell_cast filter ran **once**,244/245 at`df14af6`: Survival's fixture omitted Bear5487 effect12's existing3% Fire reduction, creating random overlapping-bound failures. Instrumented RED reproduced it; corrected expected97%/48.5% damage multipliers pass in the100-sample fixture and21/21 batch. Production scripts did not change after that broad run; the other244 passing functions remain valid. No repeated full filter or fabricated successful245/245 claim. Parent owns integration acceptance; no realm/full-project/rotation certification.
+
+Census baseline172 reproduced; after172, reviewed/partial/deferred63→70, un-derived109→102. E3 stays117 IDs/125 memberships: Raging's root E3 closes while Survival exposes its child's unresolved Dummy2. Latent child markers increase a4 from57/65 to60/68 (Colossus, Raging, Whirlwind); a226 stays14/15. Gate memberships8/4/5 and scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships unchanged. No no-op registrations or skipped-child concealment.
+
+Reap1226019→1225827 is derived but child selectors87/134 need proper projectile geometry; Provoke115546→116189 is derived but effect114 lacks real taunt execution and statue ownership remains separate. Neither inert bridge was added. Durable source/archive extracts, schema-aware172-root mining, before/after census and proof ledger: `game-engine/data/diagnostics/spell-dummy7-2026-10-10/`; `/home/osso/.worktrees/handoff-spell-dummy7.md` records publication/release status.
+
 ### Sixth batch: local Retail rows
 
 Implementation [batch6.rs](../../../crates/server/src/spell_cast/scripts/batch6.rs); [bounded contract](../../specs/spell-dummy-scripts.md#sixth-batch-locally-derived-paths). Eight ranked paths plus supplementary Ice Lance, emphasizing Balance/Resto, Ret, Brewmaster, Survival, Shadow and Frost. Local Mainline12.1.0.69933 DB2 descriptions/effects are checked against read-only SQLite; description newline normalization is not semantic drift. No external sources, invented IDs or world.db imports.
