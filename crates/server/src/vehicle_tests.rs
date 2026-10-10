@@ -10,7 +10,7 @@ use shared::components::{Health, Mounted, MovementControl, Position, Rotation, V
 #[test]
 fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
     let conn = rusqlite::Connection::open_with_flags(
-        crate::spell_info::WORLD_DB_PATH,
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();

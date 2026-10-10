@@ -269,7 +269,11 @@ fn receive_requests(world: &mut World) {
         (With<crate::auth::Authenticated>,With<crate::auth::InWorld>)>().iter_mut(world)
         .flat_map(|(link,mut receiver)|receiver.receive().map(|request|(link.0,request.driver)).collect::<Vec<_>>()).collect();
     for (passenger, driver) in boards {
-        if let Err(error) = board(world, passenger, Entity::from_bits(driver)) {
+        let Some(driver) = Entity::try_from_bits(driver) else {
+            warn!("Vehicle boarding rejected: invalid driver identity");
+            continue;
+        };
+        if let Err(error) = board(world, passenger, driver) {
             warn!("Vehicle boarding rejected: {error}");
         }
     }
