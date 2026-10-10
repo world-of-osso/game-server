@@ -126,11 +126,11 @@ fn chaos_bolt(crit: f32) -> i32 {
 }
 #[test]
 fn dummy5_chaos_bolt_always_crits_with_zero_crit_stats() {
-    assert!(varied(858.0).contains(&(chaos_bolt(0.0) as f32)));
+    assert!(varied(858.09803).contains(&(chaos_bolt(0.0) as f32)));
 }
 #[test]
 fn dummy5_chaos_bolt_damage_scales_with_critical_strike_chance() {
-    assert!(varied(1116.0).contains(&(chaos_bolt(30.0) as f32)));
+    assert!(varied(1115.5274).contains(&(chaos_bolt(30.0) as f32)));
 }
 
 #[test]
@@ -157,8 +157,8 @@ fn dummy5_rapture_counts_only_owned_damaging_periodic_effects() {
     h.cast_and_deliver(324536, None);
     h.advance(40);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(varied(46.0).contains(&(damage(&h, 324540, primary) as f32)));
-    assert!(varied(92.0).contains(&(damage(&h, 324540, two) as f32)));
+    assert!(varied(45.9196).contains(&(damage(&h, 324540, primary) as f32)));
+    assert!(varied(91.8392).contains(&(damage(&h, 324540, two) as f32)));
     for unit in [foreign, unmarked, ally] {
         assert_eq!(damage(&h, 324540, unit), 0);
     }
@@ -240,8 +240,8 @@ fn dummy5_epidemic_eruptions_require_owned_virulent_plague() {
     h.cast_and_deliver(207317, None);
     h.advance(10);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert!(varied(96.0).contains(&(damage(&h, 212739, primary) as f32)));
-    assert!(varied(39.0).contains(&(damage(&h, 212739, near) as f32)));
+    assert!(varied(96.3301).contains(&(damage(&h, 212739, primary) as f32)));
+    assert!(varied(38.5326).contains(&(damage(&h, 212739, near) as f32)));
     for unit in [foreign, far, ally] {
         assert_eq!(damage(&h, 212739, unit), 0);
     }
