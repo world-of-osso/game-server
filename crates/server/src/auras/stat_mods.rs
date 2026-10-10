@@ -48,11 +48,15 @@ pub struct AuraStatMods {
     /// strongest MOD_DECREASE_SPEED 33; 0 while rooted or stunned (MOD_ROOT 26, MOD_ROOT_2
     /// 455, MOD_STUN 12).
     pub movement_speed: f32,
+    /// REDUCE_PUSHBACK 149: additive percent, clamped when damage is received.
+    pub pushback_reduction_pct: f32,
     /// Flight speed multiplier (`UpdateSpeed(MOVE_FLIGHT)`, Unit.cpp:8846-8850): under a
     /// MOUNTED 78 aura strongest MOD_INCREASE_MOUNTED_FLIGHT_SPEED 207 × every
     /// MOD_MOUNTED_FLIGHT_SPEED_ALWAYS 208; then the slow and immobile rules of
     /// `movement_speed`. Unmounted flight speed auras (206) are not modelled.
     pub flight_speed: f32,
+    /// Existing swim modifiers, normalized against the swim base speed for aura 191.
+    pub swim_speed: f32,
     /// MOD_HIT_CHANCE 54, summed percent (`GetTotalAuraModifier` in
     /// `Unit::MeleeSpellMissChance`).
     pub melee_hit_chance_pct: f32,
@@ -90,7 +94,9 @@ impl Default for AuraStatMods {
             max_power_flat: Vec::new(),
             charged_power_points: Vec::new(),
             movement_speed: 1.0,
+            pushback_reduction_pct: 0.0,
             flight_speed: 1.0,
+            swim_speed: 1.0,
             melee_hit_chance_pct: 0.0,
             attack_cast_time_mult: 1.0,
             water_breathing: false,
@@ -194,6 +200,8 @@ struct Accumulator {
     fastest_flight: f32,
     always_flight: f32,
     slowest: f32,
+    /// Strongest positive absolute speed cap (yards/second), not a percent.
+    normal_speed_cap: f32,
     immobile: bool,
     /// MOD_CASTING_SPEED_NOT_STACK: strongest only.
     haste_not_stack: f32,
@@ -219,6 +227,17 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     } else {
         (pct(acc.fastest) * acc.always, 1.0)
     };
+    // Unit::UpdateSpeed applies normalization before the strongest slow.
+    // Both the server's run and flight base speeds are 7 yards/second.
+    const BASE_SPEED: f32 = 7.0;
+    const BASE_SWIM_SPEED: f32 = 4.722_222;
+    let capped = |speed: f32, base: f32| {
+        if acc.normal_speed_cap > 0.0 {
+            speed.min(acc.normal_speed_cap / base)
+        } else {
+            speed
+        }
+    };
     let slowed = |speed: f32| {
         if acc.immobile {
             0.0
@@ -226,8 +245,9 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
             (speed * pct(acc.slowest)).max(0.0)
         }
     };
-    acc.combat.movement_speed = slowed(run);
-    acc.combat.flight_speed = slowed(flight);
+    acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
+    acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
+    acc.combat.swim_speed = slowed(capped(run, BASE_SWIM_SPEED));
     acc.stats.haste_pct += acc.haste_not_stack;
     (acc.stats, acc.combat)
 }
@@ -299,6 +319,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
+            USE_NORMAL_MOVEMENT_SPEED => acc.normal_speed_cap = acc.normal_speed_cap.max(amount),
+            REDUCE_PUSHBACK => combat.pushback_reduction_pct += amount,
             MOUNTED => acc.mounted = true,
             MOD_INCREASE_MOUNTED_SPEED => acc.fastest_mounted = acc.fastest_mounted.max(amount),
             MOD_MOUNTED_SPEED_ALWAYS => acc.always_mounted *= pct(amount),

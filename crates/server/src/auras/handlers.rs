@@ -17,6 +17,8 @@ pub enum AuraKind {
     Absorb,
     /// Negates damage of its school mask.
     SchoolImmunity,
+    /// Rejects matching spell/effect mechanics and removes matching auras.
+    MechanicImmunity,
     /// Damage taken from the aura's caster (`damage_taken_multiplier`).
     DamageFromCaster,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
@@ -95,11 +97,13 @@ pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
+pub const REDUCE_PUSHBACK: u32 = 149;
 pub const MOD_WATER_BREATHING: u32 = 155;
 pub const MOD_HEALTH_REGEN_IN_COMBAT: u32 = 161;
 pub const MOD_TOTAL_STAT_PERCENTAGE: u32 = 137;
 pub const MOD_MELEE_HASTE: u32 = 138;
 pub const MOD_RANGED_HASTE: u32 = 140;
+pub const USE_NORMAL_MOVEMENT_SPEED: u32 = 191;
 pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
 pub const LEARN_SPELL: u32 = 195;
@@ -156,6 +160,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT
         | MOD_SPEED_ALWAYS
+        | USE_NORMAL_MOVEMENT_SPEED
+        | REDUCE_PUSHBACK
         | MOD_INCREASE_HEALTH
         | MOD_INCREASE_HEALTH_PERCENT
         | MOD_HEALING_DONE_PERCENT
@@ -206,11 +212,11 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
+        MECHANIC_IMMUNITY => MechanicImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
-        MECHANIC_IMMUNITY
-        | MOD_ATTACKER_MELEE_HIT_CHANCE
+        MOD_ATTACKER_MELEE_HIT_CHANCE
         | MOD_ATTACKER_RANGED_HIT_CHANCE
         | MOD_ATTACKER_SPELL_HIT_CHANCE
         | DEFLECT_SPELLS

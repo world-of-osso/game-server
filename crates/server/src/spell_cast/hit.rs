@@ -6,10 +6,9 @@ use bevy::prelude::*;
 use shared::protocol::{CombatLogKind, MissKind};
 
 use super::{TargetPlan, attributes, cast_event, log_event, targets};
-use crate::auras::{ActiveAuras, handlers};
+use crate::auras::{ActiveAuras, handlers, mechanic_immunity};
 use crate::spell_info::{SpellInfo, SpellStore};
 
-const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const DEFENSE_MAGIC: u32 = 1;
@@ -60,9 +59,7 @@ fn remove_immune_effect_targets(
             if misses.iter().any(|(missed, _)| missed == unit) {
                 return false;
             }
-            if attributes(spell, 0) & ATTR0_NO_IMMUNITIES == 0
-                && immune_to_mechanic(world, *unit, effect.mechanic)
-            {
+            if mechanic_immunity::blocks_mechanic(world, *unit, spell, effect.mechanic) {
                 immune_units.push(*unit);
                 return false;
             }
@@ -72,16 +69,6 @@ fn remove_immune_effect_targets(
     immune_units.sort_unstable();
     immune_units.dedup();
     immune_units
-}
-
-fn immune_to_mechanic(world: &World, unit: Entity, mechanic: u32) -> bool {
-    mechanic != 0
-        && world.get::<ActiveAuras>(unit).is_some_and(|auras| {
-            auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
-                effect.aura_type == handlers::MECHANIC_IMMUNITY
-                    && effect.misc_values[0] as u32 == mechanic
-            })
-        })
 }
 
 fn roll_defense(
@@ -94,12 +81,7 @@ fn roll_defense(
     if negative == 0 {
         return None;
     }
-    let mechanic = spell
-        .categories
-        .as_ref()
-        .map_or(0, |categories| categories.mechanic);
-    if attributes(spell, 0) & ATTR0_NO_IMMUNITIES == 0 && immune_to_mechanic(world, unit, mechanic)
-    {
+    if mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
         return Some(MissKind::Immune);
     }
     if attributes(spell, 3) & ATTR3_NO_AVOIDANCE != 0 {

@@ -125,7 +125,7 @@ fn kobold_attacks(h: &mut Harness) {
     panic!("the kobold never hit the mage");
 }
 
-/// Cast Polymorph at the kobold and let the 1.7 s cast finish.
+/// Let Polymorph finish, including up to two 500 ms damage pushbacks.
 fn cast_polymorph(h: &mut Harness) {
     h.cast_and_deliver(POLYMORPH, Some(h.npc));
     assert!(
@@ -133,7 +133,13 @@ fn cast_polymorph(h: &mut Harness) {
         "{:?}",
         h.inbox.failed
     );
-    h.advance(POLYMORPH_CAST_FRAMES + 2);
+    const MAX_PUSHBACK_FRAMES: usize = 1000 / 50;
+    for _ in 0..POLYMORPH_CAST_FRAMES + MAX_PUSHBACK_FRAMES + 2 {
+        if h.app.world().get::<CastState>(h.caster).is_none() {
+            break;
+        }
+        h.advance(1);
+    }
     assert!(polymorphed(h), "{:?}", h.inbox.failed);
 }
 

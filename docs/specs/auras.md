@@ -17,6 +17,9 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] Polymorphed creatures (`SPELL_SPECIFIC_MAGE_POLYMORPH`) regenerate a third of their max health every 2 s while engaged; creatures with `RegenHealth` do so whenever they are not engaged.
 - [x] Apply ADD_FLAT/PCT_MODIFIER (class mask) and label modifiers (`SpellLabel`) to cast time, duration, cooldown, GCD, costs, range, points, coefficients, crit, damage/heal and proc/aura fields.
 - [x] Apply `RequiredAuraSpellID` cost gating, charge-category auras (411/453/454), damage/heal multipliers, absorbs, school immunity, crit, spell haste, power regen and movement speed.
+- [x] MECHANIC_IMMUNITY 77 uses MiscValue to reject matching spell-category or effect mechanics; applying immunity removes existing matching auras through normal removal hooks. Removing immunity restores susceptibility.
+- [x] REDUCE_PUSHBACK 149 sums aura percentages (bounded to 0–100%) to reduce damage pushback for casts and channels; positive non-periodic damage causes at most two pushbacks. Fully protected casts consume no pushback count.
+- [x] USE_NORMAL_MOVEMENT_SPEED 191 caps run, swim and flight at the strongest positive aura amount in yards/second before slows; roots/stuns still stop movement. Removing the aura restores uncapped speed.
 - [x] Auto-apply passive known spells; remove them when unlearned.
 - [x] Fold aura stat changes into `stats::StatModifiers` (applied once, in `CharacterStats`); keep combat multipliers in `AuraStatMods`.
 - [x] Replicate `UnitAuras` on every player and NPC only when the aura set changes, with `remaining_ms` at send time; log `AuraApplied`/`AuraRefreshed`/`AuraRemoved`/`Dispel` to source and target owners.

@@ -519,6 +519,13 @@ fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLog
     }
 }
 
+pub(crate) fn log_mechanic_immune(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    log_event(
+        world,
+        log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune)),
+    );
+}
+
 fn mark_dirty(world: &World, entity: Entity) {
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(entity);

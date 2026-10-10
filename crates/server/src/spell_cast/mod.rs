@@ -518,7 +518,7 @@ fn cast_event(
     }
 }
 
-fn mark_dirty(world: &World, entity: Entity) {
+pub(crate) fn mark_dirty(world: &World, entity: Entity) {
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(entity);
     }

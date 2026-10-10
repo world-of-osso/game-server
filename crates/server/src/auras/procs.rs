@@ -170,6 +170,9 @@ pub(super) fn process_aura_events(world: &mut World) {
     for event in events {
         handle_side(world, event.actor, event.target, event.actor_mask, &event);
         if let Some(target) = event.target {
+            if event.damage > 0.0 && !event.periodic {
+                super::reduce_cast_pushback(world, target);
+            }
             handle_side(world, target, Some(event.actor), event.target_mask, &event);
         }
     }
