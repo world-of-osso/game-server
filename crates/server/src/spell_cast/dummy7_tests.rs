@@ -152,7 +152,7 @@ fn dummy7_heart_strike_without_heartbreaker_has_no_bonus() {
 
 #[test]
 fn dummy7_radiance_heals_primary_and_four_injured_allies_inside_catalog_radius() {
-    let mut h = harness(Vec::new(), &[194509], 5).unwrap();
+    let mut h = harness(Vec::new(), &[194509, 194384], 5).unwrap();
     let primary = spawn_player(&mut h.app, 5, 3.0); // Healthy primary still selected.
     let healthy = spawn_player(&mut h.app, 5, 4.0);
     let injured: Vec<Entity> = (0..5)
