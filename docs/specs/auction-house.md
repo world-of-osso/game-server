@@ -68,6 +68,7 @@ Auction durations, equal bot/player fees and expiry returns are owned by [bot ec
 
 Behavioral source plus saved evidence; no suites rerun by this docs audit:
 
+- `crates/server/src/auction_house_tests/clock.rs` — real create/bid, injected before/at-deadline sweep via admin clock advance, repeated sweep and reopened persisted seller/buyer mail. [Execution receipts](../wiki/systems/auction-house.md#injected-expiry-clock-2026-10-09); not live expiry acceptance.
 - `crates/server/src/auction_house_tests.rs` — flat auction behavior and `query_300k_listings_under_200ms`; not grouped or network acceptance.
 - `crates/server/src/npc_interaction_tests.rs` — actual auctioneer/session boundary.
 - Shared-protocol `tests/auction_query.rs` — request/result serialization, including grouped fields; serialization does not prove global aggregation.
