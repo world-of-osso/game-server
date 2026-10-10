@@ -32,6 +32,10 @@ TrinityCore **a352b1fa**: ItemHandler.cpp `HandleSwapItem` (130-174, IsBankPos/C
 
 Tests and externally visible contract: [banks spec](../../specs/banks.md). Warband/guild exact-slot operations remain out of scope.
 
+### Closed-bank protocol rejection (2026-10-09)
+
+`8ac442f` proves that `CloseInteraction` followed by a valid character-bank `SwapItem` on InventoryChannel returns `CantDoRightNow` without changing the complete persisted inventory or bank; an open-bank control accepts the same request. This is distinct from BankChannel's `NotInteracting` response. [Inventory contract](../../specs/inventory.md#tests-asserting-this-spec) owns the exact test and persistence assertions; `104ae6a` lands the slice.
+
 ## Openings
 - **Bankers:** they use gossip menu 699 (option type 9 → `NpcRole::Banker`). `bank::send_bank_contents` reacts to `Changed<ActiveInteraction>`.
 - **Vaults:** they open through `UseGameObject` (see [game objects](game-objects.md)). `guild_bank::send_opened_guild_banks` sends the bank, or `NotInGuild`.

@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
-COMMON_SCRIPTS = Path("/syncthing/Sync/Projects/world-of-osso/game-engine/scripts")
+COMMON_SCRIPTS = SCRIPTS.parent.parent / "game-engine/scripts"
 BINARIES = {
     "game-server": "server",
     "game-server-admin": "server",
@@ -120,6 +120,46 @@ def runtime_environment(host, key, running):
 def build(args, tail, depot, native):
     root = args.root.resolve(strict=True)
     host = depot.select_build_host(args.build_host)
+    if args.release and host == "native":
+        raise ValueError(
+            "release artifacts use the bookworm container: --build-host local|desktop"
+        )
+    if args.release:
+        if args.test or args.check or args.features or args.run:
+            raise ValueError(
+                "container release exports support --bin, not test/check/features/run"
+            )
+        spec = importlib.util.spec_from_file_location(
+            "desktop_server_build",
+            Path(depot.__file__).with_name("desktop-server-build.py"),
+        )
+        exporter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(exporter)
+        exporter.build(root, host=host, release=True, binary=args.binary)
+        return 0
+    if host == "native":
+        from native_cargo import native_slot, run_cargo
+
+        lock, _, _ = depot.locked_checkout(root)
+        with lock, native_slot():
+            source = depot.native_source_root(root, "game-server", ("shared-protocol",))
+            code = run_cargo(root, cargo_arguments(args, tail), source_root=source)
+        if code or not args.run:
+            return code
+        # Runtime owns its process lifetime, but does not occupy a compilation slot.
+        return native.execute(
+            root,
+            "server-native",
+            "game-server",
+            [],
+            "local",
+            runtime_args=tail,
+            binary=args.binary,
+            root=root,
+            runtime_cwd=root,
+            environment=runtime_environment(host, "server-native", True),
+            build=False,
+        )
     cache, checkout_key = depot.prepare_checkout_cache(root)
     key = "server-" + checkout_key
     runtime_args = tail if args.run else None
@@ -148,8 +188,8 @@ def build(args, tail, depot, native):
 def parse_arguments(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=SCRIPTS.parent)
-    parser.add_argument("--build-host", choices=("desktop", "local"))
-    parser.add_argument("--save-build-host", choices=("desktop", "local"))
+    parser.add_argument("--build-host", choices=("desktop", "local", "native"))
+    parser.add_argument("--save-build-host", choices=("desktop", "local", "native"))
     parser.add_argument("--release", action="store_true")
     parser.add_argument("--bin", dest="binary", choices=BINARIES)
     parser.add_argument("--features", help="Cargo feature CSV")
