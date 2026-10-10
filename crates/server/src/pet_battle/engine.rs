@@ -201,7 +201,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             } else {
                 1.0
             };
-        (f64::from(data.stats.speed) * self.percent(pet, "Mod_SpeedPercent") * flying)
+        let bonus = data.state(self.catalog.state_id("Stat_Speed").expect("catalog state"));
+        (f64::from(data.stats.speed + bonus) * self.percent(pet, "Mod_SpeedPercent") * flying)
             .floor()
             .max(0.0) as i32
     }
@@ -216,9 +217,10 @@ impl<R: BattleRng> Runtime<'_, R> {
         [first, 1 - first]
     }
     fn execute_round(&mut self, actions: [Action; 2]) -> Result<(), String> {
+        self.trigger_actions(actions, 6)?;
+        self.trigger_all(6)?;
         let order = self.turn_order();
         self.events.push(Event::Order(order));
-        self.trigger_all(6)?;
         // Voluntary swaps precede attacks. Replacement swaps consume no combat round.
         for team in order {
             if let Action::Swap(slot) = actions[team] {
@@ -230,8 +232,28 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         self.tick_auras()?;
         self.trigger_all(7)?;
+        self.trigger_actions(actions, 7)?;
         self.finish_passives()?;
         self.finish_battle();
+        Ok(())
+    }
+    fn trigger_actions(&mut self, actions: [Action; 2], event: u32) -> Result<(), String> {
+        for (team, action) in actions.into_iter().enumerate() {
+            let caster = self.battle.active(team);
+            let ability = self
+                .battle
+                .pet(caster)
+                .continuation
+                .map(|(id, _)| id)
+                .or(match action {
+                    Action::Ability(id) => Some(id),
+                    _ => None,
+                });
+            if let Some(ability) = ability {
+                let target = self.battle.active(1 - team);
+                self.cast_turn(caster, target, ability, 0, event)?;
+            }
+        }
         Ok(())
     }
     fn swap_pet(&mut self, team: usize, slot: usize) -> Result<(), String> {
@@ -310,6 +332,14 @@ impl<R: BattleRng> Runtime<'_, R> {
                 continue;
             }
             for effect in self.catalog.turn_effects(turn.id) {
+                if effect.property == 158 && failed {
+                    break;
+                }
+                if effect.property == 177
+                    && self.battle.pet(target).state(effect.params[0] as u32) != effect.params[1]
+                {
+                    break;
+                }
                 let success = self.execute_effect(caster, target, ability, effect, failed)?;
                 failed |= !success;
             }

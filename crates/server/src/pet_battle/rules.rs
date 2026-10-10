@@ -9,7 +9,7 @@ pub const CRITICAL_MULTIPLIER: f64 = 1.5; // Blizzard5.3 accuracy article.
 pub fn supported_property(property: u32) -> bool {
     matches!(
         property,
-        22 | 23 | 24 | 26 | 31 | 49 | 50 | 52 | 53 | 54 | 63 | 222
+        22 | 23 | 24 | 26 | 27 | 31 | 32 | 49 | 50 | 52 | 53 | 54 | 63 | 79 | 116 | 158 | 177 | 222
     )
 }
 /// Recursive admission: every turn and referenced aura must be executable before RNG draws.
@@ -78,7 +78,7 @@ fn validate_ability_graph(
         }
         for effect in catalog.turn_effects(turn.id) {
             validate_effect(catalog, effect)?;
-            if matches!(effect.property, 24 | 222) && catalog.abilities[&ability].family < 0 {
+            if matches!(effect.property, 24 | 27 | 222) && catalog.abilities[&ability].family < 0 {
                 return Err(format!("ability {ability}: damage has no family"));
             }
             if effect.aura != 0 {
@@ -97,7 +97,18 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         ));
     }
     let supported = match effect.property {
-        22 => p[0] == 0 && p[2..].iter().all(|v| *v == 0),
+        22 => true, // Points fields supply tooltip variables, not an HP operation.
+        27 => {
+            p[0] >= 0
+                && p[2] >= 0
+                && p[3] >= p[0]
+                && (p[4] == 0 || catalog.states.contains_key(&(p[4] as u32)))
+                && p[5] == 0
+        }
+        32 => p[2..].iter().skip(1).all(|v| *v == 0),
+        79 | 177 => catalog.states.contains_key(&(p[0] as u32)),
+        116 => true, // No named parameters; recalculates priority from current speed.
+        158 => p.iter().all(|v| *v == 0),
         24 => p[3..].iter().all(|v| *v == 0),
         222 => p[3..].iter().all(|v| *v == 0) && p[2] >= 0,
         31 => catalog.states.contains_key(&(p[0] as u32)),
