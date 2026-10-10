@@ -163,15 +163,22 @@ impl NavigationMap {
             .map(|(point, &reference)| {
                 // Detour marks the terminal point with ref0, belonging to the final poly.
                 let reference = if reference == 0 { end_ref } else { reference };
-                let mut height = 0.0;
-                // SAFETY: each ref is from the complete corridor; point has three floats.
+                let mut surface = [0.0; 3];
+                // A portal may lie just outside its polygon after float interpolation.
+                // Project onto its detail surface, without a strict inside-only query.
+                // SAFETY: corridor ref is valid; both arrays have three floats.
                 unsafe {
                     status(
-                        (*self.query).getPolyHeight(reference, point.as_ptr(), &mut height),
-                        "detail corner height",
+                        (*self.query).closestPointOnPoly(
+                            reference,
+                            point.as_ptr(),
+                            surface.as_mut_ptr(),
+                            std::ptr::null_mut(),
+                        ),
+                        "detail corner projection",
                     )?;
                 }
-                Ok(Vec3::new(point[0], height, point[2]))
+                Ok(Vec3::from_array(surface))
             })
             .collect()
     }
