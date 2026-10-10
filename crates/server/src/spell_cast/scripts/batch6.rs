@@ -117,7 +117,7 @@ fn plan_primary_damage(
             PlannedEffect {
                 index,
                 units,
-                dest: targets::effect_dest(world, caster, explicit, effect),
+                dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
                 chain_multipliers,
             }
         })
@@ -210,7 +210,7 @@ pub(super) fn wild_growth_plan(
     vec![PlannedEffect {
         index,
         units,
-        dest: targets::effect_dest(world, caster, explicit, effect),
+        dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
         chain_multipliers: Vec::new(),
     }]
 }
