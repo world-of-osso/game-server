@@ -238,6 +238,44 @@ fn running_moves_at_most_7_0_yards_per_sec() {
 }
 
 #[test]
+fn spell_auras_191_catalog_application_limits_reported_movement() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::harness;
+    use crate::spell_info::SpellStore;
+    const PILLAR_OF_FROST: u32 = 51271;
+    let mut h = harness(Vec::new(), &[PILLAR_OF_FROST], 6).unwrap();
+    let player = spawn_player(h.app.world_mut(), 0.0, 0.0, 0.0);
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(PILLAR_OF_FROST)
+        .unwrap();
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: player,
+            target: player,
+            spell_id: PILLAR_OF_FROST,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+    );
+    let input = reporting(FAR_X, make_input(1.0, 0.0, 0.0));
+    h.app
+        .world_mut()
+        .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
+        })
+        .unwrap();
+    let position = h.app.world().get::<Position>(player).unwrap();
+    let speed = h.app.world().get::<MovementSpeed>(player).unwrap();
+    assert!((speed.0 - 2.0).abs() < 0.0001);
+    assert!((position.x - 2.0 * MAX_INPUT_STEP_SECS).abs() < 0.0001);
+}
+
+#[test]
 fn aura_speed_multiplier_scales_movement() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);

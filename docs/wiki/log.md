@@ -1,6 +1,7 @@
 # Wiki Log
 
 - 2026-10-09 — [Retail auction mail](systems/mail.md#auction-house): server sends structured text tags and invoice fields; native client formats local GlobalStrings, not invented letters. [Contract](../specs/auction-mail-text.md); expiry/reopen RED2 followed by auction GREEN82/0/2, full-workspace proof plus corrected real-character fixtures. Private5510 native inbox text captured; no broad mail-policy change.
+- 2026-10-09 — [Spell auras](systems/auras.md#mechanic-immunity-pushback-and-normalized-movement): data-driven mechanic immunity 77, damage pushback reduction 149 and absolute run/swim/flight cap 191; concrete catalog regression tests. Targeted proof ledger: `/home/osso/.worktrees/handoff-spell-auras.md`; full suite gate belongs to lead. No client change or deployment.
 
 - 2026-10-09 — [Auction expiry](systems/auction-house.md#injected-expiry-clock-2026-10-09): injected ServerClock and existing clock-advance admin path; real posting/bidding and reopened mail regressions. RED a999851:2/2 deadline failures; GREEN ab4cd69:2/2 pass. Full locked workspace gate at ab4cd69:1586 passed/0 failed/60 ignored/1 required 300k timing skip; format pass, no warnings. Exact proof ledger linked in system page. No live claim.
 - 2026-10-09 — [Defensive fixes](../defensives-audit.md): shared melee immunity/absorb handling, matching event outcomes, aura 49 player dodge and scripted Brew health/reduction. Five gap tests enabled; current gate evidence and remaining Blur/Turtle limits live in the audit. No merge or deployment.
