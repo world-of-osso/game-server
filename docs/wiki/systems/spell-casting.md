@@ -237,6 +237,16 @@ Damage and heal side effects:
 - [[combat]] — melee, combat state, death
 - [[networking]] — input ordering, replication dirty queue
 
+## Eleventh batch: local Mainline low-count paths
+
+Implementation in `spell_cast/scripts/batch11.rs` and the existing fixed-field helper; [contract](../../specs/spell-dummy-scripts.md#eleventh-batch-bounded-low-count-paths). Native proof and census pending in `game-engine/data/diagnostics/spell-dummy11-2026-10-10/`.
+
+Local Mainline12.1.0.69933 sources:193315 description-variable338 defines `(clamp(level-10,0,10)*8+195)/275`;228260 names1242173, whose s1/s3 name ten/one1242189 bolts and s2 retains1000 raw Insanity. Native bolt travel/defense remains shared; no guessed inter-bolt cadence/replacement charges.5740 names42223m1*8: duration8000ms, effect2 period1000ms, effect0 radius8yd. Fixed fields reuse the independently clocked batch9 implementation; overlap is not replacement.
+
+184575's native404358 trigger is conditional on403826; script admission no longer grants untalented splash.53595 names88263 for OTHER enemies, conditioned on caster position inside owned26573; field ownership/map/expiry/radius determine that condition. Only the named damage effect executes, not its unknown markers/talent child.
+
+5221's343232/405834 stealth condition derives60% extra damage, double crit chance and343232s1 extra point; earlier bleeding-rank bonus composes.106830 names405233's3000ms bleed.60103/334046 name334168's100% Flame Shock vulnerability. Existing generic aura271 wrongly amplified ALL spells from its owner despite a nonempty class mask; matching now uses existing `class_mask_affects`, preserving unrestricted empty masks and foreign-caster exclusion. Optional Flame Shock spread, weapon-item Flametongue state, Shred405300/Thrash429523 and unknown Dummy markers remain open.
+
 ## Class Dummy scripts
 
 ### Tenth batch: low-count spec paths

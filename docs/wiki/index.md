@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch11](systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths) — eight bounded low-count paths, native tests/census pending; aura271 spell-family specificity.
+
 - [Class spell batch10](systems/spell-casting.md#tenth-batch-low-count-spec-paths) — eight low-count spec paths,11 native functions,170→168 Dummy roots and full40-spec before/after table; talent/transfer/actor gaps retained.
 
 - [Class spell batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks) — nine local Mainline paths, fixed ground pulses/owned marks/shield lifetimes,40-spec census coverage;171→170 Dummy roots, retained range/talent gaps.
