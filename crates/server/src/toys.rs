@@ -33,7 +33,6 @@ fn load_catalog(mut commands: Commands) {
 
 pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
     let toys = toy_store::load(&world.resource::<GameDatabase>().db, account_id);
-    let store = world.resource::<crate::spell_info::SpellStore>();
     ToyCollectionUpdate {
         toys: world
             .resource::<ToyCatalog>()
@@ -43,7 +42,7 @@ pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
                 let mut entry = toy.snapshot.clone();
                 entry.learned = toys.contains_key(&entry.item_id);
                 entry.favourite = toys.get(&entry.item_id).copied().unwrap_or(false);
-                entry.unavailable_reason = toy_catalog::unavailable(toy, store);
+                entry.unavailable_reason = toy_catalog::unavailable(toy, world);
                 entry
             })
             .collect(),
@@ -214,9 +213,7 @@ pub(crate) fn use_toy(
     if !toy_store::load(&world.resource::<GameDatabase>().db, account).contains_key(&item_id) {
         return Err("toy not learned".into());
     }
-    if let Some(reason) =
-        toy_catalog::unavailable(&toy, world.resource::<crate::spell_info::SpellStore>())
-    {
+    if let Some(reason) = toy_catalog::unavailable(&toy, world) {
         return Err(reason);
     }
     check_item_requirements(world, player, item_id)?;

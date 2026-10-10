@@ -1,5 +1,5 @@
 //! Toy.db2 identities, joined to Retail item and spell tables in world.db.
-use crate::spell_info::SpellStore;
+use crate::spell_info::{SpellEffect, SpellStore};
 use bevy::prelude::*;
 use rusqlite::Connection;
 use shared::protocol::ToySnapshot;
@@ -64,14 +64,14 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
 
 /// Registry-backed census and preflight, including reachable triggered spells.
 /// Script aura types without a toy script are not implemented merely by replication.
-pub(crate) fn unsupported_types(store: &SpellStore, spell_id: u32) -> BTreeSet<String> {
+pub(crate) fn unsupported_types(world: &World, spell_id: u32) -> BTreeSet<String> {
     let mut reasons = BTreeSet::new();
-    classify(store, spell_id, 0, &mut BTreeSet::new(), &mut reasons);
+    classify(world, spell_id, 0, &mut BTreeSet::new(), &mut reasons);
     reasons
 }
 
 fn classify(
-    store: &SpellStore,
+    world: &World,
     spell_id: u32,
     depth: u8,
     visiting: &mut BTreeSet<u32>,
@@ -80,7 +80,7 @@ fn classify(
     if !visiting.insert(spell_id) {
         return;
     }
-    let Some(spell) = store.get(spell_id) else {
+    let Some(spell) = world.resource::<SpellStore>().get(spell_id) else {
         reasons.insert("missing spell".into());
         return;
     };
@@ -91,29 +91,67 @@ fn classify(
         if effect.effect == 0 {
             continue;
         }
-        if crate::auras::is_aura_effect(effect) {
-            let kind = crate::auras::handlers::kind(effect.aura);
-            if kind.is_none()
-                || kind == Some(crate::auras::handlers::AuraKind::Script)
-                || (effect.aura == crate::auras::handlers::TRANSFORM && effect.misc_values[0] == 0)
-            {
-                reasons.insert(format!("aura {}", effect.aura));
-            }
-        } else if !crate::spell_cast::effects::is_handled(effect) {
-            reasons.insert(format!("effect {}", effect.effect));
+        if !supports_effect(world, effect) {
+            let kind = if crate::auras::is_aura_effect(effect) {
+                "aura"
+            } else {
+                "effect"
+            };
+            let id = if crate::auras::is_aura_effect(effect) {
+                effect.aura
+            } else {
+                effect.effect
+            };
+            reasons.insert(format!("{kind} {id}"));
+        }
+        if let Some(target) = crate::spell_cast::targets::unsupported_target(effect) {
+            reasons.insert(format!("target {target}"));
         }
         if effect.trigger_spell != 0 {
             if depth >= crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
                 reasons.insert("trigger depth limit".into());
             } else {
-                classify(store, effect.trigger_spell, depth + 1, visiting, reasons);
+                classify(world, effect.trigger_spell, depth + 1, visiting, reasons);
             }
         }
     }
     visiting.remove(&spell_id);
 }
 
-pub(crate) fn unavailable(toy: &Toy, store: &SpellStore) -> Option<String> {
+fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
+    use crate::auras::handlers::{AuraKind, TRANSFORM};
+    if effect.aura == TRANSFORM {
+        return effect.misc_values[0] > 0
+            && world
+                .get_resource::<crate::world_data::WorldData>()
+                .is_some_and(|data| data.templates.contains_key(&(effect.misc_values[0] as u32)));
+    }
+    if crate::auras::is_aura_effect(effect) {
+        return crate::auras::handlers::kind(effect.aura)
+            .is_some_and(|kind| kind != AuraKind::Script);
+    }
+    if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
+        let properties = world
+            .get_resource::<crate::spell_cast::summon::SummonPropertiesStore>()
+            .and_then(|store| store.0.get(&(effect.misc_values[1] as u32)));
+        let creature_exists = world
+            .get_resource::<crate::world_data::WorldData>()
+            .is_some_and(|data| data.templates.contains_key(&(effect.misc_values[0] as u32)));
+        return properties.is_some_and(|properties| properties.control <= 2) && creature_exists;
+    }
+    if effect.effect == crate::spell_cast::area_trigger::EFFECT_CREATE_AREATRIGGER {
+        // Lifecycle-only area triggers do not implement a toy's actual action.
+        return effect.trigger_spell != 0
+            && effect
+                .radius
+                .iter()
+                .flatten()
+                .any(|radius| radius.radius > 0.0 || radius.radius_max > 0.0);
+    }
+    crate::spell_cast::effects::is_handled(effect)
+}
+
+pub(crate) fn unavailable(toy: &Toy, world: &World) -> Option<String> {
     if let Some(reason) = &toy.snapshot.unavailable_reason {
         return Some(reason.clone());
     }
@@ -123,7 +161,7 @@ pub(crate) fn unavailable(toy: &Toy, store: &SpellStore) -> Option<String> {
             toy.condition_id
         ));
     }
-    let types = unsupported_types(store, toy.snapshot.spell_id?);
+    let types = unsupported_types(world, toy.snapshot.spell_id?);
     (!types.is_empty()).then(|| {
         format!(
             "unsupported toy spell: {}",
