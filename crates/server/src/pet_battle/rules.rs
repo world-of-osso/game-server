@@ -41,6 +41,7 @@ fn validate_ability_graph(
                         | 64
                         | 65
                         | 66
+                        | 67
                         | 68
                         | 71
                         | 72
