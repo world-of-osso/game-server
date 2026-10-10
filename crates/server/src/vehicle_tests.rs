@@ -18,14 +18,14 @@ fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
     assert_eq!(store.creature_vehicles[&32633], 312);
     assert_eq!(store.creature_vehicles[&32286], 318);
     assert_eq!(store.vehicles[&312], [0, 2764, 2765, 0, 0, 0, 0, 0]);
-    let left = store.poses[&(27237, 2764)];
-    let right = store.poses[&(27237, 2765)];
+    let left = store.seat_offsets[&(27237, 2764)];
+    let right = store.seat_offsets[&(27237, 2765)];
     assert!(left.y > 3.0 && right.y > 3.0);
     assert!(
-        left.z * right.z < 0.0,
+        left.x * right.x < 0.0,
         "opposite passenger sides: {left:?} / {right:?}"
     );
-    assert!(store.poses.contains_key(&(25870, 2804)));
+    assert!(store.seat_offsets.contains_key(&(25870, 2804)));
 }
 
 #[test]
@@ -108,18 +108,22 @@ fn setup() -> (World, Entity, Entity, Entity) {
         2764,
         Seat {
             flags: 0x02000000,
-            offset: Vec3::new(1.0, 3.0, 0.0),
+            offset: Vec3::ZERO,
         },
     );
     store.seats.insert(
         2765,
         Seat {
             flags: 0x02000000,
-            offset: Vec3::new(-1.0, 3.0, 0.0),
+            offset: Vec3::ZERO,
         },
     );
-    store.poses.insert((27237, 2764), Vec3::ZERO);
-    store.poses.insert((27237, 2765), Vec3::ZERO);
+    store
+        .seat_offsets
+        .insert((27237, 2764), Vec3::new(1.0, 3.0, 0.0));
+    store
+        .seat_offsets
+        .insert((27237, 2765), Vec3::new(-1.0, 3.0, 0.0));
     world.insert_resource(store);
     world.entity_mut(driver).insert(Mounted {
         mount_display_id: 27237,

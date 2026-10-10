@@ -22,7 +22,8 @@ pub(crate) struct VehicleStore {
     pub vehicles: HashMap<u32, [u32; 8]>,
     pub seats: HashMap<u32, Seat>,
     creature_vehicles: HashMap<u32, u32>,
-    poses: HashMap<(u32, u32), Vec3>,
+    /// Seat position in the unit frame, including model alignment, scale and DB2 offset.
+    seat_offsets: HashMap<(u32, u32), Vec3>,
 }
 #[derive(Component)]
 struct PassengerOrigin {
@@ -86,7 +87,7 @@ pub(crate) fn board(world: &mut World, passenger: Entity, driver: Entity) -> Res
         })
         .ok_or("Mount is full")?;
     if !store
-        .poses
+        .seat_offsets
         .contains_key(&(mounted.mount_display_id, *seat_id))
     {
         return Err("Mount seat model attachment is unavailable".into());
@@ -246,9 +247,8 @@ fn update_passenger_position(world: &mut World, passenger: Entity, seat: Vehicle
         .expect("Driver must have rotation");
     let mount = world.get::<Mounted>(driver).unwrap();
     let store = world.resource::<VehicleStore>();
-    let seat_offset = store.seats[&seat.seat_id].offset;
-    let bind_offset = store.poses[&(mount.mount_display_id, seat.seat_id)];
-    let point = vec(&position) + Quat::from_rotation_y(rotation.y) * (bind_offset + seat_offset);
+    let seat_offset = store.seat_offsets[&(mount.mount_display_id, seat.seat_id)];
+    let point = vec(&position) + Quat::from_rotation_y(rotation.y) * seat_offset;
     world.entity_mut(passenger).insert((
         Position {
             x: point.x,
@@ -429,7 +429,11 @@ fn load_mount_poses(
                 .ok_or_else(|| format!("Missing VehicleSeat {seat}"))?;
             match read_mount_attachment(&data, *attachment) {
                 Ok(position) => {
-                    store.poses.insert((display_id, seat), position * scale);
+                    // WorldModels::build_creature_visual aligns NpcVisualRoot by -90deg.
+                    let model_alignment = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
+                    let authored_offset = store.seats[&seat].offset;
+                    let unit_offset = model_alignment * ((position + authored_offset) * scale);
+                    store.seat_offsets.insert((display_id, seat), unit_offset);
                 }
                 Err(error) => warn!("Vehicle {vehicle} seat {seat} display {display_id}: {error}"),
             }
