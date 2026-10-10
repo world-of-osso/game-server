@@ -6,6 +6,97 @@ use shared::components::{MovementControl, Position, Rotation};
 const BLINK: u32 = 1953;
 
 #[test]
+fn spell_teleport_fixed_destination_consumes_authored_fixture() {
+    // Routing/loader fixture, not a claim about Retail Moonglade's actual coordinates.
+    // Spell ID is matrix18960; the authored point is the existing map0 race start.
+    let mut h = harness(Vec::new(), &[18960], 11).unwrap();
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(18960)
+        .unwrap();
+    let index = spell
+        .effects
+        .iter()
+        .find(|e| e.effect == 252)
+        .unwrap()
+        .index;
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch(include_str!(
+        "../../../../scripts/spell_target_position_schema.sql"
+    ))
+    .unwrap();
+    conn.execute("INSERT INTO spell_target_position (ID,EffectIndex,MapID,PositionX,PositionY,PositionZ,Orientation) VALUES (?1,?2,0,-8949,-132,83,1.2)",rusqlite::params![18960,index]).unwrap();
+    h.app
+        .insert_resource(super::teleport_positions::load_positions(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::CombatStatus(false));
+    h.cast(18960, None);
+    h.advance(250);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        crate::maps::WorldLocation {
+            map_id: 0,
+            position: Vec3::new(-8949.0, -132.0, 83.0),
+            orientation: 1.2
+        }
+        .bevy_position()
+    );
+}
+
+#[test]
+fn spell_teleport_fixed_destination_without_authored_row_fails_explicitly() {
+    let mut h = harness(Vec::new(), &[18960], 11).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::CombatStatus(false));
+    h.app
+        .insert_resource(super::teleport_positions::SpellTargetPositions::default());
+    h.cast(18960, None);
+    h.advance(4);
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert_eq!(
+        h.inbox.failed[0].detail.as_deref(),
+        Some("missing SpellTargetPosition row")
+    );
+}
+
+#[test]
+fn spell_teleport_ground_leap_rejects_out_of_range_and_nonfinite_destinations() {
+    use lightyear::prelude::*;
+    for point in [[10000.0, 0.0, 0.0], [f32::NAN, 0.0, 0.0]] {
+        let mut h = harness(Vec::new(), &[189110], 12).unwrap();
+        let request = shared::protocol::SpellCastIntent {
+            destination: Some(point),
+            spell_id: Some(189110),
+            spell: String::new(),
+            target_entity: None,
+            witness: None,
+        };
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::SpellCastIntent>>(h.connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(request);
+        h.advance(4);
+        assert_eq!(h.inbox.failed.len(), 1);
+        assert_eq!(
+            *h.app.world().get::<Position>(h.caster).unwrap(),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0
+            }
+        );
+    }
+}
+
+#[test]
 fn spell_teleport_matrix_infernal_strike_uses_requested_ground_destination() {
     use lightyear::prelude::*;
     let mut h = harness(Vec::new(), &[189110], 12).unwrap();

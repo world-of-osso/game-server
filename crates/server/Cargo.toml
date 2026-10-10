@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "e25c79d" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "8c16175ef1a8c2296f9a7bd3a712b9d9241966d3" }
 # Baked line-of-sight tiles and eye points (docs/specs/line-of-sight.md).
 los = { path = "../los" }
 bevy = { version = "0.19", default-features = false, features = [
