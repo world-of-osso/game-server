@@ -16,7 +16,7 @@ The sweep receives `Res<ServerClock>`; `AuctionHousePlugin` initializes it witho
 
 Reference: TrinityCore `a352b1fa`, `AuctionHouseMgr.cpp`, `AuctionHouseObject::Update` branches to `SendAuctionExpired` when no bidder exists and `SendAuctionWon`/`SendAuctionSold` otherwise; the expired mail attaches the owner's item, and sold mail deducts the house cut and adds the deposit. [Pinned primary source](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/AuctionHouse/AuctionHouseMgr.cpp#L987-L1030). Exact English subject here is the requested client contract, not TrinityCore's encoded wire subject.
 
-Execution evidence: valid RED at `a999851`, both clock tests fail because the injected deadline is ignored (`red-valid.log`). Initial `red.log` failed fixture initialization and is not behavioral RED. GREEN and full server gate pending under `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/ahexpiry-2026-10-09/`; no live expiry claim.
+Execution evidence under `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/ahexpiry-2026-10-09/`: valid RED at `a999851`, both tests fail because the injected deadline is ignored (`red-valid.log`); final GREEN at `ab4cd69`, 2/2 pass (`green-final.log`). Full locked workspace gate at the same code: 1586 passed, 0 failed, 60 existing ignored, one required skip (`query_300k_listings_under_200ms`); server unit subset 1521 passed. No compiler warnings; changed-Rust format check passes. `proof-ledger.json` records exact commands and scope hashes. Interim fixture/table, Bevy API and original-vs-escrow GUID errors are retained but are not behavioral RED. No live expiry claim.
 
 ## Saved proof ledger
 
