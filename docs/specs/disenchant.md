@@ -8,7 +8,7 @@ Spell13262/effect99 consumes an owned bag item and opens personal material loot.
 - [x] Destroy an eligible uncommon unbound BoE, roll its TDB1210.26091 entry, and expose materials to LootFrame/manual or automatic taking.
 - [x] Persist disposal appearance collection and item removal in one inventory transaction, including unbound items; survive redb reopen.
 - [x] Refuse a grey item with CantBeDisenchanted, and a caster without Enchanting with NotKnown; retain the item.
-- [ ] Refuse an eligible metadata entry with no deliverable Retail material, or an actual roll with no materials, using CantBeDisenchanted before disposal/success; retain item/appearance state, create no empty personal loot session, and allow the next valid cast.
+- [x] Refuse an eligible metadata entry with no deliverable Retail material, or an actual roll with no materials, using CantBeDisenchanted before disposal/success; retain item/appearance state, create no empty personal loot session, and allow the next valid cast.
 
 ## How it works
 - [Disenchant pipeline and provenance](../wiki/systems/disenchant.md)
