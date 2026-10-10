@@ -94,7 +94,7 @@ impl Pet {
         if family >= 10 || stats.health <= 0 || stats.power < 0 || stats.speed < 0 {
             return Err("invalid pet stats/family".into());
         }
-        for ability in abilities {
+        for ability in abilities.into_iter().filter(|ability| *ability != 0) {
             if !catalog.abilities.contains_key(&ability) {
                 return Err(format!("missing equipped ability {ability}"));
             }

@@ -30,6 +30,23 @@ fn fixture_db() -> Connection {
 }
 
 #[test]
+fn pet_battle_locked_ability_slots_cannot_be_used() {
+    let catalog = catalog();
+    let stats = calculate_stats(&catalog, 39, 3, 3, 1).unwrap();
+    let pet = Pet::new(&catalog, stats, 9, [110, 0, 0], States::new()).unwrap();
+    let team = Team {
+        pets: [pet.clone(), pet.clone(), pet],
+        active: 0,
+    };
+    let battle = Battle::new([team.clone(), team]).unwrap();
+    assert!(
+        battle
+            .step(&catalog, [Action::Ability(0), Action::Pass], &mut Fixed(0))
+            .is_err()
+    );
+}
+
+#[test]
 fn pet_battle_real_species39_rare_breed3_stats() {
     let catalog = Catalog::load_world_db(&fixture_db()).unwrap();
     // CASC: species39 stamina+100, power-100, speed0; breed3 each1700.

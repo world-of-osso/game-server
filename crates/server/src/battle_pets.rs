@@ -135,8 +135,8 @@ pub(crate) fn load_test_catalog() -> PetCatalog {
 
 #[derive(Component)]
 pub(crate) struct AccountPetJournal {
-    account_id: u64,
-    journal: PetJournal,
+    pub(crate) account_id: u64,
+    pub(crate) journal: PetJournal,
     summoned: Option<(u64, Entity)>,
 }
 
@@ -148,13 +148,18 @@ struct Companion {
 pub struct BattlePetPlugin;
 impl Plugin for BattlePetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_catalog);
+        app.add_systems(
+            Startup,
+            (load_catalog, crate::wild_pet_battles::load_wild_catalog),
+        );
         app.add_systems(
             Update,
             (
                 load_account_journals,
                 receive_pet_requests,
                 despawn_ownerless_companions,
+                crate::wild_pet_battles::receive_wild_battle_requests,
+                crate::wild_pet_battles::remove_abandoned_battles,
             )
                 .chain(),
         );
@@ -179,7 +184,7 @@ fn load_account_journals(world: &mut World) {
     }
 }
 
-fn refresh_catalog_snapshot(world: &mut World, owner: Entity) {
+pub(crate) fn refresh_catalog_snapshot(world: &mut World, owner: Entity) {
     let Some(journal) = world.get::<AccountPetJournal>(owner) else {
         return;
     };
@@ -246,7 +251,12 @@ fn receive_dismiss_requests(world: &mut World) {
     }
 }
 
-fn send_pet_update(world: &mut World, connection: Entity, owner: Entity, error: Option<String>) {
+pub(crate) fn send_pet_update(
+    world: &mut World,
+    connection: Entity,
+    owner: Entity,
+    error: Option<String>,
+) {
     let state = world
         .get::<AccountPetJournal>(owner)
         .expect("account journal loaded");
