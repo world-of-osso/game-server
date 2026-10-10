@@ -40,7 +40,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 
 ### Fourth-batch locally derived paths
 
-- [x] Light of Dawn85222 retains its catalog cone/radius and heals at most five injured allies; healthy units do not consume the cap.
+- [x] Light of Dawn85222 retains its catalog area/radius and heals at most five injured allies; healthy units do not consume the cap.
 - [x] Steady Shot56641 generates the Focus authored by77443 on a landed hit.
 - [x] Kill Shot53351 rejects targets at or above its20% health threshold before cost/cooldown; strictly below is admitted.
 - [x] Mangle33917 with231064 deals20% additional damage against an active bleed, without bonus if either requirement is absent.
