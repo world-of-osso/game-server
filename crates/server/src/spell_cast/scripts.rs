@@ -51,6 +51,7 @@ const FISTS_OF_FURY: u32 = 113_656;
 const BACKSTAB: u32 = 53;
 const PYRE_IMPACT: u32 = 393_568;
 const PYRE_DAMAGE: u32 = 357_212;
+const DRAIN_SOUL: u32 = 198_590;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -81,7 +82,23 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
         BACKSTAB => Some(backstab_damage),
+        DRAIN_SOUL => Some(drain_soul_damage),
         _ => None,
+    }
+}
+
+/// TC a352b1fa spell_warlock.cpp:840-849: evaluate the execute threshold
+/// each tick, not at application. Retail $s2=100% and $s3=20%.
+fn drain_soul_damage(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    let Some(health) = world.get::<shared::components::Health>(target) else {
+        return amount;
+    };
+    let threshold = script_effect_value(world, caster, DRAIN_SOUL, 2);
+    if health.current < health.max * threshold / 100.0 {
+        let percent = script_effect_value(world, caster, DRAIN_SOUL, 1);
+        amount * (1.0 + percent / 100.0)
+    } else {
+        amount
     }
 }
 

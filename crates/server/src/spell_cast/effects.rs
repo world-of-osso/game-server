@@ -485,8 +485,6 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let amount = super::scripts::damage_amount(ctx.spell.id)
-        .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
     deal_damage(world, ctx, target, amount, crit, false);
 }
@@ -576,6 +574,8 @@ pub fn deal_damage(
         log_event(world, event);
         return;
     }
+    let amount = super::scripts::damage_amount(ctx.spell.id)
+        .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
         * versatility_multiplier(world, ctx.caster);
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, school);

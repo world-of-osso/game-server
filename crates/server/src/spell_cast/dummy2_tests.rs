@@ -203,3 +203,77 @@ fn dummy2_evoker_pyre_explodes_at_target_and_hits_nearby_enemies_only() {
         2
     );
 }
+
+#[test]
+fn dummy2_warlock_drain_soul_doubles_ticks_below_twenty_percent() {
+    for (health, damage) in [(5000.0, 111.375), (1000.0, 111.375), (800.0, 222.75)] {
+        let mut h = harness(Vec::new(), &[198590, 205292], 9).expect("real world.db required");
+        h.cast_and_deliver(198590, Some(h.npc));
+        // Change health after application: execute damage must not snapshot.
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(h.npc)
+            .unwrap()
+            .current = health;
+        h.advance(22);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let ticks: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(198590)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(ticks.len(), 1);
+        assert!(
+            varied(damage).contains(&(health - h.health(h.npc))),
+            "ticks: {ticks:?}"
+        );
+    }
+}
+
+#[test]
+fn dummy2_warlock_drain_soul_target_death_grants_one_whole_shard() {
+    let mut h = harness(Vec::new(), &[198590, 205292], 9).expect("real world.db required");
+    h.set_power(PowerType::SoulShards, 0.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.npc)
+        .unwrap()
+        .current = 100.0;
+    h.cast_and_deliver(198590, Some(h.npc));
+    h.advance(25);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.health(h.npc), 0.0);
+    assert_eq!(h.power(PowerType::SoulShards), 10.0);
+}
+
+#[test]
+fn dummy2_warlock_drain_soul_expiry_on_living_target_grants_no_shard() {
+    let mut h = harness(Vec::new(), &[198590, 205292], 9).expect("real world.db required");
+    h.set_power(PowerType::SoulShards, 0.0);
+    h.cast_and_deliver(198590, Some(h.npc));
+    h.advance(110);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.health(h.npc) > 0.0);
+    assert_eq!(h.power(PowerType::SoulShards), 0.0);
+}
+
+#[test]
+fn dummy2_warlock_stopping_drain_soul_grants_no_shard_or_later_ticks() {
+    use lightyear::prelude::*;
+    use shared::protocol::{CombatChannel, StopSpellCast};
+    let mut h = harness(Vec::new(), &[198590, 205292], 9).expect("real world.db required");
+    h.set_power(PowerType::SoulShards, 0.0);
+    h.cast_and_deliver(198590, Some(h.npc));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<StopSpellCast>>(h.connection)
+        .unwrap()
+        .send::<CombatChannel>(StopSpellCast);
+    h.advance(110);
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert_eq!(h.power(PowerType::SoulShards), 0.0);
+}
