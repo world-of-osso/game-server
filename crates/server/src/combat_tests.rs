@@ -106,6 +106,7 @@ fn run_attack_tick(app: &mut App) {
                 scaling: &scaling,
                 sight: &sight,
                 armor_constants: armor_constants.as_deref(),
+                spells: None,
             };
             for (entity, mut aa, position, stats) in &mut attackers {
                 let te = aa.victim;

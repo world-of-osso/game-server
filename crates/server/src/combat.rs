@@ -481,6 +481,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     scaling: Query<'w, 's, ScalingItem<'static>>,
     sight: SwingSight<'w, 's>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
+    spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
     commands: Commands<'w, 's>,
@@ -522,6 +523,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                     scaling: &params.scaling,
                     sight: &params.sight,
                     armor_constants: params.armor_constants.as_deref(),
+                    spells: params.spells.as_deref(),
                 },
                 target_entity,
                 &mut snapshot.auto_attack,
@@ -688,6 +690,7 @@ impl Attacker<'_> {
 pub(crate) struct SwingContext<'a, 'w, 's> {
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
     pub armor_constants: Option<&'a ArmorConstants>,
+    spells: Option<&'a crate::spell_info::SpellStore>,
     sight: &'a SwingSight<'w, 's>,
 }
 
@@ -862,6 +865,47 @@ struct SwingOutcome {
     duel_defeated: bool,
 }
 
+fn melee_damage_splits(
+    targets: &mut AutoAttackTargets,
+    context: &SwingContext,
+    victim: Entity,
+    attacker: Entity,
+) -> Vec<crate::auras::damage_transfer::Split> {
+    let candidates = match targets.get_mut(victim) {
+        Ok((_, _, _, _, _, _, _, _, _, _, avoidance, _)) => {
+            crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
+        }
+        Err(_) => return Vec::new(),
+    };
+    let mut splits = Vec::new();
+    for mut split in candidates {
+        if split.recipient == victim
+            || context.sight.maps.get(split.recipient).ok() != context.sight.maps.get(victim).ok()
+        {
+            continue;
+        }
+        let Ok((_, health, _, _, _, _, _, _, _, _, avoidance, _)) =
+            targets.get_mut(split.recipient)
+        else {
+            continue;
+        };
+        if health.current <= 0.0 || crate::auras::immune_to_school(avoidance.1.as_deref(), 1) {
+            continue;
+        }
+        let scaling = |entity| {
+            context.scaling.get(entity).map_or(
+                UnitScaling::from_item((None, None, None)),
+                UnitScaling::from_item,
+            )
+        };
+        let unit_loss =
+            crate::level_scaling::health_loss(&scaling(attacker), &scaling(split.recipient), 1.0);
+        split.budget = (health.current - health.max * split.floor_pct / 100.0).max(0.0) / unit_loss;
+        splits.push(split);
+    }
+    splits
+}
+
 /// Swing `hand` if its timer is ready, it has a weapon and the target is in
 /// range. Players roll the hit table, and every swing takes the target's armor
 /// (Unit::CalculateMeleeDamage, Unit.cpp:1387-1495).
@@ -882,6 +926,7 @@ fn try_swing(
         return None;
     }
     let weapon = attacker.weapon(hand)?;
+    let splits = melee_damage_splits(targets, context, target_entity, attacker.entity);
     let Ok((
         target_pos,
         mut health,
@@ -957,8 +1002,23 @@ fn try_swing(
         outcome_damage,
     );
     let absorbed = absorption.absorbed;
-    let damage =
-        crate::level_scaling::damage_dealt(&attacker_scaling, &target, absorption.remaining);
+    let mut remaining = absorption.remaining;
+    for split in splits {
+        let share = (remaining * split.fraction).min(split.budget);
+        remaining -= share;
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::auras::damage_transfer::deliver(
+                world,
+                attacker_entity,
+                target_entity,
+                1,
+                split,
+                share,
+            );
+        });
+    }
+    let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, remaining);
     commands.queue(move |world: &mut World| {
         crate::auras::finish_absorbs(world, target_entity, absorption)
     });

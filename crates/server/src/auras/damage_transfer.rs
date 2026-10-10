@@ -73,7 +73,12 @@ pub(crate) fn route(
             continue;
         }
         let health = world.get::<Health>(split.recipient).unwrap();
-        split.budget = (health.current - health.max * split.floor_pct / 100.0).max(0.0);
+        let unit_loss = crate::level_scaling::health_loss(
+            &crate::level_scaling::UnitScaling::of(world, attacker),
+            &crate::level_scaling::UnitScaling::of(world, split.recipient),
+            1.0,
+        );
+        split.budget = (health.current - health.max * split.floor_pct / 100.0).max(0.0) / unit_loss;
         let share = (amount * split.fraction).min(split.budget);
         amount -= share;
         deliver(world, attacker, victim, school, split, share);

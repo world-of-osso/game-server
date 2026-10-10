@@ -7,6 +7,13 @@ fn imp(h: &mut Harness) -> Entity {
     h.app.insert_resource(crate::world_data::load_world_data(
         &world_db().unwrap().powers_db,
     ));
+    let source = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&source).unwrap());
     // TDB1210 creature_template_spell: (416,0,3110,41031),(416,2,3110,44325).
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE guardian_spells (CreatureID INTEGER, SpellIndex INTEGER, Spell INTEGER, VerifiedBuild INTEGER); INSERT INTO guardian_spells VALUES (416,0,3110,41031),(416,2,3110,44325);").unwrap();
