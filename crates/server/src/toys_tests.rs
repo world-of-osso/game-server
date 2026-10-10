@@ -13,7 +13,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         Vec::new(),
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
-            99104, 304370,
+            99104, 304370, 23126, 156132, 167273, 65451, 176889,
         ],
         8,
     )
@@ -664,6 +664,87 @@ fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
         world
             .get::<crate::creature_ai::FollowOwner>(summons[0].0)
             .is_none()
+    );
+}
+
+#[test]
+fn toyfx2_scale_toy_applies_replicates_and_reverts() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 18660); // World Enlarger, spell23126, -50%.
+    assert_eq!(activate(&mut h, 18660)[0].error, None);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 23126)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        0.5
+    );
+    // World Enlarger -50 + Super Simian Sphere100: additive1.5, not multiplicative1.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 156132,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        1.5
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 156132,
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        0.5
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 23126 });
+    h.advance(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        1.0
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 23126)
     );
 }
 

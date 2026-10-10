@@ -76,6 +76,20 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
     let flight = super::mount::flight(auras);
+    let minimum_scale = if world.get::<shared::components::Player>(unit).is_some() {
+        0.1
+    } else {
+        0.01
+    };
+    let scale = shared::components::UnitScale(
+        (1.0 + auras.modifier(super::handlers::MOD_SCALE) / 100.0).max(minimum_scale),
+    );
+    if world.get::<shared::components::UnitScale>(unit).copied() != Some(scale) {
+        world.entity_mut(unit).insert(scale);
+        if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+            dirty.mark(unit);
+        }
+    }
     if invisible != world.get::<Invisible>(unit).is_some() {
         if invisible {
             world.entity_mut(unit).insert(Invisible);
