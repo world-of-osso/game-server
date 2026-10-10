@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch6](systems/spell-casting.md#sixth-batch-local-retail-rows) — eight ranked bounded paths plus Ice Lance; local derivation and per-spell proof boundaries.
+
 - [Class spell batch5](systems/spell-casting.md#fifth-batch-local-retail-rows) — eight ranked paths plus Lava Burst;14 new native functions, full spell_cast207/207; Dummy roots176→173.
 
 - [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.

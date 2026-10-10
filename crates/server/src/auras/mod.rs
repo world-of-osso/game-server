@@ -888,6 +888,39 @@ pub(crate) fn extend_owned_duration(
     }
 }
 
+/// Extend owned auras without resetting tick clocks, respecting a maximum
+/// remaining duration (327541 Aetherial Kindling). Never shorten longer auras.
+pub(crate) fn extend_owned_duration_capped(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spells: &[u32],
+    milliseconds: u32,
+    maximum_remaining_ms: u32,
+) {
+    let maximum_expiry = aura_now(world) + f64::from(maximum_remaining_ms) / 1000.0;
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let mut changed = false;
+    for aura in &mut auras.auras {
+        if aura.caster != caster || !spells.contains(&aura.spell_id) {
+            continue;
+        }
+        let Some(expiry) = &mut aura.expires_at else {
+            continue;
+        };
+        let additional_ms = ((maximum_expiry - *expiry).max(0.0) * 1000.0).round() as u32;
+        let extension_ms = milliseconds.min(additional_ms);
+        *expiry += f64::from(extension_ms) / 1000.0;
+        aura.duration_ms += extension_ms;
+        changed |= extension_ms > 0;
+    }
+    if changed {
+        auras.dirty = true;
+    }
+}
+
 /// One charge used (proc or spell modifier); the aura ends at zero charges.
 pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
