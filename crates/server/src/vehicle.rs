@@ -296,14 +296,18 @@ fn load_vehicle_catalog(conn: &rusqlite::Connection) -> Result<VehicleStore, Str
     let mut query = conn
         .prepare("SELECT ID,SeatID_0,SeatID_1,SeatID_2,SeatID_3,SeatID_4,SeatID_5,SeatID_6,SeatID_7 FROM vehicle")
         .map_err(|error| format!("world.db vehicle: {error}"))?;
-    let rows = query.query_map([], |row| {
-        let mut seats = [0; 8];
-        for (index, seat) in seats.iter_mut().enumerate() {
-            *seat = row.get(index + 1)?;
-        }
-        Ok((row.get(0)?, seats))
-    }).map_err(|error| error.to_string())?;
-    store.vehicles = rows.collect::<Result<_, _>>().map_err(|error| error.to_string())?;
+    let rows = query
+        .query_map([], |row| {
+            let mut seats = [0; 8];
+            for (index, seat) in seats.iter_mut().enumerate() {
+                *seat = row.get(index + 1)?;
+            }
+            Ok((row.get(0)?, seats))
+        })
+        .map_err(|error| error.to_string())?;
+    store.vehicles = rows
+        .collect::<Result<_, _>>()
+        .map_err(|error| error.to_string())?;
     store.seats = load_seats(conn)?;
     Ok(store)
 }
@@ -312,12 +316,15 @@ fn load_seats(conn: &rusqlite::Connection) -> Result<HashMap<u32, Seat>, String>
     let mut query = conn
         .prepare("SELECT ID,Flags,AttachmentOffset_0,AttachmentOffset_1,AttachmentOffset_2 FROM vehicle_seat")
         .map_err(|error| format!("world.db vehicle_seat: {error}"))?;
-    let rows = query.query_map([], |row| {
-        let flags = row.get::<_, i64>(1)? as u32;
-        let offset = Vec3::new(row.get(2)?, row.get(4)?, -row.get::<_, f32>(3)?);
-        Ok((row.get(0)?, Seat { flags, offset }))
-    }).map_err(|error| error.to_string())?;
-    rows.collect::<Result<_, _>>().map_err(|error| error.to_string())
+    let rows = query
+        .query_map([], |row| {
+            let flags = row.get::<_, i64>(1)? as u32;
+            let offset = Vec3::new(row.get(2)?, row.get(4)?, -row.get::<_, f32>(3)?);
+            Ok((row.get(0)?, Seat { flags, offset }))
+        })
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<_, _>>()
+        .map_err(|error| error.to_string())
 }
 
 fn load_store(root: &std::path::Path, conn: &rusqlite::Connection) -> Result<VehicleStore, String> {
@@ -349,8 +356,10 @@ fn load_mount_poses(
         .map_err(|error| error.to_string())?
         .collect::<Result<_, _>>()
         .map_err(|error| error.to_string())?;
-    let models: HashMap<u32, u32> = load_catalog_ids(conn, "SELECT ID,FileDataID FROM creature_model_data")?;
-    let seat_records: HashMap<u32, i32> = load_catalog_ids(conn, "SELECT ID,AttachmentID FROM vehicle_seat")?;
+    let models: HashMap<u32, u32> =
+        load_catalog_ids(conn, "SELECT ID,FileDataID FROM creature_model_data")?;
+    let seat_records: HashMap<u32, i32> =
+        load_catalog_ids(conn, "SELECT ID,AttachmentID FROM vehicle_seat")?;
     let mut query=conn.prepare("SELECT DISTINCT x.CreatureDisplayInfoID,c.VehicleId FROM mount m JOIN mount_x_display x ON x.MountID=m.ID JOIN spell_effect e ON e.SpellID=m.SourceSpellID JOIN creature_template c ON c.entry=e.EffectMiscValue_0 WHERE e.EffectAura=78 AND e.DifficultyID=0 AND c.VehicleId<>0").map_err(|e|e.to_string())?;
     let rows = query
         .query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))
@@ -398,9 +407,15 @@ fn load_mount_poses(
     Ok(())
 }
 
-fn load_catalog_ids<T: rusqlite::types::FromSql>(conn: &rusqlite::Connection, sql: &str) -> Result<HashMap<u32, T>, String> {
-    let mut query = conn.prepare(sql).map_err(|error| format!("world.db {sql}: {error}"))?;
-    query.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+fn load_catalog_ids<T: rusqlite::types::FromSql>(
+    conn: &rusqlite::Connection,
+    sql: &str,
+) -> Result<HashMap<u32, T>, String> {
+    let mut query = conn
+        .prepare(sql)
+        .map_err(|error| format!("world.db {sql}: {error}"))?;
+    query
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
         .map_err(|error| error.to_string())?
         .collect::<Result<_, _>>()
         .map_err(|error| error.to_string())
