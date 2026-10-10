@@ -457,7 +457,8 @@ impl SwingSight<'_, '_> {
     }
 
     fn send_blocked_swing(&self, commands: &mut Commands, attacker: Entity) {
-        if self.bodies.get(attacker).unwrap().6.is_none() {
+        let (_, _, _, _, _, _, player, _) = self.bodies.get(attacker).unwrap();
+        if player.is_none() {
             return;
         }
         commands.queue(move |world: &mut World| {
