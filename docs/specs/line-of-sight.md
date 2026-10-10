@@ -104,7 +104,10 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   WMO doodad sets follow the same rule. Default cutoff 1 yd (`--cutoff`).
 - Each triangle is stored once, in the tile holding its centroid. A query tests the tiles under the
   segment and one ring around them. A segment touching a surface at either end is not blocked.
-- Global-WMO maps (dungeons) are not baked yet.
+- The shared collector supports global-WMO placement. `los-bake`'s CLI remains continent-only;
+  [navigation's bake tool](../wiki/systems/navigation.md) also writes Stockade (map34) LOS tiles
+  from that collector for the existing LOS-query acceptance oracle. Ship this supplement with
+  the existing eye tables; it is not a second extractor.
 - Run: `cargo run --release -p los --features bake --bin los-bake -- --data ../game-engine/data
   --world-db data/world.db --out ../game-engine/data/los --map 0 --all` (per map; `--no-eyes`
   skips the eye table). Map 0 is 1176 tiles, 6.3 GB, under 10 minutes (debug, opt-level 2). `deploy.sh` ships the

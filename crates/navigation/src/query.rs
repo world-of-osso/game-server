@@ -119,6 +119,7 @@ impl NavigationMap {
         corridor: &[dtPolyRef],
     ) -> Result<Vec<Vec3>, String> {
         let mut corners = [0.0; MAX_PATH * 3];
+        let mut references = [0; MAX_PATH];
         let mut count = 0;
         // Keep height/area transition portals as well as obstacle corners: one giant
         // sloped chord must not cut through a terrain ridge or an indoor staircase.
@@ -131,7 +132,7 @@ impl NavigationMap {
                 corridor.len() as i32,
                 corners.as_mut_ptr(),
                 std::ptr::null_mut(),
-                std::ptr::null_mut(),
+                references.as_mut_ptr(),
                 &mut count,
                 MAX_PATH as i32,
                 dtStraightPathOptions_DT_STRAIGHTPATH_ALL_CROSSINGS as i32,
@@ -141,10 +142,38 @@ impl NavigationMap {
         if result & DT_BUFFER_TOO_SMALL != 0 {
             return Err("corner buffer exhausted".into());
         }
-        Ok(corners[..count as usize * 3]
+        self.sample_corner_heights(
+            &corners[..count as usize * 3],
+            &references[..count as usize],
+            corridor[corridor.len() - 1],
+        )
+    }
+
+    /// Funnel portals use coarse polygon vertex heights. Detail triangles retain the
+    /// actual stair/terrain surface, so sample them before movement follows corners.
+    fn sample_corner_heights(
+        &self,
+        corners: &[f32],
+        references: &[dtPolyRef],
+        end_ref: dtPolyRef,
+    ) -> Result<Vec<Vec3>, String> {
+        corners
             .chunks_exact(3)
-            .map(|p| Vec3::new(p[0], p[1], p[2]))
-            .collect())
+            .zip(references)
+            .map(|(point, &reference)| {
+                // Detour marks the terminal point with ref0, belonging to the final poly.
+                let reference = if reference == 0 { end_ref } else { reference };
+                let mut height = 0.0;
+                // SAFETY: each ref is from the complete corridor; point has three floats.
+                unsafe {
+                    status(
+                        (*self.query).getPolyHeight(reference, point.as_ptr(), &mut height),
+                        "detail corner height",
+                    )?;
+                }
+                Ok(Vec3::new(point[0], height, point[2]))
+            })
+            .collect()
     }
 
     fn load_around(&mut self, start: Vec3, end: Vec3) -> Result<(), String> {
