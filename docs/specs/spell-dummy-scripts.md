@@ -11,6 +11,7 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 - [x] Barkskin 22812's periodic Dummy casts Brambles damage 213709 every catalog tick when Brambles 203953 is present, hits enemies only, and stops on aura removal.
 - [x] Penance 47540 starts the catalog friendly47757 or hostile47758 channel, delivering three catalog bolts and stopping future bolts when cancelled.
 - [x] Cobra Shot 193455 retains catalog damage and reduces Kill Command 34026's running cooldown/recharge by its effect 2 duration; never starts a cooldown on a ready ability.
+- [x] Blackout Kick 100784 with rank two 261917 reduces the running Rising Sun Kick recharge and Fists of Fury cooldown by its effect 2 milliseconds; without rank two neither changes.
 - [ ] Unknown Dummy fields remain unsupported rather than receiving generic no-op handlers.
 
 ## How it works
