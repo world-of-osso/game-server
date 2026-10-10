@@ -231,3 +231,86 @@ fn petbattle_pvp_disconnect_finishes_opponent_and_releases_account() {
         }
     )));
 }
+
+#[test]
+fn petbattle_pvp_engine_defeats_all_three_opponent_pets_without_capture() {
+    let mut app = app();
+    let [a, b] = matched(&mut app);
+    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
+    for _ in 0..100 {
+        let Some(battle) = app.world().resource::<Matchmaker>().battles.get(&id) else {
+            break;
+        };
+        let round = battle.encounter.battle.round;
+        let team = &battle.encounter.battle.teams[1];
+        if team.pets[team.active].health <= 0 {
+            let slot = team.pets.iter().position(|p| p.health > 0).unwrap();
+            advance(
+                app.world_mut(),
+                b,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Swap(slot as u8 + 1),
+                },
+            )
+            .unwrap();
+        } else {
+            advance(
+                app.world_mut(),
+                a,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Ability(1),
+                },
+            )
+            .unwrap();
+            advance(
+                app.world_mut(),
+                b,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Pass,
+                },
+            )
+            .unwrap();
+        }
+    }
+    assert!(app.world().resource::<Matchmaker>().battles.is_empty());
+    app.update();
+    for (owner, expected) in [
+        (a, WildPetBattleOutcome::Won),
+        (b, WildPetBattleOutcome::Lost),
+    ] {
+        let connection = connection(app.world_mut(), owner).unwrap();
+        let messages: Vec<_> = app
+            .world_mut()
+            .get_mut::<MessageReceiver<WildPetBattleUpdate>>(connection)
+            .unwrap()
+            .receive()
+            .collect();
+        assert!(messages.iter().any(|m| matches!(m, WildPetBattleUpdate::End { outcome, captured_pet_id: None, .. } if outcome == &expected)));
+        let terminal = messages
+            .iter()
+            .find_map(|m| {
+                if let WildPetBattleUpdate::State(s) = m {
+                    Some(s)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+        let defeated = if owner == a { 1 } else { 0 };
+        assert!(terminal.teams[defeated].iter().all(|p| p.health == 0));
+        assert_eq!(
+            app.world()
+                .get::<AccountPetJournal>(owner)
+                .unwrap()
+                .journal
+                .count(),
+            3
+        );
+    }
+}
