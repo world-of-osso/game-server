@@ -31,7 +31,13 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
     let database = redb::Database::create(&path).unwrap();
     crate::battle_pets::save_journal(&database, 42, &journal());
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(shared::ProtocolPlugin);
+    app.finish();
+    app.cleanup();
     app.insert_resource(GameDatabase { db: database });
     app.insert_resource(crate::battle_pets::load_test_catalog());
     app.insert_resource(catalog());
@@ -60,6 +66,11 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
             Authenticated { account_id: 42 },
             InWorld { character_id: 7 },
             PlayerLink(owner),
+            lightyear::prelude::RemoteId(lightyear::prelude::PeerId::Local(1)),
+            lightyear::prelude::Connected,
+            lightyear::connection::host::HostClient { buffer: Vec::new() },
+            MessageSender::<WildPetBattleUpdate>::default(),
+            MessageReceiver::<WildPetBattleUpdate>::default(),
         ))
         .id();
     let creature = app
@@ -116,6 +127,11 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
         .teams[1]
         .pets[0]
         .health = 1;
+    app.world_mut()
+        .get_mut::<ActiveEncounter>(owner)
+        .unwrap()
+        .encounter
+        .trap_failures = 4;
     for _ in 0..5 {
         let Some(active) = app.world().get::<ActiveEncounter>(owner) else {
             break;
@@ -132,6 +148,34 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
         )
         .unwrap();
     }
+    app.update();
+    let delivered: Vec<_> = app
+        .world_mut()
+        .get_mut::<MessageReceiver<WildPetBattleUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .collect();
+    let terminal_snapshot = delivered
+        .iter()
+        .rev()
+        .find_map(|update| match update {
+            WildPetBattleUpdate::Start(state)
+            | WildPetBattleUpdate::State(state)
+            | WildPetBattleUpdate::Round { state, .. } => Some(state),
+            _ => None,
+        })
+        .expect("client receives authoritative battle state");
+    assert_eq!(
+        terminal_snapshot.teams[1][0].health, 1,
+        "terminal HP reaches the client before End"
+    );
+    assert!(matches!(
+        delivered.last(),
+        Some(WildPetBattleUpdate::End {
+            captured_pet_id: Some(_),
+            ..
+        })
+    ));
     assert!(app.world().get::<ActiveEncounter>(owner).is_none());
     assert!(app.world().get::<WildPetClaim>(creature).is_none());
     assert_eq!(app.world().get::<Health>(creature).unwrap().current, 0.0);
