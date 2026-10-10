@@ -4,9 +4,11 @@ Standalone `server::pet_battle` library. No Bevy plugin, networking, UI, encount
 
 ## Content
 
-`Catalog::load_world_db` strictly loads ten battle SQLite tables. Missing schemas, invalid types, conflicting known state values and dangling turn/ability/aura references return contextual errors. Identical species4597 speed-state rows are deduplicated; undefined species-state rows (35 in this export) remain in `unresolved_states`. No runtime CSV fallback. Tests import quoted/multiline local-CASC CSVs into in-memory SQLite; no data is committed.
+`Catalog::load_world_db` strictly loads ten battle SQLite tables. Missing schemas, invalid types, conflicting known state values and dangling turn/ability/aura references return contextual errors. Identical species4597 speed-state rows are deduplicated; undefined species-state rows (35 in this export) remain in `unresolved_states`. No runtime CSV fallback. Tests copy the ten battle tables from shipped `data/world.db` into isolated in-memory SQLite; no server-local CSV export dependency or mutation of shipped data. No data is committed.
 
-Runtime producer dependency: pets-server-fix currently provides `battle_pet_species`, not the ten battle tables below. Importers must retain original DB2 column names and numeric SQLite affinity; string descriptions/LuaName/ParamLabel fields are TEXT, StateMultiplier REAL, other consumed fields INTEGER. No dependency on unmerged journal/catalog Rust code.
+Runtime producer: `scripts/import-pet-battle-tables.py <local-CASC-CSV-directory> <world.db>` atomically replaces the ten tables below, preserving unrelated tables. Original DB2 column names and numeric SQLite affinity are retained: descriptions/LuaName/ParamLabel fields are TEXT, StateMultiplier REAL, other fields INTEGER. The account pet catalog startup loads and retains the turn catalog from the same world.db. The importer requires all ten exports before beginning the database transaction; malformed rows fail explicitly. `scripts/tests/test_pet_battle_tables.py` proves multiline text, signed values, numeric types, idempotence, preservation and invalid/missing export rollback.
+
+Verified 2026-10-10: canonical resolved world.db backed up beside it as `world.db.pre-petbattle-20261010`, then imported. Species3001, toy1166, content_item58185 and spell_effect629424 rows preserved. Current corrected CASC exports contain8086 species-state rows and14975 species-ability rows; the older inventory counts in the historical handoff predate corrected exports.
 
 | DB2 | SQLite |
 |---|---|
