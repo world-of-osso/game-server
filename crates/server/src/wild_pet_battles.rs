@@ -397,6 +397,13 @@ impl Encounter {
                 .map(|(slot, identity)| {
                     let pet = &self.battle.teams[team].pets[slot];
                     let species = &catalog.species[&identity.species];
+                    let turn_locked = pet.state(
+                        catalog
+                            .turns
+                            .state_id("turnLock")
+                            .expect("loaded turnLock state"),
+                    ) != 0;
+                    let action_locked = turn_locked || pet.continuation.is_some();
                     let abilities = std::array::from_fn(|index| {
                         let id = pet.abilities[index];
                         let (name, icon) = if id == 0 {
@@ -418,6 +425,7 @@ impl Encounter {
                             // Nonzero ability-lockdown effects remain gated in the turn engine.
                             lockout: 0,
                             usable: id != 0
+                                && !action_locked
                                 && cooldown == 0
                                 && validate_ability(&catalog.turns, id).is_ok(),
                         }
