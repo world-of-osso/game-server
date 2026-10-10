@@ -31,7 +31,7 @@ pub fn calculate_stats(
         .qualities
         .get(&quality)
         .ok_or_else(|| format!("missing quality {quality}"))?;
-    let scale = |name, divisor| -> Result<i32, String> {
+    let scale = |name: &str, divisor: f64| -> Result<i32, String> {
         let state = catalog.state_id(name)?;
         let base = breed
             .get(&state)
