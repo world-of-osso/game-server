@@ -357,6 +357,29 @@ fn wild_pet_battle_forfeit_has_no_rewards_and_win_xp_survives_reopen() {
 }
 
 #[test]
+fn petbattle_effect_hud_turn_lock_disables_abilities_without_guessed_lockdown() {
+    let catalog = catalog();
+    let journal = journal();
+    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    assert!(encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
+    let turn_lock = catalog.turns.state_id("turnLock").unwrap();
+    encounter.battle.teams[0].pets[0]
+        .states
+        .insert(turn_lock, 1);
+    let ability = &encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0];
+    assert!(!ability.usable);
+    assert_eq!(ability.lockout, 0);
+    encounter.battle.teams[0].pets[0]
+        .states
+        .insert(turn_lock, 0);
+    let ability_id = encounter.battle.teams[0].pets[0].abilities[0];
+    encounter.battle.teams[0].pets[0].continuation = Some((ability_id, 2));
+    assert!(!encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
+    encounter.battle.teams[0].pets[0].continuation = None;
+    assert!(encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
+}
+
+#[test]
 fn petbattle_effect_hud_routes_weather_and_team_hazard_separately_across_swap() {
     let catalog = catalog();
     let journal = journal();
