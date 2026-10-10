@@ -409,7 +409,7 @@ fn petbattle_effect_hud_routes_weather_and_team_hazard_separately_across_swap() 
     assert!(
         snapshot.teams[1]
             .iter()
-            .all(|p| p.auras.iter().any(|a| a.ability_id == 1010 && !a.is_buff))
+            .all(|p| p.auras.iter().any(|a| a.ability_id == 526 && !a.is_buff))
     );
     encounter.battle = encounter
         .battle
