@@ -116,6 +116,13 @@ impl FallTracker {
         }
     }
 
+    pub(crate) fn restart_at(&mut self, y: f32) {
+        *self = Self {
+            epoch: self.epoch,
+            ..Self::grounded(y)
+        };
+    }
+
     /// A server reposition (new `MovementControl::epoch`) is not a fall: tracking
     /// restarts at the new height.
     fn for_epoch(self, epoch: u32, y: f32) -> Self {
@@ -645,6 +652,7 @@ type GravityPlayerData<'w, 's> = Query<
         &'static InMap,
         Has<OutOfBounds>,
         Option<&'static mut PlayerMotion>,
+        Option<&'static shared::components::FeatherFall>,
     ),
     With<Player>,
 >;
@@ -679,6 +687,7 @@ pub(crate) fn apply_terrain_gravity(
         map,
         out_of_bounds,
         motion,
+        feather_fall,
     ) in players.iter_mut()
     {
         if control.controlled {
@@ -714,6 +723,7 @@ pub(crate) fn apply_terrain_gravity(
                 *health,
                 death_state,
                 dt,
+                feather_fall.is_some_and(|state| state.0),
             );
         let min_height =
             ground.min_height(map.map_id, Vec3::new(next_pos.x, next_pos.y, next_pos.z));
@@ -817,6 +827,7 @@ fn calculate_gravity_state(
     mut health: Health,
     death_state: Option<&crate::death::PlayerDeathState>,
     dt: f32,
+    feather_fall: bool,
 ) -> (
     Position,
     VerticalVelocity,
@@ -839,6 +850,7 @@ fn calculate_gravity_state(
             &mut fall_tracker,
             &mut health,
             dt,
+            feather_fall,
         );
     }
     (pos, vert_vel, fall_tracker, health, fall)
@@ -856,6 +868,7 @@ fn clamp_to_ground(
     fall_tracker: &mut FallTracker,
     health: &mut Health,
     dt: f32,
+    feather_fall: bool,
 ) -> Option<CombatLogEvent> {
     let ground_y = match ground {
         GroundProbe::Supported(ground_y) => ground_y,
@@ -874,7 +887,17 @@ fn clamp_to_ground(
         return None;
     }
 
-    if !reported && vert_vel.0 != 0.0 {
+    if feather_fall {
+        vert_vel.0 = vert_vel.0.max(-shared::movement::FEATHER_FALL_SPEED);
+        if reported {
+            pos.y = pos
+                .y
+                .max(fall_tracker.last_y - shared::movement::FEATHER_FALL_SPEED * dt);
+        } else if pos.y > ground_y + GROUND_SNAP_THRESHOLD || vert_vel.0 > 0.0 {
+            vert_vel.0 = (vert_vel.0 - GRAVITY * dt).max(-shared::movement::FEATHER_FALL_SPEED);
+            pos.y += vert_vel.0 * dt;
+        }
+    } else if !reported && vert_vel.0 != 0.0 {
         pos.y += vert_vel.0 * dt;
         vert_vel.0 -= GRAVITY * dt;
     }
@@ -894,7 +917,7 @@ fn clamp_to_ground(
         player,
         EnvironmentalKind::Falling,
         health,
-        health.max * fall_damage,
+        health.max * if feather_fall { 0.0 } else { fall_damage },
     )
 }
 

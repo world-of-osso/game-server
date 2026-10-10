@@ -749,6 +749,65 @@ fn toyfx2_scale_toy_applies_replicates_and_reverts() {
 }
 
 #[test]
+fn toyfx2_feather_fall_authentic_toy_spell_lifecycle() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    //113542 has no runtime item: do not invent one or count it as usable.
+    assert!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .iter()
+            .find(|t| t.item_id == 113542)
+            .unwrap()
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("content_item")
+    );
+    assert!(toy_catalog::unsupported_types(h.app.world(), 167273).is_empty());
+    h.cast_and_deliver(167273, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 167273)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::FeatherFall>(h.caster)
+            .unwrap()
+            .0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 167273 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::FeatherFall>(h.caster)
+            .unwrap()
+            .0
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 167273)
+    );
+}
+
+#[test]
 fn toys_effect_census() {
     use std::collections::{BTreeMap, BTreeSet};
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
