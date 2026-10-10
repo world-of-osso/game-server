@@ -32,6 +32,8 @@ mod dummy6_tests;
 #[cfg(test)]
 mod dummy7_tests;
 #[cfg(test)]
+mod dummy8_tests;
+#[cfg(test)]
 mod dummy_tests;
 pub mod effects;
 mod hit;
