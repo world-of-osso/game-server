@@ -379,6 +379,7 @@ fn petbattle_pvp_engine_defeats_all_three_opponent_pets_without_capture() {
         assert!(messages.iter().any(|m| matches!(m, WildPetBattleUpdate::End { outcome, captured_pet_id: None, .. } if outcome == &expected)));
         let terminal = messages
             .iter()
+            .rev()
             .find_map(|m| {
                 if let WildPetBattleUpdate::State(s) = m {
                     Some(s)
