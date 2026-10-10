@@ -266,17 +266,20 @@ fn dummy9_void_step_teleports_to_requested_location_preserving_map() {
     );
 }
 #[test]
-fn dummy9_void_step_rejects_missing_or_out_of_range_ground_before_cooldown() {
-    for point in [None, Some([1000.0, 0.0, 0.0])] {
-        let mut h = harness(Vec::new(), &[1234796], 12).unwrap();
-        if let Some(p) = point {
-            ground(&mut h, 1234796, p);
-        } else {
-            h.cast_and_deliver(1234796, None);
+fn dummy9_named_ground_spells_reject_missing_or_out_of_range_ground_before_cooldown() {
+    for id in [73920, 61882, 1234796] {
+        for point in [None, Some([1000.0, 0.0, 0.0]), Some([f32::NAN, 0.0, 0.0])] {
+            let mut h = harness(Vec::new(), &[id], if id == 1234796 { 12 } else { 7 }).unwrap();
+            h.set_power(PowerType::Maelstrom, 100.0);
+            if let Some(p) = point {
+                ground(&mut h, id, p);
+            } else {
+                h.cast_and_deliver(id, None);
+            }
+            h.advance(3);
+            assert_eq!(h.inbox.failed.len(), 1, "spell={id} point={point:?}");
+            assert!(h.inbox.go.is_empty());
         }
-        h.advance(3);
-        assert_eq!(h.inbox.failed.len(), 1);
-        assert!(h.inbox.go.is_empty());
     }
 }
 #[test]
