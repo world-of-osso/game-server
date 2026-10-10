@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Disenchant](systems/disenchant.md) — Retail bag-item cast/loot pipeline and bounded native proof.
+- [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
 
 ## October 9 reconciliation
 
