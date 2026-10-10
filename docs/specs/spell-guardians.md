@@ -15,7 +15,7 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - [x] Native6940 effect2 terminates transfer at20% caster health, not an invented threshold.
 - [x] A caster on another map cannot receive shares.
 - [x] Recipient absorbs consume redirected damage, immune recipients do not receive shares, and expired transfer auras stop sharing.
-- [ ] Dead protected units cannot transfer damage; concurrent queued melee swings share one remaining caster-health floor budget.
+- [x] Dead protected units cannot transfer damage; concurrent queued melee swings share one remaining caster-health floor budget.
 
 ## How it works
 - [Spell casting wiki](../wiki/systems/spell-casting.md#guardian-actors-and-damage-transfer).
@@ -35,7 +35,7 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 
 ## Known gaps (current cycle)
 - [ ] Wild Imp55659, Dreadstalker98035, Darkglare103673, Tyrant135002/250289 and other named guardian rotations require authentic creature-to-spell/cadence/budget data. See coverage receipts; no guessed six-bolt/energy policy.
-- [ ] Non-demon guardian power inheritance, movement/AI priorities, untimed-repeat cadence and talent modifiers remain uncertified.
+- [ ] Non-demon guardian power inheritance, movement/AI priorities, untimed-repeat cadence and talent modifiers remain uncertified. Simultaneous split reservations with recipient absorbs and floor-limit ordering lack complete Retail proof.
 - [ ] Root111859 Dummy0 cleanse bridge remains unbound; effect28 fixture is not whole-root execution proof.
 - [ ] Blade Flurry secondary geometry, Atonement soft-cap curve, Touch of Karma and Spirit Link scripts remain underived.
 

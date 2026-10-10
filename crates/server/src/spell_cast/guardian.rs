@@ -72,25 +72,7 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
         );
         return;
     }
-    let store = world.resource::<crate::spell_info::SpellStore>();
-    let mut powers = Vec::new();
-    for id in &spells {
-        if let Some(spell) = store.get(*id) {
-            for cost in &spell.power_costs {
-                if let Some(power) = PowerType::from_db(cost.power_type) {
-                    if !powers.contains(&power) {
-                        powers.push(power);
-                    }
-                }
-            }
-        } else {
-            warn!("Guardian creature {entry}: bound spell {id} absent");
-        }
-    }
-    let pools = super::powers::PowerPools::from_table(
-        world.resource::<super::powers::PowerTypeTable>(),
-        powers,
-    );
+    let pools = load_actor_powers(world, entry, &spells);
     let demon = world
         .resource::<crate::world_data::WorldData>()
         .template_for(entry, 0)
@@ -109,62 +91,96 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     }
 }
 
+fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers::PowerPools {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let mut powers = Vec::new();
+    for id in spells {
+        let Some(spell) = store.get(*id) else {
+            warn!("Guardian creature {entry}: bound spell {id} absent");
+            continue;
+        };
+        for power in spell
+            .power_costs
+            .iter()
+            .filter_map(|cost| PowerType::from_db(cost.power_type))
+        {
+            if !powers.contains(&power) {
+                powers.push(power);
+            }
+        }
+    }
+    super::powers::PowerPools::from_table(world.resource::<super::powers::PowerTypeTable>(), powers)
+}
+
 pub(super) fn update(world: &mut World) {
     let actors: Vec<_> = world
         .query_filtered::<Entity, With<GuardianActor>>()
         .iter(world)
         .collect();
     for actor in actors {
-        let summon = world.get::<SummonedCreature>(actor).unwrap().clone();
-        let target = world
-            .get::<crate::networking::CombatTarget>(summon.owner)
-            .and_then(|target| target.0);
-        world
-            .get_mut::<crate::networking::CombatTarget>(actor)
-            .unwrap()
-            .0 = target;
-        if world.get::<CastState>(actor).is_some() || !super::targets::is_alive(world, actor) {
-            continue;
-        }
-        let Some(target) = target.filter(|target| {
-            super::targets::is_alive(world, *target)
-                && world.get::<crate::maps::InMap>(*target)
-                    == world.get::<crate::maps::InMap>(actor)
-        }) else {
+        cast_on_owner_target(world, actor);
+    }
+}
+
+fn cast_on_owner_target(world: &mut World, actor: Entity) {
+    let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
+    let target = world
+        .get::<crate::networking::CombatTarget>(owner)
+        .and_then(|target| target.0);
+    world
+        .get_mut::<crate::networking::CombatTarget>(actor)
+        .unwrap()
+        .0 = target;
+    if world.get::<CastState>(actor).is_some() || !super::targets::is_alive(world, actor) {
+        return;
+    }
+    let Some(target) = target.filter(|target| {
+        super::targets::is_alive(world, *target)
+            && world.get::<crate::maps::InMap>(*target) == world.get::<crate::maps::InMap>(actor)
+    }) else {
+        return;
+    };
+    cast_first_ready(world, actor, target);
+}
+
+fn has_repeat_clock(spell: &crate::spell_info::SpellInfo) -> bool {
+    let has_cast_time = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.cast_time)
+        .is_some_and(|time| time.base_ms > 0);
+    let has_cooldown = spell
+        .cooldowns
+        .as_ref()
+        .is_some_and(|cooldowns| cooldowns.recovery_ms > 0 || cooldowns.category_recovery_ms > 0);
+    has_cast_time || has_cooldown
+}
+
+fn cast_first_ready(world: &mut World, actor: Entity, target: Entity) {
+    let spells = world.get::<GuardianActor>(actor).unwrap().spells.clone();
+    for id in spells {
+        let Some(spell) = world.resource::<crate::spell_info::SpellStore>().get(id) else {
             continue;
         };
-        let spells = world.get::<GuardianActor>(actor).unwrap().spells.clone();
-        for id in spells {
-            let Some(spell) = world.resource::<crate::spell_info::SpellStore>().get(id) else {
-                continue;
-            };
-            let timed = spell
-                .misc
-                .as_ref()
-                .and_then(|misc| misc.cast_time)
-                .is_some_and(|time| time.base_ms > 0)
-                || spell.cooldowns.as_ref().is_some_and(|cooldowns| {
-                    cooldowns.recovery_ms > 0 || cooldowns.category_recovery_ms > 0
-                });
-            if !timed
-                && world
-                    .get::<GuardianActor>(actor)
-                    .unwrap()
-                    .untimed_used
-                    .contains(&id)
-            {
-                continue;
-            }
-            if super::creature_cast(world, actor, id, Some(target), false).is_ok() {
-                if !timed {
-                    world
-                        .get_mut::<GuardianActor>(actor)
-                        .unwrap()
-                        .untimed_used
-                        .push(id);
-                }
-                break;
-            }
+        let timed = has_repeat_clock(spell);
+        let used = world
+            .get::<GuardianActor>(actor)
+            .unwrap()
+            .untimed_used
+            .contains(&id);
+        if !timed && used {
+            continue;
         }
+        if super::creature_cast(world, actor, id, Some(target), false).is_err() {
+            continue;
+        }
+        if !timed {
+            world
+                .get_mut::<GuardianActor>(actor)
+                .unwrap()
+                .untimed_used
+                .push(id);
+        }
+        break;
     }
 }
