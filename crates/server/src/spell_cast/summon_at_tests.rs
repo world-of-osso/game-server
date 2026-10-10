@@ -185,11 +185,12 @@ fn summon_at_periodic_configuration_ticks_only_inside() {
 
 #[test]
 fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
+    // Emerald Blossom355913 now has a named delayed heal, exercised by dummy9.
+    // Only unbound generic area spells belong in this no-action fixture.
     for (root, area_spell, class, count) in [
         (84714, 84714, 8, 2),
         (153626, 153626, 8, 2),
         (259495, 265163, 3, 1),
-        (355913, 355913, 13, 1),
     ] {
         let ids = if root == area_spell {
             vec![root]
@@ -197,7 +198,7 @@ fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
             vec![root, area_spell]
         };
         let mut h = harness(Vec::new(), &ids, class).unwrap();
-        let target = if class == 13 { h.caster } else { h.npc };
+        let target = h.npc;
         h.cast_and_deliver(root, Some(target));
         h.advance(5);
         assert!(
