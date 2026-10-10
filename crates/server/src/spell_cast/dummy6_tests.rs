@@ -225,7 +225,8 @@ fn dummy6_wild_growth_caps_injured_allies_not_healthy_units() {
     let far = spawn_player(&mut h.app, 11, 40.0);
     h.app.world_mut().get_mut::<Health>(far).unwrap().current = 100.0;
     h.cast_and_deliver(48438, Some(injured[0]));
-    h.advance(35);
+    // Catalog cast time precedes its first1000ms periodic tick.
+    h.advance(60);
     landed(&h);
     let marked = injured
         .iter()
