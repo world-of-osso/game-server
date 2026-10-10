@@ -1,5 +1,5 @@
 use super::rules::{self, RANDOM_SCALE};
-use super::{Action, Aura, Battle, BattleRng, Catalog, Effect, Event, Outcome, PetRef};
+use super::{Action, Aura, Battle, BattleRng, Catalog, Event, Outcome, PetRef};
 
 const RULE_STATES: &[&str] = &[
     "Stat_CritChance",
@@ -62,6 +62,9 @@ impl Battle {
             rng,
             events: Vec::new(),
         };
+        if rt.replace_fainted(actions)? {
+            return Ok((rt.battle, rt.events));
+        }
         rt.begin_round();
         for (team, action) in actions.iter().enumerate() {
             rt.validate_action(team, *action)?;
@@ -112,6 +115,28 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         let unit = f64::from(self.draw()) / f64::from(RANDOM_SCALE);
         amount * (1.0 + (unit - 0.5) * f64::from(width) / 100.0)
+    }
+    fn replace_fainted(&mut self, actions: [Action; 2]) -> Result<bool, String> {
+        let dead = [0, 1].map(|team| self.battle.pet(self.battle.active(team)).health <= 0);
+        if !dead.iter().any(|v| *v) {
+            return Ok(false);
+        }
+        for team in 0..2 {
+            if dead[team] {
+                let Action::Swap(slot) = actions[team] else {
+                    return Err("fainted active pet requires replacement".into());
+                };
+                self.validate_swap(self.battle.active(team), slot)?;
+            } else if actions[team] != Action::Pass {
+                return Err("opponent must pass during faint replacement".into());
+            }
+        }
+        for team in 0..2 {
+            if let Action::Swap(slot) = actions[team] {
+                self.swap_pet(team, slot)?;
+            }
+        }
+        Ok(true)
     }
     fn begin_round(&mut self) {
         self.battle.round += 1;
@@ -326,8 +351,18 @@ impl<R: BattleRng> Runtime<'_, R> {
                 .max()
                 .unwrap_or(1);
             let order = if max == 1 { 1 } else { aura.turn };
-            self.cast_turn(aura.caster, aura.target, aura.ability, order, 255)?;
-            self.cast_turn(aura.caster, aura.target, aura.ability, 0, 8)?;
+            let caster = if aura.team_bound {
+                self.battle.active(aura.caster.team)
+            } else {
+                aura.caster
+            };
+            let target = if aura.team_bound {
+                self.battle.active(aura.target.team)
+            } else {
+                aura.target
+            };
+            self.cast_turn(caster, target, aura.ability, order, 255)?;
+            self.cast_turn(caster, target, aura.ability, 0, 8)?;
             let Some(current) = self
                 .battle
                 .auras

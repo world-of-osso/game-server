@@ -38,3 +38,9 @@ Supported dispatch:22(zero-point dummy),23(heal),24(damage),26(positive aura),31
 Family passives use state names from BattlePetState and current family descriptions236..245: Beast25% belowhalf; Flying50% speed abovehalf; Critter control immunity; Magic35% hit cap; Mechanical20% once; Undead one immortal following round with25% damage penalty; Humanoid Recovery726 percentage; Dragon next-round50% on crossing enemyhalf; Aquatic incoming periodichalf/outgoing+25%. Elemental weather immunity cannot be exercised until weather handlers exist.
 
 Power coefficient.05 and variance range `variance/200` are Retail `Blizzard_FrameXML/SharedPetBattleTemplates.lua` lines490..502. Base5% critical, critical1.5x, and base+/-10% variance are Blizzard's **Pet Battle Accuracy Changes in Patch5.3** (news10055295); the older Legion emulator instead uses2x crit and is not followed. Current DB2 variance parameters override the base spread. Full Retail runtime observation remains a separate proof level.
+
+## Delayed effects and limits
+
+Negative-aura50 Curse of Doom218 retains turns1..5 although Duration=4: four waiting rounds then impact. Positive periodic63 Wish273 follows the current active pet on its team, not its original caster. Multi-stage aura lifetime includes its final AbilityTurn; single-turn DoTs tick N times. Faint replacement is a decision-only transition and does not advance cooldowns, round counters or ticks.
+
+Object/team damage auras (e.g. Cyclone190/state69), weather, max-health changes, unsupported special states, damage events with family-1 and target override parameters fail admission. Do not present an admitted opcode count as complete ability parity. Remaining ambiguity includes base damage rounding/type weak factor beyond displayed33%, control-duration ordering versus captured Retail, proc event causality, and multi-target implicit selection.
