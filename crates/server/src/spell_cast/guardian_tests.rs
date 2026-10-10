@@ -203,7 +203,13 @@ fn guardians_boundary_same_tick_swings_share_one_native_health_floor_budget() {
             .remove::<crate::stats::CharacterStats>()
             .insert(crate::combat::AutoAttack::new(ally));
     }
-    h.advance(2);
+    // Execute the actual batched swing system and deferred commands without
+    // intervening player health regeneration changing the seeded budget.
+    use bevy::ecs::system::RunSystemOnce;
+    h.app
+        .world_mut()
+        .run_system_once(crate::combat::auto_attack_system)
+        .unwrap();
     assert_eq!(
         h.health(h.caster),
         200.0,
