@@ -245,8 +245,16 @@ pub(crate) fn learn_companion_from_item(
         .ok_or("account pet journal unavailable")?;
     let account_id = state.account_id;
     let mut journal = state.journal.clone();
+    let guid =
+        crate::persistence::next_id(&world.resource::<GameDatabase>().db, "battle_pet_instance");
     journal
-        .add_with_breed(species, level, shared::pet_battle::PetQuality::Common, 3)
+        .add_with_guid(
+            species,
+            level,
+            shared::pet_battle::PetQuality::Common,
+            3,
+            guid,
+        )
         .map_err(|reason| format!("cannot learn pet: {reason:?}"))?;
     save_journal(&world.resource::<GameDatabase>().db, account_id, &journal);
     world
@@ -323,7 +331,7 @@ fn spawn_companion(
     location: (Position, Rotation, InMap, Zone, UnitFactionTemplate),
 ) -> Entity {
     // Retail critter minions are immune to player/NPC attacks and never acquire threats.
-    const NON_COMBAT_FLAGS: u32 = 0x2 | 0x100 | 0x200;
+    use shared::pet_battle::COMPANION_UNIT_FLAGS;
     let replicate = world.get::<Replicate>(owner).is_some();
     let mut pet = world.spawn((
         location,
@@ -340,7 +348,7 @@ fn spawn_companion(
         },
         UnitLevel(level),
         CreatureClassification::Normal,
-        UnitFlags(NON_COMBAT_FLAGS),
+        UnitFlags(COMPANION_UNIT_FLAGS),
         shared::protocol::NpcFlags(0),
         CreatureMotion::Still,
         MovementSpeed(0.0),
@@ -519,6 +527,40 @@ mod tests {
         assert_eq!(loaded, &journal);
         assert_eq!(loaded.pets[0].level, 7);
         assert_eq!(loaded.pets[0].quality, PetQuality::Rare);
+    }
+
+    #[test]
+    fn companion_guids_are_unique_between_accounts_and_preserve_grant_level() {
+        let (mut app, first, _) = follower_app();
+        app.insert_resource(GameDatabase {
+            db: crate::persistence::temp_database(),
+        });
+        app.world_mut()
+            .get_mut::<AccountPetJournal>(first)
+            .unwrap()
+            .journal = PetJournal::default();
+        let second = app
+            .world_mut()
+            .spawn((
+                crate::collection::default_collection_state(),
+                AccountPetJournal {
+                    account_id: 43,
+                    journal: PetJournal::default(),
+                    summoned: None,
+                },
+            ))
+            .id();
+        app.world_mut()
+            .entity_mut(first)
+            .insert(crate::collection::default_collection_state());
+        assert!(learn_companion_from_item(app.world_mut(), first, 4055, 7).unwrap());
+        assert!(learn_companion_from_item(app.world_mut(), second, 4055, 1).unwrap());
+        let db = &app.world().resource::<GameDatabase>().db;
+        let first_journal = load_journal(db, 42);
+        let second_journal = load_journal(db, 43);
+        assert_ne!(first_journal.pets[0].id, second_journal.pets[0].id);
+        assert_eq!(first_journal.pets[0].level, 7);
+        assert_eq!(second_journal.pets[0].level, 1);
     }
 
     #[test]
