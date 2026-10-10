@@ -763,6 +763,20 @@ CREATE TABLE tdb_reference_loot_template (
   Comment TEXT DEFAULT NULL
 );
 
+DROP TABLE IF EXISTS tdb_disenchant_loot_template;
+CREATE TABLE tdb_disenchant_loot_template (
+  Entry INTEGER NOT NULL DEFAULT 0,
+  ItemType INTEGER NOT NULL DEFAULT 0,
+  Item INTEGER NOT NULL DEFAULT 0,
+  Chance REAL NOT NULL DEFAULT 100,
+  QuestRequired INTEGER NOT NULL DEFAULT 0,
+  LootMode INTEGER NOT NULL DEFAULT 1,
+  GroupId INTEGER NOT NULL DEFAULT 0,
+  MinCount INTEGER NOT NULL DEFAULT 1,
+  MaxCount INTEGER NOT NULL DEFAULT 1,
+  Comment TEXT DEFAULT NULL
+);
+
 DROP TABLE IF EXISTS tdb_item_loot_template;
 CREATE TABLE tdb_item_loot_template (
   Entry INTEGER NOT NULL DEFAULT 0,
