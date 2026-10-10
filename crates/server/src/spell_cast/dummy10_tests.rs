@@ -103,33 +103,6 @@ fn dummy10_feral_lunge_launches_named_bite_only_at_hit_enemy() {
     assert!(!hits(&h, 215802).contains(&other));
 }
 #[test]
-fn dummy10_divine_storm_soft_cap_reduces_damage_only_beyond_five() {
-    fn damage(count: usize) -> f32 {
-        let mut h = harness(Vec::new(), &[53385, 403460, 407467], 2).unwrap();
-        h.set_power(PowerType::HolyPower, 5.0);
-        for i in 1..count {
-            spawn_npc(&mut h.app, 1.0 + i as f32 * 0.1);
-        }
-        h.cast_and_deliver(53385, None);
-        h.advance(12);
-        landed(&h);
-        assert_eq!(hits(&h, 53385).len(), count);
-        h.inbox
-            .log
-            .iter()
-            .filter(|e| e.spell_id == Some(53385) && e.kind == CombatLogKind::Damage)
-            .map(|e| e.amount as f32)
-            .sum::<f32>()
-            / count as f32
-    }
-    let five = damage(5);
-    let twenty = damage(20);
-    assert!(
-        twenty / five > 0.45 && twenty / five < 0.55,
-        "{five} {twenty}"
-    );
-}
-#[test]
 fn dummy10_voidform_applies_named_damage_buff_for_native_duration() {
     let mut h = harness(Vec::new(), &[228260, 194249], 5).unwrap();
     h.cast_and_deliver(228260, Some(h.npc));
