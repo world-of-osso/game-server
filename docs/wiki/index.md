@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.
+
 - [Class spell batch7](systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations) — eight TDB-routed bounded paths;21 cast functions pass,172 roots retained with seven additional reviewed/derived candidates and latent markers explicit.
 
 - [Class spell batch6](systems/spell-casting.md#sixth-batch-local-retail-rows) — eight ranked bounded paths plus Ice Lance;17 new cast functions, spell_cast224/224, Dummy roots173→172; retained variants explicit.
