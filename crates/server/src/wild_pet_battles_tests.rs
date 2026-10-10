@@ -242,6 +242,24 @@ fn wild_pet_battle_real_rabbit_ability_round_is_replayable_and_swap_is_ordered()
         .unwrap();
     assert_eq!(first.battle, replay.battle);
     assert_eq!(events, replay_events);
+    let hud = first.snapshot(&catalog, &journal);
+    assert_eq!(hud.teams[0][0].quality, 3);
+    assert_eq!(hud.teams[0][0].icon, 133_140);
+    assert_eq!(hud.teams[0][0].abilities[0].icon, 611_425);
+    assert_eq!(hud.teams[0][0].abilities[0].family, 9);
+    assert_eq!(hud.teams[0][0].xp, journal.get(41).unwrap().xp);
+    assert!(hud.teams[0][0].next_level_xp > 0);
+    let damage = encounter.battle.teams[1].pets[0].health - first.battle.teams[1].pets[0].health;
+    assert!(hud.feedback.iter().any(|event| event.team == 1
+        && event.slot == 0
+        && event.text == damage.to_string()
+        && !event.healing));
+    assert!(
+        !events
+            .iter()
+            .any(|text| text.contains("PetRef") || text.contains("Order("))
+    );
+    assert_eq!(hud.feedback, replay.snapshot(&catalog, &journal).feedback);
     assert!(first.battle.teams[1].pets[0].health < encounter.battle.teams[1].pets[0].health);
     let (swapped, _) = first
         .step(
