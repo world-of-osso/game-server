@@ -257,6 +257,14 @@ def fetch(build, csv_root):
         raise SystemExit(f"wago.tools has no {build} export for: {', '.join(missing)}")
 
 
+def signed_disenchant_rows(rows):
+    """WoWDBDefs5845A4AA: Subclass and ExpansionID are signed8, not uint32."""
+    def signed8(value):
+        return value - 256 if value >= 128 else value
+
+    return [[row[0], signed8(row[1]), *row[2:6], signed8(row[6]), row[7]] for row in rows]
+
+
 def extract(build, csv_root):
     """Write each LOCAL_TABLES CSV from local CASC, columns from db2_schema.sql."""
     if build != DEFAULT_BUILD:
@@ -277,6 +285,8 @@ def extract(build, csv_root):
         header, rows = db2_casc.extract_rows(
             fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES
         )
+        if db2 == "ItemDisenchantLoot":
+            rows = signed_disenchant_rows(rows)
         partial = target.with_suffix(".csv.part")
         with partial.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
