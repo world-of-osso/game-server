@@ -16,8 +16,32 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(false);
         }
         match effect.property {
-            22 => Ok(true), // Explicit dummy opcode, only admitted for zero Points.
+            22 | 116 | 158 | 177 => Ok(true),
             24 | 222 => self.damage_effect(caster, target, ability, effect),
+            27 => self.ramping_damage(caster, target, ability, effect),
+            32 => {
+                if p[2] != 0 && failed || !self.hit(caster, caster, effect) {
+                    return Ok(false);
+                }
+                let amount =
+                    f64::from(self.state(caster, "Last_HitDealt")) * f64::from(p[0]) / 100.0;
+                self.heal_pet(caster, amount);
+                Ok(true)
+            }
+            79 => {
+                let old = self.battle.pet(caster).state(p[0] as u32);
+                let value = old + p[1];
+                let value = if p[2] < p[3] {
+                    value.clamp(p[2], p[3])
+                } else {
+                    value
+                };
+                self.battle
+                    .pet_mut(caster)
+                    .states
+                    .insert(p[0] as u32, value);
+                Ok(true)
+            }
             23 | 53 => self.heal_effect(caster, effect),
             31 => {
                 self.battle.pet_mut(caster).states.insert(p[0] as u32, p[1]);
@@ -30,6 +54,37 @@ impl<R: BattleRng> Runtime<'_, R> {
                 effect.property, effect.id
             )),
         }
+    }
+    fn ramping_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let id = self.catalog.state_id("Ramping_DamageID")?;
+        let uses = self.catalog.state_id("Ramping_DamageUses")?;
+        let count = if self.battle.pet(caster).state(id) == ability as i32 {
+            self.battle.pet(caster).state(uses)
+        } else {
+            0
+        };
+        let mut scaled = effect.clone();
+        scaled.params[0] = (effect.params[0] + count * effect.params[2]).min(effect.params[3]);
+        scaled.params[2] = 0;
+        let hit = self.damage_effect(caster, target, ability, &scaled)?;
+        self.battle
+            .pet_mut(caster)
+            .states
+            .insert(id, ability as i32);
+        self.battle.pet_mut(caster).states.insert(uses, count + 1);
+        if hit && scaled.params[0] == effect.params[3] && effect.params[4] != 0 {
+            self.battle
+                .pet_mut(target)
+                .states
+                .insert(effect.params[4] as u32, 1);
+        }
+        Ok(hit)
     }
     fn hit(&mut self, caster: PetRef, target: PetRef, effect: &Effect) -> bool {
         let chance = effect.params[1] + self.state(caster, "Stat_Accuracy")
@@ -144,7 +199,16 @@ impl<R: BattleRng> Runtime<'_, R> {
             critical,
             periodic,
         });
+        let dealt = old - health;
+        let last_dealt = self.catalog.state_id("Last_HitDealt")?;
+        let last_taken = self.catalog.state_id("Last_HitTaken")?;
+        self.battle.pet_mut(caster).states.insert(last_dealt, dealt);
+        self.battle.pet_mut(target).states.insert(last_taken, dealt);
         if old > health {
+            let damaged = self.catalog.state_id("Condition_WasDamagedThisTurn")?;
+            let did_damage = self.catalog.state_id("Condition_DidDamageThisRound")?;
+            self.battle.pet_mut(target).states.insert(damaged, 1);
+            self.battle.pet_mut(caster).states.insert(did_damage, 1);
             self.battle.pet_mut(caster).dealt_damage = true;
             self.trigger_dragon(caster, target, old, health);
         }
