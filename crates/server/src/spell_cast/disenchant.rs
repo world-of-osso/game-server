@@ -132,22 +132,24 @@ pub(crate) fn check_cast(
     {
         return Err(CastFailure::InProgress);
     }
-    if !world
-        .resource::<DisenchantData>()
-        .loot
-        .disenchant
-        .contains_key(&eligibility.loot_id)
-    {
+    validate_materials(
+        world.resource::<DisenchantData>(),
+        world.resource::<ItemTemplates>(),
+        eligibility.loot_id,
+    )
+}
+
+fn validate_materials(
+    data: &DisenchantData,
+    items: &ItemTemplates,
+    loot_id: u32,
+) -> Result<(), CastFailure> {
+    if !data.loot.disenchant.contains_key(&loot_id) {
         return Err(CastFailure::Unsupported(format!(
-            "Disenchant loot {} unavailable",
-            eligibility.loot_id
+            "Disenchant loot {loot_id} unavailable"
         )));
     }
-    if !world
-        .resource::<DisenchantData>()
-        .loot
-        .disenchant_has_materials(eligibility.loot_id, world.resource::<ItemTemplates>())
-    {
+    if !data.loot.disenchant_has_materials(loot_id, items) {
         return Err(CastFailure::CantBeDisenchanted);
     }
     Ok(())
