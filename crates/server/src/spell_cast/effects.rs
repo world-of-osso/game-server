@@ -593,7 +593,7 @@ pub fn deal_damage(
         .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
         * versatility_multiplier(world, ctx.caster);
-    let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, school);
+    let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
         .max(0.0)
         .round();
