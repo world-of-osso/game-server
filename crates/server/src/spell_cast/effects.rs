@@ -121,6 +121,7 @@ pub type CastEffectHandler = fn(&mut World, &EffectCtx, &SpellEffect);
 /// whatever units the effect's targets select.
 pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
     Some(match effect_id {
+        super::disenchant::EFFECT_DISENCHANT => super::disenchant::effect_disenchant,
         254 => super::teleport::jump_to_destination,
         crate::meeting_stone::ritual::EFFECT_TRANS_DOOR => {
             crate::meeting_stone::ritual::effect_trans_door

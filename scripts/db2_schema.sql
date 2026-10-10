@@ -9,6 +9,19 @@ CREATE TABLE db2_build (
   build TEXT NOT NULL
 );
 
+-- Local CASC FDID1134087, layout5845A4AA, Retail 12.1.0.69933.
+DROP TABLE IF EXISTS item_disenchant_loot;
+CREATE TABLE item_disenchant_loot (
+  ID INTEGER PRIMARY KEY,
+  Subclass INTEGER NOT NULL,
+  Quality INTEGER NOT NULL,
+  MinLevel INTEGER NOT NULL,
+  MaxLevel INTEGER NOT NULL,
+  SkillRequired INTEGER NOT NULL,
+  ExpansionID INTEGER NOT NULL,
+  Class INTEGER NOT NULL
+);
+
 -- Local CASC FDID 1345276, layout A4CA5ECF (WoWDBDefs SummonProperties).
 DROP TABLE IF EXISTS summon_properties;
 CREATE TABLE summon_properties (

@@ -16,6 +16,9 @@ pub mod area_aura;
 pub mod area_trigger;
 pub(crate) mod cosmetic;
 pub mod creature;
+mod disenchant;
+#[cfg(test)]
+mod disenchant_tests;
 pub mod effects;
 mod hit;
 mod missiles;
@@ -84,7 +87,9 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<UnhandledEffects>()
+        app.init_resource::<disenchant::DisenchantData>()
+            .add_systems(Startup, disenchant::load_startup)
+            .init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
             .init_resource::<teleport_positions::SpellTargetPositions>()
             .add_systems(Startup, teleport_positions::load_positions_startup)
@@ -157,6 +162,8 @@ pub enum CastFailure {
     Totems(String),
     /// A created item does not fit in the bags.
     InventoryFull,
+    CantBeDisenchanted,
+    CantBeDisenchantedSkill,
     /// A Tame Beast, Call Pet or Dismiss Pet check (`crate::hunter_pet::check_cast`).
     Pet(crate::hunter_pet::PetCastFailure),
     Unsupported(String),
@@ -167,7 +174,7 @@ impl CastFailure {
         use CastFailReason as R;
         match self {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
-            Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
+            Self::NotKnown => (R::NotKnown, None),
             Self::CasterDead => (R::CasterDead, None),
             Self::CrowdControlled(block) => match block {
                 crate::auras::CastBlock::Stunned => (R::Stunned, None),
@@ -197,6 +204,8 @@ impl CastFailure {
             Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
             Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
             Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
+            Self::CantBeDisenchanted => (R::CantBeDisenchanted, None),
+            Self::CantBeDisenchantedSkill => (R::CantBeDisenchantedSkill, None),
             Self::Pet(failure) => failure.to_contract(),
             Self::Unsupported(detail) => (R::NotSupported, Some(detail.clone())),
         }
@@ -588,6 +597,7 @@ pub(crate) fn cast_for_player(
     spell_id: u32,
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
+        target_item_guid: None,
         destination: None,
         spell_id: Some(spell_id),
         spell: String::new(),
@@ -793,8 +803,14 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
+    let explicit = if disenchant::is_disenchant(&spell) {
+        None
+    } else {
+        explicit
+    };
     let mut requested_spell = spell.clone();
     requested_spell.cast_destination = request.destination;
+    requested_spell.cast_target_item_guid = request.target_item_guid;
     let effective_id = crate::auras::overrides::resolve_spell(world, caster, spell.id);
     let mut spell = world
         .resource::<SpellStore>()
@@ -802,6 +818,7 @@ fn request_cast(
         .expect("resolved spell exists")
         .clone();
     spell.cast_destination = request.destination;
+    spell.cast_target_item_guid = request.target_item_guid;
     let delay = cast_queue_delay(world, caster, &spell);
     // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
@@ -863,6 +880,7 @@ fn start_queued_casts(world: &mut World) {
             .expect("resolved queued spell exists")
             .clone();
         effective_spell.cast_destination = queued.spell.cast_destination;
+        effective_spell.cast_target_item_guid = queued.spell.cast_target_item_guid;
         if let Err(failure) = start_cast(
             world,
             caster,
@@ -966,6 +984,7 @@ fn validate_start(
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
+    disenchant::check_cast(world, caster, spell)?;
     Ok(target)
 }
 
@@ -1347,6 +1366,7 @@ fn execute_cast(
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
+    disenchant::check_cast(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     spend_costs(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
@@ -1454,6 +1474,15 @@ fn plan_targets(
     let mut selected: Vec<(usize, Vec<Entity>)> = Vec::new();
     for (index, effect) in spell.effects.iter().enumerate() {
         if !selects_targets(spell, effect) {
+            continue;
+        }
+        if effect.effect == disenchant::EFFECT_DISENCHANT {
+            plan.push(PlannedEffect {
+                index,
+                units: Vec::new(),
+                dest: None,
+                chain_multipliers: Vec::new(),
+            });
             continue;
         }
         let leader = target_group_leader(spell, index);

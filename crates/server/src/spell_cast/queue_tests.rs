@@ -228,6 +228,7 @@ fn spellqueue_exact_400ms_boundary_is_inclusive() {
         .insert(133, now + 0.4);
     h.set_power(PowerType::Rage, 200.0);
     let request = shared::protocol::SpellCastIntent {
+        target_item_guid: None,
         destination: None,
         spell_id: Some(SLAM),
         spell: String::new(),

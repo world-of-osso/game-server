@@ -97,6 +97,7 @@ fn spell_teleport_ground_leap_rejects_out_of_range_and_nonfinite_destinations() 
     for point in [[10000.0, 0.0, 0.0], [f32::NAN, 0.0, 0.0]] {
         let mut h = harness(Vec::new(), &[189110], 12).unwrap();
         let request = shared::protocol::SpellCastIntent {
+            target_item_guid: None,
             destination: Some(point),
             spell_id: Some(189110),
             spell: String::new(),

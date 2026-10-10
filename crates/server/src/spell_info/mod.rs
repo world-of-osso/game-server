@@ -53,6 +53,9 @@ pub struct SpellInfo {
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,
+    /// Owned bag GUID on this cast's queued/active snapshot.
+    #[serde(skip)]
+    pub(crate) cast_target_item_guid: Option<u64>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
