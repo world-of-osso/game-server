@@ -1,4 +1,6 @@
 //! Batch10: unchanged local Mainline rows, native cast/impact boundaries.
+// Passives synchronize from KnownSpells. Negative-rank cases remove both the
+// known rank and its aura; omitting an explicit apply() does not remove a rank.
 use super::test_harness::*;
 use bevy::prelude::*;
 use shared::components::{Position, PowerType};
@@ -232,5 +234,42 @@ fn dummy10_lightning_bolt_grants_rank_maelstrom_once_per_successful_cast() {
         h.advance(70);
         landed(&h);
         assert_eq!(h.power(PowerType::Maelstrom), if rank { 6.0 } else { 0.0 });
+    }
+}
+
+#[test]
+fn dummy10_consecration_recast_replaces_only_owners_field() {
+    let mut h = harness(Vec::new(), &[26573, 81297], 2).unwrap();
+    let foreign = spawn_player(&mut h.app, 2, 30.0);
+    let foreign_enemy = spawn_npc(&mut h.app, 33.0);
+    let new_enemy = spawn_npc(&mut h.app, 63.0);
+    h.cast_and_deliver(26573, None);
+    super::cast_granted(h.app.world_mut(), foreign, 26573, None).unwrap();
+    h.advance(185); //9000ms native cooldown, original field still alive (12000ms).
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: 60.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    h.cast_and_deliver(26573, None);
+    landed(&h);
+    let old_health = h.health(h.npc);
+    let foreign_health = h.health(foreign_enemy);
+    h.advance(22);
+    assert_eq!(h.health(h.npc), old_health);
+    assert!(h.health(new_enemy) < 5000.0);
+    assert!(h.health(foreign_enemy) < foreign_health);
+}
+
+#[test]
+fn dummy10_cancelled_buff_casts_do_not_apply_post_cast_children() {
+    for (root, child, class) in [(228260, 194249, 5), (365350, 365362, 8)] {
+        let mut h = harness(Vec::new(), &[root, child], class).unwrap();
+        h.cast_and_deliver(root, Some(h.npc));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, child));
+        super::cancel_cast(h.app.world_mut(), h.caster);
+        h.advance(80);
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, child));
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == root));
     }
 }
