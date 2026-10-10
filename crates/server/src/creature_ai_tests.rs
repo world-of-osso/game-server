@@ -26,6 +26,7 @@ fn ai_test_app() -> App {
 
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
+    app.init_resource::<MapStore>();
     app.insert_resource(TimeUpdateStrategy::ManualDuration(
         std::time::Duration::from_millis(50),
     ));
@@ -41,7 +42,13 @@ fn ai_test_app() -> App {
         (
             wander_system,
             waypoint_system,
-            (chase_system, leash_check_system, return_to_spawn_system).chain(),
+            (
+                chase_system,
+                no_path_evade_system,
+                leash_check_system,
+                return_to_spawn_system,
+            )
+                .chain(),
         ),
     );
     app.update();

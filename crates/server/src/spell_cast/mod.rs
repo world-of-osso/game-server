@@ -138,6 +138,7 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
                     summon::expire_summons.after(advance_casts),
+                    crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                 ),
             );
@@ -196,6 +197,10 @@ impl CastFailure {
                 crate::auras::CastBlock::Stunned => (R::Stunned, None),
                 crate::auras::CastBlock::Silenced => (R::Silenced, None),
                 crate::auras::CastBlock::Pacified => (R::Pacified, None),
+                // Existing detail contract, as with Confused; no protocol ABI change.
+                crate::auras::CastBlock::NoActions => {
+                    (R::NotSupported, Some("Can't do that right now".into()))
+                }
                 // SPELL_FAILED_CONFUSED has no CastFailReason in shared-protocol yet.
                 crate::auras::CastBlock::Confused => {
                     (R::NotSupported, Some("Can't do that while confused".into()))
@@ -1400,6 +1405,7 @@ fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     spend_costs(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
     start_cooldowns(world, caster, spell);
@@ -1513,6 +1519,11 @@ fn plan_targets(
         if !selects_targets(spell, effect) {
             continue;
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
+            if let Some(reason) = crate::game_objects::summoned::unsupported_reason(world, effect) {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
         if effect.effect == disenchant::EFFECT_DISENCHANT {
             plan.push(PlannedEffect {
                 index,
@@ -1561,7 +1572,7 @@ fn plan_targets(
                 orientation: targets::orientation(world, caster),
             })
         } else {
-            targets::effect_dest(world, caster, explicit, effect)
+            targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
         plan.push(PlannedEffect {
             index,

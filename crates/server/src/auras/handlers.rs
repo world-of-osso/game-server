@@ -39,6 +39,8 @@ pub enum AuraKind {
     HitDefense,
     /// Read by cast selection and included in aura replication.
     Override,
+    /// Trigger a summon on application and remove it with its aura.
+    LinkedSummon,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -127,6 +129,8 @@ pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
 pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
 pub const PERIODIC_DUMMY: u32 = 226;
 pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
+/// TC a352b1fa HandleUnused: viewer-local humanoid appearance, client-side only.
+pub const CHANGE_MODEL_FOR_ALL_HUMANOIDS: u32 = 233;
 pub const MOD_SPEED_SLOW_ALL: u32 = 252;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
@@ -137,6 +141,8 @@ pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
 pub const MASTERY: u32 = 318;
+/// TC a352b1fa HandleAuraModNoActions: PreventionType NO_ACTIONS (4).
+pub const MOD_NO_ACTIONS: u32 = 321;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
@@ -152,6 +158,8 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
+pub const LINKED_SUMMON: u32 = 428;
+pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -164,9 +172,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
-        SCREEN_EFFECT => ClientVisual,
+        SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
+        LINKED_SUMMON => LinkedSummon,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
-        MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
+        MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2
         | MOD_STAT

@@ -14,6 +14,8 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
+            376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585,
         ],
         8,
     )
@@ -44,6 +46,8 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app
         .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
     h.app
@@ -873,6 +877,361 @@ fn toyfx2_override_toy_applies_replicates_and_reverts() {
 }
 
 #[test]
+fn toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 193033); // Convergent Prism376088.
+    assert_eq!(activate(&mut h, 193033)[0].error, None);
+    let frostbolt = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(116)
+        .unwrap()
+        .clone();
+    assert!(crate::auras::cast_blocker(h.app.world(), h.caster, &frostbolt).is_some());
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 376088)
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 376088,
+    );
+    assert!(crate::auras::cast_blocker(h.app.world(), h.caster, &frostbolt).is_none());
+}
+
+#[test]
+fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    learn_effect_toy(&mut h, character, 193476); // Gnoll Tent398159->398162->200391.
+    assert_eq!(activate(&mut h, 193476)[0].error, None);
+    h.advance(60); // Authentic cast time is3000ms; ToyResult only reports start.
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let summons = |world: &mut World| -> Vec<(Entity, Entity)> {
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, s)| s.spell_id == 398162)
+            .map(|(e, s)| (e, s.owner))
+            .collect()
+    };
+    let first = summons(h.app.world_mut());
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].1, h.caster);
+    let pos = h
+        .app
+        .world()
+        .get::<shared::components::Position>(first[0].0)
+        .unwrap();
+    let owner = h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.caster)
+        .unwrap();
+    // TargetA18=DEST_CASTER; TargetB79=DEST_DEST_BACK; DB2 radius7=2yd.
+    assert!((pos.x - (owner.x - 2.0)).abs() < 0.001);
+    assert_eq!(pos.y, owner.y);
+    assert!((pos.z - owner.z).abs() < 0.001);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(first[0].0)
+            .unwrap()
+            .display_id,
+        111084
+    );
+    let apply = |world: &mut World, unit| {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: unit,
+                target: unit,
+                spell_id: 398159,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        )
+    };
+    apply(h.app.world_mut(), h.caster); // Refresh does not make another tent.
+    assert_eq!(summons(h.app.world_mut()), first);
+    let other = spawn_player(&mut h.app, 8, 10.0);
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI,
+            z: 0.0,
+        });
+    apply(h.app.world_mut(), other);
+    let both = summons(h.app.world_mut());
+    assert_eq!(both.len(), 2);
+    let rotated = both.iter().find(|(_, owner)| *owner == other).unwrap().0;
+    let pos = h
+        .app
+        .world()
+        .get::<shared::components::Position>(rotated)
+        .unwrap();
+    assert!((pos.x - 10.0).abs() < 0.001);
+    assert!((pos.z - 2.0).abs() < 0.001);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 398159,
+    );
+    let remaining = summons(h.app.world_mut());
+    assert_eq!(remaining.len(), 1);
+    assert_eq!(remaining[0].1, other);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        other,
+        crate::auras::RemoveReason::Death,
+        |a| a.spell_id == 398159,
+    );
+    assert!(summons(h.app.world_mut()).is_empty());
+}
+
+#[test]
+fn toyfx3_bobber_overrides_remain_explicitly_unsupported() {
+    // Toy142528, Can of Worms:231291 replaces bobber35591 with241593/385542.
+    let mut world = World::new();
+    let data = world_db().unwrap();
+    world.insert_resource(crate::spell_info::SpellStore::fixture(
+        [231291, 131474]
+            .into_iter()
+            .map(|id| data.store.get(id).unwrap().clone())
+            .collect(),
+    ));
+    let reasons = toy_catalog::unsupported_types(&world, 231291);
+    assert!(reasons.contains("aura 258"));
+    assert!(
+        reasons
+            .iter()
+            .any(|r| r.contains("35591 -> 241593") && r.contains("transmitted-object/fishing"))
+    );
+}
+
+#[test]
+fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
+    // DB2/TDB: Stormwind Banner45011->62736->194274 (generic),
+    // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605.
+    for (item, spell, entry, go_type, display, scale, offset, lifetime_seconds) in [
+        (45011, 62736, 194274, 5, 10483, 1.0, 0.0, 180),
+        (33223, 42766, 186475, 7, 7467, 1.0, 2.0, 300),
+        (40768, 54710, 191605, 19, 8171, 0.5, 3.0, 600),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        let conn = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::Rotation {
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            });
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        h.advance(100); // includes real cast time for MOLL-E.
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let objects: Vec<_> = world
+            .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+            .iter(world)
+            .filter(|(_, info)| info.entry == entry)
+            .map(|(e, info)| (e, info.clone()))
+            .collect();
+        assert_eq!(objects.len(), 1, "toy {item} must create its real object");
+        let (object, info) = &objects[0];
+        assert_eq!(
+            (info.go_type, info.display_id, info.scale),
+            (go_type, display, scale)
+        );
+        let pos = world.get::<shared::components::Position>(*object).unwrap();
+        assert!((pos.x - offset).abs() < 0.001, "{pos:?}");
+        assert_eq!((pos.y, pos.z), (0.0, 0.0));
+        assert_eq!(
+            world.get::<crate::maps::InMap>(*object),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert_eq!(
+            world
+                .get::<shared::components::Rotation>(*object)
+                .unwrap()
+                .y,
+            std::f32::consts::FRAC_PI_2
+        );
+        if go_type == 7 {
+            assert!(world.get::<crate::chair::Chair>(*object).is_some());
+        }
+        h.advance(lifetime_seconds * 20 - 200); // survives normal cast completion.
+        assert!(h.app.world().get_entity(*object).is_ok());
+        h.advance(200); // chair's timer begins after its real3000ms cast.
+        assert!(h.app.world().get_entity(*object).is_err(), "toy {item}");
+    }
+}
+
+#[test]
+fn toyfx4_destination_request_does_not_select_a_unit_or_use_target_facing() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: 1.2 + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: 2.0 + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::SpellCastIntent>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::SpellCastIntent {
+            spell_id: Some(62736),
+            spell: String::new(),
+            target_entity: Some(h.npc.to_bits()),
+            destination: Some([7.0, 4.0, -2.0]),
+            target_item_guid: None,
+            witness: None,
+        });
+    h.advance(7);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let world = h.app.world_mut();
+    let objects: Vec<_> = world
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(world)
+        .filter(|(_, info)| info.entry == 194274)
+        .map(|(e, _)| e)
+        .collect();
+    assert_eq!(objects.len(), 1);
+    assert_eq!(
+        *world
+            .get::<shared::components::Position>(objects[0])
+            .unwrap(),
+        shared::components::Position {
+            x: 7.0,
+            y: 4.0,
+            z: -2.0
+        }
+    );
+    assert!(
+        (world
+            .get::<shared::components::Rotation>(objects[0])
+            .unwrap()
+            .y
+            - (1.2 + std::f32::consts::FRAC_PI_2))
+            .abs()
+            < 0.001
+    );
+    assert_eq!(
+        world
+            .get::<crate::game_objects::summoned::SummonedObject>(objects[0])
+            .unwrap()
+            .owner,
+        h.caster
+    );
+}
+
+#[test]
+fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    // Goblin Gumbo needs spellcaster object interaction, not ritual semantics.
+    learn_effect_toy(&mut h, character, 33219);
+    let error = activate(&mut h, 33219)[0].error.clone().unwrap();
+    assert!(
+        error.contains("186472") && error.contains("type 22"),
+        "{error}"
+    );
+    assert!(!h.inbox.cooldowns.iter().any(|c| c.spell_id == 42753));
+    // Actual DB2 toy199767/388088 references381317, absent in local TDB1210.
+    learn_effect_toy(&mut h, character, 199767);
+    let error = activate(&mut h, 199767)[0].error.clone().unwrap();
+    assert!(error.contains("gameobject template"), "{error}");
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 388088));
+}
+
+#[test]
+fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
+    for (item, spell, payload) in [(166678, 289277, [4076, 155]), (198227, 384585, [6409, 170])] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None);
+        h.advance(60); // Brynja has a real2500ms cast; goggles are instant.
+        let active = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap();
+        let aura = active.iter().find(|a| a.spell_id == spell).unwrap();
+        assert_eq!(aura.effects[0].aura_type, 233);
+        assert_eq!(aura.effects[0].misc_values, payload);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::ModelDisplay>(h.caster)
+                .is_none()
+        );
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |a| a.spell_id == spell,
+        );
+        h.advance(3);
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     use std::collections::{BTreeMap, BTreeSet};
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -880,6 +1239,8 @@ fn toys_effect_census() {
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
+    world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
+    world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
     world.insert_resource(crate::world_data::load_world_data(
         &crate::test_data::world_db_path(),
