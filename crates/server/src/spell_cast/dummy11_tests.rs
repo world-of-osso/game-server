@@ -152,7 +152,8 @@ fn dummy11_blade_of_justice_splash_requires_blade_talent() {
             no_rank(&mut h, 403826);
         }
         let near = spawn_npc(&mut h.app, 5.0);
-        let far = spawn_npc(&mut h.app, 10.0);
+        // Native child radius is8yd despite its tooltip saying6yd.
+        let far = spawn_npc(&mut h.app, 11.1);
         h.cast_and_deliver(184575, Some(h.npc));
         h.advance(8);
         landed(&h);
@@ -178,7 +179,8 @@ fn dummy11_hammer_wave_requires_caster_in_owned_consecration() {
             } else {
                 h.caster
             };
-            super::cast_triggered(h.app.world_mut(), owner, 26573, None, 0);
+            h.advance(1);
+            super::cast_granted(h.app.world_mut(), owner, 26573, None).unwrap();
             h.advance(3);
         }
         h.app.world_mut().entity_mut(h.caster).insert(Position {
