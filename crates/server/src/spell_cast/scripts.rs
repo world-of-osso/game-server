@@ -4,6 +4,7 @@
 mod batch3;
 mod batch4;
 mod batch5;
+mod batch6;
 
 use bevy::prelude::*;
 
@@ -75,6 +76,10 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch6::SUNFIRE, 0) => Some(batch6::sunfire),
+        (batch6::TEMPLARS_VERDICT, 0) => Some(batch6::verdict),
+        (batch6::ICE_LANCE, 0) => Some(batch6::ice_lance),
+        (batch6::SHADOW_WORD_DEATH, 1) => Some(batch6::shadow_word_death),
         (batch5::DEMONS_BITE, 1) => Some(batch5::demons_bite),
         (batch5::CHAOS_STRIKE, 0) => Some(batch5::chaos_strike),
         (batch5::RAPTURE, 0) => Some(batch5::rapture),
@@ -192,6 +197,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
         batch4::VIVIFY => Some(batch4::vivify),
         batch4::ERUPTION => Some(batch4::eruption),
+        batch6::STARFALL => Some(batch6::starfall),
         _ => shared::skyriding::ability_impulse(spell_id)
             .map(|_| crate::skyriding::flap as AfterCastHook),
     }
@@ -237,6 +243,9 @@ pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
         batch3::PRAYER_OF_HEALING => Some((Relation::Ally, batch3::prayer_plan)),
         batch4::LIGHT_OF_DAWN => Some((Relation::Ally, batch4::light_of_dawn_plan)),
         CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
+        batch6::STARFIRE => Some((Relation::Enemy, batch6::starfire_plan)),
+        batch6::KEG_SMASH => Some((Relation::Enemy, batch6::keg_smash_plan)),
+        batch6::WILD_GROWTH => Some((Relation::Ally, batch6::wild_growth_plan)),
         _ => None,
     }
 }
@@ -791,6 +800,7 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),
+        batch6::BUTCHERY => Some(batch6::butchery),
         FROSTBOLT => Some(frostbolt_chilled),
         _ => None,
     }

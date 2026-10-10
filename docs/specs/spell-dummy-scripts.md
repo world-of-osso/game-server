@@ -63,6 +63,18 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - [x] Epidemic207317 erupts owned Virulent Plagues through212739 with distinct primary/nearby damage and extends owned Dread/Virulent Plagues by77575's authored1000ms.
 - [x] Lava Burst51505's damage child285452 guarantees a critical strike against Flame Shock, scales damage with crit percentage, and retains its existing generic343725-modified eight Maelstrom generation (not a new resource script).
 
+### Sixth-batch locally derived paths
+
+- [x] Sunfire93402 resolves164815's direct/periodic base effects; Improved Sunfire231050 spreads only the periodic effect to nearby enemies within the child radius. Optional aura271/537 effects are not applied blindly.
+- [x] Templar's Verdict85256 resolves224266's named damage effect; the child's unidentified Dummy markers remain unsupported.
+- [x] Ice Lance30455 resolves its named228598 damage child; Freezing/shatter is not certified.
+- [x] Starfire194153 deals full primary damage and its authored70% secondary damage inside the native area.
+- [x] Keg Smash121253 deals its authored50% primary-target bonus while retaining native area damage and slow.
+- [x] Butchery212436 with294029 reduces Wildfire Bomb259495's existing recharge by its authored3000ms per successful damage-effect hit (including full absorption), up to five hits; no rank or ready recharge means no change.
+- [x] Wild Growth48438 applies its base periodic heal to at most five injured allies in the native target-centered area; healthy units do not consume slots.
+- [x] Shadow Word: Death32379 applies its authored5% caster-max-health backlash if the target survives the damage, not on a kill.
+- [x] Starfall191034 with327541 extends owned Moonfire164812/Sunfire164815 by three seconds, capped at28 seconds remaining, preserving existing tick clocks and foreign marks.
+
 ## How it works
 
 - [Spell scripts and coverage boundaries](../wiki/systems/spell-casting.md#class-dummy-scripts)
@@ -73,8 +85,8 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - `spell_cast/mod.rs`, `spell_cast/effects.rs` — validation, channel construction and normal effect execution.
 - `auras/scripts.rs`, `auras/mod.rs` — periodic/removal callbacks and owned-duration extension.
 - `stats.rs`, `auras/{handlers,stat_mods}.rs` — live stat-derived armor.
-- `spell_cast/scripts/{batch3,batch4,batch5}.rs` — locally sourced bounded paths.
-- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests,dummy4_tests,dummy5_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
+- `spell_cast/scripts/{batch3,batch4,batch5,batch6}.rs` — locally sourced bounded paths.
+- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests,dummy4_tests,dummy5_tests,dummy6_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
 
 ## Tests asserting this spec
 
@@ -88,6 +100,8 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 
 - `crates/server/src/spell_cast/dummy5_tests.rs` —14 per-spell authentic catalog cast functions with chance/ownership/rank/cap gates. Full spell_cast207/207 at`f6b842a`; [census and proof](../wiki/systems/spell-casting.md#fifth-batch-local-retail-rows).
 
+- `crates/server/src/spell_cast/dummy6_tests.rs` — 17 real catalog cast functions for the nine bounded paths, full spell_cast224/224 at`7cff842`; [scope and current proof](../wiki/systems/spell-casting.md#sixth-batch-local-retail-rows).
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
@@ -100,4 +114,5 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - Third-batch unimplemented variants: Improved Garrote windows/other concealment spells; Prayer selection injury priority/LOS beyond ordinary cast validation; Prayer-to-Serenity optional1246517; Shred stealth/Thrash variants; Thunder Clap reduced damage beyond five targets/root variant; Moonfire second target, damage reduction and Astral Power variants. Unknown root/descendant markers are not certified by base-path proof.
 - Fourth-batch limits: unknown Dummy metadata remains unresolved. Steady Shot Marksmanship cooldown/level curve, Kill Shot enabling talents, Mangle marker, Renewing Mist overheal jumps/rank231606 procs, Vivify tooltip multiplier/talent variants, Chain Lightning Maelstrom Weapon/target-count marker, Howling Blast secondary damage/CAP/Frost Fever resource procs, Sanctify target cap/extra marker, Ebon Might stat distribution and extension caps are not certified.
 - Fifth-batch limits: unidentified Demon's Bite/Disintegrate/Chaos Bolt markers; Chaos Strike's30 mirror is not separately consumed; Shuriken soft-cap/stealth/talent fields; Bone Shield consumption/haste/armor parity and Blood Plague leech; latent plague talent effects. Crash Lightning remains deferred because its native selector104 is unsupported. No alternate cone substituted. These base-path tests do not certify full class rotations.
+- Sixth-batch limits: unknown root/child markers; Starfire/Keg/Butchery reduced-damage curves beyond their soft caps; Starfire429523 variant; Keg Shuffle/Brew reduction; Wild Growth declining tick curve/Tree of Life targets; Shadow Word: Death execute/damage-effect variants; Ice Lance Freezing/shatter; Starfall overlap/base tick child contracts. Selector104 remains unsupported: no Retail selector definition derived from the allowed local sources. No cone substitute or scope-wide rotation claim.
 - Realm UDP 5000, deployment and merging.
