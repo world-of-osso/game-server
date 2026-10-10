@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks) — nine local Mainline paths, fixed ground pulses/owned marks/shield lifetimes,40-spec census coverage;171→170 Dummy roots, retained range/talent gaps.
+
 - [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.
 
 - [Audited toy attachments and sounds](systems/toys.md#audited-attachment-and-sound-toys-2026-10-10) — eight source-backed visual-only admissions, actual target/cast/lifetime proofs, preserved race restrictions and unbound-ring refusals; census103/1166.
