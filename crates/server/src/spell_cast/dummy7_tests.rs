@@ -48,10 +48,11 @@ fn dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage()
     super::cast_triggered(h.app.world_mut(), caster, 108853, Some(npc), 1);
     h.advance(10);
     assert!(varied(256.425).contains(&(logged(&h, 108853, npc, CombatLogKind::Damage) as f32)));
-    h.inbox.log.clear();
+    let before = h.health(npc);
     super::cast_triggered(h.app.world_mut(), foreign, 108853, Some(npc), 1);
     h.advance(10);
-    assert!(varied(197.25).contains(&(logged(&h, 108853, npc, CombatLogKind::Damage) as f32)));
+    // The unconnected foreign actor has no owner inbox; observe the actual loss.
+    assert!(varied(197.25).contains(&(before - h.health(npc))));
     h.advance(250);
     assert!(!crate::auras::has_aura(h.app.world(), npc, 208086));
 }
@@ -71,9 +72,10 @@ fn dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_chi
         .world_mut()
         .entity_mut(attacker)
         .insert(shared::components::UnitFactionTemplate(25));
+    let before = h.health(caster);
     super::cast_triggered(h.app.world_mut(), attacker, 108853, Some(caster), 1);
     h.advance(10);
-    assert!(varied(98.625).contains(&(logged(&h, 108853, caster, CombatLogKind::Damage) as f32)));
+    assert!(varied(98.625).contains(&(before - h.health(caster))));
     crate::auras::remove_auras(
         h.app.world_mut(),
         caster,
@@ -81,10 +83,10 @@ fn dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_chi
         |a| a.spell_id == 61336,
     );
     assert!(!crate::auras::has_aura(h.app.world(), caster, 50322));
-    h.inbox.log.clear();
+    let before = h.health(caster);
     super::cast_triggered(h.app.world_mut(), attacker, 108853, Some(caster), 1);
     h.advance(10);
-    assert!(varied(197.25).contains(&(logged(&h, 108853, caster, CombatLogKind::Damage) as f32)));
+    assert!(varied(197.25).contains(&(before - h.health(caster))));
 }
 #[test]
 fn dummy7_survival_instincts_child_expires_with_parent() {
@@ -219,8 +221,13 @@ fn raging_blow(chance: f32, rank: bool) {
         .used;
     let reset = rank && chance == 100.0;
     assert_eq!(used, if reset { 0 } else { 1 });
+    // This real one-charge proc marker can be consumed by the root's damage
+    // event before delivery. Assert application, not continued presence.
     assert_eq!(
-        crate::auras::has_aura(h.app.world(), h.caster, 280270),
+        h.inbox
+            .log
+            .iter()
+            .any(|e| e.spell_id == Some(280270) && e.kind == CombatLogKind::AuraApplied),
         reset
     );
     if reset {
@@ -279,6 +286,10 @@ fn whirlwind(rank: bool, enemies: usize) {
 #[test]
 fn dummy7_whirlwind_rank_generates_per_enemy_rage_up_to_five() {
     whirlwind(true, 7);
+}
+#[test]
+fn dummy7_whirlwind_rank_counts_two_enemies_without_using_maximum() {
+    whirlwind(true, 2);
 }
 #[test]
 fn dummy7_whirlwind_without_rank_generates_only_base_rage() {

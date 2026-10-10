@@ -7,7 +7,6 @@ use super::script_effect_value;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use crate::spell_info::{SpellInfo, SpellStore};
-use targets::Relation;
 
 pub(super) const COLOSSUS_SMASH: u32 = 167105;
 pub(super) const HEART_STRIKE: u32 = 206930;
