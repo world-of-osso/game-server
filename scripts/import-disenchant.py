@@ -8,6 +8,8 @@ import importlib.util
 import sqlite3
 from pathlib import Path
 
+from db2 import signed_disenchant_rows
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -24,11 +26,10 @@ def main():
     records = []
     for row_id, (values, parent, _) in sorted(rows.items()):
         subclass, quality, minimum, maximum, skill, expansion = values
-        subclass = subclass - 256 if subclass >= 128 else subclass
-        expansion = expansion - 256 if expansion >= 128 else expansion
         if parent is None or minimum > maximum:
             raise ValueError(f"invalid ItemDisenchantLoot row {row_id}")
         records.append((row_id, subclass, quality, minimum, maximum, skill, expansion, parent))
+    records = signed_disenchant_rows(records)
     with sqlite3.connect(args.world) as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS item_disenchant_loot (ID INTEGER PRIMARY KEY, Subclass INTEGER NOT NULL, Quality INTEGER NOT NULL, MinLevel INTEGER NOT NULL, MaxLevel INTEGER NOT NULL, SkillRequired INTEGER NOT NULL, ExpansionID INTEGER NOT NULL, Class INTEGER NOT NULL)")
         conn.execute("DELETE FROM item_disenchant_loot")
