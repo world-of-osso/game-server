@@ -87,6 +87,7 @@ mod quest_view;
 mod race_class;
 mod reputation;
 mod rest;
+mod scrapping;
 mod scripted_ai;
 mod sheet_visibility;
 mod skyriding;
@@ -188,6 +189,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(conditions::ConditionsPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
+        .add_plugins(scrapping::ScrappingPlugin)
         .add_plugins(appearance_collection::AppearanceCollectionPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)

@@ -16,7 +16,7 @@ The acquisition receipt added an account lookup to `load_inventory_record`, whos
 
 Real IDs: Worn Shortsword 25 / visual154, Verigan's Fist6953 /2288, Gaudy Winter Veil Sweater70923 /15791, Large Round Shield2129 /684, Urchin's Pants2238 /763 and unchosen Militia Buckler2249 /356. `transmogacq` fixtures exercise actual message handlers or AH settlement/mail claims and reopen redb. Existing equip/world-entry tests exercise account-alt collection snapshots. Exact commands/revisions/results are in `/home/osso/.worktrees/handoff-transmog-acquire.md`; full integration gate belongs to the lead.
 
-[Disenchant gameplay](../systems/disenchant.md) now uses these receipts on its unmerged companion branch. No scrap gameplay handler, source-specific collection, refund/loot-trade reversal, retroactive quest backfill, native Wardrobe or collected-toast parity claim.
+[Disenchant gameplay](../systems/disenchant.md) now uses these receipts on its unmerged companion branch. [Scrapping preflight](../systems/scrapping.md) now validates internal requests but cannot consume items or grant loot; explicit Retail scrap collection remains unverified. No completed scrap gameplay handler, source-specific collection, refund/loot-trade reversal, retroactive quest backfill, native Wardrobe or collected-toast parity claim.
 
 ## Sources
 

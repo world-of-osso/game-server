@@ -2,7 +2,7 @@
 //!
 //! Guild Vaults (`GAMEOBJECT_TYPE_GUILD_BANK`), Mailboxes
 //! (`GAMEOBJECT_TYPE_MAILBOX`), meeting stones (`GAMEOBJECT_TYPE_MEETINGSTONE`), chairs
-//! (`GAMEOBJECT_TYPE_CHAIR`, `chair`) and the
+//! (`GAMEOBJECT_TYPE_CHAIR`, `chair`), Scrapping Machine UI links (`scrapping`), and the
 //! non-usable decoration (`GAMEOBJECT_TYPE_GENERIC`) and spell foci
 //! (`GAMEOBJECT_TYPE_SPELL_FOCUS`: fires, bonfires) spawn for now, into each copy of their
 //! map (`maps`); other types become spawns by widening `SPAWN_QUERY`. Summoning portals spawn at runtime (`meeting_stone::ritual`). A spawned object
@@ -40,7 +40,7 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6) ORDER BY g.guid";
+     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6) OR (t.type = ?7 AND t.Data0 = ?8) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -134,6 +134,8 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
             GAMEOBJECT_TYPE_GENERIC,
             GAMEOBJECT_TYPE_SPELL_FOCUS,
             GAMEOBJECT_TYPE_CHAIR,
+            crate::scrapping::GAMEOBJECT_TYPE_UI_LINK,
+            crate::scrapping::UI_LINK_SCRAPPING_MACHINE,
         ],
         spawn_from_row,
     )?;
@@ -198,6 +200,9 @@ pub(crate) fn spawn_map_game_objects(
             Replicate::to_clients(NetworkTarget::All),
             NetworkVisibility::default(),
         ));
+        if spawn.info.go_type == crate::scrapping::GAMEOBJECT_TYPE_UI_LINK {
+            object.insert(crate::scrapping::ScrappingMachine);
+        }
         if let Some(chair) = &spawn.chair {
             object.insert(chair.clone());
         }
