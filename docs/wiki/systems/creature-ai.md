@@ -19,7 +19,7 @@ Determined by `creature.movement_type` in SQLite (see [[world-data]]):
 - **Idle phase**: counts down `idle_remaining` (2–5s random); on expiry, picks a random target point using an LCG seeded with the spawn guid (the state advances per pick; advancing the seed by one picked nearly the same point every time). A target with no ground, or more than `STEP_UP_HEIGHT` (1.6 yd) below the creature, is refused and retried 100 ms later (`RandomMovementGenerator::SetRandomLocation` path failure, `_timer.Reset(100)`).
 - **Walking phase**: moves toward target at `speed_walk * BASE_WALK_SPEED (2.5 m/s)`; each step stands on the ground under it — the player rule ([[player-ground]] in game-engine: terrain and WMO floors, highest within 1.6 yd above the feet) through `GroundMap` and the creature's `InMap` (`UpdateAllowedPositionZ`). A step onto no support or a drop deeper than 1.6 yd ends the walk there. Without ground data (`Unloaded`) the height is kept. Ground loads from `GAME_SERVER_GROUND_DIR`, else `game-engine/data` beside the checkout (not the working directory), and the server refuses to start unless map 0's WDT opens there and every map with creature spawns has every ground file it reads (`open_ground_map`, `check_spawned_ground`; the error names each map and file). `(map, file)` rows of `crates/server/src/ground_gaps.tsv` (files `scripts/extract_ground.py` could not extract, and transports' `no WDT FileDataID`) are logged at startup as known gaps with a count instead. `scripts/extract_ground.py` extracts the missing files from local CASC (resumable). `deploy.sh` ships the WDTs, ADTs and WMOs of every map with creature spawns (`scripts/ground_files.py`, 27,641 files, 5.43 GB on 2026-10-01) to `/opt/game-engine/data` and sets the variable in a systemd drop-in. Before, ground came from `../game-engine/data` relative to the working directory: a server started elsewhere ran with no ground and every creature kept its spawn height (the Northshire Blackrock Spy chased and wandered polymorphed 5 yd above the ridge it spawned on; `tests/ground_data.rs`). On arrival, transitions back to Idle with a new random pause
 
-Before this (2026-09-27) wanderers kept the spawn height: Stormwind Rat 20314034 walked through the wall by the Stockade entrance and hung 11 yd over the canal (86.7), 20314037 stayed 0.37 yd above the floor under its TDB z. Chase and return-to-spawn still do not follow the ground (chase lerps toward the target's height, return keeps its height until arrival).
+Before this (2026-09-27) wanderers kept the spawn height: Stormwind Rat 20314034 walked through the wall by the Stockade entrance and hung 11 yd over the canal (86.7), 20314037 stayed 0.37 yd above the floor under its TDB z. Current chase/home ground and path behavior is documented in [navigation](navigation.md).
 
 Wander respects `SpawnPoint.wander_distance` — targets are always within that radius of the spawn.
 
@@ -27,7 +27,7 @@ Wander respects `SpawnPoint.wander_distance` — targets are always within that 
 
 `waypoint_data.id` is a **path ID**, not a creature guid. A MovementType 2 spawn walks `path_id` from its `creature_addon` row, else its `creature_template_addon` row (AzerothCore `Creature::GetCreatureAddon` → `LoadCreaturesAddon` sets `m_path_id`; `WaypointMovementGenerator::LoadPath` reads `GetWaypointPath()`). With no addon path the spawn idles: AzerothCore never derives `guid*10` (`ObjectMgr::LoadCreatureAddons` resets such spawns to idle). Of 6,554 MovementType 2 spawns, 6,543 resolve a path this way.
 
-Per point (`WaypointMovementGenerator::StartMove`/`OnArrived`): walk to the point, pause `delay` **milliseconds**, then start the next leg; the path wraps after the last point. `move_type` 0 walks (`speed_walk * 2.5`), 1 runs (`speed_run * 7.0`); 2/3 (land/takeoff) also use run speed since flight is not modelled. A point's `orientation` is faced (`Rotation`) on arrival only when it has a delay. `waypoint_data.action` (waypoint_scripts) is not run. Waypoint coordinates are WoW space, converted via `wow_to_bevy()`.
+Per point (`WaypointMovementGenerator::StartMove`/`OnArrived`): walk to the point, pause `delay` **milliseconds**, then start the next leg; the path wraps after the last point. `move_type` 0 walks (`speed_walk * 2.5`), 1 runs (`speed_run * 7.0`); 2/3 (land/takeoff) also use run speed since flight is not modelled. A point's `orientation` is faced (`Rotation`) on arrival only when it has a delay. `waypoint_data.action` (waypoint_scripts) is not run. Waypoint coordinates are WoW space, converted via `wow_to_bevy()`. Each leg uses [navigation](navigation.md) without changing arrival/delay/orientation/wrap semantics.
 
 ## Formations
 
@@ -39,7 +39,7 @@ Wander, waypoint and formation systems skip entities with `DeathState`. Every sp
 
 ## Chase and Aggro
 
-`CreatureState::Pursuing { target }` overrides wander/waypoint AI. When active, `chase_system` runs the creature toward the target entity each tick at `speed_run × 7` yd/s (`ChaseMovementGenerator` runs), stopping `CHASE_REACH` (2 yd) short horizontally and following the target's height so the 3D 5-yard melee check passes.
+`CreatureState::Pursuing { target }` overrides wander/waypoint AI. `chase_system` runs at `speed_run × 7` yd/s (`ChaseMovementGenerator`), stopping `CHASE_REACH` (2 yd) short of the actual victim on the terminal route leg. Chase, home and waypoint legs share the [baked navigation resource](navigation.md), with ground support rather than target-height interpolation. That page defines repathing, failed-route evade and the explicit unbaked-map boundary.
 
 Who enters `Pursuing`, threat and target selection are [[creature-aggro]].
 
@@ -53,7 +53,7 @@ Every movement system writes the creature's replicated `CreatureMotion` (Still, 
 
 `leash_check_system` runs after chase each tick. A pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, health unchanged, `CreatureState` → `Returning`; see [[creature-aggro]]).
 
-`return_to_spawn_system` then runs the creature back to its spawn point at `speed_run × 7` yd/s (`MoveTargetedHome` runs by default). On arrival, `CreatureState` → `Idle` and normal AI resumes.
+`return_to_spawn_system` follows the [navigation route](navigation.md) back to its spawn point at `speed_run × 7` yd/s (`MoveTargetedHome` runs by default). On arrival, `CreatureState` → `Idle` and normal AI resumes.
 
 ## Creature addon mount and auras
 
@@ -93,5 +93,6 @@ Creature data is stored in WoW coordinate space. The AI operates in Bevy space (
 
 - [[world-data]] — `creature`, `creature_template`, `waypoint_data`, `creature_addon`, `creature_formations` tables
 - [[creature-aggro]] — aggro on sight/damage, threat, evade
-- [[combat]] — the creature's `CombatTarget` drives its auto-attack; leash evade restores HP
+- [[combat]] — the creature's `CombatTarget` drives its auto-attack
+- [[navigation]] — shared offline geometry, baked routes and unreachable chase behavior
 - [[tick-model]] — AI systems run at step 2 of the 20Hz pipeline
