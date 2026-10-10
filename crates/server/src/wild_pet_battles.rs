@@ -214,6 +214,7 @@ impl Encounter {
         let target = &self.battle.teams[1].pets[self.battle.teams[1].active];
         let identity = &self.identities[1][self.battle.teams[1].active];
         self.captured.is_none()
+            && self.battle.teams[0].pets[self.battle.teams[0].active].health > 0
             && target.health > 0
             && target.health * 100 < target.stats.health * TRAP_HEALTH_PERCENT
             && journal.count_species(identity.species) < MAX_PER_SPECIES
@@ -324,11 +325,18 @@ impl Encounter {
                 )
                 .map_err(|e| format!("capture journal: {e:?}"))?;
         }
-        let survivors = self.battle.teams[0]
-            .pets
+        let survivors = self
+            .participated
             .iter()
-            .filter(|p| p.health > 0)
+            .filter(|index| {
+                self.battle.teams[0].pets[**index].health > 0
+                    && self.identities[0][**index].level < MAX_LEVEL
+            })
             .count() as u32;
+        if survivors == 0 {
+            *journal = updated;
+            return Ok(vec![]);
+        }
         let mut rewards = Vec::new();
         for index in &self.participated {
             if self.battle.teams[0].pets[*index].health <= 0 {
@@ -438,11 +446,10 @@ impl Encounter {
     }
 }
 fn earned_xp(level: u8, opponent: u8) -> u32 {
-    let difference = i32::from(opponent) - i32::from(level);
-    if !(-4..=2).contains(&difference) {
-        return 0;
-    }
-    (i32::from(level) + 9) as u32 * (difference + 5) as u32
+    // Retail experiment author Jere, Blizzard forum1479190 posts6/8 (Jan2023):
+    // base=(own+9)*(enemy-own+5), wild multiplier1.5, no old Legion +2 cap.
+    let difference = (i32::from(opponent) - i32::from(level) + 5).max(0) as u32;
+    (u32::from(level) + 9) * difference * 3 / 2
 }
 fn format_combat_event(event: &Event) -> String {
     match event {

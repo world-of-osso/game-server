@@ -25,6 +25,150 @@ fn journal() -> PetJournal {
     journal
 }
 #[test]
+fn wild_pet_battle_production_start_round_capture_and_account_persistence_boundary() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("production.redb");
+    let database = redb::Database::create(&path).unwrap();
+    crate::battle_pets::save_journal(&database, 42, &journal());
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.insert_resource(GameDatabase { db: database });
+    app.add_plugins(crate::battle_pets::BattlePetPlugin);
+    let position = Position {
+        x: -8949.0,
+        y: 82.62,
+        z: 132.0,
+    };
+    let owner = app
+        .world_mut()
+        .spawn((
+            crate::collection::default_collection_state(),
+            position,
+            crate::maps::InMap::continent(0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((
+            Authenticated { account_id: 42 },
+            InWorld { character_id: 7 },
+            PlayerLink(owner),
+        ))
+        .id();
+    let creature = app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 61080,
+                name: "Rabbit".into(),
+            },
+            position,
+            crate::maps::InMap::continent(1),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitLevel(1),
+        ))
+        .id();
+    app.update();
+    assert!(
+        start_encounter(app.world_mut(), connection, owner, creature.to_bits())
+            .unwrap_err()
+            .contains("map")
+    );
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::maps::InMap::continent(0));
+    start_encounter(app.world_mut(), connection, owner, creature.to_bits()).unwrap();
+    assert!(start_encounter(app.world_mut(), connection, owner, creature.to_bits()).is_err());
+    let id = app
+        .world()
+        .get::<ActiveEncounter>(owner)
+        .unwrap()
+        .encounter
+        .id;
+    assert!(
+        advance_encounter(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round: 99,
+                action: WildPetBattleAction::Pass
+            }
+        )
+        .unwrap_err()
+        .contains("stale")
+    );
+    app.world_mut()
+        .get_mut::<ActiveEncounter>(owner)
+        .unwrap()
+        .encounter
+        .battle
+        .teams[1]
+        .pets[0]
+        .health = 1;
+    for _ in 0..5 {
+        let Some(active) = app.world().get::<ActiveEncounter>(owner) else {
+            break;
+        };
+        let round = active.encounter.battle.round;
+        advance_encounter(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Trap,
+            },
+        )
+        .unwrap();
+    }
+    assert!(app.world().get::<ActiveEncounter>(owner).is_none());
+    assert!(app.world().get::<WildPetClaim>(creature).is_none());
+    assert_eq!(app.world().get::<Health>(creature).unwrap().current, 0.0);
+    assert!(
+        app.world()
+            .get::<crate::combat::DeathState>(creature)
+            .is_some()
+    );
+    let captured = app
+        .world()
+        .get::<AccountPetJournal>(owner)
+        .unwrap()
+        .journal
+        .clone();
+    assert_eq!(captured.count_species(378), 1);
+    assert_eq!(captured.get(41).unwrap().level, 2);
+    drop(app);
+    let database = redb::Database::open(&path).unwrap();
+    assert_eq!(crate::battle_pets::load_journal(&database, 42), captured);
+    assert_eq!(crate::battle_pets::load_journal(&database, 43).count(), 0);
+}
+
+#[test]
+fn wild_pet_battle_current_wild_xp_supports_carry_pets_without_a_legacy_level_cap() {
+    assert_eq!(earned_xp(1, 1), 75);
+    assert_eq!(earned_xp(1, 25), 435);
+    assert_eq!(earned_xp(24, 1), 0);
+}
+
+#[test]
+fn wild_pet_battle_trap_requires_a_living_active_ally() {
+    let catalog = catalog();
+    let journal = journal();
+    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    encounter.battle.teams[1].pets[0].health = 1;
+    encounter.battle.teams[0].pets[0].health = 0;
+    assert!(!encounter.can_trap(&journal));
+}
+
+#[test]
 fn wild_pet_battle_real_rabbit_ability_round_is_replayable_and_swap_is_ordered() {
     let catalog = catalog();
     let journal = journal();
@@ -133,7 +277,10 @@ fn wild_pet_battle_forfeit_has_no_rewards_and_win_xp_survives_reopen() {
     assert_eq!(winner.battle.outcome, Some(Outcome::Winner(0)));
     let rewards = winner.apply_rewards(&catalog, &mut journal, None).unwrap();
     assert_eq!(rewards.len(), 1);
-    assert!(rewards[0].xp_gained > 0);
+    assert_eq!(rewards[0].xp_gained, 75);
+    assert_eq!(journal.get(41).unwrap().level, 2);
+    assert_eq!(journal.get(41).unwrap().xp, 25);
+    assert_eq!(journal.get(42).unwrap().xp, 0);
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("wild.redb");
     {
