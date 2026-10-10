@@ -323,12 +323,186 @@ pub(super) fn receive_queue(world: &mut World) {
 }
 
 pub(super) fn advance(
-    _world: &mut World,
-    _owner: Entity,
-    _request: WildPetBattleActionRequest,
+    world: &mut World,
+    owner: Entity,
+    request: WildPetBattleActionRequest,
 ) -> Result<(), String> {
-    Err("PvP actions not implemented".into())
+    let participant = *world
+        .get::<PvpParticipant>(owner)
+        .ok_or("no PvP pet battle")?;
+    let mut battle = world.resource::<Matchmaker>().battles[&participant.id].clone();
+    if request.battle_id != participant.id || request.round != battle.encounter.battle.round {
+        return Err("stale battle or round".into());
+    }
+    let team = participant.team;
+    if battle.decisions[team].is_some() && request.action != WildPetBattleAction::Forfeit {
+        return Err("decision already submitted".into());
+    }
+    let action = player_action(&battle.encounter, team, request.action)?;
+    if action == Action::Forfeit {
+        let mut actions = [Action::Pass; 2];
+        actions[team] = action;
+        return resolve_round(world, participant.id, battle, actions);
+    }
+    validate_decision(world.resource::<WildCatalog>(), &battle, team, action)?;
+    battle.decisions[team] = Some(action);
+    for side in 0..2 {
+        let other = 1 - side;
+        let dead = battle.encounter.battle.teams[side].pets
+            [battle.encounter.battle.teams[side].active]
+            .health
+            <= 0;
+        if dead && battle.decisions[other].is_none() {
+            let other_team = &battle.encounter.battle.teams[other];
+            if other_team.pets[other_team.active].health > 0 {
+                battle.decisions[other] = Some(Action::Pass);
+            }
+        }
+    }
+    if let [Some(a), Some(b)] = battle.decisions {
+        resolve_round(world, participant.id, battle, [a, b])
+    } else {
+        world
+            .resource_mut::<Matchmaker>()
+            .battles
+            .insert(participant.id, battle);
+        Ok(())
+    }
 }
+fn player_action(
+    encounter: &Encounter,
+    team: usize,
+    decision: WildPetBattleAction,
+) -> Result<Action, String> {
+    let pet = &encounter.battle.teams[team].pets[encounter.battle.teams[team].active];
+    match decision {
+        WildPetBattleAction::Ability(button) if (1..=3).contains(&button) => {
+            let id = pet.abilities[usize::from(button - 1)];
+            if id == 0 {
+                return Err("ability slot locked".into());
+            }
+            Ok(Action::Ability(id))
+        }
+        WildPetBattleAction::Swap(slot) if (1..=3).contains(&slot) => {
+            Ok(Action::Swap(usize::from(slot - 1)))
+        }
+        WildPetBattleAction::Pass => Ok(Action::Pass),
+        WildPetBattleAction::Forfeit => Ok(Action::Forfeit),
+        WildPetBattleAction::Trap => Err("cannot trap another player's pet".into()),
+        _ => Err("invalid battle action slot".into()),
+    }
+}
+fn validate_decision(
+    catalog: &WildCatalog,
+    battle: &PvpBattle,
+    team: usize,
+    action: Action,
+) -> Result<(), String> {
+    // Trial uses a cloned RNG/state: rejected or waiting decisions never advance the real engine.
+    let other = 1 - team;
+    let opponent = &battle.encounter.battle.teams[other];
+    let other_action = if opponent.pets[opponent.active].health <= 0 {
+        let slot = opponent
+            .pets
+            .iter()
+            .position(|p| p.health > 0)
+            .ok_or("opponent has no living pet")?;
+        Action::Swap(slot)
+    } else {
+        Action::Pass
+    };
+    let mut actions = [Action::Pass; 2];
+    actions[team] = action;
+    actions[other] = other_action;
+    battle
+        .encounter
+        .battle
+        .step(&catalog.turns, actions, &mut battle.rng.clone())
+        .map(|_| ())
+}
+fn resolve_round(
+    world: &mut World,
+    id: u64,
+    mut battle: PvpBattle,
+    actions: [Action; 2],
+) -> Result<(), String> {
+    let (next, events) = battle.encounter.battle.step(
+        &world.resource::<WildCatalog>().turns,
+        actions,
+        &mut battle.rng,
+    )?;
+    battle.encounter.battle = next;
+    battle.encounter.feedback = events.iter().filter_map(combat_feedback).collect();
+    let text: Vec<_> = events.iter().filter_map(format_combat_event).collect();
+    battle.decisions = [None; 2];
+    if let Some(outcome) = battle.encounter.battle.outcome {
+        finish_match(world, id, &battle, outcome, actions, text);
+    } else {
+        for team in 0..2 {
+            let owner = battle.owners[team];
+            let state = snapshot(world, &battle, team);
+            if let Ok(connection) = connection(world, owner) {
+                send_update(
+                    world,
+                    connection,
+                    WildPetBattleUpdate::Round {
+                        state,
+                        combat_text: text.clone(),
+                    },
+                );
+            }
+        }
+        world
+            .resource_mut::<Matchmaker>()
+            .battles
+            .insert(id, battle);
+    }
+    Ok(())
+}
+fn finish_match(
+    world: &mut World,
+    id: u64,
+    battle: &PvpBattle,
+    outcome: Outcome,
+    actions: [Action; 2],
+    text: Vec<String>,
+) {
+    for team in 0..2 {
+        let owner = battle.owners[team];
+        if let Ok(connection) = connection(world, owner) {
+            let state = snapshot(world, battle, team);
+            send_update(world, connection, WildPetBattleUpdate::State(state));
+            let result = if actions[team] == Action::Forfeit {
+                WildPetBattleOutcome::Forfeited
+            } else {
+                match outcome {
+                    Outcome::Winner(winner) if winner == team => WildPetBattleOutcome::Won,
+                    Outcome::Winner(_) => WildPetBattleOutcome::Lost,
+                    Outcome::Draw => WildPetBattleOutcome::Draw,
+                }
+            };
+            send_update(
+                world,
+                connection,
+                WildPetBattleUpdate::End {
+                    battle_id: id,
+                    outcome: result,
+                    rewards: vec![],
+                    captured_pet_id: None,
+                    combat_text: text.clone(),
+                },
+            );
+        }
+        if let Ok(mut entity) = world.get_entity_mut(owner) {
+            entity.remove::<PvpParticipant>();
+        }
+        send_queue(world, owner, PetBattleQueueState::Idle, None);
+    }
+    world.resource_mut::<Matchmaker>().battles.remove(&id);
+    info!("PvP pet battle {id} ended: {outcome:?}");
+}
+pub(super) fn remove_abandoned(_world: &mut World) {}
+
 pub(super) fn is_in_battle(world: &World, owner: Entity) -> bool {
     world.get::<PvpParticipant>(owner).is_some()
 }
