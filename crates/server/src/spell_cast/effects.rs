@@ -58,6 +58,8 @@ pub const EFFECT_FORCE_CAST: u32 = 140;
 /// TC a352b1fa SharedDefines.h:1549; SpellEffects.cpp:295 uses EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
+pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
+pub const EFFECT_LEAP: u32 = 29;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 
 /// Triggered spells may trigger further spells up to this depth.
@@ -98,7 +100,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
         EFFECT_REMOVE_AURA_2 => remove_aura,
-        EFFECT_TELEPORT_UNITS => teleport_units,
+        EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
@@ -899,8 +901,13 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
 
 /// 252 TELEPORT_UNITS (`Spell::EffectTeleportUnits`): the unit moves to the effect's
 /// destination facing its orientation (`NearTeleportTo`).
-fn teleport_units(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
-    let Some(dest) = ctx.dest else {
+fn teleport_units(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let destination = if effect.implicit_targets.contains(&55) {
+        super::teleport::forward_destination(world, ctx, target)
+    } else {
+        ctx.dest
+    };
+    let Some(dest) = destination else {
         debug!(
             "Spell {}: TELEPORT_UNITS without a destination",
             ctx.spell.id
