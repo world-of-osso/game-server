@@ -76,12 +76,18 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
+pub(crate) mod homebind;
+pub(crate) mod teleport;
+mod teleport_positions;
+
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
+            .init_resource::<teleport_positions::SpellTargetPositions>()
+            .add_systems(Startup, teleport_positions::load_positions_startup)
             .init_resource::<missiles::PendingSpellHits>()
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
@@ -582,6 +588,7 @@ pub(crate) fn cast_for_player(
     spell_id: u32,
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
+        destination: None,
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: None,
@@ -786,11 +793,20 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
+    let mut requested_spell = spell.clone();
+    requested_spell.cast_destination = request.destination;
+    let effective_id = crate::auras::overrides::resolve_spell(world, caster, spell.id);
+    let mut spell = world
+        .resource::<SpellStore>()
+        .get(effective_id)
+        .expect("resolved spell exists")
+        .clone();
+    spell.cast_destination = request.destination;
     let delay = cast_queue_delay(world, caster, &spell);
     // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
         world.entity_mut(caster).insert(QueuedSpellCast {
-            spell,
+            spell: requested_spell,
             explicit,
             witness: request.witness,
         });
@@ -840,10 +856,17 @@ fn start_queued_casts(world: &mut World) {
         .collect();
     for caster in ready {
         let queued = world.entity_mut(caster).take::<QueuedSpellCast>().unwrap();
+        let effective_id = crate::auras::overrides::resolve_spell(world, caster, queued.spell.id);
+        let mut effective_spell = world
+            .resource::<SpellStore>()
+            .get(effective_id)
+            .expect("resolved queued spell exists")
+            .clone();
+        effective_spell.cast_destination = queued.spell.cast_destination;
         if let Err(failure) = start_cast(
             world,
             caster,
-            &queued.spell,
+            &effective_spell,
             queued.explicit,
             queued.witness,
         ) {
@@ -877,6 +900,11 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
         .expect("plain component query always validates");
     crate::class_progression::knows_spell(&known, caster, spell_id)
         || taught_by_known_spell(world, caster, spell_id)
+        || world.get::<KnownSpells>(caster).is_some_and(|known| {
+            known
+                .iter()
+                .any(|base| crate::auras::overrides::resolve_spell(world, caster, base) == spell_id)
+        })
 }
 
 /// `AuraEffect::HandleLearnSpell` (SpellAuraEffects.cpp:5248-5261): a known spell's
@@ -919,6 +947,7 @@ fn validate_start(
         return Err(CastFailure::CrowdControlled(block));
     }
     validate_caster_state(world, caster, spell)?;
+    teleport::check_destination(world, caster, spell)?;
     if world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }
@@ -1393,6 +1422,7 @@ fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
         .iter()
         .position(|other| {
             other.effect != 0
+                && targets::unsupported_target(other).is_none()
                 && other.implicit_targets == effect.implicit_targets
                 && other.attributes & EFFECT_ATTR_PLAYERS_ONLY
                     == effect.attributes & EFFECT_ATTR_PLAYERS_ONLY
@@ -1459,7 +1489,14 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = targets::effect_dest(world, caster, explicit, effect);
+        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+            spell.cast_destination.map(|point| targets::Dest {
+                position: Vec3::from_array(point),
+                orientation: targets::orientation(world, caster),
+            })
+        } else {
+            targets::effect_dest(world, caster, explicit, effect)
+        };
         plan.push(PlannedEffect {
             index,
             units,
@@ -2043,10 +2080,14 @@ mod line_of_sight_tests;
 #[cfg(test)]
 mod new_class_tests;
 #[cfg(test)]
+mod override_queue_tests;
+#[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
 mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
+#[cfg(test)]
+mod teleport_tests;
 #[cfg(test)]
 mod tests;

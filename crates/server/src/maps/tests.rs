@@ -806,6 +806,59 @@ fn teleporting_across_continents_moves_the_player_to_kalimdor() {
 }
 
 #[test]
+fn spell_teleport_hearthstone_cross_map_uses_new_world_and_world_port_ack() {
+    let mut h = harness().unwrap();
+    let player = h.spawn(1, STORMWIND, STOCKADE_EXIT_TARGET);
+    let destination = WorldLocation {
+        map_id: 1,
+        position: RATCHET,
+        orientation: 1.0,
+    };
+    let player_entity = player.player;
+    let spell = crate::spell_cast::test_harness::world_db()
+        .unwrap()
+        .store
+        .get(8690)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .entity_mut(player_entity)
+        .insert(crate::spell_cast::homebind::HomeBind(destination));
+    h.app
+        .world_mut()
+        .run_system_once(move |world: &mut World| {
+            let effect = spell
+                .effects
+                .iter()
+                .find(|effect| effect.effect == 252)
+                .unwrap();
+            let context = crate::spell_cast::effects::EffectCtx {
+                caster: player_entity,
+                spell: &spell,
+                depth: 0,
+                dest: None,
+                chain_multiplier: 1.0,
+            };
+            crate::spell_cast::effects::handler(effect.effect).unwrap()(
+                world,
+                &context,
+                effect,
+                player_entity,
+            );
+        })
+        .unwrap();
+    assert!(h.app.world().get::<MapTransfer>(player_entity).is_some());
+    assert_eq!(
+        h.new_worlds(&player).pop().unwrap().map_directory,
+        "kalimdor"
+    );
+    h.ack(&player);
+    assert_eq!(h.map_of(&player), Some(InMap::continent(1)));
+    assert!(close(h.position(&player), RATCHET));
+}
+
+#[test]
 fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
     let Some(mut h) = harness() else { return };
     let player = h.spawn(

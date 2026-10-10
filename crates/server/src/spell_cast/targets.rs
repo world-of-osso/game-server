@@ -50,6 +50,8 @@ enum Selector {
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
+    /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
+    ForwardLeap,
     /// Area center = explicit target (DEST_TARGET_*).
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
@@ -73,7 +75,7 @@ enum Selector {
 fn selector(id: u32) -> Option<Selector> {
     use Relation::*;
     Some(match id {
-        0 => Selector::None,
+        0 | 9 | 17 => Selector::None, // Homebind / spell database destinations handled by teleport.
         1 | 56 | 120 => Selector::Caster,
         5 => Selector::Pet,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
@@ -85,7 +87,8 @@ fn selector(id: u32) -> Option<Selector> {
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
         18 | 22 => Selector::CenterCaster,
-        138 => Selector::ExistingDest,
+        138 | 148 => Selector::ExistingDest,
+        55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
         63 => Selector::CenterExplicit(Any),
@@ -107,7 +110,7 @@ pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
         .implicit_targets
         .iter()
         .copied()
-        .find(|&id| selector(id).is_none())
+        .find(|&id| selector(id).is_none() && !(id == 87 && effect.effect == 254))
 }
 
 /// Relation the spell requires of its explicit target, from the first
@@ -286,9 +289,12 @@ pub fn select_targets(
     let mut units = Vec::new();
     let mut selected_any = false;
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
+        if id == 87 && effect.effect == 254 {
+            continue;
+        }
         let selector = selector(id).ok_or(id)?;
         match selector {
-            Selector::None | Selector::ExistingDest => {}
+            Selector::None | Selector::ExistingDest | Selector::ForwardLeap => {}
             Selector::Caster => {
                 selected_any = true;
                 units.push(caster);
@@ -563,6 +569,7 @@ pub fn effect_dest(
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         let point = match selector(id)? {
             Selector::CenterCaster => position(world, caster),
+            Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
             Selector::ExistingDest => dest.map(|dest: Dest| dest.position),
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
             Selector::DestTargetBack => {
