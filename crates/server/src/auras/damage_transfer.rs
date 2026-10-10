@@ -73,12 +73,10 @@ pub(crate) fn route(
             continue;
         }
         let health = world.get::<Health>(split.recipient).unwrap();
-        let unit_loss = crate::level_scaling::health_loss(
-            &crate::level_scaling::UnitScaling::of(world, attacker),
-            &crate::level_scaling::UnitScaling::of(world, split.recipient),
-            1.0,
-        );
-        split.budget = (health.current - health.max * split.floor_pct / 100.0).max(0.0) / unit_loss;
+        let multiplier = crate::level_scaling::UnitScaling::of(world, split.recipient)
+            .health_multiplier(&crate::level_scaling::UnitScaling::of(world, attacker));
+        split.budget =
+            (health.current - health.max * split.floor_pct / 100.0).max(0.0) * multiplier;
         let share = (amount * split.fraction).min(split.budget);
         amount -= share;
         deliver(world, attacker, victim, school, split, share);
@@ -107,7 +105,10 @@ pub(crate) fn deliver(
             absorbed,
         );
     }
-    if split.floor_pct > 0.0 && amount >= split.budget {
+    let reached_floor = world
+        .get::<Health>(split.recipient)
+        .is_some_and(|health| health.current <= health.max * split.floor_pct / 100.0);
+    if split.floor_pct > 0.0 && reached_floor {
         super::remove_instance(world, victim, split.instance, RemoveReason::Consumed);
     }
 }
