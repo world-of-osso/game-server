@@ -5,6 +5,7 @@ mod batch3;
 mod batch4;
 mod batch5;
 mod batch6;
+mod batch7;
 
 use bevy::prelude::*;
 
@@ -76,6 +77,11 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch7::COLOSSUS_SMASH, 0) => Some(batch7::apply_colossus_wound),
+        (batch7::HEART_STRIKE, 0) => Some(batch7::energize_heartbreaker),
+        (batch7::RAGING_BLOW, 0) => Some(batch7::roll_raging_blow_reset),
+        (batch7::WHIRLWIND, 1) => Some(batch7::energize_whirlwind),
+        (batch7::RAKE, 0) => Some(batch7::stun_rake),
         (batch6::SUNFIRE, 0) => Some(batch6::sunfire),
         (batch6::TEMPLARS_VERDICT, 0) => Some(batch6::verdict),
         (batch6::ICE_LANCE, 0) => Some(batch6::ice_lance),
@@ -129,6 +135,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
         batch3::SHRED => Some(batch3::shred_damage),
+        batch7::RAKE => Some(batch7::rake_initial_damage),
         batch4::MANGLE => Some(batch4::mangle_damage),
         batch5::CHAOS_BOLT | batch5::LAVA_BURST_DAMAGE => Some(batch5::crit_scaled_damage),
         batch5::RAPTURE_DAMAGE => Some(batch5::rapture_damage),
@@ -198,6 +205,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch4::VIVIFY => Some(batch4::vivify),
         batch4::ERUPTION => Some(batch4::eruption),
         batch6::STARFALL => Some(batch6::starfall),
+        batch7::VERDANT_EMBRACE => Some(batch7::heal_panacea),
         _ => shared::skyriding::ability_impulse(spell_id)
             .map(|_| crate::skyriding::flap as AfterCastHook),
     }
@@ -246,6 +254,7 @@ pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
         batch6::STARFIRE => Some((Relation::Enemy, batch6::starfire_plan)),
         batch6::KEG_SMASH => Some((Relation::Enemy, batch6::keg_smash_plan)),
         batch6::WILD_GROWTH => Some((Relation::Ally, batch6::wild_growth_plan)),
+        batch7::RADIANCE => Some((Relation::Ally, batch7::radiance_plan)),
         _ => None,
     }
 }

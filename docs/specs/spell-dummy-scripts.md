@@ -75,6 +75,19 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - [x] Shadow Word: Death32379 applies its authored5% caster-max-health backlash if the target survives the damage, not on a kill.
 - [x] Starfall191034 with327541 extends owned Moonfire164812/Sunfire164815 by three seconds, capped at28 seconds remaining, preserving existing tick clocks and foreign marks.
 
+### Seventh-batch locally derived paths
+
+- [x] Colossus Smash167105 applies208086's base caster-owned30% vulnerability to each enemy its damage hits, after that initial damage. Foreign attackers do not benefit; native expiry remains active.
+- [x] Survival Instincts61336 applies50322's base50% damage reduction on application and removes the owned child when the parent ends, including cancellation.
+- [x] Heart Strike206930 with Heartbreaker221536 grants210738's authored20 raw Runic Power per native chain target; absent talent grants no bonus.
+- [x] Power Word: Radiance194509 heals its primary and at most four injured allies inside the catalog radius, prioritizing allies without this priest's Atonement. Foreign marks do not demote allies.
+- [x] Raging Blow85288 with383854 rolls its authored chance once at the root hit, applies280270 and restores one used charge, sending an owner update. No rank/failed roll preserves recharge.
+- [x] Whirlwind190411 grants its authored base3 Rage;12950 adds1 per enemy up to five, applying85739 at its modified maximum stacks when enemies are present. Selection occurs before its damage children.
+- [x] Verdant Embrace360995 with Panacea387761 instantly heals the caster through387763, not the selected ally; absent talent grants no self heal.
+- [x] Rake1822 with231052 or405834 and active stealth gains its authored60% initial-damage bonus and163505 stun. Missing either condition preserves ordinary initial damage/DoT/combo point.
+
+These are bounded paths, not whole abilities. Colossus optional343/In for the Kill, Survival child Dummy2, Heart Strike rank316575/front-arc targeting, Radiance actual Atonement/raid-pet priority, Raging Blow other reset talents, Whirlwind copied cleave/consumption and soft cap, Verdant flight/primary heal, and Rake periodic snapshot remain uncertified. Sources: read-only TDB1210.26091 archive registrations/proc/link rows, TC a352b1fa, and local Mainline12.1.0.69933 descriptions/effects. Archive names route investigation; they are not standalone behavior proof. No spell_bonus_data table exists in this archive; DB2 SP/AP/scaling fields supply its numerical equivalents.
+
 ## How it works
 
 - [Spell scripts and coverage boundaries](../wiki/systems/spell-casting.md#class-dummy-scripts)
@@ -85,8 +98,8 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - `spell_cast/mod.rs`, `spell_cast/effects.rs` — validation, channel construction and normal effect execution.
 - `auras/scripts.rs`, `auras/mod.rs` — periodic/removal callbacks and owned-duration extension.
 - `stats.rs`, `auras/{handlers,stat_mods}.rs` — live stat-derived armor.
-- `spell_cast/scripts/{batch3,batch4,batch5,batch6}.rs` — locally sourced bounded paths.
-- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests,dummy4_tests,dummy5_tests,dummy6_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
+- `spell_cast/scripts/{batch3,batch4,batch5,batch6,batch7}.rs` — locally sourced bounded paths.
+- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests,dummy4_tests,dummy5_tests,dummy6_tests,dummy7_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
 
 ## Tests asserting this spec
 
