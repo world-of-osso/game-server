@@ -381,7 +381,21 @@ fn damage_meter_melee_damage_delays_frostbolt_launch_by_ten_ticks() {
     assert_eq!(original_duration, 1.75);
     // The real NPC swing arrives at frame 20, 0.9 s into the second cast.
     h.advance(17);
-    assert_eq!(health_before - h.health(caster), 10.0);
+    // The swing can crit; pushback depends on positive damage, not its amount.
+    assert!(h.health(caster) < health_before);
+    let melee_hits = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(npc.to_bits())
+                && event.target == Some(caster.to_bits())
+                && event.spell_id.is_none()
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(melee_hits, 1);
     let cast = h.app.world().get::<CastState>(caster).unwrap();
     assert_eq!(cast.pushback_count, 1);
     assert_eq!(cast.duration, original_duration + 0.5);
