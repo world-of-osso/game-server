@@ -31,6 +31,10 @@ class ServerNativeTests(unittest.TestCase):
 import json, os, sys
 from pathlib import Path
 Path(os.environ['RECORD']).write_text(json.dumps(dict(args=sys.argv[1:], cwd=str(Path.cwd()), target=os.environ['CARGO_TARGET_DIR'], jobs=os.environ.get('CARGO_BUILD_JOBS'), data=Path('data/world.db').read_text())))
+if os.environ.get('EXPECT_PROTOCOL'):
+    args = sys.argv[1:]
+    project = Path(args[args.index('--manifest-path') + 1]).parent if '--manifest-path' in args else Path.cwd()
+    assert (project.parent / 'shared-protocol/value').read_text() == os.environ['EXPECT_PROTOCOL']
 print('test result: ok. 1 passed; 0 failed; 0 ignored')
 raise SystemExit(int(os.environ.get('CARGO_STATUS', '0')))
 ''')
@@ -38,6 +42,9 @@ raise SystemExit(int(os.environ.get('CARGO_STATUS', '0')))
         self.record = self.base / "record.json"
         self.env = dict(os.environ, HOME=str(self.base), XDG_CACHE_HOME=str(self.base / "cache"), PATH=str(self.bin) + os.pathsep + os.environ['PATH'], RECORD=str(self.record), CARGO_BUILD_JOBS="8")
         self.env.pop('BUILD_HOST_SCRIPTS', None)
+        for name in list(self.env):
+            if name.startswith('DEPOT_SIBLING_'):
+                del self.env[name]
         setting = self.base / '.config/game-engine/build-host'
         setting.parent.mkdir(parents=True)
         setting.write_text('native\n')
@@ -67,6 +74,14 @@ raise SystemExit(int(os.environ.get('CARGO_STATUS', '0')))
                 observed = json.loads(self.record.read_text())
                 self.assertEqual(observed['args'], ['build', '--locked', '-p', 'client', '--bin', 'game-cli'])
                 self.assertNotIn('-j8', observed['args'])
+
+    def test_native_uses_overridden_protocol_beside_manifest(self):
+        protocol = self.base / 'protocol-branch'
+        protocol.mkdir()
+        (protocol / 'value').write_text('branch protocol')
+        self.env.update(DEPOT_SIBLING_SHARED_PROTOCOL=str(protocol), EXPECT_PROTOCOL='branch protocol')
+        result = self.invoke('dev', '--build-host', 'native', '--test', '-p', 'server')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_native_release_fails_before_cargo(self):
         for adapter in ('dev',):

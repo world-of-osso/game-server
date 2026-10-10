@@ -142,7 +142,8 @@ def build(args, tail, depot, native):
 
         lock, _, _ = depot.locked_checkout(root)
         with lock, native_slot():
-            code = run_cargo(root, cargo_arguments(args, tail))
+            source = depot.native_source_root(root, "game-server", ("shared-protocol",))
+            code = run_cargo(root, cargo_arguments(args, tail), source_root=source)
         if code or not args.run:
             return code
         # Runtime owns its process lifetime, but does not occupy a compilation slot.
