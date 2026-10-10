@@ -2,6 +2,12 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Temporary summons and spell area triggers
+
+[Contract](../../specs/spell-summon-area-trigger.md). Effect 28 dispatches once per cast through `summon.rs`; `summon_properties` is loaded from world.db. `scripts/db2.py extract/import` adds local CASC SummonProperties (FDID 1345276, WDC5 layout A4CA5ECF). Missing metadata/template is logged, never synthesized. `SummonedCreature` records owner and SummonProperties; `UnitSummonedBy`, faction and `FollowOwner` reuse pet ownership/movement conventions without modifying PetStable. Positive durations expire on the aura clock; zero/negative durations are untimed. Owner removal/map departure also removes the summon.
+
+Reference: TrinityCore a352b1fa `SpellEffects.cpp::EffectSummonType` / `SharedDefines.h::SummonTitle`. Matrix probe 49028 uses creature 27893, SummonProperties 3242 (ally/runeblade), duration 8000 ms. Other six summon roots' creatures are absent from current world data.
+
 ## Pipeline
 
 1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
