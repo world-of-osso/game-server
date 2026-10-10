@@ -134,7 +134,11 @@ fn spell_teleport_tdb_orgrimmar_cast_transfers_to_authored_city_position() {
         crate::persistence::ClientId(3567),
         shared::components::CombatStatus(false),
         MovementControl::default(),
-        Rotation::default(),
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
     ));
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<NewWorld>::default(),
