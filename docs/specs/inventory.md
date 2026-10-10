@@ -23,7 +23,7 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 ## Tests asserting this spec
 
 - `crates/server/src/inventory_tests.rs` — enter-world snapshots, swap, main-hand equip + appearance, wrong-type equip, sword onto the head slot (`WRONG_SLOT` text), main-hand sword unequipped onto an empty bag slot, class-restricted equip + bind-on-pickup, split 20 into 15+5, split stack merged back, destroy persistence, invalid slot, use-item error, trade-completion deltas.
-- `crates/server/src/bank_move_tests.rs`, `bank_move_rule_tests.rs` — exact bank/bag moves, swaps, capped merges, partial splits, closed/unbought/oversized rejection, specialty/nonempty-container rejection and bound GUID/count persistence after database reopen.
+- `crates/server/src/bank_move_tests.rs`, `bank_move_rule_tests.rs` — exact bank/bag moves, swaps, capped merges, partial splits, closed/unbought/oversized rejection, specialty/nonempty-container rejection and bound GUID/count persistence after database reopen. `a_move_request_after_closing_the_bank_rejects_without_changing_inventory` sends `SwapItem` on `InventoryChannel` after `CloseInteraction`, expects `CantDoRightNow`, and compares the complete persisted inventory and character bank with their pre-request values; an open-bank positive control proves the same slot/request is valid.
 - `crates/server/src/item_templates_tests.rs` — real world.db `content_item` rows (skips without the DB).
 - shared-protocol `src/protocol_inventory_tests.rs` — wire round trips, Retail slot ids, inventory-type slot map, registration.
 
