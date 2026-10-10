@@ -113,7 +113,7 @@ These ten paths are bounded, not whole-ability parity. Reap soul collection/opti
 - [ ] Metamorphosis187827's additional15 Fury modifier for Fracture263642 requires321068; absent Metamorphosis or the rank preserves base25 Fury. Soul Fragment creation is separate.
 - [ ] Void Step1234796 teleports to the validated requested same-map destination; missing/out-of-range destinations fail before cooldown or cost.
 - [ ] Radiance194509 applies194384 Atonement to its selected allies for60% of normal duration (9000ms), keeping foreign marks independent.
-- [ ] Tranquility740's self shield absorbs up to its named60% of caster maximum health, ending with the channel.
+- [ ] Tranquility740's self shield absorbs up to its named60% of caster maximum health, ending with the channel. Shield depletion does not stop the channel's healing.
 
 Rain, Earthquake and Void Step require a finite requested destination within the native spell range; missing or invalid destinations fail before cost/cooldown rather than silently centering on the caster.
 
