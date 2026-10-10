@@ -42,6 +42,8 @@ const HOLY_SHOCK_HEAL: u32 = 25_914;
 const PENANCE: u32 = 47_540;
 const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
+const COBRA_SHOT: u32 = 193_455;
+const KILL_COMMAND: u32 = 34_026;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -55,6 +57,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (RAMPAGE, 0) => Some(rampage),
         (HOLY_SHOCK, 0) => Some(holy_shock),
         (PENANCE, 0) => Some(penance),
+        (COBRA_SHOT, 1) => Some(cobra_shot),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -79,6 +82,73 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     match (spell_id, effect_index) {
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
+    }
+}
+
+/// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."
+/// Effect 2 supplies that duration (1 second); no proc/PPM roll is authored.
+/// Run once on the damage hit, not on each Dummy metadata effect.
+fn cobra_shot(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    let seconds = script_effect_value(world, caster, COBRA_SHOT, 2);
+    reduce_cooldown(world, caster, KILL_COMMAND, f64::from(seconds));
+}
+
+fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .expect("script spell must exist in SpellStore");
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .expect("script requires its documented catalog effect");
+    super::effects::modded_base_points(world, caster, spell, effect)
+}
+
+/// Reduce the currently running recharge or spell cooldown; never start one.
+fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
+    let now = super::now(world);
+    let charge_category = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .and_then(|spell| spell.categories.as_ref())
+        .map_or(0, |category| category.charge_category);
+    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+        return;
+    };
+    let charges = history
+        .charges
+        .get_mut(&charge_category)
+        .filter(|charges| charges.used > 0)
+        .map(|charges| {
+            charges.next_ready_at -= seconds;
+            charges.refresh(now);
+            *charges
+        });
+    let remaining_ms = history
+        .spell_ready_at
+        .get_mut(&spell_id)
+        .filter(|ready| **ready > now)
+        .map(|ready| {
+            *ready = (*ready - seconds).max(now);
+            ((*ready - now) * 1000.0).round() as u32
+        });
+    if let Some(charges) = charges {
+        super::send_charges(world, caster, &charges, now);
+    }
+    if let Some(remaining_ms) = remaining_ms {
+        super::send_to_owner(
+            world,
+            caster,
+            shared::protocol::SpellCooldownUpdate {
+                spell_id,
+                category: 0,
+                duration_ms: remaining_ms,
+                remaining_ms,
+                is_gcd: false,
+            },
+        );
     }
 }
 

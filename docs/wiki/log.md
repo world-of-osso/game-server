@@ -742,3 +742,5 @@ Added [deployment SSOT](../deploy.md) from `0dcaa23`/`6bfd7b6`; linked developme
 ## 2026-10-10 — class Dummy script coverage
 
 Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hooks](systems/auras.md#script-hooks) and [contract](../specs/spell-dummy-scripts.md): six real-ID class-script paths, twelve RED/GREEN cast tests and nine bounded channel regressions. Source/data citations and unsupported variants remain explicit. The 40-spec matrix retains unresolved markers; dispatch is not full gameplay parity.
+
+- 2026-10-10 — [Class scripts](systems/spell-casting.md#class-dummy-scripts): Cobra Shot cooldown/recharge contract and real-charge cast fixture.
