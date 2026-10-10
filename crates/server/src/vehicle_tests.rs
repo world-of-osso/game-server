@@ -13,7 +13,13 @@ fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let store = super::load_store(&crate::ground::ground_data_dir(), &conn).unwrap();
+    // Deployment ships models and world.db, not the client's DB2 CSV tree.
+    let root = tempfile::tempdir().unwrap();
+    std::os::unix::fs::symlink(
+        crate::ground::ground_data_dir().join("models"),
+        root.path().join("models"),
+    ).unwrap();
+    let store = super::load_store(root.path(), &conn).unwrap();
     assert_eq!(store.creature_vehicles[&32633], 312);
     assert_eq!(store.creature_vehicles[&32286], 318);
     assert_eq!(store.vehicles[&312], [0, 2764, 2765, 0, 0, 0, 0, 0]);
@@ -45,6 +51,24 @@ fn vehicle_real_mammoth_passenger_position_matches_the_rendered_mount_frame() {
         Vec3::new(position.x, position.y, position.z).abs_diff_eq(expected, 0.0001),
         "seat position {position:?}, expected {expected:?}"
     );
+}
+
+#[test]
+fn vehicle_catalog_names_missing_world_tables() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    assert!(super::load_vehicle_catalog(&conn).err().unwrap().contains("world.db vehicle:"));
+    conn.execute_batch("CREATE TABLE vehicle (ID INTEGER, SeatID_0 INTEGER, SeatID_1 INTEGER, SeatID_2 INTEGER, SeatID_3 INTEGER, SeatID_4 INTEGER, SeatID_5 INTEGER, SeatID_6 INTEGER, SeatID_7 INTEGER)").unwrap();
+    assert!(super::load_vehicle_catalog(&conn).err().unwrap().contains("world.db vehicle_seat:"));
+}
+
+#[test]
+fn vehicle_catalog_preserves_signed_flags_and_coordinate_conversion() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE vehicle_seat (ID INTEGER, Flags INTEGER, AttachmentOffset_0 REAL, AttachmentOffset_1 REAL, AttachmentOffset_2 REAL);
+        INSERT INTO vehicle_seat VALUES (2764, -2113929216, 1.25, -2.5, 3.75)").unwrap();
+    let seats = super::load_seats(&conn).unwrap();
+    assert_eq!(seats[&2764].flags, (-2113929216_i64) as u32);
+    assert_eq!(seats[&2764].offset, Vec3::new(1.25, 3.75, 2.5));
 }
 
 fn spawn_logged_in_player(world: &mut World, id: u64) -> Entity {
