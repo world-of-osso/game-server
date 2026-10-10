@@ -1401,6 +1401,7 @@ fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     spend_costs(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
     start_cooldowns(world, caster, spell);
