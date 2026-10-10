@@ -1,5 +1,13 @@
 # Wiki Index
 
+## October 9 reconciliation
+
+- [Deployment](../deploy.md) — sakuin NixOS unit/state SSOT; layout `0dcaa23`, bookworm compatibility `6bfd7b6`. Desktop/local workflows are private development.
+- [Banks](systems/banks.md#closed-bank-protocol-rejection-2026-10-09) — closed-bank rejection/persistence `8ac442f`, landed `104ae6a`; [spec](../specs/banks.md).
+- [Auction expiry](systems/auction-house.md#injected-expiry-clock-2026-10-09) — ServerClock `9927e77`, escrow proof `ab4cd69`, landed `137c462`; listing/mail wall timestamps remain separate.
+- [Defensives](../defensives-audit.md) — final scoped tests `e86c038`, recorded gate `9f54920`, landed `c5432a4`; Blur/Turtle limitations remain, not complete ability parity.
+
+
 [Current bounded Skyborne/commerce audit](systems/skyborne.md#native-entry-and-npc-startup-source-gap-2026-10-05): approved health/unit-class estimates supersede the historical hold; [fresh workspace/startup proof](systems/content-import.md#forever-zephras-overlay) and linked bounded native acceptance retain visual/gameplay gaps and pending native artifact gate. [Owned commerce and requirement receipts](systems/inventory.md#bounded-owned-commerce-and-requirement-proof-2026-10-05) are scoped4/4 and11/11, not whole parity.
 
 [Native desktop/local development](../remote-builds.md) — normal build/run/check/test workflow, host-local runtime state, and pending runtime proof; [contract](../specs/build-host.md).

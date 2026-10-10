@@ -30,7 +30,7 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - [x] Only the Warband bank holds money. Deposit and withdraw check both balances; the Character bank answers `NoMoneyTransfer`.
 - [x] Deposit All: the character bank takes tradeskill items (class 7). The Warband bank takes Warbound items (bonding 7–9), plus tradeable reagents when asked. Tabs assigned a matching `Enum.BagSlotFlags` are filled first.
 - [x] Tab settings store the name (1–15 letters, else `InvalidTabName`), the icon and the deposit flags.
-- [x] BankChannel requests must name the open banker, otherwise `NotInteracting`. The bank and the bags are written in one transaction.
+- [x] BankChannel requests must name the open banker, otherwise `NotInteracting`. InventoryChannel bank moves after `CloseInteraction` return `CantDoRightNow` and preserve the entire persisted bank/inventory (`8ac442f`; [protocol test](inventory.md#tests-asserting-this-spec)). The bank and the bags are written in one transaction.
 - [x] `SwapItem` and `SplitItem` on InventoryChannel accept `ItemLocation::Bank { tab, slot }` for character-bank slots ([inventory contract](inventory.md)). Moves require an open banker; refusals use `InventoryError`. Unbought tabs and out-of-range slots are invalid destinations. Bank↔bags and bank↔bank (same/across tabs) support exact-slot moves, swaps, merges capped at the item's stack size, and partial-stack splits. Specialty bag restrictions and nonempty-container checks apply before either direction of a swap; failure changes no item rows. GUID identity, binding and total owned count survive moves and database reopen.
 
 ### Guild bank
