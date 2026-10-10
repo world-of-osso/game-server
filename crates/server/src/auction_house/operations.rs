@@ -230,12 +230,8 @@ fn stage_previous_bidder_refund(
         previous_bidder,
         build_auction_mail(
             db,
-            "Outbid",
-            &format!(
-                "You have been outbid on {}. Your {} has been refunded.",
-                auction.item.name,
-                crate::gold::format_money(refund)
-            ),
+            &auction_mail_subject("AUCTION_OUTBID_MAIL_SUBJECT", auction),
+            "",
             0,
             None,
         ),
@@ -366,8 +362,8 @@ pub(super) fn cancel_auction(
             character_id,
             build_auction_mail(
                 db,
-                "Auction cancelled",
-                &format!("Your auction for {} was cancelled.", auction.item.name),
+                &auction_mail_subject("AUCTION_REMOVED_MAIL_SUBJECT", auction),
+                "",
                 0,
                 Some(auction.item.clone()),
             ),
@@ -386,6 +382,7 @@ pub(crate) fn seller_sale_mail(
     db: &redb::Database,
     auction: &AuctionData,
     sale_price: u64,
+    buyer_name: Option<&str>,
 ) -> (u64, MailData) {
     let house_fee = (u128::from(sale_price) * u128::from(HOUSE_CUT_BPS) / 10_000) as u64;
     let seller_proceeds = sale_price
@@ -395,8 +392,8 @@ pub(crate) fn seller_sale_mail(
         auction.seller_character_id,
         build_auction_mail(
             db,
-            "Auction sold",
-            &format!("Your auction for {} sold.", auction.item.name),
+            &auction_mail_subject("AUCTION_SOLD_MAIL_SUBJECT", auction),
+            &auction_invoice_body(auction, buyer_name, sale_price, house_fee),
             seller_proceeds,
             None,
         ),
@@ -409,19 +406,42 @@ pub(crate) fn sale_mails(
     buyer_character_id: u64,
     sale_price: u64,
 ) -> Vec<(u64, MailData)> {
+    let buyer = persistence::load_character(db, buyer_character_id)
+        .expect("auction winner must be a persisted character");
     vec![
-        seller_sale_mail(db, auction, sale_price),
+        seller_sale_mail(db, auction, sale_price, Some(&buyer.name)),
         (
             buyer_character_id,
             build_auction_mail(
                 db,
-                "Auction won",
-                &format!("You won {}.", auction.item.name),
+                &auction_mail_subject("AUCTION_WON_MAIL_SUBJECT", auction),
+                &auction_invoice_body(auction, Some(&auction.seller_name), sale_price, 0),
                 0,
                 Some(auction.item.clone()),
             ),
         ),
     ]
+}
+
+/// Custom transport carries the Retail subject tag and item separately from English.
+pub(crate) fn auction_mail_subject(tag: &str, auction: &AuctionData) -> String {
+    format!("{tag}:{}", auction.item.name)
+}
+
+/// Equivalent to Retail's numeric invoice body; character names replace GUID lookup.
+fn auction_invoice_body(
+    auction: &AuctionData,
+    player: Option<&str>,
+    bid: u64,
+    consignment: u64,
+) -> String {
+    format!(
+        "{}:{bid}:{}:{}:{consignment}:{}",
+        player.unwrap_or(""),
+        auction.buyout_price.unwrap_or(0),
+        auction.deposit,
+        auction.stack_count,
+    )
 }
 
 /// Build instant Auction House mail without delivering it before the market commit.

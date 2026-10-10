@@ -445,11 +445,8 @@ fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(
             auction.seller_character_id,
             super::operations::build_auction_mail(
                 db,
-                "Auction Expired",
-                &format!(
-                    "Your auction for {} expired without a buyer.",
-                    auction.item.name
-                ),
+                &super::operations::auction_mail_subject("AUCTION_EXPIRED_MAIL_SUBJECT", auction),
+                "",
                 auction.deposit,
                 Some(auction.item.clone()),
             ),

@@ -107,13 +107,27 @@ fn assert_clock_expiry(with_bid: bool) {
     );
     assert!(matches!(seller_mail[0].sender, MailSender::AuctionHouse));
     if with_bid {
-        assert_eq!(seller_mail[0].subject, "Auction sold");
+        assert_eq!(
+            seller_mail[0].subject,
+            format!("AUCTION_SOLD_MAIL_SUBJECT:{}", auction.item.name)
+        );
+        assert_eq!(
+            seller_mail[0].body,
+            format!("Buyer:1001:2000:{}:50:2", auction.deposit)
+        );
         assert_eq!(seller_mail[0].money, 951 + auction.deposit);
         assert!(seller_mail[0].items.is_empty());
         let buyer_mail = mail_store::load_mailbox(&db, buyer);
         assert_eq!(buyer_mail.len(), 1);
         assert!(matches!(buyer_mail[0].sender, MailSender::AuctionHouse));
-        assert_eq!(buyer_mail[0].subject, "Auction won");
+        assert_eq!(
+            buyer_mail[0].subject,
+            format!("AUCTION_WON_MAIL_SUBJECT:{}", auction.item.name)
+        );
+        assert_eq!(
+            buyer_mail[0].body,
+            format!("Seller:1001:2000:{}:0:2", auction.deposit)
+        );
         assert_eq!(buyer_mail[0].money, 0);
         assert_eq!(buyer_mail[0].items.len(), 1);
         assert_eq!(buyer_mail[0].items[0].item, auction.item);
@@ -122,7 +136,11 @@ fn assert_clock_expiry(with_bid: bool) {
             buyer_gold - 1_001
         );
     } else {
-        assert_eq!(seller_mail[0].subject, "Auction Expired");
+        assert_eq!(
+            seller_mail[0].subject,
+            format!("AUCTION_EXPIRED_MAIL_SUBJECT:{}", auction.item.name)
+        );
+        assert_eq!(seller_mail[0].body, "");
         assert_eq!(seller_mail[0].money, auction.deposit);
         assert_eq!(seller_mail[0].items.len(), 1);
         assert_eq!(seller_mail[0].items[0].item, auction.item);
