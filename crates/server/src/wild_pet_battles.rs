@@ -383,6 +383,7 @@ impl Encounter {
                 xp_gained: gained,
                 level: pet.level,
                 xp: pet.xp,
+                next_level_xp: catalog.next_level_xp[&pet.level],
             });
         }
         *journal = updated;
@@ -441,11 +442,7 @@ impl Encounter {
                             .guid
                             .and_then(|id| journal.get(id))
                             .map_or(0, |pet| pet.xp),
-                        next_level_xp: catalog
-                            .next_level_xp
-                            .get(&identity.level)
-                            .copied()
-                            .unwrap_or(0),
+                        next_level_xp: catalog.next_level_xp[&identity.level],
                         family: species.family,
                         level: identity.level,
                         health: pet.health,
