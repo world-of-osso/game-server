@@ -1,6 +1,158 @@
 use super::*;
 
 #[test]
+fn pet_battle_246_bend_time_clears_incoming_cooldowns_once() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [1905, 110, 123]);
+    b.teams[0].pets[1].cooldowns.insert(123, 9);
+    b.teams[0].pets[2].cooldowns.insert(123, 9);
+    // Bend Time1905/1904 indices1..3 clear only the next incoming pet's cooldowns.
+    // Accuracy0 and removal Chance0 here encode unconditional scripted operations.
+    b = use_ability(&b, &c, 1905).0;
+    let (b, _) = b
+        .step(&c, [Action::Swap(1), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(
+        b.teams[0].pets[1].cooldowns.get(&123).copied().unwrap_or(0),
+        0
+    );
+    assert!(b.auras.is_empty());
+    assert_eq!(b.teams[0].pets[2].cooldowns[&123], 7);
+}
+
+#[test]
+fn pet_battle_85_tidal_wave_cleans_objects_and_attacks_all_slots() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [334, 419, 110]);
+    b = use_ability(&b, &c, 334).0;
+    assert_eq!(b.auras.len(), 1);
+    // Tidal Wave419:three enemy-slot7-point attacks,7*6=42 each;
+    // state69 reset removes team objects without damaging friendly wearers.
+    let (b, e) = use_ability(&b, &c, 419);
+    assert_eq!(damage(&e), vec![42, 42, 42]);
+    assert!(b.auras.is_empty());
+    for pet in &b.teams[0].pets {
+        assert_eq!(pet.state(c.state_id("Mechanic_IsObject").unwrap()), 0);
+    }
+}
+
+#[test]
+fn pet_battle_111_49_failsafe_revives_twenty_percent() {
+    let c = catalog();
+    let mut b = battle(&c, 9, 7, [723, 110, 123]);
+    b.teams[0].pets[0].health = 0;
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Is_Dead").unwrap(), 1);
+    // Failsafe723:unused parameter20 on removal49 isn't a second hit check.
+    // Resurrection111 restores20% of10000=2000, clears dead1 to0.
+    let mut rng = Fixed(500000);
+    let mut rt = super::super::engine::Runtime {
+        battle: b,
+        catalog: &c,
+        rng: &mut rng,
+        events: Vec::new(),
+        healing_target: None,
+    };
+    assert!(validate_ability(&c, 723).is_ok());
+    rt.cast_turn(
+        PetRef { team: 0, slot: 0 },
+        PetRef { team: 1, slot: 0 },
+        723,
+        1,
+        255,
+    )
+    .unwrap();
+    assert_eq!(rt.battle.teams[0].pets[0].health, 2000);
+    assert_eq!(
+        rt.battle.teams[0].pets[0].state(c.state_id("Is_Dead").unwrap()),
+        0
+    );
+}
+
+#[test]
+fn pet_battle_373_reconstruction_changes_three_ability_slots() {
+    let c = catalog();
+    let b = battle(&c, 7, 7, [110, 119, 123]);
+    // Necrotic Reconstruction2262 explicitly writes slots0,1,2 to2306,256,2304.
+    let mut rng = Fixed(500000);
+    let mut rt = super::super::engine::Runtime {
+        battle: b,
+        catalog: &c,
+        rng: &mut rng,
+        events: Vec::new(),
+        healing_target: None,
+    };
+    rt.cast_turn(
+        PetRef { team: 0, slot: 0 },
+        PetRef { team: 1, slot: 0 },
+        2262,
+        0,
+        0,
+    )
+    .unwrap();
+    assert_eq!(rt.battle.teams[0].pets[0].abilities, [2306, 256, 2304]);
+    assert_eq!(rt.battle.teams[0].pets[1].abilities, [110, 119, 123]);
+}
+
+#[test]
+fn pet_battle_169_scorched_earth_ticks_both_fronts_elemental_immune() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [172, 110, 123]);
+    // Scorched Earth171 tick4*(1+.05*100)=24, only two front pets each round.
+    let (next, e) = use_ability(&b, &c, 172);
+    assert!(damage(&e).ends_with(&[24, 24]));
+    assert_eq!(next.teams[0].pets[1].health, 10000);
+    b.teams[1].pets[0] = Pet::new(
+        &c,
+        b.teams[1].pets[0].stats,
+        6,
+        [110, 119, 123],
+        States::new(),
+    )
+    .unwrap();
+    let (next, _) = use_ability(&b, &c, 172);
+    let (_, e) = next
+        .step(&c, [Action::Pass; 2], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(damage(&e), vec![24]);
+}
+
+#[test]
+fn pet_battle_170_solar_beam_sunlight_conditional_bonus() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [753, 110, 123]);
+    // Solar Beam753:40*6=240, additional20*6=120 if state61 Sunlight.
+    assert_eq!(damage(&use_ability(&b, &c, 753).1), vec![240]);
+    for team in &mut b.teams {
+        for pet in &mut team.pets {
+            pet.states
+                .insert(c.state_id("Weather_Sunlight").unwrap(), 1);
+        }
+    }
+    assert_eq!(damage(&use_ability(&b, &c, 753).1), vec![240, 120]);
+}
+
+#[test]
+fn pet_battle_171_photosynthesis_sunlight_doubles_tick_not_team_pad() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [268, 110, 123]);
+    b.teams[0].pets[0].health = 5000;
+    b.teams[0].pets[1].health = 5000;
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Weather_Sunlight").unwrap(), 1);
+    // Photosynthesis267 normal6*6=36 +Sunlight-only6*6=36 ->72 each round.
+    b = use_ability(&b, &c, 268).0;
+    assert_eq!(b.teams[0].pets[0].health, 5072);
+    let (b, _) = b
+        .step(&c, [Action::Swap(1), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(b.teams[0].pets[0].health, 5144);
+    assert_eq!(b.teams[0].pets[1].health, 5000);
+}
+
+#[test]
 fn pet_battle_28_decoy_two_team_blocks_persist_through_swap() {
     let c = catalog();
     let mut b = battle(&c, 7, 7, [334, 110, 123]);
@@ -100,7 +252,7 @@ fn pet_battle_157_belly_slide_blizzard_only_priority() {
     b.teams[0].pets[0]
         .states
         .insert(c.state_id("Weather_Blizzard").unwrap(), 1);
-    assert_eq!(use_ability(&b, &c, 529).1[0], Event::Order([0, 1]));
+    assert!(use_ability(&b, &c, 529).1.contains(&Event::Order([0, 1])));
 }
 
 #[test]

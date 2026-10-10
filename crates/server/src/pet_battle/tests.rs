@@ -357,9 +357,9 @@ fn pet_battle_unsupported_effect_rejects_before_rng() {
     let b = battle(&c, 7, 7, [70, 110, 119]);
     // Replace a real row in an isolated fixture to exercise fail-closed dispatch.
     let mut c = c;
-    c.effects.get_mut(&209).unwrap().property = 385;
+    c.effects.get_mut(&209).unwrap().property = 0;
     let result = b.step(&c, [Action::Ability(70), Action::Pass], &mut Fixed(500000));
-    assert!(result.unwrap_err().contains("385"));
+    assert!(result.unwrap_err().contains("property 0"));
 }
 
 #[test]
