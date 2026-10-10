@@ -19,6 +19,7 @@ struct Species {
     name: String,
     display: u32,
     family: u8,
+    icon: u32,
     wild: bool,
 }
 #[derive(Resource)]
@@ -32,7 +33,7 @@ struct WildCatalog {
 }
 impl WildCatalog {
     fn load(db: &Connection) -> Result<Self, String> {
-        let mut statement = db.prepare("SELECT s.species_id,s.creature_id,s.name,s.display_id,m.PetTypeEnum,m.SourceTypeEnum FROM battle_pet_species s JOIN battle_pet_species_metadata m ON m.ID=s.species_id").map_err(|e| e.to_string())?;
+        let mut statement = db.prepare("SELECT s.species_id,s.creature_id,s.name,s.display_id,m.PetTypeEnum,m.SourceTypeEnum,m.IconFileDataID FROM battle_pet_species s JOIN battle_pet_species_metadata m ON m.ID=s.species_id").map_err(|e| e.to_string())?;
         let species = statement
             .query_map([], |row| {
                 Ok((
@@ -42,6 +43,7 @@ impl WildCatalog {
                         name: row.get(2)?,
                         display: row.get(3)?,
                         family: row.get(4)?,
+                        icon: row.get(6)?,
                         wild: row.get::<_, i32>(5)? == 4,
                     },
                 ))
@@ -148,6 +150,7 @@ struct Encounter {
     trap_failures: i32,
     captured: Option<Identity>,
     forfeited: bool,
+    feedback: Vec<BattleCombatFeedback>,
 }
 fn build_team(catalog: &WildCatalog, pets: &[Identity]) -> Result<Team, String> {
     let first = pets.first().ok_or("equip a battle pet in the journal")?;
@@ -208,6 +211,7 @@ impl Encounter {
             trap_failures: 0,
             captured: None,
             forfeited: false,
+            feedback: vec![],
         })
     }
     fn can_trap(&self, journal: &PetJournal) -> bool {
@@ -253,6 +257,7 @@ impl Encounter {
             return Err("battle already finished".into());
         }
         let mut next = self.clone();
+        next.feedback.clear();
         if decision == WildPetBattleAction::Trap {
             if !self.can_trap(journal) {
                 return Err("trap requires enemy below 35% health and journal capacity".into());
@@ -275,9 +280,13 @@ impl Encounter {
         };
         let (battle, events) = self.battle.step(&catalog.turns, [action, opponent], rng)?;
         next.battle = battle;
+        next.feedback = events.iter().filter_map(combat_feedback).collect();
         next.forfeited = decision == WildPetBattleAction::Forfeit;
         next.participated.insert(next.battle.teams[0].active);
-        let mut text = events.iter().map(format_combat_event).collect::<Vec<_>>();
+        let mut text = events
+            .iter()
+            .filter_map(format_combat_event)
+            .collect::<Vec<_>>();
         if decision == WildPetBattleAction::Trap {
             text.insert(0, "Trap failed; next attempt has increased chance".into());
         }
@@ -399,6 +408,11 @@ impl Encounter {
                             id,
                             name,
                             icon,
+                            family: if id == 0 {
+                                0
+                            } else {
+                                catalog.turns.abilities[&id].family as u8
+                            },
                             cooldown,
                             usable: id != 0
                                 && cooldown == 0
@@ -412,6 +426,7 @@ impl Encounter {
                         .filter(|a| a.target.team == team && a.target.slot == slot)
                         .map(|a| BattleAuraSnapshot {
                             ability_id: a.ability,
+                            icon: catalog.ability_art[&a.ability].1,
                             rounds_remaining: a.remaining,
                         })
                         .collect();
@@ -420,6 +435,17 @@ impl Encounter {
                         species_id: identity.species,
                         name: species.name.clone(),
                         display_id: species.display,
+                        icon: species.icon,
+                        quality: identity.quality as u8,
+                        xp: identity
+                            .guid
+                            .and_then(|id| journal.get(id))
+                            .map_or(0, |pet| pet.xp),
+                        next_level_xp: catalog
+                            .next_level_xp
+                            .get(&identity.level)
+                            .copied()
+                            .unwrap_or(0),
                         family: species.family,
                         level: identity.level,
                         health: pet.health,
@@ -442,6 +468,7 @@ impl Encounter {
             turn_time_ms: 0,
             replacement_required: self.battle.teams[0].pets[self.battle.teams[0].active].health
                 <= 0,
+            feedback: self.feedback.clone(),
         }
     }
 }
@@ -451,8 +478,23 @@ fn earned_xp(level: u8, opponent: u8) -> u32 {
     let difference = (i32::from(opponent) - i32::from(level) + 5).max(0) as u32;
     (u32::from(level) + 9) * difference * 3 / 2
 }
-fn format_combat_event(event: &Event) -> String {
-    match event {
+fn combat_feedback(event: &Event) -> Option<BattleCombatFeedback> {
+    let (target, text, healing) = match event {
+        Event::Damage { target, amount, .. } => (target, amount.to_string(), false),
+        Event::Heal { target, amount } => (target, format!("+{amount}"), true),
+        Event::Miss { target, .. } => (target, "Miss".into(), false),
+        Event::Immune { target, .. } => (target, "Immune".into(), false),
+        _ => return None,
+    };
+    Some(BattleCombatFeedback {
+        team: target.team as u8,
+        slot: target.slot as u8,
+        text,
+        healing,
+    })
+}
+fn format_combat_event(event: &Event) -> Option<String> {
+    Some(match event {
         Event::Damage {
             amount, critical, ..
         } => format!(
@@ -466,8 +508,8 @@ fn format_combat_event(event: &Event) -> String {
         Event::AuraApplied { ability, .. } => format!("Aura {ability} applied"),
         Event::AuraRemoved { ability, .. } => format!("Aura {ability} expired"),
         Event::Immune { .. } => "Immune".into(),
-        _ => format!("{event:?}"),
-    }
+        _ => return None,
+    })
 }
 
 use crate::auth::{Authenticated, InWorld};
