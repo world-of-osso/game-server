@@ -53,6 +53,13 @@ const PYRE_IMPACT: u32 = 393_568;
 const PYRE_DAMAGE: u32 = 357_212;
 const DRAIN_SOUL: u32 = 198_590;
 const FIRE_BLAST: u32 = 108_853;
+const DEATH_COIL: u32 = 47_541;
+const DEATH_COIL_DAMAGE: u32 = 47_632;
+const DEATH_COIL_HEAL: u32 = 47_633;
+const LICHBORNE: u32 = 49_039;
+const OUTBREAK: u32 = 77_575;
+const DREAD_PLAGUE: u32 = 1_240_996;
+const VIRULENT_PLAGUE: u32 = 191_587;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -69,6 +76,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (COBRA_SHOT, 1) => Some(cobra_shot),
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
         (PYRE_IMPACT, 0) => Some(pyre),
+        (DEATH_COIL, 0) => Some(death_coil),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -148,6 +156,63 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// Validate before spending costs: Retail47541 heals only an Undead ally.
+/// Lichborne49039 explicitly makes its bearer Undead; undead NPC type is 6.
+pub fn check_target(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Result<(), super::CastFailure> {
+    if spell_id != DEATH_COIL {
+        return Ok(());
+    }
+    let enemy = relation_matches(world, caster, target, Relation::Enemy);
+    let undead_ally =
+        relation_matches(world, caster, target, Relation::Ally) && is_undead(world, target);
+    if enemy || undead_ally {
+        Ok(())
+    } else {
+        Err(super::CastFailure::InvalidTarget)
+    }
+}
+
+fn is_undead(world: &World, target: Entity) -> bool {
+    if crate::auras::has_aura(world, target, LICHBORNE) {
+        return true;
+    }
+    world
+        .get::<shared::components::Npc>(target)
+        .and_then(|npc| {
+            world
+                .get_resource::<crate::world_data::WorldData>()?
+                .templates
+                .get(&npc.template_id)
+        })
+        .is_some_and(|template| template.creature_type == 6)
+}
+
+/// TC a352b1fa spell_dk.cpp:589-609 names the 47632 damage bridge.
+/// Retail47541 additionally names47633 healing and $77575s3 plague extension.
+fn death_coil(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let child = if relation_matches(world, caster, target, Relation::Ally) {
+        DEATH_COIL_HEAL
+    } else {
+        DEATH_COIL_DAMAGE
+    };
+    super::cast_triggered(world, caster, child, Some(target), depth + 1);
+    let milliseconds = script_effect_value(world, caster, OUTBREAK, 2)
+        .max(0.0)
+        .round() as u32;
+    crate::auras::extend_owned_duration(
+        world,
+        caster,
+        target,
+        &[DREAD_PLAGUE, VIRULENT_PLAGUE],
+        milliseconds,
+    );
 }
 
 /// TC a352b1fa spell_evoker.cpp:601-618 spell_evo_pyre casts 357212 at

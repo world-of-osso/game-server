@@ -1130,6 +1130,7 @@ fn validate_target(
             return Err(CastFailure::LineOfSight);
         }
     }
+    scripts::check_target(world, caster, spell.id, target)?;
     Ok(Some(target))
 }
 
