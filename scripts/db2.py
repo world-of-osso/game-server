@@ -47,6 +47,7 @@ TABLES = [
     "SpellMisc",
     "SpellEffect",
     "SummonProperties",
+    "OverrideSpellData",
     "SpellPower",
     "SpellCastTimes",
     "SpellRange",
@@ -165,6 +166,7 @@ TABLES = [
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
 LOCAL_TABLES = {
     "SummonProperties": (1345276, 0xA4CA5ECF),
+    "OverrideSpellData": (1002186, 0x297CBDC8),
     "ContentTuning": (1962930, 0xA3E13004),
     "QuestMoneyReward": (1139047, 0x01D6219A),
     "ExpectedStat": (1937326, 0x0FD90F9C),
@@ -273,7 +275,8 @@ def extract(build, csv_root):
             for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")
         ]
         header, rows = db2_casc.extract_rows(
-            fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES
+            fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES,
+            inline_arrays={0: 10} if db2 == "OverrideSpellData" else None
         )
         partial = target.with_suffix(".csv.part")
         with partial.open("w", newline="", encoding="utf-8") as handle:

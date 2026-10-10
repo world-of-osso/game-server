@@ -83,9 +83,22 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
 /// Registry-backed census and preflight, including reachable triggered spells.
 /// Script aura types without a toy script are not implemented merely by replication.
 pub(crate) fn unsupported_types(world: &World, spell_id: u32) -> BTreeSet<String> {
+    classify_types(world, spell_id).0
+}
+
+/// Reasons plus supported aura types, including reachable trigger-spell effects.
+pub(crate) fn classify_types(world: &World, spell_id: u32) -> (BTreeSet<String>, BTreeSet<u32>) {
     let mut reasons = BTreeSet::new();
-    classify(world, spell_id, 0, &mut BTreeSet::new(), &mut reasons);
-    reasons
+    let mut supported = BTreeSet::new();
+    classify(
+        world,
+        spell_id,
+        0,
+        &mut BTreeSet::new(),
+        &mut reasons,
+        &mut supported,
+    );
+    (reasons, supported)
 }
 
 fn classify(
@@ -94,6 +107,7 @@ fn classify(
     depth: u8,
     visiting: &mut BTreeSet<u32>,
     reasons: &mut BTreeSet<String>,
+    supported_auras: &mut BTreeSet<u32>,
 ) {
     if !visiting.insert(spell_id) {
         reasons.insert("trigger cycle".into());
@@ -110,7 +124,11 @@ fn classify(
         if effect.effect == 0 {
             continue;
         }
-        if !crate::spell_cast::cosmetic::is_visual_only(spell) && !supports_effect(world, effect) {
+        let supported = supports_effect(world, effect);
+        if supported && crate::auras::is_aura_effect(effect) {
+            supported_auras.insert(effect.aura);
+        }
+        if !crate::spell_cast::cosmetic::is_visual_only(spell) && !supported {
             let kind = if crate::auras::is_aura_effect(effect) {
                 "aura"
             } else {
@@ -135,7 +153,14 @@ fn classify(
             if depth >= crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
                 reasons.insert("trigger depth limit".into());
             } else {
-                classify(world, effect.trigger_spell, depth + 1, visiting, reasons);
+                classify(
+                    world,
+                    effect.trigger_spell,
+                    depth + 1,
+                    visiting,
+                    reasons,
+                    supported_auras,
+                );
             }
         }
     }
@@ -149,6 +174,10 @@ fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
             && world
                 .get_resource::<crate::world_data::WorldData>()
                 .is_some_and(|data| data.templates.contains_key(&(effect.misc_values[0] as u32)));
+    }
+    if effect.aura == crate::auras::handlers::OVERRIDE_SPELLS {
+        return effect.misc_values[0] > 0
+            && crate::auras::override_spell_data::supported(world, effect.misc_values[0] as u32);
     }
     if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
         return effect.misc_values[0] > 0;

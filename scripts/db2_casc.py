@@ -439,7 +439,7 @@ def typed(raw, sql_type):
     return struct.unpack("<i", struct.pack("<I", raw & 0xFFFFFFFF))[0]
 
 
-def extract_rows(fdid, layout_hash, columns, localized=False):
+def extract_rows(fdid, layout_hash, columns, localized=False, inline_arrays=None):
     """(column names, rows) of FileDataID `fdid`; columns = [(name, 'INTEGER'|'REAL'|'TEXT')] from the
     DDL. A localized table is read from its enUS copy with its TEXT columns' strings."""
     if localized:
@@ -452,7 +452,7 @@ def extract_rows(fdid, layout_hash, columns, localized=False):
     text_columns = frozenset(
         i for i, (_, sql_type) in enumerate(columns) if sql_type == "TEXT"
     )
-    header, rows = decode(data, text_columns if localized else frozenset())
+    header, rows = decode(data, text_columns if localized else frozenset(), inline_arrays=inline_arrays)
     if header["layout_hash"] != layout_hash:
         raise SystemExit(
             f"FDID {fdid}: layout {header['layout_hash']:08X}, expected {layout_hash:08X}"
