@@ -78,24 +78,8 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let flight = super::mount::flight(auras);
     let feather_fall =
         shared::components::FeatherFall(has_type(auras, super::handlers::FEATHER_FALL));
+    reconcile_scale(world, unit);
     reconcile_feather_fall(world, unit, feather_fall);
-    let auras = world
-        .get::<ActiveAuras>(unit)
-        .expect("auras retained by reconciliation");
-    let minimum_scale = if world.get::<shared::components::Player>(unit).is_some() {
-        0.1
-    } else {
-        0.01
-    };
-    let scale = shared::components::UnitScale(
-        (1.0 + auras.modifier(super::handlers::MOD_SCALE) / 100.0).max(minimum_scale),
-    );
-    if world.get::<shared::components::UnitScale>(unit).copied() != Some(scale) {
-        world.entity_mut(unit).insert(scale);
-        if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
-            dirty.mark(unit);
-        }
-    }
     if invisible != world.get::<Invisible>(unit).is_some() {
         if invisible {
             world.entity_mut(unit).insert(Invisible);
@@ -115,6 +99,26 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     super::shapeshift::reconcile_display_power(world, unit);
 }
 
+fn reconcile_scale(world: &mut World, unit: Entity) {
+    let points = world
+        .get::<ActiveAuras>(unit)
+        .expect("aura unit")
+        .modifier(super::handlers::MOD_SCALE);
+    let minimum = if world.get::<shared::components::Player>(unit).is_some() {
+        0.1
+    } else {
+        0.01
+    };
+    let scale = shared::components::UnitScale((1.0 + points / 100.0).max(minimum));
+    if world.get::<shared::components::UnitScale>(unit).copied() == Some(scale) {
+        return;
+    }
+    world.entity_mut(unit).insert(scale);
+    if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+        dirty.mark(unit);
+    }
+}
+
 fn reconcile_feather_fall(world: &mut World, unit: Entity, next: shared::components::FeatherFall) {
     let previous = world
         .get::<shared::components::FeatherFall>(unit)
@@ -126,15 +130,15 @@ fn reconcile_feather_fall(world: &mut World, unit: Entity, next: shared::compone
     world.entity_mut(unit).insert(next);
     // On removal Retail starts the damaging fall at the current height. Reset the
     // envelope on application too, so activating mid-fall starts the capped arc here.
-    if let Some(position) = world.get::<Position>(unit).copied() {
-        if let Some(mut tracker) = world.get_mut::<crate::networking::FallTracker>(unit) {
-            tracker.restart_at(position.y);
-        }
+    if let Some(position) = world.get::<Position>(unit).copied()
+        && let Some(mut tracker) = world.get_mut::<crate::networking::FallTracker>(unit)
+    {
+        tracker.restart_at(position.y);
     }
-    if let Some(mut velocity) = world.get_mut::<shared::components::VerticalVelocity>(unit) {
-        if next.0 {
-            velocity.0 = velocity.0.max(-shared::movement::FEATHER_FALL_SPEED);
-        }
+    if next.0
+        && let Some(mut velocity) = world.get_mut::<shared::components::VerticalVelocity>(unit)
+    {
+        velocity.0 = velocity.0.max(-shared::movement::FEATHER_FALL_SPEED);
     }
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(unit);
