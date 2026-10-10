@@ -152,7 +152,7 @@ pub struct Aura {
     pub turn: u32,
     pub applied_round: u32,
     pub tick_first: bool,
-    /// Property63 is a team-pad trigger (Wish); other admitted auras bind to a pet.
+    /// Team-pad healing, shared Decoy charges or a next-swap trigger; not Photosynthesis.
     pub team_bound: bool,
     pub weather: bool,
     pub charges: i32,

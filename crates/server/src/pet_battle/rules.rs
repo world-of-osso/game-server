@@ -126,8 +126,46 @@ fn validate_ability_graph(
         }
         for effect in catalog.turn_effects(turn.id) {
             validate_effect(catalog, effect)?;
-            if matches!(effect.property, 24 | 27 | 29 | 141 | 222 | 384 | 385)
-                && catalog.abilities[&ability].family < 0
+            let description = catalog.abilities[&ability].description.to_ascii_lowercase();
+            let ambiguous_team_target = [
+                "all enemy pets",
+                "all enemies",
+                "enemy team",
+                "enemy's pets",
+                "backline",
+                "back line",
+                "both teams",
+            ]
+            .iter()
+            .any(|phrase| description.contains(phrase));
+            if matches!(effect.property, 24 | 222)
+                && ambiguous_team_target
+                && !matches!(ability, 404 | 419)
+                || matches!(effect.property, 23 | 53 | 111) && matches!(ability, 70 | 295 | 714)
+            {
+                return Err(format!(
+                    "ability {ability}: undetermined team target routing"
+                ));
+            }
+            if effect.property == 135 && !matches!(ability, 282 | 663 | 2209) {
+                return Err(format!(
+                    "ability {ability}: undetermined kill target/passive semantics"
+                ));
+            }
+            if effect.property == 80
+                && catalog
+                    .ability_states
+                    .get(&effect.aura)
+                    .is_some_and(|s| s.contains_key(&71) || s.contains_key(&72))
+            {
+                return Err(format!(
+                    "ability {ability}: undetermined weather flat-modifier power ownership"
+                ));
+            }
+            if matches!(
+                effect.property,
+                24 | 27 | 29 | 62 | 68 | 141 | 169 | 170 | 222 | 384 | 385
+            ) && catalog.abilities[&ability].family < 0
             {
                 return Err(format!("ability {ability}: damage has no family"));
             }
@@ -211,11 +249,20 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         49 => effect.aura != 0 && p[2..].iter().all(|v| *v == 0),
         26 => {
             effect.aura != 0
+                && (p[1] != 0 || effect.aura == 1904)
                 && p[2] >= -1
                 && matches!(p[3], 0 | 1)
                 && p[4..].iter().all(|v| *v == 0)
         }
-        50 | 54 => effect.aura != 0 && p[2] >= -1 && p[3] >= 0 && p[4..].iter().all(|v| *v == 0),
+        50 => {
+            effect.aura != 0
+                && p[2] >= -1
+                && p[3] >= 0
+                && [p[4], p[5]]
+                    .iter()
+                    .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+        }
+        54 => effect.aura != 0 && p[2] >= -1 && p[3] >= 0 && p[4..].iter().all(|v| *v == 0),
         52 | 63 => effect.aura != 0 && p[2] >= -1 && p[3..].iter().all(|v| *v == 0),
         23 => p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
         53 => p[2..].iter().all(|v| *v == 0),

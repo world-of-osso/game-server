@@ -226,15 +226,19 @@ impl<R: BattleRng> Runtime<'_, R> {
             } else {
                 1.0
             };
-        let bonus = data.state(self.catalog.state_id("Stat_Speed").expect("catalog state"));
-        (f64::from(data.stats.speed + bonus) * self.percent(pet, "Mod_SpeedPercent") * flying)
+        (f64::from(data.stats.speed) * self.percent(pet, "Mod_SpeedPercent") * flying)
             .floor()
             .max(0.0) as i32
     }
     fn turn_order(&mut self) -> [usize; 2] {
         let left = self.speed(self.battle.active(0));
         let right = self.speed(self.battle.active(1));
-        let first = if left == right {
+        // Quick Attack563 and SpeedPriority853 promise first strike, not a finite
+        // displayed-speed increment. Base speed/tie RNG ranks equal priorities.
+        let priority = [0, 1].map(|team| self.state(self.battle.active(team), "Stat_Speed") > 0);
+        let first = if priority[0] != priority[1] {
+            usize::from(priority[1])
+        } else if left == right {
             usize::from(self.draw() >= RANDOM_SCALE / 2)
         } else {
             usize::from(right > left)
@@ -242,7 +246,18 @@ impl<R: BattleRng> Runtime<'_, R> {
         [first, 1 - first]
     }
     fn execute_round(&mut self, actions: [Action; 2]) -> Result<(), String> {
-        self.trigger_actions(actions, 6)?;
+        let pending =
+            [0, 1].map(|team| {
+                let caster = self.battle.active(team);
+                let ability = self.battle.pet(caster).continuation.map(|(id, _)| id).or(
+                    match actions[team] {
+                        Action::Ability(id) => Some(id),
+                        _ => None,
+                    },
+                );
+                ability.map(|ability| (caster, ability))
+            });
+        self.trigger_actions(pending, 6)?;
         self.trigger_all(6)?;
         let order = self.turn_order();
         self.events.push(Event::Order(order));
@@ -260,27 +275,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         self.tick_auras()?;
         self.trigger_all(7)?;
-        self.trigger_actions(actions, 7)?;
+        self.trigger_actions(pending, 7)?;
         self.finish_passives()?;
         self.finish_battle();
         Ok(())
     }
-    fn trigger_actions(&mut self, actions: [Action; 2], event: u32) -> Result<(), String> {
-        for (team, action) in actions.into_iter().enumerate() {
-            let caster = self.battle.active(team);
-            let ability = self
-                .battle
-                .pet(caster)
-                .continuation
-                .map(|(id, _)| id)
-                .or(match action {
-                    Action::Ability(id) => Some(id),
-                    _ => None,
-                });
-            if let Some(ability) = ability {
-                let target = self.battle.active(1 - team);
-                self.cast_turn(caster, target, ability, 0, event)?;
-            }
+    fn trigger_actions(
+        &mut self,
+        pending: [Option<(PetRef, u32)>; 2],
+        event: u32,
+    ) -> Result<(), String> {
+        for (caster, ability) in pending.into_iter().flatten() {
+            let target = self.battle.active(1 - caster.team);
+            self.cast_turn(caster, target, ability, 0, event)?;
         }
         Ok(())
     }

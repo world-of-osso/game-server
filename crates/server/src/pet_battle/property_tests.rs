@@ -1,6 +1,143 @@
 use super::*;
 
 #[test]
+fn pet_battle_forced_swap_priority_cleanup_stays_on_original_pet() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [563, 110, 123]);
+    b.teams[1].pets[0].abilities = [780, 110, 123];
+    b.teams[1].pets[0].stats.speed = 15000;
+    b.teams[1].pets[0]
+        .states
+        .insert(c.state_id("Stat_Speed").unwrap(), 10000);
+    b.teams[0].pets[1].health = 2000;
+    // Both pets have first-strike priority; enemy15000 speed breaks that tie.
+    // End-round -10000 must restore the OLD caster, not subtract from incoming.
+    let (b, _) = b
+        .step(
+            &c,
+            [Action::Ability(563), Action::Ability(780)],
+            &mut Fixed(500000),
+        )
+        .unwrap();
+    assert_eq!(b.teams[0].active, 1);
+    for pet in &b.teams[0].pets {
+        assert_eq!(pet.state(c.state_id("Stat_Speed").unwrap()), 0);
+    }
+}
+
+#[test]
+fn pet_battle_50_moth_balls_state_gate_before_accuracy() {
+    let c = catalog();
+    let b = battle(&c, 7, 7, [507, 110, 123]);
+    let mut rng = Fixed(400000);
+    let mut rt = super::super::engine::Runtime {
+        battle: b,
+        catalog: &c,
+        rng: &mut rng,
+        events: Vec::new(),
+        healing_target: None,
+    };
+    let caster = PetRef { team: 0, slot: 0 };
+    let target = PetRef { team: 1, slot: 0 };
+    // Real Moth Balls507 effect1165:caster state127 required;50% hit;
+    // aura154 reduces speed by25% for3 rounds. Gate must not consume a hit roll.
+    let effect = &c.effects[&1165];
+    assert!(
+        !rt.execute_effect(caster, target, 507, effect, false)
+            .unwrap()
+    );
+    rt.battle
+        .pet_mut(caster)
+        .states
+        .insert(c.state_id("Condition_DidDamageThisRound").unwrap(), 1);
+    assert!(
+        rt.execute_effect(caster, target, 507, effect, false)
+            .unwrap()
+    );
+    assert_eq!(
+        rt.battle
+            .pet(target)
+            .state(c.state_id("Mod_SpeedPercent").unwrap()),
+        -25
+    );
+}
+
+#[test]
+fn pet_battle_31_critter_rejects_direct_stun_state() {
+    let c = catalog();
+    let b = battle(&c, 4, 7, [292, 110, 123]);
+    let mut rng = Fixed(500000);
+    let mut rt = super::super::engine::Runtime {
+        battle: b,
+        catalog: &c,
+        rng: &mut rng,
+        events: Vec::new(),
+        healing_target: None,
+    };
+    let effect = c
+        .ability_turns(292)
+        .into_iter()
+        .flat_map(|t| c.turn_effects(t.id))
+        .find(|e| e.property == 31 && e.params[0] == 35)
+        .unwrap();
+    // GM Stun292 tries to set turnLock35=1; Critter passive42 makes CC immune.
+    assert!(
+        !rt.execute_effect(
+            PetRef { team: 0, slot: 0 },
+            PetRef { team: 1, slot: 0 },
+            292,
+            effect,
+            false
+        )
+        .unwrap()
+    );
+    assert_eq!(rt.battle.teams[0].pets[0].state(35), 0);
+}
+
+#[test]
+fn pet_battle_undetermined_kill_targets_are_rejected_before_rng() {
+    let c = catalog();
+    let b = battle(&c, 7, 7, [967, 110, 123]);
+    // GM Kill All Enemy967 has3 identical135 rows. No guessed self-kill routing.
+    let err = b
+        .step(&c, [Action::Ability(967), Action::Pass], &mut NoDraw)
+        .unwrap_err();
+    assert!(err.contains("undetermined"), "{err}");
+}
+
+#[test]
+fn pet_battle_decoy_refresh_restores_two_team_charges() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [334, 110, 123]);
+    b.teams[0].pets[0].stats.speed = 200;
+    b = b
+        .step(
+            &c,
+            [Action::Ability(334), Action::Ability(110)],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    b.teams[0].pets[0].cooldowns.clear();
+    // Recast334 after one block refreshes back to exactly2 charges, not1 or3.
+    b = use_ability(&b, &c, 334).0;
+    for _ in 0..2 {
+        let (next, e) = b
+            .step(&c, [Action::Pass, Action::Ability(110)], &mut Fixed(500000))
+            .unwrap();
+        assert!(damage(&e).is_empty());
+        b = next;
+    }
+    assert!(b.auras.is_empty());
+    for pet in &b.teams[0].pets {
+        assert_eq!(
+            pet.state(c.state_id("Special_BlockedAttackCount").unwrap()),
+            0
+        );
+    }
+}
+
+#[test]
 fn pet_battle_246_bend_time_clears_incoming_cooldowns_once() {
     let c = catalog();
     let mut b = battle(&c, 7, 7, [1905, 110, 123]);
@@ -500,9 +637,9 @@ fn pet_battle_quick_attack_79_116_priority_restores_speed() {
     let c = catalog();
     let mut b = battle(&c, 7, 7, [563, 110, 123]);
     b.teams[0].pets[0].stats.speed = 1;
-    b.teams[1].pets[0].stats.speed = 500;
-    // Quick Attack563 temporarily adds10000 speed before sorting; removes10000
-    // after the round.15*6=90 damage even though base speed1 is below500.
+    b.teams[1].pets[0].stats.speed = 15000;
+    // Quick Attack563 adds10000 to raw state20 to establish priority; removes10000
+    // after the round.15*6=90 damage even though base speed1 is below15000.
     let (next, e) = b
         .step(
             &c,

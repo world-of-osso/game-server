@@ -49,7 +49,7 @@ External resources, tooling, data sources, development workflow.
 
 - [Generic toy aura effects](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10) — data-backed226, cast prevention321, linked summons428, explicit bobber258 gaps and authentic template preparation; earlier61/105/37/293 support.
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
-- [Pet battle engine](systems/pet-battle-engine.md) — isolated deterministic turn library, strict SQLite boundary, 12 partial property handlers and 23 CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md), runtime table producer and Retail timing proof pending.
+- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, 40 property handlers, weather/team state and fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
 
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
 

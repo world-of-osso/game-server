@@ -165,6 +165,14 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             23 | 53 => self.heal_effect(caster, effect),
             31 => {
+                let control = matches!(p[0], 22 | 35 | 36 | 64);
+                if p[1] > 0 && control && self.state(caster, "Passive_Critter") != 0 {
+                    self.events.push(Event::Immune {
+                        effect: effect.id,
+                        target: caster,
+                    });
+                    return Ok(false);
+                }
                 self.battle.pet_mut(caster).states.insert(p[0] as u32, p[1]);
                 Ok(true)
             }
@@ -476,11 +484,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             * self.family_modifiers(caster, target, family)
             / divisor
             * if critical { CRITICAL_MULTIPLIER } else { 1.0 };
-        let mut amount = damage.floor().max(0.0) as i32;
-        if self.state(target, "Passive_Magic") != 0 {
-            let limit = (f64::from(self.battle.pet(target).stats.health) * 0.35).floor() as i32;
-            amount = amount.min(limit);
-        }
+        let amount = damage.floor().max(0.0) as i32;
         self.damage_pet(caster, target, amount, critical, periodic)?;
         Ok(amount > 0)
     }
@@ -776,10 +780,14 @@ impl<R: BattleRng> Runtime<'_, R> {
             .auras
             .iter()
             .enumerate()
-            .filter(|(_, a)| a.ability == effect.aura && a.target == target)
+            .filter(|(_, a)| {
+                a.ability == effect.aura
+                    && (a.target == target || a.team_bound && a.target.team == target.team)
+            })
             .map(|(i, _)| i)
             .collect();
         if matching.len() >= max {
+            self.restore_aura_charges(matching[0]);
             let aura = &mut self.battle.auras[matching[0]];
             aura.remaining = remaining;
             aura.turn = 1;
@@ -821,6 +829,28 @@ impl<R: BattleRng> Runtime<'_, R> {
             ability: effect.aura,
         });
         self.cast_turn(caster, target, effect.aura, 0, 0)
+    }
+    fn restore_aura_charges(&mut self, index: usize) {
+        let aura = &mut self.battle.auras[index];
+        let charges = self
+            .catalog
+            .ability_states
+            .get(&aura.ability)
+            .and_then(|s| s.get(&74))
+            .copied()
+            .unwrap_or(0);
+        let delta = charges - aura.charges;
+        aura.charges = charges;
+        let mut wearers = Vec::new();
+        for (pet, state, value) in &mut aura.state_deltas {
+            if *state == 74 {
+                *value += delta;
+                wearers.push(*pet);
+            }
+        }
+        for pet in wearers {
+            *self.battle.pet_mut(pet).states.entry(74).or_default() += delta;
+        }
     }
     fn remove_aura_effect(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
         if effect.params[0] != 0 && !self.roll(effect.params[0]) {
