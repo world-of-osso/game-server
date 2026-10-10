@@ -303,6 +303,67 @@ fn disenchant_release_finishes_personal_loot_and_allows_the_next_item() {
 }
 
 #[test]
+fn disenchant_missing_retail_materials_preserves_item_and_allows_next_cast() {
+    // Dragonmaw Shortsword753 selects TDB14; all three materials were removed
+    // from Retail12.1.0.69933. Do not replace them with fabricated templates.
+    let (mut h, _directory, guid, appearance) = setup(753, true);
+    let templates = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    for material in [11082, 11083, 11084] {
+        assert!(templates.get(Retail, material).is_none());
+    }
+    cast_item(&mut h, guid);
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert_eq!(h.inbox.failed[0].reason, CastFailReason::CantBeDisenchanted);
+    assert!(owns(&h, guid));
+    assert!(h.app.world().resource::<LootInbox>().0.is_empty());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::loot::ItemLoot>(h.caster)
+            .is_none()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::loot::ActiveLoot>(h.connection)
+            .is_none()
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert!(!persistence::appearance_store::load_account_appearances(db, 1).has(appearance));
+    let templates = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    crate::inventory::grant_item(
+        db,
+        templates,
+        h.app.world().resource::<crate::merchant::VendorCatalog>(),
+        1,
+        (727, 1),
+    )
+    .unwrap();
+    let next = crate::inventory::load_model(db, templates, 1)
+        .unwrap()
+        .bag_items()
+        .find(|item| item.item_id == 727)
+        .unwrap()
+        .item_guid;
+    cast_item(&mut h, next);
+    assert_eq!(
+        h.inbox.failed.len(),
+        1,
+        "valid next cast must not be locked"
+    );
+    assert!(!owns(&h, next));
+    assert!(owns(&h, guid));
+    let response = h.app.world().resource::<LootInbox>().0.last().unwrap();
+    assert!(!response.slots.is_empty());
+}
+
+#[test]
 fn disenchant_grey_refuses_and_keeps_item() {
     let (mut h, _directory, guid, _) = setup(25, true);
     cast_item(&mut h, guid);

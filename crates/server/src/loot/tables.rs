@@ -124,6 +124,15 @@ fn roll_chance(chance: f32, rng: &mut impl Rng) -> bool {
 }
 
 impl LootTables {
+    /// Whether this entry can yield an item present in the active Retail catalog.
+    pub fn disenchant_has_materials(&self, entry: u32, items: &ItemTemplates) -> bool {
+        self.disenchant.get(&entry).is_some_and(|template| {
+            self.misses(template, items)
+                .values()
+                .any(|miss| *miss < 1.0)
+        })
+    }
+
     pub fn roll_disenchant(
         &self,
         entry: u32,
