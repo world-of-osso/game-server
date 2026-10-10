@@ -77,27 +77,29 @@ fn learn_appearances(
     for (connection, account, in_world, sources, loaded) in &mut connections {
         let account_id = account.account_id;
         let first = loaded.is_none();
-        let (collection, learned) = match loaded {
+        if !first && !sources.is_changed() && !in_world.is_added() {
+            continue;
+        }
+        // Successful mutations already saved their grants, even when no item
+        // survives in the final inventory. Reload instead of trusting the cache.
+        let mut collection = load_account_appearances(&db.db, account_id);
+        if learn_items(&mut collection, &sources.0, &templates) > 0 {
+            save_account_appearances(&db.db, account_id, &collection);
+        }
+        let changed = match loaded {
             Some(mut loaded) => {
-                if !sources.is_changed() && !in_world.is_added() {
-                    continue;
-                }
-                let learned = learn_items(&mut loaded.0, &sources.0, &templates);
-                (loaded.0.clone(), learned)
+                let changed = loaded.0 != collection;
+                loaded.0 = collection.clone();
+                changed
             }
             None => {
-                let mut collection = load_account_appearances(&db.db, account_id);
-                let learned = learn_items(&mut collection, &sources.0, &templates);
                 commands
                     .entity(connection)
                     .insert(AccountAppearances(collection.clone()));
-                (collection, learned)
+                true
             }
         };
-        if learned > 0 {
-            save_account_appearances(&db.db, account_id, &collection);
-        }
-        if (learned > 0 || first || in_world.is_added())
+        if (changed || first || in_world.is_added())
             && let Ok(mut sender) = senders.get_mut(connection)
         {
             sender.send::<TooltipChannel>(AppearanceCollectionUpdate {

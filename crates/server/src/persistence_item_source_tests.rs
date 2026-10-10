@@ -36,6 +36,8 @@ fn record(name: &str, guid: u64) -> InventoryRecord {
         instances: HashMap::from([(guid, ItemInstanceData { soulbound: false })]),
         item_durability: HashMap::new(),
         definition_sources: HashMap::new(),
+        appearance_account: None,
+        appearance_grants: Vec::new(),
     }
 }
 

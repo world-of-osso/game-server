@@ -28,11 +28,31 @@ pub(crate) fn save_account_appearances(
     account_id: u64,
     collection: &AppearanceCollection,
 ) {
-    let bytes = serde_json::to_vec(collection).expect("encode account appearances");
     let txn = db.begin_write().expect("Failed to begin appearance write");
-    txn.open_table(ACCOUNT_APPEARANCES)
-        .expect("open account_appearances")
-        .insert(account_id, bytes.as_slice())
-        .expect("write account_appearances row");
+    learn_account_appearances_in(&txn, account_id, collection.all());
     txn.commit().expect("Failed to commit appearance write");
+}
+
+/// Merge grants inside the inventory/ownership transaction; one character cannot
+/// overwrite appearances learned by another connection on the same account.
+pub(crate) fn learn_account_appearances_in(
+    txn: &WriteTransaction,
+    account_id: u64,
+    appearances: impl IntoIterator<Item = u32>,
+) {
+    let mut table = txn
+        .open_table(ACCOUNT_APPEARANCES)
+        .expect("open account appearances");
+    let mut collection: AppearanceCollection = table
+        .get(account_id)
+        .expect("read account appearances")
+        .map(|row| serde_json::from_slice(row.value()).expect("decode account appearances"))
+        .unwrap_or_default();
+    if collection.learn_many(appearances) == 0 {
+        return;
+    }
+    let bytes = serde_json::to_vec(&collection).expect("encode account appearances");
+    table
+        .insert(account_id, bytes.as_slice())
+        .expect("write account appearances");
 }

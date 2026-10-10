@@ -1,16 +1,27 @@
 # Appearance collection
 
-Server-side account-wide transmog appearance collection (Retail `C_TransmogCollection`). The contract is shared-protocol `transmog::AppearanceCollection` and `protocol/tooltip_messages.rs` `AppearanceCollectionUpdate` (`TooltipChannel`). The client uses it to mark tooltip items collected (game-engine `docs/specs/unit-tooltip.md`).
+Account-wide appearance state uses shared-protocol `transmog::AppearanceCollection` and `AppearanceCollectionUpdate` on `TooltipChannel`. IDs currently represent Retail `ItemAppearance`, not individually collected `ItemModifiedAppearance` sources. Client tooltip contract: game-engine `docs/specs/unit-tooltip.md`.
 
-## What it must do
+## Retail reference (verified 2026-10-10)
 
-- [x] An appearance is the item's Retail `ItemAppearance` id: its `item_modified_appearance` row with the lowest `ItemAppearanceModifierID` (`ItemTemplate::appearance_id`). Items without such a row (cloth, potions, rings, trinkets, bags) have no appearance.
-- [x] The account learns an item's appearance when a character of the account has it equipped or soulbound (Retail: learned on equip or bind). Bind-on-pickup and quest items are soulbound as soon as they are owned; bind-on-equip items once equipped.
-- [x] Learned appearances are account-wide: `account_appearances` redb table, account id -> serde_json `AppearanceCollection`, written as soon as something new is learned.
-- [x] The owning client gets the whole collection (`AppearanceCollectionUpdate { appearances }`, sorted) when a character enters the world and again whenever an inventory change teaches a new appearance.
-- [ ] Wardrobe UI, applying transmog, collection from vendor purchase refunds, unlearning.
+- Blizzard [Warbands Preview, April 17, 2024](https://worldofwarcraft.blizzard.com/en-us/news/24061008/the-war-within-warbands-previe) and [Get the Band Together, July 11, 2024](https://worldofwarcraft.blizzard.com/en-us/news/24115313/get-the-band-together-for-warbands): collecting no longer requires the character to equip that armor type. Selling, deleting or disenchanting an unbound item also collects it. Collecting does not remove restrictions on *using* appearances.
+- Blizzard [11.0.5 update notes, October 22, 2024](https://worldofwarcraft.blizzard.com/en-us/news/24145980/20th-anniversary-celebration-content-update-notes), Items: other classes collect non-cosmetic class-restricted gear; completing a quest grants every non-cosmetic reward appearance, including unseen/unselectable choices. Retail also applies these changes retroactively.
+- Local Retail `GlobalStrings.csv` build 12.1.0.69933, lines 13499–13501: collected appearance, unknown appearance, and appearance collected from a different item are distinct tooltip states. `Blizzard_Collections/Mainline/Blizzard_Wardrobe.lua:1221–1241` distinguishes `visualID` and `sourceID`.
 
-## Tests asserting this spec
+## Required behavior
 
-- `crates/server/src/appearance_collection_tests.rs`: a Worn Shortsword in the bags is not learned; equipping it teaches `ItemAppearance` 154, which is saved for the account and sent; a second character of the account enters the world with it; owning the bind-on-pickup Verigan's Fist teaches 2288 at world entry.
-- `crates/server/src/item_templates_tests.rs`: Worn Shortsword 154, Verigan's Fist 2288, Linen Cloth none.
+- An item's default visual is its `item_modified_appearance` row with the lowest `ItemAppearanceModifierID`, then `OrderIndex`; no row means no visual to collect.
+- A successful ownership/equipment write collects equipped and soulbound visuals. BoP and quest-bonded items bind on receipt; BoE items remain uncollected in bags until equipped or disposed of.
+- Successful vendor sale and explicit destroy collect even an unbound BoE. Failed operations collect nothing. Generic transfer helpers do not collect an unbound item: mail, AH sales, player trade and bank transfers are not disposal.
+- Collection grants merge into the account's redb row in the same transaction as inventory/equipment changes. A quest reward merges all reward-option visuals with the awarded inventory and completed quest log.
+- Owner gets a sorted complete snapshot at world entry and after an inventory change changes collection state. Refresh from persisted state, not a stale per-connection copy.
+
+## Scope gaps (not parity claims)
+
+- No disenchant or scrapping acquisition handlers exist in the audited server. Explicit scrapping wording was not found in the Blizzard references; destruction equivalence is an inference, not verified Retail evidence.
+- Refund/loot-trade timers, reversible collection, retroactive completed-quest backfill, cosmetic-specific eligibility, variant sources and source-level persistence remain missing.
+- Native Wardrobe browsing/applying and collected toasts remain unimplemented; existing native tooltips receive appearance-level state.
+
+## Behavioral proof
+
+`transmogacq` tests cover BoP/BoE loot, BoP/BoE vendor purchase, unbound BoE sale/destroy, quest choices, player mail, AH won mail and player trade using real local item IDs. Every case closes/reopens redb. Existing appearance tests cover world-entry receipt, BoE equip, account-alt snapshots and reopen. Handoff contains the exact RED/GREEN commands and matrix; targeted proof does not replace the lead's full gate.

@@ -491,9 +491,30 @@ fn transmogacq_buying_bop_collects_its_appearance() {
         .iter()
         .position(|item| item.item_id == 70923)
         .unwrap() as u32;
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(pair::<shared::protocol::SelectGossipOption>());
     let npc = h.open(entry);
+    let opening = h
+        .take::<InteractionOpened>()
+        .pop()
+        .expect("vendor interaction opened");
+    if let InteractionKind::Gossip(menu) = opening.kind {
+        let option_id = menu
+            .options
+            .iter()
+            .find(|option| option.icon == 1)
+            .expect("vendor gossip option")
+            .option_id;
+        h.send::<_, InteractionChannel>(shared::protocol::SelectGossipOption {
+            npc: npc.to_bits(),
+            option_id,
+        });
+    }
     h.buy(npc, slot, 70923, 1);
-    assert!(h.take::<MerchantFailed>().is_empty());
+    let errors = h.take::<MerchantFailed>();
+    assert!(errors.is_empty(), "{errors:?}");
     assert_eq!(h.count_of(70923), vec![1]);
     assert!(
         crate::persistence::appearance_store::load_account_appearances(

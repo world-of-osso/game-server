@@ -72,6 +72,9 @@ pub struct InventoryRecord {
     pub instances: HashMap<u64, ItemInstanceData>,
     pub item_durability: HashMap<u64, (u32, u32)>,
     pub definition_sources: HashMap<u64, ItemDefinitionSource>,
+    /// Runtime-only collection receipt; not part of the stored inventory ABI.
+    pub appearance_account: Option<u64>,
+    pub appearance_grants: Vec<u32>,
 }
 
 pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<InventoryRecord> {
@@ -136,6 +139,8 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         instances,
         item_durability,
         definition_sources,
+        appearance_account: super::find_account_id_for_character(db, character_id),
+        appearance_grants: Vec::new(),
     })
 }
 
@@ -238,6 +243,15 @@ pub(crate) fn write_inventory_record(
     character_id: u64,
     record: &InventoryRecord,
 ) {
+    if !record.appearance_grants.is_empty() {
+        super::appearance_store::learn_account_appearances_in(
+            txn,
+            record
+                .appearance_account
+                .expect("appearance grant requires an account owner"),
+            record.appearance_grants.iter().copied(),
+        );
+    }
     let rows: [(TableDefinition<u64, &[u8]>, Vec<u8>); 5] = [
         (INVENTORIES, bitcode::encode(&record.inventory)),
         (INVENTORY_LAYOUTS, bitcode::encode(&record.placements)),
