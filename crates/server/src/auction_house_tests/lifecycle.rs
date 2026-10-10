@@ -464,7 +464,6 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
         format!("AUCTION_OUTBID_MAIL_SUBJECT:{}", source_item.name)
     );
     assert_eq!(mail_a[0].body, "");
-    assert!(mail_a[0].body.contains(&source_item.name));
     assert_eq!(mail_a[0].money, 0);
     assert!(mail_a[0].items.is_empty());
 
@@ -719,6 +718,11 @@ fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
 #[test]
 fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
     let db = persistence::temp_database();
+    for (id, name) in [(1, "Seller"), (2, "Buyer")] {
+        let (character, _) =
+            persistence::create_character_with_test_bags(&db, id, name, 1, 1).unwrap();
+        assert_eq!(character, id);
+    }
     let mut auction = test_auction(91, "Copper Ore", 1, 1);
     auction.current_bid = Some(1_001);
     auction.current_bidder_character_id = Some(2);
