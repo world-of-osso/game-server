@@ -194,7 +194,7 @@ fn a_glancing_swing_is_flagged_in_the_combat_log() {
 
 /// Unit::RollMeleeOutcomeAgainst (Unit.cpp:2422-2424) crits a player who is not standing
 /// unless the swing misses, and the swing's `DealDamage` (Unit.cpp:1185-1186) stands
-/// the player up: each swing at a re-seated player is a crit or a miss.
+/// the player up: force landed swings so each re-seated player must stand.
 #[test]
 fn a_creature_swing_crits_a_sitting_player_and_stands_it_up() {
     use shared::components::{PlayerStandState, StandState};
@@ -212,6 +212,12 @@ fn a_creature_swing_crits_a_sitting_player_and_stands_it_up() {
             },
         ))
         .id();
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..Default::default()
+        });
     for seated in [StandState::Sit, StandState::Sleep, StandState::Kneel]
         .into_iter()
         .cycle()
@@ -231,8 +237,7 @@ fn a_creature_swing_crits_a_sitting_player_and_stands_it_up() {
     assert!(
         events
             .iter()
-            .all(|kind| matches!(kind, CombatEventType::CriticalHit | CombatEventType::Miss)),
+            .all(|kind| matches!(kind, CombatEventType::CriticalHit)),
         "{events:?}"
     );
-    assert!(events.contains(&CombatEventType::CriticalHit));
 }
