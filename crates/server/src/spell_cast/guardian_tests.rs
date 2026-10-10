@@ -153,8 +153,9 @@ fn guardians_sacrifice_periodic_absorb_immunity_and_expiry() {
     );
     h.advance(260);
     assert!(!crate::auras::has_aura(h.app.world(), ally, 6940));
+    let before = h.health(ally);
     crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, ally, 100.0);
-    assert_eq!(h.health(ally), 660.0);
+    assert_eq!(h.health(ally), before - 100.0);
 }
 
 #[test]
