@@ -36,6 +36,9 @@ const BLOODTHIRST: u32 = 23_881;
 const BLOODTHIRST_HEAL: u32 = 117_313;
 const RAMPAGE: u32 = 184_367;
 const ENRAGE: u32 = 184_362;
+const HOLY_SHOCK: u32 = 20_473;
+const HOLY_SHOCK_DAMAGE: u32 = 25_912;
+const HOLY_SHOCK_HEAL: u32 = 25_914;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -47,6 +50,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (SHIELD_BLOCK, 0) => Some(shield_block),
         (BLOODTHIRST, 0) => Some(bloodthirst),
         (RAMPAGE, 0) => Some(rampage),
+        (HOLY_SHOCK, 0) => Some(holy_shock),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -72,6 +76,18 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_paladin.cpp:1261-1311, spell_pal_holy_shock:
+/// DUMMY 0 casts 25914 on a friendly target, otherwise 25912. The Retail
+/// 20473 tooltip references each child's $s1; its ENERGIZE 1 remains generic.
+fn holy_shock(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let spell = if relation_matches(world, caster, target, Relation::Ally) {
+        HOLY_SHOCK_HEAL
+    } else {
+        HOLY_SHOCK_DAMAGE
+    };
+    super::cast_triggered(world, caster, spell, Some(target), depth + 1);
 }
 
 /// TC a352b1fa spell_warrior.cpp:1754-1769, spell_warr_shield_block:
