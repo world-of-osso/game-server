@@ -1,10 +1,9 @@
-//! Account-wide appearance collection (docs/specs/appearance-collection.md):
-//! Retail transmog learns an item's appearance when the item is equipped or
-//! becomes soulbound. Inventory publishes the item ids that qualify on the
-//! connection (`AppearanceSourceItems`, at world entry and after every inventory
-//! change); this plugin adds their `ItemAppearance` ids to the account's
-//! `AppearanceCollection`, saves it at once and sends the owner the whole
-//! collection (`AppearanceCollectionUpdate`) on world entry and whenever it grows.
+//! Account-wide appearance collection (docs/specs/appearance-collection.md).
+//! Inventory writes persist equip/bind/disposal grants atomically; quest rewards
+//! also grant unchosen visuals. `AppearanceSourceItems` triggers this plugin's
+//! refresh after a mutation, including removal of the last appearance-bearing
+//! item. World entry also learns already-owned equipment and soulbound items.
+//! The owner receives the complete `AppearanceCollectionUpdate` when it changes.
 
 use bevy::prelude::*;
 use lightyear::prelude::*;

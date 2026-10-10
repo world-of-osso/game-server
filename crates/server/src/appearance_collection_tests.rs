@@ -288,6 +288,32 @@ fn transmogacq_destroying_an_unbound_boe_collects_and_sends_its_appearance() {
 }
 
 #[test]
+fn transmogacq_failed_destroy_does_not_collect_an_unbound_boe() {
+    let mut app = setup_app().unwrap();
+    let paladin = spawn_client(&mut app, 1, "Uther", WORN_SHORTSWORD);
+    add_pair::<shared::protocol::DestroyItem>(&mut app, paladin.connection);
+    enter_world(&mut app, &paladin);
+    updates(&mut app, &paladin);
+    send::<_, InventoryChannel>(
+        &mut app,
+        &paladin,
+        shared::protocol::DestroyItem {
+            location: ItemLocation::Bag { bag: 0, slot: 15 },
+            count: 0,
+        },
+    );
+    assert!(
+        persistence::load_inventory(db(&app), paladin.character_id)
+            .items
+            .iter()
+            .any(|item| item.item_id == WORN_SHORTSWORD)
+    );
+    assert!(!load_account_appearances(db(&app), ACCOUNT).has(SHORTSWORD_APPEARANCE));
+    assert!(updates(&mut app, &paladin).is_empty());
+    assert_restart(app, ACCOUNT, &[(SHORTSWORD_APPEARANCE, false)]);
+}
+
+#[test]
 fn owning_a_bind_on_pickup_item_teaches_its_appearance() {
     let Some(mut app) = setup_app() else { return };
     let paladin = spawn_client(&mut app, 1, "Uther", VERIGANS_FIST);
