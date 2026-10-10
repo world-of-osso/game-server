@@ -72,6 +72,10 @@ enum Selector {
     /// Units in the cone ahead of the caster meeting the effect's conditions
     /// (`TARGET_CHECK_ENTRY`).
     ConeEntry,
+    ///104: hostile cone aimed from the caster toward the selected destination.
+    ConeToDest,
+    ///134: hostile line aimed toward the destination, to the effect radius.
+    LineToDest,
 }
 
 fn selector(id: u32) -> Option<Selector> {
@@ -103,6 +107,8 @@ fn selector(id: u32) -> Option<Selector> {
         65 => Selector::DestTargetBack,
         77 => Selector::ChannelTarget,
         60 => Selector::ConeEntry,
+        104 => Selector::ConeToDest,
+        134 => Selector::LineToDest,
         _ => return None,
     })
 }
@@ -355,6 +361,23 @@ pub fn select_targets(
                     max_targets,
                 ));
             }
+            Selector::ConeToDest | Selector::LineToDest => {
+                selected_any = true;
+                let destination = spell
+                    .cast_destination
+                    .map(Vec3::from_array)
+                    .or_else(|| explicit.and_then(|unit| position(world, unit)));
+                units.extend(directed_units(
+                    world,
+                    caster,
+                    spell,
+                    effect,
+                    slot,
+                    destination,
+                    matches!(selector, Selector::LineToDest),
+                    max_targets,
+                ));
+            }
             Selector::ConeEntry => {
                 selected_any = true;
                 units.extend(cone_entry_units(
@@ -386,6 +409,57 @@ pub fn select_targets(
     }
     units.dedup();
     Ok(units)
+}
+
+///104/134 select hostile units along the caster-to-destination direction.
+///The line uses catalog Width, not a radial explosion or a target-only hit.
+///Unit-center geometry; combat-reach boundary expansion is not modelled.
+fn directed_units(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+    destination: Option<Vec3>,
+    line: bool,
+    cap: u32,
+) -> Vec<Entity> {
+    let origin = position(world, caster).expect("directional caster position");
+    let angle = destination
+        .filter(|point| point.x != origin.x || point.z != origin.z)
+        .map_or_else(
+            || orientation(world, caster),
+            |point| (origin.z - point.z).atan2(point.x - origin.x),
+        );
+    let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
+    let restrictions = spell
+        .target_restrictions
+        .as_ref()
+        .expect("directional spell requires catalog restrictions");
+    let half_arc = restrictions.cone_degrees.to_radians() / 2.0;
+    let width = restrictions.width;
+    let mut units = area_units(
+        world,
+        caster,
+        origin,
+        radius(effect, slot),
+        Relation::Enemy,
+        0,
+    );
+    units.retain(|&unit| {
+        let offset = position(world, unit).expect("area unit position") - origin;
+        let along = offset.dot(forward);
+        let across = (offset.x * forward.z - offset.z * forward.x).abs();
+        if line {
+            along >= 0.0 && across <= width
+        } else {
+            across.atan2(along) <= half_arc
+        }
+    });
+    if cap > 0 {
+        units.truncate(cap as usize);
+    }
+    units
 }
 
 /// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):
@@ -647,7 +721,12 @@ pub fn selects_area(effect: &SpellEffect) -> bool {
     effect.implicit_targets.iter().any(|&id| {
         matches!(
             selector(id),
-            Some(Selector::AreaAroundSrc(_) | Selector::AreaAroundDest(_))
+            Some(
+                Selector::AreaAroundSrc(_)
+                    | Selector::AreaAroundDest(_)
+                    | Selector::ConeToDest
+                    | Selector::LineToDest
+            )
         )
     })
 }
