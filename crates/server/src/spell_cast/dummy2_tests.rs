@@ -478,6 +478,14 @@ fn dummy2_dh_demon_spikes_grants_agility_armor_and_expires() {
     );
     assert!(after.armor > before.armor);
     assert_eq!(after.defense.parry, before.defense.parry);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::StatModifiers>(h.caster)
+            .unwrap()
+            .parry_pct,
+        0.0
+    );
     h.advance(245); // Catalog203819 lasts twelve seconds.
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 203819));
     assert_eq!(
@@ -500,8 +508,7 @@ fn dummy2_dh_demon_spikes_rank_two_adds_eight_parry_points() {
         .app
         .world()
         .get::<crate::stats::StatModifiers>(h.caster)
-        .unwrap()
-        .parry_pct;
+        .map_or(0.0, |mods| mods.parry_pct);
     h.cast_and_deliver(203720, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let after = h
@@ -511,4 +518,34 @@ fn dummy2_dh_demon_spikes_rank_two_adds_eight_parry_points() {
         .unwrap()
         .parry_pct;
     assert_eq!(after, before + 8.0);
+}
+
+#[test]
+fn dummy2_dh_demon_spikes_armor_tracks_agility_changes_while_active() {
+    // Authentic passive23794 (Agility +15) is removed through normal learned-
+    // passive reconciliation while the cast's Demon Spikes aura stays active.
+    let mut h = harness_with(Vec::new(), &[203720, 203819, 23794], 12, true)
+        .expect("real world.db required");
+    h.cast_and_deliver(203720, Some(h.caster));
+    let before = *h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            203720, 203819,
+        ]));
+    h.advance(4);
+    let after = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    assert_eq!(after.primary.agility, before.primary.agility - 15.0);
+    assert_eq!(after.armor, (after.primary.agility * 0.75).floor());
+    assert!(after.armor < before.armor);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 203819));
 }
