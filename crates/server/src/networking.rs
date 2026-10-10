@@ -628,7 +628,7 @@ fn stop_held_player(
     players: &mut Query<PlayerMovement, With<Player>>,
     replication_dirty: Option<&ReplicationDirtyQueue>,
 ) {
-    let Ok((.., mut motion)) = players.get_mut(player) else {
+    let Ok((.., mut motion, _)) = players.get_mut(player) else {
         return;
     };
     if stop_motion(&mut motion).replicated_state_changed
