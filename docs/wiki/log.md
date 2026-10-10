@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Class spell scripts batch7](systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations): TDB1210 script/proc/link mining and Mainline effect chains derive eight bounded paths;21 native functions pass after correcting Bear mitigation in Survival's fixture. Census172 retained,70 reviewed/partial/deferred. No database writes, deployment, merge or guessed projectile/taunt bridge.
+
 - 2026-10-10 — [Class spell scripts batch6](systems/spell-casting.md#sixth-batch-local-retail-rows): Sunfire, Verdict, Ice Lance, Starfire, Keg Smash, Butchery, Wild Growth, SWDeath backlash and capped owned Starfall extensions; local source receipts, per-spell cast proof and retained limits. No database writes, deployment, master merge or guessed selector104.
 
 - 2026-10-10 — [Class spell scripts batch3](systems/spell-casting.md#third-batch-local-retail-rows): eight bounded local-Retail paths (Prayer, Garrote, Serenity, Scorch, Shred, Thunder Clap, Devastate, Moonfire); per-spell cast proof/status and unresolved variants in `handoff-spell-dummy3.md`. No database writes, deployment or merge.

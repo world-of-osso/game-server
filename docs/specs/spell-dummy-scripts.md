@@ -115,6 +115,8 @@ These are bounded paths, not whole abilities. Colossus optional343/In for the Ki
 
 - `crates/server/src/spell_cast/dummy6_tests.rs` — 17 real catalog cast functions for the nine bounded paths, full spell_cast224/224 at`7cff842`; [scope and current proof](../wiki/systems/spell-casting.md#sixth-batch-local-retail-rows).
 
+- `crates/server/src/spell_cast/dummy7_tests.rs` —21 authentic-data cast functions, including100 Survival variance samples and one-charge/oldest-recharge preservation. Full filter ran once244/245; Bear's existing3% Fire mitigation corrected in the sole failing fixture, then batch21/21 at`81c2bf6`. No245/245 broad-pass claim; [census and proof](../wiki/systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations).
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
