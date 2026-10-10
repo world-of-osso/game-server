@@ -1,6 +1,6 @@
 # Pet battle engine
 
-Standalone `server::pet_battle` library. No Bevy plugin, networking, UI, encounter spawning, journal code or startup changes. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
+Standalone `server::pet_battle` library, consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
 
 ## Content
 
@@ -43,9 +43,15 @@ Nine families have CPU behavioral coverage: Beast, Flying, Critter, Magic, Mecha
 
 ### Limits
 
-12 property handlers, parameter/graph admission gates,23 focused tests. Coverage count is **not** all-row behavioral validation. Unsupported92 IDs, object/team damage auras (Cyclone190), weather, conditional opcodes, target overrides, max-health/special states and proc events1..4/9/12 fail explicitly. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. No wire/UI integration or full Retail parity claim.
+12 property handlers, parameter/graph admission gates,23 focused tests. Coverage count is **not** all-row behavioral validation. Unsupported92 IDs, object/team damage auras (Cyclone190), weather, conditional opcodes, target overrides, max-health/special states and proc events1..4/9/12 fail explicitly. Control-duration ordering, exact damage rounding/weak game-table factor and several proc timings remain uncaptured. The separate wild consumer has bounded wire/UI integration; this is not a full Retail parity claim.
+
+## Wild runtime consumer — verified 2026-10-10
+`crates/server/src/wild_pet_battles.rs` wraps the immutable turn library with authenticated account loadouts, wild creature claims, seeded RNG, trap decisions and persisted rewards. It reads species metadata/display overrides/visuals and pet XP thresholds already imported into canonical world.db; no reimport is needed for the current branch. [Wild contract](../../specs/wild-pet-battles.md) owns requirements and exact acceptance.
+
+Terminal state must be sent before End on CollectionChannel: otherwise lethal-round health remains at the client's previous snapshot. The production test now uses a Lightyear HostClient sender/receiver and asserts delivered final HP/End, then reopens account storage. Native private5592 proof separately covers actual defeated0HP wins and captures in both explicitly verified skins. Full server workspace passes; no unsupported effect substitution or blanket semantics claim.
 
 ## Sources
+- [Wild runtime spec](../../specs/wild-pet-battles.md), `crates/server/src/wild_pet_battles_tests.rs` and [native acceptance](../../../../game-engine/docs/specs/wild-pet-battles.md#acceptance--2026-10-10).
 
 - [Contract](../../specs/pet-battle-engine.md), [104-property coverage and reproduction](../../pet-battle-effect-coverage.md).
 - Local-CASC DB2 build12.1.0.69933 in game-engine/data/db2; no Blizzard CDN/table downloads.

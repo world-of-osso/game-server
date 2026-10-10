@@ -5,9 +5,9 @@ Server-authoritative wild PvE encounters in `crates/server/src/wild_pet_battles.
 ## What it must do
 - [ ] Start only for a living, nearby wild species on the player's map copy, with an owned three-slot loadout and exclusive encounter claim.
 - [ ] Validate battle/round identity and admit supported ability, swap, pass, trap and forfeit decisions.
-- [ ] Trap requires strictly below 35% enemy health, a living active ally and journal capacity; captured instances and participating-pet XP persist per account.
-- [ ] Deliver final authoritative health/state before the terminal outcome, including defeated wins and captures.
-- [ ] Release encounter claims and use the existing creature despawn/respawn lifecycle after wins.
+- [x] Trap requires strictly below 35% enemy health, a living active ally and journal capacity; captured instances and participating-pet XP persist per account.
+- [x] Deliver final authoritative health/state before the terminal outcome, including defeated wins and captures.
+- [x] Release encounter claims and use the existing creature despawn/respawn lifecycle after wins.
 
 ## How it works
 - [Turn catalog and semantics](../wiki/systems/pet-battle-engine.md).
@@ -23,7 +23,10 @@ Server-authoritative wild PvE encounters in `crates/server/src/wild_pet_battles.
 - Native private proof ledger: `/home/osso/.worktrees/handoff-petbattle-wild.md`.
 
 ## Known gaps (current cycle)
-- [ ] Final server workspace gate and final-build both-skin native win/capture evidence.
+- [x] Final server workspace gate: `55b823a`,1,753 passed/71 ignored/one requested skip, exit0.
+- [x] Final-build both-skin native win/capture evidence: private UDP5592, account fb_pbwild_proof, each skin defeats Rabbit then captures it, enemy0HP on defeated ends, captured instances10/11 and account XP preserved. [Client acceptance](../../../game-engine/docs/specs/wild-pet-battles.md#acceptance--2026-10-10) owns screenshots and exact proof.
+
+`terminal-transport-red-100-percent.log` reproduces147HP delivered instead of1HP on guaranteed capture;6 wild tests pass after sending terminal state before End. Live defeated-win RED14HP then GREEN0HP separately validates the lethal-round boundary. Independent verifier OAuth remains unavailable.
 
 ## Out of scope
 PvP and unsupported inherited effect semantics; no direct-damage approximation for unsupported effects. No full Retail-parity certification.
