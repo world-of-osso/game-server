@@ -1,46 +1,43 @@
 # Pet battle turn engine
 
-Pure deterministic server library; no transport, encounter spawning, UI or journal mutations. Three pets per team, one active pet; player decisions are ability, swap, pass and forfeit. Randomness is injected. Unsupported DB2 properties and event combinations must fail explicitly rather than imitate direct damage.
+Pure deterministic server library in `crates/server/src/pet_battle/`, exported through `server::pet_battle`. [Mechanics, schema and source provenance](../wiki/systems/pet-battle-engine.md); [full property coverage](../pet-battle-effect-coverage.md).
 
-## Data boundary
+## What it must do
 
-`Catalog::load_world_db` reads these SQLite tables with original DB2 column names and integer numeric affinity (StateMultiplier REAL; descriptions, LuaName, ParamLabel_* TEXT):
+- [x] Load the ten requested battle DB2 tables through its own strict SQLite loader, with test-only local-CASC CSV fixtures and no journal-code dependency/runtime CSV fallback.
+- [x] Derive stats from species/breed states, DB2 quality and level; preserve float32 rounding boundaries and fail invalid inputs explicitly.
+- [x] Model three pets per team and an active slot; ability/swap/pass/forfeit decisions; speed order and injected tie RNG; faint replacement without combat-round advancement.
+- [x] Dispatch common damage/heal/state/aura properties, including accuracy, variance, critical/type modifiers, timed ticks/expiry, refresh, multi-turn continuation and cooldowns.
+- [x] Trigger Beast, Flying, Critter, Magic, Mechanical, Undead, Humanoid, Aquatic and Dragonkin passives through BattlePetState names; use actual ability descriptions/effect values for numeric rules.
+- [x] Reject unsupported properties, parameters, events and special aura states explicitly; test rejected actions preserve RNG.
+- [x] Assert concrete real-ID behavior: Bite110, Burn113, Healing Wave123, Poison Fang152, Burrow159, Deep Breath169, Curse of Doom218, Grasp249, Wish273, Time Stop600 and Recovery726.
+- [x] Publish104-ID row/implementation/test coverage, distinguishing static admission from behavioral proof.
+- [ ] Prove exact damage rounding/type weak multiplier and control/event timing against captured Retail runtime or current client game tables.
+- [ ] Extend property coverage beyond the current12 validated-dispatch handlers as primary runtime evidence establishes their semantics.
 
-| Export | SQLite table |
-|---|---|
-| BattlePetAbility | battle_pet_ability |
-| BattlePetAbilityTurn | battle_pet_ability_turn |
-| BattlePetAbilityEffect | battle_pet_ability_effect |
-| BattlePetEffectProperties | battle_pet_effect_properties |
-| BattlePetState | battle_pet_state |
-| BattlePetSpeciesState | battle_pet_species_state |
-| BattlePetBreedState | battle_pet_breed_state |
-| BattlePetBreedQuality | battle_pet_breed_quality |
-| BattlePetSpeciesXAbility | battle_pet_species_x_ability |
-| BattlePetAbilityState | battle_pet_ability_state |
+## How it works
 
-Runtime has no CSV fallback. Tests import authenticated local-CASC build12.1.0.69933 CSVs into in-memory SQLite; `PET_BATTLE_DB2` specifies export directory. No data committed. pets-server-fix currently provides species metadata only; battle-table producer integration is a later dependency.
+- [Engine mechanics, schema contract and source boundaries](../wiki/systems/pet-battle-engine.md).
+- [Property matrix, proof levels and reproduction](../pet-battle-effect-coverage.md).
 
-## Stats contract
+## Implementation inventory
 
-Species + breed raw stamina/power/speed states multiplied by quality and level. Max health `round(stamina*quality*level/20)+100`; power/speed `round(raw*quality*level/100)`. Quality multipliers come from DB2. Species39/breed3/Rare/25 yields1563/260/276. Divisors20/100 and health offset100 are runtime constants, **not derivable from DB2 alone**: TrinityCore pinned a352b1fa `src/server/game/BattlePets/BattlePetMgr.cpp`, CalculateStats. Its rounding comment retains an upstream uncertainty; no claim of captured Retail numeric proof.
+- `src/lib.rs`, `pet_battle/mod.rs` — standalone library exports, no server startup wiring.
+- `pet_battle/catalog.rs` — own typed SQLite loader, raw unresolved-state retention and admission inventory.
+- `pet_battle/stats.rs`, `model.rs` — stats and battle/team/pet/aura/action/event representation.
+- `pet_battle/rules.rs`, `engine.rs`, `effects.rs` — opcode admission, deterministic round sequencing and effect execution.
+- `pet_battle/tests.rs` — real CSV→SQLite fixture and23 behavioral/inventory tests.
 
-## Acceptance
+## Tests asserting this spec
 
-Behavior tests must use real ability IDs and hand-derived numbers for damage strong/weak/neutral, aura expiry, control turn loss, speed, passives, multi-turn and cooldown decisions. Coverage reports distinguish handler availability from every-row validation. Full104-property parity is not implied by a handler for a frequently used opcode.
+`crates/server/src/pet_battle/tests.rs`; native `agent-run petbattle cargo test --locked -p server pet_battle`. Set `PET_BATTLE_DB2` to authenticated export directory. Existing server master requires shared master75fe6a4; current sibling3facd18 and stale declared8c16175 each have unrelated compile incompatibilities. Exact isolated dependency override and successful all-target filtered command are in the coverage report.23/23 pass, format/check pass at code2f99296; no full suite or live runtime claim.
 
-## Turn contract
+## Known gaps (current cycle)
 
-`Battle::step` returns new state plus ordered events. RNG draws uniformly0..999999; no global seed/time. Speed decides order; exact ties roll50/50. Voluntary swaps precede attacks. Pass continues a committed multi-turn move. Faint replacement is an explicit caller decision, not an automatic strongest-pet selection. Forfeit ends immediately; both forfeits draw.
+- [ ] pets-server-fix/DB producer must import ten battle tables under the documented schema; world.db currently contains species metadata only.
+- [ ] Independent verification could not run because Claude OAuth expired; no paid substitute used.
+- [ ] Elemental negative-weather immunity has no executable weather path or behavioral proof yet.
 
-Supported dispatch:22(zero-point dummy),23(heal),24(damage),26(positive aura),31(set caster state),49(remove named caster aura),50(negative aura),52(control),53(percent heal),54(periodic aura),63(positive periodic aura),222(variance damage). Parameter combinations and referenced aura graphs are admitted before execution; presence in this list does not mean every effect row is admitted. Proc events0/5/6/7/8/10/11 handled; events1..4/9/12 and weather excluded pending causal evidence. Rejected abilities return explicit errors.
+## Out of scope
 
-Family passives use state names from BattlePetState and current family descriptions236..245: Beast25% belowhalf; Flying50% speed abovehalf; Critter control immunity; Magic35% hit cap; Mechanical20% once; Undead one immortal following round with25% damage penalty; Humanoid Recovery726 percentage; Dragon next-round50% on crossing enemyhalf; Aquatic incoming periodichalf/outgoing+25%. Elemental weather immunity cannot be exercised until weather handlers exist.
-
-Power coefficient.05 and variance range `variance/200` are Retail `Blizzard_FrameXML/SharedPetBattleTemplates.lua` lines490..502. Base5% critical, critical1.5x, and base+/-10% variance are Blizzard's **Pet Battle Accuracy Changes in Patch5.3** (news10055295); the older Legion emulator instead uses2x crit and is not followed. Current DB2 variance parameters override the base spread. Full Retail runtime observation remains a separate proof level.
-
-## Delayed effects and limits
-
-Negative-aura50 Curse of Doom218 retains turns1..5 although Duration=4: four waiting rounds then impact. Positive periodic63 Wish273 follows the current active pet on its team, not its original caster. Multi-stage aura lifetime includes its final AbilityTurn; single-turn DoTs tick N times. Faint replacement is a decision-only transition and does not advance cooldowns, round counters or ticks.
-
-Object/team damage auras (e.g. Cyclone190/state69), weather, max-health changes, unsupported special states, damage events with family-1 and target override parameters fail admission. Do not present an admitted opcode count as complete ability parity. Remaining ambiguity includes base damage rounding/type weak factor beyond displayed33%, control-duration ordering versus captured Retail, proc event causality, and multi-target implicit selection.
+Networking, wild encounter spawning, UI, capture/XP, journal persistence, deployment, merges and UDP5000 operations belong to later steps. This engine is not wired into runtime battles while effect/parity coverage remains bounded.

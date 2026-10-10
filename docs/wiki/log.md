@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Pet battle engine](systems/pet-battle-engine.md): pure server library with stats, 3v3 decisions, injected RNG, common effects/auras/cooldowns/multi-turn moves and nine family passive cases. Code2f99296 targeted23/23; format/check exit0. [104-property matrix](../pet-battle-effect-coverage.md) distinguishes12 handlers/930 statically admitted rows from full Retail proof; SQLite battle-table producer, remaining92 IDs and exact timing/rounding remain open. Independent verification blocked by expired Claude OAuth. No network, UI, deployment, merge or UDP5000 work.
+
 - 2026-10-10 — [Appearance acquisition](investigations/appearance-acquisition.md#never-created-account-table-regression): missing account table reads return no owner; economy helper RED→GREEN and missing/empty/multi-account reopen test. Code `f654bcc`; economy11, acquisition14, appearance4, persistence106 passed/18 ignored. Disenchant/scrap handlers re-audited absent; no profession implementation.
 
 - 2026-10-10 — [Appearance acquisition](investigations/appearance-acquisition.md): BoP binding at store, atomic account visual receipts on equip/bind/sale/destroy, all quest choices, durable owner refresh. Targeted RED/GREEN and reopen matrix in `/home/osso/.worktrees/handoff-transmog-acquire.md`; disenchant/scrap handlers and source-level/client parity remain absent. No full gate, merge or deployment.

@@ -45,6 +45,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Pet battle engine](systems/pet-battle-engine.md) — isolated deterministic turn library, strict SQLite boundary, 12 partial property handlers and 23 CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md), runtime table producer and Retail timing proof pending.
+
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
 
 - [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
