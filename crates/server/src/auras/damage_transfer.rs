@@ -16,6 +16,7 @@ pub(crate) struct Split {
     pub fraction: f32,
     pub floor_pct: f32,
     pub budget: f32,
+    pub health_at_plan: f32,
 }
 
 /// Pure selection; callers validate living same-map recipients before applying it.
@@ -46,6 +47,7 @@ pub(crate) fn candidates(
                 fraction: (effect.amount * f32::from(aura.stacks) / 100.0).clamp(0.0, 1.0),
                 floor_pct,
                 budget: f32::INFINITY,
+                health_at_plan: 0.0,
             });
         }
     }

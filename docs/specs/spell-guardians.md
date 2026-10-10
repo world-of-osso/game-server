@@ -14,7 +14,8 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - [x] Native6940 aura81 redirects30% of post-mitigation damage to its caster for spell, periodic and real auto-attack paths; direct damage also shares.
 - [x] Native6940 effect2 terminates transfer at20% caster health, not an invented threshold.
 - [x] A caster on another map cannot receive shares.
-- [ ] Recipient absorbs consume redirected damage, immune recipients do not receive shares, and expired transfer auras stop sharing.
+- [x] Recipient absorbs consume redirected damage, immune recipients do not receive shares, and expired transfer auras stop sharing.
+- [ ] Dead protected units cannot transfer damage; concurrent queued melee swings share one remaining caster-health floor budget.
 
 ## How it works
 - [Spell casting wiki](../wiki/systems/spell-casting.md#guardian-actors-and-damage-transfer).
