@@ -458,8 +458,8 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
 }
 
 /// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
-fn crit_chance(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
-    if let Some(chance) = super::scripts::crit_chance(spell.id) {
+fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if let Some(chance) = super::scripts::crit_chance(world, caster, target, spell.id) {
         return chance;
     }
     let base = world
@@ -468,8 +468,14 @@ fn crit_chance(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
     spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
 }
 
-fn with_crit(world: &World, caster: Entity, spell: &SpellInfo, amount: f32) -> (f32, bool) {
-    let crit = rand::random::<f32>() * 100.0 < crit_chance(world, caster, spell);
+fn with_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> (f32, bool) {
+    let crit = rand::random::<f32>() * 100.0 < crit_chance(world, caster, target, spell);
     if !crit {
         return (amount, false);
     }
@@ -488,7 +494,7 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     deal_damage(world, ctx, target, amount, crit, false);
 }
 
@@ -497,7 +503,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
     let base =
         (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
     deal_damage(world, ctx, target, amount, crit, false);
 }
 
@@ -505,7 +511,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let base =
         weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
     deal_damage(world, ctx, target, amount, crit, false);
 }
 
@@ -713,7 +719,7 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     apply_heal(world, ctx, target, amount, crit, false);
 }
 

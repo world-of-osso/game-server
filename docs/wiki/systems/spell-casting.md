@@ -239,6 +239,23 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
+### Third batch: local Retail rows
+
+Implementation: `spell_cast/scripts/batch3.rs`; [contract](../../specs/spell-dummy-scripts.md#third-batch-locally-derived-paths). Sources are read-only local Retail12.1.0.69933 `spell`, `spell_effect`, duration/radius/category/aura-options/PPM rows, not older expansion assumptions. Durable receipts/proofs: `game-engine/data/diagnostics/spell-dummy3-2026-10-10/`; pending proof status is tracked in `/home/osso/.worktrees/handoff-spell-dummy3.md`.
+
+- 596 tooltip "your target and ${$s3-1} injured allies" supplies five total targets; effect1's radius23 supplies40yd. Spell-owned plan retains98367 marker trigger, caps additional injured allies, uses existing nearest-first area order. No claim that this order is a Mainline injury-priority formula.
+- 703 conditional `a196861` names1330;196861 names256148. Regular Stealth1784 aura at OnHit gates these five-second children before normal proc interrupts run.256148 applies only after the caster's1330 actually lands:196861 says "Enemies silenced by Garrote"; a real Unending Resolve104773 effect3 silence-immunity cast fixture reproduces and prevents the incorrect debuff. Zero-valued703 aura4 stays unresolved; Improved Garrote window not inferred.
+- 2050 `$s2`=6 seconds reduces its running category1673 recharge after2061 completes; existing timer mutation sends charge updates. Optional Prayer1246517 is not implemented.
+- 2948 `$s2`=30 is a strict health threshold. Crit hook now receives the target before damage, keeping normal crit/mod calculation above the threshold and existing Fire Blast guarantee.
+- 5221 `a231063`/`$231063s2` supplies25% bonus against bleeding targets. Applied aura spell/effect mechanic15 identifies a bleed, not merely any DoT. Other talent/stealth variants remain unsupported.
+- 6343 names435203s1/d; damage-effect hit casts the20% ten-second snare per enemy.20243's chance is sourced from231834s1=30%, not its unused mirrored Dummy. Full timer reset sends the ordinary cooldown update; absent rank leaves it untouched.
+- 8921 names164812s1/o2/d; base bridge launches only child effects0/1 (SP0.212 direct, SP0.184 per2000ms). It does not accidentally apply optional effect7's20% snare. Other Moonfire talent/resource fields remain unsupported.
+
+Batch3 census (verified2026-10-10, code `c7a69c7`): Dummy-bearing core roots **180→177**; complete root-type closures2050/2948/8921. E3 admissible IDs/memberships **125/133→122/130**; a4 **57/65 unchanged**; a226 **14/15 unchanged**. D memberships remain8/4/5. Scope remains13 classes/40 specs,630 book IDs/1551 memberships,302 core probes/355 memberships. Five newly scripted roots retain unresolved fields; retained177 list has45 reviewed/partial/deferred and132 un-derived entries. Moonfire's child closure also exposes latent aura269; this is not hidden by the base-only effect mask.
+
+Native proof:16 new cast tests. `dummy-integration.log` at `d80ba12` passes51; only its three Garrote tests were invalidated by the later silence-immunity fix, renewed and expanded to four passing Garrote tests at `c7a69c7`. Thus52 unique Dummy tests have surviving proof. Separate29 generic cast regressions survive the Garrote-only change; final format/check exit0, warning-free. Readability manually inspected; independent artifact verifier failed OAuth refresh, so no independent or PR-ready claim. No live realm/client proof. SQL opens mode=ro;21 actual IDs' descriptions and effects match raw local DB2 CSVs (`raw-db2-receipts.json`). No missing imports required for these bounded paths.
+
+
 See [contract](../../specs/spell-dummy-scripts.md). Effect-hit scripts bridge Shield Block2565 to132404, Bloodthirst23881 to117313 and a chance-based184362, and Rampage184367 to184362. Damage/resource effects continue through normal dispatch. Bloodthirst reads modified effect2 base points, not ProcChance101 or PPM; local DB2 has no PPM entry for these casts.
 
 Sources: TrinityCore `a352b1fa` `src/server/scripts/Spells/spell_warrior.cpp` (`spell_warr_shield_block`, `spell_warr_bloodthirst`, `spell_warr_bloodthirst_enrage`); Retail12.1.0.69933 `spell`/`spell_effect` rows2565,132404,23881,117313,184367,184362 in read-only `data/world.db`. Rampage's tooltip states "Enrages you"; its existing effect triggers name the attack spells. Fresh Meat and other optional talent variants remain unproved.
