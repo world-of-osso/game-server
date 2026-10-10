@@ -241,6 +241,17 @@ fn run_ground(probe: GroundProbe, from_y: f32) -> f32 {
     }
 }
 
+/// Exact runtime support for a routed foot position (Recast contours approximate it).
+fn sample_movement_ground(
+    ground: Option<&mut GroundMap>,
+    map: Option<&InMap>,
+    mut position: Position,
+) -> Position {
+    let feet = Vec3::new(position.x, position.y, position.z);
+    position.y = run_ground(probe_ground(ground, map, feet), position.y);
+    position
+}
+
 /// `Rotation.y` of a creature facing along Bevy `(dx, dz)`: WoW orientation + π/2, as spawns
 /// are placed (`creature_bundle`). `None` without a direction.
 pub(crate) fn facing_along(dx: f32, dz: f32) -> Option<f32> {
@@ -447,6 +458,7 @@ fn waypoint_system(
     world_data: Res<WorldData>,
     queues: MoveQueues,
     mut nav: Option<ResMut<Navigation>>,
+    mut ground: Option<ResMut<GroundMap>>,
     mut query: Query<
         (
             Entity,
@@ -490,7 +502,10 @@ fn waypoint_system(
                         };
                         match nav.advance(entity, request) {
                             Step::Unbaked => direct_leg(from, to, distance),
-                            Step::Moved { position, reached } => (position, reached),
+                            Step::Moved { position, reached } => (
+                                sample_movement_ground(ground.as_deref_mut(), Some(map), position),
+                                reached,
+                            ),
                             Step::Blocked => (from, false),
                         }
                     },
@@ -578,7 +593,8 @@ fn tick_waypoint_with_travel(
     if !reached {
         return (position, None);
     }
-    position.y = ty;
+    // Travel owns height: direct legs keep authored arrival Z, routed legs use
+    // actual ground support instead of overwriting it with approximate waypoint Z.
     state.arrived = true;
     state.delay_remaining = point.delay as f32 / 1000.0;
     (position, point.orientation.filter(|_| point.delay > 0))
@@ -1209,7 +1225,16 @@ fn return_to_spawn_system(
                 },
             ) {
                 Step::Unbaked => direct_leg(*pos, home, speed * dt),
-                Step::Moved { position, reached } => (position, reached),
+                Step::Moved {
+                    mut position,
+                    reached,
+                } => {
+                    if reached {
+                        position =
+                            sample_movement_ground(ground.as_deref_mut(), Some(map), position);
+                    }
+                    (position, reached)
+                }
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);
