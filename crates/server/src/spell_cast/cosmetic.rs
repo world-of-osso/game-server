@@ -6,20 +6,30 @@ use crate::spell_info::SpellInfo;
 /// These descriptions promise only a visual/attachment/sound, not a scripted
 /// action. Both the audit AND current DB2 shape must agree; metadata drift blocks.
 const VISUAL_ONLY_SPELLS: &[u32] = &[
-    45416, 45418, // Dancing Insoles, Fire Festival Batons
+    45416, 45418,  // Dancing Insoles, Fire Festival Batons
+    128328, // Ken-Ken's Mask (friendly-target attachment)
     131317, 131318, // Alliance / Horde fireworks
     148538, // Blackflame Daggers
     171761, // Brewfest Banner
     176457, // Fruit Basket
     176594, // Touch of the Naaru
     185712, // Seafarer's Slidewhistle
+    203533, // Black Ice
     203657, // Noble's Eternal Elementium Signet
+    203820, // Eternal Black Diamond Ring
     217708, // Gravil Goldbraid's Famous Sausage Hat
-    231129, 231142, 231143, 231144, // Falcosaur accessories
-    302273, // Heart of a Champion
-    409891, // Blazing Shadowflame Cinder
-    443689, // Toxic Victory
-    447446, // Cherry Blossom Trail
+    231129, 231142, 231143, 231144,  // Falcosaur accessories
+    261981,  // Spitzy
+    286277,  // Worn Cloak
+    302273,  // Heart of a Champion
+    406870,  // Mallard Mortar (targeted squeak, not damage)
+    409891,  // Blazing Shadowflame Cinder
+    443689,  // Toxic Victory
+    447446,  // Cherry Blossom Trail
+    455023,  // Filmless Camera
+    462145,  // Lampyridae Lure
+    1269949, // Valdekar's Special
+    1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory
 ];
 
