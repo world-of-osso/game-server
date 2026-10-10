@@ -33,6 +33,16 @@ Black Ice133997/203533 and Eternal Black Diamond Ring134007/203820 have no local
 
 Census95→103/1166 on unchanged reference data. Proof: four new behavioral tests pass; one broad toy run passed34/35, then correcting the Human-only fixture for Worn Cloak made all four new tests pass (35 distinct toy tests covered across receipts). Required `cargo test -p server --bin game-server spell_cast` passed193. Evidence: engine `data/diagnostics/toyfx5-2026-10-10/{before,after,source-records}.json` and final logs. This is server-preflight/CPU proof, not rendered Retail-client parity. [Contract](../../specs/toys.md).
 
+## Toy-effects6 follow-up (2026-10-10)
+
+Duck-Stuffed Duck Lovie194056/383065 is the additional aura4 admission: local description promises a nap, complete effects are zero-valued dummy-only, visual118994 supplies kit162763's duck attachment/AnimKit3404 and kit167706's cast sound. Ordinary bag learning, UseToy, aura replication and cancellation apply without invented healing/transform/gameplay sleep. Behavioral RED was an actual aura4 refusal; GREEN proves learning/use/SpellGo/aura/cancel and unchanged health. No other aura4/effect3 gameplay scripts were inferred from zero-valued metadata.
+
+After merging origin/master2ab5e5e into the feature branch, spell_cast261/261 and toy36/36 pass. Census103→104/1166, only gain194056, no removals. Receipts: engine `data/diagnostics/toy-effects6-2026-10-10/{before,after,delta}.json`, `final-spell-cast.log`, `final-toys.log`. These are server-preflight candidates, not complete Retail visual parity.
+
+[Client follow-up](../../../../game-engine/docs/wiki/systems/toy-box.md#toy-effects6-conditional-selection-and-summon-coverage-2026-10-10) implements Spitzy's single inverted aura condition and imports authentic ordinary train-wrecker appearance coverage. Both configured skins produced native Spitzy/train/Duck Lovie assets through actual Toy Box input. Valid-range mortar remains CPU-proven but live-unproved: final Modern reached19.82yd with hostile faction14 Invader42937 but selection was lost (`NoTarget`); final Forever's selected model left during post-selection repositioning. The final fixture removes that repositioning and learns before selection; this correction is not itself rendered acceptance.
+
+Haunting Memento170950 has DB2period180000 but trigger0; no tick action can be derived. Scoots needs absent ModifierTree303980 and cloak Type17 export lacks procedural payload. Largest remaining groups are aura4=285, summon28=263 and effect3=157; custom scripts/control categories and missing content are not closed by this one admission. Aura233 stays skipped. No world.db mutation, shared-realm deployment or master merge.
+
 ## Account state and transport
 
 `account_toys` stores a bitcode map `item_id -> favourite` keyed by account. Learning on normal UseItem writes both ownership and the consumed inventory record in one redb transaction. A duplicate returns an error without consumption. Favourite updates reread the durable account row inside their write transaction.

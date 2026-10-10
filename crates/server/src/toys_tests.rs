@@ -20,7 +20,7 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
             398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
-            203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870,
+            203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
         ],
         8,
     )
@@ -1460,6 +1460,52 @@ fn toyfx5_short_attachments_expire_at_retail_durations() {
                 .any(|aura| aura.spell_id == spell)
         );
     }
+}
+
+#[test]
+fn toyfx6_duck_lovie_learns_uses_replicates_and_cancels_authored_nap() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 194056);
+    let health_before = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(activate(&mut h, 194056)[0].error, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 383065));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 383065)
+    );
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap(),
+        health_before
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 383065 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 383065)
+    );
 }
 
 #[test]
