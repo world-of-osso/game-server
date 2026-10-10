@@ -28,8 +28,12 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<OverrideSpellData> {
 }
 
 pub(super) fn load_startup(mut commands: Commands) {
+    #[cfg(test)]
+    let path = crate::test_data::world_db_path();
+    #[cfg(not(test))]
+    let path = std::path::PathBuf::from(crate::spell_info::WORLD_DB_PATH);
     let conn = Connection::open_with_flags(
-        crate::spell_info::WORLD_DB_PATH,
+        path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .expect("open world.db for OverrideSpellData");
