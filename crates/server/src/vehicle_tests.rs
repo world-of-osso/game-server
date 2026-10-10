@@ -308,7 +308,7 @@ fn vehicle_passenger_follows_driver_rotation_and_translation() {
 
 #[test]
 fn vehicle_ejects_on_dismount_death_disconnect_map_and_instance_transfer() {
-    for cause in 0..6 {
+    for cause in 0..8 {
         let (mut world, driver, passenger, _) = setup();
         board(&mut world, passenger, driver).unwrap();
         match cause {
@@ -324,15 +324,20 @@ fn vehicle_ejects_on_dismount_death_disconnect_map_and_instance_transfer() {
             3 => {
                 world.entity_mut(driver).insert(InMap::continent(1));
             }
+            4 => {
+                world.entity_mut(driver).insert(InMap {
+                    map_id: 0,
+                    instance_id: 1,
+                });
+            }
+            5 => {
+                world.entity_mut(passenger).remove::<InMap>();
+            }
+            6 => {
+                world.get_mut::<Health>(passenger).unwrap().current = 0.0;
+            }
             _ => {
-                if cause == 4 {
-                    world.entity_mut(driver).insert(InMap {
-                        map_id: 0,
-                        instance_id: 1,
-                    });
-                } else {
-                    world.entity_mut(passenger).remove::<InMap>();
-                }
+                world.get_mut::<Mounted>(driver).unwrap().mount_display_id = 27238;
             }
         }
         reconcile_passengers(&mut world);
