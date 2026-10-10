@@ -45,6 +45,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
+
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
 
 - [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
