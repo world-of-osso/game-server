@@ -396,20 +396,20 @@ fn load_mount_poses(
         .query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))
         .map_err(|e| e.to_string())?;
     for row in rows {
-        let (display, vehicle) = row.map_err(|e| e.to_string())?;
-        let Some(&(model, scale)) = displays.get(&display) else {
-            warn!("Vehicle display {display} absent from local data");
+        let (display_id, vehicle) = row.map_err(|e| e.to_string())?;
+        let Some(&(model, scale)) = displays.get(&display_id) else {
+            warn!("Vehicle display {display_id} absent from local data");
             continue;
         };
         let fdid = models
             .get(&model)
-            .ok_or_else(|| format!("Display {display}: missing model {model}"))?;
+            .ok_or_else(|| format!("Display {display_id}: missing model {model}"))?;
         let path = root.join(format!("models/{fdid}.m2"));
         let data = match std::fs::read(&path) {
             Ok(data) => data,
             Err(error) => {
                 warn!(
-                    "Vehicle {vehicle} display {display}: {}: {error}",
+                    "Vehicle {vehicle} display {display_id}: {}: {error}",
                     path.display()
                 );
                 continue;
@@ -425,9 +425,9 @@ fn load_mount_poses(
                 .ok_or_else(|| format!("Missing VehicleSeat {seat}"))?;
             match read_mount_attachment(&data, *attachment) {
                 Ok(position) => {
-                    store.poses.insert((display, seat), position * scale);
+                    store.poses.insert((display_id, seat), position * scale);
                 }
-                Err(error) => warn!("Vehicle {vehicle} seat {seat} display {display}: {error}"),
+                Err(error) => warn!("Vehicle {vehicle} seat {seat} display {display_id}: {error}"),
             }
         }
     }
