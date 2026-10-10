@@ -596,7 +596,10 @@ fn buyout_above_the_u32_copper_range_pays_the_seller_in_full() {
 }
 
 fn atomic_fixture(db: &redb::Database) -> AuctionHouseState {
-    for id in [1, 2, 3] {
+    for (id, name) in [(1, "Seller"), (2, "Buyer"), (3, "Bidder")] {
+        let (character, _) =
+            persistence::create_character_with_test_bags(db, id, name, 1, 1).unwrap();
+        assert_eq!(character, id);
         persistence::save_inventory(
             db,
             id,

@@ -4,12 +4,17 @@ use crate::maps::difficulty::ServerClock;
 
 #[test]
 fn injected_clock_unsold_expiry_returns_item_by_persisted_mail() {
-    assert_clock_expiry(false);
+    assert_clock_expiry(false, false);
 }
 
 #[test]
 fn injected_clock_bid_expiry_persists_seller_proceeds_and_buyer_item() {
-    assert_clock_expiry(true);
+    assert_clock_expiry(true, false);
+}
+
+#[test]
+fn injected_clock_deleted_bidder_preserves_invoice_without_a_name() {
+    assert_clock_expiry(true, true);
 }
 
 fn advance_clock_through_admin(app: &mut App) {
@@ -25,7 +30,7 @@ fn advance_clock_through_admin(app: &mut App) {
     ));
 }
 
-fn assert_clock_expiry(with_bid: bool) {
+fn assert_clock_expiry(with_bid: bool, delete_buyer: bool) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("auction-clock.redb");
     let db = redb::Database::create(&path).unwrap();
@@ -68,6 +73,10 @@ fn assert_clock_expiry(with_bid: bool) {
         auction.item.item_guid, item.item_guid,
         "posting creates an escrow item instance"
     );
+    if delete_buyer {
+        persistence::delete_character(&db, 2, buyer).unwrap();
+        assert!(persistence::load_character(&db, buyer).is_none());
+    }
     let mut app = App::new();
     app.insert_resource(GameDatabase { db });
     app.insert_resource(state);
@@ -107,13 +116,31 @@ fn assert_clock_expiry(with_bid: bool) {
     );
     assert!(matches!(seller_mail[0].sender, MailSender::AuctionHouse));
     if with_bid {
-        assert_eq!(seller_mail[0].subject, "Auction sold");
+        assert_eq!(
+            seller_mail[0].subject,
+            format!("AUCTION_SOLD_MAIL_SUBJECT:{}", auction.item.name)
+        );
+        assert_eq!(
+            seller_mail[0].body,
+            format!(
+                "{}:1001:2000:{}:50:2",
+                if delete_buyer { "" } else { "Buyer" },
+                auction.deposit
+            )
+        );
         assert_eq!(seller_mail[0].money, 951 + auction.deposit);
         assert!(seller_mail[0].items.is_empty());
         let buyer_mail = mail_store::load_mailbox(&db, buyer);
         assert_eq!(buyer_mail.len(), 1);
         assert!(matches!(buyer_mail[0].sender, MailSender::AuctionHouse));
-        assert_eq!(buyer_mail[0].subject, "Auction won");
+        assert_eq!(
+            buyer_mail[0].subject,
+            format!("AUCTION_WON_MAIL_SUBJECT:{}", auction.item.name)
+        );
+        assert_eq!(
+            buyer_mail[0].body,
+            format!("Seller:1001:2000:{}:0:2", auction.deposit)
+        );
         assert_eq!(buyer_mail[0].money, 0);
         assert_eq!(buyer_mail[0].items.len(), 1);
         assert_eq!(buyer_mail[0].items[0].item, auction.item);
@@ -122,7 +149,11 @@ fn assert_clock_expiry(with_bid: bool) {
             buyer_gold - 1_001
         );
     } else {
-        assert_eq!(seller_mail[0].subject, "Auction Expired");
+        assert_eq!(
+            seller_mail[0].subject,
+            format!("AUCTION_EXPIRED_MAIL_SUBJECT:{}", auction.item.name)
+        );
+        assert_eq!(seller_mail[0].body, "");
         assert_eq!(seller_mail[0].money, auction.deposit);
         assert_eq!(seller_mail[0].items.len(), 1);
         assert_eq!(seller_mail[0].items[0].item, auction.item);
