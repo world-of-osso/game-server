@@ -6,6 +6,10 @@ crates/server/src/ground.rs reads, from the client asset cache: each map's WDT
 WMO, else every MAID tile's root and `_obj0` ADT (`terrain/<fdid>.adt`); each `_obj0`
 MODF WMO placed by FileDataID (flag 0x8) and its GFID group files (`models/<fdid>.wmo`).
 
+Also ships passenger-mount M2 bind poses selected by vehicle_models.sql, the same
+query compiled into vehicle.rs. No skins or skeleton companions are read by the
+server's attachment parser.
+
 Prints the cached files' paths relative to the cache, one per line (rsync
 --files-from); `--missing` prints the uncached ones with their map instead. The summary on stderr counts the files the cache does not hold: those
 tiles and WMOs have no ground on the server until they are extracted.
@@ -156,6 +160,20 @@ def selected_map_sources(world_db, map_ids=None, registered=False):
     return result
 
 
+def add_vehicle_models(files, world_db):
+    """Include exactly the passenger mount M2s the server opens at startup."""
+    sql = Path(__file__).with_name("vehicle_models.sql").read_text()
+    with closing(sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)) as db:
+        for display, vehicle, model, scale, fdid in db.execute(sql):
+            if scale is None or fdid is None:
+                raise ValueError(
+                    f"vehicle {vehicle} display {display}: missing display/model {model}"
+                )
+            if files.map_id != f"vehicle {vehicle}":
+                files.start_map(f"vehicle {vehicle}")
+            files.read(f"models/{fdid}.m2")
+
+
 def add_map_selection(parser):
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument(
@@ -187,6 +205,7 @@ def main():
             files.add_map(wdt)
         else:
             files.missing.append((map_id, NO_WDT))
+    add_vehicle_models(files, args.world_db)
     size = sum((args.cache / relative).stat().st_size for relative in files.present)
     if args.missing:
         print("\n".join(f"{map_id}\t{path}" for map_id, path in files.missing))
@@ -195,7 +214,7 @@ def main():
     missing_wdts = sum(1 for _, path in files.missing if path.endswith(".wdt") or path == NO_WDT)
     print(
         f"{len(maps)} selected maps: {len(files.present)} cached files, {size / 1e6:.1f} MB; "
-        f"not cached: {missing_wdts} WDTs, {len(files.missing) - missing_wdts} ADT/WMO files",
+        f"not cached: {missing_wdts} WDTs, {len(files.missing) - missing_wdts} ADT/WMO/M2 files",
         file=sys.stderr,
     )
 

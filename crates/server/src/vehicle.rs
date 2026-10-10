@@ -348,31 +348,29 @@ fn load_mount_poses(
     conn: &rusqlite::Connection,
     store: &mut VehicleStore,
 ) -> Result<(), String> {
-    let mut display_query = conn
-        .prepare("SELECT ID,ModelID,CreatureModelScale FROM creature_display_info")
-        .map_err(|error| format!("world.db creature_display_info: {error}"))?;
-    let displays: HashMap<u32, (u32, f32)> = display_query
-        .query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))
-        .map_err(|error| error.to_string())?
-        .collect::<Result<_, _>>()
-        .map_err(|error| error.to_string())?;
-    let models: HashMap<u32, u32> =
-        load_catalog_ids(conn, "SELECT ID,FileDataID FROM creature_model_data")?;
     let seat_records: HashMap<u32, i32> =
         load_catalog_ids(conn, "SELECT ID,AttachmentID FROM vehicle_seat")?;
-    let mut query=conn.prepare("SELECT DISTINCT x.CreatureDisplayInfoID,c.VehicleId FROM mount m JOIN mount_x_display x ON x.MountID=m.ID JOIN spell_effect e ON e.SpellID=m.SourceSpellID JOIN creature_template c ON c.entry=e.EffectMiscValue_0 WHERE e.EffectAura=78 AND e.DifficultyID=0 AND c.VehicleId<>0").map_err(|e|e.to_string())?;
+    let mut query = conn
+        .prepare(include_str!("../../../scripts/vehicle_models.sql"))
+        .map_err(|error| format!("world.db passenger mount models: {error}"))?;
     let rows = query
-        .query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))
-        .map_err(|e| e.to_string())?;
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, u32>(1)?,
+                row.get::<_, Option<u32>>(2)?,
+                row.get::<_, Option<f32>>(3)?,
+                row.get::<_, Option<u32>>(4)?,
+            ))
+        })
+        .map_err(|error| error.to_string())?;
     for row in rows {
-        let (display_id, vehicle) = row.map_err(|e| e.to_string())?;
-        let Some(&(model, scale)) = displays.get(&display_id) else {
+        let (display_id, vehicle, model, scale, fdid) = row.map_err(|e| e.to_string())?;
+        let Some(scale) = scale else {
             warn!("Vehicle display {display_id} absent from local data");
             continue;
         };
-        let fdid = models
-            .get(&model)
-            .ok_or_else(|| format!("Display {display_id}: missing model {model}"))?;
+        let fdid = fdid.ok_or_else(|| format!("Display {display_id}: missing model {model:?}"))?;
         let path = root.join(format!("models/{fdid}.m2"));
         let data = match std::fs::read(&path) {
             Ok(data) => data,
@@ -388,7 +386,11 @@ fn load_mount_poses(
             .vehicles
             .get(&vehicle)
             .ok_or_else(|| format!("Missing Vehicle {vehicle}"))?;
-        for &seat in seats.iter().filter(|&&seat| seat != 0) {
+        for &seat in seats.iter().filter(|&&seat| {
+            store.seats.get(&seat).is_some_and(|seat| {
+                seat.flags & CAN_ENTER_OR_EXIT != 0 && seat.flags & CAN_CONTROL == 0
+            })
+        }) {
             let attachment = seat_records
                 .get(&seat)
                 .ok_or_else(|| format!("Missing VehicleSeat {seat}"))?;
