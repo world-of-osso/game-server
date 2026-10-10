@@ -1,6 +1,56 @@
 use super::*;
 
 #[test]
+fn pet_battle_stench_applies_to_each_enemy_slot_and_expires() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [527, 110, 123]);
+    b.teams[1].active = 2;
+    b = use_ability(&b, &c, 527).0;
+    for pet in &b.teams[1].pets {
+        assert_eq!(pet.state(c.state_id("Stat_Accuracy").unwrap()), -25);
+    }
+    assert_eq!(b.auras.len(), 3);
+    for _ in 0..3 {
+        b = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap().0;
+    }
+    for pet in &b.teams[1].pets {
+        assert_eq!(pet.state(c.state_id("Stat_Accuracy").unwrap()), 0);
+    }
+    assert!(b.auras.is_empty());
+}
+
+#[test]
+fn pet_battle_cyclone_tracks_enemy_team_across_swap_and_tidal_removes_it() {
+    let c = catalog();
+    let mut b = battle(&c, 3, 7, [190, 110, 123]);
+    //35% accuracy, midpoint variance and non-critical draw sequence.
+    struct CycloneRng(usize);
+    impl BattleRng for CycloneRng {
+        fn draw(&mut self) -> u32 {
+            let n = self.0;
+            self.0 += 1;
+            if n % 3 == 0 { 100000 } else { 500000 }
+        }
+    }
+    b.teams[0].pets[0].stats.speed = 200;
+    let (b, e) = b
+        .step(&c, [Action::Ability(190), Action::Pass], &mut CycloneRng(0))
+        .unwrap();
+    assert_eq!(damage(&e), vec![36, 36, 36]);
+    assert_eq!(b.auras.len(), 1);
+    let (mut b, e) = b
+        .step(&c, [Action::Pass, Action::Swap(2)], &mut CycloneRng(0))
+        .unwrap();
+    assert_eq!(damage(&e), vec![36, 36, 36]);
+    assert_eq!(b.teams[1].active, 2);
+    b.teams[1].pets[2].abilities = [419, 110, 123];
+    let (b, _) = b
+        .step(&c, [Action::Pass, Action::Ability(419)], &mut Fixed(500000))
+        .unwrap();
+    assert!(b.auras.is_empty());
+}
+
+#[test]
 fn pet_battle_arcane_explosion_follows_active_slot_and_other_slots() {
     let c = catalog();
     for active in 0..3 {
