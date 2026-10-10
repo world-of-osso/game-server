@@ -6,6 +6,105 @@ use shared::protocol::CombatLogKind;
 use super::test_harness::*;
 
 #[test]
+fn dummy_priest_penance_channels_three_damage_bolts() {
+    let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750], 5)
+        .expect("real world.db required");
+    h.cast_and_deliver(47540, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let cast = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(h.caster)
+        .expect("Penance channel");
+    assert_eq!(cast.spell_id, 47758);
+    assert_eq!(cast.cast_type, shared::casting::CastType::Channel);
+    h.advance(50);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_none()
+    );
+    let bolts: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+        .collect();
+    assert_eq!(bolts.len(), 3);
+    assert!(
+        bolts
+            .iter()
+            .all(|event| varied(93.2).contains(&(event.amount as f32)))
+    );
+    assert!(varied(93.2 * 3.0).contains(&(5000.0 - h.health(h.npc))));
+}
+
+#[test]
+fn dummy_priest_penance_channels_three_healing_bolts() {
+    let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750], 5)
+        .expect("real world.db required");
+    let ally = spawn_player(&mut h.app, 1, 2.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 100.0,
+        max: 5000.0,
+    };
+    h.cast_and_deliver(47540, Some(ally));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .expect("Penance channel")
+            .spell_id,
+        47757
+    );
+    h.advance(50);
+    let bolts: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(47750))
+        .collect();
+    assert_eq!(bolts.len(), 3);
+    assert!(
+        bolts
+            .iter()
+            .all(|event| varied(401.1).contains(&(event.amount as f32)))
+    );
+    assert!(varied(401.1 * 3.0).contains(&(h.health(ally) - 100.0)));
+    assert_eq!(h.health(h.npc), 5000.0);
+}
+
+#[test]
+fn dummy_priest_stopping_penance_stops_subsequent_bolts() {
+    use lightyear::prelude::*;
+    use shared::protocol::{CombatChannel, StopSpellCast};
+    let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750], 5)
+        .expect("real world.db required");
+    h.cast_and_deliver(47540, Some(h.npc));
+    h.advance(6); // Initial bolt in flight has landed, second hasn't launched.
+    assert!(h.health(h.npc) < 5000.0);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<StopSpellCast>>(h.connection)
+        .unwrap()
+        .send::<CombatChannel>(StopSpellCast);
+    h.advance(12);
+    let after_stop = h.health(h.npc);
+    h.advance(45);
+    assert_eq!(h.health(h.npc), after_stop);
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn dummy_druid_barkskin_with_brambles_pulses_catalog_damage_each_second() {
     let mut h = harness(Vec::new(), &[22812, 203953, 213709], 11).expect("real world.db required");
     let ally = spawn_player(&mut h.app, 1, 2.0);

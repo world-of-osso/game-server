@@ -9,6 +9,7 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 - [ ] Rampage 184367 spends its catalog cost, retains the catalog attack triggers, and applies Enrage 184362.
 - [ ] Holy Shock 20473 casts 25912 at enemies or 25914 at allies (including self), using their catalog damage/heal formulas and retaining its one Holy Power gain.
 - [ ] Barkskin 22812's periodic Dummy casts Brambles damage 213709 every catalog tick when Brambles 203953 is present, hits enemies only, and stops on aura removal.
+- [ ] Penance 47540 starts the catalog friendly47757 or hostile47758 channel, delivering three catalog bolts and stopping future bolts when cancelled.
 - [ ] Unknown Dummy fields remain unsupported rather than receiving generic no-op handlers.
 
 ## How it works
@@ -18,12 +19,13 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 ## Implementation inventory
 
 - `crates/server/src/spell_cast/scripts.rs` — spell-ID effect-hit hooks.
+- `crates/server/src/spell_cast/mod.rs` — channel-state construction shared by normal casts and Penance's bridge.
 - `crates/server/src/auras/scripts.rs` — periodic class aura scripts.
 - `crates/server/src/spell_cast/dummy_tests.rs` — real-ID player casts and observable outcomes.
 
 ## Tests asserting this spec
 
-- `crates/server/src/spell_cast/dummy_tests.rs` — `dummy_warrior_*`, `dummy_paladin_*`, `dummy_druid_*`; Bloodthirst chance endpoints use explicitly labelled catalog clones, while the ordinary cast uses unchanged data.
+- `crates/server/src/spell_cast/dummy_tests.rs` — `dummy_warrior_*`, `dummy_paladin_*`, `dummy_druid_*`, `dummy_priest_*`; Bloodthirst chance endpoints use explicitly labelled catalog clones, while the ordinary cast uses unchanged data.
 
 ## Known gaps (current cycle)
 
@@ -32,4 +34,5 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 ## Out of scope
 
 - Full talent/hero variants: Fresh Meat's guarantee, Enrage talent gating and Rampage's optional AoE branch are not certified by these base-script tests.
+- Penance Atonement, Power of the Dark Side and Dark Reprimand variants are not certified by the base-channel tests.
 - Realm UDP 5000, deployment and merging.
