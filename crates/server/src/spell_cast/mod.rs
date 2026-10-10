@@ -19,6 +19,8 @@ pub mod creature;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
+#[cfg(test)]
+mod dummy_tests;
 pub mod effects;
 mod hit;
 mod missiles;

@@ -30,6 +30,12 @@ const SWITCH_TO_STEADY: u32 = 460_003;
 const AZURE_STRIKE: u32 = 362_969;
 const FORTIFYING_BREW: u32 = 115_203;
 const FORTIFYING_BREW_BUFF: u32 = 120_954;
+const SHIELD_BLOCK: u32 = 2_565;
+const SHIELD_BLOCK_AURA: u32 = 132_404;
+const BLOODTHIRST: u32 = 23_881;
+const BLOODTHIRST_HEAL: u32 = 117_313;
+const RAMPAGE: u32 = 184_367;
+const ENRAGE: u32 = 184_362;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -38,6 +44,9 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (FORTIFYING_BREW, 0) => Some(fortifying_brew),
+        (SHIELD_BLOCK, 0) => Some(shield_block),
+        (BLOODTHIRST, 0) => Some(bloodthirst),
+        (RAMPAGE, 0) => Some(rampage),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -63,6 +72,39 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_warrior.cpp:1754-1769, spell_warr_shield_block:
+/// DUMMY 0 casts 132404. Its catalog aura supplies +100 block chance for 6 s
+/// and the Shield Slam damage modifier; 2565's tooltip refers to those fields.
+fn shield_block(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    super::cast_triggered(world, caster, SHIELD_BLOCK_AURA, Some(caster), depth + 1);
+}
+
+/// TC a352b1fa spell_warrior.cpp:320-411, spell_warr_bloodthirst and
+/// spell_warr_bloodthirst_enrage: on the damage hit, heal via 117313 and roll
+/// effect 2's chance (not SpellAuraOptions/PPM) for 184362. Catalog 23881's
+/// $117313s1 and $s3 resolve to 3% max health and 30% chance. Fresh Meat's
+/// optional first-target guarantee remains unsupported.
+fn bloodthirst(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let spell = store.get(BLOODTHIRST).expect("resolving Bloodthirst is in SpellStore");
+    let Some(effect) = spell.effects.iter().find(|effect| effect.index == 2) else {
+        warn!("Bloodthirst requires effect 2's Enrage chance");
+        return;
+    };
+    let chance = super::effects::modded_base_points(world, caster, spell, effect);
+    super::cast_triggered(world, caster, BLOODTHIRST_HEAL, Some(caster), depth + 1);
+    if rand::random::<f32>() * 100.0 < chance {
+        super::cast_triggered(world, caster, ENRAGE, Some(caster), depth + 1);
+    }
+}
+
+/// Catalog 184367's tooltip explicitly says "Enrages you". Effects 1-4
+/// already trigger the four attack spells; DUMMY 0 describes their count.
+/// Enrage's identity is TC a352b1fa spell_warrior.cpp's SPELL_WARRIOR_ENRAGE.
+fn rampage(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    super::cast_triggered(world, caster, ENRAGE, Some(caster), depth + 1);
 }
 
 /// `spell_dh_chaos_strike_initial::HandleHit` (spell_dh.cpp:368-388): the caster
