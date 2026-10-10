@@ -1387,6 +1387,7 @@ impl InventoryModel {
             self.bags[bag][slot] = Some(stack);
             left -= count;
         }
+        self.bind_owned_pickup_items();
         Ok(())
     }
 
@@ -1552,6 +1553,7 @@ impl InventoryModel {
             }
         };
         if rest == 0 {
+            self.bind_owned_pickup_items();
             return Ok(());
         }
         if guid_taken {
