@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch10](systems/spell-casting.md#tenth-batch-low-count-spec-paths) — eight low-count spec paths,11 native functions,170→168 Dummy roots and full40-spec before/after table; talent/transfer/actor gaps retained.
+
 - [Class spell batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks) — nine local Mainline paths, fixed ground pulses/owned marks/shield lifetimes,40-spec census coverage;171→170 Dummy roots, retained range/talent gaps.
 
 - [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.

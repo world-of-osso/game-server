@@ -165,6 +165,8 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 
 Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodies or invented child IDs. Divine Storm's reduced-damage formula and Glacial Advance's advancing geometry were not derivable from these sources and remain deferred.
 
+- `crates/server/src/spell_cast/dummy10_tests.rs` —11 native functions across eight paths at`83512eb`: actual damage/area/resources/buff expiry, absent passives, owner-only replacement and cancelled casts. [Census and full40-spec table](../wiki/systems/spell-casting.md#tenth-batch-low-count-spec-paths).
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
