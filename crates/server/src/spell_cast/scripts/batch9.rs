@@ -8,6 +8,8 @@ use bevy::prelude::*;
 use shared::components::Health;
 
 pub(super) const HEALING_RAIN: u32 = 73920;
+pub(super) const CONSECRATION: u32 = 26573;
+const CONSECRATION_DAMAGE: u32 = 81297;
 pub(super) const EARTHQUAKE: u32 = 61882;
 pub(super) const EMERALD_BLOSSOM: u32 = 355913;
 pub(super) const WINTER_DAMAGE: u32 = 196771;
@@ -51,8 +53,8 @@ fn spawn_ground_pulses(
 ) {
     let center = ctx.dest.expect("validated named ground spell destination");
     let pulses = read_ground_pulses(world, ctx);
-    if ctx.spell.id == HEALING_RAIN {
-        replace_owned_rain(world, ctx.caster);
+    if matches!(ctx.spell.id, HEALING_RAIN | CONSECRATION) {
+        replace_owned_field(world, ctx.caster, ctx.spell.id);
     }
     let map = *world
         .get::<crate::maps::InMap>(ctx.caster)
@@ -72,6 +74,20 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
     let now = crate::auras::aura_now(world);
     let duration = f64::from(spell_cast::duration_ms(world, ctx.caster, ctx.spell)) / 1000.0;
     let (child, radius, cap, relation, period) = match ctx.spell.id {
+        CONSECRATION => (
+            CONSECRATION_DAMAGE,
+            targets::radius(
+                &world
+                    .resource::<SpellStore>()
+                    .get(CONSECRATION_DAMAGE)
+                    .expect("Consecration requires81297")
+                    .effects[0],
+                1,
+            ),
+            0,
+            targets::Relation::Enemy,
+            f64::from(ctx.spell.effects[0].aura_period_ms) / 1000.0,
+        ),
         HEALING_RAIN => (
             RAIN_HEAL,
             targets::effect_radius(&ctx.spell.effects[0]),
@@ -109,11 +125,32 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
     }
 }
 
-fn replace_owned_rain(world: &mut World, caster: Entity) {
+///26573's local description variable names81297; period=t1, limit=s2=1.
+///The field remains at the original caster position, not the moving caster.
+pub(super) fn spawn_consecration(
+    world: &mut World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+) {
+    let position = targets::position(world, caster).expect("Consecration caster position");
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth: 0,
+        dest: Some(targets::Dest {
+            position,
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
+    };
+    spawn_ground_pulses(world, &ctx, &spell.effects[0]);
+}
+
+fn replace_owned_field(world: &mut World, caster: Entity, root: u32) {
     let previous: Vec<_> = world
         .query::<(Entity, &GroundPulses)>()
         .iter(world)
-        .filter(|(_, p)| p.caster == caster && p.root == HEALING_RAIN)
+        .filter(|(_, p)| p.caster == caster && p.root == root)
         .map(|(e, _)| e)
         .collect();
     for entity in previous {
@@ -181,6 +218,12 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         .get(pulses.child)
         .expect("named ground spell child")
         .clone();
+    //26573's tooltip explicitly multiplies the81297 total by1.05.
+    let chain_multipliers = if pulses.root == CONSECRATION {
+        units.iter().map(|&unit| (unit, 1.05)).collect()
+    } else {
+        Vec::new()
+    };
     let mut plan = vec![PlannedEffect {
         index: 0,
         units,
@@ -188,7 +231,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             position: center,
             orientation: 0.0,
         }),
-        chain_multipliers: Vec::new(),
+        chain_multipliers,
     }];
     // Named damage/heal effect only: Earthquake's knockdown77 remains unsupported.
     spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);
