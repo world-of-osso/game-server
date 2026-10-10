@@ -1375,6 +1375,7 @@ fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
         .iter()
         .position(|other| {
             other.effect != 0
+                && targets::unsupported_target(other).is_none()
                 && other.implicit_targets == effect.implicit_targets
                 && other.attributes & EFFECT_ATTR_PLAYERS_ONLY
                     == effect.attributes & EFFECT_ATTR_PLAYERS_ONLY

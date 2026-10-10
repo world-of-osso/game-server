@@ -10,7 +10,7 @@ pub(crate) struct SpellTargetPositions(pub HashMap<(u32, u8), WorldLocation>);
 pub(crate) fn load_positions(
     conn: &rusqlite::Connection,
 ) -> rusqlite::Result<SpellTargetPositions> {
-    let mut stmt = conn.prepare("SELECT ID, EffectIndex, MapID, PositionX, PositionY, PositionZ, Orientation FROM spell_target_position WHERE VerifiedBuild > 0")?;
+    let mut stmt = conn.prepare("SELECT ID, EffectIndex, MapID, PositionX, PositionY, PositionZ, Orientation FROM spell_target_position")?;
     let positions = stmt
         .query_map([], |row| {
             Ok((

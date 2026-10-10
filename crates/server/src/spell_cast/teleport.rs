@@ -12,23 +12,7 @@ pub(super) fn check_destination(
 ) -> Result<(), super::CastFailure> {
     for effect in &spell.effects {
         if effect.effect == 254 && effect.implicit_targets.contains(&87) {
-            let point = spell
-                .cast_destination
-                .map(Vec3::from_array)
-                .ok_or(super::CastFailure::NoTarget)?;
-            let origin =
-                super::targets::position(world, caster).ok_or(super::CastFailure::InvalidTarget)?;
-            if !point.is_finite() {
-                return Err(super::CastFailure::InvalidTarget);
-            }
-            let (min, max) = super::targets::spell_range(spell, false);
-            let distance = origin.distance(point);
-            if distance > max {
-                return Err(super::CastFailure::OutOfRange);
-            }
-            if distance < min {
-                return Err(super::CastFailure::TooClose);
-            }
+            check_ground_point(world, caster, spell)?;
         }
         if !matches!(effect.effect, 15 | 252 | 29) {
             continue;
@@ -48,6 +32,31 @@ pub(super) fn check_destination(
                 "missing SpellTargetPosition row".into(),
             ));
         }
+    }
+    Ok(())
+}
+
+fn check_ground_point(
+    world: &World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+) -> Result<(), super::CastFailure> {
+    let point = spell
+        .cast_destination
+        .map(Vec3::from_array)
+        .ok_or(super::CastFailure::NoTarget)?;
+    let origin =
+        super::targets::position(world, caster).ok_or(super::CastFailure::InvalidTarget)?;
+    if !point.is_finite() {
+        return Err(super::CastFailure::InvalidTarget);
+    }
+    let (min, max) = super::targets::spell_range(spell, false);
+    let distance = origin.distance(point);
+    if distance > max {
+        return Err(super::CastFailure::OutOfRange);
+    }
+    if distance < min {
+        return Err(super::CastFailure::TooClose);
     }
     Ok(())
 }
