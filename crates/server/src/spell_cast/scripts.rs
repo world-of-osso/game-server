@@ -61,6 +61,9 @@ const OUTBREAK: u32 = 77_575;
 const DREAD_PLAGUE: u32 = 1_240_996;
 const VIRULENT_PLAGUE: u32 = 191_587;
 const CHAIN_HEAL: u32 = 1_064;
+const DEMON_SPIKES: u32 = 203_720;
+const DEMON_SPIKES_AURA: u32 = 203_819;
+const DEFLECTING_SPIKES: u32 = 321_028;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -78,6 +81,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
         (PYRE_IMPACT, 0) => Some(pyre),
         (DEATH_COIL, 0) => Some(death_coil),
+        (DEMON_SPIKES, 0) => Some(demon_spikes),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -157,6 +161,25 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_dh.cpp:1035-1055 bridges203720 to203819;
+/// spell_dh_deflecting_spikes:891-910 excludes parry effect0 without321028.
+fn demon_spikes(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    let mut effect_mask = u32::MAX;
+    if !crate::auras::has_aura(world, caster, DEFLECTING_SPIKES) {
+        effect_mask &= !1;
+    }
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: DEMON_SPIKES_AURA,
+            effect_mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
 }
 
 pub(super) type TargetPlanHook =

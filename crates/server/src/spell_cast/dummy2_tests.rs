@@ -455,3 +455,60 @@ fn dummy2_shaman_chain_heal_uses_catalog_twenty_yard_jump_radius() {
     assert!(h.health(edge) > 100.0);
     assert_eq!(h.health(beyond), 100.0);
 }
+
+#[test]
+fn dummy2_dh_demon_spikes_grants_agility_armor_and_expires() {
+    let mut h =
+        harness_with(Vec::new(), &[203720, 203819], 12, true).expect("real world.db required");
+    let before = *h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    h.cast_and_deliver(203720, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let after = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    assert_eq!(
+        after.armor,
+        before.armor + (before.primary.agility * 0.75).floor()
+    );
+    assert!(after.armor > before.armor);
+    assert_eq!(after.defense.parry, before.defense.parry);
+    h.advance(245); // Catalog203819 lasts twelve seconds.
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 203819));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .armor,
+        before.armor
+    );
+}
+
+#[test]
+fn dummy2_dh_demon_spikes_rank_two_adds_eight_parry_points() {
+    let mut h = harness_with(Vec::new(), &[203720, 203819, 321028], 12, true)
+        .expect("real world.db required");
+    // The unarmed harness cannot parry; assert the cast's nondiminishing
+    // modifier (effective chance also requires a parry skill and weapon).
+    let before = h
+        .app
+        .world()
+        .get::<crate::stats::StatModifiers>(h.caster)
+        .unwrap()
+        .parry_pct;
+    h.cast_and_deliver(203720, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let after = h
+        .app
+        .world()
+        .get::<crate::stats::StatModifiers>(h.caster)
+        .unwrap()
+        .parry_pct;
+    assert_eq!(after, before + 8.0);
+}
