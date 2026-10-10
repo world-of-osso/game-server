@@ -35,6 +35,69 @@ fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
 }
 
 #[test]
+fn vehicle_deploy_list_covers_every_resolved_passenger_model() {
+    let world_db = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let root = crate::ground::ground_data_dir();
+    let script =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/ground_files.py");
+    let output = std::process::Command::new("python3")
+        .args(["-I"])
+        .arg(&script)
+        .arg("--world-db")
+        .arg(&world_db)
+        .arg("--cache")
+        .arg(&root)
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{:?}", output);
+    let listed = String::from_utf8(output.stdout).unwrap();
+    assert!(listed.lines().any(|path| path == "models/234720.m2"));
+    assert!(listed.lines().any(|path| path == "models/234727.m2"));
+    let missing_output = std::process::Command::new("python3")
+        .arg("-I")
+        .arg(script)
+        .arg("--world-db")
+        .arg(world_db)
+        .arg("--cache")
+        .arg(&root)
+        .arg("--missing")
+        .output()
+        .unwrap();
+    assert!(missing_output.status.success(), "{:?}", missing_output);
+    let missing = String::from_utf8(missing_output.stdout).unwrap();
+    let mut query = conn
+        .prepare(include_str!("../../../scripts/vehicle_models.sql"))
+        .unwrap();
+    let models = query
+        .query_map([], |row| Ok((row.get::<_, u32>(1)?, row.get::<_, u32>(4)?)))
+        .unwrap();
+    for model in models {
+        let (vehicle, fdid) = model.unwrap();
+        let path = format!("models/{fdid}.m2");
+        if root.join(&path).is_file() {
+            assert!(
+                listed.lines().any(|line| line == path),
+                "{path} not shipped"
+            );
+        } else {
+            let diagnostic = format!("vehicle {vehicle}\t{path}");
+            assert!(
+                missing.lines().any(|line| line == diagnostic),
+                "{path} not reported"
+            );
+        }
+    }
+    for path in listed.lines() {
+        assert!(root.join(path).is_file(), "{path} not cached");
+    }
+}
+
+#[test]
 fn vehicle_real_mammoth_passenger_position_matches_the_rendered_mount_frame() {
     let (mut world, driver, passenger, _) = setup();
     let conn = rusqlite::Connection::open_with_flags(
