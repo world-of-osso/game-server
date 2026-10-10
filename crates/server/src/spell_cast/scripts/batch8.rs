@@ -131,7 +131,12 @@ pub(super) fn breath_of_fire(world: &mut World, caster: Entity, target: Entity, 
     }
 }
 
-fn first_damage_target(world: &World, caster: Entity, spell_id: u32, target: Entity) -> bool {
+pub(super) fn first_damage_target(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> bool {
     world
         .resource::<spell_cast::ResolvingHits>()
         .0
