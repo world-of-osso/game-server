@@ -21,6 +21,8 @@ Target87 is DEST_DEST, not a request to snap to terrain. It preserves the reques
 
 Aura233 is TC HandleUnused/client-side-only appearance, not aura56's global transform. Server stores/replicates the authentic aura and removes it normally. Native client viewer-local humanoid presentation still needs implementation; no rendered parity claimed. Source: pinned TC a352b1fa SpellAuraDefines.h320/SpellAuraEffects.cpp305; concrete local DB2 spells289277 and384585. No synthetic IDs or database writes. Required missing object imports and census receipts live in the toy-effects4 handoff.
 
+Measured server-preflight census75→95/1166:21 newly available object toys plus2 aura233 toys, minus3 former false positives (Little Wickerman70722, Steamworks Sausage Grill116757 and Jeweled Offering193032 still require spell-focus/chest behavior). Two previously admitted chair/mailbox toys now actually spawn; Moonkin chair70161 uses its available authentic TDB template.31 toy tests,19 ritual regressions,12 teleport regressions and7 summon regressions pass (some overlap); format/check pass without warnings. Exact receipts: engine `data/diagnostics/toyfx4-2026-10-10/`. No rendered-client parity claimed.
+
 ## Account state and transport
 
 `account_toys` stores a bitcode map `item_id -> favourite` keyed by account. Learning on normal UseItem writes both ownership and the consumed inventory record in one redb transaction. A duplicate returns an error without consumption. Favourite updates reread the durable account row inside their write transaction.
