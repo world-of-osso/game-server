@@ -48,6 +48,7 @@ const BLACKOUT_KICK: u32 = 100_784;
 const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
 const RISING_SUN_KICK: u32 = 107_428;
 const FISTS_OF_FURY: u32 = 113_656;
+const BACKSTAB: u32 = 53;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -69,6 +70,35 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
         (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
         _ => None,
+    }
+}
+
+pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
+
+pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
+    match spell_id {
+        BACKSTAB => Some(backstab_damage),
+        _ => None,
+    }
+}
+
+/// TC a352b1fa spell_rogue.cpp:225-251, spell_rog_backstab: effect 3
+/// increases damage only in the target's rear half-plane. Retail $s4=20%.
+fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    let (Some(from), Some(to)) = (
+        super::targets::position(world, target),
+        super::targets::position(world, caster),
+    ) else {
+        return amount;
+    };
+    let angle = super::targets::orientation(world, target);
+    let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
+    let behind = forward.dot(to - from) < 0.0;
+    if behind {
+        let percent = script_effect_value(world, caster, BACKSTAB, 3);
+        amount * (1.0 + percent / 100.0)
+    } else {
+        amount
     }
 }
 

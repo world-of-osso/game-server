@@ -485,6 +485,8 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
+    let amount = super::scripts::damage_amount(ctx.spell.id)
+        .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
     deal_damage(world, ctx, target, amount, crit, false);
 }
