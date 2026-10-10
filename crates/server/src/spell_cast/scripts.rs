@@ -88,7 +88,9 @@ fn shield_block(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
 /// optional first-target guarantee remains unsupported.
 fn bloodthirst(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
     let store = world.resource::<crate::spell_info::SpellStore>();
-    let spell = store.get(BLOODTHIRST).expect("resolving Bloodthirst is in SpellStore");
+    let spell = store
+        .get(BLOODTHIRST)
+        .expect("resolving Bloodthirst is in SpellStore");
     let Some(effect) = spell.effects.iter().find(|effect| effect.index == 2) else {
         warn!("Bloodthirst requires effect 2's Enrage chance");
         return;
