@@ -11,19 +11,23 @@ fn dummy_druid_barkskin_with_brambles_pulses_catalog_damage_each_second() {
     let ally = spawn_player(&mut h.app, 1, 2.0);
     h.cast_and_deliver(22812, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    h.advance(10);
-    assert_eq!(h.health(h.npc), 5000.0, "no pulse before one second");
-    h.advance(12);
+    // Attributes5 has EXTRA_INITIAL_PERIOD (0x200): one pulse on apply,
+    // then one per second. Keep the catalog timing instead of inventing delay.
     assert!(varied(7.5).contains(&(5000.0 - h.health(h.npc))));
+    let first = h.health(h.npc);
+    h.advance(10);
+    assert_eq!(h.health(h.npc), first, "no second pulse before one second");
+    h.advance(12);
+    assert!(varied(7.5).contains(&(first - h.health(h.npc))));
     h.advance(20);
-    assert!(h.health(h.npc) < 5000.0 - 8.0, "second pulse");
+    assert!(h.health(h.npc) < first - 8.0, "third pulse");
     let pulses: Vec<_> = h
         .inbox
         .log
         .iter()
         .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(213709))
         .collect();
-    assert_eq!(pulses.len(), 2);
+    assert_eq!(pulses.len(), 3);
     assert!(
         pulses
             .iter()
