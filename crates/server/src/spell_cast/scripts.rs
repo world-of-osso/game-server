@@ -52,6 +52,7 @@ const BACKSTAB: u32 = 53;
 const PYRE_IMPACT: u32 = 393_568;
 const PYRE_DAMAGE: u32 = 357_212;
 const DRAIN_SOUL: u32 = 198_590;
+const FIRE_BLAST: u32 = 108_853;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -73,6 +74,15 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
         (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
         (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
+        _ => None,
+    }
+}
+
+/// TC a352b1fa spell_mage.cpp:804-815 overrides Fire Blast's crit chance
+/// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
+pub fn crit_chance(spell_id: u32) -> Option<f32> {
+    match spell_id {
+        FIRE_BLAST => Some(100.0),
         _ => None,
     }
 }
