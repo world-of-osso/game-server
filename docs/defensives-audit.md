@@ -1,6 +1,6 @@
 # Class defensives audit
 
-Blur/Turtle follow-up: branch `blur-turtle`, base `c5432a4`. Batched RED: 18 passed / 6 failed; initial GREEN: 24 passed / 0 failed. See follow-up ledger below. Blur's catalog dodge amount remains zero, so nonzero Retail Blur dodge is not claimed. Final suite pending.
+Blur/Turtle follow-up: branch `blur-turtle`, base `c5432a4`. Batched RED: 18 passed / 6 failed; initial GREEN: 24 passed / 0 failed. See follow-up ledger below. Blur's catalog dodge amount remains zero, so nonzero Retail Blur dodge is not claimed. Final native server gate at `9bfa86d`: 1571 passed / 0 failed / 60 pre-existing ignored / 1 requested skip; all 24 defensive tests pass.
 
 Updated: 2026-10-09. Original audit base: `5b04aa931720d441aaea1f99d3c11dc2a69bba40`; reproduction tip: `41fe1be7c`. The five earlier fixes passed focused/full tests at `e86c038` and landed in master `c5432a4`. Follow-up worktree: `/home/osso/.worktrees/game-server-rest`, branch `blur-turtle`; no runtime or deployment changes.
 
@@ -52,7 +52,9 @@ Pinned [TrinityCore aura definitions](https://github.com/TrinityCore/TrinityCore
 
 - RED: `target/blur-turtle-red2-tests.log`, base c5432a4 plus behavioral tests: **18 passed / 6 failed / 0 ignored**, exit 101. Failures: Turtle melee, magic/ranged miss logs, pacify, silence immunity, generic deflection, generic parry. An earlier RED attempt had one test enum-construction compile error, corrected before this behavioral run.
 - Initial GREEN at `350924f`: `target/blur-turtle-green-tests.log`, **24 passed / 0 failed / 0 ignored**, exit 0. One unused import warning was subsequently removed; parry expiry assertion now checks restored baseline chance rather than a probabilistic single swing. The no-stats attacker path retains its prior avoidance behavior.
-- Final full server suite: pending, once after follow-up fixes, skipping `query_300k_listings_under_200ms` as requested. Logs remain untracked under `target/`.
+- Final correct-branch native full suite at `9bfa86d`: `cargo test --locked -p server --no-fail-fast -- --test-threads=4 --skip query_300k_listings_under_200ms` through `agent-run blurturtle`, **1571 passed / 0 failed / 60 pre-existing ignored / 1 filtered**, exit 0. Main: 1546 passed (218.66 s), including all 24 defensive tests; admin/timeout/ground targets: 18/4/3 passed. HEAD checked before/after and unchanged. Log: `target/blur-turtle-native-branch-final.log`. No compiler warnings.
+- Native `cargo check --locked -p server` through the same agent wrapper: exit 0, no warnings, at unchanged `9bfa86d`; `target/blur-turtle-native-branch-check.log`. Changed-file `rustfmt --edition 2024 --config skip_children=true --check`: exit 0.
+- RED/GREEN used the locked container helper. Lead then approved native Cargo/no build lock. The first container full attempt never ran Cargo (helper rejected the newly selected native host); a first native gate ran the lead's temporarily reassigned `server-native` checkout and was discarded because six new tests were absent. After the lead stopped that slot assignment, `blur-turtle` was restored and the above full suite ran once on the correct branch. Old/stale logs are not proof. Later documentation-only commits do not invalidate source proof.
 - Independent artifact verifier unavailable: Claude OAuth expired; no independent-model verification claim. Main-thread readability inspection extracted effect filtering/miss chance, kept chance numbers data-driven, and introduced no suppressions or dependencies.
 
 ## Proof boundary
