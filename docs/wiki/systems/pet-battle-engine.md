@@ -70,5 +70,7 @@ Terminal state must be sent before End on CollectionChannel: otherwise lethal-ro
 
 ## See Also
 
+- [Trainer source census](../investigations/pet-battle-trainer-data.md) — authenticated quest/creature data and unavailable ordered teams; no trainer runtime implemented.
+
 - [[world-data]] — static SQLite boundary.
 - [[toys]] — account collections remain outside this turn library.

@@ -107,6 +107,8 @@ Server gameplay systems.
 
 ## investigations/
 
+- [Trainer pet-battle data](investigations/pet-battle-trainer-data.md) — local tamer quest/creature census, empty NPC team DB2 and blocked authentic-team runtime.
+
 - [[item-healing-scaling]] — Algari zero-heal root cause, item-level RandPropPoints scaling, per-cast/aura context, consumable regressions.
 
 Debug logs and root cause analyses.
