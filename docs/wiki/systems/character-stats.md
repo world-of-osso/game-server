@@ -32,7 +32,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 
 1. **Primary** = class base + racial modifier + gear + `primary_flat`, then × (1 + `primary_pct`/100).
    - Gear Str/Agi/Int count only when they match the spec's main stat. Gear stamina always counts.
-2. **Max health** = floor(Sta) × hppersta(level) × (1 + `max_health_pct`/100), floored.
+2. **Max health** = floor(Sta) × hppersta(level) × (1 + `max_health_pct`/100) + `max_health_flat`, floored.
 3. **Mana:** max mana = base mana = basemp(class, level). Intellect does not add mana.
    - Only classes with a non-zero basemp column get a `Mana` component: Paladin, Priest, Shaman, Mage, Warlock, Monk, Druid and Evoker.
 4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). **Healing power** (`CharacterStats.healing_power`, used by heals, periodic heals and absorbs) = Int for every mana class (Unit::SpellBaseHealingBonusDone). Aura 366 OVERRIDE_SPELL_POWER_BY_AP_PCT sets both to AP × pct (Retribution, Protection, Feral/Guardian, Enhancement, Windwalker/Brewmaster passives). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Attack power** = Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility.
@@ -121,7 +121,10 @@ SimC marks these class blocks TODO for the listed levels:
 - `primary_flat`, `primary_pct`
 - `ratings_flat`
 - `crit_pct`, `haste_pct`, `mastery_points`, `versatility_pct`
-- `max_health_pct`
+- `max_health_pct`, `max_health_flat`
+- `dodge_pct`, `block_pct`
+
+MOD_INCREASE_HEALTH 34 changes current/max health by the same flat delta on aura change, rather than rescaling current health. Aura 49 adds nondiminishing player dodge points. [Defensives audit](../../defensives-audit.md) records catalog amounts, lifecycle tests and remaining gaps.
 
 The aura runtime ([[auras]]) inserts or updates it, and `Changed<StatModifiers>` triggers a recompute. The pure entry point is `compute_character_stats(&StatInputs, Option<&StatModifiers>)`.
 
@@ -142,7 +145,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
   - spec and class passives (armor specializations, tank stamina, spec mana pools);
   - `octclasscombatratingscalar`;
   - multiplicative haste stacking;
-  - dodge, parry and block from stats.
+  - additional dodge/parry/block aura types beyond handled 49/51.
 - **Replication:** `CharacterStats` is server-only. `Health` and `Mana` replicate to every observer; `UnitStats`, `CombatRatings` and `DerivedStats` only to the owning connection (`sheet_visibility.rs`: `SheetOwner(connection)`, set on `PlayerLink` insert, is a replicon visibility filter scoped to those three components). They feed the client's character sheet and its spell tooltips (spell/attack power scaled effect points).
 - **Shared formulas:** shared-protocol `formulas/rating_data.rs` interleaves a level column into every sixth entry and ends at level 80, and `rating_to_percent` divides by `raw × 100`, which is 100× too small.
   - The server no longer calls any of them.

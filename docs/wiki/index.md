@@ -35,6 +35,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
+
 Server gameplay systems.
 
 - [Player resurrection and creature taps](systems/player-resurrection-and-taps.md) — spell-effect consent offers, exact restoration, stable tap IDs and bandwidth; [contract](../specs/player-resurrection-and-taps.md).

@@ -23,6 +23,9 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] Track unhandled aura types (logged once per spell) so they still show in the UI.
 - [x] Fail casts under stun, silence and pacify with `CastFailReason::Stunned`/`Silenced`/`Pacified`, and under confuse with `NotSupported` ("Can't do that while confused": shared-protocol has no `Confused` reason).
 - [x] Apply talent passives (talent spells are in `KnownSpells`).
+- [x] Melee and spell damage share school immunity and absorb capacity handling; immune swings log `Immune`, fully absorbed swings log `Absorb`, and partial absorbs log remaining damage plus absorbed amount. Depleted shields are removed.
+- [x] MOD_DODGE_PERCENT 49 adds nondiminishing dodge percentage points to player avoidance; Evasion uses its unscaled catalog amount.
+- [x] Fortifying Brew 115203 applies buff 120954 with 20% damage reduction and a fixed health bonus computed from pre-buff maximum health and the cast's health percentage. MOD_INCREASE_HEALTH 34 adds that bonus to both current and maximum health and removes it without killing a living unit. See [defensives audit](../defensives-audit.md) for source and proof boundaries.
 - [x] MOD_BLOCK_PERCENT 51: add to a player's block chance when it can block and holds a shield (StatSystem.cpp:496-501); creatures' block ignores it.
 - [x] MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417: divide the GCD of a spell its class mask affects by 1 + haste, within 750-1500 ms (Spell.cpp:9220-9224).
 

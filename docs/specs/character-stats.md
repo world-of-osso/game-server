@@ -6,13 +6,13 @@ Players get retail 12.x stats on the server. See [character stats](../wiki/syste
 
 - [x] Compute base Str/Agi/Sta/Int from class, race and level 1–90.
 - [x] Recompute on world entry and on level, spec, gear or aura-modifier change.
-- [x] Set max health from stamina × gtHpPerSta and max mana from gtBaseMP, keeping each current value at the same fraction of the new max.
+- [x] Set max health from stamina × gtHpPerSta plus aura health modifiers and max mana from gtBaseMP, keeping each current value at the same fraction of the new max except MOD_INCREASE_HEALTH 34: its fixed bonus is added/removed from both current and max health at aura change, with a living minimum of 1 on removal.
 - [x] Expose spell power, attack power, crit, haste, mastery, versatility and armor for spell effects.
 - [x] Expose base mana, which `PowerCostPct` mana costs use.
 - [x] Count gear Str/Agi/Int only when they match the spec's main stat.
 - [x] Fold in aura `StatModifiers` after base and gear.
 - [x] Rescale existing characters' persisted health on login without changing the redb format.
-- [x] Deliberate deviation from TrinityCore: its `Unit::SetMaxHealth` only clamps the current value and its login sets `min(saved, max)` (Player.cpp:18736); here every max change keeps the percentage, at login and in session. Retail keeps the percentage for in-session max-health changes (TrinityCore too, for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old 100-health placeholder rely on it. A level change still refills (Player::GiveLevel).
+- [x] Deliberate deviation from TrinityCore: its `Unit::SetMaxHealth` only clamps the current value and its login sets `min(saved, max)` (Player.cpp:18736); here ordinary max changes keep the percentage, at login and in session; MOD_INCREASE_HEALTH 34 instead follows TrinityCore's equal current/max bonus semantics. Retail keeps the percentage for in-session max-health changes (TrinityCore too, for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old 100-health placeholder rely on it. A level change still refills (Player::GiveLevel).
 
 ## How it works
 
@@ -39,5 +39,5 @@ Players get retail 12.x stats on the server. See [character stats](../wiki/syste
 
 - [ ] Phase 4 (inventory) blocker, gear stats: the server has no item stat data, so nothing produces `EquippedItems`.
 - [ ] Phase 4 (inventory) blocker, weapon damage: there is no server weapon data.
-- [ ] Spec/class passives, dodge/parry/block from stats, and `octclasscombatratingscalar` are not modeled.
+- [ ] Spec/class passives, additional avoidance aura types beyond handled 49/51, and `octclasscombatratingscalar` are not modeled.
 - [ ] `CharacterStats` is not replicated.

@@ -121,7 +121,7 @@ impl Plugin for CombatPlugin {
 /// `UNIT_STATE_MELEE_ATTACKING`), and its swing timers: the main hand and, for a
 /// unit with an off-hand weapon, the off hand. A player's victim is separate from
 /// its selection (`Player::SetTarget` is a no-op, Player.h:1920).
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct AutoAttack {
     pub timer: f32,
     pub off_hand_timer: f32,
@@ -422,7 +422,7 @@ type AutoAttackTargets<'w, 's> = Query<
 /// confused here) it cannot (Unit.cpp:2408-2413).
 type CanAvoid<'a> = (
     Has<shared::casting::CastState>,
-    Option<&'a crate::auras::ActiveAuras>,
+    Option<&'a mut crate::auras::ActiveAuras>,
 );
 
 fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bool {
@@ -434,8 +434,7 @@ type TargetArmor<'a> = (Option<&'a CreatureArmor>, Option<&'a CharacterStats>);
 
 #[derive(SystemParam)]
 pub(crate) struct AutoAttackParams<'w, 's> {
-    attackers: AutoAttackers<'w, 's>,
-    targets: AutoAttackTargets<'w, 's>,
+    units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
@@ -453,48 +452,42 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let mut events = Vec::new();
     let mut swings = Vec::new();
 
-    for (
-        attacker_entity,
-        mut auto_attack,
-        position,
-        mods,
-        stats,
-        (stat_mods, casting, auras),
-        creature,
-    ) in &mut params.attackers
-    {
-        auto_attack.timer -= dt;
-        auto_attack.off_hand_timer -= dt;
-        let target_entity = auto_attack.victim;
-        // Unit::DoMeleeAttackIfReady / AttackerStateUpdate: no swing while casting,
-        // stunned or confused; the swing timers keep running.
-        if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
+    let attackers: Vec<Entity> = params.units.p0().iter().map(|item| item.0).collect();
+    for attacker_entity in attackers {
+        // Release the attacker's read of ActiveAuras before mutating the victim's
+        // absorb capacity. A player can be both an attacker and a victim.
+        let Some(mut snapshot) = snapshot_attacker(&mut params.units.p0(), attacker_entity, dt)
+        else {
             continue;
-        }
+        };
+        let target_entity = snapshot.auto_attack.victim;
         let attacker = Attacker {
             entity: attacker_entity,
-            position,
-            mods,
-            stats,
-            haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
-            creature,
+            position: &snapshot.position,
+            mods: snapshot.mods.as_ref(),
+            stats: snapshot.stats.as_ref(),
+            haste_pct: snapshot.haste_pct,
+            creature: snapshot.creature,
         };
         for hand in [Hand::Main, Hand::Off] {
             let Some(outcome) = try_swing(
                 &attacker,
                 hand,
-                &mut params.targets,
+                &mut params.units.p1(),
                 &SwingContext {
                     scaling: &params.scaling,
                     armor_constants: params.armor_constants.as_deref(),
                 },
                 target_entity,
-                &mut auto_attack,
+                &mut snapshot.auto_attack,
                 &mut params.commands,
             ) else {
                 continue;
             };
             swings.push((attacker_entity, target_entity, outcome));
+        }
+        if let Ok((_, mut auto_attack, ..)) = params.units.p0().get_mut(attacker_entity) {
+            *auto_attack = snapshot.auto_attack;
         }
     }
     for (attacker, target, outcome) in swings {
@@ -507,6 +500,38 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
         &mut params.combat_log,
         elapsed,
     );
+}
+
+struct SwingSnapshot {
+    auto_attack: AutoAttack,
+    position: Position,
+    mods: Option<AuraStatMods>,
+    stats: Option<CharacterStats>,
+    haste_pct: f32,
+    creature: bool,
+}
+
+fn snapshot_attacker(
+    attackers: &mut AutoAttackers,
+    entity: Entity,
+    dt: f32,
+) -> Option<SwingSnapshot> {
+    let (_, mut auto_attack, position, mods, stats, (stat_mods, casting, auras), creature) =
+        attackers.get_mut(entity).ok()?;
+    auto_attack.timer -= dt;
+    auto_attack.off_hand_timer -= dt;
+    // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
+    if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
+        return None;
+    }
+    Some(SwingSnapshot {
+        auto_attack: auto_attack.clone(),
+        position: *position,
+        mods: mods.cloned(),
+        stats: stats.cloned(),
+        haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
+        creature,
+    })
 }
 
 fn record_swing(
@@ -522,7 +547,8 @@ fn record_swing(
     mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
-    if !outcome.kind.avoided()
+    if !outcome.immune
+        && !outcome.kind.avoided()
         && let Some(pending) = params.aura_events.as_deref_mut()
     {
         pending
@@ -752,6 +778,8 @@ fn blocked_pct(
 struct SwingOutcome {
     hand: Hand,
     kind: MeleeOutcome,
+    immune: bool,
+    absorbed: f32,
     damage: f32,
     /// `damage` in the target's health units (level scaling).
     scaled_loss: f32,
@@ -797,7 +825,7 @@ fn try_swing(
         armor,
         flags,
         invisible,
-        avoidance,
+        mut avoidance,
         stand_state,
     )) = targets.get_mut(target_entity)
     else {
@@ -827,7 +855,11 @@ fn try_swing(
     );
     let sitting = stand_state.is_some_and(|state| !state.0.is_stand());
     let victim = swing_victim(is_npc, armor.1, level_difference, sitting);
-    let kind = roll_outcome(attacker, victim, can_avoid(avoidance));
+    let kind = roll_outcome(
+        attacker,
+        victim,
+        can_avoid((avoidance.0, avoidance.1.as_deref())),
+    );
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
     // not, stands a player victim up.
     if stand_state.is_some_and(|state| state.0 != shared::components::StandState::Stand) {
@@ -835,13 +867,28 @@ fn try_swing(
             crate::stand_state::stand_on_damage(world, target_entity)
         });
     }
+    let immune = crate::auras::immune_to_school(avoidance.1.as_deref(), 1);
     let (outcome_damage, blocked) = melee::outcome_damage(
         armored,
         kind,
         level_difference,
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
-    let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, outcome_damage);
+    let outcome_damage = if immune { 0.0 } else { outcome_damage };
+    let absorption = crate::auras::consume_absorbs(
+        avoidance
+            .1
+            .as_mut()
+            .map(|auras| auras.bypass_change_detection()),
+        1,
+        outcome_damage,
+    );
+    let absorbed = absorption.absorbed;
+    let damage =
+        crate::level_scaling::damage_dealt(&attacker_scaling, &target, absorption.remaining);
+    commands.queue(move |world: &mut World| {
+        crate::auras::finish_absorbs(world, target_entity, absorption)
+    });
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let overkill = crate::level_scaling::damage_overkill(damage, scaled_loss, health.current);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
@@ -881,6 +928,8 @@ fn try_swing(
     Some(SwingOutcome {
         hand,
         kind,
+        immune,
+        absorbed,
         damage,
         scaled_loss,
         blocked,
@@ -920,26 +969,41 @@ fn distance(a: &Position, b: &Position) -> f32 {
 /// block with the damage that got through, a hit (glancing included), or the avoidance
 /// without an amount.
 fn build_swing_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> CombatEvent {
-    let event_type = match outcome.kind {
-        MeleeOutcome::Miss => CombatEventType::Miss,
-        MeleeOutcome::Dodge => CombatEventType::Dodge,
-        MeleeOutcome::Parry => CombatEventType::Parry,
-        MeleeOutcome::Crit => CombatEventType::CriticalHit,
-        MeleeOutcome::Block => CombatEventType::Block,
-        MeleeOutcome::Glancing | MeleeOutcome::Hit => CombatEventType::MeleeDamage,
+    let event_type = match swing_miss_kind(outcome) {
+        Some(MissKind::Immune) => CombatEventType::Miss,
+        Some(MissKind::Absorb) => CombatEventType::Absorb,
+        _ => match outcome.kind {
+            MeleeOutcome::Miss => CombatEventType::Miss,
+            MeleeOutcome::Dodge => CombatEventType::Dodge,
+            MeleeOutcome::Parry => CombatEventType::Parry,
+            MeleeOutcome::Crit => CombatEventType::CriticalHit,
+            MeleeOutcome::Block => CombatEventType::Block,
+            MeleeOutcome::Glancing | MeleeOutcome::Hit => CombatEventType::MeleeDamage,
+        },
+    };
+    let amount = if event_type == CombatEventType::Absorb {
+        outcome.absorbed
+    } else {
+        outcome.damage
     };
     CombatEvent {
         attacker: attacker.to_bits(),
         target: target.to_bits(),
-        amount: outcome.damage,
+        amount,
         spell_id: 0,
         event_type,
     }
 }
 
 /// The combat log `MissKind` of an avoided swing.
-fn swing_miss_kind(outcome: MeleeOutcome) -> Option<MissKind> {
-    match outcome {
+fn swing_miss_kind(outcome: &SwingOutcome) -> Option<MissKind> {
+    if outcome.immune {
+        return Some(MissKind::Immune);
+    }
+    if outcome.damage == 0.0 && outcome.absorbed > 0.0 {
+        return Some(MissKind::Absorb);
+    }
+    match outcome.kind {
         MeleeOutcome::Miss => Some(MissKind::Miss),
         MeleeOutcome::Dodge => Some(MissKind::Dodge),
         MeleeOutcome::Parry => Some(MissKind::Parry),
@@ -958,15 +1022,19 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
         school_mask: 1,
         amount: outcome.damage as i32,
         overflow: outcome.overkill as i32,
-        absorbed: 0,
+        absorbed: outcome.absorbed as i32,
         resisted: 0,
-        blocked: outcome.blocked as i32,
-        crit: outcome.kind == MeleeOutcome::Crit,
-        glancing: outcome.kind == MeleeOutcome::Glancing,
+        blocked: if outcome.immune {
+            0
+        } else {
+            outcome.blocked as i32
+        },
+        crit: !outcome.immune && outcome.kind == MeleeOutcome::Crit,
+        glancing: !outcome.immune && outcome.kind == MeleeOutcome::Glancing,
         periodic: false,
         extra_spell_id: None,
         timestamp_unix_ms: 0,
-        kind: swing_miss_kind(outcome.kind).map_or(CombatLogKind::Damage, CombatLogKind::Miss),
+        kind: swing_miss_kind(outcome).map_or(CombatLogKind::Damage, CombatLogKind::Miss),
     }
 }
 
