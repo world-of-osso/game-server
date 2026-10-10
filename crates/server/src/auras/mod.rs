@@ -742,7 +742,9 @@ pub(crate) fn apply_aura_with_spell(
             excluded.contains(&aura.spell_id)
         });
     }
+    // Atonement marks from different priests remain independently owned.
     let coexist = instance.harmful
+        || spell.id == 194384
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
