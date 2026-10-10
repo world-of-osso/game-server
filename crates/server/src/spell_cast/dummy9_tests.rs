@@ -79,7 +79,7 @@ fn dummy9_healing_rain_recast_replaces_only_owners_previous_ground_field() {
     let old = injured(&mut h, 0.0);
     let new = injured(&mut h, 25.0);
     ground(&mut h, 73920, [0.0, 0.0, 0.0]);
-    h.advance(220);
+    h.advance(300); // Native cooldown is12000ms, starting at cast completion.
     landed(&h);
     h.app.world_mut().get_mut::<Health>(old).unwrap().current = 50.0;
     ground(&mut h, 73920, [25.0, 0.0, 0.0]);
@@ -228,11 +228,11 @@ fn dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury() {
         }
         let mut h = harness(Vec::new(), &ids, 12).unwrap();
         let caster = h.caster;
-        if meta {
-            apply(&mut h, caster, caster, 187827, u32::MAX);
-        }
         if rank {
             apply(&mut h, caster, caster, 321068, u32::MAX);
+        }
+        if meta {
+            apply(&mut h, caster, caster, 187827, u32::MAX);
         }
         h.set_power(PowerType::Fury, 0.0);
         h.cast_and_deliver(263642, Some(h.npc));
