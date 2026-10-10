@@ -2,7 +2,7 @@
 use super::test_harness::*;
 use bevy::prelude::*;
 use lightyear::prelude::MessageSender;
-use shared::components::{Health, Level, Position, PowerType};
+use shared::components::{Level, Position, PowerType};
 use shared::protocol::{CombatChannel, CombatLogKind, SpellCastIntent};
 
 fn apply(h: &mut Harness, caster: Entity, target: Entity, id: u32, mask: u32) {

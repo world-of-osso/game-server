@@ -1623,6 +1623,9 @@ fn resolve_effects(
             index, units, dest, ..
         } = planned;
         let effect = &spell.effects[*index];
+        if !scripts::effect_enabled(world, caster, spell.id, effect.index) {
+            continue;
+        }
         let ctx = EffectCtx {
             caster,
             spell,

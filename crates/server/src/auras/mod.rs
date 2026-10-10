@@ -1116,8 +1116,9 @@ pub fn damage_taken_multiplier(
     world: &World,
     target: Entity,
     attacker: Entity,
-    school_mask: u32,
+    spell: &SpellInfo,
 ) -> f32 {
+    let school_mask = spell.school_mask();
     let taken = world
         .get::<AuraStatMods>(target)
         .map_or(1.0, |mods| mods.damage_taken(school_mask));
@@ -1129,7 +1130,11 @@ pub fn damage_taken_multiplier(
                 let stacks = aura.stack_multiplier();
                 aura.effects
                     .iter()
-                    .filter(|effect| effect.aura_type == handlers::MOD_SPELL_DAMAGE_FROM_CASTER)
+                    .filter(|effect| {
+                        effect.aura_type == handlers::MOD_SPELL_DAMAGE_FROM_CASTER
+                            && (effect.class_mask == [0; 4]
+                                || spell_mods::class_mask_affects(aura, effect, spell))
+                    })
                     .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
             })
             .product()

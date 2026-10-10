@@ -167,6 +167,19 @@ Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodi
 
 - `crates/server/src/spell_cast/dummy10_tests.rs` —11 native functions across eight paths at`83512eb`: actual damage/area/resources/buff expiry, absent passives, owner-only replacement and cancelled casts. Single post-master `cargo test -p server --bin game-server spell_cast` at`4b281cf`: **286/286**. [Census and full40-spec table](../wiki/systems/spell-casting.md#tenth-batch-low-count-spec-paths).
 
+### Eleventh batch: bounded low-count paths
+
+- [x] Sinister Strike193315 uses description-variable338's exact level curve, including the level10/20 clamps.
+- [x] Void Volley1242173 fires ten native1242189 bolts at the primary and one at each nearby enemy in its authored radius; native1000 raw Insanity is retained. Voidform228260 launches its initial volley after completion. Inter-bolt sequencing and replacement charges are not certified.
+- [x] Rain of Fire5740 launches42223 damage in a fixed8yd destination field at native1000ms intervals for8000ms; overlaps retain independent clocks, with no ally damage or pulses after expiry.
+- [x] Blade of Justice184575's native404358 splash requires active403826, without duplicating the root's Holy Power.
+- [x] Hammer of the Righteous53595 launches only88263's named damage at other nearby enemies while the caster is inside their own active Consecration26573. The unavailable203785 variant remains unsupported.
+- [x] Shred5221 with343232 or405834 plus active stealth receives s3=60% extra damage and double modified crit chance, with the tooltip's343232s1 extra combo point. Existing bleeding-rank bonus is retained. Thrash-on-Shred405300 remains separate.
+- [x] Thrash106830 applies the named405233 periodic bleed only to hit enemies; native ticks and expiry apply. Arcane variant429523 remains unsupported.
+- [x] Lava Lash60103 with334046 applies334168; generic caster-owned aura271 now respects nonempty spell-family masks, so the named Flame Shock gains100% damage but unrelated Lightning Bolt and foreign attackers do not.
+
+Sources: only local Mainline12.1.0.69933 descriptions/effects/variables and read-only imported rows. No invented IDs or source-C++ claim. `crates/server/src/spell_cast/dummy11_tests.rs` exercises these paths; [scope/proof](../wiki/systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths).
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
