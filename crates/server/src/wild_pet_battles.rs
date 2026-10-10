@@ -554,6 +554,7 @@ pub(crate) fn load_wild_catalog(mut commands: Commands) {
     commands.init_resource::<BattleIds>();
 }
 pub(crate) fn receive_wild_battle_requests(world: &mut World) {
+    pvp::receive_queue(world);
     receive_loadouts(world);
     receive_starts(world);
     receive_actions(world);
@@ -584,8 +585,8 @@ fn receive_loadouts(world: &mut World) {
     }
 }
 fn set_loadout(world: &mut World, owner: Entity, slots: [Option<u64>; 3]) -> Result<(), String> {
-    if world.get::<ActiveEncounter>(owner).is_some() {
-        return Err("cannot change loadout during a battle".into());
+    if world.get::<ActiveEncounter>(owner).is_some() || pvp::busy(world, owner) {
+        return Err("cannot change loadout while queued or during a battle".into());
     }
     let mut state = world
         .get_mut::<AccountPetJournal>(owner)
@@ -626,8 +627,8 @@ fn start_encounter(
     owner: Entity,
     bits: u64,
 ) -> Result<(), String> {
-    if world.get::<ActiveEncounter>(owner).is_some() {
-        return Err("already in a pet battle".into());
+    if world.get::<ActiveEncounter>(owner).is_some() || pvp::busy(world, owner) {
+        return Err("already queued or in a pet battle".into());
     }
     let creature = Entity::try_from_bits(bits).ok_or("invalid wild creature")?;
     if world.get::<WildPetClaim>(creature).is_some() {
@@ -724,6 +725,9 @@ fn advance_encounter(
     owner: Entity,
     request: WildPetBattleActionRequest,
 ) -> Result<(), String> {
+    if pvp::is_in_battle(world, owner) {
+        return pvp::advance(world, owner, request);
+    }
     let active = world
         .get::<ActiveEncounter>(owner)
         .ok_or("no active pet battle")?
@@ -838,6 +842,9 @@ pub(crate) fn remove_abandoned_battles(world: &mut World) {
         world.entity_mut(entity).remove::<WildPetClaim>();
     }
 }
+
+#[path = "pvp_pet_battles.rs"]
+mod pvp;
 
 #[cfg(test)]
 #[path = "wild_pet_battles_tests.rs"]
