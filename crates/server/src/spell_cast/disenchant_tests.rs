@@ -30,6 +30,7 @@ fn setup(item_id: u32, enchanting: bool) -> (Harness, tempfile::TempDir, u64, u3
             .unwrap();
     let mut h = harness_with_plugins(Vec::new(), &[13262], 2, false, |app| {
         app.add_plugins(crate::loot::LootPlugin);
+        app.insert_resource(super::disenchant::load_data(&conn).unwrap());
         app.insert_resource(crate::loot::load_loot_tables(&conn).unwrap());
         app.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
         app.insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
