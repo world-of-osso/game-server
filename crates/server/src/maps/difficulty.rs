@@ -46,7 +46,7 @@ impl Default for DungeonDifficulty {
 #[derive(Resource, Debug, Default)]
 pub struct DifficultyChanges(pub Vec<(u64, u32)>);
 
-/// The wall clock of instance locks (`GameTime::GetSystemTime`), shifted by
+/// The wall clock of instance locks and auction expiry (`GameTime::GetSystemTime`), shifted by
 /// `offset_secs` (`game-server-admin clock-advance`) or pinned by tests.
 #[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ServerClock {
@@ -487,7 +487,7 @@ mod admin_game_object_tests {
     }
 }
 
-/// Admin commands on the lock clock and instance locks.
+/// Admin commands on the server clock and instance locks.
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct AdminInstances<'w, 's> {
     clock: Option<ResMut<'w, ServerClock>>,
@@ -534,7 +534,7 @@ impl AdminInstances<'_, '_> {
                 let clock = self.clock.as_mut()?;
                 clock.offset_secs += seconds;
                 info!(
-                    "Instance lock clock advanced {seconds} s (offset {} s)",
+                    "Instance lock and auction expiry clock advanced {seconds} s (offset {} s)",
                     clock.offset_secs
                 );
                 AdminResponse::ClockAdvanced {
