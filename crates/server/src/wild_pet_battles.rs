@@ -721,6 +721,12 @@ fn advance_encounter(
         );
         return Ok(());
     }
+    let terminal_state = encounter.snapshot(world.resource::<WildCatalog>(), &journal);
+    send_update(
+        world,
+        active.connection,
+        WildPetBattleUpdate::State(terminal_state),
+    );
     let guid = encounter.captured.as_ref().map(|_| {
         crate::persistence::next_id(&world.resource::<GameDatabase>().db, "battle_pet_instance")
     });
