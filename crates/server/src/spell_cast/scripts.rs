@@ -44,6 +44,10 @@ const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
 const COBRA_SHOT: u32 = 193_455;
 const KILL_COMMAND: u32 = 34_026;
+const BLACKOUT_KICK: u32 = 100_784;
+const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
+const RISING_SUN_KICK: u32 = 107_428;
+const FISTS_OF_FURY: u32 = 113_656;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -58,6 +62,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (HOLY_SHOCK, 0) => Some(holy_shock),
         (PENANCE, 0) => Some(penance),
         (COBRA_SHOT, 1) => Some(cobra_shot),
+        (BLACKOUT_KICK, 0) => Some(blackout_kick),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -82,6 +87,17 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     match (spell_id, effect_index) {
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
+    }
+}
+
+/// Retail 100784/261917: rank two reduces Rising Sun Kick and Fists of Fury
+/// by $100784m3/1000 seconds. Effect 2 stores milliseconds, not a proc chance.
+fn blackout_kick(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    if crate::auras::has_aura(world, caster, BLACKOUT_KICK_RANK_TWO) {
+        let milliseconds = script_effect_value(world, caster, BLACKOUT_KICK, 2);
+        for spell in [RISING_SUN_KICK, FISTS_OF_FURY] {
+            reduce_cooldown(world, caster, spell, f64::from(milliseconds) / 1000.0);
+        }
     }
 }
 
