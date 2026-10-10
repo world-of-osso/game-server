@@ -23,6 +23,8 @@ pub enum AuraKind {
     EffectImmunity,
     /// Damage taken from the aura's caster (`damage_taken_multiplier`).
     DamageFromCaster,
+    ///Creature victim selection and caster-specific threat generation.
+    Taunt,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
     /// Charge-category max/recovery modifier (`charge_mods`).
@@ -50,6 +52,7 @@ pub const MOD_FEAR: u32 = 7;
 pub const PERIODIC_HEAL: u32 = 8;
 /// Read at threat-generation time by creature_aggro::threat_multiplier.
 pub const MOD_THREAT: u32 = 10;
+pub const MOD_TAUNT: u32 = 11;
 pub const MOD_STUN: u32 = 12;
 pub const MOD_INVISIBILITY: u32 = 18;
 pub const OBS_MOD_HEALTH: u32 = 20;
@@ -172,6 +175,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
+        MOD_TAUNT => Taunt,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
