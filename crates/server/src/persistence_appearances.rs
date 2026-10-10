@@ -1,6 +1,6 @@
 //! Account-wide appearance collection: account_id -> serde_json
 //! `shared::transmog::AppearanceCollection` (docs/specs/appearance-collection.md).
-use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use shared::transmog::AppearanceCollection;
 
 pub(crate) const ACCOUNT_APPEARANCES: TableDefinition<u64, &[u8]> =
