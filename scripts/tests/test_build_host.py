@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 
 ADAPTER = Path(__file__).resolve().parents[1] / "build-host.py"
-COMMON = ADAPTER.parents[2] / "game-engine/scripts"
+COMMON = Path(os.environ.get("BUILD_HOST_SCRIPTS", ADAPTER.parents[2] / "game-engine/scripts"))
 FAKE_NATIVE = '''import json
 import os
 from pathlib import Path
@@ -132,7 +132,7 @@ class BuildHostTests(unittest.TestCase):
             self.put(self.root, name, b"LIVE PRIVATE BYTES")
         self.common = self.base / "common"
         self.common.mkdir()
-        for name in ("depot-build.py", "build_hosts.py"):
+        for name in ("depot-build.py", "build_hosts.py", "prepare_ui_icons.py", "native_cargo.py"):
             shutil.copyfile(COMMON / name, self.common / name)
         (self.common / "native_build_hosts.py").write_text(FAKE_NATIVE)
         self.record = self.base / "record.json"
@@ -354,7 +354,22 @@ class BuildHostTests(unittest.TestCase):
         self.assertFalse(Path(result["context"]).exists())
         self.assertEqual(again["environment"], result["environment"])
 
-    def test_selected_binaries_release_features_and_explicit_environment(self):
+    def test_release_exports_through_container_adapter(self):
+        (self.common / "desktop-server-build.py").write_text(
+            "import json, os\nfrom pathlib import Path\n"
+            "def build(root, host, release, binary):\n"
+            "    Path(os.environ['FAKE_RECORD']).write_text(json.dumps(dict("
+            "root=str(root), host=host, release=release, binary=binary)))\n"
+        )
+        for host in ("local", "desktop"):
+            result = self.observed(self.invoke("--release", "--bin", "game-cli", host=host))
+            self.assertEqual(result, dict(root=str(self.root), host=host, release=True, binary="game-cli"))
+        for options in (("--test",), ("--check",), ("--run",), ("--features", "a")):
+            result = self.invoke("--release", *options, host="local")
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("container release exports", result.stderr)
+
+    def test_selected_binaries_features_and_explicit_environment(self):
         self.env.update(
             GAME_SERVER_DB_PATH="/custom/game.redb",
             GAME_SERVER_ADMIN_SOCKET="/custom/admin.sock",
@@ -373,7 +388,6 @@ class BuildHostTests(unittest.TestCase):
                     self.invoke(
                         "--bin",
                         binary,
-                        "--release",
                         "--features",
                         "a,b",
                         "--run",
@@ -385,7 +399,7 @@ class BuildHostTests(unittest.TestCase):
                     result["cargo_args"],
                     ["build", "-p", package, "--bin", binary, "--features", "a,b"],
                 )
-                self.assertTrue(result["release"])
+                self.assertFalse(result["release"])
                 self.assertEqual(result["binary"], binary)
                 self.assertEqual(result["runtime_args"], ["ping"])
                 self.assertEqual(
@@ -420,7 +434,6 @@ class BuildHostTests(unittest.TestCase):
     def test_test_tail_preserves_literal_separator_and_package_filter(self):
         result = self.observed(
             self.invoke(
-                "--release",
                 "--test",
                 "-p",
                 "server",
@@ -434,7 +447,7 @@ class BuildHostTests(unittest.TestCase):
             result["cargo_args"],
             ["test", "-p", "server", "ground_data", "--", "--exact", "--nocapture"],
         )
-        self.assertTrue(result["release"])
+        self.assertFalse(result["release"])
         self.assertIsNone(result["runtime_cwd"])
         self.assertIsNone(result["runtime_args"])
         self.assertEqual(result["environment"], {})

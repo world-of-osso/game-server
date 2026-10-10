@@ -1,8 +1,10 @@
 # Native build host
 
-`scripts/build-host.py` selects native desktop/local compilation and execution; `run-dev.sh` selects the same workflow for watched runs. Details and evidence live in the [workflow guide](../remote-builds.md).
+`scripts/build-host.py` selects desktop/local or host-native development compilation and execution; `run-dev.sh` selects the same workflow for watched runs. Details and evidence live in the [workflow guide](../remote-builds.md).
 
 ## What it must do
+
+- [ ] Host `native` runs Cargo in the server checkout, uses checkout-local target/data, clears inherited job limits, and shares the engine's host-wide slots. Native releases fail; desktop/local release exports use bookworm via the engine server exporter.
 
 - [ ] Explicit host overrides the shared saved default; failures never fall back to another host. Raw Cargo stays local.
 - [ ] Build selects requested binaries or all server/admin/client binaries; run defaults to server. Check/test preserve package selection, features, filters, separators, and exit status; failed builds do not run.
@@ -24,6 +26,7 @@
 ## Tests asserting this spec
 
 - `scripts/tests/test_build_host.py` — inputs, selected modes/binaries, environment, data separation, status, and running-app boundary.
+- `scripts/tests/test_native_host.py` — saved/explicit native selection, Cargo arguments, real data/target paths, exit status and release rejection.
 - `scripts/tests/test_dev_loop.py` — watcher argument preservation, retry timing, failure, signals, and process cleanup.
 - Shared game-engine native-runner tests cover transport/lifetime and source synchronization separately.
 
@@ -32,7 +35,7 @@ Tests are inventoried, not rerun by this documentation audit; requirements remai
 ## Known gaps (current cycle)
 
 - [x] Bounded native desktop acceptance: actual build, isolated admin `pong`, disposable-account authenticated UDP login, and owned-process cleanup observed by main; see guide.
-- [ ] Actual local server proof deferred by user; local capability remains supported, no-local-compile guard preserved. No local server pass claimed; local runtime acceptance is not required now for the current gate.
+- [ ] User approved host-native dev builds on October 9, 2026; current native workspace proof lives in the server-native handoff. Local runtime acceptance remains outside this task.
 - [ ] Bounded corrected source gate pending agent 36 after seven I001 findings and two stale rustup fixtures were fixed; see guide for commits. Existing 93 fixture passes do not complete workflow acceptance.
 - [ ] Normal desktop simulator GUI remains unresolved; source-gate success is not whole-workflow completion.
 
