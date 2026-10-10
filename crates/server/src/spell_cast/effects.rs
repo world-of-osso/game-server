@@ -459,6 +459,9 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
 
 /// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
 fn crit_chance(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    if let Some(chance) = super::scripts::crit_chance(spell.id) {
+        return chance;
+    }
     let base = world
         .get::<CharacterStats>(caster)
         .map_or(0.0, |stats| stats.crit_pct);

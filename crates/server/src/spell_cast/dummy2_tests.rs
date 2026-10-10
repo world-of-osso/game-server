@@ -277,3 +277,20 @@ fn dummy2_warlock_stopping_drain_soul_grants_no_shard_or_later_ticks() {
     assert_eq!(h.health(h.npc), 5000.0);
     assert_eq!(h.power(PowerType::SoulShards), 0.0);
 }
+
+#[test]
+fn dummy2_mage_fire_blast_guarantees_a_critical_hit_with_zero_crit_stats() {
+    let mut h = harness(Vec::new(), &[108853], 8).expect("real world.db required");
+    h.cast_and_deliver(108853, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(108853) && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .unwrap();
+    assert!(damage.crit);
+    assert!(varied(98.625 * 2.0).contains(&(5000.0 - h.health(h.npc))));
+}
