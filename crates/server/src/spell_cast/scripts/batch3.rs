@@ -139,6 +139,26 @@ pub(super) fn garrote(world: &mut World, caster: Entity, target: Entity, depth: 
     }
 }
 
+fn select_prayer_allies(
+    world: &mut World,
+    caster: Entity,
+    primary: Entity,
+    radius: f32,
+    additional: usize,
+) -> Vec<Entity> {
+    let center = targets::position(world, primary).expect("validated ally position");
+    let mut units = targets::area_units(world, caster, center, radius, Relation::Ally, 0);
+    units.retain(|&unit| {
+        unit != primary
+            && world
+                .get::<shared::components::Health>(unit)
+                .is_some_and(|health| health.current < health.max)
+    });
+    units.truncate(additional);
+    units.insert(0, primary);
+    units
+}
+
 /// 596: target plus s3-1 injured allies inside effect1's second radius.
 /// Data does not specify an injury ordering; retain normal nearest-first
 /// area selection, exclude full-health units and cap the additional allies.
@@ -155,17 +175,8 @@ pub(super) fn prayer_plan(
         .position(|effect| effect.index == 1)
         .expect("Prayer heal effect");
     let radius = targets::radius(&spell.effects[heal], 1);
-    let center = targets::position(world, primary).expect("validated ally position");
     let additional = script_effect_value(world, caster, PRAYER_OF_HEALING, 2) as usize - 1;
-    let mut units = targets::area_units(world, caster, center, radius, Relation::Ally, 0);
-    units.retain(|&unit| {
-        unit != primary
-            && world
-                .get::<shared::components::Health>(unit)
-                .is_some_and(|health| health.current < health.max)
-    });
-    units.truncate(additional);
-    units.insert(0, primary);
+    let units = select_prayer_allies(world, caster, primary, radius, additional);
     vec![
         PlannedEffect {
             index: 0,
