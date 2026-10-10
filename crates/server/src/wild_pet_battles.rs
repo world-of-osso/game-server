@@ -754,15 +754,15 @@ fn advance_encounter(
     Ok(())
 }
 fn release_wild_pet(world: &mut World, encounter: &Encounter, defeated: bool) {
-    if let Some(creature) = Entity::try_from_bits(encounter.creature) {
-        if let Ok(mut entity) = world.get_entity_mut(creature) {
-            entity.remove::<WildPetClaim>();
-            if defeated {
-                if let Some(mut health) = entity.get_mut::<Health>() {
-                    health.current = 0.0;
-                }
-            }
-        }
+    let Some(creature) = Entity::try_from_bits(encounter.creature) else {
+        return;
+    };
+    if world.get_entity(creature).is_err() {
+        return;
+    }
+    world.entity_mut(creature).remove::<WildPetClaim>();
+    if defeated {
+        crate::combat::despawn_creature(world, creature);
     }
 }
 pub(crate) fn remove_abandoned_battles(world: &mut World) {

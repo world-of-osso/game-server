@@ -166,7 +166,7 @@ impl Plugin for BattlePetPlugin {
     }
 }
 
-fn load_account_journals(world: &mut World) {
+pub(crate) fn load_account_journals(world: &mut World) {
     let mut query = world.query_filtered::<(Entity, &Authenticated, &PlayerLink), Added<InWorld>>();
     let entered: Vec<_> = query
         .iter(world)

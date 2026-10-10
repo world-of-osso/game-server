@@ -33,7 +33,10 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.insert_resource(GameDatabase { db: database });
-    app.add_plugins(crate::battle_pets::BattlePetPlugin);
+    app.insert_resource(crate::battle_pets::load_test_catalog());
+    app.insert_resource(catalog());
+    app.init_resource::<BattleIds>();
+    app.add_systems(Update, crate::battle_pets::load_account_journals);
     let position = Position {
         x: -8949.0,
         y: 82.62,
