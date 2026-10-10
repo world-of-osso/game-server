@@ -20,6 +20,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     261981,  // Spitzy
     286277,  // Worn Cloak
     302273,  // Heart of a Champion
+    383065,  // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
     443689,  // Toxic Victory
