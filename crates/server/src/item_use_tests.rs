@@ -28,10 +28,7 @@ fn companion_item_learns_three_instances_and_keeps_fourth_item() {
     eater
         .h
         .app
-        .insert_resource(crate::battle_pets::PetCatalog::load(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../data/battle-pets.json"
-        )));
+        .insert_resource(crate::battle_pets::load_test_catalog());
     bevy::app::Plugin::build(&crate::battle_pets::BattlePetPlugin, &mut eater.h.app);
     app_world(&mut eater.h)
         .entity_mut(owner)

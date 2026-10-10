@@ -8,7 +8,7 @@ use crate::persistence::GameDatabase;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::{Database, ReadableTable, TableDefinition};
-use serde::Deserialize;
+use rusqlite::{Connection, OpenFlags};
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, ModelDisplay, MovementSpeed, Npc, Position,
     Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy,
@@ -55,7 +55,7 @@ pub(crate) fn save_journal(db: &Database, account_id: u64, journal: &PetJournal)
         .expect("commit account pet journal save");
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone)]
 struct Species {
     species_id: u32,
     creature_id: u32,
@@ -71,11 +71,22 @@ pub(crate) struct PetCatalog {
 }
 
 impl PetCatalog {
-    pub(crate) fn load(path: &str) -> Self {
-        let bytes = std::fs::read(path)
-            .expect("read local CASC battle-pets.json; run export_pet_catalog.py");
-        let entries: Vec<Species> =
-            serde_json::from_slice(&bytes).expect("decode battle-pet catalog");
+    pub(crate) fn load(conn: &Connection) -> rusqlite::Result<Self> {
+        let mut query = conn.prepare(
+            "SELECT species_id, creature_id, name, display_id, summon_spell_id \
+             FROM battle_pet_species ORDER BY species_id",
+        )?;
+        let entries = query
+            .query_map([], |row| {
+                Ok(Species {
+                    species_id: row.get(0)?,
+                    creature_id: row.get(1)?,
+                    name: row.get(2)?,
+                    display_id: row.get(3)?,
+                    summon_spell_id: row.get(4)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
         let spells = entries
             .iter()
             .filter(|entry| entry.summon_spell_id != 0)
@@ -85,14 +96,30 @@ impl PetCatalog {
             .into_iter()
             .map(|entry| (entry.species_id, entry))
             .collect();
-        Self { species, spells }
+        Ok(Self { species, spells })
     }
 }
 
-impl Default for PetCatalog {
-    fn default() -> Self {
-        Self::load("data/battle-pets.json")
-    }
+fn load_catalog(mut commands: Commands) {
+    let conn = Connection::open_with_flags(
+        crate::spell_info::WORLD_DB_PATH,
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("open battle-pet catalog world.db");
+    let catalog = PetCatalog::load(&conn)
+        .expect("load battle-pet catalog; run scripts/import-battle-pets.py first");
+    info!("Loaded {} BattlePetSpecies entries", catalog.species.len());
+    commands.insert_resource(catalog);
+}
+
+#[cfg(test)]
+pub(crate) fn load_test_catalog() -> PetCatalog {
+    let conn = Connection::open_with_flags(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db"),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("open test battle-pet world.db");
+    PetCatalog::load(&conn).expect("load test battle-pet catalog")
 }
 
 #[derive(Component)]
@@ -110,7 +137,7 @@ struct Companion {
 pub struct BattlePetPlugin;
 impl Plugin for BattlePetPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PetCatalog>();
+        app.add_systems(Startup, load_catalog);
         app.add_systems(
             Update,
             (
@@ -393,14 +420,34 @@ mod tests {
     use super::*;
     use shared::pet_battle::{PetJournal, PetJournalError, PetQuality};
 
+    #[test]
+    fn catalog_requires_imported_world_table() {
+        let conn = Connection::open_in_memory().unwrap();
+        let error = PetCatalog::load(&conn)
+            .err()
+            .expect("missing table must fail");
+        assert!(
+            error
+                .to_string()
+                .contains("no such table: battle_pet_species")
+        );
+    }
+
+    #[test]
+    fn imported_catalog_resolves_mechanical_squirrel_identity() {
+        let catalog = load_test_catalog();
+        let species = &catalog.species[&39];
+        assert_eq!(species.name, "Mechanical Squirrel");
+        assert_eq!(species.creature_id, 2671);
+        assert_eq!(species.display_id, 7937);
+        assert_eq!(catalog.spells[&4055], 39);
+    }
+
     fn follower_app() -> (App, Entity, u64) {
         use shared::components::{Position, Rotation, UnitFactionTemplate};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.insert_resource(PetCatalog::load(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../data/battle-pets.json"
-        )));
+        app.insert_resource(load_test_catalog());
         app.add_systems(Update, despawn_ownerless_companions);
         let mut journal = PetJournal::default();
         let id = journal
@@ -504,10 +551,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.insert_resource(GameDatabase { db });
-        app.insert_resource(PetCatalog::load(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../data/battle-pets.json"
-        )));
+        app.insert_resource(load_test_catalog());
         app.add_systems(Update, load_account_journals);
         let owner = app
             .world_mut()
