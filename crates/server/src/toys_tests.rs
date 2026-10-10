@@ -9,7 +9,15 @@ const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
-    let mut h = harness(Vec::new(), &[TRANSFORM, 51640, 61810], 8).unwrap();
+    let mut h = harness(
+        Vec::new(),
+        &[
+            TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
+            99104, 304370,
+        ],
+        8,
+    )
+    .unwrap();
     let db = redb::Database::create(path).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "ToyMage", 1, 8).unwrap();
@@ -368,6 +376,294 @@ fn toys_duplicate_learning_keeps_remaining_item_and_favourite_requires_ownership
             .unwrap()
             .stack_count,
         1
+    );
+}
+
+fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    persistence::save_inventory(
+        db,
+        character,
+        &InventoryData {
+            gold: 0,
+            items: vec![InventoryItemData {
+                item_guid: persistence::next_id(db, "item_instance"),
+                item_id,
+                name: String::new(),
+                quality: 1,
+                required_level: 1,
+                stack_count: 1,
+                vendor_sell_price: 0,
+                unique_auction: false,
+            }],
+        },
+    );
+    assert_eq!(learn(h, 0)[0].error, None);
+}
+
+#[test]
+fn toyfx_cosmetic_aura_is_applied_replicated_and_cancelled() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 119144); // Touch of the Naaru, 176594.
+    assert_eq!(activate(&mut h, 119144)[0].error, None);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 176594)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 176594 && a.caster == Some(h.caster.to_bits()))
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 176594 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 176594)
+    );
+}
+
+#[test]
+fn toyfx_cosmetic_dummy_and_script_deliver_spell_go() {
+    for (item, spell, target) in [
+        (119083, 176457, true),
+        (126931, 185712, false),
+        (169768, 302273, false),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        if target {
+            h.select(Some(h.npc));
+            h.advance(2);
+        }
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(60); // Includes actual cast time / missile flight, no mocked completion.
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell
+                && go.caster == h.caster.to_bits()
+                && go.hit_targets.contains(&if target {
+                    h.npc.to_bits()
+                } else {
+                    h.caster.to_bits()
+                })),
+            "item {item}"
+        );
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    }
+}
+
+#[test]
+fn toyfx_screen_effect_replicates_and_cancel_removes_it() {
+    // Shadescale170187 has no runtime content_item, so its actual UseToy must
+    // remain unavailable. The authentic on-use spell proves the aura mechanism.
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    assert!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .iter()
+            .find(|t| t.item_id == 170187)
+            .unwrap()
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("content_item")
+    );
+    assert!(toy_catalog::unsupported_types(h.app.world(), 304370).is_empty());
+    h.cast_and_deliver(304370, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap();
+    let aura = auras.iter().find(|a| a.spell_id == 304370).unwrap();
+    assert_eq!(aura.effects[0].aura_type, 260);
+    assert_eq!(aura.effects[0].misc_values, [1720, 7]);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 304370)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 304370 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 304370)
+    );
+}
+
+#[test]
+fn toyfx_transform_changes_display_and_cancel_restores_native() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(h.caster)
+            .is_none()
+    );
+    learn(&mut h, 0); // Time-Lost Figurine32782, real transform creature23423.
+    assert_eq!(activate(&mut h, FIGURINE)[0].error, None);
+    let template = &h
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .templates[&23423];
+    let display = h
+        .app
+        .world()
+        .get::<shared::components::ModelDisplay>(h.caster)
+        .expect("transform must change display")
+        .display_id;
+    assert!(
+        template
+            .models
+            .iter()
+            .any(|model| model.display_id == display)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+            spell_id: TRANSFORM,
+        });
+    h.advance(5);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(h.caster)
+            .is_none(),
+        "native race/sex display restored by removing transform model"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == TRANSFORM)
+    );
+}
+
+#[test]
+fn toyfx_visual_audit_requires_binding_and_no_extra_effects() {
+    for remove_visual in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, 119144);
+        let mut spell = world_db().unwrap().store.get(176594).unwrap().clone();
+        if remove_visual {
+            spell.has_spell_visual = false;
+        } else {
+            spell.effects.push(crate::spell_info::SpellEffect {
+                effect: 2,
+                index: 1,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            });
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        assert!(
+            activate(&mut h, 119144)[0]
+                .error
+                .as_deref()
+                .unwrap()
+                .contains("aura 4")
+        );
+        assert!(h.inbox.cooldowns.is_empty());
+        assert!(h.inbox.go.is_empty());
+    }
+    let mut world = World::new();
+    let spells = [23453, 360598, 170950]
+        .into_iter()
+        .map(|id| world_db().unwrap().store.get(id).unwrap().clone())
+        .collect();
+    world.insert_resource(crate::spell_info::SpellStore::fixture(spells));
+    for (id, reason) in [
+        (23453, "effect 3"),
+        (360598, "effect 3"),
+        (170950, "aura 226"),
+    ] {
+        assert!(
+            toy_catalog::unsupported_types(&world, id).contains(reason),
+            "script spell {id} must stay unavailable"
+        );
+    }
+}
+
+#[test]
+fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE summon_properties (ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER); INSERT INTO summon_properties VALUES (64,0,0,0,0);").unwrap();
+    h.app
+        .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    learn_effect_toy(&mut h, character, 34686);
+    assert_eq!(activate(&mut h, 34686)[0].error, None);
+    h.advance(60);
+    let world = h.app.world_mut();
+    let summons: Vec<_> = world
+        .query::<(
+            Entity,
+            &shared::components::Npc,
+            &shared::components::UnitSummonedBy,
+        )>()
+        .iter(world)
+        .filter(|(_, npc, _)| npc.template_id == 25305)
+        .map(|(entity, _, owner)| (entity, owner.0))
+        .collect();
+    assert_eq!(summons.len(), 1);
+    assert_eq!(summons[0].1, h.caster.to_bits());
+    let faction = world.resource::<crate::world_data::WorldData>().templates[&25305].faction;
+    assert_eq!(
+        world
+            .get::<shared::components::UnitFactionTemplate>(summons[0].0)
+            .unwrap()
+            .0,
+        u32::from(faction)
+    );
+    assert!(
+        world
+            .get::<crate::creature_ai::FollowOwner>(summons[0].0)
+            .is_none()
     );
 }
 

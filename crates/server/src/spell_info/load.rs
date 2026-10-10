@@ -182,6 +182,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_equipped_items(conn, &mut spells)?;
     load_empower_stages(conn, &mut spells)?;
     load_labels(conn, &mut spells)?;
+    load_spell_visuals(conn, &mut spells)?;
     finish(&mut spells);
     Ok(SpellStore { spells })
 }
@@ -191,6 +192,16 @@ fn finish(spells: &mut Spells) {
     for spell in spells.iter_mut() {
         spell.effects.sort_unstable_by_key(|effect| effect.index);
     }
+}
+
+fn load_spell_visuals(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<()> {
+    fill(
+        conn,
+        spells,
+        "SELECT DISTINCT SpellID FROM spell_x_spell_visual WHERE DifficultyID = 0 AND SpellVisualID > 0",
+        |_| Ok(()),
+        |spell, ()| spell.has_spell_visual = true,
+    )
 }
 
 fn load_names(conn: &Connection) -> rusqlite::Result<Spells> {

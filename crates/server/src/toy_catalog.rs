@@ -110,7 +110,7 @@ fn classify(
         if effect.effect == 0 {
             continue;
         }
-        if !supports_effect(world, effect) {
+        if !crate::spell_cast::cosmetic::is_visual_only(spell) && !supports_effect(world, effect) {
             let kind = if crate::auras::is_aura_effect(effect) {
                 "aura"
             } else {
@@ -122,6 +122,11 @@ fn classify(
                 effect.effect
             };
             reasons.insert(format!("{kind} {id}"));
+        }
+        if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
+            if let Some(reason) = crate::spell_cast::summon::unsupported_reason(world, effect) {
+                reasons.insert(reason);
+            }
         }
         if let Some(target) = crate::spell_cast::targets::unsupported_target(effect) {
             reasons.insert(format!("target {target}"));
@@ -145,18 +150,15 @@ fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
                 .get_resource::<crate::world_data::WorldData>()
                 .is_some_and(|data| data.templates.contains_key(&(effect.misc_values[0] as u32)));
     }
+    if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
+        return effect.misc_values[0] > 0;
+    }
     if crate::auras::is_aura_effect(effect) {
         return crate::auras::handlers::kind(effect.aura)
             .is_some_and(|kind| kind != AuraKind::Script);
     }
     if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
-        let properties = world
-            .get_resource::<crate::spell_cast::summon::SummonPropertiesStore>()
-            .and_then(|store| store.0.get(&(effect.misc_values[1] as u32)));
-        let creature_exists = world
-            .get_resource::<crate::world_data::WorldData>()
-            .is_some_and(|data| data.templates.contains_key(&(effect.misc_values[0] as u32)));
-        return properties.is_some_and(|properties| properties.control <= 2) && creature_exists;
+        return crate::spell_cast::summon::unsupported_reason(world, effect).is_none();
     }
     if effect.effect == crate::spell_cast::area_trigger::EFFECT_CREATE_AREATRIGGER {
         // Lifecycle-only area triggers do not implement a toy's actual action.

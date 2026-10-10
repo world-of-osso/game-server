@@ -8,10 +8,13 @@
 - SetToyFavourite requires learned ownership. World entry and every change deliver a full ToyCollectionUpdate. Catalog entries include item/spell identity, name/icon, source, flags, expansion, learned/favourite state and an explicit unavailable reason.
 - UseToy requires learned ownership and item class/race/level eligibility. It dispatches through the existing authoritative spell pipeline, including caster state, target validation, cast time, spell and category history. ItemEffect nonnegative recovery/category durations override SpellCooldowns; negative values retain spell durations. SpellCooldownUpdate reports cooldowns; ToyResult answers start/rejection. SpellGo/CastFailed retain later cast outcome.
 - Unresolved spells, unsupported effect/aura types, script-only toy behavior and unsupported ItemEffect conditions/specialization restrictions fail explicitly before starting a cast or cooldown. Zero-entry transform special cases are unsupported, not successful cosmetic no-ops.
+- Audited visual-only spells require a nonzero DifficultyID-0 SpellXSpellVisual binding and exclusively zero-valued dummy/script effects or dummy auras, with no trigger, misc payload, item creation or mechanic. They deliver SpellGo with caster/hit targets and apply/replicate/cancel their auras normally. A visual binding alone never authorizes a gameplay script or periodic dummy.
+- Aura260 ScreenEffect with a nonzero screen ID is client-owned state: apply/replicate its spell identity and normal lifetime/cancellation. Do not create a gameplay script or infer support for the spell's other effects.
+- Temporary wild summons preserve template faction unless SummonProperties overrides it; ally/guardian/companion summons inherit the caster faction. Companions follow their caster, are immune to player/NPC attacks and replace an occupied positive summon slot. Missing creature/property identities and puppet/vehicle/specialized categories remain explicit unavailable reasons.
 
 ## Exclusions
 
-Toy Box UI, search/filter/pagination, action-bar persistence and additional toy effect implementations are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.
+Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.
 
 ## References
 
