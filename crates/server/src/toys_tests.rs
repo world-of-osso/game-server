@@ -14,7 +14,8 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
-            376088, 116, 376092, 376155, 376203, 397775, 376172, 376113,
+            376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
+            398328, 398334, 398333,
         ],
         8,
     )
@@ -903,6 +904,122 @@ fn toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel() {
         |a| a.spell_id == 376088,
     );
     assert!(crate::auras::cast_blocker(h.app.world(), h.caster, &frostbolt).is_none());
+}
+
+#[test]
+fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    learn_effect_toy(&mut h, character, 193476); // Gnoll Tent398159->398162->200391.
+    assert_eq!(activate(&mut h, 193476)[0].error, None);
+    h.advance(60); // Authentic cast time is3000ms; ToyResult only reports start.
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let summons = |world: &mut World| -> Vec<(Entity, Entity)> {
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, s)| s.spell_id == 398162)
+            .map(|(e, s)| (e, s.owner))
+            .collect()
+    };
+    let first = summons(h.app.world_mut());
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].1, h.caster);
+    let pos = h
+        .app
+        .world()
+        .get::<shared::components::Position>(first[0].0)
+        .unwrap();
+    let owner = h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.caster)
+        .unwrap();
+    // TargetA18=DEST_CASTER; TargetB79=DEST_DEST_BACK; DB2 radius7=2yd.
+    assert!((pos.x - (owner.x - 2.0)).abs() < 0.001);
+    assert_eq!(pos.y, owner.y);
+    assert!((pos.z - owner.z).abs() < 0.001);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(first[0].0)
+            .unwrap()
+            .display_id,
+        111084
+    );
+    let apply = |world: &mut World, unit| {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: unit,
+                target: unit,
+                spell_id: 398159,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        )
+    };
+    apply(h.app.world_mut(), h.caster); // Refresh does not make another tent.
+    assert_eq!(summons(h.app.world_mut()), first);
+    let other = spawn_player(&mut h.app, 8, 10.0);
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI,
+            z: 0.0,
+        });
+    apply(h.app.world_mut(), other);
+    let both = summons(h.app.world_mut());
+    assert_eq!(both.len(), 2);
+    let rotated = both.iter().find(|(_, owner)| *owner == other).unwrap().0;
+    let pos = h
+        .app
+        .world()
+        .get::<shared::components::Position>(rotated)
+        .unwrap();
+    assert!((pos.x - 10.0).abs() < 0.001);
+    assert!((pos.z - 2.0).abs() < 0.001);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 398159,
+    );
+    let remaining = summons(h.app.world_mut());
+    assert_eq!(remaining.len(), 1);
+    assert_eq!(remaining[0].1, other);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        other,
+        crate::auras::RemoveReason::Death,
+        |a| a.spell_id == 398159,
+    );
+    assert!(summons(h.app.world_mut()).is_empty());
+}
+
+#[test]
+fn toyfx3_bobber_overrides_remain_explicitly_unsupported() {
+    // Toy142528, Can of Worms:231291 replaces bobber35591 with241593/385542.
+    let mut world = World::new();
+    let data = world_db().unwrap();
+    world.insert_resource(crate::spell_info::SpellStore::fixture(
+        [231291, 131474]
+            .into_iter()
+            .map(|id| data.store.get(id).unwrap().clone())
+            .collect(),
+    ));
+    let reasons = toy_catalog::unsupported_types(&world, 231291);
+    assert!(reasons.contains("aura 258"));
+    assert!(
+        reasons
+            .iter()
+            .any(|r| r.contains("35591 -> 241593") && r.contains("transmitted-object/fishing"))
+    );
 }
 
 #[test]

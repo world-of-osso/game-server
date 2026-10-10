@@ -311,7 +311,7 @@ pub(super) fn expire_summons(world: &mut World) {
     }
 }
 
-fn despawn_summon(world: &mut World, entity: Entity) {
+pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         debug!(
             "Despawn summon {entity}: spell {}, properties {}",

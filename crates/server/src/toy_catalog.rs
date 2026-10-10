@@ -141,6 +141,14 @@ fn classify(
             };
             reasons.insert(format!("{kind} {id}"));
         }
+        if effect.aura == crate::auras::handlers::LINKED_SUMMON {
+            if let Some(reason) = crate::auras::linked_summon::unsupported_reason(world, effect) {
+                reasons.insert(reason);
+            }
+        }
+        if effect.aura == crate::auras::handlers::OVERRIDE_SUMMONED_OBJECT {
+            reasons.insert(format!("summoned-object override {} -> {} requires transmitted-object/fishing runtime and object template", effect.misc_values[0], effect.misc_values[1]));
+        }
         if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
             if let Err(reason) = crate::auras::periodic_dummy_trigger(world, effect) {
                 reasons.insert(reason.into());
@@ -183,6 +191,9 @@ fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
     if effect.aura == crate::auras::handlers::OVERRIDE_SPELLS {
         return effect.misc_values[0] > 0
             && crate::auras::override_spell_data::supported(world, effect.misc_values[0] as u32);
+    }
+    if effect.aura == crate::auras::handlers::LINKED_SUMMON {
+        return crate::auras::linked_summon::unsupported_reason(world, effect).is_none();
     }
     if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
         return crate::auras::periodic_dummy_trigger(world, effect).is_ok();
