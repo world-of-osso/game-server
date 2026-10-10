@@ -2,27 +2,33 @@
 use bevy::prelude::*;
 
 use super::{ActiveAuras, AuraInstance, RemoveReason, handlers};
-use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
+use crate::spell_info::{SpellInfo, SpellStore};
 
-fn matches_mechanic(spell: &SpellInfo, effect: &SpellEffect, mechanic: i32) -> bool {
+const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
+
+fn matches_mechanic(spell: &SpellInfo, effect_mechanic: u32, mechanic: i32) -> bool {
     mechanic > 0
-        && (effect.mechanic == mechanic as u32
+        && (effect_mechanic == mechanic as u32
             || spell
                 .categories
                 .as_ref()
                 .is_some_and(|categories| categories.mechanic == mechanic as u32))
 }
 
-pub(crate) fn blocks_effect(
+/// Pass zero for category-only hit rejection; effect hits also supply their mechanic.
+pub(crate) fn blocks_mechanic(
     world: &World,
     target: Entity,
     spell: &SpellInfo,
-    effect: &SpellEffect,
+    effect_mechanic: u32,
 ) -> bool {
+    if super::attributes(spell, 0) & ATTR0_NO_IMMUNITIES != 0 {
+        return false;
+    }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras.iter().flat_map(|aura| &aura.effects).any(|immunity| {
             immunity.aura_type == handlers::MECHANIC_IMMUNITY
-                && matches_mechanic(spell, effect, immunity.misc_values[0])
+                && matches_mechanic(spell, effect_mechanic, immunity.misc_values[0])
         })
     })
 }
@@ -64,6 +70,6 @@ fn aura_matches(world: &World, aura: &AuraInstance, mechanics: &[i32]) -> bool {
         applied
             && mechanics
                 .iter()
-                .any(|&mechanic| matches_mechanic(spell, effect, mechanic))
+                .any(|&mechanic| matches_mechanic(spell, effect.mechanic, mechanic))
     })
 }
