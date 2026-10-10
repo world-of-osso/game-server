@@ -16,6 +16,8 @@ use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, ScalingItem, UnitScaling};
+use crate::line_of_sight::{BodyParts, LineOfSight, unit_sees};
+use crate::maps::InMap;
 use crate::melee::{self, Hand, MeleeOutcome, PlayerDefense, Swinger, Victim};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::spell_cast::powers::PowerPools;
@@ -26,6 +28,8 @@ use std::collections::VecDeque;
 
 /// Melee attack range in yards.
 const MELEE_RANGE: f32 = 5.0;
+/// Attack's spell ID for the existing owner spell-error channel.
+const ATTACK_SPELL_ID: u32 = 6603;
 /// Seconds between the auto-attack swings of units without `CharacterStats`
 /// (creatures, `BaseAttackTime` 2000 for every Stockade creature); players swing
 /// at their weapon speed.
@@ -432,10 +436,49 @@ fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bo
 /// A creature's own armor or a player's gear armor.
 type TargetArmor<'a> = (Option<&'a CreatureArmor>, Option<&'a CharacterStats>);
 
+/// The same unit bodies and server ray search used by creature spells.
+#[derive(SystemParam)]
+struct SwingSight<'w, 's> {
+    los: Option<Res<'w, LineOfSight>>,
+    maps: Query<'w, 's, &'static InMap>,
+    bodies: Query<'w, 's, BodyParts<'static>>,
+}
+
+impl SwingSight<'_, '_> {
+    fn sees(&self, attacker: Entity, target: Entity) -> bool {
+        // Match sees_in_world: without a map, spell LOS is not checked.
+        let Ok(map) = self.maps.get(attacker) else {
+            return true;
+        };
+        // try_swing already requires both units to have Position.
+        let watcher = self.bodies.get(attacker).unwrap();
+        let target = self.bodies.get(target).unwrap();
+        unit_sees(self.los.as_deref(), *map, watcher, target)
+    }
+
+    fn send_blocked_swing(&self, commands: &mut Commands, attacker: Entity) {
+        if self.bodies.get(attacker).unwrap().6.is_none() {
+            return;
+        }
+        commands.queue(move |world: &mut World| {
+            crate::spell_cast::send_to_owner(
+                world,
+                attacker,
+                shared::protocol::CastFailed {
+                    spell_id: ATTACK_SPELL_ID,
+                    reason: shared::spell_data::CastFailReason::LineOfSight,
+                    detail: None,
+                },
+            );
+        });
+    }
+}
+
 #[derive(SystemParam)]
 pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
+    sight: SwingSight<'w, 's>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
@@ -476,6 +519,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                 &mut params.units.p1(),
                 &SwingContext {
                     scaling: &params.scaling,
+                    sight: &params.sight,
                     armor_constants: params.armor_constants.as_deref(),
                 },
                 target_entity,
@@ -643,6 +687,7 @@ impl Attacker<'_> {
 pub(crate) struct SwingContext<'a, 'w, 's> {
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
     pub armor_constants: Option<&'a ArmorConstants>,
+    sight: &'a SwingSight<'w, 's>,
 }
 
 /// Swing damage before armor and outcome: a player's weapon roll
@@ -856,6 +901,10 @@ fn try_swing(
     // IsValidAttackTarget: an invisible or NON_ATTACKABLE_2 unit is not attacked.
     let attackable = !invisible && flags.is_none_or(|flags| flags.is_attackable());
     if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
+        return None;
+    }
+    if !context.sight.sees(attacker.entity, target_entity) {
+        context.sight.send_blocked_swing(commands, attacker.entity);
         return None;
     }
     let health_before = health.current;
