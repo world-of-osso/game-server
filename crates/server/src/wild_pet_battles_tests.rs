@@ -355,3 +355,112 @@ fn wild_pet_battle_forfeit_has_no_rewards_and_win_xp_survives_reopen() {
     let db = redb::Database::open(&path).unwrap();
     assert_eq!(crate::battle_pets::load_journal(&db, 42), journal);
 }
+
+#[test]
+fn petbattle_effect_hud_turn_lock_disables_abilities_without_guessed_lockdown() {
+    let catalog = catalog();
+    let journal = journal();
+    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    assert!(encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
+    let turn_lock = catalog.turns.state_id("turnLock").unwrap();
+    encounter.battle.teams[0].pets[0]
+        .states
+        .insert(turn_lock, 1);
+    let ability = &encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0];
+    assert!(!ability.usable);
+    assert_eq!(ability.lockout, 0);
+    encounter.battle.teams[0].pets[0]
+        .states
+        .insert(turn_lock, 0);
+    let ability_id = encounter.battle.teams[0].pets[0].abilities[0];
+    encounter.battle.teams[0].pets[0].continuation = Some((ability_id, 2));
+    assert!(!encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
+    encounter.battle.teams[0].pets[0].continuation = None;
+    assert!(encounter.snapshot(&catalog, &journal).teams[0][0].abilities[0].usable);
+}
+
+#[test]
+fn petbattle_effect_hud_routes_weather_and_team_hazard_separately_across_swap() {
+    let catalog = catalog();
+    let journal = journal();
+    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    encounter.battle.teams[0].pets[0].abilities = [404, 190, 527];
+    encounter.battle.teams[0].pets[1].abilities = [254, 110, 123];
+    for team in &mut encounter.battle.teams {
+        for pet in &mut team.pets {
+            pet.health = 10000;
+            pet.stats.health = 10000;
+            pet.base_health = 10000;
+        }
+    }
+    encounter.battle = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(404), Action::Pass],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    let snapshot = encounter.snapshot(&catalog, &journal);
+    assert_eq!(snapshot.weather.as_ref().map(|a| a.ability_id), Some(403));
+    assert!(snapshot.teams.iter().flatten().all(|p| p.auras.is_empty()));
+    encounter.battle = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(190), Action::Pass],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    let snapshot = encounter.snapshot(&catalog, &journal);
+    assert_eq!(snapshot.team_auras[1].len(), 1);
+    assert_eq!(snapshot.team_auras[1][0].ability_id, 189);
+    assert!(!snapshot.team_auras[1][0].is_buff);
+    encounter.battle = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(527), Action::Pass],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    let snapshot = encounter.snapshot(&catalog, &journal);
+    assert_eq!(snapshot.team_auras[1][0].ability_id, 189);
+    assert!(
+        snapshot.teams[1]
+            .iter()
+            .all(|p| p.auras.iter().any(|a| a.ability_id == 526 && !a.is_buff))
+    );
+    encounter.battle = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Swap(1), Action::Pass],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    encounter.battle = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(254), Action::Pass],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    let snapshot = encounter.snapshot(&catalog, &journal);
+    assert!(
+        snapshot.team_auras[0]
+            .iter()
+            .any(|a| a.ability_id == 255 && a.is_buff)
+    );
+    assert!(snapshot.teams.iter().flatten().all(|p| {
+        p.auras
+            .iter()
+            .all(|a| ![403, 189, 255].contains(&a.ability_id))
+    }));
+}

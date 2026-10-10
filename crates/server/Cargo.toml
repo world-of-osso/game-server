@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "3026c6dc7c8426d28b70d41563a4149f2b3d2f8f" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
 # Baked line-of-sight tiles and eye points (docs/specs/line-of-sight.md).
 los = { path = "../los" }
 # Tiled offline navigation queries; no runtime geometry extraction.
