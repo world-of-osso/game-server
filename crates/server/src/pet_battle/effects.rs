@@ -2,6 +2,22 @@ use super::engine::Runtime;
 use super::rules::{BASE_VARIANCE, CRITICAL_MULTIPLIER, POWER_COEFFICIENT, type_multiplier};
 use super::{Aura, BattleRng, Effect, Event, PetRef};
 
+/// First row follows the active pet; the next two address its other team members.
+fn other_team_slot(active: PetRef, order: u32) -> PetRef {
+    let slot = if order == 1 {
+        active.slot
+    } else {
+        (0..3)
+            .filter(|slot| *slot != active.slot)
+            .nth((order - 2) as usize)
+            .expect("admitted three-pet routing")
+    };
+    PetRef {
+        team: active.team,
+        slot,
+    }
+}
+
 impl<R: BattleRng> Runtime<'_, R> {
     pub fn execute_effect(
         &mut self,
@@ -16,8 +32,109 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(false);
         }
         match effect.property {
-            22 | 116 | 157 | 158 | 177 => Ok(true),
+            22 | 116 | 157 | 158 | 159 | 177 => Ok(true),
             68 => self.percent_damage(caster, target, ability, effect),
+            44 => {
+                if !self.hit(caster, caster, effect) {
+                    return Ok(false);
+                }
+                let amount =
+                    f64::from(self.state(caster, "Last_HitTaken")) * f64::from(p[0]) / 100.0;
+                self.heal_pet(caster, amount);
+                Ok(true)
+            }
+            59 => {
+                if self.battle.pet(caster).health >= self.battle.pet(target).health {
+                    return Ok(false);
+                }
+                self.damage_effect(caster, target, ability, effect)
+            }
+            66 => {
+                let mut damage = effect.clone();
+                if i64::from(self.battle.pet(target).health) * 4
+                    < i64::from(self.battle.pet(target).stats.health)
+                {
+                    damage.params[0] *= 2;
+                }
+                damage.params[2] = 0;
+                self.damage_effect(caster, target, ability, &damage)
+            }
+            76 => self.charged_damage(caster, target, ability, effect),
+            96 | 149 => self.damage_effect(caster, target, ability, effect),
+            45 | 97 => {
+                let caster_speed = self.speed(caster);
+                let target_speed = self.speed(target);
+                let bonus = if effect.property == 45 {
+                    caster_speed < target_speed
+                } else {
+                    caster_speed > target_speed
+                };
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[0] += if bonus { p[0] * p[2] / 100 } else { 0 };
+                damage.params[2] = 0;
+                self.damage_effect(caster, target, ability, &damage)
+            }
+            254 => {
+                let recipient = self.healing_target.unwrap_or(caster);
+                let below_threshold = i64::from(self.battle.pet(recipient).health) * 100
+                    < i64::from(self.battle.pet(recipient).stats.health) * i64::from(p[2]);
+                let mut heal = effect.clone();
+                heal.property = 23;
+                heal.params[0] += if below_threshold {
+                    p[0] * p[3] / 100
+                } else {
+                    0
+                };
+                heal.params[2] = p[4];
+                self.heal_effect(caster, &heal)
+            }
+            100 => self.heal_other_ally(caster, effect),
+            131 => {
+                let first = self
+                    .events
+                    .iter()
+                    .find_map(|e| match e {
+                        Event::Order(order) => Some(order[0]),
+                        _ => None,
+                    })
+                    .expect("round order precedes effects");
+                if caster.team != first {
+                    return Ok(false);
+                }
+                let mut control = effect.clone();
+                control.property = 52;
+                self.add_aura_effect(caster, target, &control)
+            }
+            172 => {
+                if p[4] != 0 && failed {
+                    return Ok(false);
+                }
+                let bonus = p[1] != 0 && self.battle.pet(caster).state(p[1] as u32) != p[0]
+                    || p[3] != 0 && self.battle.pet(target).state(p[3] as u32) != p[0];
+                let mut control = effect.clone();
+                control.property = 52;
+                control.params[1] = if bonus { 100 } else { p[5] };
+                self.add_aura_effect(caster, target, &control)
+            }
+            65 | 226 => {
+                let checked_pet = if effect.property == 65 {
+                    caster
+                } else {
+                    target
+                };
+                let bonus = if self.battle.pet(checked_pet).state(p[3] as u32) != 0 {
+                    p[2]
+                } else {
+                    0
+                };
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[0] += bonus;
+                damage.params[2] = p[4];
+                damage.params[3] = 0;
+                self.damage_effect(caster, target, ability, &damage)
+            }
             85 => self.reset_aura_state(p[0] as u32),
             111 => {
                 let pet = self.battle.pet_mut(caster);
@@ -88,12 +205,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             136 => self.cleanse(caster),
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
-                let target = if matches!(ability, 404 | 419) && effect.property == 24 {
-                    // Sunlight404's three15-point effects target the three enemy slots.
-                    PetRef {
-                        team: target.team,
-                        slot: (effect.order - 1) as usize,
-                    }
+                let target = if super::rules::damages_enemy_team(ability) {
+                    other_team_slot(target, effect.order)
                 } else {
                     target
                 };
@@ -177,13 +290,60 @@ impl<R: BattleRng> Runtime<'_, R> {
                 Ok(true)
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
-            26 | 28 | 50 | 52 | 54 | 63 => self.add_aura_effect(caster, target, effect),
+            26 | 28 | 50 | 52 | 54 | 63 => {
+                let target = if matches!(ability, 527 | 1010) && effect.property == 50 {
+                    other_team_slot(target, effect.order.div_ceil(2))
+                } else {
+                    target
+                };
+                self.add_aura_effect(caster, target, effect)
+            }
             49 => self.remove_aura_effect(caster, effect),
             _ => Err(format!(
                 "unsupported property {} effect {}",
                 effect.property, effect.id
             )),
         }
+    }
+    fn charged_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let charge = self
+            .battle
+            .auras
+            .iter()
+            .find(|a| a.target == caster && a.ability == effect.aura)
+            .map(|a| a.serial);
+        if let Some(serial) = charge {
+            let hit = self.damage_effect(caster, target, ability, effect)?;
+            self.remove_aura(serial)?;
+            return Ok(hit);
+        }
+        let mut charge = effect.clone();
+        charge.property = 26;
+        charge.params[2] = -1;
+        self.add_aura_effect(caster, target, &charge)
+    }
+    fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let p = effect.params;
+        let recipient = other_team_slot(caster, effect.order);
+        if p[2] != 0 && self.battle.pet(caster).family + 1 != p[2] as usize
+            || self.battle.pet(recipient).family + 1 != p[3] as usize
+        {
+            return Ok(false);
+        }
+        let previous = self.healing_target;
+        self.healing_target = Some(recipient);
+        let mut heal = effect.clone();
+        heal.property = 23;
+        heal.params[2] = p[4];
+        let result = self.heal_effect(caster, &heal);
+        self.healing_target = previous;
+        result
     }
     fn reset_aura_state(&mut self, state: u32) -> Result<bool, String> {
         let serials: Vec<_> = self
@@ -423,7 +583,9 @@ impl<R: BattleRng> Runtime<'_, R> {
         let chance = effect.params[1] + self.state(caster, "Stat_Accuracy")
             - self.state(target, "Stat_Dodge");
         let untargetable = caster != target && self.state(target, "untargettable") != 0;
-        if untargetable || !self.roll(chance) {
+        let guaranteed = effect.property == 96
+            && self.required_states(caster, target, effect.params[2], effect.params[3]);
+        if untargetable || !guaranteed && !self.roll(chance) {
             self.events.push(Event::Miss {
                 effect: effect.id,
                 target,
@@ -457,7 +619,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             self.battle.pet_mut(caster).states.insert(last, 0);
             return Ok(false);
         }
-        let periodic = effect.property == 24 && effect.params[2] != 0;
+        let periodic = effect.property == 24 && effect.params[2] != 0
+            || effect.property == 96 && effect.params[4] != 0;
         if !periodic && caster != target && self.block_attack(target)? {
             return Ok(false);
         }
@@ -485,6 +648,11 @@ impl<R: BattleRng> Runtime<'_, R> {
             / divisor
             * if critical { CRITICAL_MULTIPLIER } else { 1.0 };
         let amount = damage.floor().max(0.0) as i32;
+        let amount = if effect.property == 149 {
+            amount.min(self.battle.pet(target).health - 1)
+        } else {
+            amount
+        };
         self.damage_pet(caster, target, amount, critical, periodic)?;
         Ok(amount > 0)
     }
@@ -810,7 +978,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             applied_round: self.battle.round,
             tick_first,
             team_bound: effect.property == 63 && effect.aura != 267
-                || matches!(effect.aura, 333 | 1904),
+                || matches!(effect.aura, 189 | 333 | 1904),
             weather: effect.property == 80,
             charges: self
                 .catalog
