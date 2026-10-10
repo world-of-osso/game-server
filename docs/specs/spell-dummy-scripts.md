@@ -180,6 +180,16 @@ Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodi
 
 Sources: only local Mainline12.1.0.69933 descriptions/effects/variables and read-only imported rows. No invented IDs or source-C++ claim. `crates/server/src/spell_cast/dummy11_tests.rs` exercises these paths: final13/13 plus inherited Colossus1/1, format/check exit0 at`bce19e3`. Requested post-master filter ran once298/299 before rejecting the universal271 rule; no renewed299/299 broad claim; [scope/proof](../wiki/systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths).
 
+### Shared resource mechanics
+
+- [x] Flat `SpellPower.OptionalCost` spends additional available raw power, up to its authored bound, without making that optional amount an admission requirement. Missing required power refuses before any pool is changed.
+- [x] `SpellDuration.DurationPerResource` uses the successful cast's combo-point expenditure, respects native `MaxDuration`, and survives later pool changes. Rupture1943 and Rip1079 retain8/16/24-second native durations for1/3/5 points; periodic-Dummy and other unidentified fields remain unsupported.
+- [x] Envenom32645 and Black Powder319175 multiply their named damage effect by combo points actually spent. Envenom's native buff duration uses the same snapshot. Native Black Powder area/ally/far selection is retained; its soft-cap and Find Weakness branches are not certified.
+- [x] Arcane Barrage44425 snapshots36032s2 charge damage before its existing AfterCast consumes charges. Active321526 refunds its authored hundredths-percent of maximum mana per charge. Missing rank gives no refund; missile impact cannot reread the cleared charges. Secondary231564 hits remain unsupported.
+- [x] Arcane Surge365350 spends its native flat optional mana at successful execution; cancellation spends nothing. Its exact mana-to-damage curve is undetermined: the tooltip's maximum does not establish interpolation. No guessed linear formula or457521 modifier is retained.
+
+Scope/ranking: [all40-spec table](../spell-mechanics-coverage.md). Flat optional costs affect six ranked roots/seven memberships; native per-resource duration affects three/four (overlapping roots, not nine unique closures). Actor family ties at six roots but has no established native spell rotation/budget mapping. Damage-copy fields and actor scripts remain unresolved. No world.db writes or new importer is needed for these resource paths; `OptionalCostPct`, resource-rank cap extensions and whole-ability parity are not certified.
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
