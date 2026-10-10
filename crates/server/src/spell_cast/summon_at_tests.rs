@@ -106,6 +106,142 @@ fn summon_at_data_bound_purging_breath_hits_inside_not_outside() {
         .iter(world)
         .collect();
     assert_eq!(triggers.len(), 1);
+    let health_after_enter = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.npc)
+        .unwrap()
+        .current;
+    h.advance(4);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(h.npc)
+            .unwrap()
+            .current,
+        health_after_enter,
+        "on-enter trigger must not reapply every fixed tick"
+    );
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 20.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    h.advance(2);
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 3.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(h.npc)
+            .unwrap()
+            .current
+            < health_after_enter,
+        "returning inside re-enters the trigger"
+    );
     h.advance(122);
     assert!(h.app.world().get_entity(triggers[0]).is_err());
+}
+
+#[test]
+fn summon_at_periodic_configuration_ticks_only_inside() {
+    // Timing fixture only: IDs, child, radius and duration remain real DB2 data.
+    // No matrix spell is assigned a fictional trigger binding.
+    let mut spell = world_db().unwrap().store.get(1287715).unwrap().clone();
+    spell.effects[0].aura_period_ms = 200;
+    let mut h = harness(vec![spell], &[1287711], 8).unwrap();
+    let outside = spawn_npc(&mut h.app, 20.0);
+    h.cast_and_deliver(1287715, None);
+    h.advance(36);
+    let first = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.npc)
+        .unwrap()
+        .current;
+    assert!(first < 5000.0);
+    h.advance(8);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(h.npc)
+            .unwrap()
+            .current
+            < first
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(outside)
+            .unwrap()
+            .current,
+        5000.0
+    );
+}
+
+#[test]
+fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
+    for (root, area_spell, class, count) in [
+        (84714, 84714, 8, 2),
+        (153626, 153626, 8, 2),
+        (259495, 265163, 3, 1),
+        (355913, 355913, 13, 1),
+    ] {
+        let ids = if root == area_spell {
+            vec![root]
+        } else {
+            vec![root, area_spell]
+        };
+        let mut h = harness(Vec::new(), &ids, class).unwrap();
+        let target = if class == 13 { h.caster } else { h.npc };
+        h.cast_and_deliver(root, Some(target));
+        h.advance(5);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "spell {root}: {:?}",
+            h.inbox.failed
+        );
+        let world = h.app.world_mut();
+        let triggers: Vec<_> = world
+            .query::<&super::area_trigger::SpellAreaTrigger>()
+            .iter(world)
+            .filter(|trigger| trigger.spell_id == area_spell)
+            .collect();
+        assert_eq!(triggers.len(), count, "spell {root}");
+        assert!(triggers.iter().all(|trigger| trigger.trigger_spell == 0));
+    }
+}
+
+#[test]
+fn summon_at_summon_and_area_are_removed_when_owner_leaves_map() {
+    let mut h = harness(Vec::new(), &[49028, 62618], 6).unwrap();
+    h.app.insert_resource(crate::world_data::load_world_data(
+        &world_db().unwrap().powers_db,
+    ));
+    install_summon_properties(&mut h);
+    h.cast_and_deliver(49028, Some(h.npc));
+    // The area is a granted triggered cast: no DK spellbook/GCD restriction.
+    super::cast_triggered(h.app.world_mut(), h.caster, 62618, Some(h.caster), 0);
+    let world = h.app.world_mut();
+    let summons: Vec<_> = world
+        .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
+        .iter(world)
+        .collect();
+    let areas: Vec<_> = world
+        .query_filtered::<Entity, With<super::area_trigger::SpellAreaTrigger>>()
+        .iter(world)
+        .collect();
+    assert_eq!(summons.len(), 1);
+    assert_eq!(areas.len(), 1);
+    world
+        .entity_mut(h.caster)
+        .insert(crate::maps::InMap::continent(1));
+    h.advance(2);
+    for entity in summons.into_iter().chain(areas) {
+        assert!(h.app.world().get_entity(entity).is_err());
+    }
 }

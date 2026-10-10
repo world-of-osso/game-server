@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Spell summons and area triggers](systems/spell-casting.md#temporary-summons-and-spell-area-triggers): effects 28/179, local-CASC SummonProperties importer and ownership/expiry. Six targeted behavioural tests pass: Rune Weapon cast/lifetime, Barrier lifetime, four more available matrix area roots, real Purging Breath enter/radius/expiry, periodic timing fixture, owner map departure. Six summon roots lack creatures; all nine matrix area roots lack trigger bindings, four also require unsupported ground selector 87. No full gate, deployment or full matrix gameplay claim.
+
 - 2026-10-09 — [Auction expiry](systems/auction-house.md#injected-expiry-clock-2026-10-09): injected ServerClock and existing clock-advance admin path; real posting/bidding and reopened mail regressions. RED a999851:2/2 deadline failures; GREEN ab4cd69:2/2 pass. Full locked workspace gate at ab4cd69:1586 passed/0 failed/60 ignored/1 required 300k timing skip; format pass, no warnings. Exact proof ledger linked in system page. No live claim.
 - 2026-10-09 — [Defensive fixes](../defensives-audit.md): shared melee immunity/absorb handling, matching event outcomes, aura 49 player dodge and scripted Brew health/reduction. Five gap tests enabled; current gate evidence and remaining Blur/Turtle limits live in the audit. No merge or deployment.
 
