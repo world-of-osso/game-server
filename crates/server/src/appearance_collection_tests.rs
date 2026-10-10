@@ -34,9 +34,7 @@ fn setup_app() -> Option<App> {
         tick_duration: Duration::from_millis(50),
     });
     app.add_plugins(shared::protocol::ProtocolPlugin);
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.insert_resource(load_item_templates(&path).unwrap());
     app.add_plugins((InventoryPlugin, AppearanceCollectionPlugin));
@@ -44,6 +42,35 @@ fn setup_app() -> Option<App> {
     app.finish();
     app.cleanup();
     Some(app)
+}
+
+#[derive(Resource)]
+struct TestDatabasePath(tempfile::TempDir);
+
+pub(crate) fn install_database(app: &mut App) {
+    let directory = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(directory.path().join("game.redb")).unwrap();
+    persistence::create_tables(&db);
+    app.insert_resource(GameDatabase { db });
+    app.insert_resource(TestDatabasePath(directory));
+}
+
+pub(crate) fn assert_restart(mut app: App, account: u64, expected: &[(u32, bool)]) {
+    let directory = app
+        .world_mut()
+        .remove_resource::<TestDatabasePath>()
+        .unwrap();
+    drop(app);
+    let db = redb::Database::open(directory.0.path().join("game.redb")).unwrap();
+    persistence::create_tables(&db);
+    let collection = load_account_appearances(&db, account);
+    for &(appearance, collected) in expected {
+        assert_eq!(
+            collection.has(appearance),
+            collected,
+            "appearance {appearance} after database/server reopen"
+        );
+    }
 }
 
 struct Client {
@@ -228,6 +255,36 @@ fn equipping_a_bind_on_equip_sword_teaches_its_appearance_to_the_account() {
     enter_world(&mut app, &alt);
     let alt_updates = updates(&mut app, &alt);
     assert!(alt_updates[0].contains(&SHORTSWORD_APPEARANCE));
+    assert_restart(app, ACCOUNT, &[(SHORTSWORD_APPEARANCE, true)]);
+}
+
+#[test]
+fn transmogacq_destroying_an_unbound_boe_collects_and_sends_its_appearance() {
+    let mut app = setup_app().unwrap();
+    let paladin = spawn_client(&mut app, 1, "Uther", WORN_SHORTSWORD);
+    add_pair::<shared::protocol::DestroyItem>(&mut app, paladin.connection);
+    enter_world(&mut app, &paladin);
+    updates(&mut app, &paladin);
+    assert!(!load_account_appearances(db(&app), ACCOUNT).has(SHORTSWORD_APPEARANCE));
+    let location = backpack_slot_of(&app, paladin.character_id, WORN_SHORTSWORD);
+    send::<_, InventoryChannel>(
+        &mut app,
+        &paladin,
+        shared::protocol::DestroyItem { location, count: 0 },
+    );
+    assert!(
+        persistence::load_inventory(db(&app), paladin.character_id)
+            .items
+            .iter()
+            .all(|item| item.item_id != WORN_SHORTSWORD)
+    );
+    assert!(load_account_appearances(db(&app), ACCOUNT).has(SHORTSWORD_APPEARANCE));
+    assert!(
+        updates(&mut app, &paladin)
+            .iter()
+            .any(|update| update.contains(&SHORTSWORD_APPEARANCE))
+    );
+    assert_restart(app, ACCOUNT, &[(SHORTSWORD_APPEARANCE, true)]);
 }
 
 #[test]
@@ -240,4 +297,5 @@ fn owning_a_bind_on_pickup_item_teaches_its_appearance() {
     let entered = updates(&mut app, &paladin);
     assert!(entered[0].contains(&FIST_APPEARANCE), "{entered:?}");
     assert!(load_account_appearances(db(&app), ACCOUNT).has(FIST_APPEARANCE));
+    assert_restart(app, ACCOUNT, &[(FIST_APPEARANCE, true)]);
 }

@@ -75,9 +75,7 @@ fn harness(tables: bool) -> Option<Harness> {
     add_inbox::<LootFailed>(&mut app);
     app.insert_resource(load_item_templates(&path).unwrap());
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    crate::appearance_collection::tests::install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins(LootPlugin);
     if tables {
@@ -333,6 +331,46 @@ fn looting_both_slots_moves_coins_and_candle_into_the_bags_and_ends_the_sparkle(
         "{decay} vs {decay_before}"
     );
     assert!(h.failures().is_empty());
+}
+
+fn loot_appearance_item(item_id: u32, appearance: u32, collected: bool) {
+    let mut h = harness(true).unwrap();
+    let kobold = h.kill_kobold();
+    h.app.world_mut().entity_mut(kobold).insert(CorpseLoot {
+        looters: [(
+            h.looter.character_id,
+            vec![Some(LootContent::Item {
+                item_id,
+                name: "Appearance loot".into(),
+                quality: 2,
+                count: 1,
+            })],
+        )]
+        .into(),
+    });
+    h.open(kobold, true);
+    assert!(h.failures().is_empty());
+    assert_eq!(h.count_of(item_id), 1);
+    assert_eq!(
+        crate::persistence::appearance_store::load_account_appearances(
+            &h.app.world().resource::<GameDatabase>().db,
+            1
+        )
+        .has(appearance),
+        collected
+    );
+    crate::appearance_collection::tests::assert_restart(h.app, 1, &[(appearance, collected)]);
+}
+
+#[test]
+fn transmogacq_looting_class_restricted_bop_collects_on_a_different_class() {
+    // Warrior loots paladin-only Verigan's Fist: collection is not equip eligibility.
+    loot_appearance_item(6953, 2288, true);
+}
+
+#[test]
+fn transmogacq_looting_an_unbound_boe_does_not_collect() {
+    loot_appearance_item(25, 154, false);
 }
 
 #[test]

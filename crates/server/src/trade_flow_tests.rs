@@ -53,9 +53,7 @@ fn trade_harness() -> Option<TradeHarness> {
     });
     app.add_plugins(ProtocolPlugin);
     app.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    crate::appearance_collection::tests::install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.init_resource::<Updates>();
     app.add_systems(First, collect);
@@ -215,6 +213,43 @@ impl TradeHarness {
             .manager
             .is_trading(character_id)
     }
+}
+
+#[test]
+fn transmogacq_trading_an_unbound_boe_collects_for_neither_account() {
+    let mut h = trade_harness().unwrap();
+    let mut inventory = h.inventory(h.a.character_id);
+    inventory.items.push(persistence::InventoryItemData {
+        item_guid: 9_000_025,
+        item_id: 25,
+        name: "Worn Shortsword".into(),
+        quality: 1,
+        required_level: 1,
+        stack_count: 1,
+        vendor_sell_price: 1,
+        unique_auction: false,
+    });
+    persistence::save_inventory(h.db(), h.a.character_id, &inventory);
+    h.open_trade();
+    h.send(
+        h.a.connection,
+        SetTradeItem {
+            slot: 0,
+            item_guid: 9_000_025,
+            count: 1,
+        },
+    );
+    h.send(h.a.connection, ConfirmTrade);
+    h.send(h.b.connection, ConfirmTrade);
+    assert_eq!(h.count(h.a.character_id, 25), 0);
+    assert_eq!(h.count(h.b.character_id, 25), 1);
+    for account in [ACCOUNT_A, ACCOUNT_B] {
+        assert!(
+            !crate::persistence::appearance_store::load_account_appearances(h.db(), account)
+                .has(154)
+        );
+    }
+    crate::appearance_collection::tests::assert_restart(h.app, ACCOUNT_B, &[(154, false)]);
 }
 
 fn send_on<M: lightyear::prelude::Message, C: Channel>(app: &mut App, from: Entity, message: M) {

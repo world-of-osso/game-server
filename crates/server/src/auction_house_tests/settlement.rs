@@ -1,6 +1,63 @@
 use super::*;
 
 #[test]
+fn transmogacq_auction_won_mail_keeps_boe_uncollected() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (seller, _) = persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).unwrap();
+    let (buyer, _) = persistence::create_character_with_test_bags(&db, 2, "Buyer", 1, 1).unwrap();
+    let templates =
+        crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap();
+    let mut inventory = persistence::load_inventory(&db, seller);
+    let guid = persistence::next_id(&db, "item_instance");
+    inventory.items.push(persistence::InventoryItemData {
+        item_guid: guid,
+        item_id: 25,
+        name: "Worn Shortsword".into(),
+        quality: 1,
+        required_level: 1,
+        stack_count: 1,
+        vendor_sell_price: 1,
+        unique_auction: false,
+    });
+    persistence::save_inventory(&db, seller, &inventory);
+    let mut state = AuctionHouseState::default();
+    assert!(
+        create_auction(
+            &db,
+            &templates,
+            &mut state,
+            seller,
+            crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
+            &CreateAuction {
+                item_guid: guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short
+            }
+        )
+        .success
+    );
+    let id = *state.auctions.keys().next().unwrap();
+    assert!(buyout_auction(&db, &mut state, buyer, id).success);
+    let mail_id = mail_store::load_mailbox(&db, buyer)[0].mail_id;
+    take_mail(&db, buyer, mail_id, &mut GoldUpdateQueue::default());
+    assert!(
+        persistence::load_inventory(&db, buyer)
+            .items
+            .iter()
+            .any(|item| item.item_id == 25)
+    );
+    assert!(!crate::persistence::appearance_store::load_account_appearances(&db, 2).has(154));
+    drop(db);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    persistence::create_tables(&reopened);
+    assert!(!crate::persistence::appearance_store::load_account_appearances(&reopened, 2).has(154));
+}
+
+#[test]
 fn bid_on_expired_auction_fails_gracefully() {
     let db = persistence::temp_database();
     let (seller_id, _) =

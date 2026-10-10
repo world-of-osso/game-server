@@ -75,9 +75,7 @@ fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
         tick_duration: Duration::from_millis(50),
     });
     register_messages(&mut app);
-    app.insert_resource(GameDatabase {
-        db: temp_database(),
-    });
+    crate::appearance_collection::tests::install_database(&mut app);
     app.init_resource::<GoldUpdateQueue>();
     app.insert_resource(item_templates());
     app.insert_resource(quests);
@@ -519,7 +517,7 @@ fn grant_armbands(app: &mut App, client: &Client, count: u32) {
 }
 
 #[test]
-fn riverpaw_gnoll_bounty_counts_bag_items_and_grants_the_chosen_reward() {
+fn transmogacq_quest_rewards_collect_chosen_and_unchosen_appearances() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 2);
     let rainer = spawn_npc(&mut app, DEPUTY_RAINER, 2.0);
@@ -571,11 +569,15 @@ fn riverpaw_gnoll_bounty_counts_bag_items_and_grants_the_chosen_reward() {
     );
     let items = bag_items(&app, &client);
     assert!(items.contains(&(URCHINS_PANTS, 1)));
+    let appearances = crate::persistence::appearance_store::load_account_appearances(db(&app), 1);
+    assert!(appearances.has(763), "chosen Urchin's Pants appearance");
+    assert!(appearances.has(356), "unchosen Militia Buckler appearance");
     assert!(
         !items
             .iter()
             .any(|&(id, _)| id == MILITIA_BUCKLER || id == PAINTED_GNOLL_ARMBAND)
     );
+    crate::appearance_collection::tests::assert_restart(app, 1, &[(763, true), (356, true)]);
 }
 
 #[test]
