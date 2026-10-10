@@ -690,7 +690,7 @@ fn toyfx2_scale_toy_applies_replicates_and_reverts() {
             .0,
         0.5
     );
-    // World Enlarger -50 + Super Simian Sphere100: additive1.5, not multiplicative1.
+    // World Enlarger -50 + World Shrinker100: additive1.5, not multiplicative1.
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {

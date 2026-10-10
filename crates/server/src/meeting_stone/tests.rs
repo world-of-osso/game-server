@@ -335,7 +335,7 @@ impl Harness {
 
 #[test]
 fn toyfx2_effect_immunity_blocks_summon_player_and_reverts() {
-    // Pint-Sized Pink Pachyderm46709 supplies authentic immunity37 to effect85.
+    // MiniZep Controller46709 supplies authentic immunity37 to effect85.
     // Puppet summon/no-actions remain unsupported; isolate its real aura effect.
     let mut h = harness(DEADMINES_STONE).unwrap();
     let target = h.target.player;
