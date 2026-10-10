@@ -236,3 +236,15 @@ Damage and heal side effects:
 - [[auras]] — aura runtime, procs, spell and stat modifiers
 - [[combat]] — melee, combat state, death
 - [[networking]] — input ordering, replication dirty queue
+
+## Class Dummy scripts
+
+See [contract](../../specs/spell-dummy-scripts.md). Effect-hit scripts bridge Shield Block2565 to132404, Bloodthirst23881 to117313 and a chance-based184362, and Rampage184367 to184362. Damage/resource effects continue through normal dispatch. Bloodthirst reads modified effect2 base points, not ProcChance101 or PPM; local DB2 has no PPM entry for these casts.
+
+Sources: TrinityCore `a352b1fa` `src/server/scripts/Spells/spell_warrior.cpp` (`spell_warr_shield_block`, `spell_warr_bloodthirst`, `spell_warr_bloodthirst_enrage`); Retail12.1.0.69933 `spell`/`spell_effect` rows2565,132404,23881,117313,184367,184362 in read-only `data/world.db`. Rampage's tooltip states "Enrages you"; its existing effect triggers name the attack spells. Fresh Meat and other optional talent variants remain unproved.
+
+Holy Shock20473 branches on ally/enemy to25914/25912; parent ENERGIZE retains1 Holy Power. Sources: TC `a352b1fa` `spell_paladin.cpp:1261-1311`, `spell_pal_holy_shock`; Retail tooltip `$25912s1`/`$25914s1`, local SP coefficients2.16/11.17, no PPM row. Conditional talent272906 crit bonus is not covered.
+
+Barkskin22812 PERIODIC_DUMMY effect2 casts213709 immediately (Attributes5 EXTRA_INITIAL_PERIOD), then on each1000ms tick while Brambles203953 is present; `auras/scripts.rs` registers this callback. TC `a352b1fa` `spell_druid.cpp:297-316` names the condition and child; Retail203953 tooltip supplies `$213709s1`/`$22812t3`, child AP coefficient0.075. No PPM roll: this is a timed conditional pulse. Brambles absorb/reflection semantics are outside this script.
+
+Penance47540 DUMMY0 starts47757 healing or47758 damage channel with the shared normal channel-state constructor, then resolves the child without a second cost/GCD. The channel target is present before periodic aura application; target77 bolts select it. Source: TC `a352b1fa` `spell_priest.cpp:3070-3125,5546`; local child aura23 triggers47666/47750 at1000ms with extra-initial-period and2000ms duration (three bolts), SP0.932/4.011. No PPM/chance roll. Target marker aura4, Atonement and Power of the Dark Side talent semantics remain unproved.

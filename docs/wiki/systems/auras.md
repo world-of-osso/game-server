@@ -279,12 +279,12 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
 
 ## Script hooks
 
-`AuraScripts(HashMap<spell_id, AuraScript>)` holds four optional hooks: `on_apply`, `on_remove`, `on_periodic` and `on_proc`. The registry is empty. DUMMY 4 and PERIODIC_DUMMY 226 do nothing without a script.
+`AuraScripts(HashMap<spell_id, AuraScript>)` holds four optional hooks: `on_apply`, `on_remove`, `on_periodic` and `on_proc`. Production registers Aspect of the Turtle186265 apply/remove and Barkskin22812's Brambles periodic hook. Other DUMMY4/PERIODIC_DUMMY226 values still require per-spell consumers; `AuraKind::Script` alone is not implementation. See [class scripts](spell-casting.md#class-dummy-scripts).
 
 ## Coverage
 
 - Handled aura IDs (`handlers::kind`): 3, 4, 5, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 56, 60, 65, 69, 79, 82, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 155, 192, 193, 213, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 453, 454, 455.
-- Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 36 IDs covering 5693 instances (87%) are handled. DUMMY 4 counts as handled, but through the empty script registry.
+- Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 36 IDs covering 5693 instances (87%) are handled. DUMMY4 is a registered type, not blanket spell-specific coverage; the current class hooks are listed above.
 - Unhandled cut IDs, all tracked and replicated:
   - no pet or summon system: 429, 382;
   - client or visual only: 332 action bar override, 61 scale, 260 screen effect, 403 visual override, 44 tracking;

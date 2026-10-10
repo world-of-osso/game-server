@@ -1,5 +1,5 @@
 //! Script hooks for script-only aura types (DUMMY 4, PERIODIC_DUMMY 226),
-//! keyed by spell ID. The registry starts empty; a registered script runs on
+//! keyed by spell ID. Class registrations below run on
 //! apply and remove of that spell's auras, on its PERIODIC_DUMMY ticks and on
 //! its procs. Every hook receives the unit carrying the aura.
 
@@ -63,8 +63,18 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
 
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
 const TURTLE_PACIFY: u32 = 205_769;
+const BARKSKIN: u32 = 22_812;
+const BRAMBLES: u32 = 203_953;
+const BRAMBLES_DAMAGE: u32 = 213_709;
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        BARKSKIN,
+        AuraScript {
+            on_periodic: Some(barkskin_brambles),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         ASPECT_OF_THE_TURTLE,
         AuraScript {
@@ -73,6 +83,16 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC a352b1fa spell_druid.cpp:297-316, spell_dru_barkskin. Effect 2's
+/// PERIODIC_DUMMY ticks only deal damage when Brambles is present. Catalog
+/// 203953's tooltip references 213709s1 and 22812t3; the child supplies the
+/// AoE targeting and 0.075 AP coefficient, the parent the 1000ms cadence.
+fn barkskin_brambles(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
+    if effect_index == 2 && super::has_aura(world, unit, BRAMBLES) {
+        crate::spell_cast::cast_triggered(world, unit, BRAMBLES_DAMAGE, Some(unit), 1);
+    }
 }
 
 /// TrinityCore a352b1fa spell_hun_aspect_of_the_turtle applies catalog 205769

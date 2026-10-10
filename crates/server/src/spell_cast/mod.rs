@@ -19,6 +19,8 @@ pub mod creature;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
+#[cfg(test)]
+mod dummy_tests;
 pub mod effects;
 mod hit;
 mod missiles;
@@ -1249,9 +1251,15 @@ fn execute_and_channel(
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
     execute_cast(world, caster, spell, target)?;
+    start_channel(world, caster, spell, target);
+    Ok(())
+}
+
+/// Shared by ordinary channels and the documented Penance DUMMY bridge.
+fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
     let channel_ms = duration_ms(world, caster, spell);
     if !is_channeled(spell) || channel_ms <= 0 {
-        return Ok(());
+        return;
     }
     let tick_ms = spell
         .effects
@@ -1268,7 +1276,6 @@ fn execute_and_channel(
         true,
     );
     insert_cast_state(world, caster, spell, &mut cast);
-    Ok(())
 }
 
 fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast: &mut CastState) {
