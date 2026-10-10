@@ -217,6 +217,73 @@ fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
 }
 
 #[test]
+fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
+    // Green Balloon (toy 69895, spell 99104) references absent creature 53453.
+    // Mechanism-only fixture substitutes EXISTING template 25305, not invented
+    // world data. This test does not mark Green Balloon usable or prove its model.
+    let mut h = harness(Vec::new(), &[99104], 8).unwrap();
+    h.app.insert_resource(crate::world_data::load_world_data(
+        &world_db().unwrap().powers_db,
+    ));
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE summon_properties (ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER); INSERT INTO summon_properties VALUES (3141,1,0,5,6);").unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    let mut spell = world_db().unwrap().store.get(99104).unwrap().clone();
+    let effect = &mut spell.effects[0];
+    assert_eq!(effect.misc_values, [53453, 3141]);
+    assert_eq!(
+        super::summon::unsupported_reason(h.app.world(), effect).as_deref(),
+        Some("missing summon creature 53453")
+    );
+    effect.misc_values[0] = 25305;
+    let dest = super::targets::Dest {
+        position: Vec3::ZERO,
+        orientation: 0.0,
+    };
+    for _ in 0..2 {
+        let ctx = super::effects::EffectCtx {
+            caster: h.caster,
+            spell: &spell,
+            depth: 0,
+            dest: Some(dest),
+            chain_multiplier: 1.0,
+        };
+        super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
+    }
+    let world = h.app.world_mut();
+    let summons: Vec<_> = world
+        .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
+        .iter(world)
+        .collect();
+    assert_eq!(
+        summons.len(),
+        1,
+        "companion slot 6 replaces, rather than duplicates"
+    );
+    let summon = summons[0];
+    assert!(
+        world
+            .get::<crate::creature_ai::FollowOwner>(summon)
+            .is_some()
+    );
+    assert_eq!(
+        world.get::<UnitSummonedBy>(summon).unwrap().0,
+        h.caster.to_bits()
+    );
+    let flags = world
+        .get::<shared::components::UnitFlags>(summon)
+        .unwrap()
+        .0;
+    assert_eq!(flags & 0x300, 0x300, "immune to player and NPC attacks");
+    world
+        .entity_mut(h.caster)
+        .insert(crate::maps::InMap::continent(1));
+    h.advance(2);
+    assert!(h.app.world().get_entity(summon).is_err());
+}
+
+#[test]
 fn summon_at_summon_and_area_are_removed_when_owner_leaves_map() {
     let mut h = harness(Vec::new(), &[49028, 62618], 6).unwrap();
     h.app.insert_resource(crate::world_data::load_world_data(

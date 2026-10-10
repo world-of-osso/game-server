@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Toy effects](systems/toys.md#data-backed-toy-effects-2026-10-10): audited visual-only dummy/aura/script path; shared runtime/preflight summon data gates, wild faction and companion follow/immunity/slot semantics. Missing Retail creature templates and real toy scripts remain explicit; CPU/loopback proof ledger in `/home/osso/.worktrees/handoff-toy-effects.md`. No rendered-client, merge or deployment claim.
+
 - 2026-10-10 — [[toys]] server/protocol foundation: local-CASC Toy1166, unresolved joins retained; atomic account learning/consumption and favourites, all-character account broadcasts, UseToy spell/item/category dispatch and explicit unsupported preflight. CPU/loopback toys8/0 and item-use regressions11/0; no UI, live realm or effect-completeness claim. [Contract](../specs/toys.md).
 
 - 2026-10-09 — [Retail auction mail](systems/mail.md#auction-house): server sends structured text tags and invoice fields; native client formats local GlobalStrings, not invented letters. [Contract](../specs/auction-mail-text.md); expiry/reopen RED2 followed by auction GREEN82/0/2, full-workspace proof plus corrected real-character fixtures. Private5510 native inbox text captured; no broad mail-policy change.

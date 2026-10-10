@@ -41,6 +41,8 @@ pub struct SpellInfo {
     pub name: String,
     /// `spell.NameSubtext_lang` (rank text such as "Racial").
     pub subtext: String,
+    /// At least one DifficultyID-0 SpellXSpellVisual has a nonzero SpellVisualID.
+    pub has_spell_visual: bool,
     pub misc: Option<SpellMisc>,
     /// Every `spell_effect` row, sorted by `EffectIndex` (indexes may be sparse).
     pub effects: Vec<SpellEffect>,
