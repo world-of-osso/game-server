@@ -166,7 +166,8 @@ pub(super) fn keg_smash_plan(
 }
 
 ///294029 explicitly names212436s2 milliseconds per hit, capped at s3 targets.
-/// The resolving damage ledger excludes defended/immune/non-damaging targets.
+/// The damage-effect ledger excludes defended/immune targets but includes
+/// fully absorbed hits, which still count as successful targets.
 pub(super) fn butchery(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     if !crate::auras::has_aura(world, caster, FRENZY_STRIKES) {
         return;
@@ -177,13 +178,7 @@ pub(super) fn butchery(world: &mut World, caster: Entity, target: Entity, _depth
         .0
         .last()
         .filter(|frame| frame.caster == caster && frame.spell_id == BUTCHERY)
-        .and_then(|frame| {
-            frame
-                .damage
-                .iter()
-                .filter(|(_, amount)| *amount > 0.0)
-                .position(|(unit, _)| *unit == target)
-        });
+        .and_then(|frame| frame.damage.iter().position(|(unit, _)| *unit == target));
     if position.is_some_and(|position| position < cap) {
         let seconds = f64::from(script_effect_value(world, caster, BUTCHERY, 1)) / 1000.0;
         reduce_cooldown(world, caster, WILDFIRE_BOMB, seconds);

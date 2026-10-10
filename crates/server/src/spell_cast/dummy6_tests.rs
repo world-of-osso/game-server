@@ -324,6 +324,40 @@ fn dummy6_butchery_does_not_start_ready_bomb_recharge() {
     assert!(!h.inbox.charges.iter().any(|e| e.spell_id == 259495));
 }
 #[test]
+fn dummy6_butchery_counts_fully_absorbed_hits_for_recharge() {
+    let mut h = harness(Vec::new(), &[212436, 294029, 259495, 265163, 17], 3).unwrap();
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, caster, 294029, u32::MAX);
+    h.cast_and_deliver(259495, Some(npc));
+    h.advance(35);
+    landed(&h);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .spell_power = 200.0;
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .healing_power = 200.0;
+    apply(&mut h, caster, npc, 17, 1);
+    let before = bomb_ready(&h);
+    h.cast_and_deliver(212436, None);
+    h.advance(5);
+    landed(&h);
+    let hit = h
+        .inbox
+        .log
+        .iter()
+        .find(|e| e.spell_id == Some(212436) && e.kind == CombatLogKind::Damage)
+        .unwrap();
+    assert_eq!(hit.amount, 0);
+    assert!(hit.absorbed > 0);
+    assert!((bomb_ready(&h) - (before - 3.0)).abs() < 1e-9);
+}
+#[test]
 fn dummy6_starfall_caps_extension_and_preserves_existing_tick_time() {
     let mut h = harness(Vec::new(), &[191034, 50286, 327541, 164812], 11).unwrap();
     let c = h.caster;
