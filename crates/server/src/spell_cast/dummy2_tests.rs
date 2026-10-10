@@ -294,3 +294,88 @@ fn dummy2_mage_fire_blast_guarantees_a_critical_hit_with_zero_crit_stats() {
     assert!(damage.crit);
     assert!(varied(98.625 * 2.0).contains(&(5000.0 - h.health(h.npc))));
 }
+
+#[test]
+fn dummy2_dk_death_coil_damages_an_enemy_through_47632() {
+    let mut h =
+        harness(Vec::new(), &[47541, 47632, 47633, 77575], 6).expect("real world.db required");
+    h.set_power(PowerType::RunicPower, 1000.0);
+    h.cast_and_deliver(47541, Some(h.npc));
+    h.advance(12);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(211.812).contains(&(5000.0 - h.health(h.npc))));
+    assert!(h.power(PowerType::RunicPower) < 1000.0);
+    assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(47632)
+        && event.kind == shared::protocol::CombatLogKind::Damage));
+}
+
+#[test]
+fn dummy2_dk_death_coil_heals_self_while_lichborne() {
+    let mut h = harness(Vec::new(), &[47541, 47632, 47633, 49039, 77575], 6)
+        .expect("real world.db required");
+    h.cast_and_deliver(49039, Some(h.caster));
+    h.advance(35);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.set_power(PowerType::RunicPower, 1000.0);
+    h.cast_and_deliver(47541, Some(h.caster));
+    h.advance(12);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(463.75).contains(&(h.health(h.caster) - 100.0)));
+    assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(47633)
+        && event.kind == shared::protocol::CombatLogKind::Heal));
+}
+
+#[test]
+fn dummy2_dk_death_coil_rejects_living_ally_without_spending_runic_power() {
+    let mut h =
+        harness(Vec::new(), &[47541, 47632, 47633, 77575], 6).expect("real world.db required");
+    let ally = spawn_player(&mut h.app, 1, 2.0);
+    h.set_power(PowerType::RunicPower, 1000.0);
+    h.cast_and_deliver(47541, Some(ally));
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert_eq!(h.power(PowerType::RunicPower), 1000.0);
+    assert_eq!(h.health(ally), 1000.0);
+}
+
+#[test]
+fn dummy2_dk_death_coil_extends_both_outbreak_plagues_by_one_second() {
+    let mut h = harness(
+        Vec::new(),
+        &[47541, 47632, 47633, 77575, 1240996, 191587],
+        6,
+    )
+    .expect("real world.db required");
+    h.cast_and_deliver(77575, Some(h.npc));
+    h.advance(35);
+    let expirations: Vec<_> = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.npc)
+        .unwrap()
+        .iter()
+        .filter(|aura| [1240996, 191587].contains(&aura.spell_id))
+        .map(|aura| (aura.spell_id, aura.expires_at.unwrap()))
+        .collect();
+    assert_eq!(expirations.len(), 2);
+    h.set_power(PowerType::RunicPower, 1000.0);
+    h.cast_and_deliver(47541, Some(h.npc));
+    h.advance(12);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    for (spell, before) in expirations {
+        let after = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.npc)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        assert_eq!(after, before + 1.0);
+    }
+}

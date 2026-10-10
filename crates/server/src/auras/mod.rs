@@ -862,6 +862,32 @@ pub fn remove_auras(
     removed
 }
 
+/// Extend existing finite auras owned by this caster without restarting ticks.
+pub(crate) fn extend_owned_duration(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spells: &[u32],
+    milliseconds: u32,
+) {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let mut changed = false;
+    for aura in &mut auras.auras {
+        if aura.caster == caster && spells.contains(&aura.spell_id) {
+            if let Some(expiry) = &mut aura.expires_at {
+                *expiry += f64::from(milliseconds) / 1000.0;
+                aura.duration_ms += milliseconds;
+                changed = true;
+            }
+        }
+    }
+    if changed {
+        auras.dirty = true;
+    }
+}
+
 /// One charge used (proc or spell modifier); the aura ends at zero charges.
 pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
