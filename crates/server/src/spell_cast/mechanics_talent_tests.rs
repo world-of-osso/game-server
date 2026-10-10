@@ -7,7 +7,18 @@ use shared::protocol::CombatLogKind;
 fn spellmech_barrage_charge_damage_and_talented_mana_refund_survive_flight() {
     for talent in [false, true] {
         let mut h = harness(Vec::new(), &[44425, 36032, 321526], 8).unwrap();
-        if !talent {
+        if talent {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 321526,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        } else {
             h.app.world_mut().entity_mut(h.caster).insert(
                 crate::class_progression::KnownSpells::fixture(vec![44425, 36032]),
             );
