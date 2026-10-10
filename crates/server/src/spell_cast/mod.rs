@@ -44,6 +44,9 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+mod guardian;
+#[cfg(test)]
+mod guardian_tests;
 mod hit;
 mod missiles;
 pub mod powers;
