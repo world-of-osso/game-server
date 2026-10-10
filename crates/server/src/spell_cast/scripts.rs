@@ -88,7 +88,7 @@ fn fortifying_brew(world: &mut World, caster: Entity, _target: Entity, _depth: u
     };
     // Only the two requested defensive effects; stagger, talents and cosmetic
     // size effects are not implemented by this bounded bridge.
-    crate::auras::apply_aura_from_spell(
+    crate::auras::apply_aura_with_spell(
         world,
         &crate::auras::AuraApplication {
             caster,
