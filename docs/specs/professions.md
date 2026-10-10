@@ -10,6 +10,7 @@ Retail professions on the server: learning at profession trainers and crafting k
 - A known recipe casts with its Retail cast time. Without every reagent, tool or bag room it fails with Retail error text and changes nothing. On completion it consumes the reagents, puts the created item in the bags and may raise the recipe's skill-up line by the TrinityCore difficulty chances.
 - `CraftRecipe { casts }` repeats the cast; stopping or moving cancels the rest, and the first cast that cannot start ends the queue.
 - Professions persist per character and reach the owner as `ProfessionSnapshot` on world entry and after every change.
+- Spells learned through trainers, spell effects or online admin `learn-spell` also enter the player's live known-spell list and reach the owner's spellbook without relog through `SpellsLearned`. Repeated learning sends no duplicate delta. Persisted learned spells are included in `KnownSpellsSnapshot` on entry and remain known across level, specialization and talent re-evaluation.
 
 - New characters start with empty bags and no money (the old 20 Linen / 10 Peacebloom / 10 Copper Ore / 10 gold seed is gone). Admin `grant-item <character> <item_id> <count>` stores items in the bags (content_item name, quality and sell price, stacked to the template's max) and sends an online owner the `InventoryDelta`; unknown items, unknown characters and full bags are refused unchanged.
 

@@ -143,6 +143,7 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
         tick_duration: Duration::from_millis(50),
     });
     add_inbox::<KnownSpellsSnapshot>(&mut app);
+    add_inbox::<shared::protocol::ProfessionSnapshot>(&mut app);
     add_inbox::<SpellsLearned>(&mut app);
     add_inbox::<SpellsUnlearned>(&mut app);
     add_inbox::<SpecializationChanged>(&mut app);
@@ -157,7 +158,7 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     app.register_message::<CommitTraitConfig>();
     app.insert_resource(GameDatabase { db });
     app.insert_resource(classes);
-    app.add_plugins(ClassProgressionPlugin);
+    app.add_plugins((ClassProgressionPlugin, crate::profession::ProfessionPlugin));
     app.add_plugins(crate::experience::ExperiencePlugin);
     app.finish();
     app.cleanup();
@@ -1492,4 +1493,176 @@ fn fresh_paladin_knows_general_basics_but_no_content_abilities() {
             "content ability {spell} was taught"
         );
     }
+}
+
+/// Online GM learning must cross the same Lightyear boundary as level/talent learning.
+#[test]
+fn online_learn_spell_admin_publishes_without_relog() {
+    use crate::profession::{PlayerProfessions, load_profession_data};
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::components::{MovementControl, Position};
+    use shared::protocol::ProfessionSnapshot;
+
+    let classes = class_spells().unwrap();
+    let data = crate::spell_cast::test_harness::world_db().unwrap();
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let db = temp_database();
+    let character_id = persistence::create_character(&db, 1, "Probe", HUMAN, WARRIOR)
+        .unwrap()
+        .0;
+    save_progression(
+        &db,
+        character_id,
+        &ProgressionData {
+            spec_id: 72,
+            action_bar: Vec::new(),
+        },
+    );
+    let mut app = setup_app(db, classes);
+    app.insert_resource(load_profession_data(&conn).unwrap());
+    app.insert_resource(crate::spell_info::SpellStore::fixture(
+        [1719, 85288]
+            .into_iter()
+            .map(|id| data.store.get(id).unwrap().clone())
+            .collect(),
+    ));
+    let player = spawn_player(&mut app, character_id, HUMAN, WARRIOR, 10);
+    app.world_mut().entity_mut(player).insert((
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        MovementControl::default(),
+        PlayerProfessions::default(),
+    ));
+    let connection = connection_of(&mut app, player);
+    app.world_mut().entity_mut(connection).insert((
+        MessageSender::<ProfessionSnapshot>::default(),
+        MessageReceiver::<ProfessionSnapshot>::default(),
+    ));
+    advance(&mut app);
+    assert_eq!(app.world().get::<ActiveSpec>(player).unwrap().0, 72);
+    let initial = received::<KnownSpellsSnapshot>(&mut app, player);
+    assert_eq!(initial.len(), 1);
+    assert!(!initial[0].spells.contains(&1719));
+    assert!(!initial[0].spells.contains(&85288));
+    drain(&mut app, player);
+    received::<SpellsLearned>(&mut app, player);
+    for spell in [1719, 85288] {
+        let response =
+            app.world_mut()
+                .run_system_once(
+                    move |db: Res<GameDatabase>,
+                          mut commands: Commands,
+                          players: Query<(
+                        Entity,
+                        &mut Position,
+                        &ClientId,
+                        &mut MovementControl,
+                    )>| {
+                        crate::admin_handlers::handle_learn_spell(
+                            &db,
+                            &mut commands,
+                            &players,
+                            "Probe",
+                            spell,
+                        )
+                    },
+                )
+                .unwrap();
+        assert!(
+            matches!(response, crate::admin_types::AdminResponse::SpellLearned { spell: id, .. } if id == spell)
+        );
+        advance(&mut app);
+        assert!(
+            persistence::load_professions(&app.world().resource::<GameDatabase>().db, character_id)
+                .knows(spell)
+        );
+        assert_eq!(
+            received::<SpellsLearned>(&mut app, player),
+            vec![SpellsLearned {
+                spells: vec![spell]
+            }]
+        );
+        assert!(
+            app.world()
+                .get::<KnownSpells>(player)
+                .unwrap()
+                .contains(spell)
+        );
+    }
+    // Re-evaluation must not retract an explicitly learned spell.
+    app.world_mut().get_mut::<Level>(player).unwrap().0 = 11;
+    advance(&mut app);
+    assert!(
+        received::<SpellsUnlearned>(&mut app, player)
+            .iter()
+            .all(|delta| !delta.spells.contains(&1719) && !delta.spells.contains(&85288))
+    );
+    assert!(
+        app.world()
+            .get::<KnownSpells>(player)
+            .unwrap()
+            .contains(1719)
+    );
+    assert!(
+        app.world()
+            .get::<KnownSpells>(player)
+            .unwrap()
+            .contains(85288)
+    );
+    send_request(&mut app, player, SetSpecialization { spec_id: SPEC_ARMS });
+    assert!(
+        received::<SpellsUnlearned>(&mut app, player)
+            .iter()
+            .all(|delta| !delta.spells.contains(&1719) && !delta.spells.contains(&85288))
+    );
+    let response = app
+        .world_mut()
+        .run_system_once(
+            |db: Res<GameDatabase>,
+             mut commands: Commands,
+             players: Query<(Entity, &mut Position, &ClientId, &mut MovementControl)>| {
+                crate::admin_handlers::handle_learn_spell(
+                    &db,
+                    &mut commands,
+                    &players,
+                    "Probe",
+                    1719,
+                )
+            },
+        )
+        .unwrap();
+    assert!(matches!(
+        response,
+        crate::admin_types::AdminResponse::SpellLearned { .. }
+    ));
+    received::<SpellsLearned>(&mut app, player);
+    advance(&mut app);
+    assert!(
+        received::<SpellsLearned>(&mut app, player).is_empty(),
+        "duplicate learn must not republish"
+    );
+    // Auth loads the persisted learned spells before the initial progression snapshot.
+    let profs =
+        persistence::load_professions(&app.world().resource::<GameDatabase>().db, character_id);
+    app.world_mut().despawn(connection);
+    app.world_mut().despawn(player);
+    let reconnected = spawn_player(&mut app, character_id, HUMAN, WARRIOR, 11);
+    app.world_mut().entity_mut(reconnected).insert(profs);
+    advance(&mut app);
+    let snapshot = received::<KnownSpellsSnapshot>(&mut app, reconnected);
+    assert_eq!(snapshot.len(), 1);
+    for spell in [1719, 85288] {
+        assert_eq!(
+            snapshot[0].spells.iter().filter(|&&id| id == spell).count(),
+            1
+        );
+    }
+    assert!(received::<SpellsLearned>(&mut app, reconnected).is_empty());
 }
