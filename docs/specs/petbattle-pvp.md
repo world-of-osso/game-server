@@ -6,8 +6,8 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 
 - [x] Join once, leave queue, reject duplicate queue entries.
 - [x] Propose compatible slotted teams; decline requeues the other player; reject stale acceptance.
-- [ ] Wait for both player decisions, preserve each player's ally/enemy orientation, reject stale rounds and duplicate decisions.
-- [ ] Resolve engine victory/defeat/draw, forfeit and disconnected opponents without trapping PvP pets.
+- [x] Wait for both player decisions, preserve each player's ally/enemy orientation, reject stale rounds and duplicate decisions.
+- [x] Resolve engine victory/defeat, forfeit and disconnected opponents without trapping PvP pets.
 - [ ] Native Find Battle/Leave Queue and Accept/Decline use the same Retail elements in both skins.
 
 ## How it works
@@ -26,7 +26,8 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 
 ## Known gaps (current cycle)
 
-- [ ] Synchronized rounds, terminal outcomes, disconnected owners.
+- [ ] Initial active-pet selection, proposal/round deadlines and PvP XP rewards remain unimplemented.
+- [ ] Draw delivery has no dedicated production-boundary assertion.
 - [ ] Native controls and private both-skin proof.
 - [ ] Exact Retail rating/level tolerance, countdown/penalty and reward policy require source evidence; exact equal level profiles currently match.
 
