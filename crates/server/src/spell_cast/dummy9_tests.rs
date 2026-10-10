@@ -270,7 +270,9 @@ fn dummy9_named_ground_spells_reject_missing_or_out_of_range_ground_before_coold
     for id in [73920, 61882, 1234796] {
         for point in [None, Some([1000.0, 0.0, 0.0]), Some([f32::NAN, 0.0, 0.0])] {
             let mut h = harness(Vec::new(), &[id], if id == 1234796 { 12 } else { 7 }).unwrap();
-            h.set_power(PowerType::Maelstrom, 100.0);
+            if id == 61882 {
+                h.set_power(PowerType::Maelstrom, 100.0);
+            }
             if let Some(p) = point {
                 ground(&mut h, id, p);
             } else {
