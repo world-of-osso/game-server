@@ -1247,9 +1247,13 @@ pub(crate) fn applicable_costs(
         };
         // OptionalCost is additional raw spend, never an admission requirement.
         let optional = cost.optional_cost.max(0) as f32;
-        let optional = match SpellModOp::power_cost(cost.order_index) {
-            Some(op) => modify(world, caster, spell, op, optional).max(0.0),
-            None => optional,
+        let optional = if optional > 0.0 {
+            match SpellModOp::power_cost(cost.order_index) {
+                Some(op) => modify(world, caster, spell, op, optional).max(0.0),
+                None => optional,
+            }
+        } else {
+            0.0
         };
         let amount = amount + optional.min((current - amount).max(0.0));
         costs.push((pool, amount, current));

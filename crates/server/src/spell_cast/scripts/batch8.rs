@@ -197,10 +197,17 @@ pub(super) fn sanctify_plan(
         chain_multipliers: Vec::new(),
     }]
 }
-///44425's unconditional resource contract. Charge-scaled damage and231564
-///secondary hits remain explicit gaps; consuming charges does not certify them.
+///44425 consumes charges after launch.321526 refunds its authored hundredths
+///of a percent of maximum mana per charge;231564 secondary hits remain open.
 pub(super) fn arcane_barrage(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     let (current, _) = spell_cast::powers::power_value(world, caster, PowerType::ArcaneCharges)
         .expect("Mage requires Arcane Charges");
+    if crate::auras::has_aura(world, caster, 321526) {
+        let (_, max_mana) = spell_cast::powers::power_value(world, caster, PowerType::Mana)
+            .expect("Mage requires mana");
+        let hundredths_percent = script_effect_value(world, caster, 321526, 0);
+        let refund = current * max_mana * hundredths_percent / 10000.0;
+        spell_cast::powers::change_power(world, caster, PowerType::Mana, refund);
+    }
     spell_cast::powers::change_power(world, caster, PowerType::ArcaneCharges, -current);
 }

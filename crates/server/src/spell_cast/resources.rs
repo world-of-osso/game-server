@@ -5,7 +5,12 @@ use bevy::prelude::*;
 use shared::components::PowerType;
 
 use super::{CostPool, powers};
-use crate::spell_info::SpellInfo;
+use crate::spell_info::{SpellDuration, SpellInfo};
+
+const ENVENOM: u32 = 32645;
+const BLACK_POWDER: u32 = 319175;
+const ARCANE_BARRAGE: u32 = 44425;
+const ARCANE_CHARGE: u32 = 36032;
 
 pub(super) fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
     costs
@@ -28,6 +33,24 @@ fn scale_effect(spell: &mut SpellInfo, index: u8, multiplier: f32) {
     effect.bonus_coefficient_from_ap *= multiplier;
 }
 
+fn snapshot_duration(duration: &mut SpellDuration, combo: f32) {
+    if duration.per_resource_ms == 0 {
+        return;
+    }
+    duration.duration_ms += (duration.per_resource_ms as f32 * combo) as i32;
+    if duration.max_duration_ms > 0 {
+        duration.duration_ms = duration.duration_ms.min(duration.max_duration_ms);
+    }
+    duration.per_resource_ms = 0;
+}
+
+fn barrage_multiplier(world: &World, caster: Entity) -> f32 {
+    let (charges, _) = powers::power_value(world, caster, PowerType::ArcaneCharges)
+        .expect("Arcane Barrage requires charges");
+    let bonus = super::scripts::script_effect_value(world, caster, ARCANE_CHARGE, 1);
+    1.0 + charges * bonus / 100.0
+}
+
 pub(super) fn snapshot(
     world: &World,
     caster: Entity,
@@ -43,31 +66,15 @@ pub(super) fn snapshot(
             .into_iter()
             .flatten()
         {
-            if duration.per_resource_ms != 0 {
-                duration.duration_ms += (duration.per_resource_ms as f32 * combo) as i32;
-                if duration.max_duration_ms > 0 {
-                    duration.duration_ms = duration.duration_ms.min(duration.max_duration_ms);
-                }
-                duration.per_resource_ms = 0;
-            }
+            snapshot_duration(duration, combo);
         }
     }
-    match spell.id {
+    let multiplier = match spell.id {
         // Native descriptions explicitly multiply m1 by combo points spent.
-        32645 | 319175 => scale_effect(&mut spell, 0, combo),
-        365350 => {
-            let (_, max) = powers::power_value(world, caster, PowerType::Mana)
-                .expect("Arcane Surge requires mana");
-            let mana = spent(costs, PowerType::Mana);
-            let factor = super::scripts::script_effect_value(world, caster, spell.id, 1);
-            let mut multiplier = factor * mana / max;
-            if crate::auras::has_aura(world, caster, 457521) {
-                multiplier *=
-                    1.0 + super::scripts::script_effect_value(world, caster, 457521, 0) / 100.0;
-            }
-            scale_effect(&mut spell, 0, multiplier);
-        }
-        _ => {}
-    }
+        ENVENOM | BLACK_POWDER => combo,
+        ARCANE_BARRAGE => barrage_multiplier(world, caster),
+        _ => return spell,
+    };
+    scale_effect(&mut spell, 0, multiplier);
     spell
 }
