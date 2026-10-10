@@ -19,6 +19,7 @@ fn probe_and_clamp(
         fall_tracker,
         health,
         dt,
+        false,
     );
 }
 
@@ -576,6 +577,7 @@ fn a_fall_that_comes_to_rest_a_hair_above_the_floor_lands() {
                 &mut fall_tracker,
                 health,
                 dt,
+                false,
             );
         }
     };

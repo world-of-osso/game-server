@@ -21,6 +21,7 @@ pub(super) type PlayerMovement = (
     Option<&'static shared::casting::CastState>,
     &'static mut FallTracker,
     &'static mut PlayerMotion,
+    Option<&'static shared::components::FeatherFall>,
 );
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -138,6 +139,7 @@ pub(super) fn apply_movement_input(
         cast_state,
         mut fall_tracker,
         mut motion,
+        feather_fall,
     )) = players.get_mut(player_entity)
     else {
         return MovementChanges::default();
@@ -214,6 +216,7 @@ pub(super) fn apply_movement_input(
                 swimming,
                 jumping: input.jumping,
                 airborne: fall_tracker.airborne_state(),
+                feather_fall: feather_fall.is_some_and(|state| state.0),
             };
             judged_height(ground, map_id, player, next)
         }
@@ -245,6 +248,7 @@ struct JudgedPlayer {
     swimming: bool,
     jumping: bool,
     airborne: Option<Airborne>,
+    feather_fall: bool,
 }
 
 /// The height the player gets at `next`: within the swim bounds there while swimming,
@@ -260,6 +264,7 @@ fn judged_height(ground: &mut GroundMap, map_id: u32, player: JudgedPlayer, next
     let envelope = LandEnvelope {
         airborne: player.airborne,
         jumping: player.jumping,
+        feather_fall: player.feather_fall,
     };
     land_height(ground, map_id, player.current, next, envelope)
 }
@@ -368,6 +373,7 @@ pub(super) fn swim_bounds(ground: &mut GroundMap, map_id: u32, feet: Vec3) -> Op
 pub(super) struct LandEnvelope {
     pub(super) airborne: Option<Airborne>,
     pub(super) jumping: bool,
+    pub(super) feather_fall: bool,
 }
 
 /// A player off the ground since `takeoff_y`, `secs` ago, with `impulse` upward speed.
@@ -406,10 +412,14 @@ fn land_height(
 pub(super) fn land_ceiling(current_y: f32, floor: f32, envelope: LandEnvelope) -> f32 {
     match (envelope.airborne, envelope.jumping) {
         (Some(airborne), _) => {
-            airborne.takeoff_y + highest_arc(airborne.impulse, airborne.secs) + HEIGHT_TOLERANCE
+            airborne.takeoff_y
+                + highest_arc(airborne.impulse, airborne.secs, envelope.feather_fall)
+                + HEIGHT_TOLERANCE
         }
         (None, true) => {
-            current_y + highest_arc(shared::movement::JUMP_IMPULSE, 0.0) + HEIGHT_TOLERANCE
+            current_y
+                + highest_arc(shared::movement::JUMP_IMPULSE, 0.0, envelope.feather_fall)
+                + HEIGHT_TOLERANCE
         }
         (None, false) => (floor + super::GROUND_SNAP_THRESHOLD).max(current_y),
     }
@@ -417,9 +427,15 @@ pub(super) fn land_ceiling(current_y: f32, floor: f32, envelope: LandEnvelope) -
 
 /// Highest point, over the takeoff, of a launch at `impulse` under `GRAVITY` between
 /// `secs - MOVEMENT_BANK_SECS` and `secs + MOVEMENT_BANK_SECS` after it.
-fn highest_arc(impulse: f32, secs: f32) -> f32 {
+fn highest_arc(impulse: f32, secs: f32, feather_fall: bool) -> f32 {
     let gravity = shared::movement::GRAVITY;
-    let arc = |t: f32| impulse * t - 0.5 * gravity * t * t;
+    let arc = |t: f32| {
+        if feather_fall {
+            shared::movement::feather_fall_displacement(impulse, t)
+        } else {
+            impulse * t - 0.5 * gravity * t * t
+        }
+    };
     let earliest = (secs - MOVEMENT_BANK_SECS).max(0.0);
     let latest = secs + MOVEMENT_BANK_SECS;
     arc((impulse / gravity).clamp(earliest, latest))

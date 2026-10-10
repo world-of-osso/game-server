@@ -31,6 +31,15 @@ pub(super) fn view_overrides(
             super::handlers::ANIM_REPLACEMENT_SET => {
                 vec![AuraOverride::Animation(effect.misc_values[0] as u32)]
             }
+            super::handlers::OVERRIDE_SPELLS => {
+                let id = effect.misc_values[0] as u32;
+                super::override_spell_data::spells(world, id).map_or_else(Vec::new, |spells| {
+                    vec![AuraOverride::SpellSet {
+                        id,
+                        spells: spells.to_vec(),
+                    }]
+                })
+            }
             OVERRIDE_ACTIONBAR_SPELLS => {
                 let candidates = if effect.misc_values[0] != 0 {
                     vec![effect.misc_values[0] as u32]
@@ -53,6 +62,22 @@ pub(super) fn view_overrides(
             _ => Vec::new(),
         })
         .collect()
+}
+
+/// Newest override set grants temporary cast permission; never persist KnownSpells.
+pub(crate) fn grants_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
+    world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .auras
+                .iter()
+                .rev()
+                .flat_map(|aura| &aura.effects)
+                .find(|effect| effect.aura_type == super::handlers::OVERRIDE_SPELLS)
+        })
+        .and_then(|effect| super::override_spell_data::spells(world, effect.misc_values[0] as u32))
+        .is_some_and(|spells| spell_id != 0 && spells.contains(&spell_id))
 }
 
 pub(crate) fn resolve_spell(world: &World, caster: Entity, spell_id: u32) -> u32 {

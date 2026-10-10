@@ -52,14 +52,15 @@ fn remove_immune_effect_targets(
     let mut immune_units = Vec::new();
     for planned in plan.iter_mut() {
         let effect = &spell.effects[planned.index];
-        if negative & (1 << effect.index) == 0 {
-            continue;
-        }
+        let harmful = negative & (1 << effect.index) != 0;
         planned.units.retain(|unit| {
-            if misses.iter().any(|(missed, _)| missed == unit) {
+            if harmful && misses.iter().any(|(missed, _)| missed == unit) {
                 return false;
             }
-            if mechanic_immunity::blocks_mechanic(world, *unit, spell, effect.mechanic) {
+            if crate::auras::effect_immunity::blocks_effect(world, *unit, spell, effect)
+                || harmful
+                    && mechanic_immunity::blocks_mechanic(world, *unit, spell, effect.mechanic)
+            {
                 immune_units.push(*unit);
                 return false;
             }

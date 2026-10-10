@@ -925,6 +925,7 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
         .expect("plain component query always validates");
     crate::class_progression::knows_spell(&known, caster, spell_id)
         || taught_by_known_spell(world, caster, spell_id)
+        || crate::auras::overrides::grants_spell(world, caster, spell_id)
         || world.get::<KnownSpells>(caster).is_some_and(|known| {
             known
                 .iter()
@@ -1597,6 +1598,10 @@ fn resolve_effects(
         let handler = effects::handler(effect.effect);
         let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
+            if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
+                effects::log_mechanic_immune(world, &ctx, unit);
+                continue;
+            }
             if let Some(handler) = handler
                 && world.get_entity(unit).is_ok()
             {
