@@ -164,6 +164,7 @@ pub enum CastFailure {
     InventoryFull,
     CantBeDisenchanted,
     CantBeDisenchantedSkill,
+    DisenchantNotKnown,
     /// A Tame Beast, Call Pet or Dismiss Pet check (`crate::hunter_pet::check_cast`).
     Pet(crate::hunter_pet::PetCastFailure),
     Unsupported(String),
@@ -174,7 +175,8 @@ impl CastFailure {
         use CastFailReason as R;
         match self {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
-            Self::NotKnown => (R::NotKnown, None),
+            Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
+            Self::DisenchantNotKnown => (R::NotKnown, None),
             Self::CasterDead => (R::CasterDead, None),
             Self::CrowdControlled(block) => match block {
                 crate::auras::CastBlock::Stunned => (R::Stunned, None),
@@ -792,7 +794,12 @@ fn request_cast(
         ));
     }
     if !caster_knows_spell(world, caster, spell.id) {
-        return Err((spell.id, CastFailure::NotKnown));
+        let failure = if disenchant::is_disenchant(&spell) {
+            CastFailure::DisenchantNotKnown
+        } else {
+            CastFailure::NotKnown
+        };
+        return Err((spell.id, failure));
     }
     let explicit = request
         .target_entity

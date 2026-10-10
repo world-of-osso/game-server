@@ -26,7 +26,18 @@ pub(crate) struct DisenchantData {
 
 pub(crate) fn load_data(conn: &rusqlite::Connection) -> rusqlite::Result<DisenchantData> {
     // Flags0: CONJURED=2, NO_DISENCHANT=0x8000. Never use legacy DisenchantID.
-    let mut stmt = conn.prepare("SELECT c.ID, d.ID, d.SkillRequired FROM content_item c JOIN item_sparse s ON s.ID=c.ID JOIN item_disenchant_loot d ON d.Class=c.ClassID AND (d.Subclass<0 OR d.Subclass=c.SubclassID) AND d.Quality=c.Quality AND c.ItemLevel BETWEEN d.MinLevel AND d.MaxLevel AND (d.ExpansionID=-2 OR d.ExpansionID=s.ExpansionID) WHERE (s.Flags_0 & 32770)=0 AND s.Bonding!=4 AND s.Stackable=1 AND s.ZoneBound_0=0 AND s.ZoneBound_1=0 AND s.InstanceBound=0 AND s.SellPrice>0 ORDER BY d.ID")?;
+    let mut stmt = conn.prepare(
+        "SELECT c.ID, d.ID, d.SkillRequired
+         FROM content_item c JOIN item_sparse s ON s.ID=c.ID
+         JOIN item_disenchant_loot d ON d.Class=c.ClassID
+           AND (d.Subclass<0 OR d.Subclass=c.SubclassID)
+           AND d.Quality=c.Quality
+           AND c.ItemLevel BETWEEN d.MinLevel AND d.MaxLevel
+           AND (d.ExpansionID=-2 OR d.ExpansionID=s.ExpansionID)
+         WHERE (s.Flags_0 & 32770)=0 AND s.Bonding!=4 AND s.Stackable=1
+           AND s.ZoneBound_0=0 AND s.ZoneBound_1=0 AND s.InstanceBound=0
+           AND s.SellPrice>0 ORDER BY d.ID",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok((
             row.get::<_, u32>(0)?,
@@ -109,7 +120,7 @@ pub(crate) fn check_cast(
     let professions = world
         .get::<crate::profession::PlayerProfessions>(caster)
         .filter(|profs| profs.knows(spell.id))
-        .ok_or(CastFailure::NotKnown)?;
+        .ok_or(CastFailure::DisenchantNotKnown)?;
     let (_, _, _, eligibility) = load_target(world, caster, spell)?;
     if professions.rank(ENCHANTING) < eligibility.skill {
         return Err(CastFailure::CantBeDisenchantedSkill);
