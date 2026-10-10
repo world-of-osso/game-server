@@ -12,7 +12,6 @@ pub(super) const VOID_VOLLEY: u32 = 1242173;
 pub(super) const VOIDFORM: u32 = 228260;
 pub(super) const HAMMER_RIGHTEOUS: u32 = 53595;
 pub(super) const BLADE_JUSTICE: u32 = 184575;
-pub(super) const LAVA_LASH: u32 = 60103;
 pub(super) const THRASH: u32 = 106830;
 const VOLLEY_BOLT: u32 = 1242189;
 const HAMMER_WAVE: u32 = 88263;
@@ -196,12 +195,4 @@ pub(super) fn thrash_bleed(world: &mut World, caster: Entity, target: Entity, _d
             source: AuraSource::Cast,
         },
     );
-}
-
-///60103/334046 explicitly name334168. Native rank42 can proc this too;
-///application is caster-owned and refreshes the same mark, not a second instance.
-pub(super) fn lashing_flames(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    if crate::auras::has_aura(world, caster, 334046) {
-        spell_cast::cast_triggered(world, caster, 334168, Some(target), depth + 1);
-    }
 }

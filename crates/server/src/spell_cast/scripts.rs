@@ -89,7 +89,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
         (batch3::SHRED, 2) => Some(batch11::shred_points),
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
-        (batch11::LAVA_LASH, 0) => Some(batch11::lashing_flames),
         (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
