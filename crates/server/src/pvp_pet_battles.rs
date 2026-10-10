@@ -501,7 +501,37 @@ fn finish_match(
     world.resource_mut::<Matchmaker>().battles.remove(&id);
     info!("PvP pet battle {id} ended: {outcome:?}");
 }
-pub(super) fn remove_abandoned(_world: &mut World) {}
+pub(super) fn remove_abandoned(world: &mut World) {
+    let Some(matches) = world.get_resource::<Matchmaker>() else {
+        return;
+    };
+    let owners: BTreeSet<_> = matches
+        .queued
+        .iter()
+        .copied()
+        .chain(matches.proposals.values().flat_map(|p| p.owners))
+        .collect();
+    let battles: Vec<_> = matches
+        .battles
+        .iter()
+        .map(|(id, battle)| (*id, battle.clone()))
+        .collect();
+    for owner in owners {
+        if connection(world, owner).is_err() || load_team(world, owner).is_err() {
+            cancel_queue(world, owner);
+        }
+    }
+    for (id, battle) in battles {
+        let missing = battle.owners.map(|owner| connection(world, owner).is_err());
+        if !missing.iter().any(|v| *v) {
+            continue;
+        }
+        let actions = missing.map(|v| if v { Action::Forfeit } else { Action::Pass });
+        if let Err(error) = resolve_round(world, id, battle, actions) {
+            error!("PvP disconnect: {error}");
+        }
+    }
+}
 
 pub(super) fn is_in_battle(world: &World, owner: Entity) -> bool {
     world.get::<PvpParticipant>(owner).is_some()

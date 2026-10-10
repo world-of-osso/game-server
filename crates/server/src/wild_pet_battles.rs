@@ -554,6 +554,7 @@ pub(crate) fn load_wild_catalog(mut commands: Commands) {
     commands.init_resource::<BattleIds>();
 }
 pub(crate) fn receive_wild_battle_requests(world: &mut World) {
+    pvp::remove_abandoned(world);
     pvp::receive_queue(world);
     receive_loadouts(world);
     receive_starts(world);
