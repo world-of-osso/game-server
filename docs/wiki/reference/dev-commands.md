@@ -12,7 +12,7 @@ Development workflow commands for the game-server project.
 ssh sakuin GAME_SERVER_ADMIN_SOCKET=/run/game-server/admin.sock /var/lib/game-server/bin/game-server-admin <command>
 ```
 
-Runs on the `sakuin` host. Communicates with the server via a Unix IPC socket (`admin_ipc.rs`, `admin_ipc_server.rs`). Source for the admin binary: `crates/server/src/bin/admin.rs`.
+Runs on the `sakuin` host. Communicates with the server via a Unix IPC socket (`admin_ipc.rs`, `admin_ipc_server.rs`). Source for the admin binary: `crates/server/src/bin/admin.rs`. [Deployment](../../deploy.md) owns the shared test-realm unit, state paths and bookworm build requirement (`0dcaa23`, `6bfd7b6`); desktop/local helpers below are private development, not the shared UDP5000 realm.
 
 ### Timeout
 

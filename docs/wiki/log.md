@@ -706,3 +706,7 @@ Updated [[skyborne]] with wrong-cell root cause, stronger first-tick landing ass
 
 Existing ItemLocation/SwapItem/SplitItem extended to character bank tabs; [bank system](systems/banks.md) records native cursor and transactional server behavior. Targeted proof tracked in `/home/osso/.worktrees/handoff-bankmoves.md`; no live run.
 - 2026-10-08: auction subcategory alternatives and Bid/Quantity ordering;4 targeted RED/GREEN paging/filter/source-tie tests. Updated auction-house spec/system. No live/broad gates.
+
+## [2026-10-09] docs | Landed-state reconciliation
+
+Added [deployment SSOT](../deploy.md) from `0dcaa23`/`6bfd7b6`; linked development commands without duplicating unit/state/build policy. Reconciled BankChannel versus InventoryChannel closed-bank responses (`8ac442f`, merge `104ae6a`) in [[banks]] and its spec. Indexed existing auction ServerClock/escrow proof (`9927e77`, `ab4cd69`, merge `137c462`) and defensive fixes/limits (`e86c038`, gate `9f54920`, merge `c5432a4`) rather than copying their ledgers. Docs-only inspection; no build, deployment, service or live validation.
