@@ -95,7 +95,45 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    spell_id == BREATH_OF_FIRE_BURN && effect_index == 1
+    (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1) || (spell_id == 740 && effect_index == 5)
+}
+
+/// Mainline740s6 supplies the caster's Tranquility shield cap.
+pub(super) fn absorb_amount(
+    world: &World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    effect: &crate::spell_info::SpellEffect,
+) -> Option<f32> {
+    if spell.id != 740 || effect.index != 4 {
+        return None;
+    }
+    let percent = spell
+        .effects
+        .iter()
+        .find(|e| e.index == 5)
+        .expect("Tranquility shield percentage")
+        .base_points;
+    let health = world
+        .get::<shared::components::Health>(caster)
+        .expect("Tranquility caster health");
+    Some(health.max * percent / 100.0)
+}
+
+/// Tranquility's channel owns its aura lifetime, not its shield capacity.
+/// Removing the whole aura on depletion would also stop its healing ticks.
+pub(super) fn absorb_ends_aura(spell_id: u32) -> bool {
+    spell_id != 740
+}
+
+///321068 explicitly gates187827s4's extra Shear/Fracture Fury modifier.
+pub(super) fn effect_enabled(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    effect_index: u8,
+) -> bool {
+    spell_id != 187827 || effect_index != 3 || super::has_aura(world, caster, 321068)
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {

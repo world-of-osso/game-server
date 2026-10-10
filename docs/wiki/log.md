@@ -1,6 +1,7 @@
 # Wiki Log
 
 - 2026-10-10 — [Toy-effects6 follow-up](systems/toys.md#toy-effects6-follow-up-2026-10-10): Duck Lovie source-bound nap admission, RED/GREEN and103→104/1166 (+1,no removals). Post-origin/master261 spell_cast/36 toy tests pass. Client Spitzy/ordinary train coverage and both-skin bounded asset captures documented; mortar live proof and absent periodic/procedural/ModifierTree payloads remain incomplete. No world.db/shared-realm/master changes.
+- 2026-10-10 — [Class spell scripts batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks): nine local Mainline paths and per-spec scripted census;171→170 roots. Ground fields, owned Atonement/base plague, rank-gated Meta Fury, Void Step and shield lifetime.14 native functions; requested broad gate once274/275, obsolete Blossom no-action fixture corrected/focused1/1; separate depletion RED and absorb5/5/Tranquility2/2. Final format/check pass. No DB writes, invented IDs, realm process or master merge.
 
 - 2026-10-10 — [Class spell scripts batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths): Reap destination line, real Provoke threat/victim/owned-statue path and eight additional bounded spell paths. Per-spell RED/GREEN, owner-only Breath damage reduction, requested-ground Sanctify cap, post-master census172→171. No database writes, fabricated IDs, deployment, master merge or realm process.
 

@@ -48,6 +48,7 @@ External resources, tooling, data sources, development workflow.
 ## systems/
 
 - [Toy-effects6 follow-up](systems/toys.md#toy-effects6-follow-up-2026-10-10) — Duck Lovie104/1166 census,261 spell/36 toy regression passes, client condition/appearance follow-up and explicit remaining live/script gaps.
+- [Class spell batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks) — nine local Mainline paths, fixed ground pulses/owned marks/shield lifetimes,40-spec census coverage;171→170 Dummy roots, retained range/talent gaps.
 
 - [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.
 
