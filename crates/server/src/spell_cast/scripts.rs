@@ -1,6 +1,7 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+mod batch10;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -81,6 +82,11 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
+        (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
+        (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
+        (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
+        (batch10::LIGHTNING_BOLT, 0) => Some(batch10::energize_lightning_bolt),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
         (batch9::SCOURGE_STRIKE, 0) => Some(batch9::apply_missing_plague),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
@@ -213,6 +219,10 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
+        batch10::VOIDFORM => Some(batch10::apply_voidform),
+        batch10::ARCANE_SURGE => Some(batch10::apply_surge),
+        batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
         batch8::CRASH_LIGHTNING => Some(batch8::crash_lightning),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),

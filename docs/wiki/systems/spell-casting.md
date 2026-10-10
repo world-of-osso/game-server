@@ -239,7 +239,75 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
-### Ninth batch: local Mainline ground fields and owned marks
+### Tenth batch: low-count spec paths
+
+[Contract](../../specs/spell-dummy-scripts.md#tenth-batch-low-count-spec-paths), [implementation](../../../crates/server/src/spell_cast/scripts/batch10.rs), [tests](../../../crates/server/src/spell_cast/dummy10_tests.rs), [updated census](../../spell-coverage.md). Verified2026-10-10. Sources: local Mainline12.1.0.69933 DB2 CSVs/imported read-only rows only;21 authentic IDs/251 compared rows,zero drift. No C++ implementations, invented IDs, world.db writes or realm process.
+
+| Path | Observable native proof | Retained boundary |
+|---|---|---|
+|13877 Blade Flurry|331850 initial8yd strike caps five/eight with272026;381878 grants one combo point per actual initial hit. Far/allied exclusions and absent-rank/talent proofs.|Subsequent28% damage transfer, independent root markers/cap4.|
+|26573 Consecration|Fixed-position81297 field:8yd,1000ms,12000ms; original caster position survives movement. Recast replaces only owner's old field; foreign field continues. Tooltip1.05 multiplier retained.|204054 slow/405289 Radiant variants, summoned actor parity.|
+|196884 Feral Lunge|Named215802 bite hits only selected enemy beyond native minimum range; inherited generic254 endpoint movement remains covered by its existing terrain/LOS fixture.|Full traversal/visual parity; named-bite proof alone is not movement certification.|
+|228260 Voidform|Named194249 damage effects apply after1500ms cast; actual Mind Blast+20%, native expiry and cancellation exclusion.|Volley/replacement charges, root/child markers.|
+|365350 Arcane Surge|Named365362 damage/regeneration effects apply after2500ms cast; actual Fireball+35%, expiry and cancellation exclusion.|Mana-spent damage, reduced-damage formula, Clearcasting.|
+|275779 Protection Judgment|315867 gate launches220637 for one Holy Power on native damage hit; no-rank case generates none.|Other Judgment/talent variants.|
+|105174 Hand of Gul'dan|Native30-raw cost (three shards), root s1=3 times86040 damage in native8yd target area; allies/far excluded.|Imp/Doom/variable-shard contracts; rootDummy0 intentionally remains counted because s1 also describes imp count.|
+|188196 Lightning Bolt|343725s1=6 Maelstrom awarded once on actual hit; absent-rank proof.|Maelstrom Weapon consumption/other variants.|
+
+Census frozen baseline`e64b2da` reproduces170 Dummy core roots. After Rust`83512eb`: **168** remain,83 reviewed/partial/deferred,85 un-derived (before80/90). Consecration's named periodic Dummy and Feral Lunge's named bite close two Dummy-bearing roots; no whole-ability parity claim. E3 admissible121/129→120/128; a4 66/74→67/75; a22619/20 unchanged. Voidform's named child exposes latent Dummy fields rather than concealing them. Scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships remains unchanged.
+
+Selection prioritizes core-zero Protection/Outlaw and core-one Arcane/Enhancement/Shadow/Demonology. Protection0→2, Outlaw0→1, Arcane1→2, Enhancement1→3, Shadow1→2, Demonology1→2; shared Lightning Bolt also improves Elemental3→4. Divine Storm's reduction formula and Glacial Advance's advancing geometry were not derivable from the permitted sources, so no guessed implementation. Prior Winter diagnostics overlooked slot1 radius14 (8yd); existing proof remains coincident-unit only, not a new range implementation.
+
+Script-presence table preserves batch9's exact method/baseline: closure intersects explicit script bindings/consumed fields; named Meta/Fracture modifier probes remain core-only as in the original table. A counts bounded test-source evidence, never full ability parity.
+
+| Spec | Book script roots before→after | Core script roots before→after | Core A before→after |
+|---|---:|---:|---:|
+| Mage Arcane (62) | 2→2 | 1→2 | 2→3 |
+| Mage Fire (63) | 1→1 | 2→2 | 4→4 |
+| Mage Frost (64) | 1→1 | 2→2 | 4→4 |
+| Paladin Holy (65) | 0→1 | 2→2 | 4→4 |
+| Paladin Protection (66) | 0→2 | 0→2 | 1→3 |
+| Paladin Retribution (70) | 1→2 | 1→1 | 2→2 |
+| Warrior Arms (71) | 1→1 | 1→1 | 5→5 |
+| Warrior Fury (72) | 2→2 | 4→4 | 6→6 |
+| Warrior Protection (73) | 2→2 | 3→3 | 4→4 |
+| Druid Balance (102) | 5→5 | 5→5 | 5→5 |
+| Druid Feral (103) | 4→4 | 3→3 | 3→3 |
+| Druid Guardian (104) | 4→4 | 3→3 | 4→4 |
+| Druid Restoration (105) | 4→4 | 3→3 | 3→3 |
+| Death Knight Blood (250) | 2→2 | 2→2 | 3→3 |
+| Death Knight Frost (251) | 2→2 | 2→2 | 4→4 |
+| Death Knight Unholy (252) | 2→2 | 3→3 | 4→4 |
+| Hunter Beast Mastery (253) | 2→2 | 2→2 | 3→3 |
+| Hunter Marksmanship (254) | 2→2 | 3→3 | 3→3 |
+| Hunter Survival (255) | 2→2 | 2→2 | 2→2 |
+| Priest Discipline (256) | 2→2 | 3→3 | 6→6 |
+| Priest Holy (257) | 1→1 | 4→4 | 6→6 |
+| Priest Shadow (258) | 1→1 | 1→2 | 4→5 |
+| Rogue Assassination (259) | 2→2 | 2→2 | 4→4 |
+| Rogue Outlaw (260) | 0→1 | 0→1 | 2→3 |
+| Rogue Subtlety (261) | 2→2 | 2→2 | 4→4 |
+| Shaman Elemental (262) | 0→1 | 3→4 | 4→5 |
+| Shaman Enhancement (263) | 0→2 | 1→3 | 2→4 |
+| Shaman Restoration (264) | 0→1 | 2→2 | 3→3 |
+| Warlock Affliction (265) | 0→0 | 3→3 | 5→5 |
+| Warlock Demonology (266) | 0→0 | 1→2 | 3→4 |
+| Warlock Destruction (267) | 1→1 | 2→2 | 4→4 |
+| Monk Brewmaster (268) | 3→3 | 5→5 | 6→6 |
+| Monk Windwalker (269) | 3→3 | 2→2 | 3→3 |
+| Monk Mistweaver (270) | 4→4 | 3→3 | 3→3 |
+| Demon Hunter Havoc (577) | 4→4 | 2→2 | 3→3 |
+| Demon Hunter Vengeance (581) | 3→3 | 3→3 | 3→3 |
+| Evoker Devastation (1467) | 4→4 | 4→4 | 5→5 |
+| Evoker Preservation (1468) | 4→4 | 3→3 | 4→4 |
+| Evoker Augmentation (1473) | 6→6 | 3→3 | 4→4 |
+| Demon Hunter Devourer (1480) | 4→4 | 2→2 | 3→3 |
+
+Native proof at`83512eb`: **11/11** batch10 functions, warning-free. Initial RED0/9 plus corrected Lunge range RED0/1; negative-rank fixtures remove KnownSpells passives and their aura (omitting apply() alone leaves auto-synchronized passives active). Damage buffs are proven through actual spell damage, not school-only AuraStatMods. Shared-protocol compilation drift resolved by merging origin/master before implementation. Requested post-master `cargo test -p server --bin game-server spell_cast` ran **once**, at`4b281cf`: **286/286**, including all11 new functions and inherited Feral Lunge movement. Format/check results are recorded in the handoff.
+
+Durable receipts, frozen source tars, generator, exact40-spec inventories, census and proof ledger: `game-engine/data/diagnostics/spell-dummy10-2026-10-10/`; worker handoff `/home/osso/.worktrees/handoff-spell-dummy10.md`. Parent retains integration/live acceptance; no independent verifier/rotation claim.
+
+## Ninth batch: local Mainline ground fields and owned marks
 
 [Contract](../../specs/spell-dummy-scripts.md#ninth-batch-locally-derived-paths), [implementation](../../../crates/server/src/spell_cast/scripts/batch9.rs), [tests](../../../crates/server/src/spell_cast/dummy9_tests.rs). Sources are local Mainline12.1.0.69933 DB2 CSVs and read-only imported rows plus inherited TDB1210 routing, not TrinityCore C++ bodies.22 authentic IDs/185 rows match slot and canonical databases exactly. No downloads/imports/world writes or realm process.
 
@@ -248,7 +316,7 @@ Damage and heal side effects:
 |73920 Healing Rain|Fixed requested11yd field;2000ms pulses through73921, six injured allies,18sec native lifetime. Recast replaces this caster's previous field; entering/leaving allies evaluated each pulse.|14/magic-reduction/aura4 markers and1298679 child. Tooltip fixed6*2 formula disagrees with18sec native duration; no total-tooltip parity claim.|
 |61882 Earthquake|77478 base damage at requested8yd field, six1000ms pulses including expiry; two real casts retain independent clocks, ally/far exclusions.|Knockdown77/chance and extra Dummy metadata.|
 |355913 Emerald Blossom|1500ms delayed355916 heal of three injured allies within10yd, anchored at original ally position; moving primary/healthy/far excluded.|Root zero Dummy1 and variants.|
-|196770 Remorseless Winter|Actual196771 hit applies21179320% slow; expiry restores movement.|Neither child has local radius: coincident-unit native proof only. No guessed8yd radius; root25 marker/CAP remain.|
+|196770 Remorseless Winter|Actual196771 hit applies21179320% slow; expiry restores movement.|Coincident-unit native proof only. Batch10 source correction: child slot1 references radius14 (8yd); range is not newly tested here. Root25 marker/CAP remain.|
 |55090 Scourge Strike|Missing owned191587 base DoT applies/ticks; existing own mark not refreshed as substitute for spreading.|35% plague eruption, spread and root3 marker.|
 |263642 Fracture /187827 Meta|Named321068 gate on Meta's native15 Fury modifier; base25 vs transformed talented40, missing-rank/Meta boundaries.|Soul fragments/objects, Meta periodic marker; no complete Meta parity.|
 |1234796 Void Step|Requested same-map teleport; missing/nonfinite/out-of-range refused before spending.|This is the sole whole Dummy-root closure; no unrelated mobility/terrain parity claim.|
