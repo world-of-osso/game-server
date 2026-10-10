@@ -98,14 +98,14 @@ fn dummy3_serenity_flash_heal_does_not_start_ready_cooldown() {
 }
 
 #[test]
-fn dummy3_prayer_heals_primary_and_four_injured_allies_within_twenty_yards() {
+fn dummy3_prayer_heals_primary_and_four_injured_allies_within_catalog_radius() {
     let mut h = harness(Vec::new(), &[596, 98367], 5).expect("real world.db");
     let primary = spawn_player(&mut h.app, 5, 3.0);
     let allies: Vec<_> = (4..=9)
         .map(|x| spawn_player(&mut h.app, 5, x as f32))
         .collect();
     let healthy = spawn_player(&mut h.app, 5, 3.5);
-    let far = spawn_player(&mut h.app, 5, 24.0);
+    let far = spawn_player(&mut h.app, 5, 44.0);
     for &unit in allies.iter().chain([&primary, &far]) {
         *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
             current: 100.0,
@@ -126,6 +126,25 @@ fn dummy3_prayer_heals_primary_and_four_injured_allies_within_twenty_yards() {
     assert_eq!(h.health(healthy), 1000.0);
     assert_eq!(h.health(far), 100.0);
     assert_eq!(h.health(h.npc), 5000.0);
+}
+
+#[test]
+fn dummy3_prayer_radius_is_forty_yards_from_primary_not_caster() {
+    let mut h = harness(Vec::new(), &[596, 98367], 5).expect("real world.db");
+    let primary = spawn_player(&mut h.app, 5, 3.0);
+    let inside = spawn_player(&mut h.app, 5, 42.0);
+    let outside = spawn_player(&mut h.app, 5, 44.0);
+    for unit in [primary, inside, outside] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 100.0,
+            max: 5000.0,
+        };
+    }
+    h.cast_and_deliver(596, Some(primary));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(578.74198).contains(&(h.health(inside) - 100.0)));
+    assert_eq!(h.health(outside), 100.0);
 }
 
 #[test]

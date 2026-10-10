@@ -29,7 +29,7 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - [x] Demon Spikes203720 applies203819 for its catalog twelve-second duration. Armor tracks75% of live Agility via aura268; parry effect0 is excluded unless Deflecting Spikes321028 is present.
 ### Third-batch locally derived paths
 
-- [x] Prayer of Healing596 heals its primary target plus at most four injured allies inside its catalog20yd radius, excluding enemies and full-health additional allies.
+- [x] Prayer of Healing596 heals its primary target plus at most four injured allies inside its catalog40yd radius, excluding enemies and full-health additional allies.
 - [x] Garrote703 with196861, applied from regular Stealth1784, applies1330 silence and256148 damage reduction for their catalog five seconds. Without rank or Stealth neither applies.
 - [x] Flash Heal2061 reduces Holy Word: Serenity2050's running recharge by the authored six seconds, sends a charge update and never starts a ready cooldown.
 - [x] Scorch2948 guarantees a critical strike strictly below its authored30% health threshold; at the threshold normal critical-strike chance applies.
