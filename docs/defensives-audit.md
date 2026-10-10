@@ -1,5 +1,7 @@
 # Class defensives audit
 
+Blur/Turtle follow-up: branch `blur-turtle`, base `c5432a4`. Batched RED: 18 passed / 6 failed; implementation committed before GREEN verification. See follow-up ledger below. Earlier proof remains historical.
+
 Verified: 2026-10-09. Audit base: `5b04aa931720d441aaea1f99d3c11dc2a69bba40`; reproduction branch tip: `41fe1be7c`. Worktree: `/home/osso/.worktrees/game-server-rest`, branch `defensives`. Five reproduced gaps are fixed on this branch. Final focused and complete server-crate tests pass at `e86c038`; no gap tests remain ignored. No merge, runtime or deployment changes.
 
 ## Results
@@ -10,7 +12,7 @@ All 13 supported classes' candidates exist in local `data/world.db` and load thr
 |---|---|---|---|
 | Warrior | 871 Shield Wall | 100 → 60 fire/melee | `warrior_shield_wall_reduces_fire_40_percent` |
 | Paladin | 642 Divine Shield | Fire/melee immunity; `Immune` log | `paladin_divine_shield_blocks_fire`, `paladin_divine_shield_blocks_melee` |
-| Hunter | 186265 Aspect of the Turtle | 100 → 70 fire/melee; other mechanics remain incomplete | `hunter_turtle_reduces_fire_30_percent` |
+| Hunter | 186265 Aspect of the Turtle | 100 → 70 already-landed damage; new melee/ranged/magic attacks miss; silence immunity; 205769 pacifies attacks until parent expiry | `hunter_turtle_reduces_fire_30_percent`, `turtle_*` |
 | Rogue | 5277 Evasion | +200 unscaled catalog dodge points; guaranteed ordinary dodge, unchanged fire damage; dodge removed with aura | `rogue_evasion_increases_dodge` |
 | Priest | 17 Power Word: Shield | Fire/melee consume shield; overflow damages health; depletion removes aura; full melee absorb logs `Absorb` | `priest_power_word_shield_absorbs_and_is_consumed`, `priest_power_word_shield_absorbs_melee` |
 | Death Knight | 48792 Icebound Fortitude | 100 → 70 fire/melee | `death_knight_icebound_fortitude_reduces_fire_30_percent` |
@@ -19,7 +21,7 @@ All 13 supported classes' candidates exist in local `data/world.db` and load thr
 | Warlock | 104773 Unending Resolve | 100 → 75 fire/melee; interrupt/silence protection not proven | `warlock_unending_resolve_reduces_fire_25_percent` |
 | Monk | 115203 Fortifying Brew → 120954 | 100 → 80 fire/melee; fixed +20% of pre-buff max health added to current/max and removed with buff | `monk_fortifying_brew_reduces_fire_20_percent`, `monk_brew_health_survives_stat_updates` |
 | Druid | 22812 Barkskin | 100 → 80 fire/melee | `druid_barkskin_reduces_fire_20_percent` |
-| Demon Hunter | 198589 Blur → 212800 | 100 → 75 fire/melee; dodge/deflection remain incomplete | `demon_hunter_blur_trigger_reduces_fire_25_percent` |
+| Demon Hunter | 198589 Blur → 212800 | 100 → 75 fire/melee; data-driven dodge modifier and expiry, but catalog dodge amount is 0; aura 288 ignores direction, not deflection | `demon_hunter_blur_trigger_reduces_fire_25_percent`, `blur_uses_catalog_dodge_amount_and_expires` |
 | Evoker | 363916 Obsidian Scales | 100 → 70 fire/melee; interrupt/silence protection not proven | `evoker_obsidian_scales_reduces_fire_30_percent` |
 
 All five original gap tests are enabled and passing. Focused: **18 passed / 0 failed / 0 ignored**. Complete server crate: **1563 passed / 0 failed / 60 pre-existing ignored**. All 13 candidates demonstrate at least one defensive effect; this does not mean complete Retail ability parity.
@@ -37,10 +39,19 @@ All five original gap tests are enabled and passing. Focused: **18 passed / 0 fa
 
 [SimulationCraft Retail monk buffs::fortifying_brew_t](https://github.com/simulationcraft/simc/blob/midnight/engine/class_modules/monk/sc_monk.cpp) snapshots max health × cast health percentage, adds equal current/max gains and removes the same gains on expiry. [TrinityCore AuraEffect::HandleAuraModIncreaseHealth](https://github.com/TrinityCore/TrinityCore/blob/master/src/server/game/Spells/Auras/SpellAuraEffects.cpp) supplies aura 34's equal current/max and nonlethal-removal semantics. Upstream TrinityCore master currently has no Brew script; the DUMMY-to-120954 bridge is present in [TrinityCore-derived RoleplayCore spell_monk_fortifying_brew](https://github.com/KamiliaBlow/RoleplayCore/blob/master/src/server/scripts/Spells/spell_monk.cpp). Sources are cited in implementation comments. Local parent +20/-20 values drive this bounded implementation; other expansions/specs are not substituted.
 
-## Blur and Turtle still need work
+## Blur/Turtle follow-up
 
-- **Blur:** generic aura 49 handling is now available, but catalog 212800's dodge amount is **0**, so this does not implement a nonzero Blur dodge bonus. Aura 288 deflection also lacks a handler. A spell-specific amount/source reconciliation and deflection behavior are needed before claiming complete Blur.
-- **Turtle:** attacker melee/ranged/spell hit modifiers 184/185/186 (-200 catalog points), deflection 288 (+100), and mechanic immunity 77 still lack handlers. These are source-inspection gaps, not separate end-to-end failures reproduced here. Aura 28 reflection **does** have a handler (the original audit incorrectly grouped it with unhandled types), but Turtle's raw reflection amount is 0; it does not establish functioning Turtle deflection. Attack suppression and directional behavior are not proven. No new systems for these ancillary mechanics were added.
+Pinned [TrinityCore aura definitions](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Spells/Auras/SpellAuraDefines.h) correct the original audit: **287 = DEFLECT_SPELLS; 288 = IGNORE_HIT_DIRECTION**. A +100 amount on 288 is not a deflection probability. Neither Blur nor Turtle has aura 287 in this catalog; Turtle prevents new attacks through -200 attacker hit modifiers, not an invented school immunity or deflection chance.
+
+- **General incoming defenses:** aura 184 modifies melee miss selection; 185 modifies ranged-spell misses; 186 modifies matching-school magic misses. Aura 77 prevents incoming matching spell/effect mechanics. Aura 287 deflects magic/ranged spells from the front, or any direction under 288, unless controlled. Existing NoAvoidance/NoAttackMiss/NoImmunities attributes are respected in their applicable paths. Aura 47 adds nondiminishing player parry with the existing weapon/parry-capability requirements. Damage reduction remains aura 87; already-landed and periodic damage bypasses new-hit avoidance. References: [Unit melee hit selection](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Unit/Unit.cpp), [magic hit selection](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Object/Object.cpp).
+- **Turtle pacify:** pinned [spell_hun_aspect_of_the_turtle](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/scripts/Spells/spell_hunter.cpp) applies child 205769 on parent application and removes it with the parent. Its catalog aura 25 blocks PreventionType PACIFY abilities and, generally, auto-attacks. No defensive amounts are hard-coded. Natural timer expiry removes miss modifiers, reduction and the child pacify.
+- **Blur data boundary:** 212800 effect 1 remains aura 49 with BasePointsF **0**, no coefficient or per-level term. Generic dodge handling already works (Evasion's real-data guaranteed-dodge test). The follow-up proves Blur consumes the catalog amount and removes it on timer expiry; it does **not** claim a nonzero Retail Blur dodge bonus. No replacement amount or catalog row is fabricated. Auto-attack front/back avoidance remains the existing engine boundary; 288's directional exemption is consumed by the new spell-deflection path.
+- **Additional real-data fixtures:** Deterrence 19263 demonstrates aura 287 deflection without reflecting damage to the caster; Die by the Sword 118038, Parry 3127 and equipped Worn Shortsword 25 demonstrate aura 47 preventing actual NPC melee swings. Both end through natural timers. Turtle 186265 blocks Fireball 133, Auto Shot 75 and silence 1330, suppresses scheduled player swings and Steady Shot 56641, then permits attacks after expiry. These are combat/runtime assertions, not source-shape tests.
+
+### Follow-up ledger
+
+- RED: `target/blur-turtle-red2-tests.log`, base c5432a4 plus behavioral tests: **18 passed / 6 failed / 0 ignored**, exit 101. Failures: Turtle melee, magic/ranged miss logs, pacify, silence immunity, generic deflection, generic parry. An earlier RED attempt had one test enum-construction compile error, corrected before this behavioral run.
+- GREEN and final full server suite: pending. Full suite is run once, skipping `query_300k_listings_under_200ms` as requested. Logs remain untracked under `target/`.
 
 ## Proof boundary
 
@@ -48,7 +59,7 @@ The real-data Bevy/Lightyear [harness](../crates/server/src/spell_cast/test_harn
 
 Incoming fire uses Fireball 133 metadata and deterministic pre-mitigation damage through production `deal_damage`; it does not prove incoming spell hit/deflect/reflect selection. Melee uses actual scheduled NPC AutoAttack, a fixed 100-point weapon, zero AP and +100 hit to remove random misses. NPCs retain their intrinsic 5% crit chance: assertions use the delivered crit flag to validate normal and doubled critical damage, shield consumption and overflow without changing NPC gameplay. The original audit incorrectly claimed zero crit. Victims have zero avoidance except computed Evasion. An unprotected control takes 100 fire and 100/200 melee. Shield capacity is fractional (4.638 × 100 healing power), while incoming spell damage rounds; partial-absorb assertions use measured remaining capacity and the existing integer log contract. Brew has separate wounded-health and StatsPlugin apply/remove proofs; explicit Expired removal exercises cleanup, not timer expiry.
 
-Client presentation, live realm networking, all schools, natural expiry timers, dispels, secondary mechanics and talent/spec variants remain outside this proof. No other worktree or runtime was changed.
+Client presentation, live realm networking, all schools, dispels, secondary mechanics and talent/spec variants remain outside this proof. Follow-up tests add natural timer-expiry proof for Blur, Turtle, Deterrence and Die by the Sword. No other worktree or runtime was changed.
 
 ## Verification ledger
 

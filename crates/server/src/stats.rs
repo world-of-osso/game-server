@@ -60,6 +60,8 @@ pub struct StatModifiers {
     pub spell_power_from_ap_pct: f32,
     /// MOD_DODGE_PERCENT: nondiminishing percentage points.
     pub dodge_pct: f32,
+    /// MOD_PARRY_PERCENT: nondiminishing percentage points.
+    pub parry_pct: f32,
     /// MOD_BLOCK_PERCENT: added to block chance (`player_defense`).
     pub block_pct: f32,
 }
@@ -388,6 +390,8 @@ pub struct DefenseInputs {
     pub shield_armor: Option<f32>,
     /// Σ MOD_DODGE_PERCENT (`StatModifiers::dodge_pct`).
     pub dodge_pct: f32,
+    /// Σ MOD_PARRY_PERCENT, outside rating diminishing returns.
+    pub parry_pct: f32,
     /// Σ MOD_BLOCK_PERCENT (`StatModifiers::block_pct`).
     pub block_pct: f32,
 }
@@ -426,7 +430,7 @@ pub fn player_defense(
     let parry = if inputs.can_parry && parry_cap > 0.0 && inputs.has_weapon {
         diminished(
             parry_cap,
-            BASE_PARRY_PCT,
+            BASE_PARRY_PCT + inputs.parry_pct,
             ratings.parry / PARRY_RATING[level],
         )
     } else {
@@ -682,6 +686,7 @@ pub(crate) fn update_character_stats(
                 has_weapon: gear.has_weapon,
                 shield_armor: gear.shield_armor,
                 dodge_pct: mods.map_or(0.0, |mods| mods.dodge_pct),
+                parry_pct: mods.map_or(0.0, |mods| mods.parry_pct),
                 block_pct: mods.map_or(0.0, |mods| mods.block_pct),
             },
         );

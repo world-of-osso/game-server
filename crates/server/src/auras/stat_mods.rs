@@ -272,6 +272,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_BLOCK_PERCENT => stats.block_pct += amount,
             // Player::UpdateDodgePercentage adds aura 49 outside rating DR.
             MOD_DODGE_PERCENT => stats.dodge_pct += amount,
+            MOD_PARRY_PERCENT => stats.parry_pct += amount,
             MOD_DAMAGE_PERCENT_DONE => each_school(misc, |school| {
                 combat.damage_done_mult[school] *= pct(amount)
             }),
