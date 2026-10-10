@@ -11,13 +11,18 @@ pub(crate) struct HomeBind(pub WorldLocation);
 
 type SavedBind = (u32, [f32; 3], f32);
 
-pub(crate) fn save_bind(db: &Database, character: u64, bind: WorldLocation) {
+pub(crate) fn save_bind_in(txn: &redb::WriteTransaction, character: u64, bind: WorldLocation) {
     let bytes = bitcode::encode(&(bind.map_id, bind.position.to_array(), bind.orientation));
-    let txn = db.begin_write().expect("Begin homebind write");
     txn.open_table(HOME_BINDS)
         .expect("Open homebind table")
         .insert(character, bytes.as_slice())
         .expect("Save homebind");
+}
+
+#[cfg(test)]
+pub(crate) fn save_bind(db: &Database, character: u64, bind: WorldLocation) {
+    let txn = db.begin_write().expect("Begin homebind write");
+    save_bind_in(&txn, character, bind);
     txn.commit().expect("Commit homebind");
 }
 
@@ -32,20 +37,4 @@ pub(crate) fn load_bind(db: &Database, character: u64) -> Option<HomeBind> {
         position: Vec3::from_array(position),
         orientation,
     }))
-}
-
-/// New characters bind at their creation location. Pre-homebind characters have no
-/// saved inn: initialize once at the existing race start, not their logout position.
-pub(crate) fn load_or_initialize_bind(db: &Database, character: u64, race: u8) -> HomeBind {
-    if let Some(bind) = load_bind(db, character) {
-        return bind;
-    }
-    let start = crate::persistence_character::start_location(race);
-    let location = WorldLocation {
-        map_id: start.map_id,
-        position: Vec3::new(start.x, start.y, start.z),
-        orientation: 0.0,
-    };
-    save_bind(db, character, location);
-    HomeBind(location)
 }

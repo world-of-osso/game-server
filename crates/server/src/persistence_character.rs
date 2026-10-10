@@ -609,6 +609,15 @@ pub(crate) fn save_new_character(
         acct.insert(account_id, encoded.as_slice())
             .expect("insert acct chars");
     }
+    crate::spell_cast::homebind::save_bind_in(
+        &txn,
+        character_id,
+        crate::maps::WorldLocation {
+            map_id: start_location(data.race).map_id,
+            position: bevy::math::Vec3::new(data.x, data.y, data.z),
+            orientation: 0.0,
+        },
+    );
     txn.commit().expect("Failed to commit new character");
 }
 

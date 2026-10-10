@@ -6,6 +6,31 @@ use shared::components::{MovementControl, Position, Rotation};
 const BLINK: u32 = 1953;
 
 #[test]
+fn spell_teleport_new_character_bind_is_persisted_at_creation_not_login() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("new-character.redb");
+    let db = redb::Database::create(&path).unwrap();
+    crate::persistence::create_tables(&db);
+    let (id, mut character) =
+        crate::persistence_character::create_character(&db, 1, "Bound", 1, 8).unwrap();
+    let bind =
+        super::homebind::load_bind(&db, id).expect("new character has its actual creation bind");
+    assert_eq!(
+        bind.0.position,
+        Vec3::new(character.x, character.y, character.z)
+    );
+    character.x += 100.0;
+    crate::persistence_character::save_character(&db, id, &character);
+    drop(db);
+    let db = redb::Database::open(&path).unwrap();
+    assert_eq!(super::homebind::load_bind(&db, id).unwrap().0, bind.0);
+    assert!(
+        super::homebind::load_bind(&db, id + 1).is_none(),
+        "missing bind must not be fabricated from race or logout position"
+    );
+}
+
+#[test]
 fn spell_teleport_fixed_destination_consumes_authored_fixture() {
     // Routing/loader fixture, not a claim about Retail Moonglade's actual coordinates.
     // Spell ID is matrix18960; the authored point is the existing map0 race start.

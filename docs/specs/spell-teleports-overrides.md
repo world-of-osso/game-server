@@ -7,8 +7,9 @@ Data-driven server displacement and matrix aura overrides in `crates/server/src/
 - [x] Blink 1953 moves 20 yards forward from target55's radius and snaps to ground.
 - [x] Blink stops before real map0 wall geometry and bumps the movement teleport epoch.
 - [x] Hearthstone 8690 returns to a persisted homebind, including NewWorld/WorldPortAck across maps.
-- [ ] Legacy teleport15 and Retail252 use authored spell_target_position rows for target17, never fabricated destinations.
-- [ ] Matrix related leap effects move the caster, not the enemy target.
+- [ ] New characters persist actual creation binds; missing existing bind rows fail explicitly rather than infer locations.
+- [x] Target17 teleports consume authored spell_target_position rows, never infer destination coordinates from spell IDs. Matrix18960 fixture proves loader/routing, not Retail Moonglade coordinates.
+- [x] Harpoon190925's child186260 and Feral Lunge196884 move the caster, not the enemy target. Infernal Strike189110 accepts a finite, in-range explicit ground point.
 - [x] Aura332 selects its data-specified replacement spell while active and restores the base after removal/expiry.
 - [x] Aura312 exposes its animation replacement set through aura replication; client consumption is a separate task.
 
@@ -31,7 +32,8 @@ Data-driven server displacement and matrix aura overrides in `crates/server/src/
 
 - `crates/server/src/spell_cast/teleport_tests.rs`
 - `crates/server/src/maps/tests.rs`: Hearthstone cross-map handshake.
-- `crates/server/src/auras/override_tests.rs`: substitution, removal, expiry and queued release.
+- `crates/server/src/auras/override_tests.rs`: substitution, removal and expiry.
+- `crates/server/src/spell_cast/override_queue_tests.rs`: re-resolve on queued release.
 - Companion `shared-protocol/src/protocol_spell_tests.rs`: aura overrides and ground-point wire round trips.
 
 ## Known gaps (current cycle)
