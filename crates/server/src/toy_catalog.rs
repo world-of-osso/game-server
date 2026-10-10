@@ -150,6 +150,9 @@ fn supports_effect(world: &World, effect: &SpellEffect) -> bool {
                 .get_resource::<crate::world_data::WorldData>()
                 .is_some_and(|data| data.templates.contains_key(&(effect.misc_values[0] as u32)));
     }
+    if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
+        return effect.misc_values[0] > 0;
+    }
     if crate::auras::is_aura_effect(effect) {
         return crate::auras::handlers::kind(effect.aura)
             .is_some_and(|kind| kind != AuraKind::Script);
