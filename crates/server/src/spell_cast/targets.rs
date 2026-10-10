@@ -106,11 +106,11 @@ fn selector(id: u32) -> Option<Selector> {
 
 /// First implicit target ID of `effect` that has no selector.
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
-    effect
-        .implicit_targets
-        .iter()
-        .copied()
-        .find(|&id| selector(id).is_none() && !(id == 87 && effect.effect == 254))
+    effect.implicit_targets.iter().copied().find(|&id| {
+        let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
+        let ground_target = id == 87 && effect.effect == 254;
+        selector(id).is_none() && !item_target && !ground_target
+    })
 }
 
 /// Relation the spell requires of its explicit target, from the first

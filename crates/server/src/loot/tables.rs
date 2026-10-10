@@ -82,6 +82,7 @@ pub(crate) struct CreatureLoot {
 pub(crate) struct LootTables {
     pub creature: HashMap<u32, LootTemplate>,
     pub reference: HashMap<u32, LootTemplate>,
+    pub disenchant: HashMap<u32, LootTemplate>,
     /// By creature template entry.
     pub money: HashMap<u32, CreatureLoot>,
     /// By (entry, dungeon difficulty): `content_creature_template_difficulty` loot.
@@ -123,6 +124,21 @@ fn roll_chance(chance: f32, rng: &mut impl Rng) -> bool {
 }
 
 impl LootTables {
+    pub fn roll_disenchant(
+        &self,
+        entry: u32,
+        items: &ItemTemplates,
+        rng: &mut impl Rng,
+    ) -> RolledLoot {
+        let template = &self.disenchant[&entry];
+        let mut drops = Vec::new();
+        self.process(template, items, &|_| false, rng, &mut drops);
+        RolledLoot {
+            items: drops,
+            copper: 0,
+        }
+    }
+
     /// The loot id and money of `entry` in a copy at `difficulty_id` (0 outside
     /// dungeons): its difficulty row's, else its template's.
     fn creature_loot(&self, entry: u32, difficulty_id: u32) -> Option<&CreatureLoot> {
@@ -381,10 +397,20 @@ fn group_shares<'a>(group: &'a [LootRow], items: &ItemTemplates) -> Vec<(&'a Loo
     shares
 }
 
+/// TDB references remain separate from the creature content-policy tables.
+pub(crate) fn load_disenchant_tables(conn: &Connection) -> rusqlite::Result<LootTables> {
+    Ok(LootTables {
+        disenchant: load_templates(conn, "tdb_disenchant_loot_template")?,
+        reference: load_templates(conn, "tdb_reference_loot_template")?,
+        ..LootTables::default()
+    })
+}
+
 pub(crate) fn load_loot_tables(conn: &Connection) -> rusqlite::Result<LootTables> {
     Ok(LootTables {
         creature: load_templates(conn, "content_creature_loot_template")?,
         reference: load_templates(conn, "content_reference_loot_template")?,
+        disenchant: HashMap::new(),
         money: load_money(conn)?,
         difficulty_money: load_difficulty_money(conn)?,
     })

@@ -47,7 +47,7 @@ use crate::quest_rules::quest_needs_item;
 
 mod tables;
 
-pub(crate) use tables::{LootTables, load_loot_tables};
+pub(crate) use tables::{LootTables, RolledLoot, load_disenchant_tables, load_loot_tables};
 
 /// Everyone's loot on one corpse, by character id; a taken slot becomes `None`.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
@@ -55,7 +55,43 @@ pub(crate) struct CorpseLoot {
     pub looters: HashMap<u64, Vec<Option<LootContent>>>,
 }
 
-/// The corpse whose loot window a connection has open.
+/// A personal item-loot source attached to its owner, not an NPC corpse.
+#[derive(Component)]
+pub(crate) struct ItemLoot;
+
+pub(crate) fn open_item_loot(
+    world: &mut World,
+    player: Entity,
+    character_id: u64,
+    rolled: RolledLoot,
+) {
+    let slots = loot_slots(rolled, world.resource::<VendorCatalog>());
+    let response = LootResponse {
+        corpse: player.to_bits(),
+        auto: false,
+        slots: remaining_slots(&slots),
+    };
+    let mut connections = world.query::<(Entity, &InWorld, &PlayerLink)>();
+    let connection = connections
+        .iter(world)
+        .find(|(_, in_world, link)| in_world.character_id == character_id && link.0 == player)
+        .map(|(entity, _, _)| entity)
+        .expect("item caster has an in-world connection");
+    world.entity_mut(player).insert((
+        ItemLoot,
+        CorpseLoot {
+            looters: HashMap::from([(character_id, slots)]),
+        },
+    ));
+    world
+        .entity_mut(connection)
+        .insert(ActiveLoot { corpse: player });
+    if let Some(mut sender) = world.get_mut::<MessageSender<LootResponse>>(connection) {
+        sender.send::<LootChannel>(response);
+    }
+}
+
+/// The loot source whose loot window a connection has open.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ActiveLoot {
     pub corpse: Entity,
@@ -339,8 +375,8 @@ type Corpses<'w, 's> = Query<
     (
         &'static Position,
         &'static mut CorpseLoot,
-        &'static mut Corpse,
-        &'static mut DeathState,
+        Option<&'static mut Corpse>,
+        Option<&'static mut DeathState>,
     ),
 >;
 
@@ -411,8 +447,10 @@ impl Looting<'_, '_> {
             return Ok(false);
         }
         loot.looters.remove(&character_id);
-        if loot.looters.is_empty() {
-            corpse_looted(&mut decay, &mut death);
+        if loot.looters.is_empty()
+            && let (Some(decay), Some(death)) = (decay.as_deref_mut(), death.as_deref_mut())
+        {
+            corpse_looted(decay, death);
         }
         self.senders.lootable(connection, corpse, false);
         self.senders.closed(connection, corpse);
@@ -527,6 +565,7 @@ fn process_loot_slots(
 }
 
 fn process_loot_releases(
+    item_sources: Query<(), With<ItemLoot>>,
     mut requests: Requests<LootRelease>,
     mut senders: LootSenders,
     mut commands: Commands,
@@ -541,6 +580,11 @@ fn process_loot_releases(
         if let Some(active) = active.filter(|_| releases > 0) {
             senders.closed(connection, active.corpse);
             commands.entity(connection).remove::<ActiveLoot>();
+            if item_sources.contains(active.corpse) {
+                commands
+                    .entity(active.corpse)
+                    .remove::<(ItemLoot, CorpseLoot)>();
+            }
         }
     }
 }
@@ -566,7 +610,7 @@ fn close_invalid_loot(
 /// A decayed corpse (no longer `Corpse`) loses its loot; its remaining looters are
 /// told it is no longer lootable.
 fn drop_decayed_loot(
-    decayed: Query<(Entity, &CorpseLoot), Without<Corpse>>,
+    decayed: Query<(Entity, &CorpseLoot), (Without<Corpse>, Without<ItemLoot>)>,
     connections: Query<(Entity, &InWorld)>,
     mut senders: LootSenders,
     mut commands: Commands,
