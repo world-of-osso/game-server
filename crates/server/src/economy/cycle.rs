@@ -493,9 +493,9 @@ fn acquire_ingredients(
                 .push((auction.auction_id, auction.clone()));
             changes.deleted_auctions.push(auction.auction_id);
         }
-        changes
-            .mails
-            .push(crate::auction_house::seller_sale_mail(db, auction, price));
+        changes.mails.push(crate::auction_house::seller_sale_mail(
+            db, auction, price, None,
+        ));
     }
     Ok(())
 }

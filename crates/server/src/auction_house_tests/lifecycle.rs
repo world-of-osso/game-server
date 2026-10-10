@@ -37,6 +37,11 @@ fn cancel_own_auction_returns_item_via_mail() {
     let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
     assert_eq!(seller_mail[0].money, 0);
+    assert_eq!(
+        seller_mail[0].subject,
+        format!("AUCTION_REMOVED_MAIL_SUBJECT:{}", source_item.name)
+    );
+    assert_eq!(seller_mail[0].body, "");
     let returned_item = seller_mail[0]
         .items
         .first()
@@ -454,8 +459,11 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
 
     let mail_a = mail_store::load_mailbox(&db, bidder_a_id);
     assert_eq!(mail_a.len(), 1);
-    assert_eq!(mail_a[0].subject, "Outbid");
-    assert!(mail_a[0].body.contains(&source_item.name));
+    assert_eq!(
+        mail_a[0].subject,
+        format!("AUCTION_OUTBID_MAIL_SUBJECT:{}", source_item.name)
+    );
+    assert_eq!(mail_a[0].body, "");
     assert_eq!(mail_a[0].money, 0);
     assert!(mail_a[0].items.is_empty());
 
@@ -573,11 +581,11 @@ fn expired_auction_without_bid_returns_item_to_seller() {
                 auction.seller_character_id,
                 super::super::operations::build_auction_mail(
                     &db,
-                    "Auction expired",
-                    &format!(
-                        "Your auction for {} expired without a buyer.",
-                        auction.item.name
+                    &super::super::operations::auction_mail_subject(
+                        "AUCTION_EXPIRED_MAIL_SUBJECT",
+                        &auction,
                     ),
+                    "",
                     auction.deposit,
                     Some(auction.item.clone()),
                 ),
@@ -710,6 +718,11 @@ fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
 #[test]
 fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
     let db = persistence::temp_database();
+    for (id, name) in [(1, "Seller"), (2, "Buyer")] {
+        let (character, _) =
+            persistence::create_character_with_test_bags(&db, id, name, 1, 1).unwrap();
+        assert_eq!(character, id);
+    }
     let mut auction = test_auction(91, "Copper Ore", 1, 1);
     auction.current_bid = Some(1_001);
     auction.current_bidder_character_id = Some(2);

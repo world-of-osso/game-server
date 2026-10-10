@@ -175,18 +175,18 @@ fn ahserver_bound_unbound_equip_item_remains_auctionable() {
 }
 
 #[test]
-fn ahserver_money_outbid_200_copper_uses_real_denominations() {
-    assert_outbid_money(200, "0g 2s 0c");
+fn ahserver_money_outbid_200_copper_preserves_refund_without_invented_body() {
+    assert_outbid_money(200);
 }
 
 #[test]
 fn ahserver_money_outbid_mixed_and_u64_amounts_keep_every_coin() {
-    for (amount, text) in [(12_345, "1g 23s 45c"), (4_294_967_395, "429496g 73s 95c")] {
-        assert_outbid_money(amount, text);
+    for amount in [12_345, 4_294_967_395] {
+        assert_outbid_money(amount);
     }
 }
 
-fn assert_outbid_money(amount: u64, formatted: &str) {
+fn assert_outbid_money(amount: u64) {
     let (mut app, seller_connection, _, guid) = request_app(0, false);
     assert!(post(&mut app, seller_connection, guid).success);
     let auction_id = *app
@@ -207,15 +207,12 @@ fn assert_outbid_money(amount: u64, formatted: &str) {
     assert_eq!(persistence::load_inventory(db, a_id).gold, 998_800 + amount);
     let mail = persistence::mail_store::load_mailbox(db, a_id);
     assert_eq!(mail.len(), 1);
-    assert_eq!(mail[0].subject, "Outbid");
+    assert_eq!(mail[0].subject, "AUCTION_OUTBID_MAIL_SUBJECT:Hearthstone");
     assert_eq!(
         mail[0].money, 0,
         "refund was already credited, not a mail attachment"
     );
-    assert_eq!(
-        mail[0].body,
-        format!("You have been outbid on Hearthstone. Your {formatted} has been refunded.")
-    );
+    assert_eq!(mail[0].body, "");
 }
 
 fn bidder_connection(app: &mut App, account: u64, name: &str, copper: u64) -> (Entity, u64) {
