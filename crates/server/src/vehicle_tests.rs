@@ -156,11 +156,81 @@ fn vehicle_boards_group_member_into_sparse_empty_seat_and_exit_frees_it() {
 fn vehicle_rejects_non_group_boarding_and_full_vehicle_without_state_changes() {
     let (mut world, driver, passenger, outsider) = setup();
     assert!(board(&mut world, outsider, driver).is_err());
-    world.get_mut::<Mounted>(driver).unwrap().seats[1] = Some(99);
-    world.get_mut::<Mounted>(driver).unwrap().seats[2] = Some(100);
-    assert!(board(&mut world, passenger, driver).is_err());
-    assert!(world.get::<VehiclePassenger>(passenger).is_none());
-    assert!(!world.get::<MovementControl>(passenger).unwrap().controlled);
+    let overflow = world
+        .spawn((
+            ClientId(4),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Position {
+                x: 10.0,
+                y: 2.0,
+                z: 20.0,
+            },
+            Rotation::default(),
+            InMap::continent(0),
+            shared::components::Zone { id: 12 },
+            MovementControl::default(),
+        ))
+        .id();
+    let online: OnlineView = [
+        (1, driver, "Driver"),
+        (2, passenger, "Passenger"),
+        (3, outsider, "Outsider"),
+        (4, overflow, "Overflow"),
+    ]
+    .into_iter()
+    .map(|(id, entity, name)| {
+        (
+            id,
+            OnlineMember {
+                entity: entity.to_bits(),
+                name: name.into(),
+                class: 1,
+                level: 1,
+                portrait: Default::default(),
+                dungeon_difficulty: 1,
+            },
+        )
+    })
+    .collect();
+    let mut groups = world.resource_mut::<GroupRegistry>();
+    groups.invite(1, "Outsider", &online);
+    groups.respond_invite(3, true);
+    groups.invite(1, "Overflow", &online);
+    groups.respond_invite(4, true);
+    board(&mut world, passenger, driver).unwrap();
+    board(&mut world, outsider, driver).unwrap();
+    let occupied = world.get::<Mounted>(driver).unwrap().clone();
+    assert!(board(&mut world, overflow, driver).is_err());
+    assert_eq!(world.get::<Mounted>(driver), Some(&occupied));
+    assert!(world.get::<VehiclePassenger>(overflow).is_none());
+    assert!(!world.get::<MovementControl>(overflow).unwrap().controlled);
+    exit(&mut world, passenger);
+    board(&mut world, overflow, driver).unwrap();
+    assert_eq!(
+        world.get::<Mounted>(driver).unwrap().seats[1],
+        Some(overflow.to_bits())
+    );
+}
+
+#[test]
+fn vehicle_disconnect_pending_despawn_releases_seats_before_entity_removal() {
+    for disconnect_driver in [false, true] {
+        let (mut world, driver, passenger, _) = setup();
+        board(&mut world, passenger, driver).unwrap();
+        let leaving = if disconnect_driver { driver } else { passenger };
+        world
+            .entity_mut(leaving)
+            .insert(crate::networking::PendingDespawn);
+        reconcile_passengers(&mut world);
+        assert!(world.get::<VehiclePassenger>(passenger).is_none());
+        assert!(!world.get::<MovementControl>(passenger).unwrap().controlled);
+        assert_eq!(world.get::<Mounted>(driver).unwrap().seats[1], None);
+        world.despawn(leaving);
+        reconcile_passengers(&mut world);
+    }
 }
 
 #[test]
