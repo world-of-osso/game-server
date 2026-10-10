@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-10
 
-Source: game-server spell-dummy11 code revision `59a273b38e0e36f96651a726742f2cb2326972ac`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
+Source: game-server spell-dummy11 code revision `bce19e3726bb9a54404b79f9dd6663da234e6740`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
 
 ## Scope and classification
 
