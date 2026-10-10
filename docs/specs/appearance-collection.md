@@ -19,7 +19,7 @@ Account-wide appearance state uses shared-protocol `transmog::AppearanceCollecti
 
 ## Scope gaps (not parity claims)
 
-- No disenchant or scrapping acquisition handlers exist in the audited server. Explicit scrapping wording was not found in the Blizzard references; destruction equivalence is an inference, not verified Retail evidence.
+- [Disenchant](disenchant.md) now collects unbound disposal through the atomic API on its unmerged companion branch. No scrapping handler exists. Explicit scrapping wording was not found in the Blizzard references; destruction equivalence is an inference, not verified Retail evidence.
 - Refund/loot-trade timers, reversible collection, retroactive completed-quest backfill, additional `CanAddAppearance` source/visual eligibility exclusions, cosmetic-specific eligibility, variant sources and source-level persistence remain missing.
 - Native Wardrobe browsing/applying and collected toasts remain unimplemented. Native NPC vendor/drop tooltip marks consume appearance-level state; ordinary item tooltips do not render Retail's collection-status lines. Native IPC `appearance_known` still tests physical ownership, not collection.
 

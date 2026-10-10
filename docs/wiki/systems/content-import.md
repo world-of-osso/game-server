@@ -6,7 +6,7 @@ Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5
 
 The missing excerpt was restored from [TDB1210.26091](https://github.com/TrinityCore/TrinityCore/releases/tag/TDB1210.26091), the same release already identified by [Retail world content](../../specs/retail-world-content.md). Archive `TDB_full_1210.26091_2026_09_09.7z` (156449334 bytes) SHA256: `fc5513334d7534a19f533124a95910193c8150379e5ed8d0db3e547ac2c5a3f5`. The disenchant excerpt (6902 bytes) SHA256: `6fdbcbbf84199ff114039872d57facb01a5da3e01abbc91450a2e1348de718ba`. All 14669 reference-loot rows matched `tdb_reference_loot_template` exactly; no reference replacement. Canonical world.db was backed up beside itself as `world.db.pre-disenchant-20261010`, then only the new table was imported through `mysql_dump.py --prefix tdb_` using its DDL from `tdb_schema.sql`.
 
-Local Retail 12.1.0.69933 CASC `ItemDisenchantLoot` (FDID1134087, layout5845A4AA) has 166 records, all with `SkillRequired=0`. Legacy `item_template.RequiredDisenchantSkill` is not equivalent. Item727 matches Retail entry3 (level5), not legacy DisenchantID21. Gameplay still needs an explicit item-target protocol and typed disenchant errors; neither is present in the current shared contract. No gameplay completion claim.
+Local Retail 12.1.0.69933 CASC `ItemDisenchantLoot` (FDID1134087, layout5845A4AA) has 166 records, all with `SkillRequired=0`. Legacy `item_template.RequiredDisenchantSkill` is not equivalent. Item727 matches Retail entry3 (level5), not legacy DisenchantID21. Companion unmerged `disenchant` branches now supply the item-GUID contract, typed refusals and [gameplay pipeline](disenchant.md); this is not a master/deployment claim.
 
 ## Imported tables
 
@@ -25,7 +25,7 @@ Local Retail 12.1.0.69933 CASC `ItemDisenchantLoot` (FDID1134087, layout5845A4AA
 | `npc_vendor` | 37,585 (2,018 vendors) | Vendor item lists; negative `item` = reference to another vendor |
 | `tdb_trainer` / `tdb_trainer_spell` / `tdb_creature_trainer` / `tdb_skill_tiers` | 192 / 5,402 / 975 / 59 | Trainers come from TrinityCore TDB1210.26091 (Retail 12.1.0) excerpts, not AzerothCore (whose trainer tables are no longer imported: its profession trainers teach the Apprentice/Journeyman/Expert/Artisan ranks Retail removed, its class trainers Wrath ranks) in `data/reference/tdb1210/` (source: `SOURCE.txt` there), loaded with `mysql_dump.py --prefix tdb_` and `scripts/tdb_schema.sql`; Retail profession trainers and skill tier caps ([professions](professions.md)) |
 | `creature_loot_template` / `gameobject_loot_template` / `reference_loot_template` / `item_loot_template` | 249,466 / 17,957 / 44,536 / 4,997 | Loot tables |
-| `tdb_disenchant_loot_template` | 180 | TDB1210.26091 material loot, keyed by Retail `ItemDisenchantLoot.ID`; restored 2026-10-10. Gameplay handler pending. |
+| `tdb_disenchant_loot_template` | 180 | TDB1210.26091 material loot, keyed by Retail `ItemDisenchantLoot.ID`; restored 2026-10-10; [unmerged gameplay handler](disenchant.md). |
 | `gossip_menu` / `gossip_menu_option` | 6,055 / 4,604 | Gossip menus |
 | `npc_text` / `broadcast_text` | 8,361 / 73,039 | Gossip and NPC text |
 | `points_of_interest` | 463 | Gossip map POIs |
