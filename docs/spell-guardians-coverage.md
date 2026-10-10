@@ -16,6 +16,10 @@ No whole Dummy root closes. Census remains **168 roots,87 reviewed/81 underived*
 
 Durable receipts, frozen before/after source tars, generator, per-spec assertions and proof logs: `game-engine/data/diagnostics/spell-guardians-2026-10-10/`. Base dbe51fd; production snapshot a3e3762. Import still required: `python3 scripts/import-guardian-spells.py --archive data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql --db data/world.db.new`; do not invoke against live world.db.
 
+## Proof
+
+Eight final native functions pass atdcc8fea; importer fixtures2/2 pass. The single requested post-master `cargo test -p server --bin game-server spell_cast` ran atc096034: **314/315**, sole failure was a concurrency fixture assuming fixed damage while creatures can crit/miss. Transfer's200-health floor passed even on that failed run. Fixtures now use deterministic untyped melee units for the real batched/deferred swing system; final targeted **8/8**. No repeated broad gate or fresh315/315 claim. Final production remains unchanged from the passing format/check scope; independent integration acceptance belongs to the parent.
+
 ## All40-spec preference table
 
 | Spec | Book script roots before→after | Core script roots before→after | Core A before→after |
