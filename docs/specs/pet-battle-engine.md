@@ -14,6 +14,11 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 - [x] Publish104-ID row/implementation/test coverage, distinguishing static admission from behavioral proof.
 - [ ] Prove exact damage rounding/type weak multiplier and control/event timing against captured Retail runtime or current client game tables.
 - [x] Extend data-grounded dispatch with failure/state branching, drain, ramping attacks, priority, conditional/percentage damage, split-team attacks and global weather.
+- [x] Execute Cauterize's last-hit heal, Comeback's lower-health bonus, below-quarter-health attacks, charged two-use attacks, state-guaranteed accuracy and family-filtered healing of other allies from authenticated DB2 descriptions.
+- [x] Route authenticated three-row enemy-team attacks to the active and other slots; execute first-strike interrupts, state-boosted stun chances, bonus-state attacks and Leech Life's bounded post-hit heal.
+- [x] Keep Cyclone189/190 bound to the enemy team through swaps and removable by object reset; apply Stench527/1010 to each enemy pet. These do not establish other object or159 selector semantics.
+- [x] Execute strict speed bonuses for Slow Digestion/Rapid Consumption, Creeping Fungus's Moonlight bonus, Weakening Blow/Superbark's one-health floor and Eat the Fly's low-health heal bonus.
+- [ ] Generalize reactive damage/heal callbacks only when their causal ordering, target/source ownership and recursion are established; Leech Life383 does not certify other event2 graphs.
 - [x] Weather must affect bench pets, replace prior weather, remove exactly applied state deltas, and preserve Elemental negative-weather exemptions.
 - [ ] Reach at least90% executable effect-row coverage; retain explicit rejection and document undetermined parameters/states.
 
