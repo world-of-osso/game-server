@@ -1132,8 +1132,7 @@ pub fn damage_taken_multiplier(
                     .iter()
                     .filter(|effect| {
                         effect.aura_type == handlers::MOD_SPELL_DAMAGE_FROM_CASTER
-                            && (effect.class_mask == [0; 4]
-                                || spell_mods::class_mask_affects(aura, effect, spell))
+                            && scripts::affects_incoming_spell(aura, effect, spell)
                     })
                     .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
             })

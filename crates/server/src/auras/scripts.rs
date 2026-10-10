@@ -77,6 +77,18 @@ const DRAIN_SOUL_ENERGIZE: u32 = 205_292;
 const SURVIVAL_INSTINCTS: u32 = 61336;
 const SURVIVAL_INSTINCTS_BUFF: u32 = 50322;
 const BREATH_OF_FIRE_BURN: u32 = 123725;
+const LASHING_FLAMES: u32 = 334168;
+
+///60103/334046/334168 explicitly limit this vulnerability to Flame Shock.
+///Other271 masks do not establish a universal filter:208086's description
+///instead grants all owner damage. Keep that existing base contract intact.
+pub(super) fn affects_incoming_spell(
+    aura: &AuraInstance,
+    effect: &super::AuraEffectState,
+    spell: &crate::spell_info::SpellInfo,
+) -> bool {
+    aura.spell_id != LASHING_FLAMES || super::spell_mods::class_mask_affects(aura, effect, spell)
+}
 
 ///115181 names123725s2 as reduced damage dealt to the casting Monk.
 ///Consume that named field for this spell only; do not redefine generic269.

@@ -176,7 +176,7 @@ Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodi
 - [x] Hammer of the Righteous53595 launches only88263's named damage at other nearby enemies while the caster is inside their own active Consecration26573. The unavailable203785 variant remains unsupported.
 - [x] Shred5221 with343232 or405834 plus active stealth receives s3=60% extra damage and double modified crit chance, with the tooltip's343232s1 extra combo point. Existing bleeding-rank bonus is retained. Thrash-on-Shred405300 remains separate.
 - [x] Thrash106830 applies the named405233 periodic bleed only to hit enemies; native ticks and expiry apply. Arcane variant429523 remains unsupported.
-- [x] Lava Lash60103 with334046 applies334168; generic caster-owned aura271 now respects nonempty spell-family masks, so the named Flame Shock gains100% damage but unrelated Lightning Bolt and foreign attackers do not.
+- [x] Lava Lash60103 with334046 applies334168; caster-owned aura271's named334168 consumer respects its Flame Shock family mask, so own Flame Shock gains100% damage but unrelated Lightning Bolt and foreign attackers do not. Other271 mask contracts are not generalized; Colossus Smash's existing all-owner-damage contract is preserved.
 
 Sources: only local Mainline12.1.0.69933 descriptions/effects/variables and read-only imported rows. No invented IDs or source-C++ claim. `crates/server/src/spell_cast/dummy11_tests.rs` exercises these paths; [scope/proof](../wiki/systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths).
 
