@@ -152,6 +152,19 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 
 - `crates/server/src/spell_cast/dummy9_tests.rs` —14 native functions across nine bounded paths. Requested post-master `spell_cast` filter ran once at`314a8f1`:274/275 (all14 new functions passed). The sole obsolete Blossom no-action fixture was corrected at`521455e` and passes its focused rerun. Separate shield-depletion RED at`43701c9` led to`e78fad0`; absorb regressions5/5 and both Tranquility functions2/2 pass, with final format/check. No fresh275/275 broad-pass claim; [census and proof](../wiki/systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks).
 
+### Tenth batch: low-count spec paths
+
+- [x] Blade Flurry13877 launches the named331850 initial strike in its native8yd area: five targets, eight with active272026. Active381878 grants its s2 combo points per landed initial hit. Subsequent28% damage transfer and unknown markers remain unsupported.
+- [x] Consecration26573 creates one owned fixed-position81297 damage field; native8yd area, t1=1000ms, native duration, tooltip1.05 coefficient; recast replaces only that owner's field. Optional slow/Radiant variants and summoned actor parity remain open.
+- [x] Feral Lunge196884 launches215802 at the selected enemy. This does not implement effect254 movement.
+- [x] Voidform228260 applies the named194249 damage effects for their native duration after cast; no guessed Volley/replacement charge behavior.
+- [x] Arcane Surge365350 applies named365362 damage/regeneration effects after cast. Mana-spent damage, soft-cap and Clearcasting remain open.
+- [x] Protection Judgment275779 with active315867 launches220637 Holy Power once on its damage hit; no rank means no resource award.
+- [x] Hand of Gul'dan105174 launches86040 at the target's native8yd area, multiplying damage by root s1=3 with the unchanged30-raw shard cost. Imps, Doom and variable-shard casting remain unsupported.
+- [x] Lightning Bolt188196 with active343725 awards its s1=6 Maelstrom once on a landed bolt. Maelstrom Weapon consumption/variants remain open.
+
+Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodies or invented child IDs. Divine Storm's reduced-damage formula and Glacial Advance's advancing geometry were not derivable from these sources and remain deferred.
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
