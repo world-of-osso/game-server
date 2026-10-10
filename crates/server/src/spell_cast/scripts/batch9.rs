@@ -21,7 +21,7 @@ const WINTER_SLOW: u32 = 211793;
 const VIRULENT_PLAGUE: u32 = 191587;
 const ATONEMENT: u32 = 194384;
 
-pub(super) fn cast_effect(spell_id: u32, index: u8) -> Option<CastEffectHandler> {
+pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<CastEffectHandler> {
     match (spell_id, index) {
         (HEALING_RAIN, 0) | (EARTHQUAKE, 2) | (EMERALD_BLOSSOM, 0) => Some(spawn_ground_pulses),
         (VOID_STEP, 0) => Some(teleport_void_step),
@@ -121,7 +121,7 @@ fn replace_owned_rain(world: &mut World, caster: Entity) {
     }
 }
 
-pub(super) fn update_ground_pulses(world: &mut World) {
+pub(in crate::spell_cast) fn update_ground_pulses(world: &mut World) {
     let entities: Vec<_> = world
         .query_filtered::<Entity, With<GroundPulses>>()
         .iter(world)
