@@ -355,9 +355,11 @@ pub fn list_characters_for_account(db: &Database, account_id: u64) -> Vec<(u64, 
 
 pub fn find_account_id_for_character(db: &Database, character_id: u64) -> Option<u64> {
     let txn = db.begin_read().expect("Failed to begin read txn");
-    let table = txn
-        .open_table(ACCOUNT_CHARACTERS)
-        .expect("Failed to open account_characters");
+    let table = match txn.open_table(ACCOUNT_CHARACTERS) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return None,
+        Err(error) => panic!("Failed to open account_characters: {error}"),
+    };
     for row in table.iter().expect("Failed to iterate account_characters") {
         let (account_id, encoded_ids) = row.expect("Failed to read account_characters row");
         let ids =
