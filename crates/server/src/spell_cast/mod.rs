@@ -22,6 +22,8 @@ mod disenchant_tests;
 #[cfg(test)]
 mod dummy10_tests;
 #[cfg(test)]
+mod dummy11_tests;
+#[cfg(test)]
 mod dummy2_tests;
 #[cfg(test)]
 mod dummy3_tests;
