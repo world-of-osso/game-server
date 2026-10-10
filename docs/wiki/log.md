@@ -1,6 +1,7 @@
 # Wiki Log
 
 - 2026-10-10 — [Toy effects3](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10): data-backed226 ticks retain channel targets; conditional/scripts remain blocked.321 uses PreventionType4, not MiscValue; linked428 lifecycle and authentic24-template import unlock tent summons with DB2 target18/79. All17 bobber258 toys remain explicit fishing/object gaps. Private prepared census71→75/1166; no canonical database, client, merge or realm changes.
+- 2026-10-10 — [Class spell scripts batch3](systems/spell-casting.md#third-batch-local-retail-rows): eight bounded local-Retail paths (Prayer, Garrote, Serenity, Scorch, Shred, Thunder Clap, Devastate, Moonfire); per-spell cast proof/status and unresolved variants in `handoff-spell-dummy3.md`. No database writes, deployment or merge.
 
 - 2026-10-10 — [Disenchant](systems/disenchant.md): Retail item-GUID casts, authentic eligibility/TDB rolls, atomic unbound disposal receipts and shared personal loot; six native gameplay tests plus metadata1/loot27/known-spell1 pass. Companion protocol/client required; no merges/services/live proof.
 

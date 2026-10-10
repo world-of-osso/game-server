@@ -1,6 +1,8 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+mod batch3;
+
 use bevy::prelude::*;
 
 use super::targets::{Relation, relation_matches};
@@ -71,6 +73,9 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
+        (batch3::THUNDER_CLAP, 0) => Some(batch3::thunder_clap),
+        (batch3::DEVASTATE, 0) => Some(batch3::devastate),
         (FORTIFYING_BREW, 0) => Some(fortifying_brew),
         (SHIELD_BLOCK, 0) => Some(shield_block),
         (BLOODTHIRST, 0) => Some(bloodthirst),
@@ -93,8 +98,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 
 /// TC a352b1fa spell_mage.cpp:804-815 overrides Fire Blast's crit chance
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
-pub fn crit_chance(spell_id: u32) -> Option<f32> {
+pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         FIRE_BLAST => Some(100.0),
         _ => None,
     }
@@ -104,6 +110,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
+        batch3::SHRED => Some(batch3::shred_damage),
         BACKSTAB => Some(backstab_damage),
         DRAIN_SOUL => Some(drain_soul_damage),
         COBRA_SHOT => Some(cobra_shot_damage),
@@ -164,7 +171,12 @@ fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
-    shared::skyriding::ability_impulse(spell_id).map(|_| crate::skyriding::flap as AfterCastHook)
+    if spell_id == batch3::FLASH_HEAL {
+        Some(batch3::flash_heal)
+    } else {
+        shared::skyriding::ability_impulse(spell_id)
+            .map(|_| crate::skyriding::flap as AfterCastHook)
+    }
 }
 
 /// `SpellObjectAreaTargetSelectFn`: narrows the units an effect selected.
@@ -203,6 +215,7 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        batch3::PRAYER_OF_HEALING => Some((Relation::Ally, batch3::prayer_plan)),
         CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
         _ => None,
     }
@@ -753,6 +766,7 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        batch3::GARROTE => Some(batch3::garrote),
         FROSTBOLT => Some(frostbolt_chilled),
         _ => None,
     }
