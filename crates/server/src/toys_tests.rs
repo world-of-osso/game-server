@@ -1235,8 +1235,6 @@ fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
 #[test]
 fn toyfx5_visual_attachments_use_real_toys_and_cancel_without_gameplay_changes() {
     for (item, spell) in [
-        (133997, 203533),  // Black Ice
-        (134007, 203820),  // Eternal Black Diamond Ring
         (156871, 261981),  // Spitzy
         (165791, 286277),  // Worn Cloak
         (221964, 455023),  // Filmless Camera
@@ -1353,6 +1351,11 @@ fn toyfx5_mask_affects_selected_friend_and_mortar_delivers_real_cast_time() {
     );
 
     learn_effect_toy(&mut h, character, 204818);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.npc)
+        .unwrap()
+        .x = 20.0;
     h.select(Some(h.npc));
     h.advance(2);
     let health_before = *h
@@ -1378,6 +1381,35 @@ fn toyfx5_mask_affects_selected_friend_and_mortar_delivers_real_cast_time() {
         health_before,
         "a squeaking rubber duck is not a damage spell"
     );
+}
+
+#[test]
+fn toyfx5_attachment_descriptions_without_visual_bindings_remain_unavailable() {
+    for (item, spell) in [(133997, 203533), (134007, 203820)] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        assert!(
+            !world_db()
+                .unwrap()
+                .store
+                .get(spell)
+                .unwrap()
+                .has_spell_visual
+        );
+        let error = activate(&mut h, item)[0].error.clone().unwrap();
+        assert!(
+            error.contains("aura 4") && error.contains("effect 3"),
+            "{error}"
+        );
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+        assert!(
+            !h.inbox
+                .cooldowns
+                .iter()
+                .any(|cooldown| cooldown.spell_id == spell)
+        );
+    }
 }
 
 #[test]
