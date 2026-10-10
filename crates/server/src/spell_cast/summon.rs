@@ -44,6 +44,10 @@ impl SummonProperties {
             )
     }
 
+    pub(super) fn is_guardian(self) -> bool {
+        matches!(self.title, TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE)
+    }
+
     pub(crate) fn is_supported(self) -> bool {
         match self.control {
             CONTROL_PET => true,
@@ -274,6 +278,8 @@ fn spawn_summon(
             },
         ),
     ));
+    let actor = entity.id();
+    entity.world_scope(|world| super::guardian::initialize(world, actor));
     if properties.control == CONTROL_ALLY || properties.control == CONTROL_PET {
         entity.insert(UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED));
     }
@@ -303,6 +309,7 @@ pub(super) fn expire_summons(world: &mut World) {
         .filter(|(_, summon, map)| {
             summon.expires_at.is_some_and(|expiry| now >= expiry)
                 || world.get::<InMap>(summon.owner) != Some(*map)
+                || !super::targets::is_alive(world, summon.owner)
         })
         .map(|(entity, _, _)| entity)
         .collect();

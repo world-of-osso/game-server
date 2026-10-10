@@ -14,7 +14,23 @@ fn imp(h: &mut Harness) -> Entity {
         .insert_resource(super::guardian::load_guardian_spells(&conn).unwrap());
     h.select(Some(h.npc));
     h.advance(4);
-    super::cast_triggered(h.app.world_mut(), h.caster, 111859, Some(h.npc), 0);
+    // Root Dummy0 remains unbound; exercise its authentic effect28 directly.
+    let spell = world_db().unwrap().store.get(111859).unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 28)
+        .unwrap();
+    let dest =
+        super::targets::effect_dest(h.app.world(), h.caster, Some(h.npc), effect, None).unwrap();
+    let ctx = super::effects::EffectCtx {
+        caster: h.caster,
+        spell,
+        depth: 0,
+        dest: Some(dest),
+        chain_multiplier: 1.0,
+    };
+    super::summon::summon_creature(h.app.world_mut(), &ctx, effect);
     let world = h.app.world_mut();
     world
         .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
@@ -97,6 +113,23 @@ fn guardians_sacrifice_splits_spell_damage_and_stops_on_native_health_floor() {
     h.advance(5);
     assert_eq!(h.health(h.caster), 200.0);
     assert!(!crate::auras::has_aura(h.app.world(), ally, 6940));
+}
+
+#[test]
+fn guardians_sacrifice_splits_real_auto_attack_damage() {
+    let (mut h, ally) = sacrifice();
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(crate::combat::AutoAttack::new(ally));
+    h.advance(40);
+    let ally_loss = 1000.0 - h.health(ally);
+    let owner_loss = 1000.0 - h.health(h.caster);
+    assert!(ally_loss > 0.0, "real swings must land");
+    assert!(
+        (owner_loss - ally_loss * 3.0 / 7.0).abs() < 0.1,
+        "melee must split too: {ally_loss}/{owner_loss}"
+    );
 }
 
 #[test]
