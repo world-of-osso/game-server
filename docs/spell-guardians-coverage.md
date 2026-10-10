@@ -14,7 +14,7 @@ Native Mainline12.1.0.69933, read-only world.db and local TDB1210.26091 archive.
 
 No whole Dummy root closes. Census remains **168 roots,87 reviewed/81 underived**; E3 **120 IDs/128 memberships**, aura4 **67/75**, aura226 **18/19**. Generic actors/81 do not count as named scripts. Native6940 effect2 is a named consumed numeric field; Paladin book script presence increases by one per spec; core totals stay unchanged. Blade Flurry geometry, Atonement damage-to-healing curve, Touch of Karma and Spirit Link remain un-derived.
 
-Durable receipts, frozen before/after source tars, generator, per-spec assertions and proof logs: `game-engine/data/diagnostics/spell-guardians-2026-10-10/`. Base dbe51fd; production snapshot e0c73d5. Import still required: `python3 scripts/import-guardian-spells.py --archive data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql --db data/world.db.new`; do not invoke against live world.db.
+Durable receipts, frozen before/after source tars, generator, per-spec assertions and proof logs: `game-engine/data/diagnostics/spell-guardians-2026-10-10/`. Base dbe51fd; production snapshot a3e3762. Import still required: `python3 scripts/import-guardian-spells.py --archive data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql --db data/world.db.new`; do not invoke against live world.db.
 
 ## All40-spec preference table
 
