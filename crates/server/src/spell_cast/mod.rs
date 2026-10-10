@@ -518,7 +518,7 @@ fn cast_event(
     }
 }
 
-fn mark_dirty(world: &World, entity: Entity) {
+pub(crate) fn mark_dirty(world: &World, entity: Entity) {
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(entity);
     }
@@ -1469,6 +1469,10 @@ fn resolve_effects(
         let handler = effects::handler(effect.effect);
         let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
+            if crate::auras::mechanic_immunity::blocks_effect(world, unit, spell, effect) {
+                effects::log_mechanic_immune(world, &ctx, unit);
+                continue;
+            }
             if let Some(handler) = handler
                 && world.get_entity(unit).is_ok()
             {

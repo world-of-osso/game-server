@@ -103,6 +103,16 @@ Casting at full health stays allowed and ends at the first healing tick without 
 
 Heal log `amount` is raw healing and `overflow` is overheal; effective healing is `amount - overflow` (`spell_cast/effects.rs`). Behavioral tests cast the real data spells, verify immediate aura/channel removal, absence of later heal events, and unchanged Renew overheal ticks.
 
+## Mechanic immunity, pushback and normalized movement
+
+Verified 2026-10-09: aura 77 (`mechanic_immunity.rs`) compares MiscValue with `SpellCategories.Mechanic` and `SpellEffect.EffectMechanic`. It rejects matching effects, logs Immune, and removes existing matching aura instances through normal removal hooks. Icebound Fortitude 48792 removes/rejects Hammer of Justice 853 (mechanic 12), not Hamstring 1715 (effect mechanic 11). Unending Resolve 104773 rejects Pummel 6552 (interrupt mechanic 26).
+
+Aura 149 sums percentages into `AuraStatMods.pushback_reduction_pct`. Positive non-periodic damage events apply reduced pushback to the replicated CastState: normal casts +500 ms, channels −25% duration, each multiplied by `1 − reduction/100`, at most twice. 100% protection consumes no count. The shared CastState pushback method was previously unused by the server. Barkskin 22812 is 100%; catalog spell 1258016 supplies the 70% test. No spell-specific gameplay IDs are hardcoded in these handlers.
+
+Aura 191 is an **absolute speed cap**, not a percentage or immunity to slows. `stat_mods.rs` takes the greatest positive amount, caps run/flight against base 7 and swim against base 4.722222 yards/second, then applies the strongest slow and root/stun. Pillar of Frost 51271 has amount 2: run speed is 2 yd/s, or 1 yd/s under Hamstring. Swim uses the existing movement path with a separately normalized multiplier.
+
+Reference: TrinityCore `a352b1fa`, `Unit::UpdateSpeed` (normalization before slows), `Spell::Delayed`/`DelayedChannel` (summed REDUCE_PUSHBACK), and `AuraEffect::HandleModMechanicImmunity` → `SpellInfo::ApplyAllSpellImmunitiesTo`. Tests: `auras::spell_auras_tests`. These handlers do not implement the other missing aura types on these spells.
+
 ## Damage and healing
 
 `spell_cast::effects::deal_damage` applies these steps in order:

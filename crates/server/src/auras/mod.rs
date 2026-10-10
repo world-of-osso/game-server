@@ -15,6 +15,7 @@
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 pub(crate) mod handlers;
+pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod periodic;
 pub mod procs;
@@ -633,6 +634,32 @@ pub fn align_area_aura(
     auras.dirty = true;
 }
 
+/// Damage pushback, shared by spell and melee events. Periodic/absorbed hits
+/// are excluded by the event consumer before reaching this function.
+pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
+    use shared::casting::{CastState, CastType};
+    const MAX_PUSHBACKS: u8 = 2;
+    const CAST_DELAY: f32 = 0.5;
+    const CHANNEL_FRACTION: f32 = 0.25;
+    let reduction = world
+        .get::<AuraStatMods>(target)
+        .map_or(0.0, |mods| mods.pushback_reduction_pct)
+        .clamp(0.0, 100.0);
+    let Some(mut cast) = world.get_mut::<CastState>(target) else {
+        return;
+    };
+    if reduction == 100.0 || !cast.interruptible || cast.pushback_count >= MAX_PUSHBACKS {
+        return;
+    }
+    let factor = 1.0 - reduction / 100.0;
+    cast.pushback_count += 1;
+    cast.duration = match cast.cast_type {
+        CastType::Normal => cast.duration + CAST_DELAY * factor,
+        CastType::Channel => (cast.duration * (1.0 - CHANNEL_FRACTION * factor)).max(cast.elapsed),
+    };
+    crate::spell_cast::mark_dirty(world, target);
+}
+
 /// Apply (or refresh) the aura effects of one resolution on a target.
 pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     let Some(spell) = lookup_spell(world, application.spell_id) else {
@@ -658,12 +685,32 @@ pub(crate) fn apply_aura_with_spell(
         return;
     }
     let now = aura_now(world);
-    let instance = build_instance(world, application, &spell, now);
+    let mut instance = build_instance(world, application, &spell, now);
+    instance.effects.retain(|stored| {
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == stored.index)
+            .expect("applied aura effect belongs to spell");
+        let immune = mechanic_immunity::blocks_effect(world, target, spell, effect);
+        if immune {
+            let ctx = crate::spell_cast::effects::EffectCtx {
+                caster: application.caster,
+                spell,
+                depth: 0,
+                dest: None,
+                chain_multiplier: 1.0,
+            };
+            crate::spell_cast::effects::log_mechanic_immune(world, &ctx, target);
+        }
+        !immune
+    });
     if instance.effects.is_empty() {
         return;
     }
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
+    mechanic_immunity::remove_matching(world, target, &instance);
     if let Some(specific) = food_drink(&spell) {
         let excluded: Vec<u32> = world
             .get::<ActiveAuras>(target)
@@ -1484,6 +1531,9 @@ mod tests;
 
 #[cfg(test)]
 mod defensives_tests;
+
+#[cfg(test)]
+mod spell_auras_tests;
 
 #[cfg(test)]
 mod polymorph_tests;
