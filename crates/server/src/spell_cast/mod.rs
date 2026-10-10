@@ -15,6 +15,7 @@
 pub mod area_aura;
 pub mod creature;
 pub mod effects;
+mod hit;
 mod missiles;
 pub mod powers;
 mod reflect;
@@ -1351,7 +1352,7 @@ const EFFECT_ATTR_PLAYERS_ONLY: u32 = 0x0000_4000;
 
 /// Targets of every handled effect, selected before any effect resolves. A
 /// creature's melee-defense spell misses units by its miss chance
-/// (`creature::roll_spell_misses`).
+/// (`hit::remove_defended_targets`).
 /// `ignore_target_check` (`TRIGGERED_IGNORE_TARGET_CHECK`, Spell.cpp:3489-3491): the
 /// explicit unit is hit whatever its relation to the caster, as a reflected Frostbolt's
 /// triggered damage hits its own caster.
@@ -1411,7 +1412,7 @@ fn plan_targets(
             chain_multipliers,
         });
     }
-    creature::roll_spell_misses(world, caster, spell, &mut plan);
+    hit::remove_defended_targets(world, caster, spell, &mut plan);
     Ok(plan)
 }
 

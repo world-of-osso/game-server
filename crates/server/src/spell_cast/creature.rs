@@ -9,20 +9,15 @@
 //! not modelled), which MOD_HIT_CHANCE lowers.
 
 use bevy::prelude::*;
-use shared::components::Npc;
-use shared::protocol::{CombatLogKind, MissKind};
+use shared::protocol::CombatLogKind;
 
 use super::{
-    CastFailure, Sight, TargetPlan, cast_event, handled_effects, log_event, plan_targets,
-    start_cast, targets, validate_target,
+    CastFailure, Sight, cast_event, handled_effects, log_event, plan_targets, start_cast, targets,
+    validate_target,
 };
 use crate::creature_ai::CreatureState;
 use crate::spell_info::{SpellInfo, SpellStore};
 
-/// `SPELL_DAMAGE_CLASS_MELEE` (`SpellCategories.DefenseType`).
-const SPELL_DAMAGE_CLASS_MELEE: u32 = 2;
-/// `SPELL_ATTR7_NO_ATTACK_MISS`.
-const SPELL_ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 /// Triggered casts resolve without proc events (`TRIGGERED_DISALLOW_PROC_EVENTS`).
 const TRIGGERED_DEPTH: u8 = 1;
 
@@ -109,61 +104,4 @@ pub(crate) fn ai_spell_target(world: &World, spell_id: u32) -> AiTarget {
         }
     }
     target
-}
-
-fn attribute(spell: &SpellInfo, index: usize) -> u32 {
-    spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
-}
-
-/// Remove the hostile units a creature's melee spell misses from every planned
-/// effect and log each miss.
-pub(super) fn roll_spell_misses(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    plan: &mut TargetPlan,
-) {
-    let melee = spell
-        .categories
-        .as_ref()
-        .is_some_and(|categories| categories.defense_type == SPELL_DAMAGE_CLASS_MELEE);
-    if world.get::<Npc>(caster).is_none()
-        || !melee
-        || attribute(spell, 7) & SPELL_ATTR7_NO_ATTACK_MISS != 0
-    {
-        return;
-    }
-    let miss_chance =
-        crate::combat::creature_miss_chance(world.get::<crate::auras::AuraStatMods>(caster));
-    let mut rolled: Vec<(Entity, bool)> = Vec::new();
-    for planned in plan.iter() {
-        for &unit in &planned.units {
-            if unit == caster
-                || rolled.iter().any(|(seen, _)| *seen == unit)
-                || !targets::is_hostile(world, caster, unit)
-            {
-                continue;
-            }
-            let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..100.0);
-            rolled.push((unit, roll < miss_chance));
-        }
-    }
-    let missed: Vec<Entity> = rolled
-        .into_iter()
-        .filter_map(|(unit, missed)| missed.then_some(unit))
-        .collect();
-    for planned in plan.iter_mut() {
-        planned.units.retain(|unit| !missed.contains(unit));
-    }
-    for unit in missed {
-        log_event(
-            world,
-            cast_event(
-                caster,
-                Some(unit),
-                spell,
-                CombatLogKind::Miss(MissKind::Miss),
-            ),
-        );
-    }
 }

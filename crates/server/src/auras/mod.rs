@@ -69,6 +69,7 @@ impl Plugin for AuraPlugin {
         app.init_resource::<procs::PendingAuraEvents>()
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
+            .add_systems(Startup, scripts::register_class_scripts)
             .init_resource::<PendingPassiveSync>()
             .add_systems(
                 Startup,
@@ -283,10 +284,27 @@ impl ActiveAuras {
     /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned or confused (fear and charges are
     /// not modelled).
     pub fn cannot_auto_attack(&self) -> bool {
-        self.is_stunned() || self.is_confused()
+        self.is_stunned() || self.is_confused() || self.is_pacified()
     }
 
-    fn has_type(&self, aura_type: u32) -> bool {
+    pub fn is_pacified(&self) -> bool {
+        self.has_type(handlers::MOD_PACIFY) || self.has_type(handlers::MOD_PACIFY_SILENCE)
+    }
+
+    /// Additive aura points, outside rating diminishing returns.
+    pub(crate) fn modifier(&self, aura_type: u32) -> f32 {
+        self.iter()
+            .map(|aura| {
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.aura_type == aura_type)
+                    .map(|effect| effect.amount * aura.stack_multiplier())
+                    .sum::<f32>()
+            })
+            .sum()
+    }
+
+    pub(crate) fn has_type(&self, aura_type: u32) -> bool {
         self.auras
             .iter()
             .flat_map(|aura| &aura.effects)

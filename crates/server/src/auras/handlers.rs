@@ -29,6 +29,8 @@ pub enum AuraKind {
     UnitState,
     /// Chance to reflect a spell back to its caster (`reflect_chance`).
     Reflect,
+    /// Read by incoming hit selection (`spell_cast::hit`, `combat`).
+    HitDefense,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -57,6 +59,14 @@ pub const MOD_SHAPESHIFT: u32 = 36;
 pub const MOD_DECREASE_SPEED: u32 = 33;
 /// SPELL_AURA_MOD_DODGE_PERCENT: nondiminishing percentage points.
 pub const MOD_DODGE_PERCENT: u32 = 49;
+pub const MOD_PARRY_PERCENT: u32 = 47;
+pub const MECHANIC_IMMUNITY: u32 = 77;
+pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
+pub const MOD_ATTACKER_RANGED_HIT_CHANCE: u32 = 185;
+pub const MOD_ATTACKER_SPELL_HIT_CHANCE: u32 = 186;
+/// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
+pub const DEFLECT_SPELLS: u32 = 287;
+pub const IGNORE_HIT_DIRECTION: u32 = 288;
 /// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
 pub const MOD_BLOCK_PERCENT: u32 = 51;
 pub const MOD_HIT_CHANCE: u32 = 54;
@@ -177,6 +187,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_MOUNTED_SPEED_ALWAYS
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
         | MOD_DODGE_PERCENT
+        | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
@@ -198,6 +209,12 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
+        MECHANIC_IMMUNITY
+        | MOD_ATTACKER_MELEE_HIT_CHANCE
+        | MOD_ATTACKER_RANGED_HIT_CHANCE
+        | MOD_ATTACKER_SPELL_HIT_CHANCE
+        | DEFLECT_SPELLS
+        | IGNORE_HIT_DIRECTION => HitDefense,
         _ => return None,
     })
 }

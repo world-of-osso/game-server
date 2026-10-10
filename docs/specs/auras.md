@@ -24,7 +24,9 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] Fail casts under stun, silence and pacify with `CastFailReason::Stunned`/`Silenced`/`Pacified`, and under confuse with `NotSupported` ("Can't do that while confused": shared-protocol has no `Confused` reason).
 - [x] Apply talent passives (talent spells are in `KnownSpells`).
 - [x] Melee and spell damage share school immunity and absorb capacity handling; immune swings log `Immune`, fully absorbed swings log `Absorb`, and partial absorbs log remaining damage plus absorbed amount. Depleted shields are removed.
-- [x] MOD_DODGE_PERCENT 49 adds nondiminishing dodge percentage points to player avoidance; Evasion uses its unscaled catalog amount.
+- [x] MOD_DODGE_PERCENT 49 adds nondiminishing dodge percentage points to player avoidance; Evasion uses its unscaled catalog amount. MOD_PARRY_PERCENT 47 adds nondiminishing parry points with weapon/parry capability requirements; no spell-specific amounts are substituted.
+- [x] MOD_ATTACKER_MELEE/RANGED/SPELL_HIT_CHANCE 184/185/186 modifies incoming melee/ranged/matching-school spell misses. MECHANIC_IMMUNITY 77 blocks matching incoming spell/effect mechanics. DEFLECT_SPELLS 287 deflects magic/ranged attacks from the front unless controlled; IGNORE_HIT_DIRECTION 288 removes that facing restriction. New-hit defenses do not cancel already-landed periodic damage; applicable bypass attributes remain respected.
+- [x] MOD_PACIFY 25 and MOD_PACIFY_SILENCE 60 prevent auto-attacks as well as PACIFY-prevention abilities. Turtle 186265 applies catalog pacify child 205769 and removes it when the parent ends, including natural expiry. See [defensives audit](../defensives-audit.md) for catalog/proof boundaries.
 - [x] Fortifying Brew 115203 applies buff 120954 with 20% damage reduction and a fixed health bonus computed from pre-buff maximum health and the cast's health percentage. MOD_INCREASE_HEALTH 34 adds that bonus to both current and maximum health and removes it without killing a living unit. See [defensives audit](../defensives-audit.md) for source and proof boundaries.
 - [x] MOD_BLOCK_PERCENT 51: add to a player's block chance when it can block and holds a shield (StatSystem.cpp:496-501); creatures' block ignores it.
 - [x] MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417: divide the GCD of a spell its class mask affects by 1 + haste, within 750-1500 ms (Spell.cpp:9220-9224).
@@ -41,7 +43,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - `crates/server/src/auras/spell_mods.rs`: `SpellModOp`, modifier matching, charge use.
 - `crates/server/src/auras/stat_mods.rs`: `StatModifiers`/`AuraStatMods` computation.
 - `crates/server/src/auras/handlers.rs`: aura type registry.
-- `crates/server/src/auras/scripts.rs`: `AuraScripts` hooks (empty).
+- `crates/server/src/auras/scripts.rs`: `AuraScripts` hooks, including Turtle's catalog pacify child lifecycle.
 - `crates/server/src/auras/unit_state.rs`: invisibility, unattackable, confuse and transform unit state.
 - `crates/server/src/auras/tests.rs`: real-DB App tests.
 - `crates/server/src/auras/polymorph_tests.rs`: Polymorph 118 on a kobold and a level-scaled Blackrock Spy.

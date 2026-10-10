@@ -147,7 +147,11 @@ fn defensives_warrior_shield_wall_reduces_fire_40_percent() {
 
 #[test]
 fn defensives_hunter_turtle_reduces_fire_30_percent() {
-    assert_reduction(3, 186_265, &[], 70.0);
+    let mut h = cast_defensive(3, 186_265, &[205_769]);
+    // Already-landed/periodic damage is reduced; a new melee attack misses.
+    assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), 70.0);
+    assert_eq!(incoming_melee(&mut h).health_loss, 0.0);
+    assert_melee_event(&h, CombatEventType::Miss, 0.0);
 }
 
 #[test]
@@ -418,4 +422,212 @@ fn defensives_priest_power_word_shield_absorbs_melee() {
             .filter(|event| event.spell_id.is_none())
             .collect::<Vec<_>>()
     );
+}
+
+fn expire_defensive(h: &mut Harness, spell_id: u32) {
+    let expires_at = h
+        .app
+        .world()
+        .get::<ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == spell_id)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    let now = h
+        .app
+        .world()
+        .resource::<bevy::prelude::Time>()
+        .elapsed_secs_f64();
+    h.advance(((expires_at - now).max(0.0) / 0.05).ceil() as usize + 3);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, spell_id));
+}
+
+fn incoming_cast(h: &mut Harness, spell_id: u32) -> f32 {
+    // Concrete attacker power so a Fireball control cannot silently deal zero.
+    h.app.world_mut().entity_mut(h.npc).insert(CharacterStats {
+        spell_power: 100.0,
+        attack_power: 100.0,
+        ..Default::default()
+    });
+    let before = h.health(h.caster);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.npc, spell_id, Some(h.caster), 0);
+    h.advance(40);
+    before - h.health(h.caster)
+}
+
+#[test]
+fn defensives_turtle_misses_magic_and_ranged_then_expires() {
+    let mut h = cast_defensive(3, 186_265, &[205_769, 75]);
+    for spell in [FIREBALL, 75] {
+        assert_eq!(incoming_cast(&mut h, spell), 0.0);
+        assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(spell)
+            && event.kind == CombatLogKind::Miss(MissKind::Miss)));
+    }
+    expire_defensive(&mut h, 186_265);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 205_769));
+    assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
+    assert!(incoming_melee(&mut h).health_loss >= INCOMING_DAMAGE);
+    assert!(incoming_cast(&mut h, FIREBALL) > 0.0);
+}
+
+#[test]
+fn defensives_turtle_pacifies_swings_and_abilities_until_expiry() {
+    let mut h = cast_defensive(3, 186_265, &[205_769, 56641]);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::combat::AutoAttack::new(h.npc));
+    let before = h.health(h.npc);
+    h.advance(5);
+    assert_eq!(
+        h.health(h.npc),
+        before,
+        "pacified auto-attacker must not swing"
+    );
+    h.cast_and_deliver(56641, Some(h.npc));
+    assert!(
+        h.inbox
+            .failed
+            .iter()
+            .any(|event| event.reason == shared::spell_data::CastFailReason::Pacified),
+        "{:?}",
+        h.inbox.failed
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<crate::combat::AutoAttack>();
+    expire_defensive(&mut h, 186_265);
+    h.inbox.failed.clear();
+    h.cast_and_deliver(56641, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(70);
+    assert!(h.health(h.npc) < before);
+}
+
+#[test]
+fn defensives_turtle_mechanic_immunity_blocks_silence() {
+    let mut h = cast_defensive(3, 186_265, &[205_769, 1330]);
+    incoming_cast(&mut h, 1330);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1330));
+    assert!(
+        h.inbox.log.iter().any(|event| event.spell_id == Some(1330)
+            && event.kind == CombatLogKind::Miss(MissKind::Immune))
+    );
+    expire_defensive(&mut h, 186_265);
+    incoming_cast(&mut h, 1330);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 1330));
+}
+
+#[test]
+fn defensives_catalog_deflection_is_not_reflection() {
+    let mut h = cast_defensive(3, 19263, &[]);
+    let npc_before = h.health(h.npc);
+    assert_eq!(incoming_cast(&mut h, FIREBALL), 0.0);
+    assert_eq!(
+        h.health(h.npc),
+        npc_before,
+        "deflection must not damage caster"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(FIREBALL)
+                && event.kind == CombatLogKind::Miss(MissKind::Deflect))
+    );
+    expire_defensive(&mut h, 19263);
+    assert!(incoming_cast(&mut h, FIREBALL) > 0.0);
+}
+
+#[test]
+fn defensives_catalog_parry_prevents_melee_until_expiry() {
+    let mut h = crate::spell_cast::test_harness::harness_with(
+        Vec::new(),
+        &[118038, 3127, FIREBALL],
+        1,
+        true,
+    )
+    .expect("catalog and computed stats");
+    let path = crate::test_data::world_db_path();
+    h.app
+        .world_mut()
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .world_mut()
+        .insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems {
+            items: vec![(
+                shared::protocol::EquipmentSlot::MainHand,
+                shared::item_data::ItemDefinitionSource::Retail,
+                25,
+            )],
+        });
+    h.advance(3);
+    h.cast_and_deliver(118038, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(incoming_melee(&mut h).health_loss, 0.0);
+    assert!(h.inbox.log.iter().any(
+        |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Parry)
+    ));
+    expire_defensive(&mut h, 118038);
+    assert!(incoming_melee(&mut h).health_loss > 0.0);
+}
+
+#[test]
+fn defensives_blur_uses_catalog_dodge_amount_and_expires() {
+    let mut h = crate::spell_cast::test_harness::harness_with(
+        Vec::new(),
+        &[198589, 212800, FIREBALL],
+        12,
+        true,
+    )
+    .expect("catalog and computed stats");
+    h.advance(3);
+    let before = h
+        .app
+        .world()
+        .get::<CharacterStats>(h.caster)
+        .unwrap()
+        .defense
+        .dodge;
+    let amount = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(212800)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.aura == 49)
+        .unwrap()
+        .base_points;
+    h.cast_and_deliver(198589, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .defense
+            .dodge,
+        before + amount
+    );
+    assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), 75.0);
+    expire_defensive(&mut h, 212800);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .defense
+            .dodge,
+        before
+    );
+    assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
 }

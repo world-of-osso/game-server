@@ -722,7 +722,12 @@ pub(crate) fn armor_mitigated(
 /// The hit-table result of a swing (Unit::RollMeleeOutcomeAgainst): a creature's
 /// miss chance or a player's crit chance and dual wielding, against `victim`. A player
 /// without `CharacterStats` (no class stat data) always hits.
-fn roll_outcome(attacker: &Attacker, victim: Victim, can_avoid: bool) -> MeleeOutcome {
+fn roll_outcome(
+    attacker: &Attacker,
+    victim: Victim,
+    can_avoid: bool,
+    target_auras: Option<&crate::auras::ActiveAuras>,
+) -> MeleeOutcome {
     let swinger = match (attacker.creature, attacker.stats) {
         (true, _) => Swinger::Creature {
             miss_pct: creature_miss_chance(attacker.mods),
@@ -731,9 +736,22 @@ fn roll_outcome(attacker: &Attacker, victim: Victim, can_avoid: bool) -> MeleeOu
             crit_pct: stats.crit_pct,
             dual_wield: stats.off_hand.is_some(),
         },
-        (false, None) => return MeleeOutcome::Hit,
+        (false, None) => Swinger::Player {
+            crit_pct: 0.0,
+            dual_wield: false,
+        },
     };
-    let chances = melee::swing_chances(swinger, victim, can_avoid);
+    let mut chances = melee::swing_chances(swinger, victim, can_avoid);
+    // Unit::MeleeSpellMissChance: victim's attacker-hit modifier, not attacker hit.
+    let hit_modifier = target_auras.map_or(0.0, |auras| {
+        auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_HIT_CHANCE)
+    });
+    let base_miss = if !attacker.creature && attacker.stats.is_none() {
+        0.0
+    } else {
+        chances.miss
+    };
+    chances.miss = (base_miss - hit_modifier).clamp(0.0, 100.0);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -859,6 +877,7 @@ fn try_swing(
         attacker,
         victim,
         can_avoid((avoidance.0, avoidance.1.as_deref())),
+        avoidance.1.as_deref(),
     );
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
     // not, stands a player victim up.
