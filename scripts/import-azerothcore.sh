@@ -59,7 +59,7 @@ TDB_TABLES=(
     quest_template quest_template_addon quest_offer_reward quest_request_items quest_objectives quest_poi quest_poi_points
     creature_queststarter creature_questender gameobject_queststarter gameobject_questender areatrigger_involvedrelation
     npc_vendor gossip_menu gossip_menu_option npc_text creature_template_gossip broadcast_text creature_text
-    creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
+    creature_loot_template gameobject_loot_template reference_loot_template item_loot_template disenchant_loot_template
     areatrigger_teleport world_safe_locs graveyard_zone instance_template conditions smart_scripts
     playercreateinfo_action playercreateinfo_item
     pool_template pool_members game_event_pool
