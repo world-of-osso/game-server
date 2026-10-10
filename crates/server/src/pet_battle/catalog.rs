@@ -108,13 +108,10 @@ fn load_states(
             });
             continue;
         }
-        if result
-            .entry(owner)
-            .or_default()
-            .insert(state, value)
-            .is_some()
-        {
-            return Err(format!("{table}: duplicate owner {owner} state {state}"));
+        if let Some(previous) = result.entry(owner).or_default().insert(state, value) {
+            if previous != value {
+                return Err(format!("{table}: conflicting owner {owner} state {state}"));
+            }
         }
     }
     Ok(result)
