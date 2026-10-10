@@ -848,20 +848,28 @@ fn process_commit_trait_config(
         };
         let spec_id = entry.3.0;
         let mut configs = load_trait_configs(&db.db, entry.2.0);
-        if let Err(reason) =
-            update_trait_configs(&classes, entry.0, entry.1.0, spec_id, &mut configs, request)
-        {
-            warn!("Rejected trait loadout mutation: {reason}");
-            send(
-                &mut senders.commit,
-                connection,
-                TraitCommitResult {
-                    ok: false,
-                    reason: Some(reason),
-                },
-            );
-            continue;
-        }
+        let refresh_allocation = match update_trait_configs(
+            &classes,
+            entry.0,
+            entry.1.0,
+            spec_id,
+            &mut configs,
+            request,
+        ) {
+            Ok(refresh_allocation) => refresh_allocation,
+            Err(reason) => {
+                warn!("Rejected trait loadout mutation: {reason}");
+                send(
+                    &mut senders.commit,
+                    connection,
+                    TraitCommitResult {
+                        ok: false,
+                        reason: Some(reason),
+                    },
+                );
+                continue;
+            }
+        };
         save_trait_configs(&db.db, entry.2.0, &configs);
         send(
             &mut senders.commit,
@@ -871,18 +879,27 @@ fn process_commit_trait_config(
                 reason: None,
             },
         );
-        let evaluated = evaluate(&classes, entry.0, entry.1.0, spec_id, |spec| {
-            configs.spec(spec).to_vec()
-        });
-        refresh_player(
-            entry,
-            evaluated,
-            true,
-            &classes,
-            &db,
-            connection,
-            &mut senders,
-        );
+        if refresh_allocation {
+            let evaluated = evaluate(&classes, entry.0, entry.1.0, spec_id, |spec| {
+                configs.spec(spec).to_vec()
+            });
+            refresh_player(
+                entry,
+                evaluated,
+                true,
+                &classes,
+                &db,
+                connection,
+                &mut senders,
+            );
+        } else {
+            // Rename/delete are metadata, not a rollback of the client's staged ranks.
+            send(
+                &mut senders.loadouts,
+                connection,
+                loadout_snapshot(&configs, spec_id),
+            );
+        }
     }
 }
 
@@ -897,12 +914,12 @@ fn update_trait_configs(
     active_spec: u32,
     configs: &mut TraitConfigsData,
     request: TraitMutation,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let request = match request {
         TraitMutation::Commit(request) => {
             let purchases = commit_purchases(classes, player, level, active_spec, &request)?;
             configs.spec_mut(active_spec).replace_active(purchases);
-            return Ok(());
+            return Ok(true);
         }
         TraitMutation::Loadout(request) => request,
     };
@@ -912,7 +929,7 @@ fn update_trait_configs(
             request.spec_id
         ));
     }
-    match request.operation {
+    let refresh_allocation = match request.operation {
         TraitLoadoutOperation::Create { name, entries } => {
             let purchases = commit_purchases(
                 classes,
@@ -925,9 +942,16 @@ fn update_trait_configs(
                 },
             )?;
             configs.create(active_spec, name, purchases)?;
+            true
         }
-        TraitLoadoutOperation::Rename { id, name } => configs.rename(active_spec, id, name)?,
-        TraitLoadoutOperation::Delete { id } => configs.delete(active_spec, id)?,
+        TraitLoadoutOperation::Rename { id, name } => {
+            configs.rename(active_spec, id, name)?;
+            false
+        }
+        TraitLoadoutOperation::Delete { id } => {
+            configs.delete(active_spec, id)?;
+            false
+        }
         TraitLoadoutOperation::Activate { id } => {
             configs.activate(active_spec, id)?;
             let class = class_info(classes, player.class).ok_or("Class has no trait tree")?;
@@ -939,9 +963,10 @@ fn update_trait_configs(
                 },
                 configs.spec(active_spec),
             )?;
+            true
         }
-    }
-    Ok(())
+    };
+    Ok(refresh_allocation)
 }
 
 fn loadout_snapshot(configs: &TraitConfigsData, spec_id: u32) -> TraitLoadoutsSnapshot {

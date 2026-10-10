@@ -139,6 +139,64 @@ fn talent_loadouts_create_apply_switch_rename_delete_and_login_restore() {
 }
 
 #[test]
+fn talent_loadouts_metadata_does_not_replace_the_clients_pending_allocation() {
+    let classes = class_spells().expect("world.db");
+    let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
+    drain(&mut app, player);
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Create {
+            name: "Raid".into(),
+            entries: selections(&[BLADE_OF_JUSTICE]),
+        },
+    );
+    let raid = received::<TraitLoadoutsSnapshot>(&mut app, player)
+        .pop()
+        .unwrap()
+        .selected_id;
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Create {
+            name: "Solo".into(),
+            entries: vec![],
+        },
+    );
+    let solo = received::<TraitLoadoutsSnapshot>(&mut app, player)
+        .pop()
+        .unwrap()
+        .selected_id;
+    change(
+        &mut app,
+        player,
+        TraitLoadoutOperation::Activate { id: raid },
+    );
+    drain(&mut app, player);
+    let before = app.world().get::<TraitLoadout>(player).unwrap().clone();
+    for operation in [
+        TraitLoadoutOperation::Rename {
+            id: raid,
+            name: "Raid Updated".into(),
+        },
+        TraitLoadoutOperation::Delete { id: solo },
+        TraitLoadoutOperation::Delete { id: raid },
+    ] {
+        change(&mut app, player, operation);
+        assert!(
+            received::<TraitConfigSnapshot>(&mut app, player).is_empty(),
+            "Metadata must not discard the client's pending ranks via an allocation snapshot"
+        );
+        assert_eq!(app.world().get::<TraitLoadout>(player), Some(&before));
+        assert_eq!(received::<TraitLoadoutsSnapshot>(&mut app, player).len(), 1);
+    }
+    assert_eq!(
+        load_trait_configs(&app.world().resource::<GameDatabase>().db, 9).spec(SPEC_RETRIBUTION),
+        purchases(&[BLADE_OF_JUSTICE])
+    );
+}
+
+#[test]
 fn talent_loadouts_reject_invalid_allocation_wrong_spec_and_foreign_id_without_mutation() {
     let classes = class_spells().expect("world.db");
     let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
