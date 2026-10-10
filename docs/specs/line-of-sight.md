@@ -59,6 +59,16 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   segment describes the start). Casts the server starts for a player without a request (item use,
   game objects, profession crafts) carry no witness, so at another unit they fail.
 
+## Auto-attacks
+- Player and creature auto-attack swings require LOS before they land, using the same
+  server eye-to-eyes/chest/feet search as creature casts (no client witness).
+- A blocked ready swing deals no damage or combat/proc events and does not reset either
+  hand's timer or stop attacking. It resumes as soon as sight returns.
+- Players receive `CastFailReason::LineOfSight` for Attack (6603), displayed as
+  "Target not in line of sight" (`SPELL_FAILED_LINE_OF_SIGHT`), through the existing
+  spell error channel. Creature failures are not sent to the victim.
+- Without the LOS resource, checks behave exactly as existing spell LOS checks.
+
 ## Creatures (no client)
 - Creature aggro, creature-vs-creature checks and creature casts use a server search: from the
   creature's eye point to the target's eyes, chest and feet. LOS holds if any ray is clear.

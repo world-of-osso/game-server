@@ -7,6 +7,8 @@ use shared::components::{CombatStatus, Player, UnitLevel};
 mod attack_requests;
 #[path = "combat_tests/death.rs"]
 mod death;
+#[path = "combat_tests/line_of_sight.rs"]
+mod line_of_sight;
 #[path = "combat_tests/outcomes.rs"]
 mod outcomes;
 #[path = "combat_tests/player_damage.rs"]
@@ -97,10 +99,12 @@ fn run_attack_tick(app: &mut App) {
          mut attackers: Query<(Entity, &mut AutoAttack, &Position, Option<&CharacterStats>)>,
          mut targets: AutoAttackTargets,
          scaling: Query<ScalingItem<'static>>,
-         armor_constants: Option<Res<ArmorConstants>>| {
+         armor_constants: Option<Res<ArmorConstants>>,
+         sight: SwingSight| {
             let dt = time.delta_secs();
             let context = SwingContext {
                 scaling: &scaling,
+                sight: &sight,
                 armor_constants: armor_constants.as_deref(),
             };
             for (entity, mut aa, position, stats) in &mut attackers {
