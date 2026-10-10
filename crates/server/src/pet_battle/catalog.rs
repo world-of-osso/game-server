@@ -4,6 +4,14 @@ use std::collections::{BTreeMap, BTreeSet};
 pub type States = BTreeMap<u32, i32>;
 
 #[derive(Debug, Clone)]
+pub struct UnresolvedState {
+    pub table: String,
+    pub owner: u32,
+    pub state: u32,
+    pub value: i32,
+}
+
+#[derive(Debug, Clone)]
 pub struct Ability {
     pub id: u32,
     /// DB2 families are zero based, unlike the UI API.
@@ -41,6 +49,7 @@ pub struct Catalog {
     pub turns: BTreeMap<u32, Turn>,
     pub effects: BTreeMap<u32, Effect>,
     pub states: BTreeMap<u32, String>,
+    pub unresolved_states: Vec<UnresolvedState>,
     pub species_states: BTreeMap<u32, States>,
     pub breed_states: BTreeMap<u32, States>,
     pub ability_states: BTreeMap<u32, States>,
@@ -70,7 +79,13 @@ fn index_unique<T>(rows: Vec<(u32, T)>) -> Result<BTreeMap<u32, T>, String> {
     }
     Ok(result)
 }
-fn load_states(db: &Connection, table: &str, owner: &str) -> Result<BTreeMap<u32, States>, String> {
+fn load_states(
+    db: &Connection,
+    table: &str,
+    owner: &str,
+    known: &BTreeMap<u32, String>,
+    unresolved: &mut Vec<UnresolvedState>,
+) -> Result<BTreeMap<u32, States>, String> {
     let rows = query_rows(
         db,
         &format!("SELECT {owner}, BattlePetStateID, Value FROM {table} ORDER BY ID"),
@@ -84,6 +99,15 @@ fn load_states(db: &Connection, table: &str, owner: &str) -> Result<BTreeMap<u32
     )?;
     let mut result: BTreeMap<u32, States> = BTreeMap::new();
     for (owner, state, value) in rows {
+        if !known.contains_key(&state) {
+            unresolved.push(UnresolvedState {
+                table: table.into(),
+                owner,
+                state,
+                value,
+            });
+            continue;
+        }
         if result
             .entry(owner)
             .or_default()
@@ -194,9 +218,27 @@ impl Catalog {
             "SELECT QualityEnum, StateMultiplier FROM battle_pet_breed_quality ORDER BY ID",
             |r| Ok((r.get(0)?, r.get(1)?)),
         )?)?;
-        self.species_states = load_states(db, "battle_pet_species_state", "BattlePetSpeciesID")?;
-        self.breed_states = load_states(db, "battle_pet_breed_state", "BattlePetBreedID")?;
-        self.ability_states = load_states(db, "battle_pet_ability_state", "BattlePetAbilityID")?;
+        self.species_states = load_states(
+            db,
+            "battle_pet_species_state",
+            "BattlePetSpeciesID",
+            &self.states,
+            &mut self.unresolved_states,
+        )?;
+        self.breed_states = load_states(
+            db,
+            "battle_pet_breed_state",
+            "BattlePetBreedID",
+            &self.states,
+            &mut self.unresolved_states,
+        )?;
+        self.ability_states = load_states(
+            db,
+            "battle_pet_ability_state",
+            "BattlePetAbilityID",
+            &self.states,
+            &mut self.unresolved_states,
+        )?;
         self.species_abilities = query_rows(
             db,
             "SELECT BattlePetSpeciesID, BattlePetAbilityID, RequiredLevel, SlotEnum FROM battle_pet_species_x_ability ORDER BY ID",
