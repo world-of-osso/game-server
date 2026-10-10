@@ -406,10 +406,10 @@ pub(crate) fn sale_mails(
     buyer_character_id: u64,
     sale_price: u64,
 ) -> Vec<(u64, MailData)> {
-    let buyer = persistence::load_character(db, buyer_character_id)
-        .expect("auction winner must be a persisted character");
+    // Retail GetInboxInvoiceInfo permits a nil participant name (MailFrame.lua:556-558).
+    let buyer_name = persistence::load_character(db, buyer_character_id).map(|buyer| buyer.name);
     vec![
-        seller_sale_mail(db, auction, sale_price, Some(&buyer.name)),
+        seller_sale_mail(db, auction, sale_price, buyer_name.as_deref()),
         (
             buyer_character_id,
             build_auction_mail(
