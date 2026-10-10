@@ -400,8 +400,8 @@ fn group_shares<'a>(group: &'a [LootRow], items: &ItemTemplates) -> Vec<(&'a Loo
 /// TDB references remain separate from the creature content-policy tables.
 pub(crate) fn load_disenchant_tables(conn: &Connection) -> rusqlite::Result<LootTables> {
     Ok(LootTables {
-        disenchant: load_templates(conn, "tdb_disenchant_loot_template")?,
-        reference: load_templates(conn, "tdb_reference_loot_template")?,
+        disenchant: load_tdb_templates(conn, "tdb_disenchant_loot_template")?,
+        reference: load_tdb_templates(conn, "tdb_reference_loot_template")?,
         ..LootTables::default()
     })
 }
@@ -416,12 +416,31 @@ pub(crate) fn load_loot_tables(conn: &Connection) -> rusqlite::Result<LootTables
     })
 }
 
+fn load_tdb_templates(
+    conn: &Connection,
+    table: &str,
+) -> rusqlite::Result<HashMap<u32, LootTemplate>> {
+    read_templates(
+        conn,
+        &format!(
+            "SELECT Entry, Item, CASE ItemType WHEN 1 THEN Item ELSE 0 END AS Reference, Chance, QuestRequired, GroupId, MinCount, MaxCount FROM {table} WHERE LootMode & {LOOT_MODE_DEFAULT} != 0 AND ItemType IN (0, 1) ORDER BY Entry, GroupId, Item, Reference"
+        ),
+    )
+}
+
 fn load_templates(conn: &Connection, table: &str) -> rusqlite::Result<HashMap<u32, LootTemplate>> {
-    let mut statement = conn.prepare(&format!(
-        "SELECT Entry, Item, Reference, Chance, QuestRequired, GroupId, MinCount, MaxCount \
+    read_templates(
+        conn,
+        &format!(
+            "SELECT Entry, Item, Reference, Chance, QuestRequired, GroupId, MinCount, MaxCount \
          FROM {table} WHERE LootMode & {LOOT_MODE_DEFAULT} != 0 \
          ORDER BY Entry, GroupId, Item, Reference"
-    ))?;
+        ),
+    )
+}
+
+fn read_templates(conn: &Connection, query: &str) -> rusqlite::Result<HashMap<u32, LootTemplate>> {
+    let mut statement = conn.prepare(query)?;
     let rows = statement.query_map([], |row| {
         let entry: u32 = row.get(0)?;
         let loot_row = LootRow {
