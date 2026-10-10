@@ -354,10 +354,15 @@ fn dummy9_tranquility_shield_absorbs_sixty_percent_max_health_and_ends_with_chan
     };
     super::effects::deal_damage(h.app.world_mut(), &ctx, h.caster, 900.0, false, false);
     assert_eq!(h.health(h.caster), 700.0);
+    // Depleting the shield must not remove Tranquility's healing/channel aura.
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 740));
+    h.advance(22);
+    assert!(h.health(h.caster) > 700.0);
+    let healed = h.health(h.caster);
     super::cancel_cast(h.app.world_mut(), h.caster);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 740));
     super::effects::deal_damage(h.app.world_mut(), &ctx, h.caster, 200.0, false, false);
-    assert_eq!(h.health(h.caster), 500.0);
+    assert_eq!(h.health(h.caster), healed - 200.0);
 }
 
 #[test]
