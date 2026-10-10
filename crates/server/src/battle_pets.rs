@@ -11,7 +11,7 @@ use redb::{Database, ReadableTable, TableDefinition};
 use serde::Deserialize;
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, ModelDisplay, MovementSpeed, Npc, Position,
-    Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy, Zone,
+    Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy,
 };
 use shared::pet_battle::PetJournal;
 use shared::protocol::{CollectionChannel, CollectionStateUpdate, DismissPet, SummonPet};
@@ -288,7 +288,6 @@ fn summon_companion(world: &mut World, owner: Entity, id: u64) -> Result<Entity,
         return Err("species display unavailable".into());
     }
     let map = *world.get::<InMap>(owner).ok_or("owner map unavailable")?;
-    let zone = *world.get::<Zone>(owner).ok_or("owner zone unavailable")?;
     let faction = *world
         .get::<UnitFactionTemplate>(owner)
         .ok_or("owner faction unavailable")?;
@@ -314,7 +313,7 @@ fn summon_companion(world: &mut World, owner: Entity, id: u64) -> Result<Entity,
         owner,
         &species,
         pet.level,
-        (position, rotation, map, zone, faction),
+        (position, rotation, map, faction),
     );
     world
         .get_mut::<AccountPetJournal>(owner)
@@ -328,7 +327,7 @@ fn spawn_companion(
     owner: Entity,
     species: &Species,
     level: u8,
-    location: (Position, Rotation, InMap, Zone, UnitFactionTemplate),
+    location: (Position, Rotation, InMap, UnitFactionTemplate),
 ) -> Entity {
     // Retail critter minions are immune to player/NPC attacks and never acquire threats.
     use shared::pet_battle::COMPANION_UNIT_FLAGS;
@@ -395,7 +394,7 @@ mod tests {
     use shared::pet_battle::{PetJournal, PetJournalError, PetQuality};
 
     fn follower_app() -> (App, Entity, u64) {
-        use shared::components::{Position, Rotation, UnitFactionTemplate, Zone};
+        use shared::components::{Position, Rotation, UnitFactionTemplate};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.insert_resource(PetCatalog::load(concat!(
@@ -424,7 +423,6 @@ mod tests {
                     map_id: 0,
                     instance_id: 0,
                 },
-                Zone { id: 12 },
                 UnitFactionTemplate(1),
                 AccountPetJournal {
                     account_id: 42,
