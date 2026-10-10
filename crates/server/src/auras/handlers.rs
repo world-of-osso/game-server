@@ -19,6 +19,8 @@ pub enum AuraKind {
     SchoolImmunity,
     /// Rejects matching spell/effect mechanics and removes matching auras.
     MechanicImmunity,
+    /// Rejects SpellEffects IDs in aura37 MiscValue.
+    EffectImmunity,
     /// Damage taken from the aura's caster (`damage_taken_multiplier`).
     DamageFromCaster,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
@@ -62,6 +64,7 @@ pub const MOD_INCREASE_MOUNTED_SPEED: u32 = 32;
 pub const MOD_INCREASE_HEALTH: u32 = 34;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
 pub const MOD_SHAPESHIFT: u32 = 36;
+pub const EFFECT_IMMUNITY: u32 = 37;
 pub const MOD_DECREASE_SPEED: u32 = 33;
 /// SPELL_AURA_MOD_DODGE_PERCENT: nondiminishing percentage points.
 pub const MOD_DODGE_PERCENT: u32 = 49;
@@ -81,6 +84,8 @@ pub const TRANSFORM: u32 = 56;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
+/// TC a352b1fa Unit::RecalculateObjectScale: sum percentage points, not products.
+pub const MOD_SCALE: u32 = 61;
 pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
@@ -92,6 +97,7 @@ pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
 pub const MOD_HEALTH_REGEN_PERCENT: u32 = 88;
 pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
 pub const MOD_UNATTACKABLE: u32 = 93;
+pub const FEATHER_FALL: u32 = 105;
 pub const ADD_FLAT_MODIFIER: u32 = 107;
 pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
@@ -127,6 +133,7 @@ pub const SCREEN_EFFECT: u32 = 260;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
+pub const OVERRIDE_SPELLS: u32 = 293;
 pub const MASTERY: u32 = 318;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
@@ -156,7 +163,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         SCREEN_EFFECT => ClientVisual,
-        ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS => Override,
+        ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2
@@ -207,6 +214,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | MOD_SCALE
+        | FEATHER_FALL
         | MOD_UNATTACKABLE
         | MOD_CONFUSE
         | TRANSFORM
@@ -223,6 +232,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY => MechanicImmunity,
+        EFFECT_IMMUNITY => EffectImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,

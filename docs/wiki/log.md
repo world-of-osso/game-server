@@ -2,6 +2,7 @@
 
 - 2026-10-10 — [Disenchant](systems/disenchant.md): Retail item-GUID casts, authentic eligibility/TDB rolls, atomic unbound disposal receipts and shared personal loot; six native gameplay tests plus metadata1/loot27/known-spell1 pass. Companion protocol/client required; no merges/services/live proof.
 
+- 2026-10-10 — [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10): additive61, feather105, effect-ID37 and OverrideSpellData293; authentic3050-row source, temporary permission/replicated slot list and removal semantics. Census71/1166 (3 this branch,10 earlier master gains versus historical58). Private live/client proof boundary lives in toy-effects2 handoff; no merge or protected-realm mutation.
 
 - 2026-10-10 — [Appearance acquisition](investigations/appearance-acquisition.md#never-created-account-table-regression): missing account table reads return no owner; economy helper RED→GREEN and missing/empty/multi-account reopen test. Code `f654bcc`; economy11, acquisition14, appearance4, persistence106 passed/18 ignored. Disenchant/scrap handlers re-audited absent; no profession implementation.
 

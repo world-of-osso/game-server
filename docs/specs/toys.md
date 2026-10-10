@@ -12,6 +12,14 @@
 - Aura260 ScreenEffect with a nonzero screen ID is client-owned state: apply/replicate its spell identity and normal lifetime/cancellation. Do not create a gameplay script or infer support for the spell's other effects.
 - Temporary wild summons preserve template faction unless SummonProperties overrides it; ally/guardian/companion summons inherit the caster faction. Companions follow their caster, are immune to player/NPC attacks and replace an occupied positive summon slot. Missing creature/property identities and puppet/vehicle/specialized categories remain explicit unavailable reasons.
 
+- Aura61 MOD_SCALE adds all active per-stack percentage points to native object scale, with Retail minima0.1 for players and0.01 for creatures. Replicated UnitScale updates existing/new visuals and restores native scale on removal. Reference: TrinityCore a352b1fa Unit::RecalculateObjectScale, SpellAuraEffects::HandleAuraModScale.
+
+- Aura105 FEATHER_FALL replicates authoritative FeatherFall state, caps descending server and client movement at7yd/s (TrinityCore MovementUtil.cpp terminalSafefallVelocity), negates landing damage, and restores normal gravity on removal. Client-reported heights are capped per server tick, not per input. Removing the last aura restarts fall accounting at current height (TC a352b1fa HandleAuraFeatherFall).
+
+- Aura37 EFFECT_IMMUNITY prevents only the spell effect ID in MiscValue, including friendly summon offers, at target filtering and effect application. Spell/effect NoImmunity attributes bypass it. Ordinary UnitAuras transport/presentation and removal restore eligibility; unsupported puppet/script effects remain blocked. References: TC a352b1fa SpellInfo::LoadImmunityInfo, Unit::IsImmunedToSpellEffect.
+
+- Aura293 OVERRIDE_SPELLS loads MiscValue's ordered10-spell OverrideSpellData record from local CASC. AuraView.overrides carries the list using existing aura332 transport; the Retail six-button main-bar override replaces even empty/item slots without rebinding. Only active set spells gain temporary server cast permission; removal restores base slots/permissions. Missing override records/spells stay unavailable; underlying ability scripts are not implemented by swapping buttons. References: TC a352b1fa HandleAuraOverrideSpells; cached Retail OverrideActionBar.lua:42/Setup; WoWDBDefs layout297CBDC8.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.

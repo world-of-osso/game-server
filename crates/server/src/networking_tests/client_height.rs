@@ -336,6 +336,47 @@ fn a_fall_the_client_reports_lands_with_fall_damage() {
     );
 }
 
+#[test]
+fn toyfx2_feather_fall_caps_server_and_reported_descent_and_negates_damage() {
+    for report in [false, true] {
+        let (mut app, player, connection) = flat_app(FLAT + 20.0);
+        app.world_mut()
+            .entity_mut(player)
+            .insert(shared::components::FeatherFall(true));
+        let mut previous = FLAT + 20.0;
+        for _ in 0..90 {
+            let inputs = if report {
+                vec![frame_input(&flat_spot(FLAT), false, false); 3]
+            } else {
+                Vec::new()
+            };
+            tick(&mut app, connection, inputs);
+            let next = server_y(&app, player);
+            assert!(
+                previous - next <= 7.0 * 0.05 + 0.001,
+                "reported={report}, {previous}->{next}"
+            );
+            assert!(app.world().get::<VerticalVelocity>(player).unwrap().0 >= -7.0);
+            previous = next;
+        }
+        assert!((server_y(&app, player) - FLAT).abs() < 0.3);
+        assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+        // Removing the last feather aura restores normal fall damage and speed.
+        app.world_mut()
+            .entity_mut(player)
+            .insert(shared::components::FeatherFall(false));
+        app.world_mut().get_mut::<Position>(player).unwrap().y = FLAT + 20.0;
+        app.world_mut()
+            .get_mut::<FallTracker>(player)
+            .unwrap()
+            .restart_at(FLAT + 20.0);
+        for _ in 0..60 {
+            tick(&mut app, connection, vec![]);
+        }
+        assert!(app.world().get::<Health>(player).unwrap().current < 100.0);
+    }
+}
+
 /// Falling 10 yd into the lake: gravity stops where the player swims, without fall damage.
 #[test]
 fn a_fall_into_deep_water_stops_swimming_without_fall_damage() {

@@ -91,7 +91,7 @@ fn harness(stone_entry: u32) -> Option<Harness> {
     app.finish();
     app.cleanup();
     app.update();
-    let spells = [SUMMONING_STONE_EFFECT, PORTAL_RITUAL_SPELL]
+    let spells = [SUMMONING_STONE_EFFECT, PORTAL_RITUAL_SPELL, 65451]
         .iter()
         .map(|&id| data.store.get(id).expect("spell in world.db").clone())
         .collect();
@@ -331,6 +331,119 @@ impl Harness {
         self.use_object(self.helper.connection, portal);
         assert_eq!(self.requests.len(), 1, "summon offer sent");
     }
+}
+
+#[test]
+fn toyfx2_effect_immunity_blocks_summon_player_and_reverts() {
+    // MiniZep Controller46709 supplies authentic immunity37 to effect85.
+    // Puppet summon/no-actions remain unsupported; isolate its real aura effect.
+    let mut h = harness(DEADMINES_STONE).unwrap();
+    let target = h.target.player;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: target,
+            target,
+            spell_id: 65451,
+            effect_mask: 1 << 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 65451)
+    );
+    let portal = h.open_portal();
+    h.use_object(h.helper.connection, portal);
+    h.advance(5);
+    assert!(
+        h.requests.is_empty(),
+        "summon effect must not send an offer while immune"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<super::summon::PendingSummon>(target)
+            .is_none()
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 65451,
+    );
+    h.advance(3);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 65451)
+    );
+    h.offer_summon();
+    assert!(
+        h.app
+            .world()
+            .get::<super::summon::PendingSummon>(target)
+            .is_some()
+    );
+}
+
+#[test]
+fn toyfx2_effect_no_immunity_summon_bypasses_toy_immunity() {
+    let mut h = harness(DEADMINES_STONE).unwrap();
+    let mut spells: Vec<_> = [SUMMONING_STONE_EFFECT, PORTAL_RITUAL_SPELL, 65451]
+        .into_iter()
+        .map(|id| {
+            h.app
+                .world()
+                .resource::<SpellStore>()
+                .get(id)
+                .unwrap()
+                .clone()
+        })
+        .collect();
+    spells
+        .iter_mut()
+        .find(|s| s.id == PORTAL_RITUAL_SPELL)
+        .unwrap()
+        .effects[0]
+        .attributes |= 1;
+    h.app.insert_resource(SpellStore::fixture(spells));
+    let target = h.target.player;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: target,
+            target,
+            spell_id: 65451,
+            effect_mask: 1 << 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.offer_summon();
+    assert!(
+        h.app
+            .world()
+            .get::<super::summon::PendingSummon>(target)
+            .is_some()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 65451)
+    );
 }
 
 #[test]

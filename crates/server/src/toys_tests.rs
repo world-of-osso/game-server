@@ -13,7 +13,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         Vec::new(),
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
-            99104, 304370,
+            99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
         ],
         8,
     )
@@ -668,6 +668,211 @@ fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
 }
 
 #[test]
+fn toyfx2_scale_toy_applies_replicates_and_reverts() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 18660); // World Enlarger, spell23126, -50%.
+    assert_eq!(activate(&mut h, 18660)[0].error, None);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 23126)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        0.5
+    );
+    // World Enlarger -50 + World Shrinker100: additive1.5, not multiplicative1.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 156132,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        1.5
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 156132,
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        0.5
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 23126 });
+    h.advance(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitScale>(h.caster)
+            .unwrap()
+            .0,
+        1.0
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 23126)
+    );
+}
+
+#[test]
+fn toyfx2_feather_fall_authentic_toy_spell_lifecycle() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    //113542 has no runtime item: do not invent one or count it as usable.
+    assert!(
+        snapshot(h.app.world(), 1)
+            .toys
+            .iter()
+            .find(|t| t.item_id == 113542)
+            .unwrap()
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("content_item")
+    );
+    assert!(toy_catalog::unsupported_types(h.app.world(), 167273).is_empty());
+    h.cast_and_deliver(167273, None);
+    h.advance(40); // Authentic one-second cast, not an immediate aura fixture.
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 167273)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::FeatherFall>(h.caster)
+            .unwrap()
+            .0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 167273 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::FeatherFall>(h.caster)
+            .unwrap()
+            .0
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 167273)
+    );
+}
+
+#[test]
+fn toyfx2_override_toy_applies_replicates_and_reverts() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![176889]));
+    assert!(!crate::spell_cast::caster_knows_spell(
+        h.app.world_mut(),
+        h.caster,
+        225656
+    ));
+    learn_effect_toy(&mut h, character, 119211); // Golden Hearthstone Card,176889, override785.
+    assert_eq!(activate(&mut h, 119211)[0].error, None);
+    h.advance(10);
+    let auras = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(h.caster)
+        .unwrap();
+    let aura = auras.auras.iter().find(|a| a.spell_id == 176889).unwrap();
+    assert!(
+        aura.overrides
+            .contains(&shared::components::AuraOverride::SpellSet {
+                id: 785,
+                spells: vec![225656, 225658, 225660, 225657, 225659, 0, 0, 0, 0, 0]
+            })
+    );
+    assert!(crate::spell_cast::caster_knows_spell(
+        h.app.world_mut(),
+        h.caster,
+        225656
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(h.caster)
+            .unwrap()
+            .contains(225656)
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 176889,
+    );
+    h.advance(3);
+    assert!(!crate::spell_cast::caster_knows_spell(
+        h.app.world_mut(),
+        h.caster,
+        225656
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 176889)
+    );
+}
+
+#[test]
 fn toys_effect_census() {
     use std::collections::{BTreeMap, BTreeSet};
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -675,6 +880,7 @@ fn toys_effect_census() {
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
+    world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
     world.insert_resource(crate::world_data::load_world_data(
         &crate::test_data::world_db_path(),
     ));
@@ -690,15 +896,22 @@ fn toys_effect_census() {
     } // Absent local reference data means effect 28 is explicitly unavailable.
     let store = world.resource::<crate::spell_info::SpellStore>();
     let mut unsupported: BTreeMap<String, BTreeSet<u32>> = BTreeMap::new();
+    let mut supported_auras: BTreeMap<u32, BTreeSet<u32>> = BTreeMap::new();
     let mut effects: BTreeMap<u32, BTreeSet<u32>> = BTreeMap::new();
     let mut auras: BTreeMap<u32, BTreeSet<u32>> = BTreeMap::new();
     let mut rows = Vec::new();
     for toy in catalog.0.values() {
-        let types = toy
+        let (types, supported) = toy
             .snapshot
             .spell_id
-            .map(|spell| toy_catalog::unsupported_types(&world, spell))
+            .map(|spell| toy_catalog::classify_types(&world, spell))
             .unwrap_or_default();
+        for aura_type in supported {
+            supported_auras
+                .entry(aura_type)
+                .or_default()
+                .insert(toy.snapshot.item_id);
+        }
         for reason in &types {
             unsupported
                 .entry(reason.clone())
@@ -722,7 +935,16 @@ fn toys_effect_census() {
         rows.push(serde_json::json!({"item_id":toy.snapshot.item_id,"spell_id":toy.snapshot.spell_id,"unsupported":types,"unavailable":toy_catalog::unavailable(toy,&world)}));
     }
     assert_eq!(catalog.0.len(), 1166);
-    let report = serde_json::json!({"toys":rows,"unsupported":unsupported,"root_effects":effects,"root_auras":auras});
+    let candidate_usable = rows
+        .iter()
+        .filter(|row| row["unavailable"].is_null())
+        .count();
+    let report = serde_json::json!({"candidate_usable":candidate_usable,"toys":rows,"unsupported":unsupported,
+        "supported_aura_toys":supported_auras,"root_effects":effects,"root_auras":auras});
+    println!(
+        "candidate-usable toys: {candidate_usable}/{}",
+        catalog.0.len()
+    );
     if let Ok(path) = std::env::var("TOY_CENSUS_REPORT") {
         std::fs::write(path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
     }
