@@ -87,7 +87,7 @@ fn selector(id: u32) -> Option<Selector> {
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
         18 | 22 => Selector::CenterCaster,
-        138 => Selector::ExistingDest,
+        138 | 148 => Selector::ExistingDest,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
@@ -110,7 +110,7 @@ pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
         .implicit_targets
         .iter()
         .copied()
-        .find(|&id| selector(id).is_none())
+        .find(|&id| selector(id).is_none() && !(id == 87 && effect.effect == 254))
 }
 
 /// Relation the spell requires of its explicit target, from the first
@@ -289,6 +289,9 @@ pub fn select_targets(
     let mut units = Vec::new();
     let mut selected_any = false;
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
+        if id == 87 && effect.effect == 254 {
+            continue;
+        }
         let selector = selector(id).ok_or(id)?;
         match selector {
             Selector::None | Selector::ExistingDest | Selector::ForwardLeap => {}

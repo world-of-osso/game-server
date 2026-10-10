@@ -586,6 +586,7 @@ pub(crate) fn cast_for_player(
     spell_id: u32,
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
+        destination: None,
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: None,
@@ -745,13 +746,15 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
-    let requested_spell = spell.clone();
+    let mut requested_spell = spell.clone();
+    requested_spell.cast_destination = request.destination;
     let effective_id = crate::auras::overrides::resolve_spell(world, caster, spell.id);
-    let spell = world
+    let mut spell = world
         .resource::<SpellStore>()
         .get(effective_id)
         .expect("resolved spell exists")
         .clone();
+    spell.cast_destination = request.destination;
     let delay = cast_queue_delay(world, caster, &spell);
     // Compare at CastState's precision: widening 0.4f32 is greater than 0.4f64.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
@@ -807,11 +810,12 @@ fn start_queued_casts(world: &mut World) {
     for caster in ready {
         let queued = world.entity_mut(caster).take::<QueuedSpellCast>().unwrap();
         let effective_id = crate::auras::overrides::resolve_spell(world, caster, queued.spell.id);
-        let effective_spell = world
+        let mut effective_spell = world
             .resource::<SpellStore>()
             .get(effective_id)
             .expect("resolved queued spell exists")
             .clone();
+        effective_spell.cast_destination = queued.spell.cast_destination;
         if let Err(failure) = start_cast(
             world,
             caster,
@@ -1437,7 +1441,14 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = targets::effect_dest(world, caster, explicit, effect);
+        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+            spell.cast_destination.map(|point| targets::Dest {
+                position: Vec3::from_array(point),
+                orientation: targets::orientation(world, caster),
+            })
+        } else {
+            targets::effect_dest(world, caster, explicit, effect)
+        };
         plan.push(PlannedEffect {
             index,
             units,
