@@ -35,7 +35,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; cast-to-damage proofs and five reproduced gaps.
+- [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
 
 Server gameplay systems.
 
