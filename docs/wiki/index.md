@@ -51,7 +51,7 @@ External resources, tooling, data sources, development workflow.
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
 - [Pet battle engine](systems/pet-battle-engine.md) — isolated deterministic turn library, strict SQLite boundary, 12 partial property handlers and 23 CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md), runtime table producer and Retail timing proof pending.
 
-- [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
+- [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 
 - [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
 

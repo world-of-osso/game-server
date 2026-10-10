@@ -607,6 +607,9 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
     {
         return;
     }
+    world
+        .entity_mut(creature)
+        .remove::<crate::creature_ai::CannotReachTarget>();
     remove_auras_on_evade(world, creature);
     crate::spell_cast::cancel_cast(world, creature);
     // `CreatureAI::_EnterEvadeMode`: `SetTappedBy(nullptr)`, `ResetPlayerDamageReq`,
