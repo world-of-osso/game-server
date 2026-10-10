@@ -31,7 +31,12 @@ pub(super) fn sinister_damage(world: &World, caster: Entity, _target: Entity, am
 }
 
 /// Native E64 already names404358, but the description gates it on403826.
-pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+pub(in crate::spell_cast) fn effect_enabled(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    index: u8,
+) -> bool {
     spell != BLADE_JUSTICE || index != 2 || crate::auras::has_aura(world, caster, BLADE_TALENT)
 }
 
