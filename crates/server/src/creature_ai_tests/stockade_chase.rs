@@ -125,10 +125,16 @@ fn navigation_stockade_home_return_routes_around_walls() {
     *app.world_mut().get_mut::<Position>(mob).unwrap() = bevy(PLAYER_ON_FLOOR);
     let mut los = los::LosMap::new(&nav_ground_dir().join("los/34"));
     let mut last = bevy(PLAYER_ON_FLOOR);
+    let mut ground = stockade_ground();
     for _ in 0..200 {
         app.update();
         let pos = *app.world().get::<Position>(mob).unwrap();
         clear_step(&mut los, last, pos);
+        let floor = floor_under(&mut ground, pos).expect("supported routed home position");
+        assert!(
+            (pos.y - floor).abs() < 0.05,
+            "home feet {pos:?} vs floor{floor}"
+        );
         last = pos;
     }
     assert_eq!(
@@ -200,10 +206,16 @@ fn navigation_stockade_waypoint_leg_routes_around_walls() {
         .insert(WaypointState::new(1, 1.0, 1.14286, (spawn.x, spawn.z)));
     let mut los = los::LosMap::new(&nav_ground_dir().join("los/34"));
     let mut last = spawn;
+    let mut ground = stockade_ground();
     for _ in 0..150 {
         app.update();
         let pos = *app.world().get::<Position>(mob).unwrap();
         clear_step(&mut los, last, pos);
+        let floor = floor_under(&mut ground, pos).expect("supported routed waypoint position");
+        assert!(
+            (pos.y - floor).abs() < 0.05,
+            "waypoint feet {pos:?} vs floor{floor}"
+        );
         last = pos;
     }
     assert!(app.world().get::<WaypointState>(mob).unwrap().arrived);
