@@ -20,7 +20,7 @@ use shared::protocol::{
 use super::*;
 use crate::combat::DeathState;
 use crate::item_templates::{ItemTemplates, load_item_templates};
-use crate::persistence::{InventoryItemData, temp_database};
+use crate::persistence::InventoryItemData;
 use crate::quest_data::test_quest_db;
 
 const DEPUTY_WILLEM: u32 = 823;

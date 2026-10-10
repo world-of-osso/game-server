@@ -236,7 +236,7 @@ fn transmogacq_trading_an_unbound_boe_collects_for_neither_account() {
         SetTradeItem {
             slot: 0,
             item_guid: 9_000_025,
-            count: 1,
+            stack_count: 1,
         },
     );
     h.send(h.a.connection, ConfirmTrade);
