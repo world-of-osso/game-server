@@ -13,7 +13,9 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 - [x] Assert concrete real-ID behavior: Bite110, Burn113, Healing Wave123, Poison Fang152, Burrow159, Deep Breath169, Curse of Doom218, Grasp249, Wish273, Time Stop600 and Recovery726.
 - [x] Publish104-ID row/implementation/test coverage, distinguishing static admission from behavioral proof.
 - [ ] Prove exact damage rounding/type weak multiplier and control/event timing against captured Retail runtime or current client game tables.
-- [ ] Extend property coverage beyond the current12 validated-dispatch handlers as primary runtime evidence establishes their semantics.
+- [x] Extend data-grounded dispatch with failure/state branching, drain, ramping attacks, priority, conditional/percentage damage, split-team attacks and global weather.
+- [x] Weather must affect bench pets, replace prior weather, remove exactly applied state deltas, and preserve Elemental negative-weather exemptions.
+- [ ] Reach at least90% executable effect-row coverage; retain explicit rejection and document undetermined parameters/states.
 
 ## How it works
 
@@ -36,7 +38,7 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 
 - [ ] pets-server-fix/DB producer must import ten battle tables under the documented schema; world.db currently contains species metadata only.
 - [ ] Independent verification could not run because Claude OAuth expired; no paid substitute used.
-- [ ] Elemental negative-weather immunity has no executable weather path or behavioral proof yet.
+- [x] Assert Elemental negative-weather immunity and replacement/expiry on all six slots with Darkness256 and Moonfire595.
 
 ## Out of scope
 

@@ -17,7 +17,65 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         match effect.property {
             22 | 116 | 158 | 177 => Ok(true),
-            24 | 222 => self.damage_effect(caster, target, ability, effect),
+            24 | 222 => {
+                let target = if ability == 404 && effect.property == 24 {
+                    // Sunlight404's three15-point effects target the three enemy slots.
+                    PetRef {
+                        team: target.team,
+                        slot: (effect.order - 1) as usize,
+                    }
+                } else {
+                    target
+                };
+                self.damage_effect(caster, target, ability, effect)
+            }
+            29 => {
+                if !self.required_states(caster, target, p[2], p[3]) {
+                    return Ok(false);
+                }
+                let mut damage = effect.clone();
+                damage.property = 24;
+                damage.params[2] = p[4];
+                self.damage_effect(caster, target, ability, &damage)
+            }
+            62 => {
+                if !self.hit(caster, target, effect) {
+                    return Ok(false);
+                }
+                let amount = self.battle.pet(target).stats.health * p[0] / 100;
+                self.damage_pet(caster, target, amount, false, p[2] != 0)?;
+                Ok(amount > 0)
+            }
+            141 => self.split_damage(caster, target, ability, effect),
+            384 | 385 => {
+                let first = self
+                    .events
+                    .iter()
+                    .find_map(|e| match e {
+                        Event::Order(order) => Some(order[0]),
+                        _ => None,
+                    })
+                    .expect("round order precedes effects");
+                if (caster.team == first) != (effect.property == 384) {
+                    return Ok(false);
+                }
+                self.damage_effect(caster, target, ability, effect)
+            }
+            80 => self.weather_effect(caster, effect, failed),
+            178 => {
+                if p[4] != 0 && failed
+                    || p[3] != 0 && self.battle.pet(target).state(p[3] as u32) == p[0]
+                {
+                    if p[5] != 0 {
+                        self.events.push(Event::Immune {
+                            effect: effect.id,
+                            target,
+                        });
+                    }
+                    return Ok(false);
+                }
+                self.add_aura_effect(caster, target, effect)
+            }
             27 => self.ramping_damage(caster, target, ability, effect),
             32 => {
                 if p[2] != 0 && failed || !self.hit(caster, caster, effect) {
@@ -54,6 +112,50 @@ impl<R: BattleRng> Runtime<'_, R> {
                 effect.property, effect.id
             )),
         }
+    }
+    fn required_states(
+        &self,
+        caster: PetRef,
+        target: PetRef,
+        caster_state: i32,
+        target_state: i32,
+    ) -> bool {
+        (caster_state == 0 || self.battle.pet(caster).state(caster_state as u32) != 0)
+            && (target_state == 0 || self.battle.pet(target).state(target_state as u32) != 0)
+    }
+    fn split_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let targets: Vec<_> = (0..3)
+            .map(|slot| PetRef {
+                team: target.team,
+                slot,
+            })
+            .filter(|pet| self.battle.pet(*pet).health > 0)
+            .collect();
+        if targets.is_empty() {
+            return Ok(false);
+        }
+        let bonus = if effect.params[2] != 0
+            && self.battle.pet(caster).state(effect.params[2] as u32) != 0
+        {
+            effect.params[3]
+        } else {
+            0
+        };
+        let mut damage = effect.clone();
+        damage.params[0] += bonus;
+        damage.params[2] = 0;
+        let mut success = false;
+        for target in &targets {
+            success |=
+                self.scaled_damage(caster, *target, ability, &damage, targets.len() as f64)?;
+        }
+        Ok(success)
     }
     fn ramping_damage(
         &mut self,
@@ -106,6 +208,16 @@ impl<R: BattleRng> Runtime<'_, R> {
         ability: u32,
         effect: &Effect,
     ) -> Result<bool, String> {
+        self.scaled_damage(caster, target, ability, effect, 1.0)
+    }
+    fn scaled_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+        divisor: f64,
+    ) -> Result<bool, String> {
         if self.battle.pet(target).health <= 0 {
             return Ok(false);
         }
@@ -133,6 +245,8 @@ impl<R: BattleRng> Runtime<'_, R> {
         let damage = varied
             * multiplier
             * self.damage_modifiers(caster, target, periodic)
+            * self.family_modifiers(caster, target, family)
+            / divisor
             * if critical { CRITICAL_MULTIPLIER } else { 1.0 };
         let mut amount = damage.floor().max(0.0) as i32;
         if self.state(target, "Passive_Magic") != 0 {
@@ -141,6 +255,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         self.damage_pet(caster, target, amount, critical, periodic)?;
         Ok(amount > 0)
+    }
+    fn family_modifiers(&self, caster: PetRef, target: PetRef, family: i32) -> f64 {
+        let dealt = if self.state(caster, "Mod_PetType_ID") == family + 1 {
+            self.percent(caster, "Mod_PetTypeDamageDealtPercent")
+        } else {
+            1.0
+        };
+        let taken = if self.state(target, "Mod_PetType_ID") == family + 1 {
+            self.percent(target, "Mod_PetTypeDamageTakenPercent")
+        } else {
+            1.0
+        };
+        dealt * taken
     }
     fn damage_modifiers(&self, caster: PetRef, target: PetRef, periodic: bool) -> f64 {
         let pet = self.battle.pet(caster);
@@ -253,7 +380,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             .battle
             .auras
             .iter()
-            .filter(|a| a.target == target)
+            .filter(|a| a.target == target && !a.weather)
             .map(|a| a.serial)
             .collect();
         for serial in serials {
@@ -292,6 +419,28 @@ impl<R: BattleRng> Runtime<'_, R> {
             amount: health - old,
         });
     }
+    fn weather_effect(
+        &mut self,
+        caster: PetRef,
+        effect: &Effect,
+        failed: bool,
+    ) -> Result<bool, String> {
+        if effect.params[3] != 0 && failed || !self.hit(caster, caster, effect) {
+            return Ok(false);
+        }
+        let old: Vec<_> = self
+            .battle
+            .auras
+            .iter()
+            .filter(|a| a.weather)
+            .map(|a| a.serial)
+            .collect();
+        for serial in old {
+            self.remove_aura(serial)?;
+        }
+        self.apply_or_refresh_aura(caster, caster, effect, 1, true)?;
+        Ok(true)
+    }
     fn add_aura_effect(
         &mut self,
         caster: PetRef,
@@ -303,7 +452,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         if self.battle.pet(wearer).health <= 0 || !self.hit(caster, wearer, effect) {
             return Ok(false);
         }
-        if effect.property == 52 && self.control_immune(wearer, effect.aura) {
+        if matches!(effect.property, 52 | 178) && self.control_immune(wearer, effect.aura) {
             self.events.push(Event::Immune {
                 effect: effect.id,
                 target: wearer,
@@ -312,7 +461,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         let tick_first = if effect.property == 26 {
             effect.params[3] != 0
-        } else if effect.property == 52 {
+        } else if matches!(effect.property, 52 | 178) {
             self.battle.pet(wearer).acted_round != self.battle.round
         } else {
             true
@@ -399,7 +548,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             });
             return Ok(());
         }
-        let aura = Aura {
+        let mut aura = Aura {
             serial: self.battle.next_aura,
             ability: effect.aura,
             caster,
@@ -409,9 +558,11 @@ impl<R: BattleRng> Runtime<'_, R> {
             applied_round: self.battle.round,
             tick_first,
             team_bound: effect.property == 63,
+            weather: effect.property == 80,
+            state_deltas: Vec::new(),
         };
         self.battle.next_aura += 1;
-        self.apply_aura_states(&aura, 1);
+        self.apply_aura_states(&mut aura);
         self.battle.auras.push(aura);
         self.events.push(Event::AuraApplied {
             target,

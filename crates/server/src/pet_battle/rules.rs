@@ -9,7 +9,30 @@ pub const CRITICAL_MULTIPLIER: f64 = 1.5; // Blizzard5.3 accuracy article.
 pub fn supported_property(property: u32) -> bool {
     matches!(
         property,
-        22 | 23 | 24 | 26 | 27 | 31 | 32 | 49 | 50 | 52 | 53 | 54 | 63 | 79 | 116 | 158 | 177 | 222
+        22 | 23
+            | 24
+            | 26
+            | 27
+            | 29
+            | 31
+            | 32
+            | 49
+            | 50
+            | 52
+            | 53
+            | 54
+            | 62
+            | 63
+            | 79
+            | 80
+            | 116
+            | 141
+            | 158
+            | 177
+            | 178
+            | 222
+            | 384
+            | 385
     )
 }
 /// Recursive admission: every turn and referenced aura must be executable before RNG draws.
@@ -38,6 +61,11 @@ fn validate_ability_graph(
                 *state,
                 21 | 22 | 23 | 24 | 25 | 29 | 30 | 33 | 34 | 35 | 36 | 40 | 41 | 42
                     ..=51
+                        | 52..=62
+                        | 87
+                        | 88
+                        | 89
+                        | 99
                         | 64
                         | 65
                         | 66
@@ -79,7 +107,9 @@ fn validate_ability_graph(
         }
         for effect in catalog.turn_effects(turn.id) {
             validate_effect(catalog, effect)?;
-            if matches!(effect.property, 24 | 27 | 222) && catalog.abilities[&ability].family < 0 {
+            if matches!(effect.property, 24 | 27 | 29 | 141 | 222 | 384 | 385)
+                && catalog.abilities[&ability].family < 0
+            {
                 return Err(format!("ability {ability}: damage has no family"));
             }
             if effect.aura != 0 {
@@ -111,6 +141,23 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         116 => true, // No named parameters; recalculates priority from current speed.
         158 => p.iter().all(|v| *v == 0),
         24 => p[3..].iter().all(|v| *v == 0),
+        29 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && p[5] == 0
+        }
+        62 | 384 | 385 => p[2..].iter().all(|v| *v == 0),
+        80 => effect.aura != 0 && p[2] > 0 && p[4..].iter().all(|v| *v == 0),
+        141 => {
+            (p[2] == 0 || catalog.states.contains_key(&(p[2] as u32)))
+                && p[4..].iter().all(|v| *v == 0)
+        }
+        178 => {
+            effect.aura != 0
+                && p[2] >= 0
+                && (p[3] == 0 || catalog.states.contains_key(&(p[3] as u32)))
+        }
         222 => p[3..].iter().all(|v| *v == 0) && p[2] >= 0,
         31 => catalog.states.contains_key(&(p[0] as u32)),
         49 => effect.aura != 0 && p[1..].iter().all(|v| *v == 0),
