@@ -453,7 +453,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         inventory.gold = gold;
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
-        self.persist_reward(&inventory, &log, self.reward_appearances(quest));
+        self.persist_reward(&inventory, &log, self.reward_appearances(quest, &items));
         // `RewardQuest`: no XP at the cap.
         let level = self.requester.player.level;
         let xp = if level >= MAX_LEVEL {
@@ -519,7 +519,7 @@ impl<'a> QuestSession<'a, '_, '_> {
 
     /// Retail 11.0.5 grants non-cosmetic appearances from every reward option,
     /// not just the item selected or an armor type the character can equip.
-    fn reward_appearances(&self, quest: &QuestTemplate) -> Vec<u32> {
+    fn reward_appearances(&self, quest: &QuestTemplate, selected: &[(u32, u32)]) -> Vec<u32> {
         if quest.reward_items.is_empty() && quest.choice_items.is_empty() {
             return Vec::new();
         }
@@ -536,7 +536,9 @@ impl<'a> QuestSession<'a, '_, '_> {
             .filter_map(|&(id, _)| {
                 let template =
                     templates.get(shared::item_data::ItemDefinitionSource::Retail, id)?;
-                template.appearance_id
+                let picked = selected.iter().any(|&(item_id, _)| item_id == id);
+                let collect = !template.is_cosmetic() || (picked && template.binds_on_pickup());
+                collect.then_some(template.appearance_id).flatten()
             })
             .collect()
     }
