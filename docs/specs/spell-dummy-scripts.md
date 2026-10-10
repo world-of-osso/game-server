@@ -27,6 +27,17 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - [x] Death Coil47541 damages an enemy via47632 or heals an Undead ally via47633, including Lichborne self-healing. Living allies fail before spending Runic Power. It extends the caster’s existing Dread/Virulent Plagues by the catalog Outbreak effect2 duration without restarting ticks.
 - [x] Chain Heal1064 heals its explicit ally then three nearby allies, prioritizing greatest missing health within each catalog jump radius and reducing healing by the effect1 percentage per jump.
 - [x] Demon Spikes203720 applies203819 for its catalog twelve-second duration. Armor tracks75% of live Agility via aura268; parry effect0 is excluded unless Deflecting Spikes321028 is present.
+### Third-batch locally derived paths
+
+- [x] Prayer of Healing596 heals its primary target plus at most four injured allies inside its catalog20yd radius, excluding enemies and full-health additional allies.
+- [x] Garrote703 with196861, applied from regular Stealth1784, applies1330 silence and256148 damage reduction for their catalog five seconds. Without rank or Stealth neither applies.
+- [x] Flash Heal2061 reduces Holy Word: Serenity2050's running recharge by the authored six seconds, sends a charge update and never starts a ready cooldown.
+- [x] Scorch2948 guarantees a critical strike strictly below its authored30% health threshold; at the threshold normal critical-strike chance applies.
+- [x] Shred5221 with231063 deals the authored25% extra damage against a bleeding target; no bonus without either requirement.
+- [x] Thunder Clap6343 applies435203 slow to each enemy its damage hits, not allies or out-of-radius units; slow expires normally.
+- [x] Devastate20243 with231834 rolls that rank's modified chance to reset a running Shield Slam23922 cooldown and notifies the owner; absent rank/zero chance preserves the timer.
+- [x] Moonfire8921 resolves164812's base direct damage and periodic damage, without applying the child's optional snare to an untalented cast.
+
 ## How it works
 
 - [Spell scripts and coverage boundaries](../wiki/systems/spell-casting.md#class-dummy-scripts)
@@ -37,13 +48,16 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - `spell_cast/mod.rs`, `spell_cast/effects.rs` — validation, channel construction and normal effect execution.
 - `auras/scripts.rs`, `auras/mod.rs` — periodic/removal callbacks and owned-duration extension.
 - `stats.rs`, `auras/{handlers,stat_mods}.rs` — live stat-derived armor.
-- `spell_cast/{dummy_tests,dummy2_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
+- `spell_cast/scripts/batch3.rs` — locally sourced third-batch paths.
+- `spell_cast/{dummy_tests,dummy2_tests,dummy3_tests}.rs` — real-ID casts and observable outcomes. Paths relative to `crates/server/src/`.
 
 ## Tests asserting this spec
 
 - `crates/server/src/spell_cast/dummy_tests.rs` — `dummy_warrior_*`, `dummy_paladin_*`, `dummy_druid_*`, `dummy_priest_*`; Bloodthirst chance endpoints use explicitly labelled catalog clones, while the ordinary cast uses unchanged data.
 
 - `crates/server/src/spell_cast/dummy2_tests.rs` — 24 native cast tests across nine class scripts, including tooltip level curves, conditional ranks, timer changes, cancellation/death and live armor changes.
+
+- `crates/server/src/spell_cast/dummy3_tests.rs` — per-spell cast tests, chance endpoints and threshold/condition boundaries.
 
 ## Known gaps (current cycle)
 
@@ -54,4 +68,5 @@ Spell-specific behaviours beyond generic Retail effects live in `crates/server/s
 - Full talent/hero variants: Fresh Meat's guarantee, Enrage talent gating and Rampage's optional AoE branch are not certified by these base-script tests.
 - Penance Atonement, Power of the Dark Side and Dark Reprimand variants are not certified by the base-channel tests.
 - Second-batch optional/uncertified paths: Teachings/normalization, Find Weakness, Volatility, Unholy Vigor, Chain Heal additional-jump LOS/talent range, Calcified Spikes/Retaliation, Fire Blast parallel casting/Hot Streak.
+- Third-batch unimplemented variants: Improved Garrote windows/other concealment spells; Prayer selection injury priority/LOS beyond ordinary cast validation; Prayer-to-Serenity optional1246517; Shred stealth/Thrash variants; Thunder Clap reduced damage beyond five targets/root variant; Moonfire second target, damage reduction and Astral Power variants. Unknown root/descendant markers are not certified by base-path proof.
 - Realm UDP 5000, deployment and merging.

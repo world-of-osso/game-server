@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Class spell scripts batch3](systems/spell-casting.md#third-batch-local-retail-rows): eight bounded local-Retail paths (Prayer, Garrote, Serenity, Scorch, Shred, Thunder Clap, Devastate, Moonfire); per-spell cast proof/status and unresolved variants in `handoff-spell-dummy3.md`. No database writes, deployment or merge.
+
 - 2026-10-10 — [Disenchant](systems/disenchant.md): Retail item-GUID casts, authentic eligibility/TDB rolls, atomic unbound disposal receipts and shared personal loot; six native gameplay tests plus metadata1/loot27/known-spell1 pass. Companion protocol/client required; no merges/services/live proof.
 
 - 2026-10-10 — [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10): additive61, feather105, effect-ID37 and OverrideSpellData293; authentic3050-row source, temporary permission/replicated slot list and removal semantics. Census71/1166 (3 this branch,10 earlier master gains versus historical58). Private live/client proof boundary lives in toy-effects2 handoff; no merge or protected-realm mutation.
