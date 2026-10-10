@@ -13,6 +13,7 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 - [x] Cobra Shot 193455 retains catalog damage and reduces Kill Command 34026's running cooldown/recharge by its effect 2 duration; never starts a cooldown on a ready ability.
 - [x] Blackout Kick 100784 with rank two 261917 reduces the running Rising Sun Kick recharge and Fists of Fury cooldown by its effect 2 milliseconds; without rank two neither changes.
 - [x] Backstab 53 deals its effect 3 percentage extra damage from behind the target; front hits keep base damage and both retain the combo point gain.
+- [x] Pyre 357211 resolves its impact393568 into explosion357212 at the target location, dealing catalog damage to nearby enemies, not allies/out-of-radius enemies.
 - [ ] Unknown Dummy fields remain unsupported rather than receiving generic no-op handlers.
 
 ## How it works
