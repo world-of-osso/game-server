@@ -13,6 +13,7 @@
 //! See `docs/wiki/systems/spell-casting.md`.
 
 pub mod area_aura;
+pub mod area_trigger;
 pub mod creature;
 pub mod effects;
 mod hit;
@@ -111,6 +112,7 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
                     summon::expire_summons.after(advance_casts),
+                    area_trigger::update_area_triggers.after(advance_casts),
                 ),
             );
     }

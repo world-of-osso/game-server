@@ -16,6 +16,7 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 ## Implementation inventory
 
 - `crates/server/src/spell_cast/summon.rs`: metadata loading, spawn, ownership and expiry.
+- `crates/server/src/spell_cast/area_trigger.rs`: area lifetime, enter/periodic trigger execution.
 - `crates/server/src/spell_cast/effects.rs`: once-per-cast dispatch.
 - `crates/server/src/spell_cast/targets.rs`: destinations and summon selectors.
 - `scripts/db2.py`, `scripts/db2_schema.sql`: local SummonProperties extraction/import.
@@ -27,7 +28,7 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 ## Known gaps (current cycle)
 
 - [ ] Six matrix summon roots have no creature template in current world data.
-- [ ] Nine matrix area-trigger roots have no supplied trigger spell or server action binding; no spell IDs may be guessed from their names.
+- [ ] Nine matrix area-trigger roots have no supplied trigger spell or server action binding; no spell IDs may be guessed from their names. Four roots additionally require unsupported selector 87. Generic effect execution is tested with authentic non-matrix Purging Breath 1287715 → 1287711.
 
 ## Out of scope
 
