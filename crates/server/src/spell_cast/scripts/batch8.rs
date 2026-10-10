@@ -83,23 +83,20 @@ pub(super) fn provoke(world: &mut World, caster: Entity, target: Entity, depth: 
     spell_cast::cast_triggered(world, caster, child, Some(target), depth + 1);
 }
 
-///116189's speed requires328670; the statue child has its own authored speed.
-/// Every selected child still uses actual114 taunt,11 lifetime and catalog area.
+///Provoke's optional speed requires328670. Every selected child still uses
+///actual114 taunt,11 lifetime and catalog area.
 pub(super) fn provoke_plan(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> TargetPlan {
+    let hasty = crate::auras::has_aura(world, caster, HASTY_PROVOCATION);
     spell
         .effects
         .iter()
         .enumerate()
-        .filter(|(_, effect)| {
-            effect.index != 2
-                || spell.id == PROVOKE_AREA
-                || crate::auras::has_aura(world, caster, HASTY_PROVOCATION)
-        })
+        .filter(|(_, effect)| effect.index != 2 || hasty)
         .map(|(index, effect)| {
             let units = targets::select_targets(world, caster, explicit, spell, effect, 0, false)
                 .expect("Provoke child catalog selectors");
