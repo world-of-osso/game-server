@@ -926,6 +926,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
     info!("Loaded {} game object spawns", game_objects.0.len());
     commands.insert_resource(game_objects);
+    commands.insert_resource(
+        crate::game_objects::summoned::load_templates(&conn)
+            .expect("Failed to load spell-summoned gameobject templates"),
+    );
     let meeting_stones = crate::meeting_stone::load_meeting_stone_data(&conn)
         .expect("Failed to load meeting stone and ritual templates");
     commands.insert_resource(meeting_stones);

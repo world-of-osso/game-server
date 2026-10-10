@@ -27,6 +27,10 @@
 - Tent summons support the fully data-defined destination pair18/79: caster destination followed by a backward offset using the nonzero DB2 radius. Other destination-back forms remain unavailable. Reference: TC a352b1fa SelectImplicitDestDestTargets.
 - Aura258 remains unavailable when transmitted-gameobject/fishing behavior or replacement object templates are missing. Its MiscValue0/1 replaces a summoned gameobject entry; it is not a linked creature summon (TC a352b1fa EffectTransmitted).
 
+- Effect50 TRANS_DOOR uses actual local Retail tdb_gameobject_template and DB2 display bounds. Non-scripted generic decorations, chairs and mailboxes spawn once at the selected destination with template scale/facing/map and spell lifetime (whole seconds); normal cast completion does not remove them. Chairs use the existing seat interaction. Rituals retain their channel-owned handler. Missing templates/displays, custom scripts and other object interactions remain unavailable before cooldowns.
+- Target87 DEST_DEST preserves a requested or earlier selected destination, or uses the caster's position when none was selected (TC SelectImplicitDestDestTargets/CheckDst). It is not ground-height snapping. Native UseToy has no ground-picking destination field; its target87 objects spawn at the caster.
+- Aura233 CHANGE_MODEL_FOR_ALL_HUMANOIDS is viewer-local, client-owned appearance. Apply/replicate its spell identity and normal duration/cancellation; never change global ModelDisplay or infer support for other effects. Rendered viewer-local models require client consumption, outside this server change.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.

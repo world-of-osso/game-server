@@ -129,6 +129,8 @@ pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
 pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
 pub const PERIODIC_DUMMY: u32 = 226;
 pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
+/// TC a352b1fa HandleUnused: viewer-local humanoid appearance, client-side only.
+pub const CHANGE_MODEL_FOR_ALL_HUMANOIDS: u32 = 233;
 pub const MOD_SPEED_SLOW_ALL: u32 = 252;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
@@ -170,7 +172,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
-        SCREEN_EFFECT => ClientVisual,
+        SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,

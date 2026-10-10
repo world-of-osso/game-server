@@ -13,6 +13,16 @@ python3 scripts/import-toys.py <Toy.csv> data/world.db --report <joins.json>
 
 The wrapper registers WoWDBDefs layout821B5D20 with the engine's maintained WDC5 decoder; unknown encrypted records are dropped by that decoder. The importer atomically replaces only the `toy` reference table. It preserves every decrypted identity and writes unresolved joins to the requested report. Runtime joins Item/ItemSparse and the first on-use ItemXItemEffect→ItemEffect ordered by LegacySlotIndex/ID, matching item-use catalog selection. Missing runtime content_item definitions remain unavailable rather than receiving substitute templates. Startup fails explicitly if the reference table has not been prepared.
 
+## Transmitted toy objects and viewer-local models (2026-10-10)
+
+Effect50 had a ritual-only handler: nonritual toys could report success and spawn nothing. `game_objects::summoned` now loads authentic spell-referenced TDB1210 templates/DB2 display bounds (not the Wrath-derived content templates: Stormwind banner194274 uses Retail display10483, not8623) at world-data startup and handles non-scripted generic decoration, chair and mailbox objects. Other template types/scripts and absent content remain explicit preflight failures. Existing ritual channel ownership is unchanged. Template scale, chair seats, destination/facing and map copy are preserved; positive spell duration expires in whole seconds, while nonpositive duration does not set a despawn timer (TC a352b1fa EffectTransmitted).
+
+Target87 is DEST_DEST, not a request to snap to terrain. It preserves the requested or earlier selected destination. TC CheckDst initializes a missing destination to the caster. UseToy currently carries no destination, so standalone87 resolves to the caster; SpellCastIntent ground positions are honored by ordinary spells.
+
+Aura233 is TC HandleUnused/client-side-only appearance, not aura56's global transform. Server stores/replicates the authentic aura and removes it normally. Native client viewer-local humanoid presentation still needs implementation; no rendered parity claimed. Source: pinned TC a352b1fa SpellAuraDefines.h320/SpellAuraEffects.cpp305; concrete local DB2 spells289277 and384585. No synthetic IDs or database writes. Required missing object imports and census receipts live in the toy-effects4 handoff.
+
+Measured server-preflight census75→95/1166:21 newly available object toys plus2 aura233 toys, minus3 former false positives (Little Wickerman70722, Steamworks Sausage Grill116757 and Jeweled Offering193032 still require spell-focus/chest behavior). Two previously admitted chair/mailbox toys now actually spawn; Moonkin chair70161 uses its available authentic TDB template.31 toy tests,19 ritual regressions,12 teleport regressions and7 summon regressions pass (some overlap); format/check pass without warnings. Exact receipts: engine `data/diagnostics/toyfx4-2026-10-10/`. No rendered-client parity claimed.
+
 ## Account state and transport
 
 `account_toys` stores a bitcode map `item_id -> favourite` keyed by account. Learning on normal UseItem writes both ownership and the consumed inventory record in one redb transaction. A duplicate returns an error without consumption. Favourite updates reread the durable account row inside their write transaction.

@@ -130,6 +130,7 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
                     summon::expire_summons.after(advance_casts),
+                    crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                 ),
             );
@@ -1509,6 +1510,11 @@ fn plan_targets(
         if !selects_targets(spell, effect) {
             continue;
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
+            if let Some(reason) = crate::game_objects::summoned::unsupported_reason(world, effect) {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
         if effect.effect == disenchant::EFFECT_DISENCHANT {
             plan.push(PlannedEffect {
                 index,
@@ -1557,7 +1563,7 @@ fn plan_targets(
                 orientation: targets::orientation(world, caster),
             })
         } else {
-            targets::effect_dest(world, caster, explicit, effect)
+            targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
         plan.push(PlannedEffect {
             index,
