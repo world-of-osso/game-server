@@ -140,12 +140,15 @@ fn drain_soul_damage(world: &World, caster: Entity, target: Entity, amount: f32)
 /// TC a352b1fa spell_rogue.cpp:225-251, spell_rog_backstab: effect 3
 /// increases damage only in the target's rear half-plane. Retail $s4=20%.
 fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
-    let (Some(from), Some(to)) = (
-        super::targets::position(world, target),
-        super::targets::position(world, caster),
-    ) else {
-        return amount;
-    };
+    // SpellXDescriptionVariables53 ->339 supplies unconditional $mult.
+    let level = world
+        .get::<shared::components::Level>(caster)
+        .expect("class spell caster requires Level")
+        .0;
+    let early_levels = (f32::from(level) - 10.0).clamp(0.0, 10.0);
+    let amount = amount * (early_levels * 11.0 + 260.0) / 370.0;
+    let from = super::targets::position(world, target).expect("Backstab target requires position");
+    let to = super::targets::position(world, caster).expect("Backstab caster requires position");
     let angle = super::targets::orientation(world, target);
     let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
     let behind = forward.dot(to - from) < 0.0;
