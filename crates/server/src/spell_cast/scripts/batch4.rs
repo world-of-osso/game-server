@@ -11,6 +11,7 @@ pub(super) const STEADY_SHOT: u32 = 56641;
 pub(super) const KILL_SHOT: u32 = 53351;
 pub(super) const MANGLE: u32 = 33917;
 pub(super) const VIVIFY: u32 = 116670;
+pub(super) const RENEWING_MIST_CAST: u32 = 115151;
 pub(super) const CHAIN_LIGHTNING: u32 = 188443;
 pub(super) const HOWLING_BLAST: u32 = 49184;
 pub(super) const SANCTIFY: u32 = 34861;
@@ -85,6 +86,21 @@ pub(super) fn mangle_damage(world: &World, caster: Entity, target: Entity, amoun
     } else {
         amount
     }
+}
+
+/// 115151 explicitly names119611o1/d. Apply only its base periodic heal;
+/// jumping on overheal and rank231606 procs remain separate contracts.
+pub(super) fn renewing_mist(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: RENEWING_MIST,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
 }
 
 /// 116670/274586 explicitly names 425804 and "your Renewing Mist".

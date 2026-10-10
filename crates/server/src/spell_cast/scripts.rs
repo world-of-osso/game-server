@@ -74,6 +74,7 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch4::RENEWING_MIST_CAST, 0) => Some(batch4::renewing_mist),
         (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
         (batch4::CHAIN_LIGHTNING, 0) => Some(batch4::chain_lightning),
         (batch4::HOWLING_BLAST, 0) => Some(batch4::howling_blast),
