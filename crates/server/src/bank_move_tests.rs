@@ -190,6 +190,38 @@ fn swapping_onto_the_same_item_fills_the_stack_and_keeps_the_rest() {
 }
 
 #[test]
+fn a_move_request_after_closing_the_bank_rejects_without_changing_inventory() {
+    let mut h = harness().expect("real world.db and faction templates");
+    let npc = banker_with_tabs(&mut h, 1);
+    let linen = location_of(&h, h.guid_of(LINEN));
+    // Positive control: the bought bank slot accepts this exact request while open.
+    swap(&mut h, linen, bank(0, 5));
+    assert_eq!(bank_items(&mut h), vec![(0, 5, LINEN, 20)]);
+    swap(&mut h, bank(0, 5), linen);
+    assert_eq!(bank_items(&mut h), vec![]);
+    assert_eq!(errors(&mut h), vec![]);
+
+    h.send::<_, InteractionChannel>(CloseInteraction { npc: npc.to_bits() });
+    assert!(
+        h.app
+            .world()
+            .get::<crate::npc_interaction::ActiveInteraction>(h.connection)
+            .is_none()
+    );
+    let inventory_before = h.inventory();
+    let bank_before = persistence::banks::load_character_bank(h.db(), h.character_id);
+    // Bypass the UI cursor cancellation: send the real InventoryChannel request.
+    swap(&mut h, linen, bank(0, 5));
+    assert_eq!(errors(&mut h), vec![InventoryErrorReason::CantDoRightNow]);
+    assert_eq!(h.inventory(), inventory_before);
+    assert_eq!(
+        persistence::banks::load_character_bank(h.db(), h.character_id),
+        bank_before
+    );
+    assert!(h.take::<BankContents>().is_empty());
+}
+
+#[test]
 fn bank_moves_refuse_oversized_splits_unbought_tabs_and_a_closed_bank() {
     let Some(mut h) = harness() else { return };
     let linen = location_of(&h, h.guid_of(LINEN));
