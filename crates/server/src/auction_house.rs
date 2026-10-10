@@ -79,6 +79,7 @@ pub struct AuctionHousePlugin;
 impl Plugin for AuctionHousePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AuctionHouseState>();
+        app.init_resource::<crate::maps::ServerClock>();
         app.add_systems(Update, initialize_auction_state);
         app.add_systems(Update, process_open_requests);
         app.add_systems(Update, process_query_requests);
