@@ -130,7 +130,7 @@ Players no longer use the HP/mana/rating functions below: [[character-stats]] co
 
 ## See Also
 
-- [Class defensives audit](../../defensives-audit.md) — melee reductions work, but shield absorption and school immunity are bypassed (2026-10-09)
+- [Class defensives audit](../../defensives-audit.md) — melee immunity/absorb fixes, dodge and Brew proof; remaining Blur/Turtle limits (2026-10-09)
 
 - [[tick-model]] — combat systems run in `FixedUpdate`; no global fixed-phase pipeline is implemented
 - [[networking]] — CombatEvent broadcast over CombatChannel
