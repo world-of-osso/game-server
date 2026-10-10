@@ -1,4 +1,6 @@
 use bevy::ecs::system::SystemParam;
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Health, Npc, Player, Position, UnitFactionTemplate};
@@ -496,6 +498,8 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
     let mut swings = Vec::new();
+    // Recipient health not yet mutated by this batch's deferred split deliveries.
+    let mut redirect_health = HashMap::new();
 
     let attackers: Vec<Entity> = params.units.p0().iter().map(|item| item.0).collect();
     for attacker_entity in attackers {
@@ -528,6 +532,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                 target_entity,
                 &mut snapshot.auto_attack,
                 &mut params.commands,
+                &mut redirect_health,
             ) else {
                 continue;
             };
@@ -899,6 +904,7 @@ fn melee_damage_splits(
             )
         };
         let multiplier = scaling(split.recipient).health_multiplier(&scaling(attacker));
+        split.health_at_plan = health.current;
         split.budget =
             (health.current - health.max * split.floor_pct / 100.0).max(0.0) * multiplier;
         splits.push(split);
@@ -917,6 +923,7 @@ fn try_swing(
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
+    redirect_health: &mut HashMap<Entity, f32>,
 ) -> Option<SwingOutcome> {
     let timer = match hand {
         Hand::Main => auto_attack.timer,
@@ -1004,7 +1011,19 @@ fn try_swing(
     let absorbed = absorption.absorbed;
     let mut remaining = absorption.remaining;
     for split in splits {
-        let share = (remaining * split.fraction).min(split.budget);
+        let recipient_scaling = context.scaling.get(split.recipient).map_or(
+            UnitScaling::from_item((None, None, None)),
+            UnitScaling::from_item,
+        );
+        let health_left = redirect_health
+            .entry(split.recipient)
+            .or_insert(split.health_at_plan);
+        let multiplier = recipient_scaling.health_multiplier(&attacker_scaling);
+        let reserved = (split.health_at_plan - *health_left) * multiplier;
+        let budget = (split.budget - reserved).max(0.0);
+        let share = (remaining * split.fraction).min(budget);
+        *health_left -=
+            crate::level_scaling::health_loss(&attacker_scaling, &recipient_scaling, share);
         remaining -= share;
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
@@ -1280,6 +1299,9 @@ pub(crate) fn despawn_creature(world: &mut World, creature: Entity) {
 /// multiplier for the attacker, both enter combat, the victim's threat and
 /// `DamageTaken` follow, and a lethal hit kills it.
 pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: Entity, damage: f32) {
+    if !crate::spell_cast::targets::is_alive(world, victim) {
+        return;
+    }
     let damage = crate::auras::damage_transfer::route(world, attacker, victim, 1, damage);
     deal_health_damage(world, attacker, victim, damage, 1, None, 0.0);
 }
