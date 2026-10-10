@@ -95,6 +95,7 @@ fn dummy10_consecration_stays_at_cast_position_pulses_and_expires() {
 #[test]
 fn dummy10_feral_lunge_launches_named_bite_only_at_hit_enemy() {
     let mut h = harness(Vec::new(), &[196884, 215802], 7).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert(Position { x: 10.0, y: 0.0, z: 0.0 });
     let other = spawn_npc(&mut h.app, 6.0);
     h.cast_and_deliver(196884, Some(h.npc));
     h.advance(12);
