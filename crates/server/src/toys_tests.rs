@@ -766,6 +766,7 @@ fn toyfx2_feather_fall_authentic_toy_spell_lifecycle() {
     );
     assert!(toy_catalog::unsupported_types(h.app.world(), 167273).is_empty());
     h.cast_and_deliver(167273, None);
+    h.advance(40); // Authentic one-second cast, not an immediate aura fixture.
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(
         h.app
