@@ -204,3 +204,30 @@ fn petbattle_pvp_decline_requeues_opponent_and_stale_accept_cannot_start() {
         .is_err()
     );
 }
+
+#[test]
+fn petbattle_pvp_disconnect_finishes_opponent_and_releases_account() {
+    let mut app = app();
+    let [a, b] = matched(&mut app);
+    let disconnected = connection(app.world_mut(), a).unwrap();
+    app.world_mut().entity_mut(disconnected).remove::<InWorld>();
+    remove_abandoned(app.world_mut());
+    assert!(!is_in_battle(app.world(), a));
+    assert!(!is_in_battle(app.world(), b));
+    assert!(app.world().resource::<Matchmaker>().battles.is_empty());
+    app.update();
+    let connection = connection(app.world_mut(), b).unwrap();
+    let delivered: Vec<_> = app
+        .world_mut()
+        .get_mut::<MessageReceiver<WildPetBattleUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .collect();
+    assert!(delivered.iter().any(|update| matches!(
+        update,
+        WildPetBattleUpdate::End {
+            outcome: WildPetBattleOutcome::Won,
+            ..
+        }
+    )));
+}
