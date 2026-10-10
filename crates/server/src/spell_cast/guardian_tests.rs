@@ -90,7 +90,7 @@ fn guardians_imp_does_not_attack_with_no_target_or_after_owner_death() {
 }
 
 fn sacrifice() -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[6940, 108853], 2).unwrap();
+    let mut h = harness(Vec::new(), &[6940, 108853, 17, 642], 2).unwrap();
     let ally = spawn_player(&mut h.app, 2, 0.0);
     super::cast_triggered(h.app.world_mut(), h.caster, 6940, Some(ally), 0);
     h.app
@@ -123,11 +123,47 @@ fn guardians_sacrifice_splits_spell_damage_and_stops_on_native_health_floor() {
 }
 
 #[test]
+fn guardians_sacrifice_periodic_absorb_immunity_and_expiry() {
+    let (mut h, ally) = sacrifice();
+    let spell = world_db().unwrap().store.get(108853).unwrap();
+    let ctx = super::effects::EffectCtx {
+        caster: h.npc,
+        spell,
+        depth: 1,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    super::effects::deal_damage(h.app.world_mut(), &ctx, ally, 100.0, false, true);
+    assert_eq!(h.health(ally), 930.0);
+    assert_eq!(h.health(h.caster), 970.0);
+    super::cast_triggered(h.app.world_mut(), h.caster, 17, Some(h.caster), 0);
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, ally, 100.0);
+    assert_eq!(
+        h.health(h.caster),
+        970.0,
+        "recipient absorb consumes the transferred share"
+    );
+    assert_eq!(h.health(ally), 860.0);
+    super::cast_triggered(h.app.world_mut(), h.caster, 642, Some(h.caster), 0);
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, ally, 100.0);
+    assert_eq!(
+        h.health(ally),
+        760.0,
+        "immune recipients do not receive splits"
+    );
+    h.advance(260);
+    assert!(!crate::auras::has_aura(h.app.world(), ally, 6940));
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, ally, 100.0);
+    assert_eq!(h.health(ally), 660.0);
+}
+
+#[test]
 fn guardians_sacrifice_splits_real_auto_attack_damage() {
     let (mut h, ally) = sacrifice();
     h.app
         .world_mut()
         .entity_mut(h.npc)
+        .remove::<crate::stats::CharacterStats>()
         .insert(crate::combat::AutoAttack::new(ally));
     h.advance(40);
     let ally_loss = 1000.0 - h.health(ally);

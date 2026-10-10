@@ -898,9 +898,9 @@ fn melee_damage_splits(
                 UnitScaling::from_item,
             )
         };
-        let unit_loss =
-            crate::level_scaling::health_loss(&scaling(attacker), &scaling(split.recipient), 1.0);
-        split.budget = (health.current - health.max * split.floor_pct / 100.0).max(0.0) / unit_loss;
+        let multiplier = scaling(split.recipient).health_multiplier(&scaling(attacker));
+        split.budget =
+            (health.current - health.max * split.floor_pct / 100.0).max(0.0) * multiplier;
         splits.push(split);
     }
     splits
