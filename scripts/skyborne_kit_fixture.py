@@ -55,6 +55,7 @@ def fixture_database():
             "content_npc_vendor",
             "db2_row_source",
             "spell_name",
+            "spell_effect",
             "tdb_playercreateinfo_item",
             "tdb_playercreateinfo_action",
             "skyborne_content_item",
