@@ -415,6 +415,8 @@ impl Encounter {
                                 catalog.turns.abilities[&id].family as u8
                             },
                             cooldown,
+                            // Nonzero ability-lockdown effects remain gated in the turn engine.
+                            lockout: 0,
                             usable: id != 0
                                 && cooldown == 0
                                 && validate_ability(&catalog.turns, id).is_ok(),
@@ -424,12 +426,13 @@ impl Encounter {
                         .battle
                         .auras
                         .iter()
-                        .filter(|a| a.target.team == team && a.target.slot == slot)
-                        .map(|a| BattleAuraSnapshot {
-                            ability_id: a.ability,
-                            icon: catalog.ability_art[&a.ability].1,
-                            rounds_remaining: a.remaining,
+                        .filter(|a| {
+                            !a.weather
+                                && !a.team_bound
+                                && a.target.team == team
+                                && a.target.slot == slot
                         })
+                        .map(|a| aura_snapshot(a, catalog))
                         .collect();
                     BattlePetSnapshot {
                         instance_id: identity.guid,
@@ -467,7 +470,32 @@ impl Encounter {
             replacement_required: self.battle.teams[0].pets[self.battle.teams[0].active].health
                 <= 0,
             feedback: self.feedback.clone(),
+            weather: self
+                .battle
+                .auras
+                .iter()
+                .find(|a| a.weather)
+                .map(|a| aura_snapshot(a, catalog)),
+            team_auras: std::array::from_fn(|team| {
+                self.battle
+                    .auras
+                    .iter()
+                    .filter(|a| !a.weather && a.team_bound && a.target.team == team)
+                    .map(|a| aura_snapshot(a, catalog))
+                    .collect()
+            }),
         }
+    }
+}
+fn aura_snapshot(aura: &crate::pet_battle::Aura, catalog: &WildCatalog) -> BattleAuraSnapshot {
+    let (name, icon) = &catalog.ability_art[&aura.ability];
+    BattleAuraSnapshot {
+        ability_id: aura.ability,
+        name: name.clone(),
+        icon: *icon,
+        rounds_remaining: aura.remaining,
+        // Admitted beneficial effects attach to the caster's team; hostile effects to the enemy.
+        is_buff: aura.weather || aura.caster.team == aura.target.team,
     }
 }
 fn earned_xp(level: u8, opponent: u8) -> u32 {

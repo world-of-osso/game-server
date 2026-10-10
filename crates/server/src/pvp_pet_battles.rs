@@ -282,6 +282,7 @@ fn snapshot(world: &World, battle: &PvpBattle, team: usize) -> WildPetBattleSnap
     state.initial_selection_required = battle.initial_pets.is_some();
     if team == 1 {
         state.teams.swap(0, 1);
+        state.team_auras.swap(0, 1);
         state.active.swap(0, 1);
         for feedback in &mut state.feedback {
             feedback.team = 1 - feedback.team;
