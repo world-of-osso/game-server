@@ -168,7 +168,7 @@ pub(super) fn apply_movement_input(
     let travel = if flown {
         Travel::Flight
     } else if swimming {
-        Travel::Swim(DEFAULT_SWIM_SPEED * auras.map_or(1.0, |mods| mods.movement_speed))
+        Travel::Swim(DEFAULT_SWIM_SPEED * auras.map_or(1.0, |mods| mods.swim_speed))
     } else {
         Travel::Ground
     };
