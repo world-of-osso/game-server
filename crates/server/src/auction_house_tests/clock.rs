@@ -4,12 +4,17 @@ use crate::maps::difficulty::ServerClock;
 
 #[test]
 fn injected_clock_unsold_expiry_returns_item_by_persisted_mail() {
-    assert_clock_expiry(false);
+    assert_clock_expiry(false, false);
 }
 
 #[test]
 fn injected_clock_bid_expiry_persists_seller_proceeds_and_buyer_item() {
-    assert_clock_expiry(true);
+    assert_clock_expiry(true, false);
+}
+
+#[test]
+fn injected_clock_deleted_bidder_preserves_invoice_without_a_name() {
+    assert_clock_expiry(true, true);
 }
 
 fn advance_clock_through_admin(app: &mut App) {
@@ -25,7 +30,7 @@ fn advance_clock_through_admin(app: &mut App) {
     ));
 }
 
-fn assert_clock_expiry(with_bid: bool) {
+fn assert_clock_expiry(with_bid: bool, delete_buyer: bool) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("auction-clock.redb");
     let db = redb::Database::create(&path).unwrap();
@@ -68,6 +73,10 @@ fn assert_clock_expiry(with_bid: bool) {
         auction.item.item_guid, item.item_guid,
         "posting creates an escrow item instance"
     );
+    if delete_buyer {
+        persistence::delete_character(&db, 2, buyer).unwrap();
+        assert!(persistence::load_character(&db, buyer).is_none());
+    }
     let mut app = App::new();
     app.insert_resource(GameDatabase { db });
     app.insert_resource(state);
@@ -113,7 +122,11 @@ fn assert_clock_expiry(with_bid: bool) {
         );
         assert_eq!(
             seller_mail[0].body,
-            format!("Buyer:1001:2000:{}:50:2", auction.deposit)
+            format!(
+                "{}:1001:2000:{}:50:2",
+                if delete_buyer { "" } else { "Buyer" },
+                auction.deposit
+            )
         );
         assert_eq!(seller_mail[0].money, 951 + auction.deposit);
         assert!(seller_mail[0].items.is_empty());
