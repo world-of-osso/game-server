@@ -15,6 +15,46 @@ pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &Spe
     }
 }
 
+pub(super) fn view_overrides(
+    world: &World,
+    unit: Entity,
+    aura: &AuraInstance,
+) -> Vec<shared::components::AuraOverride> {
+    use shared::components::AuraOverride;
+    let store = world.resource::<SpellStore>();
+    let known: Vec<u32> = world
+        .get::<crate::class_progression::KnownSpells>(unit)
+        .map_or_else(Vec::new, |known| known.iter().collect());
+    aura.effects
+        .iter()
+        .flat_map(|effect| match effect.aura_type {
+            super::handlers::ANIM_REPLACEMENT_SET => {
+                vec![AuraOverride::Animation(effect.misc_values[0] as u32)]
+            }
+            OVERRIDE_ACTIONBAR_SPELLS => {
+                let candidates = if effect.misc_values[0] != 0 {
+                    vec![effect.misc_values[0] as u32]
+                } else {
+                    known.clone()
+                };
+                candidates
+                    .into_iter()
+                    .filter_map(|base| {
+                        let spell = store.get(base)?;
+                        let replacement = effect.amount as u32;
+                        (affects(aura, effect, spell) && store.get(replacement).is_some())
+                            .then_some(AuraOverride::ActionBar {
+                                spell_id: base,
+                                replacement,
+                            })
+                    })
+                    .collect()
+            }
+            _ => Vec::new(),
+        })
+        .collect()
+}
+
 pub(crate) fn resolve_spell(world: &World, caster: Entity, spell_id: u32) -> u32 {
     let Some(auras) = world.get::<ActiveAuras>(caster) else {
         return spell_id;
