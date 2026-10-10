@@ -47,7 +47,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
+- [Generic toy aura effects](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10) — data-backed226, cast prevention321, linked summons428, explicit bobber258 gaps and authentic template preparation; earlier61/105/37/293 support.
 
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [contract](../specs/navigation.md).
 
