@@ -480,7 +480,10 @@ fn resolve_round(
     )?;
     battle.encounter.battle = next;
     battle.encounter.feedback = events.iter().filter_map(combat_feedback).collect();
-    let text: Vec<_> = events.iter().filter_map(|event| format_combat_event(event, world.resource::<WildCatalog>())).collect();
+    let text: Vec<_> = events
+        .iter()
+        .filter_map(|event| format_combat_event(event, world.resource::<WildCatalog>()))
+        .collect();
     battle.decisions = [None; 2];
     if let Some(outcome) = battle.encounter.battle.outcome {
         finish_match(world, id, &battle, outcome, actions, text);
