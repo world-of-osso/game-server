@@ -82,7 +82,9 @@ fn load_target(
         CastFailure::Unsupported("Disenchant inventory database unavailable".into())
     })?;
     let templates = world.resource::<ItemTemplates>();
-    let model = load_model(&db.db, templates, id).map_err(CastFailure::Unsupported)?;
+    let model = load_model(&db.db, templates, id).map_err(|error| {
+        CastFailure::Unsupported(format!("Disenchant inventory unavailable: {error:?}"))
+    })?;
     let item = model.bag_item(guid).ok_or(CastFailure::InvalidTarget)?;
     if model.definition_source(guid) != Retail {
         return Err(CastFailure::CantBeDisenchanted);
