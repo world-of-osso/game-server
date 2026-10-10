@@ -165,6 +165,7 @@ fn guardians_sacrifice_splits_real_auto_attack_damage() {
         .world_mut()
         .entity_mut(h.npc)
         .remove::<crate::stats::CharacterStats>()
+        .remove::<shared::components::Npc>()
         .insert(crate::combat::AutoAttack::new(ally));
     h.advance(40);
     let ally_loss = 1000.0 - h.health(ally);
@@ -192,6 +193,8 @@ fn guardians_boundary_same_tick_swings_share_one_native_health_floor_budget() {
         .get_mut::<Health>(h.caster)
         .unwrap()
         .current = 210.0;
+    // Untyped melee units use the deterministic default hit table: this proves
+    // deferred health routing, independently of creature crit/miss RNG.
     let mut attackers = vec![h.npc];
     for _ in 0..3 {
         attackers.push(spawn_npc(&mut h.app, 3.0));
@@ -201,6 +204,7 @@ fn guardians_boundary_same_tick_swings_share_one_native_health_floor_budget() {
             .world_mut()
             .entity_mut(attacker)
             .remove::<crate::stats::CharacterStats>()
+            .remove::<shared::components::Npc>()
             .insert(crate::combat::AutoAttack::new(ally));
     }
     // Execute the actual batched swing system and deferred commands without
