@@ -59,6 +59,11 @@ fn dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage()
 
 #[test]
 fn dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_child() {
+    for _ in 0..100 {
+        survival_instincts_damage_case();
+    }
+}
+fn survival_instincts_damage_case() {
     let mut h = harness(Vec::new(), &[61336, 50322, 5487, 108853], 11).unwrap();
     let caster = h.caster;
     h.cast_and_deliver(5487, Some(caster));
@@ -75,7 +80,13 @@ fn dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_chi
     let before = h.health(caster);
     super::cast_triggered(h.app.world_mut(), attacker, 108853, Some(caster), 1);
     h.advance(10);
-    assert!(varied(98.625).contains(&(before - h.health(caster))));
+    // Mainline Bear5487 effect12 already reduces Fire damage by3%.
+    // Survival halves that existing97% multiplier, not an unmodified hit.
+    assert!(
+        varied(95.66625).contains(&(before - h.health(caster))),
+        "before={before}, after={}",
+        h.health(caster)
+    );
     crate::auras::remove_auras(
         h.app.world_mut(),
         caster,
@@ -86,7 +97,11 @@ fn dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_chi
     let before = h.health(caster);
     super::cast_triggered(h.app.world_mut(), attacker, 108853, Some(caster), 1);
     h.advance(10);
-    assert!(varied(197.25).contains(&(before - h.health(caster))));
+    assert!(
+        varied(191.3325).contains(&(before - h.health(caster))),
+        "Bear's remaining3% reduction: before={before}, after={}",
+        h.health(caster)
+    );
 }
 #[test]
 fn dummy7_survival_instincts_child_expires_with_parent() {
