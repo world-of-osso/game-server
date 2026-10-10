@@ -147,7 +147,15 @@ fn spell_teleport_tdb_orgrimmar_cast_transfers_to_authored_city_position() {
         MessageReceiver::<WorldPortAck>::default(),
     ));
     h.cast(TELEPORT_ORGRIMMAR, None);
-    h.advance(250);
+    // HostClient messages expire next frame, like the harness's spell inbox.
+    let mut messages = Vec::new();
+    for _ in 0..250 {
+        h.advance(1);
+        messages.extend(super::test_harness::drain::<NewWorld>(
+            &mut h.app,
+            h.connection,
+        ));
+    }
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(
         h.inbox
@@ -162,7 +170,6 @@ fn spell_teleport_tdb_orgrimmar_cast_transfers_to_authored_city_position() {
         .unwrap();
     assert_eq!(transfer.destination, destination);
     assert!(h.app.world().get::<InMap>(h.caster).is_none());
-    let messages = super::test_harness::drain::<NewWorld>(&mut h.app, h.connection);
     assert_eq!(messages.len(), 1);
     assert_eq!(messages[0].map_id, 1);
     h.app
