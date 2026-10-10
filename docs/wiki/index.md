@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Audited toy attachments and sounds](systems/toys.md#audited-attachment-and-sound-toys-2026-10-10) — eight source-backed visual-only admissions, actual target/cast/lifetime proofs, preserved race restrictions and unbound-ring refusals; census103/1166.
+
 - [Transmitted toy objects](systems/toys.md#transmitted-toy-objects-and-viewer-local-models-2026-10-10) — actual effect50 decoration/chair/mailbox summons, destination87, explicit unsupported object semantics and client-owned233.
 
 - [Generic toy aura effects](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10) — data-backed226, cast prevention321, linked summons428, explicit bobber258 gaps and authentic template preparation; earlier61/105/37/293 support.

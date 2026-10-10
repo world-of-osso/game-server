@@ -9,20 +9,25 @@ const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
+    setup_for_race(path, 1)
+}
+
+fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
     let mut h = harness(
         Vec::new(),
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
+            203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870,
         ],
         8,
     )
     .unwrap();
     let db = redb::Database::create(path).unwrap();
     persistence::create_tables(&db);
-    let (character, _) = persistence::create_character(&db, 1, "ToyMage", 1, 8).unwrap();
+    let (character, _) = persistence::create_character(&db, 1, "ToyMage", race, 8).unwrap();
     let item = |id| InventoryItemData {
         item_guid: persistence::next_id(&db, "item_instance"),
         item_id: id,
@@ -68,6 +73,11 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         .world_mut()
         .entity_mut(h.caster)
         .insert((CombatStatus(false), Level(80)));
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(h.caster)
+        .unwrap()
+        .race = race;
     h.app.world_mut().entity_mut(h.connection).insert((
         InWorld {
             character_id: character,
@@ -1227,6 +1237,227 @@ fn toyfx4_humanoid_model_is_viewer_aura_not_global_transform() {
                 .auras
                 .iter()
                 .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
+fn toyfx5_visual_attachments_use_real_toys_and_cancel_without_gameplay_changes() {
+    for (item, spell) in [
+        (156871, 261981),  // Spitzy
+        (165791, 286277),  // Worn Cloak
+        (221964, 455023),  // Filmless Camera
+        (228413, 462145),  // Lampyridae Lure
+        (263198, 1269949), // Valdekar's Special
+        (267456, 1280563), // Lil' Scoots' Pillow
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let race = if item == 165791 { 2 } else { 1 }; // Worn Cloak is Horde-only.
+        let (mut h, character) = setup_for_race(&dir.path().join("toys.redb"), race);
+        learn_effect_toy(&mut h, character, item);
+        let health_before = *h
+            .app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap();
+        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        assert!(
+            h.inbox.failed.is_empty(),
+            "toy {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox
+                .go
+                .iter()
+                .any(|go| go.spell_id == spell && go.hit_targets.contains(&h.caster.to_bits())),
+            "toy {item}"
+        );
+        let auras = h
+            .app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap();
+        assert!(
+            auras
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell && aura.caster == Some(h.caster.to_bits())),
+            "toy {item}"
+        );
+        assert_eq!(
+            *h.app
+                .world()
+                .get::<shared::components::Health>(h.caster)
+                .unwrap(),
+            health_before
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::ModelDisplay>(h.caster)
+                .is_none()
+        );
+        assert!(
+            persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character)
+                .items
+                .is_empty()
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                spell_id: spell,
+            });
+        h.advance(5);
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell),
+            "toy {item}"
+        );
+        if item == 165791 {
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Player>(h.caster)
+                .unwrap()
+                .race = 1;
+            assert_eq!(
+                activate(&mut h, item)[0].error.as_deref(),
+                Some("toy race/class restriction")
+            );
+        }
+    }
+}
+
+#[test]
+fn toyfx5_mask_affects_selected_friend_and_mortar_delivers_real_cast_time() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    let friend = spawn_player(&mut h.app, 8, 3.0);
+    h.select(Some(friend));
+    h.advance(2);
+    learn_effect_toy(&mut h, character, 88580);
+    assert_eq!(activate(&mut h, 88580)[0].error, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(friend)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 128328 && aura.caster == Some(h.caster.to_bits()))
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .is_some_and(|auras| auras.auras.iter().any(|aura| aura.spell_id == 128328))
+    );
+    h.advance(1200); // authentic 60000ms duration, not a permanent costume.
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(friend)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 128328)
+    );
+
+    learn_effect_toy(&mut h, character, 204818);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.npc)
+        .unwrap()
+        .x = 20.0;
+    h.select(Some(h.npc));
+    h.advance(2);
+    let health_before = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.npc)
+        .unwrap();
+    assert_eq!(activate(&mut h, 204818)[0].error, None);
+    assert!(
+        !h.inbox.go.iter().any(|go| go.spell_id == 406870),
+        "real 2000ms cast must not finish instantly"
+    );
+    h.advance(80); // Includes the cast and the DB2 missile travel.
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 406870
+        && go.caster == h.caster.to_bits()
+        && go.hit_targets.contains(&h.npc.to_bits())));
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Health>(h.npc)
+            .unwrap(),
+        health_before,
+        "a squeaking rubber duck is not a damage spell"
+    );
+}
+
+#[test]
+fn toyfx5_attachment_descriptions_without_visual_bindings_remain_unavailable() {
+    for (item, spell) in [(133997, 203533), (134007, 203820)] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        assert!(
+            !world_db()
+                .unwrap()
+                .store
+                .get(spell)
+                .unwrap()
+                .has_spell_visual
+        );
+        let error = activate(&mut h, item)[0].error.clone().unwrap();
+        assert!(
+            error.contains("aura 4") && error.contains("effect 3"),
+            "{error}"
+        );
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+        assert!(
+            !h.inbox
+                .cooldowns
+                .iter()
+                .any(|cooldown| cooldown.spell_id == spell)
+        );
+    }
+}
+
+#[test]
+fn toyfx5_short_attachments_expire_at_retail_durations() {
+    for (item, spell, frames) in [(263198, 1269949, 70), (267456, 1280563, 230)] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+        h.advance(frames);
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
         );
     }
 }
