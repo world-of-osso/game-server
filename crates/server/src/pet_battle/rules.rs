@@ -13,6 +13,7 @@ pub fn supported_property(property: u32) -> bool {
             | 24
             | 26
             | 27
+            | 28
             | 29
             | 31
             | 32
@@ -23,9 +24,16 @@ pub fn supported_property(property: u32) -> bool {
             | 54
             | 62
             | 63
+            | 68
             | 79
             | 80
+            | 104
             | 116
+            | 135
+            | 136
+            | 139
+            | 145
+            | 157
             | 141
             | 158
             | 177
@@ -54,7 +62,7 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            if name == "Mechanic_IsObject" {
+            if name == "Mechanic_IsObject" && ability != 333 {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
             if !matches!(
@@ -70,6 +78,10 @@ fn validate_ability_graph(
                         | 65
                         | 66
                         | 67
+                        | 69
+                        | 74
+                        | 75
+                        | 20
                         | 68
                         | 71
                         | 72
@@ -137,7 +149,21 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
                 && p[5] == 0
         }
         32 => p[2..].iter().skip(1).all(|v| *v == 0),
-        79 | 177 => catalog.states.contains_key(&(p[0] as u32)),
+        79 | 157 | 177 => catalog.states.contains_key(&(p[0] as u32)),
+        28 => effect.aura != 0 && p[2] >= -1 && p[4..].iter().all(|v| *v == 0),
+        68 => p[2..].iter().all(|v| *v == 0),
+        104 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && p[4] >= 0
+                && p[5] == 0
+        }
+        135 => {
+            matches!(p[1], 0 | 100) && p[2] == 0 && p[3] == 0 && matches!(p[4], 0 | 1) && p[5] == 0
+        }
+        136 => matches!(p[0], 0 | 1) && p[1..].iter().all(|v| *v == 0),
+        139 | 145 => p[1..].iter().all(|v| *v == 0),
         116 => true, // No named parameters; recalculates priority from current speed.
         158 => p.iter().all(|v| *v == 0),
         24 => p[3..].iter().all(|v| *v == 0),

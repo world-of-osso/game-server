@@ -1,5 +1,160 @@
 use super::*;
 
+#[test]
+fn pet_battle_28_decoy_two_team_blocks_persist_through_swap() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [334, 110, 123]);
+    b.teams[0].pets[0].stats.speed = 200;
+    // Decoy334/333 has state74=2: absorbs exactly two direct attacks across swaps.
+    let (b, e) = b
+        .step(
+            &c,
+            [Action::Ability(334), Action::Ability(110)],
+            &mut Fixed(500000),
+        )
+        .unwrap();
+    assert!(damage(&e).is_empty());
+    let (b, e) = b
+        .step(
+            &c,
+            [Action::Swap(1), Action::Ability(110)],
+            &mut Fixed(500000),
+        )
+        .unwrap();
+    assert!(damage(&e).is_empty());
+    assert!(b.auras.is_empty());
+    let (b, e) = b
+        .step(&c, [Action::Pass, Action::Ability(110)], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(damage(&e), vec![120]);
+    assert_eq!(b.teams[0].pets[1].health, 9880);
+}
+
+#[test]
+fn pet_battle_136_sear_magic_cleans_pet_auras_not_weather() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [194, 763, 256]);
+    b = use_ability(&b, &c, 256).0;
+    b = use_ability(&b, &c, 194).0;
+    assert_eq!(
+        b.teams[0].pets[0].state(c.state_id("Mod_SpeedPercent").unwrap()),
+        100
+    );
+    // Sear Magic763 removes all personal buffs/debuffs, not the global Darkness.
+    b = use_ability(&b, &c, 763).0;
+    assert_eq!(
+        b.teams[0].pets[0].state(c.state_id("Mod_SpeedPercent").unwrap()),
+        0
+    );
+    assert_eq!(
+        b.teams[0].pets[0].state(c.state_id("Weather_Darkness").unwrap()),
+        1
+    );
+}
+
+#[test]
+fn pet_battle_139_145_force_health_swap_cancels_queued_ability() {
+    let c = catalog();
+    for (id, slot) in [(780, 1), (457, 2)] {
+        let mut b = battle(&c, 7, 7, [id, 110, 123]);
+        b.teams[0].pets[0].stats.speed = 200;
+        b.teams[1].pets[1].health = 2000;
+        b.teams[1].pets[2].health = 8000;
+        // Death Grip780 chooses lowest2000; Sweep457 highest8000 bench pet.
+        // The old active pet's queued Bite must not execute on the incoming pet.
+        let (b, e) = b
+            .step(
+                &c,
+                [Action::Ability(id), Action::Ability(110)],
+                &mut Fixed(500000),
+            )
+            .unwrap();
+        assert_eq!(b.teams[1].active, slot);
+        assert_eq!(b.teams[0].pets[0].health, 10000);
+        assert_eq!(
+            e.iter().filter(|e| matches!(e, Event::Used { .. })).count(),
+            1
+        );
+    }
+}
+
+#[test]
+fn pet_battle_68_135_explode_bypasses_failsafe() {
+    let c = catalog();
+    let b = battle(&c, 9, 0, [282, 110, 123]);
+    // Explode282 deals40% of caster max10000=4000, then kills itself.
+    // Description explicitly prevents Failsafe; no Mechanical20% resurrection.
+    let (b, e) = use_ability(&b, &c, 282);
+    assert_eq!(b.teams[1].pets[0].health, 6000);
+    assert_eq!(b.teams[0].pets[0].health, 0);
+    assert!(!e.iter().any(|e| matches!(e, Event::Revived(_))));
+}
+
+#[test]
+fn pet_battle_157_belly_slide_blizzard_only_priority() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [529, 110, 123]);
+    b.teams[0].pets[0].stats.speed = 1;
+    // Belly Slide529 state58 gate: no Blizzard -> slow; Blizzard1 -> goes first.
+    assert_eq!(use_ability(&b, &c, 529).1[0], Event::Order([1, 0]));
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Weather_Blizzard").unwrap(), 1);
+    assert_eq!(use_ability(&b, &c, 529).1[0], Event::Order([0, 1]));
+}
+
+#[test]
+fn pet_battle_104_devour_only_heals_after_kill() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [538, 110, 123]);
+    b.teams[0].pets[0].health = 6000;
+    // Devour538 direct15*6=90. Kill-only heal30*6=180; living target ->0.
+    assert_eq!(use_ability(&b, &c, 538).0.teams[0].pets[0].health, 6000);
+    b.teams[1].pets[0].health = 80;
+    assert_eq!(use_ability(&b, &c, 538).0.teams[0].pets[0].health, 6180);
+}
+
+#[test]
+fn pet_battle_63_tranquility_heals_swapped_pet_using_source_power() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [254, 110, 123]);
+    b.teams[0].pets[0].health = 5000;
+    b.teams[0].pets[1].health = 5000;
+    b.teams[0].pets[1].stats.power = 0;
+    b = use_ability(&b, &c, 254).0;
+    // Tranquility255 tick10*(1+.05*source100)=60, not incoming power0's10.
+    let (b, _) = b
+        .step(&c, [Action::Swap(1), Action::Pass], &mut Fixed(500000))
+        .unwrap();
+    assert_eq!(b.teams[0].pets[0].health, 5060);
+    assert_eq!(b.teams[0].pets[1].health, 5060);
+}
+
+#[test]
+fn pet_battle_vicious_fang_miss_does_not_ramp_and_damage_flags_reset() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [156, 110, 123]);
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Stat_Accuracy").unwrap(), -100);
+    b = use_ability(&b, &c, 156).0;
+    b.teams[0].pets[0]
+        .states
+        .insert(c.state_id("Stat_Accuracy").unwrap(), 0);
+    // Vicious Fang156 explicitly increases each time it HITS:miss leaves15*6=90.
+    let (b, e) = use_ability(&b, &c, 156);
+    assert_eq!(damage(&e), vec![90]);
+    assert_eq!(
+        b.teams[1].pets[0].state(c.state_id("Condition_WasDamagedThisTurn").unwrap()),
+        1
+    );
+    let (b, _) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+    assert_eq!(
+        b.teams[1].pets[0].state(c.state_id("Condition_WasDamagedThisTurn").unwrap()),
+        0
+    );
+}
+
 fn use_ability(b: &Battle, c: &Catalog, id: u32) -> (Battle, Vec<Event>) {
     b.step(c, [Action::Ability(id), Action::Pass], &mut Fixed(500000))
         .unwrap()
@@ -114,7 +269,7 @@ fn pet_battle_141_arcane_storm_splits_pool_and_weather_bonus() {
 #[test]
 fn pet_battle_29_takedown_adds_only_when_target_stunned() {
     let c = catalog();
-    let mut b = battle(&c, 7, 7, [221, 110, 123]);
+    let mut b = battle(&c, 7, 0, [221, 110, 123]);
     // Takedown221: first18*6=108; conditional second18*6=108 only if state22.
     assert_eq!(damage(&use_ability(&b, &c, 221).1), vec![108]);
     b.teams[1].pets[0]
@@ -243,6 +398,7 @@ fn pet_battle_22_dummy_points_are_tooltip_metadata() {
         catalog: &c,
         rng: &mut rng,
         events: Vec::new(),
+        healing_target: None,
     };
     rt.cast_turn(
         PetRef { team: 0, slot: 0 },
