@@ -1,6 +1,3 @@
 [env]
 # Always build the pinned Recast source, never an unversioned host library.
 RECAST_VENDOR = { value = "true", force = true }
-# recastnavigation-sys 1.0.3 declares CMake 3.0; CMake 4 removed pre-3.5 policies.
-# Select supported policies (not warning suppression). Remove when upstream raises its minimum.
-CMAKE_POLICY_VERSION_MINIMUM = "3.5"

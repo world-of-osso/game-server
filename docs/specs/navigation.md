@@ -27,6 +27,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 ## Tests asserting this spec
 
 - `crates/navigation/src/bake.rs` — deterministic walkable floor and steep-slope rejection.
+- `crates/navigation/src/query.rs` — real Stockade obstacle detour with LOS-clear path segments (opt-in).
 
 ## Known gaps (current cycle)
 
