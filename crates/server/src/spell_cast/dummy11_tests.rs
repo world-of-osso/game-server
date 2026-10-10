@@ -125,9 +125,11 @@ fn dummy11_lashing_flames_excludes_foreign_caster_and_ends_on_expiry() {
     let foreign = spawn_player(&mut h.app, 7, 0.0);
     let spell = world_db().unwrap().store.get(188389).unwrap();
     let base = super::effects::scaled_amount(h.app.world(), foreign, spell, &spell.effects[0]);
+    // Foreign caster has no connection; observe target health, not owner's inbox.
+    let before = h.health(h.npc);
     super::cast_triggered(h.app.world_mut(), foreign, 188389, Some(h.npc), 1);
     h.advance(3);
-    assert!(varied(base).contains(&(hits(&h, 188389, h.npc).iter().sum::<i32>() as f32)));
+    assert!(varied(base).contains(&(before - h.health(h.npc))));
     h.advance(410);
     assert!(!crate::auras::has_aura(h.app.world(), h.npc, 334168));
     h.inbox.log.clear();
