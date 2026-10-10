@@ -66,6 +66,7 @@ struct Species {
 
 #[derive(Resource)]
 pub(crate) struct PetCatalog {
+    pub(crate) battle: server::pet_battle::Catalog,
     species: HashMap<u32, Species>,
     spells: HashMap<u32, u32>,
 }
@@ -96,7 +97,13 @@ impl PetCatalog {
             .into_iter()
             .map(|entry| (entry.species_id, entry))
             .collect();
-        Ok(Self { species, spells })
+        let battle = server::pet_battle::Catalog::load_world_db(conn)
+            .map_err(rusqlite::Error::InvalidParameterName)?;
+        Ok(Self {
+            battle,
+            species,
+            spells,
+        })
     }
 }
 
@@ -108,7 +115,11 @@ fn load_catalog(mut commands: Commands) {
     .expect("open battle-pet catalog world.db");
     let catalog = PetCatalog::load(&conn)
         .expect("load battle-pet catalog; run scripts/import-battle-pets.py first");
-    info!("Loaded {} BattlePetSpecies entries", catalog.species.len());
+    info!(
+        "Loaded {} BattlePetSpecies and {} battle abilities from world.db",
+        catalog.species.len(),
+        catalog.battle.abilities.len()
+    );
     commands.insert_resource(catalog);
 }
 
@@ -603,6 +614,20 @@ mod tests {
         assert_ne!(first_journal.pets[0].id, second_journal.pets[0].id);
         assert_eq!(first_journal.pets[0].level, 7);
         assert_eq!(second_journal.pets[0].level, 1);
+    }
+
+    #[test]
+    fn pet_battle_startup_loads_real_stats_from_shipped_world_db() {
+        let catalog = load_test_catalog();
+        assert_eq!(catalog.species.get(&39).unwrap().creature_id, 2671);
+        assert_eq!(
+            server::pet_battle::calculate_stats(&catalog.battle, 39, 3, 3, 25).unwrap(),
+            server::pet_battle::Stats {
+                health: 1563,
+                power: 260,
+                speed: 276
+            }
+        );
     }
 
     #[test]
