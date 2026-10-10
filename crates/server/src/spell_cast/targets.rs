@@ -256,7 +256,7 @@ pub fn spell_range(spell: &SpellInfo, hostile: bool) -> (f32, f32) {
 
 /// Radius for target slot `slot` (TrinityCore `CalcRadius`: TargetB prefers
 /// the second radius entry).
-fn radius(effect: &SpellEffect, slot: usize) -> f32 {
+pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
     let entry = if slot == 1 {
         effect.radius[1].or(effect.radius[0])
     } else {

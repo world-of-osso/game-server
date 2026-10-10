@@ -176,3 +176,30 @@ fn dummy2_rogue_backstab_from_front_keeps_base_damage() {
     assert!(varied(107.31).contains(&(5000.0 - h.health(h.npc))));
     assert_eq!(h.power(PowerType::ComboPoints), 1.0);
 }
+
+#[test]
+fn dummy2_evoker_pyre_explodes_at_target_and_hits_nearby_enemies_only() {
+    let mut h = harness(Vec::new(), &[357211, 393568, 357212], 13).expect("real world.db required");
+    let nearby = spawn_npc(&mut h.app, 5.0);
+    let distant = spawn_npc(&mut h.app, 30.0);
+    let ally = spawn_player(&mut h.app, 1, 4.0);
+    h.set_power(PowerType::Essence, 6.0);
+    h.cast_and_deliver(357211, Some(h.npc));
+    h.advance(25);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(440.0).contains(&(5000.0 - h.health(h.npc))));
+    assert!(varied(440.0).contains(&(5000.0 - h.health(nearby))));
+    assert_eq!(h.health(distant), 5000.0);
+    assert_eq!(h.health(ally), 1000.0);
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.spell_id == Some(357212)
+            )
+            .count(),
+        2
+    );
+}

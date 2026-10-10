@@ -49,6 +49,8 @@ const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
 const RISING_SUN_KICK: u32 = 107_428;
 const FISTS_OF_FURY: u32 = 113_656;
 const BACKSTAB: u32 = 53;
+const PYRE_IMPACT: u32 = 393_568;
+const PYRE_DAMAGE: u32 = 357_212;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -64,6 +66,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (PENANCE, 0) => Some(penance),
         (COBRA_SHOT, 1) => Some(cobra_shot),
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
+        (PYRE_IMPACT, 0) => Some(pyre),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
@@ -118,6 +121,45 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_evoker.cpp:601-618 spell_evo_pyre casts 357212 at
+/// the hit unit's position. Its real radius/coefficients define the explosion;
+/// target 87 is a scripted destination, not a generic unit-target substitution.
+fn pyre(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if depth >= super::effects::MAX_TRIGGER_DEPTH {
+        warn!("Pyre trigger depth exhausted");
+        return;
+    }
+    let Some(center) = super::targets::position(world, target) else {
+        return;
+    };
+    let child = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(PYRE_DAMAGE)
+        .expect("Pyre requires catalog damage 357212")
+        .clone();
+    let effect = &child.effects[0];
+    let radius = super::targets::radius(effect, 1);
+    let units = super::targets::area_units(
+        world,
+        caster,
+        center,
+        radius,
+        Relation::Enemy,
+        super::max_targets(&child),
+    );
+    let mut plan = vec![super::PlannedEffect {
+        index: 0,
+        units,
+        dest: Some(super::targets::Dest {
+            position: center,
+            orientation: super::targets::orientation(world, caster),
+        }),
+        chain_multipliers: Vec::new(),
+    }];
+    super::hit::remove_defended_targets(world, caster, &child, &mut plan);
+    super::missiles::launch(world, caster, &child, plan, depth + 1);
 }
 
 /// Retail 100784/261917: rank two reduces Rising Sun Kick and Fists of Fury
