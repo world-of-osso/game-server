@@ -109,6 +109,7 @@ mod toys;
 mod trade;
 mod trait_config;
 mod unit_target;
+mod vehicle;
 mod vignettes;
 mod who;
 mod world_data;
@@ -237,6 +238,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(loot::LootPlugin)
         .add_plugins(creature_tooltip::CreatureTooltipPlugin)
         .add_plugins(taxi::TaxiPlugin)
+        .add_plugins(vehicle::VehiclePlugin)
         .add_plugins(game_objects::GameObjectPlugin)
         .add_plugins(bank::BankPlugin)
         .add_plugins(guild_bank::GuildBankPlugin)

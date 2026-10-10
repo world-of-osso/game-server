@@ -384,8 +384,10 @@ pub(super) fn on_applied(world: &mut World, unit: Entity, aura: &AuraInstance) {
         .map_or(effect.misc_values[1] as u32, |mount| mount.mount_type);
     match mount_display(world, unit, aura, creature) {
         Some(mount_display_id) => {
+            let vehicle_id = crate::vehicle::mount_vehicle_id(world, creature as u32);
             world.entity_mut(unit).insert(Mounted {
                 mount_display_id,
+                vehicle_id,
                 ..Default::default()
             });
             mark_dirty(world, unit);
