@@ -48,7 +48,12 @@ fn incoming_fire(h: &mut Harness, amount: f32) -> f32 {
     loss
 }
 
-fn incoming_melee(h: &mut Harness) -> f32 {
+struct MeleeImpact {
+    health_loss: f32,
+    critical_multiplier: f32,
+}
+
+fn start_npc_swing(h: &mut Harness) {
     h.app.world_mut().entity_mut(h.npc).insert((
         CharacterStats {
             main_hand: WeaponDamage {
@@ -65,13 +70,36 @@ fn incoming_melee(h: &mut Harness) -> f32 {
         },
         crate::combat::AutoAttack::new(h.caster),
     ));
+}
+
+fn incoming_melee(h: &mut Harness) -> MeleeImpact {
+    start_npc_swing(h);
     let before = h.health(h.caster);
     h.advance(1);
     h.app
         .world_mut()
         .entity_mut(h.npc)
         .remove::<crate::combat::AutoAttack>();
-    before - h.health(h.caster)
+    let health_loss = before - h.health(h.caster);
+    h.advance(3);
+    let event = h
+        .inbox
+        .log
+        .iter()
+        .rev()
+        .find(|event| {
+            event.spell_id.is_none()
+                && event.source == Some(h.npc.to_bits())
+                && event.target == Some(h.caster.to_bits())
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .expect("delivered melee combat log");
+    // NPCs retain their 5% crit chance even with CharacterStats::crit_pct = 0.
+    // Validate both actual hit outcomes rather than changing NPC gameplay.
+    MeleeImpact {
+        health_loss,
+        critical_multiplier: if event.crit { 2.0 } else { 1.0 },
+    }
 }
 
 fn assert_melee_event(h: &Harness, kind: CombatEventType, amount: f32) {
@@ -90,7 +118,8 @@ fn assert_reduction(class: u8, spell: u32, triggered: &[u32], expected: f32) {
             && event.kind == CombatLogKind::Damage
             && event.amount == expected as i32
     }));
-    assert_eq!(incoming_melee(&mut h), expected);
+    let melee = incoming_melee(&mut h);
+    assert_eq!(melee.health_loss, expected * melee.critical_multiplier);
 }
 
 fn assert_immunity(class: u8, spell: u32) {
@@ -164,14 +193,16 @@ fn defensives_monk_fortifying_brew_reduces_fire_20_percent() {
     h.cast_and_deliver(115_203, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), 80.0);
-    assert_eq!(incoming_melee(&mut h), 80.0);
+    let melee = incoming_melee(&mut h);
+    let expected_melee = 80.0 * melee.critical_multiplier;
+    assert_eq!(melee.health_loss, expected_melee);
     let health = h
         .app
         .world()
         .get::<shared::components::Health>(h.caster)
         .unwrap();
     assert_eq!(health.max, 1200.0);
-    assert_eq!(health.current, 740.0);
+    assert_eq!(health.current, 820.0 - expected_melee);
     crate::auras::remove_auras(
         h.app.world_mut(),
         h.caster,
@@ -185,7 +216,7 @@ fn defensives_monk_fortifying_brew_reduces_fire_20_percent() {
         .get::<shared::components::Health>(h.caster)
         .unwrap();
     assert_eq!(health.max, 1000.0);
-    assert_eq!(health.current, 540.0);
+    assert_eq!(health.current, 620.0 - expected_melee);
     assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
 }
 
@@ -265,7 +296,7 @@ fn defensives_rogue_evasion_increases_dodge() {
         .defense
         .dodge;
     assert_eq!(after - before, 200.0);
-    assert_eq!(incoming_melee(&mut h), 0.0);
+    assert_eq!(incoming_melee(&mut h).health_loss, 0.0);
     h.advance(3);
     assert!(h.inbox.log.iter().any(
         |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Dodge)
@@ -320,13 +351,17 @@ fn defensives_priest_power_word_shield_absorbs_and_is_consumed() {
 fn defensives_unprotected_control_takes_full_fire_damage() {
     let mut h = harness(Vec::new(), &[FIREBALL], 1).expect("real world.db required");
     assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
-    assert_eq!(incoming_melee(&mut h), INCOMING_DAMAGE);
+    let melee = incoming_melee(&mut h);
+    assert_eq!(
+        melee.health_loss,
+        INCOMING_DAMAGE * melee.critical_multiplier
+    );
 }
 
 #[test]
 fn defensives_paladin_divine_shield_blocks_melee() {
     let mut h = cast_defensive(2, 642, &[]);
-    assert_eq!(incoming_melee(&mut h), 0.0);
+    assert_eq!(incoming_melee(&mut h).health_loss, 0.0);
     assert_melee_event(&h, CombatEventType::Miss, 0.0);
     h.advance(3);
     assert!(h.inbox.log.iter().any(
@@ -337,7 +372,7 @@ fn defensives_paladin_divine_shield_blocks_melee() {
 #[test]
 fn defensives_mage_ice_block_blocks_melee() {
     let mut h = cast_defensive(8, 45_438, &[]);
-    assert_eq!(incoming_melee(&mut h), 0.0);
+    assert_eq!(incoming_melee(&mut h).health_loss, 0.0);
     assert_melee_event(&h, CombatEventType::Miss, 0.0);
     h.advance(3);
     assert!(h.inbox.log.iter().any(
@@ -349,22 +384,25 @@ fn defensives_mage_ice_block_blocks_melee() {
 fn defensives_priest_power_word_shield_absorbs_melee() {
     let mut h = cast_defensive(5, 17, &[]);
     let before = shield_remaining(&h);
-    assert!(before > INCOMING_DAMAGE);
-    assert_eq!(incoming_melee(&mut h), 0.0);
-    assert_eq!(shield_remaining(&h), before - INCOMING_DAMAGE);
-    assert_melee_event(&h, CombatEventType::Absorb, INCOMING_DAMAGE);
+    assert!(before > INCOMING_DAMAGE * 2.0);
+    let melee = incoming_melee(&mut h);
+    let incoming = INCOMING_DAMAGE * melee.critical_multiplier;
+    assert_eq!(melee.health_loss, 0.0);
+    assert_eq!(shield_remaining(&h), before - incoming);
+    assert_melee_event(&h, CombatEventType::Absorb, incoming);
     h.advance(3);
     assert!(h.inbox.log.iter().any(|event| event.spell_id.is_none()
         && event.kind == CombatLogKind::Miss(MissKind::Absorb)
         && event.amount == 0
-        && event.absorbed == INCOMING_DAMAGE as i32));
+        && event.absorbed == incoming as i32));
     // Capacity is fractional (catalog coefficient 4.638), while spell damage
     // rounds to whole points. Measure the remainder instead of assuming 50.
-    incoming_fire(&mut h, before - INCOMING_DAMAGE - 50.0);
+    incoming_fire(&mut h, before - incoming - 50.0);
     let remaining = shield_remaining(&h);
     assert!(remaining > 0.0 && remaining < INCOMING_DAMAGE);
-    let expected_damage = (INCOMING_DAMAGE - remaining).round();
-    assert_eq!(incoming_melee(&mut h), expected_damage);
+    let melee = incoming_melee(&mut h);
+    let expected_damage = (INCOMING_DAMAGE * melee.critical_multiplier - remaining).round();
+    assert_eq!(melee.health_loss, expected_damage);
     assert_eq!(shield_remaining(&h), 0.0);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 17));
     h.advance(3);
