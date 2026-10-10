@@ -70,6 +70,8 @@ pub enum Event {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pet {
     pub stats: Stats,
+    /// Unmodified maximum health; weather changes the published stats.health cap.
+    pub base_health: i32,
     pub health: i32,
     pub family: usize,
     pub abilities: [u32; 3],
@@ -117,6 +119,7 @@ impl Pet {
             .or_insert(5);
         Ok(Self {
             stats,
+            base_health: stats.health,
             health: stats.health,
             family,
             abilities,
@@ -151,6 +154,9 @@ pub struct Aura {
     pub tick_first: bool,
     /// Property63 is a team-pad trigger (Wish); other admitted auras bind to a pet.
     pub team_bound: bool,
+    pub weather: bool,
+    /// Exact state deltas admitted at application, including Elemental exemptions.
+    pub state_deltas: Vec<(PetRef, u32, i32)>,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Battle {

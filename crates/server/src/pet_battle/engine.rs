@@ -6,6 +6,18 @@ const RULE_STATES: &[&str] = &[
     "Stat_Accuracy",
     "Stat_Dodge",
     "Mod_SpeedPercent",
+    "Mod_MaxHealthPercent",
+    "Mod_PetType_ID",
+    "Mod_PetTypeDamageDealtPercent",
+    "Mod_PetTypeDamageTakenPercent",
+    "Passive_Elemental",
+    "Stat_Speed",
+    "Last_HitDealt",
+    "Last_HitTaken",
+    "Condition_WasDamagedThisTurn",
+    "Condition_DidDamageThisRound",
+    "Ramping_DamageID",
+    "Ramping_DamageUses",
     "Mod_DamageDealtPercent",
     "Mod_DamageTakenPercent",
     "Mod_HealingDealtPercent",
@@ -416,7 +428,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             return Ok(());
         };
         let aura = self.battle.auras.remove(index);
-        self.apply_aura_states(&aura, -1);
+        for (pet, state, value) in &aura.state_deltas {
+            *self.battle.pet_mut(*pet).states.entry(*state).or_default() -= value;
+            self.refresh_max_health(*pet);
+        }
         self.events.push(Event::AuraRemoved {
             target: aura.target,
             ability: aura.ability,
@@ -424,17 +439,38 @@ impl<R: BattleRng> Runtime<'_, R> {
         // Aura-local positive effects on removal belong to the wearer, e.g. Resilient924.
         self.cast_turn(aura.target, aura.target, aura.ability, 0, 5)
     }
-    pub fn apply_aura_states(&mut self, aura: &Aura, sign: i32) {
-        if let Some(states) = self.catalog.ability_states.get(&aura.ability) {
+    pub fn apply_aura_states(&mut self, aura: &mut Aura) {
+        let targets: Vec<_> = if aura.weather {
+            (0..2)
+                .flat_map(|team| (0..3).map(move |slot| PetRef { team, slot }))
+                .collect()
+        } else {
+            vec![aura.target]
+        };
+        let Some(states) = self.catalog.ability_states.get(&aura.ability) else {
+            return;
+        };
+        for pet in targets {
             for (state, value) in states {
-                *self
-                    .battle
-                    .pet_mut(aura.target)
-                    .states
-                    .entry(*state)
-                    .or_default() += value * sign;
+                let negative_weather =
+                    *value < 0 || matches!(*state, 21 | 22 | 34 | 36 | 52 | 64 | 82);
+                if aura.weather && negative_weather && self.state(pet, "Passive_Elemental") != 0 {
+                    continue;
+                }
+                *self.battle.pet_mut(pet).states.entry(*state).or_default() += value;
+                aura.state_deltas.push((pet, *state, *value));
             }
+            self.refresh_max_health(pet);
         }
+    }
+    fn refresh_max_health(&mut self, pet: PetRef) {
+        let multiplier = self.percent(pet, "Mod_MaxHealthPercent");
+        let max = (f64::from(self.battle.pet(pet).base_health) * multiplier)
+            .floor()
+            .max(1.0) as i32;
+        let data = self.battle.pet_mut(pet);
+        data.stats.health = max;
+        data.health = data.health.min(max);
     }
     fn finish_passives(&mut self) -> Result<(), String> {
         for team in 0..2 {
