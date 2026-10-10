@@ -81,6 +81,8 @@ pub const TRANSFORM: u32 = 56;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
+/// TC a352b1fa Unit::RecalculateObjectScale: sum percentage points, not products.
+pub const MOD_SCALE: u32 = 61;
 pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
@@ -207,6 +209,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | MOD_SCALE
         | MOD_UNATTACKABLE
         | MOD_CONFUSE
         | TRANSFORM

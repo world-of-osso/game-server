@@ -12,6 +12,8 @@
 - Aura260 ScreenEffect with a nonzero screen ID is client-owned state: apply/replicate its spell identity and normal lifetime/cancellation. Do not create a gameplay script or infer support for the spell's other effects.
 - Temporary wild summons preserve template faction unless SummonProperties overrides it; ally/guardian/companion summons inherit the caster faction. Companions follow their caster, are immune to player/NPC attacks and replace an occupied positive summon slot. Missing creature/property identities and puppet/vehicle/specialized categories remain explicit unavailable reasons.
 
+- Aura61 MOD_SCALE adds all active per-stack percentage points to native object scale, with Retail minima0.1 for players and0.01 for creatures. Replicated UnitScale updates existing/new visuals and restores native scale on removal. Reference: TrinityCore a352b1fa Unit::RecalculateObjectScale, SpellAuraEffects::HandleAuraModScale.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.
