@@ -4,14 +4,14 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 ## What it must do
 
-- [ ] Produce reproducible per-tile navigation beside `<ground dir>/los`, covering existing LOS maps/tiles starting with map 0; include Stockade global-WMO geometry for acceptance.
+- [x] Produce reproducible per-tile navigation beside `<ground dir>/los`, covering existing LOS maps/tiles starting with map 0; include Stockade global-WMO geometry for acceptance.
 - [x] Voxelize walkable surfaces deterministically and exclude slopes exceeding the shared player slope limit.
-- [ ] Include collision-bearing WMO floors, walls and open doorways, terrain holes and M2 doodad collision hulls, with agent clearance/radius/climb; mark authored terrain water as a distinct area.
-- [ ] Query connected tiles and return string-pulled corners; reject incomplete/unreachable routes instead of crossing obstacles.
+- [x] Include collision-bearing WMO floors, walls and open doorways, terrain holes and M2 doodad collision hulls, with agent clearance/radius/climb; mark authored terrain water as a distinct area.
+- [x] Query connected tiles and return string-pulled corners; reject incomplete/unreachable routes instead of crossing obstacles.
 - [x] Chase, return-home and waypoint legs follow paths; chase replans after its target moves more than one yard.
 - [x] Failed chase reachability enters the existing evade lifecycle (threat/combat cleared, return-home).
-- [ ] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
-- [ ] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
+- [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
+- [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
 
 ## How it works
 
@@ -31,11 +31,13 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - `crates/navigation/src/query.rs` — real Stockade obstacle detours with LOS-clear path segments (opt-in).
 - `crates/server/src/creature_ai_tests/stockade_chase.rs` — real chase/home/waypoint/repath/unreachable-evade fixtures (opt-in).
 - `crates/los/src/liquid.rs` — real modern ocean LiquidObject42 regression (opt-in).
+- `crates/server/src/navigation_tests.rs` — real Stormwind auction-house floor, per-tick stair support/LOS, cross-tile terrain portals, and missing/unbaked/empty/corrupt artifact boundaries.
 
 ## Known gaps (current cycle)
 
-- [ ] Stormwind and missing-data boundary acceptance.
-- [ ] Real-geometry proof and complete existing LOS tile bake.
+- [ ] Lead-owned release/publication; local full LOS-tile bake coverage is complete.
+- [ ] Lead must preserve vendored native build/config inputs in the release snapshot; see [deployment boundary](../wiki/systems/navigation.md#lead-owned-shipping).
+- [ ] Full workspace formatting has an unchanged inherited module-order failure; only changed-file formatting is passing.
 
 ## Out of scope
 
