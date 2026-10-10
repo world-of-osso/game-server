@@ -459,6 +459,9 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
 
 /// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
 fn crit_chance(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    if let Some(chance) = super::scripts::crit_chance(spell.id) {
+        return chance;
+    }
     let base = world
         .get::<CharacterStats>(caster)
         .map_or(0.0, |stats| stats.crit_pct);
@@ -574,6 +577,8 @@ pub fn deal_damage(
         log_event(world, event);
         return;
     }
+    let amount = super::scripts::damage_amount(ctx.spell.id)
+        .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
         * versatility_multiplier(world, ctx.caster);
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, school);

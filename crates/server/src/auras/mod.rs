@@ -749,7 +749,7 @@ pub(crate) fn apply_aura_with_spell(
         Stacking::Applied(id) => (id, CombatLogKind::AuraApplied),
         Stacking::Refreshed(id) => (id, CombatLogKind::AuraRefreshed),
         Stacking::Replaced { id, removed } => {
-            announce_removed(world, target, &removed);
+            announce_removed(world, target, &removed, RemoveReason::Replaced);
             (id, CombatLogKind::AuraApplied)
         }
     };
@@ -890,8 +890,8 @@ pub enum RemoveReason {
     Replaced,
 }
 
-fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    scripts::run_remove(world, unit, aura);
+fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    scripts::run_remove(world, unit, aura, reason);
     linked_summon::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
@@ -913,10 +913,36 @@ pub fn remove_auras(
     }
     for aura in &removed {
         debug!("Aura {} removed from {unit}: {reason:?}", aura.spell_id);
-        announce_removed(world, unit, aura);
+        announce_removed(world, unit, aura, reason);
     }
     auras_changed(world, unit);
     removed
+}
+
+/// Extend existing finite auras owned by this caster without restarting ticks.
+pub(crate) fn extend_owned_duration(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spells: &[u32],
+    milliseconds: u32,
+) {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let mut changed = false;
+    for aura in &mut auras.auras {
+        if aura.caster == caster && spells.contains(&aura.spell_id) {
+            if let Some(expiry) = &mut aura.expires_at {
+                *expiry += f64::from(milliseconds) / 1000.0;
+                aura.duration_ms += milliseconds;
+                changed = true;
+            }
+        }
+    }
+    if changed {
+        auras.dirty = true;
+    }
 }
 
 /// One charge used (proc or spell modifier); the aura ends at zero charges.

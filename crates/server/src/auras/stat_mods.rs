@@ -272,6 +272,15 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     mask == 0 || mask & (1 << index) != 0
                 })
             }
+            MOD_ARMOR_PCT_FROM_STAT => {
+                if misc == -2 {
+                    stats.armor_from_primary_stat_pct += amount;
+                } else {
+                    add_to_stats(&mut stats.armor_from_stat_pct, amount, |index| {
+                        misc == index as i32
+                    });
+                }
+            }
             MOD_CRIT_PCT => stats.crit_pct += amount,
             // Retail 12.x haste is one stat: melee, ranged and spell haste
             // auras all add to it.
