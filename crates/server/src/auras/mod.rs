@@ -762,6 +762,7 @@ pub(crate) fn apply_aura_with_spell(
             shapeshift::remove_other_forms(world, target, id);
         }
         scripts::run_apply(world, target, &aura);
+        interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
             .effects
@@ -771,6 +772,59 @@ pub(crate) fn apply_aura_with_spell(
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
+}
+
+/// TC HandleAuraModNoActions interrupts only spells with PreventionType bit4.
+fn interrupt_no_actions_cast(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if !aura
+        .effects
+        .iter()
+        .any(|effect| effect.aura_type == handlers::MOD_NO_ACTIONS)
+    {
+        return;
+    }
+    let prevented = world
+        .get::<shared::casting::CastState>(unit)
+        .and_then(|cast| lookup_spell(world, cast.spell_id))
+        .is_some_and(|spell| no_actions_prevention(&spell));
+    if prevented {
+        crate::spell_cast::cancel_cast(world, unit);
+    }
+}
+
+fn no_actions_prevention(spell: &SpellInfo) -> bool {
+    // SharedDefines.h SPELL_PREVENTION_TYPE_NO_ACTIONS=4. Aura MiscValue
+    // is NOT this mask: authentic toy records contain0 or85.
+    const PREVENTION_NO_ACTIONS: u32 = 4;
+    spell
+        .categories
+        .as_ref()
+        .is_some_and(|categories| categories.prevention_type & PREVENTION_NO_ACTIONS != 0)
+}
+
+/// Data-backed226 tick bridge, not a replacement for conditional/custom scripts.
+/// TC PeriodicTick leaves226 to scripts. Retail DB2 supplies explicit triggers
+/// for some toys; consuming auras (164) also need a predicate absent from DB2.
+pub(crate) fn periodic_dummy_trigger(
+    world: &World,
+    effect: &SpellEffect,
+) -> Result<u32, &'static str> {
+    if effect.aura_period_ms == 0 || effect.trigger_spell == 0 {
+        return Err("periodic dummy requires custom script (no trigger/period)");
+    }
+    let trigger = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(effect.trigger_spell))
+        .ok_or("periodic dummy missing trigger spell")?;
+    const EFFECT_REMOVE_AURA: u32 = 164;
+    if trigger
+        .effects
+        .iter()
+        .any(|effect| effect.effect == EFFECT_REMOVE_AURA)
+    {
+        return Err("conditional periodic dummy requires custom script");
+    }
+    Ok(trigger.id)
 }
 
 /// `SPELL_SPECIFIC_FOOD`, `_DRINK` or `_FOOD_AND_DRINK` (SpellInfo.cpp:2815-2845).
@@ -1120,6 +1174,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
     {
         return Some(CastBlock::Pacified);
     }
+    if no_actions_prevention(spell) && has(&[handlers::MOD_NO_ACTIONS]) {
+        return Some(CastBlock::NoActions);
+    }
     if attributes(spell, 5) & ATTR5_ALLOW_WHILE_CONFUSED == 0 && has(&[handlers::MOD_CONFUSE]) {
         return Some(CastBlock::Confused);
     }
@@ -1131,6 +1188,7 @@ pub enum CastBlock {
     Stunned,
     Silenced,
     Pacified,
+    NoActions,
     Confused,
 }
 
@@ -1552,6 +1610,8 @@ fn receive_cancel_aura(world: &mut World) {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod toy_effects_tests;
 
 #[cfg(test)]
 mod defensives_tests;

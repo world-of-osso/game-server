@@ -135,6 +135,8 @@ pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
 pub const MASTERY: u32 = 318;
+/// TC a352b1fa HandleAuraModNoActions: PreventionType NO_ACTIONS (4).
+pub const MOD_NO_ACTIONS: u32 = 321;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
@@ -164,7 +166,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PERIODIC_DUMMY | DUMMY => Script,
         SCREEN_EFFECT => ClientVisual,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
-        MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
+        MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2
         | MOD_STAT

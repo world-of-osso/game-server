@@ -14,6 +14,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         &[
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
+            376088, 116, 376092, 376155, 376203, 397775, 376172, 376113,
         ],
         8,
     )
@@ -870,6 +871,38 @@ fn toyfx2_override_toy_applies_replicates_and_reverts() {
             .iter()
             .any(|a| a.spell_id == 176889)
     );
+}
+
+#[test]
+fn toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 193033); // Convergent Prism376088.
+    assert_eq!(activate(&mut h, 193033)[0].error, None);
+    let frostbolt = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(116)
+        .unwrap()
+        .clone();
+    assert!(crate::auras::cast_blocker(h.app.world(), h.caster, &frostbolt).is_some());
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 376088)
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 376088,
+    );
+    assert!(crate::auras::cast_blocker(h.app.world(), h.caster, &frostbolt).is_none());
 }
 
 #[test]
