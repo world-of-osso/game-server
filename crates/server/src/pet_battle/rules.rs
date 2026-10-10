@@ -48,10 +48,50 @@ pub fn supported_property(property: u32) -> bool {
             | 222
             | 384
             | 385
+            | 44
+            | 59
+            | 66
+            | 76
+            | 96
+            | 100
+            | 131
+            | 172
+            | 226
+            | 159
+            | 45
+            | 65
+            | 97
+            | 149
+            | 254
     )
 }
+/// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
+pub(super) fn damages_enemy_team(ability: u32) -> bool {
+    matches!(
+        ability,
+        189 | 299
+            | 404
+            | 419
+            | 923
+            | 1031
+            | 1035
+            | 1531
+            | 1587
+            | 1738
+            | 1764
+            | 2104
+            | 2303
+            | 2346
+            | 2356
+            | 2364
+            | 2385
+            | 2417
+            | 2539
+    )
+}
+
 /// Recursive admission: every turn and referenced aura must be executable before RNG draws.
-/// Event1..4 etc intentionally excluded; their causal ordering isn't established here.
+/// Reactive events remain excluded except Leech Life383's own post-hit healing turn.
 pub fn validate_ability(catalog: &Catalog, ability: u32) -> Result<(), String> {
     validate_ability_graph(catalog, ability, &mut BTreeSet::new())
 }
@@ -69,7 +109,7 @@ fn validate_ability_graph(
     if let Some(states) = catalog.ability_states.get(&ability) {
         for state in states.keys() {
             let name = &catalog.states[state];
-            if name == "Mechanic_IsObject" && ability != 333 {
+            if name == "Mechanic_IsObject" && !matches!(ability, 189 | 333) {
                 return Err(format!("ability {ability}: unsupported object/team aura"));
             }
             if !matches!(
@@ -116,7 +156,9 @@ fn validate_ability_graph(
     }
     for turn in catalog.ability_turns(ability) {
         if (turn.kind == 0 && (turn.event != 255 || turn.order == 0))
-            || (turn.kind == 1 && !matches!(turn.event, 0 | 5 | 6 | 7 | 8 | 10 | 11))
+            || (turn.kind == 1
+                && !matches!(turn.event, 0 | 5 | 6 | 7 | 8 | 10 | 11)
+                && !(ability == 383 && turn.event == 2))
             || turn.kind > 1
         {
             return Err(format!(
@@ -140,7 +182,7 @@ fn validate_ability_graph(
             .any(|phrase| description.contains(phrase));
             if matches!(effect.property, 24 | 222)
                 && ambiguous_team_target
-                && !matches!(ability, 404 | 419)
+                && !damages_enemy_team(ability)
                 || matches!(effect.property, 23 | 53 | 111) && matches!(ability, 70 | 295 | 714)
             {
                 return Err(format!(
@@ -164,7 +206,25 @@ fn validate_ability_graph(
             }
             if matches!(
                 effect.property,
-                24 | 27 | 29 | 62 | 68 | 141 | 169 | 170 | 222 | 384 | 385
+                24 | 27
+                    | 29
+                    | 45
+                    | 65
+                    | 97
+                    | 149
+                    | 59
+                    | 62
+                    | 66
+                    | 68
+                    | 76
+                    | 96
+                    | 141
+                    | 169
+                    | 170
+                    | 222
+                    | 226
+                    | 384
+                    | 385
             ) && catalog.abilities[&ability].family < 0
             {
                 return Err(format!("ability {ability}: damage has no family"));
@@ -186,6 +246,55 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
     }
     let supported = match effect.property {
         22 => true, // Points fields supply tooltip variables, not an HP operation.
+        // Only the two described three-enemy Stench graphs establish these selectors.
+        159 => {
+            p.iter().all(|v| *v == 0) && matches!(catalog.turns[&effect.turn].ability, 527 | 1010)
+        }
+        131 => effect.aura != 0 && p[0] == 0 && p[2] >= 0 && p[3..].iter().all(|v| *v == 0),
+        172 => {
+            effect.aura != 0
+                && p[0] == 0
+                && p[2] >= 0
+                && matches!(p[4], 0 | 1)
+                && [p[1], p[3]]
+                    .iter()
+                    .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+        }
+        45 | 97 => p[0] == 20 && p[2] == 150 && p[3..].iter().all(|v| *v == 0),
+        149 => p[0] >= 0 && p[2..].iter().all(|v| *v == 0),
+        254 => {
+            p[0] >= 0
+                && (1..=100).contains(&p[2])
+                && matches!(p[3], 100 | 300)
+                && p[4] >= 0
+                && p[5] == 0
+        }
+        65 | 226 => {
+            p[0] >= 0
+                && p[2] >= 0
+                && catalog.states.contains_key(&(p[3] as u32))
+                && matches!(p[4], 0 | 1)
+                && p[5] == 0
+        }
+        44 | 59 => p[0] >= 0 && p[2..].iter().all(|v| *v == 0),
+        // The three authenticated low-health attacks all specify below25%/double.
+        66 => p[0] >= 0 && p[2] == 100 && p[3..].iter().all(|v| *v == 0),
+        76 => effect.aura != 0 && p[0] >= 0 && p[2..].iter().all(|v| *v == 0),
+        96 => {
+            [p[2], p[3]]
+                .iter()
+                .all(|s| *s == 0 || catalog.states.contains_key(&(*s as u32)))
+                && matches!(p[4], 0 | 1)
+                && p[5] == 0
+        }
+        100 => {
+            (0..=10).contains(&p[2])
+                && (1..=10).contains(&p[3])
+                && p[4] >= 0
+                && p[5] == 0
+                && (2..=3).contains(&effect.order)
+                && matches!(catalog.turns[&effect.turn].ability, 533 | 922 | 1956)
+        }
         27 => {
             p[0] >= 0
                 && p[2] >= 0
