@@ -94,6 +94,7 @@ pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
 pub const MOD_HEALTH_REGEN_PERCENT: u32 = 88;
 pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
 pub const MOD_UNATTACKABLE: u32 = 93;
+pub const FEATHER_FALL: u32 = 105;
 pub const ADD_FLAT_MODIFIER: u32 = 107;
 pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
@@ -210,6 +211,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
         | MOD_SCALE
+        | FEATHER_FALL
         | MOD_UNATTACKABLE
         | MOD_CONFUSE
         | TRANSFORM
