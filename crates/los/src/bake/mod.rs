@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use glam::{Affine3A, Vec3};
+use glam::{Affine3A, Vec3, Vec3Swizzles};
 
 use crate::{LosTile, MAP_TILES, TILE_SIZE, tile_of};
 use adt::{ModelRef, Placement, TileFiles};
@@ -228,24 +228,7 @@ impl Baker {
             let x = chunks::f32_at(chunk, 0x68)?;
             let z = -chunks::f32_at(chunk, 0x6c)?;
             for layer in &liquid.layers {
-                for row in 0..8 {
-                    for col in 0..8 {
-                        if let Some(level) = layer.level_at(row as f32 + 0.5, col as f32 + 0.5) {
-                            let step = (100.0 / 3.0) / 8.0;
-                            let min = Vec3::new(
-                                x - (row + 1) as f32 * step,
-                                -2000.0,
-                                z + col as f32 * step,
-                            );
-                            let max = Vec3::new(
-                                x - row as f32 * step,
-                                level,
-                                z + (col + 1) as f32 * step,
-                            );
-                            bounds.push((min, max));
-                        }
-                    }
-                }
+                bounds.extend(water_quad_bounds(layer, x, z));
             }
         }
         Ok(bounds)
@@ -331,25 +314,40 @@ impl Baker {
             obstacles: Vec::new(),
         };
         if self.collision {
-            for r in row.saturating_sub(1)..=(row + 1).min(MAP_TILES - 1) {
-                for c in col.saturating_sub(1)..=(col + 1).min(MAP_TILES - 1) {
-                    if (r, c) == (row, col) {
-                        continue;
-                    }
-                    let root = tiles[(c * MAP_TILES + r) as usize].root;
-                    if root == 0 {
-                        continue;
-                    }
-                    let data = self
-                        .read("terrain", &format!("{root}.adt"))
-                        .map_err(|err| format!("terrain/{root}.adt: {err}"))?;
-                    build.add(&adt::terrain_triangles(&data)?, Affine3A::IDENTITY);
+            self.collect_neighbour_terrain(tiles, &mut build)?;
+        }
+        self.collect_placed_geometry(tiles, &mut build)?;
+        Ok(Some(build.into_geometry()))
+    }
+
+    fn collect_neighbour_terrain(&self, tiles: &[TileFiles], build: &mut TileBuild) -> Result<()> {
+        let (row, col) = build.tile;
+        for r in row.saturating_sub(1)..=(row + 1).min(MAP_TILES - 1) {
+            for c in col.saturating_sub(1)..=(col + 1).min(MAP_TILES - 1) {
+                if (r, c) == (row, col) {
+                    continue;
                 }
+                let root = tiles[(c * MAP_TILES + r) as usize].root;
+                if root == 0 {
+                    continue;
+                }
+                let data = self
+                    .read("terrain", &format!("{root}.adt"))
+                    .map_err(|err| format!("terrain/{root}.adt: {err}"))?;
+                build.add(&adt::terrain_triangles(&data)?, Affine3A::IDENTITY);
             }
         }
-        let (doodads, wmos) = self.neighbourhood_placements(tiles, (row, col))?;
+        Ok(())
+    }
+
+    fn collect_placed_geometry(
+        &mut self,
+        tiles: &[TileFiles],
+        build: &mut TileBuild,
+    ) -> Result<()> {
+        let (doodads, wmos) = self.neighbourhood_placements(tiles, build.tile)?;
         for placement in &wmos {
-            self.place_wmo(placement, &mut build);
+            self.place_wmo(placement, build);
         }
         for placement in &doodads {
             let ModelRef::Fdid(fdid) = self.resolve(&placement.model) else {
@@ -361,15 +359,9 @@ impl Baker {
                 scale: placement.scale,
                 world: placement.world_from_local(),
             };
-            self.place_doodad(&doodad, &mut build);
+            self.place_doodad(&doodad, build);
         }
-        Ok(Some((
-            CollectedGeometry {
-                triangles: build.triangles,
-                obstacles: build.obstacles,
-            },
-            build.stats,
-        )))
+        Ok(())
     }
 
     /// MDDF and MODF placements of the tile's and its neighbours' `_obj0`, each unique id
@@ -596,6 +588,16 @@ struct TileBuild {
 }
 
 impl TileBuild {
+    fn into_geometry(self) -> (CollectedGeometry, TileStats) {
+        (
+            CollectedGeometry {
+                triangles: self.triangles,
+                obstacles: self.obstacles,
+            },
+            self.stats,
+        )
+    }
+
     /// Adds the placed triangles whose centroid lies in the tile; returns how many.
     fn add(&mut self, triangles: &[[Vec3; 3]], world: Affine3A) -> usize {
         let before = self.triangles.len();
@@ -614,7 +616,7 @@ impl TileBuild {
                 let z1 = (tile.0 + 1) as f32 * TILE_SIZE - center + border;
                 let min = tri[0].min(tri[1]).min(tri[2]);
                 let max = tri[0].max(tri[1]).max(tri[2]);
-                max.x >= x0 && min.x <= x1 && max.z >= z0 && min.z <= z1
+                footprints_overlap(min, max, Vec3::new(x0, 0.0, z0), Vec3::new(x1, 0.0, z1))
             }));
         self.triangles.len() - before
     }
@@ -662,7 +664,41 @@ fn overlaps_tile(
         center - (col + 1) as f32 * TILE_SIZE,
         center - col as f32 * TILE_SIZE,
     );
-    max.x >= x0 - border && min.x <= x1 + border && max.z >= z0 - border && min.z <= z1 + border
+    footprints_overlap(
+        min,
+        max,
+        Vec3::new(x0 - border, 0.0, z0 - border),
+        Vec3::new(x1 + border, 0.0, z1 + border),
+    )
+}
+
+fn footprints_overlap(min: Vec3, max: Vec3, foot_min: Vec3, foot_max: Vec3) -> bool {
+    max.xz().cmpge(foot_min.xz()).all() && min.xz().cmple(foot_max.xz()).all()
+}
+
+fn water_quad_bounds(layer: &crate::liquid::WaterLayer, x: f32, z: f32) -> Vec<(Vec3, Vec3)> {
+    const QUAD_SIZE: f32 = (100.0 / 3.0) / 8.0;
+    const WATER_MIN_Y: f32 = -2000.0;
+    let mut bounds = Vec::new();
+    for row in 0..8 {
+        for col in 0..8 {
+            let Some(level) = layer.level_at(row as f32 + 0.5, col as f32 + 0.5) else {
+                continue;
+            };
+            let min = Vec3::new(
+                x - (row + 1) as f32 * QUAD_SIZE,
+                WATER_MIN_Y,
+                z + col as f32 * QUAD_SIZE,
+            );
+            let max = Vec3::new(
+                x - row as f32 * QUAD_SIZE,
+                level,
+                z + (col + 1) as f32 * QUAD_SIZE,
+            );
+            bounds.push((min, max));
+        }
+    }
+    bounds
 }
 
 /// Shared vertices for identical corners.

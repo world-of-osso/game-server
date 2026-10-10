@@ -109,37 +109,16 @@ impl Navigation {
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {
         let from = point(request.from);
         let to = point(request.to);
-        let current = self.routes.get(&entity).is_some_and(|route| {
-            route.map_id == request.map_id
-                && route.goal == request.goal
-                && route.destination.distance(to) <= REPATH_DISTANCE
-                && horizontal(route.expected_from - from) <= TELEPORT_DISTANCE
-        });
+        let current = self
+            .routes
+            .get(&entity)
+            .is_some_and(|route| route.reusable(&request));
         if !current {
-            let path = match self.query_path(request.map_id, from, to) {
-                Ok(None) => {
-                    self.routes.remove(&entity);
-                    return Step::Unbaked;
-                }
-                Ok(Some(points)) => Ok(Corners::new(points)),
-                Err(err) => {
-                    error!(
-                        "Creature {entity} navigation {:?} on map {} failed: {err}; no direct movement",
-                        request.goal, request.map_id
-                    );
-                    Err(err)
-                }
+            let Some(route) = self.query_route(entity, &request) else {
+                self.routes.remove(&entity);
+                return Step::Unbaked;
             };
-            self.routes.insert(
-                entity,
-                Route {
-                    map_id: request.map_id,
-                    goal: request.goal,
-                    destination: to,
-                    expected_from: from,
-                    path,
-                },
-            );
+            self.routes.insert(entity, route);
         }
         let route = self.routes.get_mut(&entity).unwrap();
         let Ok(corners) = &mut route.path else {
@@ -151,6 +130,38 @@ impl Navigation {
             position: position(next),
             reached,
         }
+    }
+    fn query_route(&self, entity: Entity, request: &MoveRequest) -> Option<Route> {
+        let from = point(request.from);
+        let to = point(request.to);
+        let path = match self.query_path(request.map_id, from, to) {
+            Ok(None) => return None,
+            Ok(Some(points)) => Ok(Corners::new(points)),
+            Err(err) => {
+                error!(
+                    "Creature {entity} navigation {:?} on map {} failed: {err}; no direct movement",
+                    request.goal, request.map_id
+                );
+                Err(err)
+            }
+        };
+        Some(Route {
+            map_id: request.map_id,
+            goal: request.goal,
+            destination: to,
+            expected_from: from,
+            path,
+        })
+    }
+}
+
+impl Route {
+    fn reusable(&self, request: &MoveRequest) -> bool {
+        let same_goal = self.map_id == request.map_id && self.goal == request.goal;
+        let target_is_current = self.destination.distance(point(request.to)) <= REPATH_DISTANCE;
+        let position_is_current =
+            horizontal(self.expected_from - point(request.from)) <= TELEPORT_DISTANCE;
+        same_goal && target_is_current && position_is_current
     }
 }
 

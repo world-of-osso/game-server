@@ -1,6 +1,6 @@
 //! Recast voxelization of the LOS/ground collector's world collision triangles.
 use crate::*;
-use glam::Vec3;
+use glam::{Vec3, Vec3Swizzles};
 use recastnavigation_sys::*;
 
 const SUBTILE_CELLS: i32 = 512;
@@ -96,7 +96,8 @@ impl RasterInput {
         for tri in triangles {
             let tmin = tri[0].min(tri[1]).min(tri[2]);
             let tmax = tri[0].max(tri[1]).max(tri[2]);
-            if tmax.x < min.x || tmin.x > max.x || tmax.z < min.z || tmin.z > max.z {
+            let overlaps = tmax.xz().cmpge(min.xz()).all() && tmin.xz().cmple(max.xz()).all();
+            if !overlaps {
                 continue;
             }
             min.y = min.y.min(tmin.y);
@@ -146,12 +147,16 @@ impl RecastBuild {
                 detail: rcAllocPolyMeshDetail(),
             }
         };
-        let failed = build.context.is_null()
-            || build.heightfield.is_null()
-            || build.compact.is_null()
-            || build.contours.is_null()
-            || build.mesh.is_null()
-            || build.detail.is_null();
+        let failed = [
+            build.context.is_null(),
+            build.heightfield.is_null(),
+            build.compact.is_null(),
+            build.contours.is_null(),
+            build.mesh.is_null(),
+            build.detail.is_null(),
+        ]
+        .into_iter()
+        .any(|missing| missing);
         if failed {
             return Err("Recast allocation failed".into());
         }

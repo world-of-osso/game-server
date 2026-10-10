@@ -84,16 +84,24 @@ fn liquid_boundaries(payload: &[u8]) -> Result<std::collections::BTreeSet<usize>
         }
         boundaries.insert(instances);
         for layer in 0..count {
-            let offset = instances + layer * INSTANCE_SIZE;
-            for field in [16, 20] {
-                let start = read_u32(payload, offset + field)? as usize;
-                if start != 0 {
-                    boundaries.insert(start);
-                }
-            }
+            add_instance_boundaries(payload, instances + layer * INSTANCE_SIZE, &mut boundaries)?;
         }
     }
     Ok(boundaries)
+}
+
+fn add_instance_boundaries(
+    payload: &[u8],
+    offset: usize,
+    boundaries: &mut std::collections::BTreeSet<usize>,
+) -> Result<(), String> {
+    for field in [16, 20] {
+        let start = read_u32(payload, offset + field)? as usize;
+        if start != 0 {
+            boundaries.insert(start);
+        }
+    }
+    Ok(())
 }
 
 fn parse_chunk(
