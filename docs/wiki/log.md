@@ -730,3 +730,5 @@ Added [deployment SSOT](../deploy.md) from `0dcaa23`/`6bfd7b6`; linked developme
 - 2026-10-10: Navigation query and chase/home/waypoint/repath/evade proven on real Stockade; corrected M2 obstacle support and modern LiquidObject42 parsing. Existing map bake and Stormwind acceptance remain active.
 
 - 2026-10-10: Completed1252 navigation tiles for existing LOS maps0/2991 plus Stockade34, zero bake input gaps; recorded6,323,034,020bytes and lead-owned release/shipping boundaries. Native96-test proof, exact-floor movement assertions, and9/9 representative byte-equivalence evidence preserved.
+
+- 2026-10-10: Restored authentic TDB1210.26091 disenchant loot excerpt and importer/schema; reference-loot full-row equality and canonical backup/import verified. [Content import](systems/content-import.md#disenchant-source-restoration-2026-10-10). Retail zero-skill metadata and absent item-target/error contract block gameplay continuation pending decisions.
