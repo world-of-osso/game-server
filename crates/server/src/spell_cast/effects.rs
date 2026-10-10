@@ -61,6 +61,7 @@ pub const EFFECT_TELEPORT_UNITS: u32 = 252;
 pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
 pub const EFFECT_LEAP: u32 = 29;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
+pub const EFFECT_ATTACK_ME: u32 = 114;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
@@ -103,6 +104,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_REMOVE_AURA_2 => remove_aura,
         EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
+        EFFECT_ATTACK_ME => attack_me,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
         crate::profession::EFFECT_SKILL_STEP => crate::profession::effect_skill_step,
@@ -113,6 +115,10 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
+}
+
+fn attack_me(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
+    crate::creature_aggro::taunt(world, target, ctx.caster);
 }
 
 pub type CastEffectHandler = fn(&mut World, &EffectCtx, &SpellEffect);
@@ -647,10 +653,11 @@ pub fn deal_damage(
     log_event(world, event);
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.
-    if amount > 0.0
-        && (periodic
-            || !super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, scaled_loss))
-    {
+    // A fully absorbed damage effect still landed. Preserve that target in
+    // the hit ledger for per-hit scripts, without inventing damage procs.
+    let recorded_hit =
+        !periodic && super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, scaled_loss);
+    if amount > 0.0 && !recorded_hit {
         push_damage_event(world, ctx, target, periodic, scaled_loss);
     }
     if lethal {

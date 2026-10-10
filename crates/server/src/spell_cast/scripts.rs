@@ -4,6 +4,9 @@
 mod batch3;
 mod batch4;
 mod batch5;
+mod batch6;
+mod batch7;
+mod batch8;
 
 use bevy::prelude::*;
 
@@ -75,6 +78,21 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch8::REAP, 0) => Some(batch8::reap),
+        (batch8::PROVOKE, 0) => Some(batch8::provoke),
+        (batch8::BREATH_OF_FIRE, 0) => Some(batch8::breath_of_fire),
+        (batch8::FAN_OF_KNIVES, 0) => Some(batch8::fan_of_knives),
+        (batch8::INCINERATE, 1) => Some(batch8::incinerate),
+        (batch8::UNSTABLE_AFFLICTION, 0) => Some(batch8::unstable_affliction),
+        (batch7::COLOSSUS_SMASH, 0) => Some(batch7::apply_colossus_wound),
+        (batch7::HEART_STRIKE, 0) => Some(batch7::energize_heartbreaker),
+        (batch7::RAGING_BLOW, 0) => Some(batch7::roll_raging_blow_reset),
+        (batch7::WHIRLWIND, 1) => Some(batch7::energize_whirlwind),
+        (batch7::RAKE, 0) => Some(batch7::stun_rake),
+        (batch6::SUNFIRE, 0) => Some(batch6::sunfire),
+        (batch6::TEMPLARS_VERDICT, 0) => Some(batch6::verdict),
+        (batch6::ICE_LANCE, 0) => Some(batch6::ice_lance),
+        (batch6::SHADOW_WORD_DEATH, 1) => Some(batch6::shadow_word_death),
         (batch5::DEMONS_BITE, 1) => Some(batch5::demons_bite),
         (batch5::CHAOS_STRIKE, 0) => Some(batch5::chaos_strike),
         (batch5::RAPTURE, 0) => Some(batch5::rapture),
@@ -124,6 +142,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     match spell_id {
         batch3::SHRED => Some(batch3::shred_damage),
+        batch7::RAKE => Some(batch7::rake_initial_damage),
         batch4::MANGLE => Some(batch4::mangle_damage),
         batch5::CHAOS_BOLT | batch5::LAVA_BURST_DAMAGE => Some(batch5::crit_scaled_damage),
         batch5::RAPTURE_DAMAGE => Some(batch5::rapture_damage),
@@ -188,10 +207,15 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch8::DEMONBOLT => Some(batch8::demonbolt),
+        batch8::CRASH_LIGHTNING => Some(batch8::crash_lightning),
+        batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
         batch4::VIVIFY => Some(batch4::vivify),
         batch4::ERUPTION => Some(batch4::eruption),
+        batch6::STARFALL => Some(batch6::starfall),
+        batch7::VERDANT_EMBRACE => Some(batch7::heal_panacea),
         _ => shared::skyriding::ability_impulse(spell_id)
             .map(|_| crate::skyriding::flap as AfterCastHook),
     }
@@ -234,9 +258,16 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        batch8::SANCTIFY => Some((Relation::Ally, batch8::sanctify_plan)),
+        batch8::PROVOKE_SINGLE => Some((Relation::Enemy, batch8::provoke_plan)),
+        batch8::PROVOKE_AREA => Some((Relation::Any, batch8::provoke_plan)),
         batch3::PRAYER_OF_HEALING => Some((Relation::Ally, batch3::prayer_plan)),
         batch4::LIGHT_OF_DAWN => Some((Relation::Ally, batch4::light_of_dawn_plan)),
         CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
+        batch6::STARFIRE => Some((Relation::Enemy, batch6::starfire_plan)),
+        batch6::KEG_SMASH => Some((Relation::Enemy, batch6::keg_smash_plan)),
+        batch6::WILD_GROWTH => Some((Relation::Ally, batch6::wild_growth_plan)),
+        batch7::RADIANCE => Some((Relation::Ally, batch7::radiance_plan)),
         _ => None,
     }
 }
@@ -325,6 +356,9 @@ pub fn check_target(
     spell_id: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
+    if spell_id == batch8::PROVOKE {
+        return batch8::check_provoke(world, caster, target);
+    }
     if spell_id == batch4::KILL_SHOT && !batch4::kill_shot_allowed(world, caster, target) {
         return Err(super::CastFailure::InvalidTarget);
     }
@@ -791,6 +825,7 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),
+        batch6::BUTCHERY => Some(batch6::butchery),
         FROSTBOLT => Some(frostbolt_chilled),
         _ => None,
     }

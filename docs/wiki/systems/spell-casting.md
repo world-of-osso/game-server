@@ -20,7 +20,7 @@ Reference: TrinityCore a352b1fa `SpellEffects.cpp::EffectSummonType` / `SharedDe
 
 Effect 179 dispatches once per cast through `area_trigger.rs`. Radius is the first supplied SpellRadius (including the second radius slot); duration comes from the cast spell. An explicit EffectTriggerSpell executes through the normal triggered pipeline, on entry when EffectAuraPeriod is zero, periodically otherwise. Inside selection uses caster map, living units, radius and the trigger's explicit relation; depth and casting item level survive delayed area execution. Missing trigger/radius logs a lifecycle-only entity, not an invented action.
 
-The nine matrix roots all lack trigger bindings, including Wildfire Bomb's child 265163. Purging Breath 1287715 → 1287711 supplies an authentic non-matrix damage binding for engine proof. Local AreaTriggerCreateProperties (FDID 1937227) contains none of these matrix create-property IDs: their server actions/scripts cannot be reconstructed from that client table. Selector87 stays unsupported for area triggers; its new explicit destination support is limited to jump254. Ground selection for area triggers and moving orbs are not claimed.
+The nine matrix roots all lack trigger bindings, including Wildfire Bomb's child 265163. Purging Breath 1287715 → 1287711 supplies an authentic non-matrix damage binding for engine proof. Local AreaTriggerCreateProperties (FDID 1937227) contains none of these matrix create-property IDs: their server actions/scripts cannot be reconstructed from that client table. Selector87 destination propagation was added by master toy-effects4; area-trigger actions without bindings and moving-orb behavior remain unclaimed.
 
 ## Pipeline
 
@@ -134,7 +134,7 @@ Relations come from faction reactions ([[factions]]): enemy = `can_attack`, ally
 
 - Radius: slot A uses `EffectRadiusIndex_0`; slot B uses `_1`, falling back to `_0` (TrinityCore `CalcRadius`).
 - Area results are nearest first, capped by `SpellTargetRestrictions.MaxTargets`.
-- Any other ID (for example 87 DEST_DEST, 104 cone, 47 front) fails the cast when it belongs to a handled effect.
+- 87/104/134 now support selected destination, authored destination-directed enemy cone and line;47 selects the caster-front destination. Other unimplemented IDs still fail a handled cast.
 - Effects with the same implicit targets (and, for areas, the same radii) share the first one's selection, as `Spell::SelectSpellTargets` (Spell.cpp:741-781): Avenger's Shield's interrupt and silence hit every unit its damage chains to.
 - Chains (`targets::chain_targets`, `Spell::SearchChainTargets`, Spell.cpp:2216-2320): an explicit unit target with `EffectChainTargets` > 1 jumps to the living unit nearest the last one within the jump radius (7.5 yd ranged, 5 yd melee, 10 yd otherwise), searched within the radius × the jumps left; `SPELL_ATTR2_CHAIN_FROM_CASTER` searches from the caster over the spell range and `ChainFromInitialTarget` keeps the first target as the source. Each jump multiplies damage and healing by `EffectChainAmplitude` (`m_damageMultipliers`, Spell.cpp:8631-8636). Not modelled: line of sight, the melee front arc (`SPELL_ATTR5_MELEE_CHAIN_TARGETING`), chain heal (target 45 is unsupported) and the ChainTargets/ChainJumpDistance/ChainAmplitude spell mods.
 - Triggered spells take their explicit unit whatever its relation to the caster (`TRIGGERED_IGNORE_TARGET_CHECK`, Spell.cpp:3489-3491).
@@ -239,6 +239,74 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
+### Eighth batch: projectile, taunt and low-coverage paths
+
+[Contract](../../specs/spell-dummy-scripts.md#eighth-batch-locally-derived-paths), [implementation](../../../crates/server/src/spell_cast/scripts/batch8.rs), [cast tests](../../../crates/server/src/spell_cast/dummy8_tests.rs), [incoming-damage test](../../../crates/server/src/spell_cast/dummy8_defense_tests.rs). Mainline12.1.0.69933 local CSVs and read-only imported rows provide all IDs/amounts; TDB1210 routes named scripts.22 IDs/130 CSV rows match both the slot and canonical databases exactly. No new external fetch, data import or realm process.
+
+| Root | Implemented and observed | Uncertified / missing |
+|---|---|---|
+|1226019 Reap|Named1225827 damage follows87/134 caster-to-destination line: catalog30yd radius/Width20, multiple enemies, destination direction rather than caster facing; behind/far/ally/other-map exclusions.|Soul collection, optional Fury, aura4/312; unit-center geometry lacks combat-reach edge expansion.|
+|115546 Provoke|116189 actual114 attack-me equalizes highest threat and changes victim; active aura11 holds victim6000ms and multiplies this Monk's generated threat by9. Owned61146 statue selects118635's10yd enemy area; foreign statue/ordinary ally fail before costs.|Optional328670 speed; overlapping/reapplied taunt precedence; no player forced-target claim.|
+|264178 Demonbolt|AfterCast280127 grants20 raw Soul Shards once, retaining damage.|Zero Dummy1/460553 marker; not relabelled no-ops.|
+|187874 Crash Lightning|Catalog104 cone120 degrees/radius8;187878 enhancement lasts12sec.|Root Dummy1, proc318, cleave consumption/195592 split damage. Current Mainline tooltip lacks old TDB two-target gate.|
+|115181 Breath of Fire|Catalog104 cone90 degrees/radius12; only owned Keg targets receive123725 DoT and deal5% less damage to that Monk, not foreign players; expiry restores normal damage.|Secondary falloff; no generic269 semantic change.123725s2 is consumed by a spell-specific incoming-damage script.|
+|51723 Fan of Knives|One combo point for a successful cast's first damage hit; none for empty area, never per enemy.|Poisons, damage soft cap5.|
+|34861 Sanctify|Five injured allies in requested10yd ground area; healthy/sixth/far units excluded.|Dummy3; Prayer recharge reduction retained.|
+|29722 Incinerate|244670 supplies two base fragments once for root damage, not each splash unit.|Critical/talent additions and other markers.|
+|30108 Unstable Affliction|233490 named base periodic aura applies/ticks/expires.|Five-instance accumulation, vulnerability, dispel/death rewards.|
+|44425 Arcane Barrage|AfterCast consumes all Arcane Charges.|Charge-scaled damage, secondary40% hits, optional mana refund.|
+
+Selectors104/134 use authored destination direction, radius, ConeDegrees/Width, map/life/faction selection. Missing required restriction metadata fails explicitly before costs; no guessed universal cone angle/width. Requested destination also now reaches ordinary31 ground-area selection, rather than accidentally centering Sanctify on its self-cast explicit target. Older batch6/7 plans pass `spell.cast_destination` to master's five-argument `effect_dest` API.
+
+Targeted proof:13/13 at`70c4f20`, plus real incoming Breath damage/owner exclusion/expiry1/1 at`2d883e8`, after behavioral RED12/13 and a separate missing-reduction RED. After merging current origin/master`afecfa6`, the requested broad `cargo test --locked -p server --bin game-server spell_cast` ran once at`2fb37d8`: **261/261 pass**, including all14 batch8 functions and the incomplete-metadata104 refusal. Native format/check exit0, warning-free. No live/full-project/rotation certification.
+
+Census compares frozen post-master-integration baseline`52d359f` with`2fb37d8`: **172→171** unresolved Dummy core roots (Provoke closes); reviewed/partial/deferred70→73, un-derived102→98. E3 admissible IDs/memberships124/132→123/131 (additional D1→0), a4 63/71→64/72 (D1 unchanged), a22619/20 unchanged (D0). Master toy-target support accounts for baseline admission differences versus batch7's historical117/125, not new dummy8 scripts. Crash exposes latent187878 Dummy markers. Scope stays13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships. No skipped-child concealment.
+
+Durable receipts, frozen code, census generator, ranked remaining roots and logs: `game-engine/data/diagnostics/spell-dummy8-2026-10-10/`. Delivery/proof ledger: `/home/osso/.worktrees/handoff-spell-dummy8.md`; `SPELL_BATCH8_MODE=before python3 <evidence>/regenerate.py --write` reproduces baseline; default mode regenerates after. Parent retains independent acceptance responsibility.
+
+### Seventh batch: TDB-routed Retail derivations
+
+Implementation [batch7.rs](../../../crates/server/src/spell_cast/scripts/batch7.rs), Survival lifecycle in [aura scripts](../../../crates/server/src/auras/scripts.rs); [bounded contract](../../specs/spell-dummy-scripts.md#seventh-batch-locally-derived-paths). TDB1210.26091 registrations route investigation, not behavior inference from names alone. Across the172 ranked roots,88 have exact script bindings, one has a proc override and four have linked rows. No spell_bonus_data table exists: local Mainline12.1.0.69933 SpellEffect SP/AP/scaling/resource coefficients provide numerical equivalents. Pinned TC a352b1fa hooks plus local descriptions/effect chains derive the selected paths;217 CSV rows across38 IDs match read-only SQLite with no semantic drift.
+
+| Root | Runtime hook / source | Retained boundary |
+|---|---|---|
+|167105 Colossus Smash|After damage0, apply only208086 aura271; ordinary caster-owned damage multiplier and expiry execute it.|Child343/self marker, soft cap and optional talents.|
+|61336 Survival Instincts|Aura apply/remove owns50322 effect0, excluding its unknown Dummy2.|Parent marker/child Dummy2; no full Druid-form parity.|
+|206930 Heart Strike|Dummy0 on each native chain target,221536 gate,210738 energize.|Rank316575, extra mirrors and native chain front-arc limit.|
+|194509 Radiance|Spell-owned native heal plan, s3 additional cap; stable owned-Atonement priority within injured allies.|Actual Atonement duration/application; raid/pet priority.|
+|85288 Raging Blow|Root s1 roll with383854,280270 application, restore one latest charge and notify owner.|Marker may be consumed by root proc; other reset talents.|
+|190411 Whirlwind|Caster Dummy1 before weapon children; select count from Dummy0 native area, generate modified280715 and apply85739 maximum stacks.|Cleave copies/consumption and damage soft cap.|
+|360995 Verdant Embrace|AfterCast Panacea387761 gates387763 self heal.|Flight, primary heal and root Dummy0.|
+|1822 Rake|Initial damage and stun hooks require stealth plus231052 or405834, reading s4.|Child periodic snapshot remains open; s4 stays counted.|
+
+Native proof:21 batch7 functions pass at Rust`81c2bf6`, including100 Survival variance samples, two real Raging casts preserving oldest recharge, both Rake rank IDs, Whirlwind four-stack catalog cap, ownership/rank/radius/expiry exclusions. Format/check exit0, warning-free. The requested full spell_cast filter ran **once**,244/245 at`df14af6`: Survival's fixture omitted Bear5487 effect12's existing3% Fire reduction, creating random overlapping-bound failures. Instrumented RED reproduced it; corrected expected97%/48.5% damage multipliers pass in the100-sample fixture and21/21 batch. Production scripts did not change after that broad run; the other244 passing functions remain valid. No repeated full filter or fabricated successful245/245 claim. Parent owns integration acceptance; no realm/full-project/rotation certification.
+
+Census baseline172 reproduced; after172, reviewed/partial/deferred63→70, un-derived109→102. E3 stays117 IDs/125 memberships: Raging's root E3 closes while Survival exposes its child's unresolved Dummy2. Latent child markers increase a4 from57/65 to60/68 (Colossus, Raging, Whirlwind); a226 stays14/15. Gate memberships8/4/5 and scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships unchanged. No no-op registrations or skipped-child concealment.
+
+Reap1226019→1225827 and Provoke115546→116189 were derived but deferred in batch7; their projectile geometry and actual taunt/owned statue paths are now implemented in [batch8](#eighth-batch-projectile-taunt-and-low-coverage-paths). Durable source/archive extracts, schema-aware172-root mining, before/after census and proof ledger: `game-engine/data/diagnostics/spell-dummy7-2026-10-10/`; `/home/osso/.worktrees/handoff-spell-dummy7.md` records publication/release status.
+
+### Sixth batch: local Retail rows
+
+Implementation [batch6.rs](../../../crates/server/src/spell_cast/scripts/batch6.rs); [bounded contract](../../specs/spell-dummy-scripts.md#sixth-batch-locally-derived-paths). Eight ranked paths plus supplementary Ice Lance, emphasizing Balance/Resto, Ret, Brewmaster, Survival, Shadow and Frost. Local Mainline12.1.0.69933 DB2 descriptions/effects are checked against read-only SQLite; description newline normalization is not semantic drift. No external sources, invented IDs or world.db imports.
+
+| Root | Authored action | Remaining boundary |
+|---|---|---|
+|93402 Sunfire|164815s1/o2/d base bridge;231050 explicitly spreads only the DoT through its native child area.|Root Dummy1 marker and optional child271/537 effects remain open.|
+|85256 Templar's Verdict|224266s1 damage bridge; apply only child effect0.|Unknown parent/child Dummy markers remain open.|
+|30455 Ice Lance (supplement)|228598s1 damage bridge.|Freezing/shatter unimplemented; not a Dummy census closure.|
+|194153 Starfire|s3=70% secondary damage; native area/destination/resource retained.|429523 variant, soft-cap8 and effect3/77 semantics remain open.|
+|121253 Keg Smash|s8=50% primary bonus; native secondary damage/slow retained.|Root markers, Shuffle/Brew reduction and damage soft cap remain open.|
+|212436 Butchery|294029 grants s2=3000ms per successful damage-effect target (including full absorption), at most s3=5; existing259495 recharge only.|Damage soft-cap formula/talent bleed not certified; recharge proof is not Wildfire Bomb damage proof.|
+|48438 Wild Growth|s2=5 injured allies inside native target-centered area; existing periodic aura execution.|Declining tick curve/Tree of Life target additions unimplemented.|
+|32379 Shadow Word: Death|s6=5% caster-max-health backlash after target survives, ordinary damage/absorb/death/log path.|Other damage-effect/execute variants not certified.|
+|191034 Starfall|327541s1=3sec owned Moonfire/Sunfire extension, s2=28sec remaining cap; do not reset ticks.|Base overlap/tick-child contracts remain open.|
+
+Source receipts, RED/GREEN and final proof ledger: `game-engine/data/diagnostics/spell-dummy6-2026-10-10/`; delivery state: `/home/osso/.worktrees/handoff-spell-dummy6.md`. Initial14 cast functions reproduced11 missing-path failures and3 negative gates. At Rust revision`7cff842`, requested full `cargo test --locked -p server --bin game-server spell_cast` ran once: **224/224 pass**, including17 batch6 functions. Format/check exit0, warning-free. Fully absorbed Butchery regression uses authentic17 (200SP): corrected RED proves missing recharge; damage-effect hit ledger now records zero-loss landed hits without creating damage procs. Wild Growth's initial GREEN tick assertion was corrected to wait through catalog cast time plus first1000ms period. Parent owns independent integration proof; no live realm/full-project/rotation-parity claim.
+
+Census frozen baseline **173** reproduced exactly; after **172**, only Wild Growth's Dummy target-cap field closes a full type gap (not its declining-heal semantics). E3 admissible IDs/memberships118/126→117/125; a4=57/65, a226=14/15 unchanged, additional gated memberships8/4/5 unchanged. Remaining172:63 reviewed/partial/deferred,109 un-derived; scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships unchanged. Butchery's s3 remains unresolved for its damage-soft-cap action despite cooldown-cap consumption; no false whole-root closure. Sunfire/Verdict child markers remain latent even when base scripts exclude them.
+
+Batch6 left selector104 unsupported. [Batch8](#eighth-batch-projectile-taunt-and-low-coverage-paths) implements authored caster-to-destination cones; missing ConeDegrees/Width metadata still fails explicitly, preserving the old incomplete-metadata104 fixture. Augmentation candidates need healer-role/selection, stat-distribution or empower/flight contracts beyond these bounded derivations.
+
 ### Fifth batch: local Retail rows
 
 Implementation: `spell_cast/scripts/batch5.rs`; [contract](../../specs/spell-dummy-scripts.md#fifth-batch-locally-derived-paths). Sources exclusively local Mainline12.1.0.69933 DB2, cross-checked against read-only SQLite. No fabricated IDs or external source fetches. Eight ranked paths plus supplementary Lava Burst favor DH, Evoker, Warlock, Rogue and DK over previously frequent Mage/Monk additions; Shaman receives the Lava Burst path.
@@ -259,7 +327,7 @@ At Rust revision`f6b842a`, the requested full `cargo test --locked -p server --b
 
 Census baseline reproduces176 exactly; after173. Script-owned E3 actions close162794/324536/207317, not every numeric field or optional talent. E3 admissible IDs/memberships121/129→118/126; a4=57/65, a226=14/15 unchanged. Remaining173:56 reviewed/partial/deferred,117 un-derived; class/spec scope unchanged13/40,630 book IDs/1551 memberships,302 core IDs/355 memberships. Source parser now recognizes qualified `batchN::NAME` registrations; the unchanged baseline still reproduces176. No no-op registrations.
 
-Crash Lightning187874 was attempted then deferred: native RED rejects selector104. No invented cone/weapon-proc substitute. Durable before/after snapshots, ranked reasons, raw34-ID receipts, census generator and proof logs: `game-engine/data/diagnostics/spell-dummy5-2026-10-10/`. Delivery/remote/release receipts: `/home/osso/.worktrees/handoff-spell-dummy5.md`.
+Crash Lightning187874 was attempted then deferred in batch5; [batch8](#eighth-batch-projectile-taunt-and-low-coverage-paths) now supplies native104 cone and initial enhancement, with weapon-cleave/proc damage still uncertified. Durable before/after snapshots, ranked reasons, raw34-ID receipts, census generator and proof logs: `game-engine/data/diagnostics/spell-dummy5-2026-10-10/`. Delivery/remote/release receipts: `/home/osso/.worktrees/handoff-spell-dummy5.md`.
 
 ### Third batch: local Retail rows
 
