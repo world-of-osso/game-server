@@ -647,6 +647,9 @@ fn start_encounter(
     let catalog = world.resource::<WildCatalog>();
     let encounter = Encounter::start(catalog, &journal, species, level, bits, id)?;
     let snapshot = encounter.snapshot(catalog, &journal);
+    info!(
+        "Wild pet battle {id} started: account {account}, species {species}, creature {bits}, level {level}"
+    );
     world.entity_mut(owner).insert(ActiveEncounter {
         encounter,
         rng: RuntimeRng(rand::rngs::StdRng::from_entropy()),
@@ -738,6 +741,10 @@ fn advance_encounter(
             Outcome::Draw => WildPetBattleOutcome::Draw,
         }
     };
+    info!(
+        "Wild pet battle {} ended: account {}, outcome {:?}, captured {:?}, rewards {:?}",
+        encounter.id, account, outcome, guid, rewards
+    );
     world.entity_mut(owner).remove::<ActiveEncounter>();
     release_wild_pet(world, &encounter, outcome == WildPetBattleOutcome::Won);
     send_update(
