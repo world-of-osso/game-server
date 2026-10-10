@@ -4,9 +4,9 @@ Verified 2026-10-10. The acquisition audit corrected pre-Warbands assumptions an
 
 ## Root causes and fix
 
-`AppearanceCollectionPlugin` originally learned only from surviving equipped/soulbound items sampled by `InventoryDeltas`. Selling or deleting an unbound appearance-bearing item removed it before that sample. New BoP items also stayed unbound until the *next* model load; acquisition writes could therefore persist neither binding nor appearance. Quest rewards learned only the selected physical item, not all reward choices.
+`AppearanceCollectionPlugin` originally learned only from surviving equipped/soulbound items sampled by `InventoryDeltas`. Selling or deleting an unbound appearance-bearing item removed it before that sample. New BoP items also stayed unbound until the *next* model load; acquisition writes could therefore persist neither binding nor appearance. Quest rewards learned only the selected physical item, not all non-cosmetic reward choices.
 
-Inventory models now carry a transient account owner and appearance-grant receipt into `InventoryRecord`. Successful store operations bind BoP items before saving. The record writer merges grants with the existing account collection inside its inventory transaction; these receipt fields are not added to serialized inventory/character data. Explicit destroy and vendor sale add disposed-item visuals, while generic ownership transfers do not. Quest completion writes its reward visuals, inventory and quest log together. The connection refresh reads durable collection state so a removed item still produces an owner update.
+Inventory models now carry a transient account owner and appearance-grant receipt into `InventoryRecord`. Successful store operations bind BoP items before saving. The record writer merges grants with the existing account collection inside its inventory transaction; these receipt fields are not added to serialized inventory/character data. Explicit destroy and vendor sale add disposed-item visuals, while generic ownership transfers do not. Quest completion writes its non-cosmetic reward-option visuals, selected BoP cosmetics, inventory and quest log together; unchosen cosmetics remain uncollected. The connection refresh reads durable collection state so a removed item still produces an owner update.
 
 ## Proof and limits
 
