@@ -7,6 +7,9 @@ mod batch5;
 mod batch6;
 mod batch7;
 mod batch8;
+mod batch9;
+
+pub(super) use batch9::{cast_effect, update_ground_pulses};
 
 use bevy::prelude::*;
 
@@ -78,6 +81,9 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
+        (batch9::SCOURGE_STRIKE, 0) => Some(batch9::apply_missing_plague),
+        (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
         (batch8::REAP, 0) => Some(batch8::reap),
         (batch8::PROVOKE, 0) => Some(batch8::provoke),
         (batch8::BREATH_OF_FIRE, 0) => Some(batch8::breath_of_fire),

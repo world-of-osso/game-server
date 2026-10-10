@@ -10,6 +10,10 @@ pub(super) fn check_destination(
     caster: Entity,
     spell: &crate::spell_info::SpellInfo,
 ) -> Result<(), super::CastFailure> {
+    // Named Rain, Earthquake and Void Step require the requested ground point.
+    if matches!(spell.id, 73920 | 61882 | 1234796) {
+        check_ground_point(world, caster, spell)?;
+    }
     for effect in &spell.effects {
         if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             check_ground_point(world, caster, spell)?;

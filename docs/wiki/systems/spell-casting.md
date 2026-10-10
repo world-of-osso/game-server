@@ -239,6 +239,32 @@ Damage and heal side effects:
 
 ## Class Dummy scripts
 
+### Ninth batch: local Mainline ground fields and owned marks
+
+[Contract](../../specs/spell-dummy-scripts.md#ninth-batch-locally-derived-paths), [implementation](../../../crates/server/src/spell_cast/scripts/batch9.rs), [tests](../../../crates/server/src/spell_cast/dummy9_tests.rs). Sources are local Mainline12.1.0.69933 DB2 CSVs and read-only imported rows plus inherited TDB1210 routing, not TrinityCore C++ bodies.22 authentic IDs/185 rows match slot and canonical databases exactly. No downloads/imports/world writes or realm process.
+
+| Path | Implemented / observable proof | Remaining boundary |
+|---|---|---|
+|73920 Healing Rain|Fixed requested11yd field;2000ms pulses through73921, six injured allies,18sec native lifetime. Recast replaces this caster's previous field; entering/leaving allies evaluated each pulse.|14/magic-reduction/aura4 markers and1298679 child. Tooltip fixed6*2 formula disagrees with18sec native duration; no total-tooltip parity claim.|
+|61882 Earthquake|77478 base damage at requested8yd field, six1000ms pulses including expiry; two real casts retain independent clocks, ally/far exclusions.|Knockdown77/chance and extra Dummy metadata.|
+|355913 Emerald Blossom|1500ms delayed355916 heal of three injured allies within10yd, anchored at original ally position; moving primary/healthy/far excluded.|Root zero Dummy1 and variants.|
+|196770 Remorseless Winter|Actual196771 hit applies21179320% slow; expiry restores movement.|Neither child has local radius: coincident-unit native proof only. No guessed8yd radius; root25 marker/CAP remain.|
+|55090 Scourge Strike|Missing owned191587 base DoT applies/ticks; existing own mark not refreshed as substitute for spreading.|35% plague eruption, spread and root3 marker.|
+|263642 Fracture /187827 Meta|Named321068 gate on Meta's native15 Fury modifier; base25 vs transformed talented40, missing-rank/Meta boundaries.|Soul fragments/objects, Meta periodic marker; no complete Meta parity.|
+|1234796 Void Step|Requested same-map teleport; missing/nonfinite/out-of-range refused before spending.|This is the sole whole Dummy-root closure; no unrelated mobility/terrain parity claim.|
+|194509 Radiance|Selected allies receive194384 for60% normal duration (9000ms); independent foreign owners persist.|Atonement damage-transfer/raid-pet priority and other Dummy fields.|
+|740 Tranquility|Named60% caster-max-health shield absorbs concrete incoming damage; channel cancellation removes remaining capacity. Depletion preserves channel healing rather than consuming the entire aura.|Ally Dummy marker, soft cap and HoT extension.|
+
+Once-per-cast destination hooks run even in empty areas. Field pulses use normal defended-target, missile, combat and damage/heal paths, not a guessed custom damage formula. Root/child fields provide radii/caps/delay/cadence; no invented spell IDs.29 now admits the native ally dynamic-object selector, but admission is not new raid propagation. Rain/Quake/Void Step require finite, native-range requested points rather than silently moving an omitted destination to the caster.
+
+Census baseline`2ab5e5e` reproduced171 Dummy-bearing core roots; after Rust`e78fad0`, **170** remain (Void Step closes). Reviewed/partial/deferred73→80, un-derived98→90; E3 admissible123/131→121/129, a4 64/72→66/74 (D1→0), a22619/20 unchanged. Radiance exposes child Dummy markers; Tranquility moves from D to admitted A without concealing unresolved fields. Scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships unchanged.
+
+Per-spec script counts derive census membership/closure plus explicit cast/aura/field consumers, not generic A damage tests. Before core counts: Protection Paladin/Outlaw0, Restoration Shaman/Frost DK/Vengeance1. Resolvable selections improve Restoration Shaman1→2, Frost DK1→2, Vengeance1→3, Elemental2→3, Unholy2→3, Preservation2→3, Devourer1→2, Restoration Druid2→3; Priest count unchanged while Radiance's existing path improves. Zero-script Protection/Outlaw death interception/random-roll mechanics require a broader independently sourced contract, not fabricated substitutions. Complete40-spec before/after table: `game-engine/data/diagnostics/spell-dummy9-2026-10-10/per-spec-scripts.md`.
+
+Native proof: behavioral RED initially0/11,11/11 GREEN at`6b11521`; new overlap/empty-area/cancellation boundaries give14/14 at`7c471f0`. Separate requested-ground RED at`eb96054`; malformed Maelstrom fixture corrected and nine refusal cases pass at`314a8f1`. Requested post-master full `spell_cast` filter ran **once** at`314a8f1`: **274/275**, all14 batch9 functions pass. Sole failure was obsolete355913 generic no-action fixture; moved into the existing named-heal proof and remaining unbound matrix passes1/1 at`521455e`. Separate shield-depletion RED at`43701c9` caught removal of the healing aura; named lifetime fix`e78fad0` passes absorb5/5 and Tranquility2/2. Final format/check pass. No new275/275 full-filter claim; parent owns integration acceptance. No live/full-crate/rotation certification.
+
+Durable frozen sources/census/source receipts/logs: `game-engine/data/diagnostics/spell-dummy9-2026-10-10/`; delivery/proof ledger: `/home/osso/.worktrees/handoff-spell-dummy9.md`. `SPELL_BATCH9_MODE=before python3 <evidence>/regenerate.py --write` reproduces baseline; default regenerates after.
+
 ### Eighth batch: projectile, taunt and low-coverage paths
 
 [Contract](../../specs/spell-dummy-scripts.md#eighth-batch-locally-derived-paths), [implementation](../../../crates/server/src/spell_cast/scripts/batch8.rs), [cast tests](../../../crates/server/src/spell_cast/dummy8_tests.rs), [incoming-damage test](../../../crates/server/src/spell_cast/dummy8_defense_tests.rs). Mainline12.1.0.69933 local CSVs and read-only imported rows provide all IDs/amounts; TDB1210 routes named scripts.22 IDs/130 CSV rows match both the slot and canonical databases exactly. No new external fetch, data import or realm process.
@@ -273,7 +299,7 @@ Implementation [batch7.rs](../../../crates/server/src/spell_cast/scripts/batch7.
 |167105 Colossus Smash|After damage0, apply only208086 aura271; ordinary caster-owned damage multiplier and expiry execute it.|Child343/self marker, soft cap and optional talents.|
 |61336 Survival Instincts|Aura apply/remove owns50322 effect0, excluding its unknown Dummy2.|Parent marker/child Dummy2; no full Druid-form parity.|
 |206930 Heart Strike|Dummy0 on each native chain target,221536 gate,210738 energize.|Rank316575, extra mirrors and native chain front-arc limit.|
-|194509 Radiance|Spell-owned native heal plan, s3 additional cap; stable owned-Atonement priority within injured allies.|Actual Atonement duration/application; raid/pet priority.|
+|194509 Radiance|Spell-owned native heal plan, s3 additional cap; stable owned-Atonement priority within injured allies.|Raid/pet priority; Atonement application/duration follows in [batch9](#ninth-batch-local-mainline-ground-fields-and-owned-marks).|
 |85288 Raging Blow|Root s1 roll with383854,280270 application, restore one latest charge and notify owner.|Marker may be consumed by root proc; other reset talents.|
 |190411 Whirlwind|Caster Dummy1 before weapon children; select count from Dummy0 native area, generate modified280715 and apply85739 maximum stacks.|Cleave copies/consumption and damage soft cap.|
 |360995 Verdant Embrace|AfterCast Panacea387761 gates387763 self heal.|Flight, primary heal and root Dummy0.|

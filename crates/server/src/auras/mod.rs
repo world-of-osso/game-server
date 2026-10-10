@@ -449,7 +449,9 @@ fn build_effect(
     effect: &SpellEffect,
     now: f64,
 ) -> AuraEffectState {
-    let amount = if handlers::scales_with_power(effect.aura) {
+    let amount = if let Some(amount) = scripts::absorb_amount(world, caster, spell, effect) {
+        amount
+    } else if handlers::scales_with_power(effect.aura) {
         crate::spell_cast::effects::scaled_amount(world, caster, spell, effect)
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
@@ -504,7 +506,9 @@ fn build_instance(
         .effects
         .iter()
         .filter(|effect| {
-            is_aura_effect(effect) && application.effect_mask & (1 << effect.index) != 0
+            is_aura_effect(effect)
+                && application.effect_mask & (1 << effect.index) != 0
+                && scripts::effect_enabled(world, caster, spell.id, effect.index)
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
@@ -738,7 +742,9 @@ pub(crate) fn apply_aura_with_spell(
             excluded.contains(&aura.spell_id)
         });
     }
+    // Atonement marks from different priests remain independently owned.
     let coexist = instance.harmful
+        || spell.id == 194384
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
@@ -1199,7 +1205,7 @@ pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResu
     }
     if !result.depleted.is_empty() {
         remove_auras(world, unit, RemoveReason::Consumed, |aura| {
-            result.depleted.contains(&aura.instance_id)
+            result.depleted.contains(&aura.instance_id) && scripts::absorb_ends_aura(aura.spell_id)
         });
     }
 }
