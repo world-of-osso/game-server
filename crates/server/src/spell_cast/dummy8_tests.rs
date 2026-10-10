@@ -343,7 +343,7 @@ fn dummy8_unstable_affliction_applies_named_periodic_child_and_ticks() {
     assert!(!crate::auras::has_aura(h.app.world(), h.npc, 233490));
 }
 #[test]
-fn dummy8_arcane_barrage_consumes_all_charges_without_inventing_targets() {
+fn dummy8_arcane_barrage_consumes_all_charges_without_inventing_damage_or_targets() {
     let mut h = harness(Vec::new(), &[44425, 36032], 8).unwrap();
     h.set_power(PowerType::ArcaneCharges, 3.0);
     h.cast_and_deliver(44425, Some(h.npc));
