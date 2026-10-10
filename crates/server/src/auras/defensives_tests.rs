@@ -5,7 +5,7 @@ use crate::auras::AuraStatMods;
 use crate::item_stats::WeaponDamage;
 use crate::stats::CharacterStats;
 use shared::components::WeaponType;
-use shared::protocol::{CombatLogKind, MissKind};
+use shared::protocol::{CombatEventType, CombatLogKind, MissKind};
 
 use crate::auras::ActiveAuras;
 use crate::spell_cast::effects::{EffectCtx, deal_damage};
@@ -72,6 +72,14 @@ fn incoming_melee(h: &mut Harness) -> f32 {
         .entity_mut(h.npc)
         .remove::<crate::combat::AutoAttack>();
     before - h.health(h.caster)
+}
+
+fn assert_melee_event(h: &Harness, kind: CombatEventType, amount: f32) {
+    let log = h.app.world().resource::<crate::combat::CombatLog>();
+    let entries = log.range(0.0, f64::MAX);
+    let event = &entries.last().expect("scheduled swing event").event;
+    assert_eq!(event.event_type, kind);
+    assert_eq!(event.amount, amount);
 }
 
 fn assert_reduction(class: u8, spell: u32, triggered: &[u32], expected: f32) {
@@ -319,6 +327,7 @@ fn defensives_unprotected_control_takes_full_fire_damage() {
 fn defensives_paladin_divine_shield_blocks_melee() {
     let mut h = cast_defensive(2, 642, &[]);
     assert_eq!(incoming_melee(&mut h), 0.0);
+    assert_melee_event(&h, CombatEventType::Miss, 0.0);
     h.advance(3);
     assert!(h.inbox.log.iter().any(
         |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Immune)
@@ -329,6 +338,7 @@ fn defensives_paladin_divine_shield_blocks_melee() {
 fn defensives_mage_ice_block_blocks_melee() {
     let mut h = cast_defensive(8, 45_438, &[]);
     assert_eq!(incoming_melee(&mut h), 0.0);
+    assert_melee_event(&h, CombatEventType::Miss, 0.0);
     h.advance(3);
     assert!(h.inbox.log.iter().any(
         |event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Immune)
@@ -342,6 +352,7 @@ fn defensives_priest_power_word_shield_absorbs_melee() {
     assert!(before > INCOMING_DAMAGE);
     assert_eq!(incoming_melee(&mut h), 0.0);
     assert_eq!(shield_remaining(&h), before - INCOMING_DAMAGE);
+    assert_melee_event(&h, CombatEventType::Absorb, INCOMING_DAMAGE);
     h.advance(3);
     assert!(h.inbox.log.iter().any(|event| event.spell_id.is_none()
         && event.kind == CombatLogKind::Miss(MissKind::Absorb)
