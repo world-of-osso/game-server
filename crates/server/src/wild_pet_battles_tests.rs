@@ -399,7 +399,7 @@ fn petbattle_effect_hud_routes_weather_and_team_hazard_separately_across_swap() 
         .battle
         .step(
             &catalog.turns,
-            [Action::Ability(527), Action::Swap(1)],
+            [Action::Ability(527), Action::Pass],
             &mut Fixed(500000),
         )
         .unwrap()

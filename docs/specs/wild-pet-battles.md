@@ -11,6 +11,12 @@ Server-authoritative wild PvE encounters in `crates/server/src/wild_pet_battles.
 
 - [x] Supply authoritative species portrait/quality/XP, ability family, aura icon and per-event target/amount feedback for the client HUD; terminal rewards include the new level XP threshold. No client-side combat inference.
 
+## Effect HUD transport
+- Weather and per-team pads are distinct snapshot scopes; neither duplicates onto individual pet aura rows. Names/icons/durations come from the authoritative catalog/turn state.
+- Team-pad ownership follows client orientation in PvP. Beneficial admitted effects attach to the source team; hostile effects attach to the opposing team.
+- Ability snapshots carry separate cooldown and lockdown turns. Nonzero lockdown effect handlers are still gated: the current engine reports zero rather than guessed turns.
+- Combat messages include ability/aura names, damage/healing, expiry and outcomes; event amounts remain separate floating feedback.
+
 ## How it works
 - [Turn catalog and semantics](../wiki/systems/pet-battle-engine.md).
 - [Native client contract](../../../game-engine/docs/specs/wild-pet-battles.md).
