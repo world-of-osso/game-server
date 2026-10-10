@@ -28,6 +28,26 @@ fn vehicle_local_catalog_links_mammoth_and_chopper_to_actual_model_seats() {
     assert!(store.poses.contains_key(&(25870, 2804)));
 }
 
+#[test]
+fn vehicle_real_mammoth_passenger_position_matches_the_rendered_mount_frame() {
+    let (mut world, driver, passenger, _) = setup();
+    let conn = rusqlite::Connection::open_with_flags(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    world.insert_resource(super::load_store(&crate::ground::ground_data_dir(), &conn).unwrap());
+    board(&mut world, passenger, driver).unwrap();
+    let position = world.get::<Position>(passenger).unwrap();
+    // Local M2 234720 attachment40: (-1.278439,0.793948,3.151280), plus
+    // NpcVisualRoot's -90deg model alignment and the driver at (10,2,20).
+    let expected = Vec3::new(10.793948, 5.1512804, 18.721561);
+    assert!(
+        Vec3::new(position.x, position.y, position.z).abs_diff_eq(expected, 0.0001),
+        "seat position {position:?}, expected {expected:?}"
+    );
+}
+
 fn setup() -> (World, Entity, Entity, Entity) {
     let mut world = World::new();
     let spawn = |world: &mut World, id| {
