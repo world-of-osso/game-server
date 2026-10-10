@@ -301,6 +301,32 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires nav-bake real map0 ocean tile23,39"]
+    fn modern_ocean_artifact_marks_water_area() {
+        let bytes = std::fs::read(ground_dir().join("navmesh/0/23_39.nav")).unwrap();
+        let mut water = 0;
+        for packet in decode_packets(&bytes).unwrap() {
+            validate_packet(packet).unwrap();
+            // The serialized .nav area IDs are the external bake contract.
+            let header =
+                unsafe { std::ptr::read_unaligned(packet.as_ptr().cast::<dtMeshHeader>()) };
+            let align = |size: usize| (size + 3) & !3;
+            let first =
+                align(std::mem::size_of::<dtMeshHeader>()) + align(header.vertCount as usize * 12);
+            for index in 0..header.polyCount as usize {
+                let offset = first + index * std::mem::size_of::<dtPoly>();
+                let poly =
+                    unsafe { std::ptr::read_unaligned(packet[offset..].as_ptr().cast::<dtPoly>()) };
+                water += usize::from(poly.areaAndtype & 63 == WATER_AREA);
+            }
+        }
+        assert!(
+            water > 100,
+            "real submerged terrain must retain authored water area, found {water}"
+        );
+    }
+
+    #[test]
     #[ignore = "requires nav-bake map34 from local Stockade assets"]
     fn stockade_repath_to_other_cell_has_clear_segments() {
         let mut map = NavigationMap::open(&ground_dir().join("navmesh/34")).unwrap();
