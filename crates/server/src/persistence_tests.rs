@@ -197,6 +197,36 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
 }
 
 #[test]
+fn account_lookup_handles_missing_empty_and_populated_tables() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    assert_eq!(find_account_id_for_character(&db, 42), None);
+
+    let txn = db.begin_write().unwrap();
+    txn.open_table(ACCOUNT_CHARACTERS).unwrap();
+    txn.commit().unwrap();
+    assert_eq!(find_account_id_for_character(&db, 42), None);
+
+    let txn = db.begin_write().unwrap();
+    {
+        let mut table = txn.open_table(ACCOUNT_CHARACTERS).unwrap();
+        table
+            .insert(7, bitcode::encode(&vec![42_u64, 43]).as_slice())
+            .unwrap();
+        table
+            .insert(8, bitcode::encode(&vec![44_u64]).as_slice())
+            .unwrap();
+    }
+    txn.commit().unwrap();
+    drop(db);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(find_account_id_for_character(&db, 42), Some(7));
+    assert_eq!(find_account_id_for_character(&db, 43), Some(7));
+    assert_eq!(find_account_id_for_character(&db, 44), Some(8));
+    assert_eq!(find_account_id_for_character(&db, 45), None);
+}
+
+#[test]
 fn legacy_inventories_move_to_u64_gold_during_startup() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
