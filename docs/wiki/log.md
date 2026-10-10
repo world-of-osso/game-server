@@ -1,6 +1,6 @@
 # Wiki Log
 
-- 2026-10-10 — [Stationary arch and leash](systems/navigation.md#stationary-arch-and-leash-acceptance): real supported Stockade perch exposed immediate no-path evade; restored pinned Retail5s non-raid grace with reachability/victim resets and behavioural RED fixtures. Existing40-yard leash unchanged; final rebuilt private proof recorded in navmesh-leash handoff.
+- 2026-10-10 — [Stationary arch and leash](systems/navigation.md#stationary-arch-and-leash-acceptance): real supported Stockade perch exposed immediate no-path evade; restored pinned Retail5s non-raid grace with reachability/victim resets. Targeted56/56 GREEN and rebuilt private5094 live proof at6c96656: sampled39.888yard leash reversal/home and5.103s no-path hold/home with stationary supported feet.12 inspected PNGs/two VFR videos; no world.db writes, shared-realm deployment or master merge.
 
 - 2026-10-10 — [Toy effects3](systems/toys.md#periodic-dummy-no-actions-and-linked-summons-2026-10-10): data-backed226 ticks retain channel targets; conditional/scripts remain blocked.321 uses PreventionType4, not MiscValue; linked428 lifecycle and authentic24-template import unlock tent summons with DB2 target18/79. All17 bobber258 toys remain explicit fishing/object gaps. Private prepared census71→75/1166; no canonical database, client, merge or realm changes.
 
