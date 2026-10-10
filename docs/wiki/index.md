@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Toy-effects6 follow-up](systems/toys.md#toy-effects6-follow-up-2026-10-10) — Duck Lovie104/1166 census,261 spell/36 toy regression passes, client condition/appearance follow-up and explicit remaining live/script gaps.
+
 - [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.
 
 - [Audited toy attachments and sounds](systems/toys.md#audited-attachment-and-sound-toys-2026-10-10) — eight source-backed visual-only admissions, actual target/cast/lifetime proofs, preserved race restrictions and unbound-ring refusals; census103/1166.

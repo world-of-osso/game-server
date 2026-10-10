@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Toy-effects6 follow-up](systems/toys.md#toy-effects6-follow-up-2026-10-10): Duck Lovie source-bound nap admission, RED/GREEN and103→104/1166 (+1,no removals). Post-origin/master261 spell_cast/36 toy tests pass. Client Spitzy/ordinary train coverage and both-skin bounded asset captures documented; mortar live proof and absent periodic/procedural/ModifierTree payloads remain incomplete. No world.db/shared-realm/master changes.
+
 - 2026-10-10 — [Class spell scripts batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths): Reap destination line, real Provoke threat/victim/owned-statue path and eight additional bounded spell paths. Per-spell RED/GREEN, owner-only Breath damage reduction, requested-ground Sanctify cap, post-master census172→171. No database writes, fabricated IDs, deployment, master merge or realm process.
 
 - 2026-10-10 — [Class spell scripts batch7](systems/spell-casting.md#seventh-batch-tdb-routed-retail-derivations): TDB1210 script/proc/link mining and Mainline effect chains derive eight bounded paths;21 native functions pass after correcting Bear mitigation in Survival's fixture. Census172 retained,70 reviewed/partial/deferred. No database writes, deployment, merge or guessed projectile/taunt bridge.
