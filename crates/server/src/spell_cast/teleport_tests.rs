@@ -10,16 +10,16 @@ fn spell_teleport_blink_lands_twenty_yards_forward_on_ground() {
     let mut h = harness(Vec::new(), &[BLINK], 8).unwrap();
     h.app
         .insert_resource(crate::terrain_height::test_helpers::flat_ground(
-            25.0, 25.0, 2.0,
+            33.0, 33.0, 2.0,
         ));
     let dir = std::path::Path::new("/home/osso/Projects/world-of-osso/game-engine/data/los");
     h.app
         .insert_resource(crate::line_of_sight::LineOfSight::load(dir).unwrap());
     h.app.world_mut().entity_mut(h.caster).insert((
         Position {
-            x: 0.0,
+            x: 10.0,
             y: 2.0,
-            z: 0.0,
+            z: -10.0,
         },
         Rotation {
             x: 0.0,
@@ -32,7 +32,7 @@ fn spell_teleport_blink_lands_twenty_yards_forward_on_ground() {
     h.advance(4);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let pos = h.app.world().get::<Position>(h.caster).unwrap();
-    assert!((pos.x - 20.0).abs() < 0.01, "{pos:?}");
+    assert!((pos.x - 30.0).abs() < 0.01, "{pos:?}");
     assert_eq!(pos.y, 2.0);
     assert_eq!(
         h.app
