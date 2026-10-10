@@ -2,6 +2,16 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Shared resource mechanics
+
+Successful casts now clone a resource-dependent spell snapshot between cost validation and target planning, before payment. Flat native `SpellPower.OptionalCost` is additional spend capped by current power; only the required portion gates admission. `spell_cast/resources.rs` freezes combo expenditure into `SpellDuration.DurationPerResource`/`MaxDuration` and named Envenom/Black Powder damage coefficients. The owned spell clone follows the existing missile path; no mutable caster snapshot or post-impact pool read is introduced.
+
+Arcane Barrage's explicitly authored36032s2 charge damage is frozen at launch. Its existing AfterCast reads the same charges before clearing them and, only with active321526, refunds native hundredths-percent of maximum mana. Native Rupture/Rip/Envenom durations and Black Powder area behavior have bounded tests. Surge only gains authentic optional mana payment: its tooltip supplies a maximum, not the interpolation curve, so an initial linear assumption was rejected and removed.
+
+**Coverage:** [contract](../../specs/spell-dummy-scripts.md#shared-resource-mechanics), [all40-spec table](../../spell-mechanics-coverage.md). Eight focused native functions pass; the requested post-master `spell_cast` filter ran once and passed307/307 at823f5a4, with format/check exit0.168 Dummy roots remain,87 reviewed/81 un-derived. This is partial behavior, not whole-root closure. Generic optional spending intersects six roots/seven memberships, native resource duration three/four; these overlap. Guardian/imp rotation, damage copy/redirect, optional percentage costs, rank-specific resource caps and the Surge damage curve remain unimplemented. Native104317 names55659/3210, but runtime creature55659 and TDB smart-script spell bindings are absent; the empty TDB AIName/ScriptName cannot establish actor spell budget/cadence.
+
+Sources: local Mainline12.1.0.69933 `SpellPower`, `SpellDuration`, `SpellEffect`, `Spell` descriptions; read-only native SQLite/TDB rows. Durable receipts/generator/ledger: `game-engine/data/diagnostics/spell-mechanics-2026-10-10/` (95 matching native rows, no semantic drift). No C++ body, inferred actor spell ID, database write, UDP5000, realm or deployment claim.
+
 ## Teleports and aura overrides
 
 [Contract](../../specs/spell-teleports-overrides.md). Retail Blink1953 uses effect29 and target55's second radius (20yd); legacy teleport15 and current252 share dispatch. Forward movement samples GroundMap and stops 0.5yd before the first blocking baked LOS triangle using monotonic prefix queries. Missing ground/LOS never becomes an unchecked move. Same-map players use MovementControl's teleport epoch; cross-map moves reuse NewWorld/WorldPortAck.

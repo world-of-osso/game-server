@@ -520,7 +520,7 @@ fn cobra_shot(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     reduce_cooldown(world, caster, KILL_COMMAND, f64::from(seconds));
 }
 
-fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
+pub(super) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)

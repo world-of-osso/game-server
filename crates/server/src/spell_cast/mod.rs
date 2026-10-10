@@ -48,6 +48,7 @@ mod hit;
 mod missiles;
 pub mod powers;
 mod reflect;
+mod resources;
 pub mod runes;
 pub mod scripts;
 pub mod summon;
@@ -1244,6 +1245,17 @@ pub(crate) fn applicable_costs(
             Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
             None => amount_with(base),
         };
+        // OptionalCost is additional raw spend, never an admission requirement.
+        let optional = cost.optional_cost.max(0) as f32;
+        let optional = if optional > 0.0 {
+            match SpellModOp::power_cost(cost.order_index) {
+                Some(op) => modify(world, caster, spell, op, optional).max(0.0),
+                None => optional,
+            }
+        } else {
+            0.0
+        };
+        let amount = amount + optional.min((current - amount).max(0.0));
         costs.push((pool, amount, current));
     }
     Ok(costs)
@@ -1416,6 +1428,8 @@ fn execute_cast(
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
+    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     spend_costs(world, caster, &costs);
@@ -2175,6 +2189,10 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 mod class_resource_tests;
 #[cfg(test)]
 mod line_of_sight_tests;
+#[cfg(test)]
+mod mechanics_talent_tests;
+#[cfg(test)]
+mod mechanics_tests;
 #[cfg(test)]
 mod new_class_tests;
 #[cfg(test)]

@@ -28,6 +28,8 @@ const KEG_SMASH: u32 = 121253;
 const BREATH_BURN: u32 = 123725;
 const INCINERATE_ENERGIZE: u32 = 244670;
 const AFFLICTION_PERIODIC: u32 = 233490;
+const BARRAGE_MANA_REFUND: u32 = 321526;
+const HUNDREDTHS_PERCENT_DENOMINATOR: f32 = 10000.0;
 
 /// Root names1225827. Its87/134 line is aimed at the hit unit's destination,
 /// extending to the authored radius, rather than a single-target substitution.
@@ -197,10 +199,17 @@ pub(super) fn sanctify_plan(
         chain_multipliers: Vec::new(),
     }]
 }
-///44425's unconditional resource contract. Charge-scaled damage and231564
-///secondary hits remain explicit gaps; consuming charges does not certify them.
+///44425 consumes charges after launch.321526 refunds its authored hundredths
+///of a percent of maximum mana per charge;231564 secondary hits remain open.
 pub(super) fn arcane_barrage(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     let (current, _) = spell_cast::powers::power_value(world, caster, PowerType::ArcaneCharges)
         .expect("Mage requires Arcane Charges");
+    if crate::auras::has_aura(world, caster, BARRAGE_MANA_REFUND) {
+        let (_, max_mana) = spell_cast::powers::power_value(world, caster, PowerType::Mana)
+            .expect("Mage requires mana");
+        let hundredths_percent = script_effect_value(world, caster, BARRAGE_MANA_REFUND, 0);
+        let refund = current * max_mana * hundredths_percent / HUNDREDTHS_PERCENT_DENOMINATOR;
+        spell_cast::powers::change_power(world, caster, PowerType::Mana, refund);
+    }
     spell_cast::powers::change_power(world, caster, PowerType::ArcaneCharges, -current);
 }
