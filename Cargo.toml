@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/server", "crates/client", "crates/integration-tests", "crates/los", "crates/navigation"]
-exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication"]
+exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication", "vendor/recastnavigation-sys"]
 
 [workspace.package]
 edition = "2024"
@@ -18,6 +18,8 @@ opt-level = 2
 shared = { path = "../shared-protocol" }
 
 [patch.crates-io]
+# Modern clang/CMake compatibility; algorithms remain pinned to 1.0.3 source.
+recastnavigation-sys = { path = "vendor/recastnavigation-sys" }
 bevy_replicon = { path = "vendor/bevy_replicon" }
 # Per-client server disconnect; see ../shared-protocol/vendor/lightyear_netcode/UPSTREAM.md.
 lightyear_netcode = { path = "../shared-protocol/vendor/lightyear_netcode" }

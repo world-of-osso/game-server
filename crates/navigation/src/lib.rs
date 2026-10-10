@@ -1,6 +1,8 @@
 //! Offline Recast navigation tiles and Detour queries, in Bevy world coordinates.
 #[cfg(feature = "bake")]
 pub mod bake;
+mod query;
+pub use query::NavigationMap;
 
 pub const TILE_SIZE: f32 = 1600.0 / 3.0;
 pub const SUBDIVISIONS: u32 = 4;
