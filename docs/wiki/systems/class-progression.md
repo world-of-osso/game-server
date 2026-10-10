@@ -64,6 +64,16 @@ The known list is built in learn order:
 
 Duplicates are dropped. A talent whose `TraitDefinition.OverridesSpellID` is set removes that baseline spell ([[talents]]): Retribution's Final Verdict 383328 replaces Templar's Verdict 85256. Passives stay in the list with no flag; the client decides from its catalog. `LearnableSpell.passive` and `SpecSpell.passive` are `spell_misc.Attributes_0 & 0x40`, and mastery spells count as passive.
 
+Explicitly learned spells from `PlayerProfessions.spells` are appended without class/spec auto-learning filters, with duplicates removed. Auth loads this persisted component before progression initialization; both initial snapshots and level/spec/talent refreshes include it.
+
+### Online learning replication (2026-10-10)
+
+Admin `learn-spell`, trainer purchases and `LEARN_SPELL` effects share `profession::with_learner`. Previously they changed and persisted `PlayerProfessions` and sent only `ProfessionSnapshot`; the separate `KnownSpells` component and spellbook messages never changed. This affected both GM learning (Recklessness 1719, Raging Blow 85288) and trainer recipes.
+
+`publish_learned_spells` runs in `PostUpdate`, after Update admin/trainer commands and FixedUpdate spell effects. For a changed `PlayerProfessions`, it merges additions into `KnownSpells` and sends the authenticated owner `SpellsLearned` on `TalentChannel`; already-known spells produce no delta. Profession persistence/snapshots retain their existing path. Explicit learning does not add action buttons automatically.
+
+Behavioral regressions `online_learn_spell_*` run a Bevy app with connected Lightyear HostClient stand-ins: actual deferred admin handler and trainer purchase, receipt without relog, server known state, persistence, re-evaluation, duplicate learning and reconnect snapshots. They do not exercise a rendered client or a Unix admin socket.
+
 The list is stored in the `KnownSpells` component. Cast validation should call `class_progression::knows_spell(&Query<&KnownSpells>, player, spell_id)`.
 
 ## Action bars
@@ -86,6 +96,7 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 |---|---|
 | First frame the player has a `PlayerLink` connection | `SpecializationChanged` and `TraitConfigSnapshot` (only if the class has spec data), `KnownSpellsSnapshot`, `ActionBarSnapshot` |
 | Level change (`Changed<Level>`) or accepted `SetSpecialization` | `SpecializationChanged` if the spec changed, then `SpellsUnlearned` and `SpellsLearned` (each only when non-empty), then `ActionBarSnapshot` if the bar was rewritten or pruned, then `TraitConfigSnapshot` if the spec, config or point budget changed |
+| Admin/trainer/spell-effect learning | `SpellsLearned` for additions not already known; profession snapshots remain separate |
 | `CommitTraitConfig` | `TraitCommitResult`; when accepted, then the spell deltas and `TraitConfigSnapshot` ([[talents]]) |
 
 ## Level

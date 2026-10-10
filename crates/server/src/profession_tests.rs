@@ -686,3 +686,43 @@ fn transmogacq_crafting_an_unbound_shirt_does_not_collect() {
     );
     crate::appearance_collection::tests::assert_restart(h.app, 1, &[(appearance, false)]);
 }
+
+#[test]
+fn online_learn_spell_trainer_publishes_without_relog() {
+    use crate::class_progression::{ClassProgressionPlugin, KnownSpells};
+    use shared::protocol::{KnownSpellsSnapshot, SpellsLearned};
+
+    let mut h = harness(5).unwrap();
+    ClassProgressionPlugin.build(&mut h.app);
+    add_inbox::<KnownSpellsSnapshot>(&mut h.app);
+    add_inbox::<SpellsLearned>(&mut h.app);
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert((pair::<KnownSpellsSnapshot>(), pair::<SpellsLearned>()));
+    h.advance(3);
+    h.take::<KnownSpellsSnapshot>();
+    h.take::<SpellsLearned>();
+    h.set_gold(100);
+    let npc = h.open_georgio();
+    h.buy(npc, TAILORING);
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    let profs = h.professions();
+    assert!(profs.knows(BOLT_OF_LINEN_CLOTH));
+    let learned: Vec<u32> = h
+        .take::<SpellsLearned>()
+        .into_iter()
+        .flat_map(|delta| delta.spells)
+        .collect();
+    assert!(
+        learned.contains(&BOLT_OF_LINEN_CLOTH),
+        "client learned {learned:?}"
+    );
+    let known = h.app.world().get::<KnownSpells>(h.player).unwrap();
+    for spell in profs.spells {
+        assert!(
+            known.contains(spell),
+            "server does not know learned {spell}"
+        );
+    }
+}

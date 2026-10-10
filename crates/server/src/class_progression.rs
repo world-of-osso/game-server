@@ -2,7 +2,7 @@
 //! spells and action bars. Rules and persistence:
 //! `docs/wiki/systems/class-progression.md`, `docs/wiki/systems/talents.md`.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -22,6 +22,7 @@ use crate::persistence_progression::{
     ActionRefData, ProgressionData, load_progression, load_trait_configs, save_progression,
     save_trait_config,
 };
+use crate::profession::PlayerProfessions;
 use crate::race_class::race_mask_allows;
 use crate::spell_info::{ClassInfo, ClassSpells, SpecInfo};
 use crate::trait_config::{
@@ -125,6 +126,42 @@ impl Plugin for ClassProgressionPlugin {
             )
                 .chain(),
         );
+        // Learning can happen in Update (admin/trainer) or FixedUpdate (spell effects).
+        app.add_systems(PostUpdate, publish_learned_spells);
+    }
+}
+
+/// Merge explicitly learned spells without applying class/spec auto-learning filters.
+/// Return only additions, preserving their persisted learn order.
+fn merge_learned_spells(
+    known: &mut KnownSpells,
+    professions: Option<&PlayerProfessions>,
+) -> Vec<u32> {
+    let mut seen: BTreeSet<u32> = known.iter().collect();
+    let learned: Vec<u32> = professions
+        .into_iter()
+        .flat_map(|profs| profs.spells.iter().copied())
+        .filter(|spell| seen.insert(*spell))
+        .collect();
+    known.0.extend(&learned);
+    learned
+}
+
+/// Publish admin, trainer and spell-effect learning to the owner's spellbook.
+fn publish_learned_spells(
+    connections: ConnectionLinks,
+    mut players: Query<(&PlayerProfessions, &mut KnownSpells), Changed<PlayerProfessions>>,
+    mut senders: Query<&mut MessageSender<SpellsLearned>>,
+) {
+    for (connection, link) in &connections {
+        let Ok((professions, mut known)) = players.get_mut(link.0) else {
+            continue;
+        };
+        let learned = merge_learned_spells(known.bypass_change_detection(), Some(professions));
+        if !learned.is_empty() {
+            known.set_changed();
+            send(&mut senders, connection, SpellsLearned { spells: learned });
+        }
     }
 }
 
@@ -508,14 +545,14 @@ fn init_player_progression(
     db: Option<Res<GameDatabase>>,
     classes: Option<Res<ClassSpells>>,
     connections: ConnectionLinks,
-    players: Query<(&Player, &Level, &ClientId), Without<KnownSpells>>,
+    players: Query<(&Player, &Level, &ClientId, Option<&PlayerProfessions>), Without<KnownSpells>>,
     mut senders: ProgressionSenders,
 ) {
     let (Some(db), Some(classes)) = (db, classes) else {
         return;
     };
     for (connection, link) in &connections {
-        let Ok((player, level, client_id)) = players.get(link.0) else {
+        let Ok((player, level, client_id, professions)) = players.get(link.0) else {
             continue;
         };
         let stored = load_progression(&db.db, client_id.0);
@@ -528,7 +565,8 @@ fn init_player_progression(
         if evaluated.traits_reset {
             save_trait_config(&db.db, client_id.0, spec.0, Vec::new());
         }
-        let known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+        let mut known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+        merge_learned_spells(&mut known, professions);
         let mut bar = ActionBar(match &stored {
             Some(data) => data
                 .action_bar
@@ -578,6 +616,7 @@ type ProgressionPlayer = (
     &'static mut ActionBar,
     &'static mut TraitLoadout,
     Entity,
+    Option<&'static PlayerProfessions>,
 );
 
 /// Apply a re-evaluated spec, trait config and known spells after a level, spec
@@ -585,7 +624,7 @@ type ProgressionPlayer = (
 /// bar buttons for unlearned spells and persist. `TraitConfigSnapshot` is sent when the spec or config changed, or
 /// always with `always_send_traits`.
 fn refresh_player(
-    (player, _, client_id, mut spec, mut known, mut bar, mut traits, entity): (
+    (player, _, client_id, mut spec, mut known, mut bar, mut traits, entity, professions): (
         &Player,
         &Level,
         &ClientId,
@@ -594,6 +633,7 @@ fn refresh_player(
         Mut<ActionBar>,
         Mut<TraitLoadout>,
         Entity,
+        Option<&PlayerProfessions>,
     ),
     evaluated: Evaluated,
     always_send_traits: bool,
@@ -603,7 +643,8 @@ fn refresh_player(
     senders: &mut ProgressionSenders,
 ) {
     let new_spec = evaluated.spec;
-    let new_known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+    let mut new_known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+    merge_learned_spells(&mut new_known, professions);
     let spec_changed = *spec != new_spec;
     if spec_changed {
         *spec = new_spec;
