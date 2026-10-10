@@ -23,12 +23,9 @@ fn spell_override_queue_resolves_after_aura_expiry_not_at_admission() {
     );
     h.advance(235);
     let now = super::now(h.app.world());
-    h.app
-        .world_mut()
-        .get_mut::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .gcd_ready_at
-        .insert(133, now + 0.4);
+    let mut history = super::SpellHistory::default();
+    history.gcd_ready_at.insert(133, now + 0.4);
+    h.app.world_mut().entity_mut(h.caster).insert(history);
     h.cast(85288, Some(h.npc));
     h.advance(15);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
