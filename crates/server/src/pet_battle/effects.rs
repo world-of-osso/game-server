@@ -290,6 +290,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         max: usize,
         tick_first: bool,
     ) -> Result<(), String> {
+        let max_turn = self
+            .catalog
+            .ability_turns(effect.aura)
+            .iter()
+            .filter(|t| t.kind == 0)
+            .map(|t| t.order)
+            .max()
+            .unwrap_or(1) as i32;
+        let remaining = if effect.params[2] == -1 {
+            -1
+        } else {
+            effect.params[2].max(max_turn)
+        };
         let matching: Vec<_> = self
             .battle
             .auras
@@ -300,7 +313,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             .collect();
         if matching.len() >= max {
             let aura = &mut self.battle.auras[matching[0]];
-            aura.remaining = effect.params[2];
+            aura.remaining = remaining;
             aura.turn = 1;
             aura.applied_round = self.battle.round;
             aura.tick_first = tick_first;
@@ -316,10 +329,11 @@ impl<R: BattleRng> Runtime<'_, R> {
             ability: effect.aura,
             caster,
             target,
-            remaining: effect.params[2],
+            remaining,
             turn: 1,
             applied_round: self.battle.round,
             tick_first,
+            team_bound: effect.property == 63,
         };
         self.battle.next_aura += 1;
         self.apply_aura_states(&aura, 1);
