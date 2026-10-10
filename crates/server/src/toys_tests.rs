@@ -9,6 +9,10 @@ const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
+    setup_for_race(path, 1)
+}
+
+fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
     let mut h = harness(
         Vec::new(),
         &[
@@ -23,7 +27,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
     .unwrap();
     let db = redb::Database::create(path).unwrap();
     persistence::create_tables(&db);
-    let (character, _) = persistence::create_character(&db, 1, "ToyMage", 1, 8).unwrap();
+    let (character, _) = persistence::create_character(&db, 1, "ToyMage", race, 8).unwrap();
     let item = |id| InventoryItemData {
         item_guid: persistence::next_id(&db, "item_instance"),
         item_id: id,
@@ -69,6 +73,11 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         .world_mut()
         .entity_mut(h.caster)
         .insert((CombatStatus(false), Level(80)));
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(h.caster)
+        .unwrap()
+        .race = race;
     h.app.world_mut().entity_mut(h.connection).insert((
         InWorld {
             character_id: character,
@@ -1243,7 +1252,8 @@ fn toyfx5_visual_attachments_use_real_toys_and_cancel_without_gameplay_changes()
         (267456, 1280563), // Lil' Scoots' Pillow
     ] {
         let dir = tempfile::tempdir().unwrap();
-        let (mut h, character) = setup(&dir.path().join("toys.redb"));
+        let race = if item == 165791 { 2 } else { 1 }; // Worn Cloak is Horde-only.
+        let (mut h, character) = setup_for_race(&dir.path().join("toys.redb"), race);
         learn_effect_toy(&mut h, character, item);
         let health_before = *h
             .app
@@ -1311,6 +1321,17 @@ fn toyfx5_visual_attachments_use_real_toys_and_cancel_without_gameplay_changes()
                 .any(|aura| aura.spell_id == spell),
             "toy {item}"
         );
+        if item == 165791 {
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Player>(h.caster)
+                .unwrap()
+                .race = 1;
+            assert_eq!(
+                activate(&mut h, item)[0].error.as_deref(),
+                Some("toy race/class restriction")
+            );
+        }
     }
 }
 
