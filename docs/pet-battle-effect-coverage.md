@@ -1,25 +1,27 @@
 # Pet battle effect-property coverage
 
-Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `896af2fbecc446b007506daa731f8bd207148c67`.
+Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `607671d1bd52c174b573b83fa033362643072eef` (origin/master merged into petbattle-effects2).
 
 ## Coverage by rows — do not conflate these metrics
 
 | Metric | Before | After |
 |---|---:|---:|
-| Handler IDs / referenced IDs |12/104|40/104|
-| Rows referencing handler IDs |2008/2829 (70.98%)|2605/2829 (92.08%)|
-| Rows in recursively admitted ability graphs |930/2829 (32.87%)|1568/2829 (55.43%)|
-| Admitted ability records (including empty/passive records) |657/1404|913/1404|
+| Handler IDs / referenced IDs |40/104|55/104|
+| Rows referencing handler IDs |2605/2829 (92.08%)|2672/2829 (94.45%)|
+| Rows in recursively admitted ability graphs |1568/2829 (55.43%)|1727/2829 (61.05%)|
+| Admitted ability records (including empty/passive records) |913/1404|987/1404|
 
-**The >=90% executable-row goal is NOT met.** Handler references exceed90%, but1037 rows referencing implemented IDs still belong to rejected graphs, plus224 rows use64 unsupported IDs. New admission adds638 rows. Static admission is not behavioral proof of every row or current Retail parity. The largest unsupported ID has13 rows; remaining gaps inside common IDs are not rare.
+**The90% executable-row goal and completion of the original partial handlers are NOT met.** This continuation adds159 admitted rows and74 ability records.945 rows referencing implemented IDs still belong to rejected graphs;157 rows use49 unsupported IDs. The90% target needs820 more admitted rows. Static admission is not all-row behavioral or Retail proof. Wild inventory:83/99 candidate abilities from spawned wild species on hosted maps0/1/2991 now admit; this is not live spawn/level/loadout utilization.
 
 ## Original12 Partial handlers — exact changes and remaining gaps
+
+Continuation:24/222 gain active-plus-bench routes,50 gains Cyclone/Stench,23/31 gain bounded Leech Life383,54 gains Creeping Fungus742/743. Unknown OverrideIndex, per-level max-health formula, generic callbacks, clone/type and kill semantics remain excluded. The following table retains prior-cycle changes with current remaining gaps.
 
 | ID | Previously missing | Added this cycle | Still not established/implemented |
 |---:|---|---|---|
 |24|OverrideIndex; multi-pet targets; hit/round state bookkeeping; weather family modifiers|Real slot routing for404/419, last-hit/round states, weather family modifiers, shared blocking|103 nonzero OverrideIndex rows; unrepresented team routing; exact Retail rounding/crit coupling|
 |26|Special/max-health states; object/proc graphs; zero-accuracy next-swap trigger|Percent max-health cap via state99, source/recipient healing context, Bend Time team trigger|Per-level maxHealthBonus2 requires level metadata; most object/clone/proc graphs; unexplained Accuracy0 rows|
-|50|CasterState/TargetState; shared object/team semantics; refresh state|Required-state guards and exact Decoy refresh/team lifecycle|Other object auras such as Cyclone190; reactive proc ordering|
+|50|CasterState/TargetState; shared object/team semantics; refresh state|Required-state guards and exact Decoy refresh/team lifecycle|Other object auras; reactive proc ordering (Cyclone190 now covered)|
 |49|Unused Param1 values; Chance0 scripted removal; callback scope|Unused Param1 accepted; unconditional0 inferred from one-shot Bend Time; source-owned removal|Unsupported callback graphs and unknown target routing still rejected|
 |23|Healing recipient versus original source power/dealt modifier|Separate source/recipient for pad healing and correct swapped recipient cap|Ambiguous backline/GM routing; live Retail rounding proof|
 |222|Weather family modifiers and shared blocking/caps|Inherited shared damage pipeline with explicit variance|Referenced graph gaps; current export has only zero OverrideIndex for222|
@@ -36,14 +38,14 @@ Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `
 
 | Property | Rows | Admitted rows | Implementation / boundary | Real-ability fixed-RNG proof |
 |---:|---:|---:|---|---|
-|24|945|508|Partial: zero OverrideIndex; slot routing404/419; other team routing rejected|Bite110; Sunlight404; Tidal Wave419|
+|24|945|571|Partial: zero OverrideIndex; grounded active/bench routes; other targets rejected|Bite110; Sunlight404; Tidal Wave419; Arcane Explosion299|
 |26|244|155|Dispatch; special-stat/proc graphs and unexplained Accuracy0 gated|Burrow159; Metabolic Boost194; Bend Time1905|
-|50|194|98|Dispatch: state gates, max stacks/refresh; non-Decoy object graphs rejected|Curse218; Moth Balls507/effect1165|
+|50|194|105|Dispatch: state guards, stacks/refresh, Cyclone object and Stench per-pet routing|Curse218; Moth Balls507; Cyclone190; Stench527|
 |49|138|55|Dispatch: chance/default0, unused Param1; callback graphs gated|Burrow159; Failsafe723; Bend Time1904|
-|23|115|85|Dispatch: source power/dealt modifier, recipient cap/taken modifier|Healing Wave123; Tranquility254/255|
-|222|90|78|Dispatch: explicit variance, weather family modifiers, central Magic cap|Burn113; Burrow159|
-|31|86|69|Dispatch: absolute state, Critter direct-CC immunity; unknown state semantics gated|Deep Breath169; GM Stun292|
-|54|77|54|Dispatch: chain guard, duration/max stacks; reactive proc graphs gated|Poison Fang152; Aquatic passive|
+|23|115|93|Dispatch: source power/dealt modifier, recipient cap/taken modifier|Healing Wave123; Tranquility254/255; Leech Life383|
+|222|90|82|Dispatch: explicit variance, weather family modifiers, central Magic cap|Burn113; Burrow159; Cyclone189/190|
+|31|86|71|Dispatch: absolute state, Critter direct-CC immunity; unknown state semantics gated|Deep Breath169; GM Stun292|
+|54|77|55|Dispatch: chain guard, duration/max stacks; reactive proc graphs gated|Poison Fang152; Aquatic passive; Creeping Fungus743|
 |158|69|57|Dispatch: stop remaining effects after failed chain|Death Coil121 miss/hit|
 |22|61|40|Dispatch: all Points fields are tooltip metadata, no HP operation|Healthy577 (isolated dummy); Curse218|
 |116|57|46|Dispatch: priority evaluated before order; equal priorities use speed/RNG|Quick Attack563; Belly Slide529|
@@ -51,7 +53,7 @@ Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `
 |28|29|23|Dispatch: cancellable/self aura; shared Decoy charges; other objects gated|Decoy334/333 swap/refresh|
 |85|29|13|Partial: reset auras with named state; missing state161 remains rejected|Tidal Wave419 clears objects|
 |79|28|19|Dispatch: additive bounded states; priority cleanup bound to original actor|Quick Attack563; forced swap780|
-|177|28|12|Dispatch: target-state equality stops later branch, not prior damage|Frog Kiss233/Resilient149|
+|177|28|24|Dispatch: target-state equality stops later branch, not prior damage|Frog Kiss233/Resilient149|
 |135|27|3|Partial: grounded self-kills282/663/2209 only; other routing rejected|Explode282 skips Failsafe|
 |32|25|13|Dispatch: percentage of actual last hit, no second power scaling|Death Coil121 restores42 of84|
 |80|24|11|Partial: global weather, exact delta reversal, Elemental exemptions; flat-source scaling gated|Darkness256; Moonfire595; Sunlight404; Scorched Earth172|
@@ -59,45 +61,45 @@ Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `
 |29|23|10|Dispatch: additional damage only with required caster/target state|Takedown221 normal/stunned|
 |62|23|8|Dispatch: target max-HP percentage without power/variance; typed damage/cap|Trample377|
 |384|23|23|Dispatch: faster/first-strike conditional attack|Tail Sweep122 faster|
-|141|22|21|Dispatch: split pool across living enemy pets, conditional weather bonus|Arcane Storm589 three/two targets|
+|141|22|22|Dispatch: split pool across living enemy pets, conditional weather bonus|Arcane Storm589 three/two targets|
 |27|21|20|Dispatch: capped ramp; hits156/930 versus uses for others|Frog Kiss233; Vicious Fang156 miss|
 |136|19|16|Dispatch: personal aura cleanse, not global weather/team objects|Sear Magic763|
 |145|18|12|Dispatch: highest-health live bench swap; displaced action cancelled|Sweep457|
 |373|17|8|Dispatch: zero-based ability slot assignment; surrounding boss states gated|Necrotic Reconstruction2262 (isolated trigger)|
 |139|15|12|Dispatch: lowest-health live bench swap; displaced action cancelled|Death Grip780|
-|157|14|4|Dispatch: caster-state equality gates remaining branch|Belly Slide529 Blizzard state58|
+|157|14|5|Dispatch: caster-state equality gates remaining branch|Belly Slide529 Blizzard state58|
 |111|13|2|Partial: self resurrection; ambiguous team resurrection gated|Failsafe723 restores2000, clears dead|
 |179|13|0|No; explicit rejection|—|
 |229|13|0|No; explicit rejection|—|
 |246|12|6|Partial: zero modification clears one-based slots; nonzero modification undetermined|Bend Time1905/1904 next incoming pet|
 |68|11|3|Partial: source-HP percentage, grounded self-sacrifice/enemy routing; other graphs gated|Explode282|
-|104|11|9|Dispatch: required-state heal, explicit variance|Devour538 only after death|
+|104|11|10|Dispatch: required-state heal, explicit variance|Devour538 only after death|
 |53|10|7|Dispatch: recipient maximum-HP percentage, no second power scaling|Wish273/274; Recovery726|
-|159|10|0|No; explicit rejection|—|
+|159|10|4|Partial: selectors only in Stench527/1010; other graphs rejected|Stench527|
 |0|9|0|No; explicit rejection|—|
 |107|9|0|No; explicit rejection|—|
-|131|9|0|No; explicit rejection|—|
+|131|9|8|Partial: first-acting interrupt; Horn Attack chain rejected|Kick307|
 |156|9|0|No; explicit rejection|—|
 |363|9|0|No; explicit rejection|—|
 |150|8|0|No; explicit rejection|—|
-|76|7|0|No; explicit rejection|—|
-|96|7|0|No; explicit rejection|—|
-|100|6|0|No; explicit rejection|—|
+|76|7|7|Dispatch: persistent charge; second use fires and consumes charge|Wind-Up459|
+|96|7|7|Dispatch: required-state guarantees accuracy; targetability still checked|Nocturnal Strike517|
+|100|6|6|Dispatch: living other allies and family filters;533/922/1956 only|Rebuild533, nonzero active slot|
 |168|6|0|No; explicit rejection|—|
 |170|6|6|Dispatch: weather-gated additional damage|Solar Beam753 Sunlight state61|
-|226|6|0|No; explicit rejection|—|
+|226|6|6|Dispatch: bonus points for target state|Deep Burn1407|
 |25|5|0|No; explicit rejection|—|
 |121|5|0|No; explicit rejection|—|
 |122|5|0|No; explicit rejection|—|
-|44|4|0|No; explicit rejection|—|
-|59|4|0|No; explicit rejection|—|
+|44|4|4|Dispatch: percentage of actual last hit taken; no second power scaling|Cauterize173|
+|59|4|4|Dispatch: additional hit only with lower current HP|Comeback253|
 |63|4|4|Dispatch: team pad versus wearer; retain source power through swaps|Wish273; Tranquility254; Photosynthesis268|
 |112|4|0|No; explicit rejection|—|
 |169|4|2|Partial: negative-state damage; front-pair weather routing; reactive events gated|Scorched Earth171/172 Elemental exemption|
-|172|4|0|No; explicit rejection|—|
+|172|4|4|Dispatch: state increases stun chance; existing CC immunity|Deep Freeze481 normal/chilled/Critter|
 |372|4|0|No; explicit rejection|—|
 |385|4|4|Dispatch: slower/last-strike conditional attack|Tail Sweep122 slower|
-|66|3|0|No; explicit rejection|—|
+|66|3|3|Dispatch: double below25%, not at25%|Predatory Strike518|
 |128|3|0|No; explicit rejection|—|
 |129|3|0|No; explicit rejection|—|
 |230|3|0|No; explicit rejection|—|
@@ -108,25 +110,25 @@ Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `
 |123|2|0|No; explicit rejection|—|
 |124|2|0|No; explicit rejection|—|
 |138|2|0|No; explicit rejection|—|
-|149|2|0|No; explicit rejection|—|
+|149|2|2|Dispatch: damage cannot reduce target below1|Weakening Blow826 Mechanical target|
 |194|2|0|No; explicit rejection|—|
 |197|2|0|No; explicit rejection|—|
 |223|2|0|No; explicit rejection|—|
 |249|2|0|No; explicit rejection|—|
-|254|2|0|No; explicit rejection|—|
+|254|2|1|Partial: low-health heal; Gonk2069 callback rejected|Eat the Fly2206|
 |255|2|0|No; explicit rejection|—|
 |256|2|0|No; explicit rejection|—|
 |360|2|0|No; explicit rejection|—|
-|45|1|0|No; explicit rejection|—|
+|45|1|1|Dispatch: strict slower-speed bonus; actual20/150 values|Slow Digestion2024|
 |61|1|0|No; explicit rejection|—|
-|65|1|0|No; explicit rejection|—|
+|65|1|1|Dispatch: caster weather-state bonus, periodic damage|Creeping Fungus742/743|
 |67|1|0|No; explicit rejection|—|
 |72|1|0|No; explicit rejection|—|
 |74|1|0|No; explicit rejection|—|
 |75|1|0|No; explicit rejection|—|
 |78|1|0|No; explicit rejection|—|
 |86|1|0|No; explicit rejection|—|
-|97|1|0|No; explicit rejection|—|
+|97|1|1|Dispatch: strict faster-speed bonus; actual20/150 values|Rapid Consumption2026|
 |137|1|0|No; explicit rejection|—|
 |140|1|0|No; explicit rejection|—|
 |144|1|0|No; explicit rejection|—|
@@ -143,11 +145,11 @@ Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `
 
 ## Undetermined / deliberately rejected, not fabricated
 
-- **Target/override representation:** property24 OverrideIndex has103 nonzero rows, but labels/descriptions do not establish variance/critical/hit reuse. Broad team/bench descriptions without a implemented route are rejected; Sunlight404 and Tidal Wave419 have explicit three-slot routes. Heal Back Line70/GM Heal295/GM Revive714 and unknown135 kill routing are rejected rather than selecting the caster repeatedly.
+- **Target/override representation:** property24 OverrideIndex has103 nonzero rows, but labels/descriptions do not establish variance/critical/hit reuse. Broad team/bench descriptions without a implemented route are rejected; Sunlight404, Tidal Wave419 and16 additional described three-row attacks have active/other-enemy routes. Arbitrary team graphs remain rejected. Heal Back Line70/GM Heal295/GM Revive714 and unknown135 kill routing are rejected rather than selecting the caster repeatedly.
 - **State/special stat semantics:** state161 referenced by85 is absent from BattlePetState; no invented category. State2 maxHealthBonus is per-level, but Pet has no level field. Clone/type-override/boss state graphs remain gated. Sunny Day403 has state99=50 and65=25: max cap15000 and heal225 from Healing Wave30*6*1.25 are tested; no healing effect is invented on weather application. Current-HP transition/rounding has no captured Retail proof.
-- **Reactive and conditional aura semantics:** proc events1..4/9/12 remain rejected because current data does not determine precise callback ordering/recursion, hit ownership and aura expiry interaction.179 (13 rows) needs retaliation ownership;229 (13 rows) needs conditional type-state polarity/refresh semantics. These are the two largest unsupported IDs. Complex chain values in632/1962 and special immunity/reverse/passive options in135 remain unproven.
-- **Weather/terrain and cooldown boundaries:** Darkness, Moonlight, Sunlight, Arcane Winds and Scorched Earth have real-ID CPU cases. Flat-modifier weather (Sandstorm454) is rejected until the tooltip AttackBonus power owner is established; no attacker/source substitution. Cleansing Rain duration changes, Lightning proc damage and non-Decoy terrain/object effects are not certified.246 modification1 in Forbidden Hourglass1932 is not inferable from its terse description, so only0 clearing executes.
-- **Numerical/runtime boundary:** inherited weak multiplier.67, family passive/crit constants and rounding are not newly invented, but exact current Retail game-table/observed timing remains absent. No live Retail comparison or independent verifier PASS; Claude OAuth expired before verification ran.64 unsupported IDs are listed in the matrix; not every omitted rare handler is intrinsically unknowable.
+- **Reactive and conditional aura semantics:** proc events1..4/9/12 remain rejected except Leech Life383's own post-hit healing event2; current data does not determine generic callback ordering/recursion, hit ownership and aura expiry interaction.179 (13 rows) needs retaliation ownership;229 (13 rows) needs conditional type-state polarity/refresh semantics. These are the two largest unsupported IDs. Complex chain values in632/1962 and special immunity/reverse/passive options in135 remain unproven.
+- **Weather/terrain and cooldown boundaries:** Darkness, Moonlight, Sunlight, Arcane Winds and Scorched Earth have real-ID CPU cases. Flat-modifier weather (Sandstorm454) is rejected until the tooltip AttackBonus power owner is established; no attacker/source substitution. Cleansing Rain duration changes, Lightning proc damage and objects other than Decoy/Cyclone are not certified.246 modification1 in Forbidden Hourglass1932 is not inferable from its terse description, so only0 clearing executes.
+- **Numerical/runtime boundary:** inherited weak multiplier.67, family passive/crit constants and rounding are not newly invented, but exact current Retail game-table/observed timing remains absent. No live Retail comparison or independent verifier PASS; Claude OAuth expired before verification ran.49 unsupported IDs are listed in the matrix; not every omitted rare handler is intrinsically unknowable. Life Exchange277 averaging/rounding and generic159/194 selectors remain undetermined.
 
 ## Data citations / derivation
 
@@ -159,7 +161,7 @@ Source of new semantics is read-only `data/world.db` imported from authenticated
 - Decoy333 states69=1,74=2,75=333; Decoy334 description says block two attacks. Tranquility254 and Renewing Mists511 explicitly persist through pet swaps; Photosynthesis268 does not describe a team pad, and its conditional heal267 tests Sunlight61.
 - Explode282 explicitly prevents Failsafe; its68 Points40 is source-health percent and135 kills the caster. GM Kill All Enemy967 contradicts that same default target, so its graph is rejected. Tidal Wave419 explicitly damages enemy pets and destroys both teams' objects. Failsafe723111 Percentage20 restores2000/10000, independent of power.
 
-All hand-derived expected numbers are comments beside the actual assertions in `crates/server/src/pet_battle/property_tests.rs`; pre-existing cases remain in `tests.rs`. No battle data staged or committed.
+Cases are in `crates/server/src/pet_battle/{property_tests,effects2_tests}.rs`; pre-existing cases remain in `tests.rs`. New semantics come from actual labels/descriptions. Cyclone189 has6/35/50 points/accuracy/variance, object state69 and three damage rows; root190 lasts5 rounds. Stench527/1010 names enemy-team accuracy reduction;159 only separates its three50 rows. Root383 names ON_DAMAGE_DEALT healing and its event2 only heals/sets guards. No generic damage callback was enabled. No battle data staged or committed.
 
 No local TrinityCore pet-battle effect interpreter was found in known reference locations. Diagnostic `PetBattleAbilityEffect.cpp`/`PetBattle.cpp` files are **LegionCore9222216**, not TrinityCore or current Retail authority; their explicit unknown/no-op removal and kill handlers were not adopted. Retained TrinityCorea352b1fa stat provenance and local Retail SharedPetBattleTemplates formula provenance live in the [engine wiki](wiki/systems/pet-battle-engine.md#numeric-provenance), not a claim that TrinityCore implements these new properties.
 
@@ -168,11 +170,11 @@ No local TrinityCore pet-battle effect interpreter was found in known reference 
 From the leased slot, no dependency override/CSV environment needed:
 
 ```text
-/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run pbfx cargo test --locked -p server pet_battle -- --nocapture
+/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run pbfx2 cargo test --locked -p server pet_battle -- --nocapture
 ```
 
-At Rust896af2f:55 engine tests +7 wild/startup tests pass (62 total), no failures/ignored cases within the filter; unrelated1735+18+4+3 tests filtered, not run. `cargo fmt -p server -- --check` and `cargo check --locked -p server` exit0, no warnings. No full suite rerun, client/live capture, merge or protected-service work.
+At Rust607671d after the feature-branch master merge:72 engine +7 wild/startup tests pass (79 total), zero failures/ignored; unrelated1872+18+4+3 filtered. Format/check exit0, no warnings observed. No full workspace suite, live/client test, deployment or master merge.
 
-Durable proof root: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/pbfx-20261010/`. `batch1-red/green/green2`, `batch2-red/green`, `batch3-red/green`, `batch4-red/green`, `bend-time-red`, `admission-refresh-red`, `priority-owner-red`, `priority-class-red`, `final-targeted`, `fmt-check`, `cargo-check` logs retain actual intermediate failures and final outputs. Batch2's initial Takedown expected value omitted the Humanoid-vs-Beast weak multiplier; the corrected test uses a neutral Humanoid defender. Batch3's initial Belly Slide expectation incorrectly assumed Order was the first event despite its begin-round AuraApplied; it now checks the actual Order event. These are fixture corrections, not extra passing proof.
+Durable proof: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/pbfx2-20261010/`. Four batches reproduce6/5/2/4 missing-behavior failures before implementation;17 new real-ID tests pass. The first post-merge suite found an obsolete Cyclone-rejection assertion; it now proves Volcano176 remains rejected before RNG. `final-pet-battle-corrected.log` is current79-test proof. `verification-receipt.json` records format/check outcomes and stdout/compiler-stderr logging boundary; large full tool captures are retained. Previous evidence remains in sibling `pbfx-20261010/`.
 
-Machine census: `coverage.json`; authentic joins/labels/state IDs: `effect-evidence.json`, `property-labels.json`, `state-evidence.json`. The final requested command ran once after the last Rust change; documentation-only changes do not invalidate it.
+`coverage.json` includes every rejected root's first blocker. `wild-property-ranking.json` and `wild-after.json` preserve99 candidate abilities and16 remaining blockers. `effect-evidence.json`, `property-evidence.json`, `tooltip-source.txt` cite local records and Lua hash. Documentation-only changes do not invalidate Rust proof. Original partial handlers and90% admission remain unfinished; no independent verification or live Retail parity claim.

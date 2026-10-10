@@ -4,6 +4,9 @@ use rusqlite::Connection;
 #[path = "property_tests.rs"]
 mod property_tests;
 
+#[path = "effects2_tests.rs"]
+mod effects2_tests;
+
 fn fixture_db() -> Connection {
     // Copy only battle tables; corruption tests must never mutate shipped world.db.
     let db = Connection::open_in_memory().unwrap();
@@ -415,9 +418,10 @@ fn pet_battle_fainted_replacement_does_not_advance_combat() {
 #[test]
 fn pet_battle_unimplemented_object_aura_is_rejected() {
     let c = catalog();
-    let b = battle(&c, 2, 7, [190, 110, 123]);
+    // Cyclone190 is supported; Volcano176/175 still has undetermined object semantics.
+    let b = battle(&c, 2, 7, [176, 110, 123]);
     let err = b
-        .step(&c, [Action::Ability(190), Action::Pass], &mut Fixed(500000))
+        .step(&c, [Action::Ability(176), Action::Pass], &mut NoDraw)
         .unwrap_err();
     assert!(err.contains("object"));
 }
@@ -588,8 +592,13 @@ fn pet_battle_catalog_inventory_and_admission() {
         let admitted_rows=c.effects.values().filter(|e|e.property==property && admitted.contains(&c.turns[&e.turn].ability)).count();
         serde_json::json!({"property":property,"rows":rows,"handler":supported_property(property),"admitted_rows":admitted_rows})
     }).collect();
+    let admission: Vec<_> = c
+        .abilities
+        .keys()
+        .map(|id| serde_json::json!({"ability": id, "error": validate_ability(&c, *id).err()}))
+        .collect();
     println!(
         "PET_BATTLE_COVERAGE={}",
-        serde_json::json!({"properties":coverage,"admitted_abilities":admitted.len(),"total_abilities":c.abilities.len(),"unresolved_states":c.unresolved_states.len()})
+        serde_json::json!({"properties":coverage,"admitted_abilities":admitted.len(),"total_abilities":c.abilities.len(),"unresolved_states":c.unresolved_states.len(),"admission":admission})
     );
 }
