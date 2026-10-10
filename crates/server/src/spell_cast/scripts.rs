@@ -60,6 +60,7 @@ const LICHBORNE: u32 = 49_039;
 const OUTBREAK: u32 = 77_575;
 const DREAD_PLAGUE: u32 = 1_240_996;
 const VIRULENT_PLAGUE: u32 = 191_587;
+const CHAIN_HEAL: u32 = 1_064;
 
 /// `SpellEffectFn` on `OnEffectHitTarget`: runs per unit the effect selects,
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
@@ -156,6 +157,93 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         _ => None,
     }
+}
+
+pub(super) type TargetPlanHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> super::TargetPlan;
+
+/// Script-owned target plans still use normal validation, hit and effect paths.
+pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    match spell_id {
+        CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
+        _ => None,
+    }
+}
+
+/// Retail1064 $s2/$s3 supply falloff and jump radius; effect0 supplies four
+/// total targets. TC a352b1fa Spell.cpp:2273-2322 chooses greatest HP deficit,
+/// then moves the next jump's source. Its old 12.5yd default is NOT Retail's20yd.
+fn chain_heal_plan(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> super::TargetPlan {
+    let primary = explicit.expect("Chain Heal has a validated ally target");
+    let jumps = spell.effects[0].chain_targets.saturating_sub(1) as usize;
+    let radius = script_effect_value(world, caster, CHAIN_HEAL, 2);
+    let amplitude = 1.0 - script_effect_value(world, caster, CHAIN_HEAL, 1) / 100.0;
+    let mut units = vec![primary];
+    units.extend(chain_heal_jumps(world, caster, primary, radius, jumps));
+    let chain_multipliers =
+        std::iter::successors(Some(1.0), |multiplier| Some(multiplier * amplitude))
+            .zip(&units)
+            .map(|(multiplier, &unit)| (unit, multiplier))
+            .collect();
+    vec![super::PlannedEffect {
+        index: 0,
+        units,
+        dest: None,
+        chain_multipliers,
+    }]
+}
+
+fn chain_heal_jumps(
+    world: &mut World,
+    caster: Entity,
+    primary: Entity,
+    radius: f32,
+    jumps: usize,
+) -> Vec<Entity> {
+    let center = super::targets::position(world, primary).expect("validated target position");
+    let mut candidates = super::targets::area_units(
+        world,
+        caster,
+        center,
+        radius * jumps as f32,
+        Relation::Ally,
+        0,
+    );
+    candidates.retain(|&unit| unit != primary);
+    let mut source = primary;
+    let mut chain = Vec::new();
+    while chain.len() < jumps {
+        let from = super::targets::position(world, source).expect("chain source position");
+        let Some(slot) = most_injured_within(world, &candidates, from, radius) else {
+            break;
+        };
+        source = candidates.remove(slot);
+        chain.push(source);
+    }
+    chain
+}
+
+fn most_injured_within(
+    world: &World,
+    candidates: &[Entity],
+    from: Vec3,
+    radius: f32,
+) -> Option<usize> {
+    candidates
+        .iter()
+        .enumerate()
+        .filter_map(|(slot, &unit)| {
+            let distance = super::targets::position(world, unit)?.distance(from);
+            let health = world.get::<shared::components::Health>(unit)?;
+            (distance <= radius).then_some((slot, health.max - health.current))
+        })
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(slot, _)| slot)
 }
 
 /// Validate before spending costs: Retail47541 heals only an Undead ally.

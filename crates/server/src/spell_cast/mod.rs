@@ -987,7 +987,9 @@ fn validate_start(
     if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }
-    if let Some(id) = handled_effects(spell).find_map(targets::unsupported_target) {
+    if scripts::target_plan(spell.id).is_none()
+        && let Some(id) = handled_effects(spell).find_map(targets::unsupported_target)
+    {
         return Err(CastFailure::Unsupported(format!(
             "implicit target {id} not supported"
         )));
@@ -1088,7 +1090,9 @@ fn validate_target(
         .any(crate::death::resurrection::is_resurrection);
     // Retail resurrection rows have both implicit targets zero; their effect still
     // requires an explicit dead ally and the normal range/LOS checks.
-    let requirement = targets::explicit_requirement(handled_effects(spell))
+    let requirement = scripts::target_plan(spell.id)
+        .map(|(relation, _)| relation)
+        .or_else(|| targets::explicit_requirement(handled_effects(spell)))
         .or_else(|| resurrects.then_some(Relation::Ally));
     let Some(relation) = requirement else {
         return Ok(explicit);
@@ -1486,6 +1490,11 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    if let Some((_, select)) = scripts::target_plan(spell.id) {
+        let mut plan = select(world, caster, spell, explicit);
+        hit::remove_defended_targets(world, caster, spell, &mut plan);
+        return Ok(plan);
+    }
     let cap = max_targets(spell);
     let mut plan = Vec::new();
     // Units per leading effect (`processedEffectsMaskForSpell`).
