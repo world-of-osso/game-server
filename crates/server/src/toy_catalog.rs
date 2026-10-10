@@ -18,7 +18,23 @@ pub(crate) struct Toy {
 pub(crate) struct ToyCatalog(pub BTreeMap<u32, Toy>);
 
 pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
-    let mut query = conn.prepare("SELECT t.ItemID, s.Display_lang, i.IconFileDataID, s.ExpansionID, t.Flags, t.SourceTypeEnum, t.SourceText_lang, e.SpellID, e.CoolDownMSec, e.SpellCategoryID, e.CategoryCoolDownMSec, e.PlayerConditionID, e.ChrSpecializationID FROM toy t LEFT JOIN item i ON i.ID=t.ItemID LEFT JOIN item_sparse s ON s.ID=t.ItemID LEFT JOIN (SELECT x.ItemID,e.*,ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY e.LegacySlotIndex,e.ID) AS slot FROM item_x_item_effect x JOIN item_effect e ON e.ID=x.ItemEffectID WHERE e.TriggerType=0 AND e.SpellID>0) e ON e.ItemID=t.ItemID AND e.slot=1 ORDER BY t.ItemID")?;
+    let mut query = conn.prepare(
+        "SELECT t.ItemID, s.Display_lang, i.IconFileDataID, s.ExpansionID,
+                t.Flags, t.SourceTypeEnum, t.SourceText_lang, e.SpellID,
+                e.CoolDownMSec, e.SpellCategoryID, e.CategoryCoolDownMSec,
+                e.PlayerConditionID, e.ChrSpecializationID, c.ID
+         FROM toy t
+         LEFT JOIN item i ON i.ID=t.ItemID
+         LEFT JOIN item_sparse s ON s.ID=t.ItemID
+         LEFT JOIN content_item c ON c.ID=t.ItemID
+         LEFT JOIN (
+             SELECT x.ItemID,e.*,ROW_NUMBER() OVER (
+                 PARTITION BY x.ItemID ORDER BY e.LegacySlotIndex,e.ID) AS slot
+             FROM item_x_item_effect x JOIN item_effect e ON e.ID=x.ItemEffectID
+             WHERE e.TriggerType=0 AND e.SpellID>0
+         ) e ON e.ItemID=t.ItemID AND e.slot=1
+         ORDER BY t.ItemID",
+    )?;
     let rows = query
         .query_map([], |r| {
             let name: Option<String> = r.get(1)?;
@@ -29,6 +45,8 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
                 Some("unresolved Item/ItemSparse row".into())
             } else if spell_id.is_none() {
                 Some("unresolved ItemEffect on-use spell".into())
+            } else if r.get::<_, Option<u32>>(13)?.is_none() {
+                Some("item absent from runtime content_item catalog".into())
             } else if spec.is_some_and(|id| id != 0) {
                 Some("toy specialization restriction not supported".into())
             } else {
@@ -78,6 +96,7 @@ fn classify(
     reasons: &mut BTreeSet<String>,
 ) {
     if !visiting.insert(spell_id) {
+        reasons.insert("trigger cycle".into());
         return;
     }
     let Some(spell) = world.resource::<SpellStore>().get(spell_id) else {

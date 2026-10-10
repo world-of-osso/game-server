@@ -9,7 +9,7 @@ const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
-    let mut h = harness(Vec::new(), &[TRANSFORM, 51640], 8).unwrap();
+    let mut h = harness(Vec::new(), &[TRANSFORM, 51640, 61810], 8).unwrap();
     let db = redb::Database::create(path).unwrap();
     persistence::create_tables(&db);
     let (character, _) = persistence::create_character(&db, 1, "ToyMage", 1, 8).unwrap();
@@ -28,7 +28,7 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
         character,
         &InventoryData {
             gold: 0,
-            items: vec![item(FIGURINE), item(FLAG_OWNERSHIP)],
+            items: vec![item(FIGURINE), item(FLAG_OWNERSHIP), item(188698)],
         },
     );
     let path = crate::test_data::world_db_path();
@@ -233,6 +233,30 @@ fn toys_use_real_transform_starts_item_recovery_and_rejects_repeat() {
 }
 
 #[test]
+fn toys_category_override_expires_authoritatively() {
+    // Eagger Basket: ItemEffect category1203/10s; SpellCooldowns recovery0,
+    // spell category44 must not replace the item category.
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    learn(&mut h, 2);
+    assert_eq!(activate(&mut h, 188698)[0].error, None);
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .any(|update| update.spell_id == 61810
+                && update.category == 1203
+                && update.duration_ms == 10_000)
+    );
+    assert_eq!(
+        activate(&mut h, 188698)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    h.advance(201);
+    assert_eq!(activate(&mut h, 188698)[0].error, None);
+}
+
+#[test]
 fn toys_unsupported_dummy_is_not_silent_success() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, _) = setup(&dir.path().join("toys.redb"));
@@ -358,7 +382,16 @@ fn toys_effect_census() {
     world.insert_resource(crate::world_data::load_world_data(
         &crate::test_data::world_db_path(),
     ));
-    world.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    let has_summon_properties: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    if has_summon_properties {
+        world.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    } // Absent local reference data means effect 28 is explicitly unavailable.
     let store = world.resource::<crate::spell_info::SpellStore>();
     let mut unsupported: BTreeMap<String, BTreeSet<u32>> = BTreeMap::new();
     let mut effects: BTreeMap<u32, BTreeSet<u32>> = BTreeMap::new();
