@@ -189,6 +189,35 @@ fn dummy3_garrote_from_stealth_with_rank_silences_and_reduces_damage_for_five_se
 }
 
 #[test]
+fn dummy3_garrote_cannot_apply_silence_damage_reduction_to_silence_immune_target() {
+    let mut h =
+        harness(Vec::new(), &[703, 1784, 196861, 1330, 256148, 104773], 4).expect("real world.db");
+    // Unending Resolve's real effect3 is mechanic9 (silence) immunity.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.npc,
+            target: h.npc,
+            spell_id: 104773,
+            effect_mask: 1 << 3,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = false;
+    h.cast_and_deliver(1784, Some(h.caster));
+    h.advance(35);
+    h.set_power(PowerType::Energy, 100.0);
+    h.cast_and_deliver(703, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(!crate::auras::has_aura(h.app.world(), h.npc, 1330));
+    assert!(!crate::auras::has_aura(h.app.world(), h.npc, 256148));
+}
+
+#[test]
 fn dummy3_garrote_rank_without_stealth_has_no_silence() {
     let mut h = harness(Vec::new(), &[703, 196861, 1330, 256148], 4).expect("real world.db");
     h.set_power(PowerType::Energy, 100.0);
