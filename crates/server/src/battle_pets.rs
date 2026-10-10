@@ -66,6 +66,7 @@ struct Species {
 
 #[derive(Resource)]
 pub(crate) struct PetCatalog {
+    pub(crate) battle: ::server::pet_battle::Catalog,
     species: HashMap<u32, Species>,
     spells: HashMap<u32, u32>,
 }
@@ -96,7 +97,13 @@ impl PetCatalog {
             .into_iter()
             .map(|entry| (entry.species_id, entry))
             .collect();
-        Ok(Self { species, spells })
+        let battle = ::server::pet_battle::Catalog::load_world_db(conn)
+            .map_err(rusqlite::Error::InvalidParameterName)?;
+        Ok(Self {
+            battle,
+            species,
+            spells,
+        })
     }
 }
 
@@ -108,7 +115,11 @@ fn load_catalog(mut commands: Commands) {
     .expect("open battle-pet catalog world.db");
     let catalog = PetCatalog::load(&conn)
         .expect("load battle-pet catalog; run scripts/import-battle-pets.py first");
-    info!("Loaded {} BattlePetSpecies entries", catalog.species.len());
+    info!(
+        "Loaded {} BattlePetSpecies and {} battle abilities from world.db",
+        catalog.species.len(),
+        catalog.battle.abilities.len()
+    );
     commands.insert_resource(catalog);
 }
 
@@ -124,8 +135,8 @@ pub(crate) fn load_test_catalog() -> PetCatalog {
 
 #[derive(Component)]
 pub(crate) struct AccountPetJournal {
-    account_id: u64,
-    journal: PetJournal,
+    pub(crate) account_id: u64,
+    pub(crate) journal: PetJournal,
     summoned: Option<(u64, Entity)>,
 }
 
@@ -137,20 +148,25 @@ struct Companion {
 pub struct BattlePetPlugin;
 impl Plugin for BattlePetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_catalog);
+        app.add_systems(
+            Startup,
+            (load_catalog, crate::wild_pet_battles::load_wild_catalog),
+        );
         app.add_systems(
             Update,
             (
                 load_account_journals,
                 receive_pet_requests,
                 despawn_ownerless_companions,
+                crate::wild_pet_battles::receive_wild_battle_requests,
+                crate::wild_pet_battles::remove_abandoned_battles,
             )
                 .chain(),
         );
     }
 }
 
-fn load_account_journals(world: &mut World) {
+pub(crate) fn load_account_journals(world: &mut World) {
     let mut query = world.query_filtered::<(Entity, &Authenticated, &PlayerLink), Added<InWorld>>();
     let entered: Vec<_> = query
         .iter(world)
@@ -168,7 +184,7 @@ fn load_account_journals(world: &mut World) {
     }
 }
 
-fn refresh_catalog_snapshot(world: &mut World, owner: Entity) {
+pub(crate) fn refresh_catalog_snapshot(world: &mut World, owner: Entity) {
     let Some(journal) = world.get::<AccountPetJournal>(owner) else {
         return;
     };
@@ -235,7 +251,12 @@ fn receive_dismiss_requests(world: &mut World) {
     }
 }
 
-fn send_pet_update(world: &mut World, connection: Entity, owner: Entity, error: Option<String>) {
+pub(crate) fn send_pet_update(
+    world: &mut World,
+    connection: Entity,
+    owner: Entity,
+    error: Option<String>,
+) {
     let state = world
         .get::<AccountPetJournal>(owner)
         .expect("account journal loaded");
@@ -603,6 +624,20 @@ mod tests {
         assert_ne!(first_journal.pets[0].id, second_journal.pets[0].id);
         assert_eq!(first_journal.pets[0].level, 7);
         assert_eq!(second_journal.pets[0].level, 1);
+    }
+
+    #[test]
+    fn pet_battle_startup_loads_real_stats_from_shipped_world_db() {
+        let catalog = load_test_catalog();
+        assert_eq!(catalog.species.get(&39).unwrap().creature_id, 2671);
+        assert_eq!(
+            ::server::pet_battle::calculate_stats(&catalog.battle, 39, 3, 3, 25).unwrap(),
+            ::server::pet_battle::Stats {
+                health: 1563,
+                power: 260,
+                speed: 276
+            }
+        );
     }
 
     #[test]
