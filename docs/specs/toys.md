@@ -16,6 +16,8 @@
 
 - Aura105 FEATHER_FALL replicates authoritative FeatherFall state, caps descending server and client movement at7yd/s (TrinityCore MovementUtil.cpp terminalSafefallVelocity), negates landing damage, and restores normal gravity on removal. Client-reported heights are capped per server tick, not per input. Removing the last aura restarts fall accounting at current height (TC a352b1fa HandleAuraFeatherFall).
 
+- Aura37 EFFECT_IMMUNITY prevents only the spell effect ID in MiscValue, including friendly summon offers, at target filtering and effect application. Spell/effect NoImmunity attributes bypass it. Ordinary UnitAuras transport/presentation and removal restore eligibility; unsupported puppet/script effects remain blocked. References: TC a352b1fa SpellInfo::LoadImmunityInfo, Unit::IsImmunedToSpellEffect.
+
 ## Exclusions
 
 Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actions and rendered client visual proof are separate work. Existing mount/pet character storage is unchanged. Toy cooldowns follow existing character SpellHistory lifetime; persistence of cooldowns across server restart is not provided by this foundation.
