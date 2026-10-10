@@ -95,8 +95,11 @@ fn demons_bite_generates_fury() {
 /// triggers 222031 and 199547 are the two weapon hits.
 #[test]
 fn chaos_strike_spends_40_fury_and_hits_twice() {
-    let ids = [CHAOS_STRIKE_INITIAL, 162_794, 222_031, 199_547];
-    let Some(mut h) = harness(Vec::new(), &ids, DEMON_HUNTER) else {
+    let ids = [CHAOS_STRIKE_INITIAL, 162_794, 222_031, 199_547, 193_840];
+    let mut refund = world_db().unwrap().store.get(197_125).unwrap().clone();
+    // This test isolates gross cost and weapon hits; dummy5 covers refund endpoints.
+    refund.aura_options.as_mut().unwrap().proc_chance = 0;
+    let Some(mut h) = harness(vec![refund], &ids, DEMON_HUNTER) else {
         return;
     };
     h.set_power(PowerType::Fury, 50.0);
