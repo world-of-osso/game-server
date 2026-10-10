@@ -52,6 +52,8 @@ pub const BIND_ON_PICKUP: u8 = 1;
 pub const BIND_ON_EQUIP: u8 = 2;
 pub const BIND_QUEST: u8 = 4;
 
+const ITEM_CLASS_ARMOR: u8 = 4;
+const ITEM_SUBCLASS_COSMETIC: u8 = 5;
 const ITEM_CLASS_CONTAINER: u8 = 1;
 const ITEM_SUBCLASS_REAGENT_CONTAINER: u8 = 11;
 /// `ITEM_FLAG2_USED_IN_A_TRADESKILL` (ItemTemplate.h:257), `IsCraftingReagent`.
@@ -78,6 +80,11 @@ impl ItemTemplate {
         let race_ok = crate::race_class::race_bit(race)
             .is_some_and(|bit| self.allowable_race & (1 << bit) != 0);
         class_ok && race_ok
+    }
+
+    pub fn is_cosmetic(&self) -> bool {
+        self.scaling.class_id == ITEM_CLASS_ARMOR
+            && self.scaling.subclass_id == ITEM_SUBCLASS_COSMETIC
     }
 
     pub fn is_reagent_bag(&self) -> bool {
