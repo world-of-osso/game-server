@@ -748,7 +748,7 @@ pub(crate) fn apply_aura_with_spell(
         Stacking::Applied(id) => (id, CombatLogKind::AuraApplied),
         Stacking::Refreshed(id) => (id, CombatLogKind::AuraRefreshed),
         Stacking::Replaced { id, removed } => {
-            announce_removed(world, target, &removed);
+            announce_removed(world, target, &removed, RemoveReason::Replaced);
             (id, CombatLogKind::AuraApplied)
         }
     };
@@ -834,8 +834,8 @@ pub enum RemoveReason {
     Replaced,
 }
 
-fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    scripts::run_remove(world, unit, aura);
+fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    scripts::run_remove(world, unit, aura, reason);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
@@ -856,7 +856,7 @@ pub fn remove_auras(
     }
     for aura in &removed {
         debug!("Aura {} removed from {unit}: {reason:?}", aura.spell_id);
-        announce_removed(world, unit, aura);
+        announce_removed(world, unit, aura, reason);
     }
     auras_changed(world, unit);
     removed

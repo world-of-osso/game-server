@@ -14,6 +14,7 @@ Spell-specific behaviours for Retail Dummy effects live in `crates/server/src/sp
 - [x] Blackout Kick 100784 with rank two 261917 reduces the running Rising Sun Kick recharge and Fists of Fury cooldown by its effect 2 milliseconds; without rank two neither changes.
 - [x] Backstab 53 deals its effect 3 percentage extra damage from behind the target; front hits keep base damage and both retain the combo point gain.
 - [x] Pyre 357211 resolves its impact393568 into explosion357212 at the target location, dealing catalog damage to nearby enemies, not allies/out-of-radius enemies.
+- [x] Drain Soul 198590 reads its effect 1 bonus and effect 2 health threshold on each periodic damage tick. Death removal awards205292 (one whole Soul Shard); expiry and cancellation do not.
 - [ ] Unknown Dummy fields remain unsupported rather than receiving generic no-op handlers.
 
 ## How it works
