@@ -38,17 +38,32 @@ const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
 const EVENT_LINK: u32 = 61;
+const EVENT_ACCEPTED_QUEST: u32 = 19;
+const EVENT_REWARD_QUEST: u32 = 20;
+const EVENT_WAYPOINT_REACHED: u32 = 40;
+const EVENT_WAYPOINT_PAUSED: u32 = 55;
+const EVENT_WAYPOINT_RESUMED: u32 = 56;
+const EVENT_WAYPOINT_STOPPED: u32 = 57;
+const EVENT_WAYPOINT_ENDED: u32 = 58;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
 const ACTION_CAST: u32 = 11;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_DIE: u32 = 37;
+const ACTION_WP_START: u32 = 53;
+const ACTION_WP_PAUSE: u32 = 54;
+const ACTION_WP_RESUME: u32 = 65;
+const ACTION_STORE_TARGET_LIST: u32 = 64;
+const ACTION_CALL_TIMED_ACTION_LIST: u32 = 80;
+const ACTION_REMOVE_NPC_FLAG: u32 = 83;
 // `SMART_TARGET`.
 const TARGET_NONE: u32 = 0;
 const TARGET_SELF: u32 = 1;
 const TARGET_VICTIM: u32 = 2;
 const TARGET_ACTION_INVOKER: u32 = 7;
+const TARGET_STORED: u32 = 12;
+const TARGET_INVOKER_PARTY: u32 = 16;
 // `SMART_EVENT_FLAG_*`, `SMARTCAST_*`.
 const EVENT_FLAG_NOT_REPEATABLE: u32 = 0x001;
 const EVENT_FLAG_DONT_RESET: u32 = 0x100;
@@ -331,9 +346,21 @@ impl SmartAi {
                     self.process_action(ctx, index, invoker);
                 }
             }
-            19 | 20 => {
+            EVENT_ACCEPTED_QUEST | EVENT_REWARD_QUEST => {
                 if event.event_params[0] == 0 || event.event_params[0] == spell {
                     self.recalc_timer(index, event.event_params[1], event.event_params[2]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_WAYPOINT_REACHED
+            | EVENT_WAYPOINT_PAUSED
+            | EVENT_WAYPOINT_RESUMED
+            | EVENT_WAYPOINT_STOPPED
+            | EVENT_WAYPOINT_ENDED => {
+                let path_id = self.escort.as_ref().map_or(0, |escort| escort.path_id);
+                if (event.event_params[0] == 0 || event.event_params[0] == spell)
+                    && (event.event_params[1] == 0 || event.event_params[1] == path_id)
+                {
                     self.process_action(ctx, index, invoker);
                 }
             }
@@ -391,8 +418,8 @@ impl SmartAi {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
-            TARGET_ACTION_INVOKER | 16 => invoker.into_iter().collect(),
-            12 => self
+            TARGET_ACTION_INVOKER | TARGET_INVOKER_PARTY => invoker.into_iter().collect(),
+            TARGET_STORED => self
                 .stored_targets
                 .get(&event.target_params[0])
                 .cloned()
@@ -420,11 +447,13 @@ impl SmartAi {
                     ctx.kill_self();
                 }
             }
-            64 => {
+            ACTION_STORE_TARGET_LIST => {
                 self.stored_targets.insert(event.action_params[0], targets);
             }
-            80 => self.start_timed_list(ctx, event.action_params[0], invoker),
-            83 => {
+            ACTION_CALL_TIMED_ACTION_LIST => {
+                self.start_timed_list(ctx, event.action_params[0], invoker)
+            }
+            ACTION_REMOVE_NPC_FLAG => {
                 for target in targets {
                     if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(target)
                     {
@@ -432,7 +461,15 @@ impl SmartAi {
                     }
                 }
             }
-            53 => self.start_path(ctx, event, invoker),
+            ACTION_WP_START => self.start_path(ctx, event, invoker),
+            ACTION_WP_PAUSE => self.pause_path(ctx, event.action_params[0]),
+            ACTION_WP_RESUME => {
+                if let Some(escort) = &mut self.escort
+                    && escort.pause_ms.is_some()
+                {
+                    escort.pause_ms = Some(1);
+                }
+            }
             _ => {}
         }
         true
@@ -496,6 +533,8 @@ impl SmartAi {
             path_id,
             path,
             index: 0,
+            pause_ms: None,
+            reached: false,
         });
         self.move_to_waypoint(ctx);
         if invoker.is_some_and(|entity| {
@@ -507,6 +546,61 @@ impl SmartAi {
                 flags.0 = 0;
             }
         }
+    }
+
+    fn pause_path(&mut self, ctx: &mut Ctx, duration_ms: u32) {
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        if escort.pause_ms.is_some() {
+            return;
+        }
+        escort.pause_ms = Some(duration_ms);
+        let node_id = escort.path.nodes[escort.index].id;
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<super::movement::PointMovement>();
+        self.process_events_for(ctx, EVENT_WAYPOINT_PAUSED, None, node_id);
+    }
+
+    fn update_path(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        let Some(timer) = escort.pause_ms else {
+            return;
+        };
+        if timer == 0 || ctx.is_engaged() {
+            return;
+        }
+        if timer > diff_ms {
+            escort.pause_ms = Some(timer - diff_ms);
+            return;
+        }
+        escort.pause_ms = None;
+        let node_id = escort.path.nodes[escort.index].id;
+        let reached = escort.reached;
+        self.process_events_for(ctx, EVENT_WAYPOINT_RESUMED, None, node_id);
+        if reached {
+            self.advance_waypoint(ctx);
+        } else {
+            self.move_to_waypoint(ctx);
+        }
+    }
+
+    fn advance_waypoint(&mut self, ctx: &mut Ctx) {
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        escort.index += 1;
+        escort.reached = false;
+        if escort.index >= escort.path.nodes.len() {
+            let last = escort.path.nodes.last().map_or(0, |node| node.id);
+            self.process_events_for(ctx, EVENT_WAYPOINT_ENDED, None, last);
+            self.escort = None;
+            return;
+        }
+        self.move_to_waypoint(ctx);
     }
 
     fn move_to_waypoint(&self, ctx: &mut Ctx) {
@@ -548,6 +642,28 @@ impl CreatureAi for SmartAi {
         }
     }
 
+    fn movement_inform(&mut self, ctx: &mut Ctx, kind: super::MotionType, node_id: u32) {
+        if kind != super::MotionType::Point {
+            return;
+        }
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        if escort.path.nodes[escort.index].id != node_id {
+            return;
+        }
+        escort.reached = true;
+        self.process_events_for(ctx, EVENT_WAYPOINT_REACHED, None, node_id);
+        self.update_timed_list(ctx, 0);
+        if self
+            .escort
+            .as_ref()
+            .is_some_and(|escort| escort.pause_ms.is_none())
+        {
+            self.advance_waypoint(ctx);
+        }
+    }
+
     fn spell_hit(&mut self, ctx: &mut Ctx, caster: Entity, spell_id: u32) {
         self.process_events_for(ctx, EVENT_SPELLHIT, Some(caster), spell_id);
     }
@@ -556,6 +672,7 @@ impl CreatureAi for SmartAi {
     /// events (SmartScript.cpp:3777-3850), after refreshing the victim.
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         ctx.update_victim();
+        self.update_path(ctx, diff_ms);
         self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
             let event = &self.events[index];
