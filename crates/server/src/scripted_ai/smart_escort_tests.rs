@@ -918,6 +918,21 @@ fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedul
         });
 
     let mut app = App::new();
+    world.insert_resource(
+        app.world_mut()
+            .remove_resource::<bevy::ecs::schedule::Schedules>()
+            .unwrap(),
+    );
+    world.insert_resource(
+        app.world_mut()
+            .remove_resource::<bevy::app::MainScheduleOrder>()
+            .unwrap(),
+    );
+    world.insert_resource(
+        app.world_mut()
+            .remove_resource::<bevy::app::FixedMainScheduleOrder>()
+            .unwrap(),
+    );
     std::mem::swap(app.world_mut(), &mut world);
     app.add_plugins((bevy::MinimalPlugins, CreatureAiPlugin));
     app.insert_resource(crate::world_data::WorldData::default());
