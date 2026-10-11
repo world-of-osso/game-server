@@ -51,7 +51,11 @@ fn class_completeness_native_enemy_cone_follows_caster_facing_and_target_cap() {
     h.app
         .world_mut()
         .entity_mut(h.caster)
-        .insert(shared::components::Rotation(std::f32::consts::PI));
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
     let spell = world_db()
         .unwrap()
         .store
