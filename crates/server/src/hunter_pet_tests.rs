@@ -713,10 +713,15 @@ fn pet_lifecycle_mend_heals_owned_pet_by_authored_periodic_percentage() {
         h.app.world().get::<Health>(pet).unwrap().current,
         50.0 + healed
     );
-    assert!(h.inbox.log.iter().any(|event| event.spell_id == MEND_PET
-        && event.target == pet.to_bits()
-        && event.periodic
-        && event.amount == healed as i32));
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(MEND_PET)
+                && event.target == Some(pet.to_bits())
+                && event.periodic
+                && event.amount == healed as i32)
+    );
 }
 
 #[test]
