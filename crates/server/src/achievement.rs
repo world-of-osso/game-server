@@ -174,6 +174,11 @@ pub(crate) fn record_spell_cast(world: &mut World, caster: Entity, spell: u32) {
     record_criteria_event(world, caster, CriteriaEvent::CastSpell(spell));
 }
 
+/// TC a352b1fa Spell.cpp:2876-2880 credits the targeted player, not caster.
+pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32) {
+    record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
+}
+
 fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     if !world
         .get_resource::<AchievementCatalog>()
