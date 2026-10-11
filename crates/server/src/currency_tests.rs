@@ -5,7 +5,7 @@ use crate::persistence;
 fn earn_currency_adds_to_wallet() {
     let mut wallet = CurrencyWallet::default();
 
-    let message = earn_currency(&mut wallet, 1, 125).expect("earn currency");
+    let message = earn_currency(&mut wallet, 1792, 125).expect("earn currency");
 
     assert_eq!(wallet.get(1792), 125);
     assert_eq!(message, "earned 125 Honor");
@@ -18,7 +18,7 @@ fn spend_currency_removes_from_wallet() {
         .add(1792, 200, shared::currency::currency_by_id(1792).unwrap())
         .unwrap();
 
-    let message = spend_currency(&mut wallet, 1, 50).expect("spend currency");
+    let message = spend_currency(&mut wallet, 1792, 50).expect("spend currency");
 
     assert_eq!(wallet.get(1792), 150);
     assert_eq!(message, "spent 50 Honor");
@@ -28,7 +28,7 @@ fn spend_currency_removes_from_wallet() {
 fn spend_currency_rejects_insufficient_balance() {
     let mut wallet = CurrencyWallet::default();
 
-    let error = spend_currency(&mut wallet, 1, 50).expect_err("insufficient");
+    let error = spend_currency(&mut wallet, 1792, 50).expect_err("insufficient");
 
     assert_eq!(error, "insufficient Honor");
 }
