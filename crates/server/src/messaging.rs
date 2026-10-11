@@ -589,15 +589,37 @@ pub fn process_guild_invites(
     char_ids: Query<&ClientId>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<GuildInviteResponse>>,
+    mut invitees: Query<
+        (
+            &PlayerLink,
+            &mut MessageSender<shared::protocol::GuildInvitation>,
+        ),
+        With<crate::auth::InWorld>,
+    >,
 ) {
     let Some(db) = db else { return };
     for (conn_entity, link, mut receiver) in receivers.iter_mut() {
         for req in receiver.receive() {
             let response = handle_guild_invite(&db, &players, &guilds, &char_ids, link.0, &req);
-            let Ok(mut sender) = senders.get_mut(conn_entity) else {
-                continue;
-            };
-            sender.send::<AuthChannel>(response);
+            if response.success {
+                let target =
+                    persistence::find_character_id_by_name(&db.db, &req.target_character_name)
+                        .expect("successful invite has target");
+                let pending = persistence::load_pending_guild_invite(&db.db, target)
+                    .expect("successful invite persisted");
+                for (target_link, mut sender) in &mut invitees {
+                    if char_ids.get(target_link.0).is_ok_and(|id| id.0 == target) {
+                        sender.send::<AuthChannel>(shared::protocol::GuildInvitation {
+                            guild_id: pending.guild_id,
+                            guild_name: pending.guild_name.clone(),
+                            inviter_name: pending.inviter_name.clone(),
+                        });
+                    }
+                }
+            }
+            if let Ok(mut sender) = senders.get_mut(conn_entity) {
+                sender.send::<AuthChannel>(response);
+            }
         }
     }
 }
@@ -619,7 +641,11 @@ fn handle_guild_invite(
     let Ok(inviter_guild) = guilds.get(inviter_entity) else {
         return GuildInviteResponse {
             success: false,
-            error: Some("You are not in a guild".into()),
+            error: Some(
+                shared::protocol::GuildRankError::NotInGuild
+                    .message()
+                    .into(),
+            ),
         };
     };
 
@@ -646,7 +672,7 @@ fn handle_guild_invite(
     else {
         return GuildInviteResponse {
             success: false,
-            error: Some("Target character not found".into()),
+            error: Some(format!("\"{}\" not found.", req.target_character_name)),
         };
     };
 
@@ -655,10 +681,34 @@ fn handle_guild_invite(
     {
         return GuildInviteResponse {
             success: false,
-            error: Some("Cannot invite yourself".into()),
+            error: Some("You can't invite yourself to a guild.".into()),
         };
     }
 
+    if persistence::load_character_guild(&db.db, target_character_id).is_some() {
+        return GuildInviteResponse {
+            success: false,
+            error: Some(format!(
+                "{} is already in a guild.",
+                req.target_character_name
+            )),
+        };
+    }
+    if persistence::load_pending_guild_invite(&db.db, target_character_id).is_some() {
+        return GuildInviteResponse {
+            success: false,
+            error: Some(format!(
+                "{} has already been invited to a guild.",
+                req.target_character_name
+            )),
+        };
+    }
+    if !char_ids.iter().any(|id| id.0 == target_character_id) {
+        return GuildInviteResponse {
+            success: false,
+            error: Some(format!("\"{}\" not found.", req.target_character_name)),
+        };
+    }
     persistence::set_pending_guild_invite(
         &db.db,
         target_character_id,
@@ -686,18 +736,40 @@ pub fn process_guild_accepts(
     guilds: Query<&GuildMembership>,
     db: Option<Res<GameDatabase>>,
     mut commands: Commands,
-    mut senders: Query<&mut MessageSender<GuildAcceptInviteResponse>>,
+    mut replies: GuildAcceptReplies,
 ) {
     let Some(db) = db else { return };
     for (conn_entity, link, mut receiver) in receivers.iter_mut() {
         for _ in receiver.receive() {
             let response = handle_guild_accept(&db, &char_ids, &guilds, &mut commands, link.0);
-            let Ok(mut sender) = senders.get_mut(conn_entity) else {
-                continue;
-            };
-            sender.send::<AuthChannel>(response);
+            if let Some(guild_id) = response.guild_id {
+                replies.changed.0.push(guild_id);
+                for (connection, world) in &replies.connections {
+                    if persistence::load_character_guild(&db.db, world.character_id)
+                        .is_some_and(|g| g.guild_id == guild_id)
+                    {
+                        if let Ok(mut sender) = replies.ranks.get_mut(connection) {
+                            sender.send::<shared::protocol::GuildChannel>(
+                                crate::guild::guild_rank_snapshot(&db.db, world.character_id, None),
+                            );
+                        }
+                    }
+                }
+            }
+            if let Ok(mut sender) = replies.accepts.get_mut(conn_entity) {
+                sender.send::<AuthChannel>(response);
+            }
         }
     }
+}
+
+#[derive(SystemParam)]
+pub struct GuildAcceptReplies<'w, 's> {
+    accepts: Query<'w, 's, &'static mut MessageSender<GuildAcceptInviteResponse>>,
+    ranks: Query<'w, 's, &'static mut MessageSender<shared::protocol::GuildRanksState>>,
+    connections:
+        Query<'w, 's, (Entity, &'static crate::auth::InWorld), With<crate::auth::Authenticated>>,
+    changed: ResMut<'w, crate::guild_bank::ChangedGuilds>,
 }
 
 fn guild_accept_error(msg: impl Into<String>) -> GuildAcceptInviteResponse {
@@ -719,18 +791,13 @@ fn handle_guild_accept(
     let Ok(character_id) = char_ids.get(player_entity).map(|c| c.0) else {
         return guild_accept_error("Character id not found");
     };
-    let Some(invite) = persistence::take_pending_guild_invite(&db.db, character_id) else {
-        return guild_accept_error("No pending guild invite");
-    };
-    if let Err(err) = persistence::set_character_guild_by_id(
-        &db.db,
-        character_id,
-        invite.guild_id,
-        &invite.guild_name,
-    ) {
-        return guild_accept_error(err);
+    if persistence::load_character_guild(&db.db, character_id).is_some() {
+        return guild_accept_error("You are already in a guild.");
     }
-
+    let invite = match persistence::accept_pending_guild_invite(&db.db, character_id) {
+        Ok(invite) => invite,
+        Err(error) => return guild_accept_error(error),
+    };
     let next_membership = GuildMembership {
         guild_id: invite.guild_id,
         guild_name: invite.guild_name.clone(),
@@ -785,11 +852,127 @@ mod tests {
     }
 
     #[test]
+    fn guild_invites_reject_guilded_and_duplicate_targets_then_accept_at_lowest_rank() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("invites.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (master, _) = persistence::create_character(&db, 1, "Master", 1, 1).unwrap();
+        let (target, _) = persistence::create_character(&db, 2, "Invitee", 1, 1).unwrap();
+        persistence::set_character_guild_by_id(&db, master, 7, "Raid Team").unwrap();
+        persistence::banks::save_guild_member_rank(&db, master, 0);
+        let mut app = App::new();
+        app.insert_resource(GameDatabase { db });
+        let actor = app
+            .world_mut()
+            .spawn((
+                ClientId(master),
+                GuildMembership {
+                    guild_id: 7,
+                    guild_name: "Raid Team".into(),
+                },
+                Player {
+                    name: "Master".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+            ))
+            .id();
+        let invitee = app.world_mut().spawn(ClientId(target)).id();
+        let invite = |app: &mut App| {
+            app.world_mut()
+                .run_system_once(
+                    move |db: Res<GameDatabase>,
+                          players: Query<&Player>,
+                          guilds: Query<&GuildMembership>,
+                          ids: Query<&ClientId>| {
+                        handle_guild_invite(
+                            &db,
+                            &players,
+                            &guilds,
+                            &ids,
+                            actor,
+                            &GuildInviteRequest {
+                                target_character_name: "Invitee".into(),
+                            },
+                        )
+                    },
+                )
+                .unwrap()
+        };
+        assert!(invite(&mut app).success);
+        let duplicate = invite(&mut app);
+        assert_eq!(
+            duplicate.error.as_deref(),
+            Some("Invitee has already been invited to a guild.")
+        );
+        let db = &app.world().resource::<GameDatabase>().db;
+        assert_eq!(
+            persistence::load_pending_guild_invite(db, target)
+                .unwrap()
+                .inviter_name,
+            "Master"
+        );
+        persistence::take_pending_guild_invite(db, target); // decline
+        assert!(persistence::load_pending_guild_invite(db, target).is_none());
+        assert!(invite(&mut app).success);
+        assert!(apply_guild_accept(&mut app, invitee).success);
+        assert_eq!(
+            invite(&mut app).error.as_deref(),
+            Some("Invitee is already in a guild.")
+        );
+        let db = &app.world().resource::<GameDatabase>().db;
+        assert!(persistence::load_pending_guild_invite(db, target).is_none());
+        assert_eq!(
+            persistence::banks::load_guild_member_rank(
+                db,
+                &persistence::banks::load_guild(db, 7),
+                target
+            ),
+            4
+        );
+        drop(app);
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        assert_eq!(
+            persistence::load_character_guild(&db, target)
+                .unwrap()
+                .guild_id,
+            7
+        );
+        assert!(persistence::load_pending_guild_invite(&db, target).is_none());
+    }
+
+    #[test]
+    fn guild_invite_accept_cannot_replace_existing_persisted_membership() {
+        let db = crate::persistence::temp_database();
+        let (id, _) =
+            crate::persistence_character::create_character(&db, 1, "Invitee", 1, 1).unwrap();
+        persistence::set_character_guild_by_id(&db, id, 9, "Existing").unwrap();
+        persistence::set_pending_guild_invite(&db, id, 7, "Raid Team", "Inviter");
+        let mut app = App::new();
+        app.insert_resource(GameDatabase { db });
+        let player = app.world_mut().spawn(ClientId(id)).id();
+        let response = apply_guild_accept(&mut app, player);
+        assert!(!response.success);
+        assert_eq!(
+            response.error.as_deref(),
+            Some("You are already in a guild.")
+        );
+        let db = &app.world().resource::<GameDatabase>().db;
+        assert_eq!(
+            persistence::load_character_guild(db, id).unwrap().guild_id,
+            9
+        );
+    }
+
+    #[test]
     fn guild_accept_preserves_tick_for_repeated_membership_value() {
         let db = crate::persistence::temp_database();
-        let character_id = 42;
-        let _ = crate::persistence_character::create_character(&db, 1, "Invitee", 1, 1)
-            .expect("character should be created");
+        let (character_id, _) =
+            crate::persistence_character::create_character(&db, 1, "Invitee", 1, 1)
+                .expect("character should be created");
         crate::persistence::set_pending_guild_invite(&db, character_id, 7, "Raid Team", "Inviter");
 
         let mut app = App::new();
@@ -839,7 +1022,11 @@ mod tests {
             "Inviter",
         );
         let second_response = apply_guild_accept(&mut app, player);
-        assert!(second_response.success);
+        assert!(!second_response.success);
+        assert_eq!(
+            second_response.error.as_deref(),
+            Some("You are already in a guild.")
+        );
         assert_eq!(
             app.world().entity(player).get::<GuildMembership>(),
             Some(&GuildMembership {
@@ -1125,6 +1312,7 @@ mod tests {
                     level: 10,
                     portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                    raid_difficulty: crate::maps::RaidDifficulty::default(),
                 };
                 (
                     p.character_id.expect("participant has a character id"),

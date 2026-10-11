@@ -1,6 +1,6 @@
-# Phase 2 client hookup
+# Native dungeon and achievement client contract
 
-Server/protocol contract for the later client change. The game-engine checkout is read-only during this phase. [Spec](specs/dungeon-achievements.md), [runtime/provenance](wiki/systems/dungeon-achievements.md).
+Server/protocol contract for the native client; the original phase-2 insertion notes below are historical. [Spec](specs/dungeon-achievements.md), [runtime/provenance](wiki/systems/dungeon-achievements.md).
 
 ## Dungeon objective block
 
@@ -16,19 +16,27 @@ Retail source root: `~/.cache/wow-ui-sim/blizzard-ui/retail/AddOns/`:
 
 ## Achievement frame
 
-`QueryAchievementCatalog` uses reliable ordered `AchievementChannel`. Request only when opening the achievement frame or selecting a category; no catalog is sent on login.
+`QueryAchievementCatalog` uses reliable ordered `AchievementChannel`. Request on opening/browsing, full-catalog search, selected own-state links or restored/tracked IDs; no bulk achievement catalog is sent on login.
 
 | Request variant | Response variant | Fields |
 |---|---|---|
+| `Summary { scope }` | `Summary` | authoritative points/counts, category ancestry totals, newest three earned rows |
+| `Achievement { achievement_id }` | `Achievement` | correlated optional own-state row; never comparison data |
+| `Statistics { category_id, after_id }` | `Statistics` | counter rows with optional raw `statistic_value`, `next_id` |
+| `Search { text, scope, after_id }` | `Search` | correlated term/scope, matching rows, `next_id` |
 | `Categories { after_id }` | `Categories` | `categories`, `next_id` |
 | `Category { category_id, after_id }` | `Category` | echoed category, `achievements`, `next_id` |
 | `Criteria { achievement_id, after_id }` | `Criteria` | echoed achievement, `criteria`, `next_id` |
 
 Start `after_id=0`; use the returned `next_id` unchanged for the next page. `None` ends pagination. IDs are exclusive ascending cursors, not offsets. Unknown category/achievement and exhausted cursors return empty terminal pages. Category rows: `category_id`, signed `parent_id` (-1 root), `order_index`, `name`; collect pages and display by authored order under the parent.
 
-Achievement rows: `achievement_id`, `name`, `description`, `points`, `icon_fdid`, `earned`, `earned_at` (optional Unix seconds UTC), `progress_supported`, first `criteria` page and `next_criteria_id`. `earned_at=None` is a genuinely unknown historical date, not zero/today. Newly earned dates persist with the character. `progress_supported=false` means catalog metadata is available but phase-1 evaluation cannot grant that achievement; do not treat it as completed or claim Retail evaluation parity.
+Achievement rows: `achievement_id`, `name`, `description`, `points`, `icon_fdid`, raw `flags`, `earned`, `earned_at` (optional Unix seconds UTC), `progress_supported`, first `criteria` page, `next_criteria_id` and optional `statistic_value`. `earned_at=None` is a genuinely unknown historical date, not zero/today. Newly earned dates persist with the character. `progress_supported=false` means catalog metadata is available but phase-1 evaluation cannot grant that achievement; do not treat it as completed or claim Retail evaluation parity.
 
-Criterion rows: `tree_id` (cursor/row identity), `order_index`, `criteria_id`, localized `description`, `current`, `required` (u64), `completed`, `progress_supported`. Request additional criteria with `next_criteria_id`. Keep unsupported lines visibly unevaluated; no synthetic names/counters. Existing `AchievementStateUpdate` remains the live toast/progress signal; re-request the visible category when it changes so its dates and criterion lines stay current. The later client needs a new achievement runtime/frame, not a reuse of quest-log data. That frame should read the account's cached category/achievement/criteria pages, project them into its SharedContext screen state, and send requests through `NetworkBridge::send` (`godot/network/src/lib.rs:303`) on AchievementChannel. These client state/frame changes are not part of this handoff. Client and server must build against the same updated protocol; the registry fingerprint changes.
+All/Account/Character scope uses authored flag0x20000. Summary and ordinary category browsing exclude counters, hidden/guild rows and hidden tracking copies; search includes statistics but excludes non-player rows. Statistics quantities are unclamped supported counters; None remains unevaluated, not fabricated zero. Search matches title/description over the full faction/scope-eligible catalog, not loaded pages. The shared native limit is256 characters; replies preserve valid Unicode terms so the client can correlate them. Selecting a result queries authoritative own-state details.
+
+Earned payloads include authentic `Achievement.IconFileID`; the client must not guess an icon from an unrelated asset. Watch persistence stores IDs only; restored/watch refresh requests use `Achievement`, including while the window is closed. No authoritative comparison endpoint exists; InspectSnapshot exposes equipment/talents only.
+
+Criterion rows: `tree_id` (cursor/row identity), `order_index`, `criteria_id`, localized `description`, `current`, `required` (u64), `completed`, `progress_supported`. Request additional criteria with `next_criteria_id`. Keep unsupported lines visibly unevaluated; no synthetic names/counters. Existing `AchievementStateUpdate` remains the live toast/progress signal; re-request the visible category when it changes so its dates and criterion lines stay current. The native client uses a dedicated achievement runtime/frame, not quest-log data. That frame should read the account's cached category/achievement/criteria pages, project them into its SharedContext screen state, and send requests through `NetworkBridge::send` (`godot/network/src/lib.rs:303`) on AchievementChannel. Current client behavior/proof is owned by `game-engine/docs/wiki/systems/dungeon-achievements.md`. Client and server must build against the same updated protocol; the registry fingerprint changes.
 
 Retail sources:
 - `Blizzard_AchievementUI/Mainline/Blizzard_AchievementUI.lua:572` builds category names/parents; `:1814` reads achievement name/points/date/description/icon; `:1952` reads criterion text/completion/current/required; `:2728` requests a category/index row.
@@ -36,4 +44,4 @@ Retail sources:
 
 ## Bounds
 
-Fixed pages: 32 categories, 8 achievements, 16 criterion lines. Embedded achievement criteria use the same 16-line page and continuation. Names/criterion text are UTF-8 prefix-capped to 256 bytes; achievement descriptions to 2048 bytes. Category response worst-case text is 8 × (256 + 2048 + 16 × 256) = 51,200 bytes plus bounded numeric/encoding overhead; 56,397 bytes with maximum-width numeric fields in the bincode wire test, below 64 KiB. The pinned build's served criterion labels are at most 181 bytes, so the cap does not cut any currently reachable achievement criterion line. Requests contain only enum tags and u32 IDs. Dungeon encounters use the 32-bit encounter mask (validated maximum 32 rows per map/difficulty), with names capped to 256 bytes. No client-controlled page sizes or unbounded vectors from a catalog request.
+Fixed pages: 32 categories, 8 achievements, 16 criterion lines. Embedded achievement criteria use the same 16-line page and continuation. Names/criterion text are UTF-8 prefix-capped to 256 bytes; achievement descriptions to 2048 bytes. Category response worst-case text is 8 × (256 + 2048 + 16 × 256) = 51,200 bytes plus bounded numeric/encoding overhead; 56,397 bytes with maximum-width numeric fields in the bincode wire test, below 64 KiB. The pinned build's served criterion labels are at most 181 bytes, so the cap does not cut any currently reachable achievement criterion line. Search additionally carries at most256 Unicode characters (up to1024 UTF-8 bytes); other requests carry enum tags, scope and u32 IDs. Summary category totals cover the finite eligible source catalog and embed at most three earned rows. Dungeon encounters use the 32-bit encounter mask (validated maximum 32 rows per map/difficulty), with names capped to 256 bytes. No client-controlled page sizes or unbounded vectors from a catalog request.

@@ -23,12 +23,18 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] A casting creature neither chases (if movement interrupts the cast) nor swings; a stunned unit does not swing; stunned/rooted creatures do not chase and chase speed follows speed auras.
 - [x] A creature's melee-class spell misses hostile units by 5% − MOD_HIT_CHANCE.
 - [x] Effects/targets added: 27 PERSISTENT_AREA_AURA (dynamic object; enemies inside carry the aura with the object's expiry and tick phase, leavers lose it), 252 TELEPORT_UNITS, targets 28 DEST_DYNOBJ_ENEMY, 65 DEST_TARGET_BACK, 77 UNIT_CHANNEL_TARGET.
-- [x] Auras added: 18 MOD_INVISIBILITY (hidden from every client, no valid target), 93 MOD_UNATTACKABLE (`NON_ATTACKABLE_2`, attack stopped in a dungeon), 54 MOD_HIT_CHANCE, 252 MOD_SPEED_SLOW_ALL (attack and cast time ×(100−amount)/100).
+- [x] Auras added: 18 MOD_INVISIBILITY (hidden from observers without matching [typed detection](invisibility-detection.md)), 93 MOD_UNATTACKABLE (`NON_ATTACKABLE_2`, attack stopped in a dungeon), 54 MOD_HIT_CHANCE, 252 MOD_SPEED_SLOW_ALL (attack and cast time ×(100−amount)/100).
 
 ### SmartAI combat casts
 - [x] `SMART_EVENT_UPDATE_IC` advances initial and repeat min/max timers only while engaged; a due cast waits for any active cast to finish.
 - [x] `SMART_TARGET_VICTIM` resolves the current victim. `SMARTCAST_COMBAT_MOVE` disables chase after an accepted cast, including between casts; a rejected cast restores chase/melee and retries on the next update without rerolling event chance.
 - [x] New AI starts with combat movement enabled; Reset restores initial timers without changing movement permission. Real Kobold Geomancer 476 rows cast Fireball 20793, with a 0 ms initial delay and 3000–5000 ms repeat.
+
+### Wailing Caverns — bounded Cobrahn slice
+- [x] Lord Cobrahn3669 (map43, Normal1, encounter586, instance data0 from local SmartAI death action34) participates in copy-scoped encounter start/end and boss frames through the existing `BossAi` machinery. Evade fails the encounter; death succeeds.
+- [x] Its abilities are loaded, not hardcoded: SmartAI row2 casts Lightning Bolt20805 at its victim, initial0ms/repeat6000–8000ms. AGGRO4 / TALK1 speaks source group0.
+- [ ] Remaining WC bosses, Naralex escort, door progression and unsupported SmartAI events/actions are not covered. No absent C++ mechanics or coefficients are inferred.
+- [ ] Full playable both-skin acceptance remains blocked: native entry/pull/death/credit/frame clearing observed in both skins, but display4213 has no imported appearance and the population copy loses its authored Normal loot binding. Population/gate dependency belongs to `dungeon-population`; no DB writes or fabricated bindings. Normal has no scheduled lockout; existing encounter credit/loot paths are reused.
 
 ### The Stockade
 - [x] Hogger (46254, boss 2, encounter 1144): pull yell; Maddening Call 1-2 s then every 15-20 s; Vicious Slice 3-4 s then every 10-14 s; once below 30%: boss emote "Hogger enrages!" and Enrage (+30% melee haste, +10% physical damage); death yell, Warden Thelwater summoned, runs to (152.0, 106.2) and speaks at +1/+5/+8 s.
@@ -40,6 +46,22 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] `instance_grim_batol` (map 670): 4 bosses (General Umbriss 39625, Forgemaster Throngus 40177, Drahga Shadowburner 40319, Erudax 40484; encounters 1051, 1050, 1048, 1049), `LoadObjectData(creatureData)`.
 - [x] Deviation: TrinityCore has no Grim Batol creature scripts, so no kill there sets a boss state or locks anyone. Each `creatureData` boss runs a spell-less `BossAI`: engage → `IN_PROGRESS`, wipe → `NOT_STARTED`, death → `DONE` (then the instance lock, docs/specs/instances.md). No boss abilities.
 - [x] An instance script created for a copy with an instance lock starts with the lock's `DONE` bosses (`InstanceScript::Load`); encounter messages carry the copy's difficulty.
+
+## Cobrahn behavioral acceptance
+
+`cargo test --locked -p server --bin game-server scripted_ai::` on c7b792a:20 passed, zero failed, one ignored; native build, cargo fmt check and cargo check pass without compiler warnings. Canonical Normal loot roll yields one authored group1 item and87–168 copper, excluding the quest-only gem. Explicit population-copy gate:
+
+```text
+DUNGEON_ENCOUNTER_POPULATION_DB=<prepared-copy> cargo test --locked -p server --bin game-server cobrahn_population_copy_normal_loot -- --ignored --nocapture
+```
+
+The existing prepared population.sqlite fails this gate with empty items/copper0; this is a real acceptance blocker, not a waived failure. The test opens data read-only. Independent lead review and repaired-copy/live-loot proof remain required; no master merge or deployment claimed.
+
+## Cobrahn native proof — 2026-10-11
+
+Private UDP5700, fresh redb, `fb_dungeon_encounter` characters Cobrmodern/Cobrforever; server integration e77ba78 with population prepared copy. Both skins entered WC through production far transfer/ack, pulled the authentic spawn, received yell/Lightning Bolt20805 and compact boss frame, clicked that frame to target, killed with ordinary Fireball133, cleared the frame and marked Lord Cobrahn complete in the existing dungeon tracker. Setup used level80, periodic admin player-health restoration (not injected boss damage), and an authored Charged Invoker222450 on Forever. This is transport/encounter proof, not normal solo balance.
+
+All13 PNGs under `/syncthing/AgentShared/2026-10-11/dungeon-encounter/` inspected; logs/JSON under engine `data/diagnostics/dungeon-encounter-2026-10-11/`. Modern01 documents void death at the outside portal setup coordinate; physical portal traversal is unproved. The actor/owned spell attachments are absent because display4213 lies outside imported appearance coverage. Loot07/08 and Forever05 explicitly show the failure, not successful looting: prepared `content_creature_template_difficulty`3669/1 has lootid/gold0; raw TDB Normal authors LootID3669/Gold87–168. The population importer owns restoration of that binding. No encounter journal UX added; existing tracker credit and Normal's no-lockout behavior are reused.
 
 ## How it works
 - `docs/wiki/systems/boss-scripts.md`

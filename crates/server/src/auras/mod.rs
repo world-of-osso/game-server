@@ -17,6 +17,7 @@
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
+pub mod invisibility;
 pub(crate) mod linked_summon;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
@@ -28,6 +29,7 @@ pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
 mod unit_state;
+pub use invisibility::Invisibility;
 
 use std::collections::HashSet;
 
@@ -45,7 +47,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub use unit_state::{Confused, Invisible, is_polymorphed};
+pub use unit_state::{Confused, is_polymorphed};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
@@ -126,6 +128,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Authored spell_area autocast; cannot be canceled by the player.
+    SpellArea,
 }
 
 /// One aura application request: the aura effects of `spell_id` that hit
@@ -504,6 +508,7 @@ fn build_instance(
     let max_stacks =
         spell_mods::modify(world, caster, spell, SpellModOp::MaxAuraStacks, max_stacks);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
+    let charges = crate::spell_cast::scripts::proc_charges(world, caster, spell, charges);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
     let mut effects: Vec<AuraEffectState> = spell
         .effects
@@ -900,6 +905,42 @@ pub enum RemoveReason {
     Evade,
     /// A new aura its spell specific excludes took its place (food by food).
     Replaced,
+}
+
+///31850s2 rescues exactly the next otherwise fatal attack; reserve its field
+///immediately so deferred melee commands cannot spend the same rescue twice.
+pub(crate) fn rescue_ardent_defender(
+    health: &mut shared::components::Health,
+    auras: Option<&mut ActiveAuras>,
+    loss: f32,
+) -> Option<u32> {
+    if health.current <= 0.0 || loss < health.current {
+        return None;
+    }
+    let aura = auras?.auras.iter_mut().find(|a| {
+        a.spell_id == 31850 && a.effects.iter().any(|e| e.index == 1 && e.amount > 0.0)
+    })?;
+    let effect = aura
+        .effects
+        .iter_mut()
+        .find(|e| e.index == 1)
+        .expect("Ardent Defender field");
+    health.current = health.max * effect.amount / 100.0;
+    effect.amount = 0.0;
+    Some(aura.instance_id)
+}
+
+pub(crate) fn apply_attack_damage(world: &mut World, unit: Entity, loss: f32) -> bool {
+    let mut query = world.query::<(&mut shared::components::Health, Option<&mut ActiveAuras>)>();
+    let Ok((mut health, mut auras)) = query.get_mut(world, unit) else {
+        return false;
+    };
+    let rescue = rescue_ardent_defender(&mut health, auras.as_deref_mut(), loss);
+    let lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
+    if let Some(instance) = rescue {
+        remove_instance(world, unit, instance, RemoveReason::Consumed);
+    }
+    lethal
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
@@ -1380,6 +1421,7 @@ pub fn dispel(world: &mut World, dispel: &CombatLogEvent, dispel_type: u32, coun
         chosen.contains(&aura.instance_id)
     });
     for aura in removed {
+        crate::spell_cast::scripts::on_dispelled(world, dispeller, &aura);
         let event = CombatLogEvent {
             amount: i32::from(aura.stacks),
             extra_spell_id: Some(aura.spell_id),
@@ -1685,7 +1727,10 @@ fn receive_cancel_aura(world: &mut World) {
             continue;
         }
         remove_auras(world, owner, RemoveReason::Cancelled, |aura| {
-            aura.spell_id == spell_id && !aura.harmful && !aura.passive
+            aura.spell_id == spell_id
+                && !aura.harmful
+                && !aura.passive
+                && aura.source != AuraSource::SpellArea
         });
     }
 }

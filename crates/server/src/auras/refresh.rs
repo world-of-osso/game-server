@@ -5,12 +5,14 @@ use shared::components::{ActiveSpec, Health};
 use super::{ActiveAuras, AuraInstance, aura_now, periodic};
 
 const SHADOW_WORD_MADNESS: u32 = 335467;
+const BARBED_SHOT: u32 = 217200;
 const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
 
 pub(super) fn prepare_application(world: &mut World, target: Entity, new: &mut AuraInstance) {
     match new.spell_id {
         SHADOW_WORD_MADNESS => roll_remaining_damage(world, target, new),
+        BARBED_SHOT => roll_barbed_damage(world, target, new),
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         _ => {}
     }
@@ -64,6 +66,38 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
             fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
         }
     }
+}
+
+///217200's description totals five damage amounts, while the native clock
+///has seven ticks. Distribute that total without replacing the native clock.
+fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance) {
+    if let Some(old) = previous(world, target, new) {
+        periodic::run_ticks_until(world, target, old.instance_id, aura_now(world));
+    }
+    let old = previous(world, target, new);
+    let count = crate::spell_cast::scripts::script_effect_value(world, new.caster, BARBED_SHOT, 1);
+    let expiry = new.expires_at.expect("Barbed Shot native duration");
+    let fresh = new
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Barbed Shot periodic damage");
+    let new_budget = fresh.amount * count;
+    let (next, old_budget) = old
+        .as_ref()
+        .and_then(|aura| unpaid_barbed_damage(aura, fresh.index))
+        .unwrap_or((fresh.next_tick_at, 0.0));
+    let future = remaining_ticks(next, expiry, fresh.period_ms);
+    if future > 0 {
+        fresh.amount = (new_budget + old_budget) / future as f32;
+    }
+}
+
+fn unpaid_barbed_damage(aura: &AuraInstance, index: u8) -> Option<(f64, f32)> {
+    let effect = aura.effects.iter().find(|effect| effect.index == index)?;
+    let unpaid = remaining_ticks(effect.next_tick_at, aura.expires_at?, effect.period_ms);
+    let budget = effect.amount * aura.stack_multiplier() * unpaid as f32;
+    Some((effect.next_tick_at, budget))
 }
 
 ///190456 c3/s4: remaining shields accumulate to the native percent-health cap.

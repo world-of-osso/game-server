@@ -23,6 +23,7 @@ pub mod instance_script;
 pub mod movement;
 pub mod smart_ai;
 pub mod the_stockade;
+pub mod wailing_caverns;
 
 use std::collections::VecDeque;
 
@@ -159,8 +160,7 @@ pub struct CreatureAiState {
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
     if script_name == SMART_AI {
-        let entry = world.get::<shared::components::Npc>(creature)?.template_id;
-        return smart_ai::creature_ai(world, entry);
+        return smart_ai::creature_ai(world, creature);
     }
     if script_name.is_empty() {
         return grim_batol::creature_ai(world, creature);
