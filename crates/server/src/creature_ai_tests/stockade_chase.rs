@@ -324,6 +324,7 @@ fn navigation_no_path_raid_does_not_apply_the_timeout() {
             corpse: (0.0, 0.0),
             max_players: 40,
             wdt_file_data_id: STOCKADE_WDT_FDID,
+            expansion_id: 0,
         },
     );
     app.insert_resource(maps);

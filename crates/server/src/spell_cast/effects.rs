@@ -88,6 +88,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_SCHOOL_DAMAGE => school_damage,
+        33 | 95 => crate::gathering::effect_gather,
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,

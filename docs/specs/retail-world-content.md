@@ -18,14 +18,26 @@ Where it's built:
 
 How it works: [content import](../wiki/systems/content-import.md).
 
+## Open-world population (2026-10-11)
+
+- [x] `content_policy.py --mode world-promote --maps <IDs>` promotes only explicit open-world maps on an existing private database copy; refuses canonical-name, linked and instance destinations/maps.
+- [x] Source coordinates, IDs, phase 0/169 without phase-use flags/groups/terrain swaps and authored difficulty 0 remain authentic. No phase progression is flattened.
+- [x] Unrelated map spawns, shared templates, authored creature/gameobject placements on the promoted map and their addons, and existing pool dependencies survive; repeated promotion is idempotent. This mode does not run full policy regeneration or clear overlays.
+- [ ] Every locally loadable open-world map has a source/content/phase/difficulty/event/map-filter census; missing source rows remain explicit, not synthesized.
+- [ ] The31 promoted local-terrain expansion maps are hosted as shared continent maps, not dungeon copies: normal admission and startup NPC/object spawning use the same existing host list; other unsupported maps remain refused.
+
+Implementation: `scripts/world_population.py` reuses the [instance import functions](../wiki/systems/content-import.md#instance-population-2026-10-11). Process/copy proof: `scripts/tests/test_world_population.py`; admission/private-copy ECS tests in `maps/tests.rs` and `zones.rs`. [Census and observed both-skin Boralus proof](../world-population-counts.md) distinguish imported rows, living actors, source-empty maps and client appearance gaps.
+
 ## Instance population (2026-10-11)
 
-All maps in the canonical TDB `instance_template` take authentic TDB creature/gameobject spawns, templates, models, addons, formations, equipment and paths through the copy-only [instance importer](../wiki/systems/content-import.md#instance-population-2026-10-11). The historical four-map importer below remains the world/quest/vendor policy; instance population runs after it during regeneration.
+Maps from local `Map.db2` with `InstanceType` dungeon/raid (1/2) and `MapDifficulty.db2` rows, union all canonical TDB `instance_template` maps, take authentic TDB creature/gameobject spawns, templates, models, addons, formations, equipment and paths through the copy-only [instance importer](../wiki/systems/content-import.md#instance-population-2026-10-11). The historical four-map importer below remains the world/quest/vendor policy; instance population runs after it during regeneration.
+
+Garrison directories are excluded from the DB2 expansion, not from the existing TDB union. Missing or sparse authored placements remain data gaps, never generated population. Expanding the roster preserves existing maps' content rows; shared entries retain their existing-map base difficulty before considering newly imported maps. Per-map difficulty rows still use each authored spawn difficulty. [Coverage and reachability](../instance-coverage-counts.md) records the private-copy proof.
 
 - [ ] Every instance map imports source-backed base-phase rows at its MapDifficulty difficulties; always-visible flag1 rows remain eligible, while conditional phases, terrain swaps and unsupported/inverse phase-use flags are counted separately, never flattened into visible base-phase spawns.
 - [ ] Same-ID legacy instance templates/models must not override TDB identity. Missing source templates remain explicit deficits; missing display/asset metadata never causes fabricated models.
 - [ ] A map copy spawns its eligible creatures independent of client appearance-cache coverage, at the copy's difficulty and excluding dead bosses/event/pool restrictions.
-- [ ] Copy importer refuses `world.db`, symlinks and hardlinks; repeated application preserves world-map spawns and unrelated source-backed loot references. Imported instance base/difficulty templates bind their resolved TDB LootID (+20,000,000 when nonzero), GoldMin and GoldMax, including gold-only rows; referenced TDB loot is imported through the existing Retail item policy without legacy/Wowhead substitutions.
+- [ ] Copy importer refuses `world.db`, symlinks and hardlinks; repeated application preserves world-map spawns and unrelated source-backed loot references. Imported instance base/difficulty templates bind their resolved TDB LootID (+20,000,000 when nonzero), GoldMin and GoldMax, including gold-only rows; referenced TDB loot is imported through the existing Retail item policy. When the resolved TDB LootID is zero, existing source-backed Wowhead bindings are retained without inventing drops; nonzero TDB loot remains authoritative.
 - [ ] Private-port client proof covers visible, attackable creatures in representative dungeons and both skins.
 
 Raid admission/lockout UX (rank 5), encounter scripting (rank 2), phase progression and unsupported gameobject interaction types remain separate gaps; importing their authentic rows is not proof those gameplay systems work.

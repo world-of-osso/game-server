@@ -59,6 +59,8 @@ pub const MOD_THREAT: u32 = 10;
 pub const MOD_TAUNT: u32 = 11;
 pub const MOD_STUN: u32 = 12;
 pub const MOD_INVISIBILITY: u32 = 18;
+pub const MOD_INVISIBILITY_DETECT: u32 = 19;
+pub const DETECT_VISIBLE_WHILE_INVISIBLE: u32 = 335;
 pub const OBS_MOD_HEALTH: u32 = 20;
 pub const OBS_MOD_POWER: u32 = 21;
 pub const PERIODIC_TRIGGER_SPELL: u32 = 23;
@@ -242,6 +244,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | MOD_INVISIBILITY_DETECT
+        | DETECT_VISIBLE_WHILE_INVISIBLE
         | MOD_SCALE
         | FEATHER_FALL
         | MOD_UNATTACKABLE

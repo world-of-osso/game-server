@@ -238,7 +238,7 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    fn to_contract(&self) -> (CastFailReason, Option<String>) {
+    pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
         use CastFailReason as R;
         match self {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
@@ -335,7 +335,7 @@ impl SpellHistory {
         }
     }
 
-    fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub(crate) fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         self.spell_ready_at
             .get(&spell.id)
@@ -1194,6 +1194,11 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    if crate::gathering::is_gathering(spell) {
+        let target = explicit.ok_or(CastFailure::NoTarget)?;
+        crate::gathering::check_target(world, caster, spell, target)?;
+        return Ok(Some(target));
+    }
     let resurrects = spell
         .effects
         .iter()
@@ -1652,6 +1657,21 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    if crate::gathering::is_gathering(spell) {
+        let target = explicit.ok_or(CastFailure::NoTarget)?;
+        return Ok(spell
+            .effects
+            .iter()
+            .enumerate()
+            .filter(|(_, effect)| matches!(effect.effect, 33 | 95))
+            .map(|(index, _)| PlannedEffect {
+                index,
+                units: vec![target],
+                dest: None,
+                chain_multipliers: Vec::new(),
+            })
+            .collect());
+    }
     if let Some((_, select)) = scripts::target_plan(spell.id) {
         let mut plan = select(world, caster, spell, explicit);
         hit::remove_defended_targets(world, caster, spell, &mut plan);

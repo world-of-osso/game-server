@@ -23,7 +23,8 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
             239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090, 381262,
             401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618, 128327,
-            196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
+            196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909, 127803,
+            128150, 128151, 128152,
         ],
         8,
     )
@@ -1927,6 +1928,226 @@ fn toyfx9_prepared_census_preserves_interaction_blockers() {
 }
 
 #[test]
+fn toyfx13_orange_paint_targets_friend_and_expires_after_six_seconds() {
+    assert_toyfx12_aura(88377, 127803, 6_000, true);
+}
+
+#[test]
+fn toyfx13_shell_applies_all_three_source_auras_and_movement_removes_them() {
+    let state = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&state.path().join("toys.redb"));
+    let friend = spawn_player(&mut h.app, 8, 3.0);
+    h.select(Some(friend));
+    h.advance(2);
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.caster)
+        .unwrap();
+    let health = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    learn_effect_toy(&mut h, character, 88417);
+    assert_eq!(activate(&mut h, 88417)[0].error, None);
+    h.advance(80);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 128150));
+    // Native trigger64 children apply their auras without a separate SpellGo.
+    for spell in [128150, 128151, 128152] {
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, 120_000);
+        assert_eq!(aura.caster, h.caster);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(friend)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+    }
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Position>(h.caster)
+            .unwrap(),
+        position
+    );
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap(),
+        health
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(h.caster)
+            .is_none()
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::Moving(true));
+    h.advance(2);
+    for spell in [128150, 128151, 128152] {
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+    }
+    let world = h.app.world_mut();
+    assert_eq!(
+        world
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(world)
+            .count(),
+        0
+    );
+    assert_eq!(
+        world
+            .query::<&crate::game_objects::summoned::SummonedObject>()
+            .iter(world)
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn toyfx13_shell_expires_with_both_linked_visuals_after_two_minutes() {
+    let state = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&state.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 88417);
+    assert_eq!(activate(&mut h, 88417)[0].error, None);
+    h.advance(80);
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap();
+    let expires_at = auras
+        .iter()
+        .filter_map(|aura| aura.expires_at)
+        .fold(0.0, f64::max);
+    let until_near_expiry = expires_at - crate::auras::aura_now(h.app.world()) - 1.0;
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .advance_by(std::time::Duration::from_secs_f64(until_near_expiry));
+    h.advance(2);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .filter(|aura| [128150, 128151, 128152].contains(&aura.spell_id))
+            .count(),
+        3
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .advance_by(std::time::Duration::from_secs(2));
+    h.advance(2);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| [128150, 128151, 128152].contains(&aura.spell_id))
+    );
+}
+
+#[test]
+fn toyfx13_audited_slots_do_not_admit_changed_amounts_or_unhandled_siblings() {
+    use crate::spell_info::SpellStore;
+    for item in [88377, 88417] {
+        let state = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&state.path().join("toys.redb"));
+        learn_effect_toy(&mut h, character, item);
+        let spell_ids: &[u32] = if item == 88377 {
+            &[127803]
+        } else {
+            &[128150, 128151, 128152]
+        };
+        let store = h.app.world().resource::<SpellStore>();
+        let mut spells: Vec<_> = spell_ids
+            .iter()
+            .map(|id| store.get(*id).unwrap().clone())
+            .collect();
+        if item == 88377 {
+            spells[0].effects[0].base_points = 2.0;
+        } else {
+            // The admitted root aura does not authorize a changed sibling script.
+            spells[0].effects[1].effect = 77;
+        }
+        h.app.insert_resource(SpellStore::fixture(spells));
+        let result = activate(&mut h, item);
+        assert!(
+            result[0]
+                .error
+                .as_deref()
+                .unwrap()
+                .contains("unsupported toy spell")
+        );
+        h.advance(80);
+        assert!(h.inbox.go.is_empty());
+        assert!(h.inbox.cooldowns.is_empty());
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .is_empty()
+        );
+    }
+}
+
+#[test]
+fn toyfx13_shared_census_preserves_control_refusals_and_unbound_scripts() {
+    let report = report_toy_census(&crate::test_data::world_db_path(), "TOYFX13_CENSUS_REPORT");
+    let toys = report["toys"].as_array().unwrap();
+    for item in [88377, 88417] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [1973, 133997, 134007, 48933, 199902, 210974, 249468, 115503] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(!toy["unavailable"].is_null(), "underived behavior: {toy}");
+    }
+}
+
+#[test]
 fn toyfx12_helheim_spirit_applies_to_caster_and_expires_after_thirty_minutes() {
     assert_toyfx12_aura(129149, 193333, 1_800_000, false);
 }
@@ -2095,11 +2316,11 @@ fn toyfx12_prepared_census_retains_underivable_non_summon_scripts() {
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX12_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
-    for item in [50471, 129149, 205045, 211931] {
+    for item in [50471, 88377, 129149, 205045, 211931] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [1973, 133997, 134007, 48933, 88377, 199902, 210974, 249468] {
+    for item in [1973, 133997, 134007, 48933, 199902, 210974, 249468] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(!toy["unavailable"].is_null(), "underived behavior: {toy}");
     }
@@ -2235,11 +2456,11 @@ fn toyfx10_prepared_census_retains_script_and_interaction_refusals() {
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX10_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
-    for item in [88587, 131812, 175063] {
+    for item in [88417, 88587, 131812, 175063] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [48933, 88387, 88417, 95567, 138873, 198156, 219387, 238852] {
+    for item in [48933, 88387, 95567, 138873, 198156, 219387, 238852] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(!toy["unavailable"].is_null(), "unproved action: {toy}");
     }
