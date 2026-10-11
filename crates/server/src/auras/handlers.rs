@@ -233,6 +233,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | 19 // MOD_INVISIBILITY_DETECT
+        | 335 // DETECT_VISIBLE_WHILE_INVISIBLE
         | MOD_SCALE
         | FEATHER_FALL
         | MOD_UNATTACKABLE

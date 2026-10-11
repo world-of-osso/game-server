@@ -1,9 +1,6 @@
 //! Unit state an aura set implies, reconciled on every aura change:
-//! - MOD_INVISIBILITY 18 (`HandleModInvisibility`): no player detects the invisible
-//!   unit (there are no invisibility detection auras), so interest hides it from
-//!   every client (`UpdateObjectVisibility`) and it is no valid target (`CanSeeOrDetect` in
-//!   `IsValidAttackTarget`/`IsValidAssistTarget`, `spell_cast::targets`); the last
-//!   aura's removal shows it again.
+//! - MOD_INVISIBILITY 18 / MOD_INVISIBILITY_DETECT 19: typed values reconciled
+//!   for per-observer interest and target detection (invisibility.rs).
 //! - MOD_UNATTACKABLE 93 (`HandleModUnattackable`): `UNIT_FLAG_NON_ATTACKABLE_2`
 //!   while any such aura is on; applying it stops the unit's attack in a dungeon
 //!   (`AttackStop`) and its whole combat elsewhere (`CombatStop`).
@@ -24,7 +21,7 @@ use shared::components::{ModelDisplay, Position, UnitFlags};
 use super::handlers::{MOD_CONFUSE, MOD_INVISIBILITY, MOD_UNATTACKABLE, TRANSFORM};
 use super::{ActiveAuras, AuraInstance};
 
-/// Under a MOD_INVISIBILITY aura (hidden in `interest`).
+/// Under a MOD_INVISIBILITY aura; visibility depends on observer detection.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Invisible;
 
@@ -73,6 +70,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         return;
     };
     let invisible = has_type(auras, MOD_INVISIBILITY);
+    let visibility = super::Invisibility::from_auras(auras);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
     let flight = super::mount::flight(auras);
@@ -86,7 +84,10 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         } else {
             world.entity_mut(unit).remove::<Invisible>();
         }
-        crate::interest::set_hidden(world, unit, invisible);
+    }
+    if world.get::<super::Invisibility>(unit) != Some(&visibility) {
+        world.entity_mut(unit).insert(visibility.clone());
+        crate::interest::set_invisibility(world, unit, visibility);
     }
     if unattackable != world.get::<Unattackable>(unit).is_some() {
         reconcile_unattackable(world, unit, unattackable);
