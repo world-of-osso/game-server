@@ -285,32 +285,52 @@ pub(crate) fn persist_scripted_quest_result(
         return;
     };
     let mut log = load_quest_log(&database.db, character);
-    let Some(active) = log
-        .active
-        .iter_mut()
-        .find(|active| active.quest_id == quest_id)
-    else {
-        return;
-    };
-    let changed = if failed {
-        let changed = !active.failed;
-        active.failed = true;
-        changed
-    } else {
-        if active.failed {
-            return;
-        }
-        // QuestDef.h a352b1fa COMPLETION_EVENT | COMPLETION_AREA_TRIGGER.
-        const COMPLETION_FLAGS: u32 = 0x2 | 0x4;
-        let Some(quest) = quests.quests.get(&quest_id) else {
-            return;
-        };
-        quest.flags & COMPLETION_FLAGS != 0 && credit_area_trigger(quests, &mut log, &[quest_id])
-    };
+    let changed = apply_scripted_quest_result(quests, &mut log, quest_id, failed);
     if changed {
         save_quest_log(&database.db, character, &log);
         world.resource_mut::<QuestDirty>().0.insert(character);
     }
+}
+
+fn apply_scripted_quest_result(
+    quests: &QuestDb,
+    log: &mut QuestLogData,
+    quest_id: u32,
+    failed: bool,
+) -> bool {
+    // SmartScript.cpp:2581 action152 does not replay rewards.
+    if log.is_rewarded(quest_id) {
+        return false;
+    }
+    if failed {
+        let Some(active) = log
+            .active
+            .iter_mut()
+            .find(|active| active.quest_id == quest_id)
+        else {
+            return false;
+        };
+        let changed = !active.failed;
+        active.failed = true;
+        return changed;
+    }
+    let Some(quest) = quests.quests.get(&quest_id) else {
+        return false;
+    };
+    const COMPLETION_FLAGS: u32 = 0x2 | 0x4;
+    const TRACKING_EVENT: u32 = 0x400;
+    if quest.flags & COMPLETION_FLAGS != 0 {
+        return log.active(quest_id).is_some_and(|active| !active.failed)
+            && credit_area_trigger(quests, log, &[quest_id]);
+    }
+    if quest.flags & TRACKING_EVENT == 0 {
+        return false;
+    }
+    // Pinned CompleteQuest automatically rewards invisible server-side flags,
+    // including those never accepted into the player's visible log.
+    log.remove(quest_id);
+    log.mark_rewarded(quest_id);
+    true
 }
 
 /// The quest area triggers the player stands in on its current map.
