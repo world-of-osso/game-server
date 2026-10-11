@@ -5,10 +5,11 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use super::*;
 use crate::auth::Authenticated;
+use crate::class_progression::KnownSpells;
 use crate::group::GroupRegistry;
 use crate::persistence::ClientId;
 use rand::Rng;
-use shared::components::{Player, UnitLevel};
+use shared::components::Player;
 use shared::loot::{LootDrop, LootMode, LootRollChoice, RollWindow};
 use shared::protocol::{GroupLootChoice, GroupLootHistoryRequest, GroupLootPlayer, GroupLootRoll};
 
@@ -156,7 +157,7 @@ type GroupPlayers<'w, 's> = Query<
     (
         &'static ClientId,
         &'static Player,
-        Option<&'static UnitLevel>,
+        Option<&'static KnownSpells>,
     ),
 >;
 
@@ -246,7 +247,7 @@ impl GroupGeneration<'_, '_> {
                     LootContent::Item { quality, .. }
                         if mode == LootMode::GroupLoot && quality >= threshold =>
                     {
-                        let players = self.eligibility(&members, &content, source);
+                        let players = self.load_eligibility(&members, &content, source);
                         let snapshot = self.rolls.start(corpse, pool_index, content, players);
                         self.send(&snapshot);
                         pool.pending += 1;
@@ -269,7 +270,7 @@ impl GroupGeneration<'_, '_> {
         (personal, shared)
     }
 
-    fn eligibility(
+    fn load_eligibility(
         &self,
         members: &[u64],
         item: &LootContent,
@@ -285,27 +286,28 @@ impl GroupGeneration<'_, '_> {
         members
             .iter()
             .map(|&character_id| {
-                let (_, player, level) = self
+                let (_, player, known) = self
                     .players
                     .iter()
                     .find(|(id, _, _)| id.0 == character_id)
                     .expect("rewarded online player");
-                let inventory = persistence::load_inventory(db, character_id);
+                let inventory =
+                    load_model(db, templates, character_id).expect("rewarded character inventory");
                 let goods = source.store.catalog.goods.get(&item_id);
-                let owned: u32 = inventory
-                    .items
-                    .iter()
-                    .filter(|item| item.item_id == item_id)
-                    .map(|item| item.stack_count)
-                    .sum();
+                let owned =
+                    inventory.owned_count(shared::item_data::ItemDefinitionSource::Retail, item_id);
                 let max_count = goods.map_or(0, |goods| goods.max_count);
-                let need_reason = need_refusal(
+                let professions = persistence::load_professions(db, character_id);
+                let need_reason = need_refusal(&NeedContext {
+                    item_id,
                     template,
                     player,
-                    level.map_or(1, |level| level.0),
                     owned,
                     max_count,
-                );
+                    known,
+                    professions: &professions,
+                    metadata: &templates.loot_need,
+                });
                 let account = self
                     .accounts
                     .iter()
@@ -342,23 +344,72 @@ impl GroupGeneration<'_, '_> {
     }
 }
 
-fn need_refusal(
-    template: &crate::item_templates::ItemTemplate,
-    player: &Player,
-    level: u8,
+const CAN_ONLY_ROLL_GREED: i64 = 0x100; // ItemTemplate.h:223
+const ITEM_CLASS_WEAPON: u8 = 2;
+const ITEM_CLASS_ARMOR: u8 = 4;
+const INVTYPE_CLOAK: u8 = 16;
+
+struct NeedContext<'a> {
+    item_id: u32,
+    template: &'a crate::item_templates::ItemTemplate,
+    player: &'a Player,
+    metadata: &'a crate::item_templates::LootNeedMetadata,
+    professions: &'a crate::profession::PlayerProfessions,
+    known: Option<&'a KnownSpells>,
     owned: u32,
     max_count: u32,
-) -> Option<String> {
-    if !template.allows(player.class, player.race) {
-        return Some("Your class may not roll need on this item.".into());
+}
+
+fn need_refusal(context: &NeedContext) -> Option<String> {
+    if context.template.scaling.flags2 & CAN_ONLY_ROLL_GREED != 0 {
+        return Some("Need rolls are disabled for this item.".into());
     }
-    if max_count > 0 && owned >= max_count {
+    if context.max_count > 0 && context.owned >= context.max_count {
         return Some("You already have the maximum amount of this item.".into());
     }
-    if u16::from(level) < template.required_level {
-        return Some(format!("Requires level {}", template.required_level));
+    if !class_can_need(context) {
+        return Some("Your class may not roll need on this item.".into());
+    }
+    if let Some(&(skill, rank)) = context.metadata.required_skills.get(&context.item_id)
+        && context.professions.rank(skill) < rank.max(1)
+    {
+        return Some("You do not have the profession required to use this item.".into());
     }
     None
+}
+
+fn class_can_need(context: &NeedContext) -> bool {
+    let template = context.template;
+    if !template.allows(context.player.class, context.player.race) {
+        return false;
+    }
+    if !matches!(
+        template.scaling.class_id,
+        ITEM_CLASS_ARMOR | ITEM_CLASS_WEAPON
+    ) {
+        return true;
+    }
+    let subclass_mask = 1u32 << template.scaling.subclass_id;
+    match template.scaling.class_id {
+        ITEM_CLASS_ARMOR if template.inventory_type != INVTYPE_CLOAK => {
+            let armor = context
+                .metadata
+                .armor_masks
+                .get(&context.player.class)
+                .expect("active Retail class armor mask");
+            armor & subclass_mask != 0
+        }
+        ITEM_CLASS_WEAPON => context.known.is_some_and(|known| {
+            known.iter().any(|spell| {
+                context
+                    .metadata
+                    .weapon_proficiencies
+                    .get(&spell)
+                    .is_some_and(|mask| mask & subclass_mask != 0)
+            })
+        }),
+        _ => true,
+    }
 }
 
 #[derive(SystemParam)]

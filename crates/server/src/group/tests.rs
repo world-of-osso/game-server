@@ -1418,6 +1418,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             .into_iter()
             .collect(),
             forever: Default::default(),
+            loot_need: Default::default(),
         });
         app.register_message::<InventorySnapshot>();
         app.register_message::<EquipmentSnapshot>();

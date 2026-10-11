@@ -63,6 +63,7 @@ fn test_templates() -> ItemTemplates {
         .into_iter()
         .collect(),
         forever: Default::default(),
+        loot_need: Default::default(),
     }
 }
 
