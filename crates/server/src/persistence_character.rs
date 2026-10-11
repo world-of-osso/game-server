@@ -168,6 +168,7 @@ pub fn set_character_guild_by_id(
             .insert(character_id, encoded.as_slice())
             .expect("insert character guild");
     }
+    crate::persistence::charters::join_guild_in(&write, character_id, guild_id, guild_name);
     write.commit().expect("Failed to commit character guild");
     Ok(())
 }
@@ -255,6 +256,12 @@ pub fn accept_pending_guild_invite(
         .expect("open invites")
         .remove(character_id)
         .expect("consume invite");
+    crate::persistence::charters::join_guild_in(
+        &txn,
+        character_id,
+        invite.guild_id,
+        &invite.guild_name,
+    );
     txn.commit().expect("commit guild invite acceptance");
     Ok(invite)
 }
