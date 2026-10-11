@@ -14,7 +14,13 @@ from pathlib import Path
 import retail_content as retail
 
 OFFSET = retail.RETAIL_GUID_OFFSET
-MAPS = "SELECT map FROM tdb_instance_template"
+# `map` / `map_difficulty` are imported local Map.db2 / MapDifficulty.db2.
+# instance_template supplies scripts/parents, not the complete dungeon roster.
+# Garrisons carry InstanceType=1 too, but are not party dungeons.
+MAPS = """SELECT map FROM tdb_instance_template
+    UNION SELECT ID AS map FROM map m
+    WHERE InstanceType IN (1,2) AND lower(Directory) NOT LIKE '%garrison%'
+      AND EXISTS (SELECT 1 FROM map_difficulty d WHERE d.MapID=m.ID)"""
 ENTRIES = "SELECT DISTINCT id1 FROM temp.instance_creature"
 # TrinityCore a352b1fa PhasingHandler::InitDbPhaseShift: ALWAYS_VISIBLE ignores phases.
 BASE_PHASE = "terrainSwapMap=-1 AND (phaseUseFlags=1 OR " \
@@ -165,7 +171,7 @@ def import_gameobjects(conn, report):
 
 def population_counts(conn):
     rows = []
-    for (map_id,) in conn.execute(f"{MAPS} ORDER BY map"):
+    for (map_id,) in conn.execute(f"SELECT map FROM ({MAPS}) ORDER BY map"):
         row = {"map": map_id}
         for table, label in (("creature", "creatures"), ("gameobject", "gameobjects")):
             row[f"tdb_{label}"] = conn.execute(f"SELECT count(*) FROM tdb_{table} WHERE map=?", (map_id,)).fetchone()[0]
