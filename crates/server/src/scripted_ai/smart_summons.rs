@@ -21,15 +21,7 @@ impl SmartAi {
         targets: &[Entity],
         invoker: Option<Entity>,
     ) {
-        let [
-            entry,
-            kind,
-            duration_ms,
-            flags,
-            count,
-            stored_id,
-            created_by_spell,
-        ] = event.action_params;
+        let [entry, _, _, flags, _, stored_id, created_by_spell] = event.action_params;
         if flags & SUMMON_PERSONAL != 0 || created_by_spell != 0 {
             warn!(
                 entry,
@@ -49,31 +41,42 @@ impl SmartAi {
             self.stored_targets.remove(&stored_id);
         }
         let positions = summon_positions(ctx, event, targets, invoker);
+        let mut summoner_ctx = Ctx {
+            world: ctx.world,
+            me: summoner,
+        };
         for (position, attack_target) in positions {
-            for _ in 0..count.max(1) {
-                let summon = Ctx {
-                    world: ctx.world,
-                    me: summoner,
-                }
-                .summon_creature(entry, position);
-                let Some(summon) = summon else { continue };
-                ctx.world.entity_mut(summon).insert(SummonLifetime {
-                    kind,
-                    remaining_ms: duration_ms,
-                    duration_ms,
-                });
-                if stored_id != 0 {
-                    self.stored_targets
-                        .entry(stored_id)
-                        .or_default()
-                        .push(summon);
-                }
-                if flags & SUMMON_ATTACK_TARGET != 0 {
-                    if let Some(target) = attack_target {
-                        crate::creature_aggro::add_threat(ctx.world, summon, target, 0.0);
-                    }
+            for _ in 0..event.action_params[4].max(1) {
+                if let Some(summon) = summoner_ctx.summon_creature(entry, position) {
+                    self.record_summon(&mut summoner_ctx, event, summon, attack_target);
                 }
             }
+        }
+    }
+
+    fn record_summon(
+        &mut self,
+        ctx: &mut Ctx,
+        event: &SmartEvent,
+        summon: Entity,
+        attack_target: Option<Entity>,
+    ) {
+        let [_, kind, duration_ms, flags, _, stored_id, _] = event.action_params;
+        ctx.world.entity_mut(summon).insert(SummonLifetime {
+            kind,
+            remaining_ms: duration_ms,
+            duration_ms,
+        });
+        if stored_id != 0 {
+            self.stored_targets
+                .entry(stored_id)
+                .or_default()
+                .push(summon);
+        }
+        if flags & SUMMON_ATTACK_TARGET != 0
+            && let Some(target) = attack_target
+        {
+            crate::creature_aggro::add_threat(ctx.world, summon, target, 0.0);
         }
     }
 }
