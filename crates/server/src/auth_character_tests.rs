@@ -85,6 +85,38 @@ fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
 }
 
 #[test]
+fn source_start_facing_is_used_on_login_without_repositioning_saved_characters() {
+    for moved in [false, true] {
+        let db = test_db();
+        let (id, mut created) = persistence::create_character(&db.db, 1, "Mulgore", 6, 1).unwrap();
+        if moved {
+            created.x = -2322.0;
+            created.y = -377.0;
+            created.z = 63.0;
+            persistence::save_character(&db.db, id, &created);
+        }
+        let (app, player) = select_character_in_world(db, 1, id);
+        let entity = app.world().entity(player);
+        let position = entity.get::<shared::components::Position>().unwrap();
+        assert_eq!(
+            (position.x, position.y, position.z),
+            (created.x, created.z, -created.y)
+        );
+        let rotation = entity.get::<shared::components::Rotation>().unwrap();
+        let expected_yaw = if moved {
+            0.0
+        } else {
+            0.302378 + std::f32::consts::FRAC_PI_2
+        };
+        assert!(
+            (rotation.y - expected_yaw).abs() < 0.001,
+            "yaw {}",
+            rotation.y
+        );
+    }
+}
+
+#[test]
 fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     let db = test_db();
     let character_id = 55;

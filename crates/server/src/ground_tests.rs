@@ -164,7 +164,7 @@ fn new_tauren_starts_on_real_mulgore_ground_and_stays_there() {
     let GroundProbe::Supported(floor) = ground.ground_at(1, Vec3::new(x, y, z)) else {
         panic!("Tauren start at {y} has no reachable Mulgore ground");
     };
-    assert!((floor - 59.2693).abs() < 0.1, "authored ground {floor}");
+    assert!((floor - 59.45241).abs() < 0.001, "authored ground {floor}");
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins)
         .add_message::<crate::death::PlayerDeathTransition>()
