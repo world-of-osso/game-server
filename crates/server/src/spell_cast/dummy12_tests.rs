@@ -224,7 +224,7 @@ fn dummy12_shield_of_righteous_applies_native_armor_buff_and_expires() {
     assert_eq!(
         h.app
             .world()
-            .get::<crate::auras::StatModifiers>(caster)
+            .get::<crate::stats::StatModifiers>(caster)
             .unwrap()
             .armor_from_primary_stat_pct,
         160.0
@@ -235,7 +235,7 @@ fn dummy12_shield_of_righteous_applies_native_armor_buff_and_expires() {
     assert_eq!(
         h.app
             .world()
-            .get::<crate::auras::StatModifiers>(caster)
+            .get::<crate::stats::StatModifiers>(caster)
             .unwrap()
             .armor_from_primary_stat_pct,
         0.0
