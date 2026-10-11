@@ -3,10 +3,14 @@ use super::*;
 use shared::protocol::{
     ACHIEVEMENT_CATEGORY_PAGE_SIZE, ACHIEVEMENT_CRITERIA_PAGE_SIZE,
     ACHIEVEMENT_DESCRIPTION_MAX_BYTES, ACHIEVEMENT_NAME_MAX_BYTES, ACHIEVEMENT_PAGE_SIZE,
-    AchievementCatalogEntry, AchievementCatalogPage, AchievementCategoryEntry,
-    AchievementCategoryTotals, AchievementCriterionLine, AchievementScope, AchievementSummary,
-    QueryAchievementCatalog,
+    ACHIEVEMENT_SEARCH_MAX_CHARS, AchievementCatalogEntry, AchievementCatalogPage,
+    AchievementCategoryEntry, AchievementCategoryTotals, AchievementCriterionLine,
+    AchievementScope, AchievementSummary, QueryAchievementCatalog,
 };
+
+// TrinityCore a352b1fa DBCEnums.h:73-93: hidden, guild and hidden tracking copies.
+const NON_PLAYER_UI_FLAGS: u32 = 0x2 | 0x4000 | 0x100000;
+const STATISTIC_FLAG: u32 = 0x1;
 
 #[derive(Debug)]
 struct WindowDefinition {
@@ -192,14 +196,12 @@ impl AchievementCatalog {
         race: u8,
         scope: AchievementScope,
     ) -> AchievementSummary {
-        // TrinityCore a352b1fa DBCEnums.h:73-93: counters, hidden, guild and tracking copies.
-        const NON_PLAYER_UI: u32 = 0x1 | 0x2 | 0x4000 | 0x100000;
         let eligible: Vec<_> = self
             .window
             .definitions
             .values()
             .filter(|row| {
-                row.flags & NON_PLAYER_UI == 0
+                row.flags & (NON_PLAYER_UI_FLAGS | STATISTIC_FLAG) == 0
                     && self.faction_matches(row.faction, race)
                     && matches_scope(row.flags, scope)
             })
@@ -318,6 +320,7 @@ impl AchievementCatalog {
             .definitions
             .values()
             .filter(|row| row.category == category_id && row.id > after_id)
+            .filter(|row| row.flags & (NON_PLAYER_UI_FLAGS | STATISTIC_FLAG) == 0)
             .filter(|row| self.faction_matches(row.faction, race));
         let (definitions, next_id) = paginate(rows.map(|row| (row.id, row)), ACHIEVEMENT_PAGE_SIZE);
         let achievements = definitions
@@ -342,8 +345,8 @@ impl AchievementCatalog {
         let rows = self.window.definitions.values().filter(|row| {
             row.id > after_id
                 && row.category == category_id
-                && row.flags & 1 != 0
-                && row.flags & (2 | 0x4000 | 0x100000) == 0
+                && row.flags & STATISTIC_FLAG != 0
+                && row.flags & NON_PLAYER_UI_FLAGS == 0
                 && self.faction_matches(row.faction, race)
         });
         let (rows, next_id) = paginate(
@@ -366,12 +369,16 @@ impl AchievementCatalog {
         after_id: u32,
         race: u8,
     ) -> AchievementCatalogPage {
-        let text = bound_text(text.trim(), ACHIEVEMENT_NAME_MAX_BYTES);
+        let text: String = text
+            .trim()
+            .chars()
+            .take(ACHIEVEMENT_SEARCH_MAX_CHARS)
+            .collect();
         let needle = text.to_lowercase();
         let rows = self.window.definitions.values().filter(|row| {
             !needle.is_empty()
                 && row.id > after_id
-                && row.flags & (2 | 0x4000 | 0x100000) == 0
+                && row.flags & NON_PLAYER_UI_FLAGS == 0
                 && matches_scope(row.flags, scope)
                 && self.faction_matches(row.faction, race)
                 && (row.name.to_lowercase().contains(&needle)
