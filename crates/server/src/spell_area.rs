@@ -292,6 +292,44 @@ fn load_quest_statuses(world: &World, character: u64) -> HashMap<u32, u8> {
 mod tests {
     use super::*;
     #[test]
+    fn spell_area_requirements_respect_zone_race_gender_and_signed_auras() {
+        let mut rule = Rule {
+            area: 1637,
+            start: 0,
+            end: 0,
+            aura: 89305,
+            race_mask: 2,
+            gender: 1,
+            flags: 3,
+            start_status: 0,
+            end_status: 0,
+        };
+        let mut inputs = Inputs {
+            area: 5171,
+            zone: 1637,
+            race: 2,
+            gender: 1,
+            statuses: HashMap::new(),
+        };
+        assert!(rule.fits(&inputs, &[89305]), "zone matches a child area");
+        inputs.race = 1;
+        assert!(!rule.fits(&inputs, &[89305]));
+        inputs.race = 2;
+        inputs.gender = 0;
+        assert!(!rule.fits(&inputs, &[89305]));
+        inputs.gender = 1;
+        assert!(!rule.fits(&inputs, &[]), "positive prerequisite must exist");
+        rule.aura = -89305;
+        assert!(rule.fits(&inputs, &[]));
+        assert!(
+            !rule.fits(&inputs, &[89305]),
+            "negative prerequisite must be absent"
+        );
+        inputs.zone = 0;
+        assert!(!rule.fits(&inputs, &[]));
+    }
+
+    #[test]
     fn spell_area_jaga_authored_position_resolves_required_area() {
         let conn = Connection::open_with_flags(
             crate::test_data::world_db_path(),
