@@ -19,7 +19,7 @@ Source quotations above come from local `data/world.db` `spell.Description_lang`
 
 ## Census and source receipts
 
-Frozen **14e4e64→7f02a25** reproduces **160 roots/104 reviewed/56 underived →158/110/48**. Barbed Shot and Stormkeeper close their consumed numeric Dummy fields; six other roots move from unreviewed to reviewed/deferred, not implemented. E3 **113/121→111/119** IDs/memberships; aura4 **64/72** and aura226 **18/19** unchanged.13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships retained. Every previous all40 script/proof ID set reproduced before additions.
+Frozen **14e4e64→57deae4** reproduces **160 roots/104 reviewed/56 underived →158/110/48**. Barbed Shot and Stormkeeper close their consumed numeric Dummy fields; six other roots move from unreviewed to reviewed/deferred, not implemented. E3 **113/121→111/119** IDs/memberships; aura4 **64/72** and aura226 **18/19** unchanged.13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships retained. Every previous all40 script/proof ID set reproduced before additions.
 
 **214 native SQLite rows** match pinned CSV columns with zero differences (exact strings,1e-10 numeric tolerance). Referenced duration/range/radius/cast-time rows included. All eight roots have no `SpellXDescriptionVariables` mapping in this pinned export; explicit absence and CSV hashes recorded. TDB1210 names only. Tests clone real SpellStore rows and pin only fixture Variance; actor AP/position/health are fixture inputs, not invented IDs, coefficients or clocks.
 
@@ -37,7 +37,7 @@ Prior Death Strike rolling-history, Karma redirect, Pandemic, Lifebloom near-exp
 |713c8a4|8/9 boundaries; foreign player's private combat log not delivered to this fixture's authenticated connection. Not a production damage failure.|
 |7f02a25|9/9 GREEN, warning-free. Foreign-owner proof uses target health (14 independent61 hits) plus owner's received log, not another player's private inbox.|
 
-Final source readability extraction and once-only `spell_cast`/format/check results recorded below after execution. No full-server, live, full-rotation or independent integration acceptance claim.
+Final code **57deae4** (pure unpaid-budget helper extraction): requested `cargo test --locked -p server --bin game-server spell_cast` ran **ONCE,427/427**, including all nine batch20 tests; exit0, compiler warning-free. `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` exit0, warning-free. All Cargo proof pins local shared44b2b0f. Later edits docs/proof only, no invalidation. Manual changed-Rust readability audit; metrics executable unavailable. Independent artifact verifier was attempted concurrently but unavailable: OAuth expired and refresh failed; no independent acceptance claimed. Parent retains integration acceptance. No full-server/live/full-rotation claim.
 
 Durable evidence: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy20-2026-10-11/` — exact before/after source archives, pinned shared archive, native/variable receipts, census/all40 generators/results, corrected RED/GREEN logs and final proof ledger. `--config patch.\"https://github.com/world-of-osso/shared-protocol.git\".shared.path=\"<evidence>/shared-protocol\"` pins the verification dependency; current pool's quest-wire additions require unrelated server changes and are not silently integrated here.
 

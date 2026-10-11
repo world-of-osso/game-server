@@ -1,8 +1,8 @@
 # Server spell behaviour coverage — 2026-10-11
 
-Matrix: batch20 code snapshot `7f02a25`, inheriting exact batch19 `14e4e64`. [Capabilities/all40/source/proof](spell-dummy20-coverage.md). Census **158 roots,110 reviewed/48 underived**, versus160/104/56 before. Barbed Shot and Stormkeeper close numeric Dummy fields only; six inspected fields have exact deferred/unidentified reasons. E3=111/119, aura4=64/72, aura226=18/19. Native targeted9/9; final once-only gate pending. Barbed equal tick distribution is an explicit total/clock inference, not independently observed Retail tick amounts. Shared verification dependency frozen at local44b2b0f; no master merge/live/server/UDP5000.
+Matrix: batch20 code snapshot `57deae4`, inheriting exact batch19 `14e4e64`. [Capabilities/all40/source/proof](spell-dummy20-coverage.md). Census **158 roots,110 reviewed/48 underived**, versus160/104/56 before. Barbed Shot and Stormkeeper close numeric Dummy fields only; six inspected fields have exact deferred/unidentified reasons. E3=111/119, aura4=64/72, aura226=18/19. Native targeted9/9; final57deae4 spell_cast ONCE427/427, fmt/check exit0, warning-free. Independent verifier unavailable (expired OAuth); no independent acceptance claim. Barbed equal tick distribution is an explicit total/clock inference, not independently observed Retail tick amounts. Shared verification dependency frozen at local44b2b0f; no master merge/live/server/UDP5000.
 
-Source: game-server spell-dummy20 code revision `7f02a25`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
+Source: game-server spell-dummy20 code revision `57deae44e64064937b79c8ad54f1676099176571`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
 
 ## Scope and classification
 
