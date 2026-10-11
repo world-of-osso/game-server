@@ -3,11 +3,11 @@ use crate::auth::{Authenticated, InWorld};
 use crate::maps::{InMap, InstanceManager};
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase};
+use ::server::mythic_plus_catalog::{FontContext, load_azure, validate_font};
+use ::server::mythic_plus_runtime::{ChallengeDefinition, Run, UnsourcedChallengeConfig};
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use redb::{ReadableDatabase, TableDefinition};
-use server::mythic_plus_catalog::{FontContext, load_azure, validate_font};
-use server::mythic_plus_runtime::{ChallengeDefinition, Run, UnsourcedChallengeConfig};
+use redb::{ReadableDatabase, ReadableTable, TableDefinition};
 use shared::components::{Health, Npc, Position};
 use shared::protocol::*;
 use std::collections::HashMap;
@@ -167,7 +167,7 @@ fn slot(world: &mut World, connection: Entity, font: u64, guid: u64) -> Result<(
         .into_iter()
         .find(|key| key.item_guid == guid)
         .ok_or("Keystone is not in your bags")?;
-    let font = Entity::try_from_bits(font).map_err(|_| "Invalid Font")?;
+    let font = Entity::try_from_bits(font).ok_or("Invalid Font")?;
     let definition = world
         .resource::<Challenges>()
         .definition
@@ -222,7 +222,7 @@ fn validate_world_font(
         .ok_or("Not in a dungeon copy")?
         .difficulty_id;
     let context = FontContext {
-        font_type: info.go_type,
+        font_type: u32::from(info.go_type),
         player_map: (map.map_id, map.instance_id),
         font_map: (font_map.map_id, font_map.instance_id),
         challenge_map: definition.map_id,
