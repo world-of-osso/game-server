@@ -21,7 +21,8 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
             398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
             203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
-            239560, 254513, 405634, 127771, 128180,
+            239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090, 381262,
+            401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
         ],
         8,
     )
@@ -1746,6 +1747,180 @@ fn toyfx8_scenery_census() {
         assert!(
             !toy["unavailable"].is_null(),
             "interaction toys must stay blocked: {toy}"
+        );
+    }
+}
+
+#[test]
+fn toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{
+        ModelDisplay, Npc, Position, Rotation, UnitFactionTemplate, UnitSummonedBy,
+    };
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    for (item, spell, entry, display) in [
+        (163986, 280827, 144025, 88125),
+        (163987, 280828, 144026, 88126),
+        (187834, 360123, 181826, 102568),
+        (187957, 361085, 182459, 103372),
+        (187958, 361090, 182461, 103384),
+        (197719, 381262, 193182, 108105),
+        (203716, 401253, 201798, 111503),
+        (208057, 417591, 208477, 113602),
+        (211424, 429364, 214220, 115934),
+        (218128, 442240, 220620, 118153),
+        (232301, 469612, 233144, 123650),
+        (232302, 469613, 233145, 123654),
+        (232303, 469614, 233146, 123655),
+        (232305, 469616, 233148, 123656),
+        (232306, 469617, 233149, 123658),
+        (232307, 469618, 233150, 123659),
+    ] {
+        let race = if item == 163986 { 2 } else { 1 };
+        let (mut h, character) =
+            setup_for_race(&directory.path().join(format!("{item}.redb")), race);
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI,
+            z: 0.0,
+        });
+        learn_effect_toy(&mut h, character, item);
+        if matches!(item, 163986 | 163987) {
+            let wrong_race = if race == 2 { 1 } else { 2 };
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Player>(h.caster)
+                .unwrap()
+                .race = wrong_race;
+            assert_eq!(
+                activate(&mut h, item)[0].error.as_deref(),
+                Some("toy race/class restriction")
+            );
+            assert!(h.inbox.go.is_empty());
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Player>(h.caster)
+                .unwrap()
+                .race = race;
+        }
+        let caster_position = *h.app.world().get::<Position>(h.caster).unwrap();
+        let is_sign = item == 197719;
+        // Retail radius16 = 1yd for war banners; radius7 = 2yd for seasonal banners.
+        let forward_distance = if is_sign {
+            0.0
+        } else if matches!(item, 163986 | 163987) {
+            1.0
+        } else {
+            2.0
+        };
+        let expected_position = Position {
+            x: caster_position.x,
+            y: caster_position.y,
+            z: caster_position.z - forward_distance,
+        };
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        if is_sign {
+            assert!(
+                !h.inbox.go.iter().any(|go| go.spell_id == spell),
+                "sign has a 2000ms cast"
+            );
+        }
+        h.advance(if is_sign { 45 } else { 10 });
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        let world = h.app.world_mut();
+        let summons: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, _)| entity)
+            .collect();
+        assert_eq!(summons.len(), 1, "item {item}");
+        let summon = summons[0];
+        assert_eq!(
+            world.get::<ModelDisplay>(summon).unwrap().display_id,
+            display
+        );
+        assert_eq!(
+            world.get::<UnitSummonedBy>(summon).unwrap().0,
+            h.caster.to_bits()
+        );
+        let position = world.get::<Position>(summon).unwrap();
+        assert!(
+            (position.x - expected_position.x).abs() < 0.001,
+            "item {item}: {position:?}"
+        );
+        assert!(
+            (position.z - expected_position.z).abs() < 0.001,
+            "item {item}: {position:?}"
+        );
+        assert_eq!(position.y, expected_position.y);
+        assert_eq!(
+            world.get::<crate::maps::InMap>(summon),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        let source_faction = if matches!(item, 163986 | 163987) {
+            35
+        } else {
+            0
+        };
+        assert_eq!(
+            world.get::<UnitFactionTemplate>(summon).unwrap().0,
+            source_faction
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(summon)
+                .is_none()
+        );
+        let stationary_position = *position;
+        world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
+        let lifetime_frames = if is_sign { 6000 } else { 1200 };
+        h.advance(lifetime_frames - 30);
+        assert_eq!(
+            h.app.world().get::<Position>(summon),
+            Some(&stationary_position)
+        );
+        h.advance(40);
+        assert!(
+            h.app.world().get_entity(summon).is_err(),
+            "authored lifetime: item {item}"
+        );
+    }
+}
+
+#[test]
+fn toyfx9_prepared_census_preserves_interaction_blockers() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX9_CENSUS_REPORT");
+    let toys = report["toys"].as_array().unwrap();
+    for item in [
+        163986, 163987, 187834, 187957, 187958, 197719, 203716, 208057, 211424, 218128, 232301,
+        232302, 232303, 232305, 232306, 232307,
+    ] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [88387, 88579, 193478, 198156, 219387, 238852] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(
+            !toy["unavailable"].is_null(),
+            "unproven interaction/scale: {toy}"
         );
     }
 }

@@ -2,6 +2,35 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Toy-effects9 stationary banners and sign (2026-10-10)
+
+Missing runtime items and effect28 templates, not absent generic summon execution, blocked this source-complete group. `scripts/add_toy_summon_templates.py` now adds15 Retail banner item definitions using `content_policy.ITEM_COLUMNS` and16 authentic TDB1210 templates/models (15 banners plus Artisan's Sign). Full content-policy rebuilding retains those selected item/template identities. No world.db mutation is part of this branch: run `python3 scripts/add_toy_summon_templates.py --db data/world.db.new` on an approved copy, then let the owner promote it separately.
+
+|Item|Spell|Creature|Display|
+|---|---|---|---|
+|163986 Orgrimmar Hero's War Banner|280827|144025|88125|
+|163987 Stormwind Champion's War Banner|280828|144026|88126|
+|187834 Tormented Banner|360123|181826|102568|
+|187957 Encrypted Banner|361085|182459|103372|
+|187958 Shrouded Banner|361090|182461|103384|
+|197719 Artisan's Sign|381262|193182|108105|
+|203716 Thundering Banner|401253|201798|111503|
+|208057 Smoldering Banner|417591|208477|113602|
+|211424 Dreaming Banner|429364|214220|115934|
+|218128 Draconic Banner|442240|220620|118153|
+|232301 Tempered Banner|469612|233144|123650|
+|232302 Prized Banner|469613|233145|123654|
+|232303 Unbound Banner|469614|233146|123655|
+|232305 Forged Champion's Banner|469616|233148|123656|
+|232306 Prized Champion's Banner|469617|233149|123658|
+|232307 Astral Champion's Banner|469618|233150|123659|
+
+All selected spells have exactly one summon effect, Control0/Title0/Slot0, no creature AIName/ScriptName/npcflags/gossip/SmartAI action or spell_script_names binding. Complete reference tuples match the actual local `TDB_full_world_1210.26091_2026_09_09.sql`:16 templates,16 models,21 difficulty rows and0 addons/SmartAI rows. Retail descriptions promise only planting a banner or placing this sign. This does not justify importing Lilian's editable sign, drinks, seats, wormholes or firework opt-in actors. Flame's Radiance Banner238852 has model DisplayScale0.75 and stays deferred; no scaled-render proof is inferred.
+
+Banner target47 preserves radius16=1yd for war banners and radius7=2yd for seasonal banners. Target138 uses the current destination; UseToy has no ground-pick field, so Artisan's Sign lands at the caster after its2000ms cast. Banners last60000ms, sign300000ms. Wild summons keep source faction35 for the two war banners and0 for the other selected scenery, not caster faction. War-banner ItemSparse faction/race masks remain intact.
+
+Imported-copy census109→125/1166, +16 and no removals; unchanged shared database109. Behavioral fixtures exercise actual bag learning/UseToy, faction restrictions, SpellGo, one authentic actor/model, destination, ownership/map, stationary position and expiry. Importer tests cover source-row preservation, repeated CLI idempotency and atomic rollback for missing source models/items. Evidence/proof ledger: engine `data/diagnostics/toy-effects9-2026-10-10/` and `/home/osso/.worktrees/handoff-toy-effects9.md`. Server-preflight/CPU proof is not rendered Retail-client parity. [Contract](../../specs/toys.md).
+
 ## Catalog preparation
 
 Extract FDID988200 with `casc-local` from the local WoW install. Store the DB2 under the engine's persistent data tree. Then run:
