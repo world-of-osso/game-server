@@ -49,6 +49,8 @@ External resources, tooling, data sources, development workflow.
 
 - [Class spell batch13](systems/spell-casting.md#thirteenth-batch-authored-hits-ranks-and-channel-clocks) — local hit/rank/channel contracts; [proof and all40 table](../spell-dummy13-coverage.md), guardian inheritance/melee gaps retained.
 
+- [Toy-effects8 stationary scenery](systems/toys.md#toy-effects8-stationary-scenery-preparation-2026-10-10) — authentic incense/totem template preparation, stationary owned lifetimes and imported-copy census; shared database unchanged.
+
 - [Class spell batch12](systems/spell-casting.md#twelfth-batch-actor-resource-and-snapshot-consumers) — authentic wolves/Gargoyle, successful resource consumers, Rake snapshot, owned UA vulnerability, Shield armor/cone and Butchery bleed; ten focused functions,168 retained Dummy roots,88/80 and [all40-spec table](../spell-dummy12-coverage.md).
 
 - [Guardian actors and damage transfer](systems/spell-casting.md#guardian-actors-and-damage-transfer) — authentic creature spell bindings, owner-target actors, native81 spell/melee/periodic/direct splitting and6940 health floor; retained named-guardian/source gaps and [all40-spec table](../spell-guardians-coverage.md).
