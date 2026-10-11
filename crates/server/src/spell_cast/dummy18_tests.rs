@@ -120,6 +120,7 @@ fn dummy18_madness_direct_leech_excludes_absorbs_immunity_and_overkill() {
             3 => h.app.world_mut().get_mut::<Health>(npc).unwrap().current = 20.0,
             _ => {}
         }
+        h.set_power(PowerType::Insanity, 10_000.0);
         execute(&mut h, 335467, npc);
         h.advance(2);
         let damage =
@@ -166,6 +167,7 @@ fn dummy18_madness_reapplication_rolls_remaining_damage_only_for_same_owner() {
         .find(|e| e.index == 2)
         .unwrap()
         .amount;
+    assert!(initial > 0.0, "native leech must snapshot spell power");
     apply(&mut h, caster, npc, 335467, 4);
     let aura = h
         .app
