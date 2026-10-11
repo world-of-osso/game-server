@@ -244,7 +244,7 @@ impl AchievementCatalog {
         )
     }
 
-    fn criterion_tree_ids(&self, root: u32) -> BTreeSet<u32> {
+    pub(crate) fn criterion_tree_ids(&self, root: u32) -> BTreeSet<u32> {
         let mut pending = vec![root];
         let mut visited = BTreeSet::new();
         let mut criteria = BTreeSet::new();
@@ -264,7 +264,7 @@ impl AchievementCatalog {
         criteria
     }
 
-    fn criterion_line(
+    pub(crate) fn criterion_line(
         &self,
         state: &PlayerAchievementState,
         id: u32,
