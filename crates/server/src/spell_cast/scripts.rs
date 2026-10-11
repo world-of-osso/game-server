@@ -9,6 +9,10 @@ mod batch14;
 mod batch15;
 mod batch16;
 mod batch17;
+mod batch19;
+mod batch20;
+mod batch21;
+mod batch22;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -18,6 +22,8 @@ mod batch8;
 mod batch9;
 
 pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
+pub(crate) use batch20::proc_charges;
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
 }
@@ -31,9 +37,12 @@ pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
 };
+pub(super) use batch21::berserk_combo_bonus;
+pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    batch11::effect_enabled(world, caster, spell, index)
+    batch19::effect_enabled(world, caster, spell, index)
+        && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
 }
@@ -223,6 +232,9 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
+    if let Some(hook) = batch19::damage_amount(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
         batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
@@ -292,6 +304,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch20::BARBED_SHOT => Some(batch20::grant_barbed_focus),
         batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
         batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),

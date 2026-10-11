@@ -128,6 +128,36 @@ fn gossip_opening(
     }
 }
 
+#[cfg(test)]
+mod transmog_tests {
+    use super::*;
+
+    #[test]
+    fn transmog_authored_gossip_option_opens_the_service() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let catalog = load_gossip_catalog(&conn).unwrap();
+        let opening = catalog.open(54442, NpcFlags(268435585)).unwrap();
+        assert!(
+            opening
+                .actions
+                .contains(&(0, GossipAction::Role(NpcRole::Transmogrifier)))
+        );
+    }
+
+    #[test]
+    fn transmog_flag_opens_the_transmogrifier_service() {
+        let opening = GossipCatalog::default().open(62821, NpcFlags(NpcFlags::TRANSMOGRIFIER));
+        assert_eq!(
+            opening.map(|opening| opening.kind),
+            Some(InteractionKind::Role(NpcRole::Transmogrifier))
+        );
+    }
+}
+
 /// Roles an NPC's flags grant, in Retail gossip order.
 pub(crate) fn roles_from_flags(flags: NpcFlags) -> Vec<NpcRole> {
     const VENDOR_ANY: u64 = NpcFlags::VENDOR
@@ -150,6 +180,7 @@ pub(crate) fn roles_from_flags(flags: NpcFlags) -> Vec<NpcRole> {
         (NpcFlags::BATTLEMASTER, NpcRole::Battlemaster),
         (NpcFlags::AUCTIONEER, NpcRole::AuctionHouse),
         (NpcFlags::STABLEMASTER, NpcRole::StableMaster),
+        (NpcFlags::TRANSMOGRIFIER, NpcRole::Transmogrifier),
     ]
     .into_iter()
     .filter(|(mask, _)| flags.contains(*mask))
@@ -175,6 +206,7 @@ fn option_action(option_type: u8, action_menu_id: u32) -> Option<GossipAction> {
         12 => GossipAction::Role(NpcRole::Battlemaster),
         13 => GossipAction::Role(NpcRole::AuctionHouse),
         14 => GossipAction::Role(NpcRole::StableMaster),
+        34 => GossipAction::Role(NpcRole::Transmogrifier),
         _ => return None,
     })
 }
@@ -286,9 +318,15 @@ fn load_menu_options(
     menus: &mut HashMap<u32, GossipMenuData>,
 ) -> rusqlite::Result<()> {
     let mut stmt = conn.prepare(
-        "SELECT MenuID, OptionID, OptionIcon, OptionText, OptionBroadcastTextID,
-                OptionType, OptionNpcFlag, ActionMenuID
-         FROM content_gossip_menu_option ORDER BY MenuID, OptionID",
+        // TDB GossipOptionNpc::Transmogrifier (34) is not an AzerothCore
+        // OptionType. Preserve that authored service instead of its lossy view row.
+        "SELECT m.MenuID, m.OptionID, m.OptionIcon, m.OptionText, m.OptionBroadcastTextID,
+                CASE WHEN r.OptionNpc = 34 THEN 34 ELSE m.OptionType END,
+                CASE WHEN r.OptionNpc = 34 THEN 268435456 ELSE m.OptionNpcFlag END,
+                m.ActionMenuID
+         FROM content_gossip_menu_option m
+         LEFT JOIN tdb_gossip_menu_option r ON r.MenuID = m.MenuID AND r.OptionID = m.OptionID
+         ORDER BY m.MenuID, m.OptionID",
     )?;
     let rows = stmt.query_map(params![], |row| {
         let broadcast_id = row.get::<_, i64>(4)? as u32;
@@ -305,7 +343,7 @@ fn load_menu_options(
                 icon: row.get::<_, i64>(2)? as u8,
                 text,
                 option_type: row.get::<_, i64>(5)? as u8,
-                npc_flag: NpcFlags::from_azerothcore(row.get::<_, i64>(6)? as u32),
+                npc_flag: NpcFlags(row.get::<_, i64>(6)? as u64),
                 action_menu_id: row.get::<_, i64>(7)? as u32,
             },
         ))

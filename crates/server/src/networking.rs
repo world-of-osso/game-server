@@ -396,6 +396,9 @@ fn save_and_despawn(
 }
 
 pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
+    commands.queue(move |world: &mut World| {
+        crate::hunter_pet::persist_current_pet_health(world, entity);
+    });
     commands
         .entity(entity)
         .queue_silenced(|mut entity: EntityWorldMut| {

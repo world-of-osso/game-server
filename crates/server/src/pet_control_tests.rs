@@ -59,6 +59,8 @@ fn seed_stable(path: &Path) {
         level: 10,
         family: 1,
         react_state: REACT_PASSIVE,
+        health: None,
+        specialization: None,
     });
     save_pet_stable(&db.db, CHARACTER_ID, &stored);
 }

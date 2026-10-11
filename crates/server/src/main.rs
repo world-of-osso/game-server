@@ -77,6 +77,7 @@ mod persistence_character;
 mod persistence_progression;
 mod persistence_types;
 mod pet_control;
+mod pet_stable;
 mod player_create_info;
 mod player_start;
 mod profession;
@@ -84,6 +85,7 @@ mod pvp;
 mod quest;
 mod quest_data;
 mod quest_rules;
+mod quest_time;
 mod quest_view;
 mod race_class;
 mod reputation;
@@ -110,6 +112,8 @@ mod toy_catalog;
 mod toys;
 mod trade;
 mod trait_config;
+mod transmog;
+mod transmog_store;
 mod unit_target;
 mod vehicle;
 mod vignettes;
@@ -191,6 +195,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
         .add_plugins(appearance_collection::AppearanceCollectionPlugin)
+        .add_plugins(transmog::TransmogPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)
         .add_plugins(experience::ExperiencePlugin);

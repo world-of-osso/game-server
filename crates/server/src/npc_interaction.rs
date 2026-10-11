@@ -68,6 +68,9 @@ pub struct ActiveInteraction {
 #[path = "auction_house_tests/regressions.rs"]
 mod ahserver_regressions;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct NpcInteractionsProcessed;
+
 pub struct NpcInteractionPlugin;
 
 impl Plugin for NpcInteractionPlugin {
@@ -82,7 +85,8 @@ impl Plugin for NpcInteractionPlugin {
                 process_close_requests,
                 close_invalid_interactions,
             )
-                .chain(),
+                .chain()
+                .in_set(NpcInteractionsProcessed),
         );
     }
 }

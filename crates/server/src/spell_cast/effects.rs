@@ -135,6 +135,7 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
             crate::game_objects::summoned::spawn_transmitted
         }
         crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
+        crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
         super::summon::EFFECT_SUMMON => super::summon::summon_creature,
         super::area_trigger::EFFECT_CREATE_AREATRIGGER => super::area_trigger::create_area_trigger,
         _ => return None,
@@ -589,7 +590,7 @@ pub fn deal_damage(
     crit: bool,
     periodic: bool,
 ) {
-    deal_damage_and_report(world, ctx, target, amount, crit, periodic);
+    deal_damage_and_report(world, ctx, target, amount, crit, periodic, false);
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
@@ -603,7 +604,7 @@ pub(crate) fn deal_leech(
     crit: bool,
     periodic: bool,
 ) {
-    let dealt = deal_damage_and_report(world, ctx, target, amount, crit, periodic);
+    let dealt = deal_damage_and_report(world, ctx, target, amount, crit, periodic, false);
     if dealt > 0.0 {
         let healing = (dealt * multiplier).max(0.0).round();
         apply_resolved_heal(world, ctx, ctx.caster, healing, false, periodic);
@@ -619,6 +620,11 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
     deal_leech(world, ctx, target, amount, effect.amplitude, crit, false);
 }
 
+/// A named copy has already consumed the source's damage modifiers and crit.
+pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+    deal_damage_and_report(world, ctx, target, amount, false, false, true);
+}
+
 fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
@@ -626,6 +632,7 @@ fn deal_damage_and_report(
     amount: f32,
     crit: bool,
     periodic: bool,
+    resolved_source: bool,
 ) -> f32 {
     if !super::targets::is_alive(world, target) {
         return 0.0;
@@ -637,12 +644,25 @@ fn deal_damage_and_report(
         log_event(world, event);
         return 0.0;
     }
-    let amount = super::scripts::damage_amount(ctx.spell.id)
-        .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
-    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
-        * versatility_multiplier(world, ctx.caster);
+    let amount = if resolved_source {
+        amount
+    } else {
+        super::scripts::damage_amount(ctx.spell.id)
+            .map_or(amount, |modify| modify(world, ctx.caster, target, amount))
+    };
+    let done = if resolved_source {
+        1.0
+    } else {
+        stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
+            * versatility_multiplier(world, ctx.caster)
+    };
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
-    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
+    let amount = (if resolved_source {
+        amount
+    } else {
+        modded_amount(world, ctx, amount, periodic)
+    } * done
+        * taken)
         .max(0.0)
         .round();
     let amount = if reduced_by_armor(ctx.spell) {
@@ -660,7 +680,7 @@ fn deal_damage_and_report(
     let scaled_loss = crate::level_scaling::health_loss(&caster_scaling, &target_scaling, amount);
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
     let duel = world.get::<crate::duel::DuelOpponent>(target).copied();
-    let Some(mut health) = world.get_mut::<Health>(target) else {
+    let Some(health) = world.get::<Health>(target) else {
         return 0.0;
     };
     let before = health.current;
@@ -670,7 +690,7 @@ fn deal_damage_and_report(
         before,
         health_loss(training_dummy, scaled_loss),
     );
-    let lethal = crate::death::apply_health_damage(&mut health, loss);
+    let lethal = crate::auras::apply_attack_damage(world, target, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, loss);
@@ -712,7 +732,11 @@ fn deal_damage_and_report(
     if lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
     }
-    (amount - overkill).max(0.0)
+    let effective = (amount - overkill).max(0.0);
+    if !resolved_source && !periodic && effective > 0.0 {
+        super::scripts::copy_havoc(world, ctx, target, effective);
+    }
+    effective
 }
 
 /// Damage outside a spell's hit event: periodic ticks, and damage by a spell that is
@@ -806,7 +830,8 @@ pub fn apply_heal(
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
-    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
+    let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell);
+    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named)
         .max(0.0)
         .round();
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
@@ -884,7 +909,14 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         return;
     };
     let amount = modded_base_points(world, ctx.caster, ctx.spell, effect);
-    energize_unit(world, ctx, target, power, amount, false);
+    let is_combo_builder = power == PowerType::ComboPoints && amount > 0.0;
+    let is_owned_cast = target == ctx.caster && ctx.depth == 0;
+    let bonus = if is_combo_builder && is_owned_cast {
+        super::scripts::berserk_combo_bonus(world, ctx.caster, ctx.spell)
+    } else {
+        0.0
+    };
+    energize_unit(world, ctx, target, power, amount + bonus, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.

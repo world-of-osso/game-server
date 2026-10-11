@@ -1,5 +1,14 @@
 # Wiki Index
 
+- [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
+
+- [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
+- [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
+- [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+- [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
@@ -20,6 +29,8 @@
 
 
 Content catalog for the game-server wiki.
+
+- [Combat pet lifecycle](systems/combat-pet-lifecycle.md) — V2 stable migration, health/name/spec durability, authenticated stable mutations, Revive/Mend and Call1–5; both-skin native logout proof and food/render boundaries.
 
 [Appearance acquisition](investigations/appearance-acquisition.md) — Retail Warbands disposal/quest rules, atomic collection receipts, real-item acquisition/reopen proofs and missing-path limits.
 
@@ -50,6 +61,12 @@ External resources, tooling, data sources, development workflow.
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 
 ## systems/
+
+- [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
+
+- [Class spell batch20](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses) — Barbed Shot total/rollover/Focus and Stormkeeper two-use count;158 remaining Dummy roots/110 reviewed/48 underived, six exact source deferrals and [all40/proof/limits](../spell-dummy20-coverage.md).
+
+- [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
 
 - [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
 
@@ -118,7 +135,7 @@ Server gameplay systems.
 | [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour; Northshire native-vs-effective pool audit and starter regressions |
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, player-managed guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
-| [[warlock-pets]] | Level-3 Imp lifecycle/AI; Retail command-dismiss investigation removes artificial 2641 fixture grant, RED blocked by build-helper API drift |
+| [[warlock-pets]] | Authored permanent demon lifecycle, reopened wounded/dismissed state and Fel Domination proof; both-skin native bars/logout, body-data boundaries explicit |
 | [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal; pinned override/form/capability/restriction rows distinguish Skyward Ascent from source-blocked Lift Off 374763 |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |

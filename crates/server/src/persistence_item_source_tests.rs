@@ -38,6 +38,7 @@ fn record(name: &str, guid: u64) -> InventoryRecord {
         definition_sources: HashMap::new(),
         appearance_account: None,
         appearance_grants: Vec::new(),
+        transmogs: Default::default(),
     }
 }
 
