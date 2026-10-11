@@ -79,7 +79,9 @@ fn class_stats(
         class: profile.class_id,
         race: 0,
         level,
-        primary_stat: crate::stats::PrimaryStat::from_priority(spec.primary_stat_priority),
+        primary_stat: Some(crate::stats::PrimaryStat::from_priority(
+            spec.primary_stat_priority,
+        )),
         mastery_coefficient: 0.0,
         attack_power_per_strength: class.attack_power_per_strength,
         attack_power_per_agility: class.attack_power_per_agility,

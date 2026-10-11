@@ -110,7 +110,14 @@ fn select_enemy(
         })
         .map(|(enemy, _, _, target)| (enemy, target.and_then(|target| target.0)))
         .collect();
-    enemies.retain(|(enemy, _)| crate::spell_cast::targets::is_enemy(world, unit, *enemy));
+    enemies.retain(|(enemy, _)| {
+        crate::spell_cast::targets::relation_matches(
+            world,
+            unit,
+            *enemy,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
+    });
     enemies.sort_by_key(|(enemy, victim)| {
         let lost_threat =
             follower.profile.role == GroupRole::Tank && victim.is_some_and(|victim| victim != unit);
