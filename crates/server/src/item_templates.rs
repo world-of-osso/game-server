@@ -6,6 +6,9 @@ use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row};
 
 use crate::item_stats::{ItemScaling, ItemStatAllocation};
+#[path = "item_templates/loot_need.rs"]
+mod loot_need;
+pub use loot_need::LootNeedMetadata;
 
 /// Item attributes inventory validation and item stats need.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -126,6 +129,7 @@ fn one_based_bit(id: u8) -> Option<u64> {
 pub struct ItemTemplates {
     pub retail: HashMap<u32, ItemTemplate>,
     pub forever: HashMap<u32, ItemTemplate>,
+    pub loot_need: LootNeedMetadata,
 }
 
 impl ItemTemplates {
@@ -232,6 +236,7 @@ pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
     Ok(ItemTemplates {
         retail: load_item_template_rows(&conn, ITEM_QUERY)?,
         forever: HashMap::new(),
+        loot_need: loot_need::load(&conn)?,
     })
 }
 

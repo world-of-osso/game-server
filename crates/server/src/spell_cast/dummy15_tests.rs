@@ -223,6 +223,7 @@ fn group(h: &mut Harness, members: &[Entity]) {
                 level: 10,
                 portrait: default(),
                 dungeon_difficulty: 1,
+                raid_difficulty: crate::maps::RaidDifficulty::default(),
             },
         );
     }

@@ -22,6 +22,31 @@ use crate::group::{GroupRegistry, OnlineMember, OnlineView};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::persistence::ClientId;
 
+#[test]
+fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
+    let store = map_store().expect("authentic map metadata");
+    let mut manager = InstanceManager::default();
+    let player = entrant(9820, None);
+    for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+        assert_eq!(
+            manager.player_cannot_enter(store, map_id, player, 80, SUNDAY_NOON),
+            None,
+            "open-world map {map_id} refused"
+        );
+        let resolved = manager
+            .create_map(store, map_id, player, at(0.0))
+            .expect("hosted open-world map");
+        assert_eq!(resolved.map, InMap::continent(map_id));
+        assert!(!resolved.created);
+    }
+    // An unselected development/unused map remains refused.
+    assert!(
+        manager
+            .player_cannot_enter(store, 13, player, 80, SUNDAY_NOON)
+            .is_some()
+    );
+}
+
 const STOCKADE: u32 = 34;
 /// `areatrigger_teleport` 101 "Stormwind Jail Entrance Target": its AreaTrigger box
 /// center in Stormwind City.
@@ -50,6 +75,72 @@ fn map_store() -> Option<&'static MapStore> {
             )
         })
         .as_ref()
+}
+
+fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    // The spawn loader reads the authored locks beside its database file, so the fixture
+    // database lives in a temp directory next to a copy of the canonical locks.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(
+        crate::test_data::world_db_path().with_file_name("game_object_locks.json"),
+        dir.path().join("game_object_locks.json"),
+    )
+    .expect("game_object_locks.json beside world.db; run scripts/import_game_object_locks.py");
+    let target = Connection::open(dir.path().join("world.db")).unwrap();
+    target.execute_batch("CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
+        CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
+        CREATE TABLE game_object_display_info (ID INTEGER,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
+    let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
+        t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
+        g.spawntimesecs,t.Data3,t.Data5,t.Data6
+        FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
+        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=2106 AND g.id IN (227740,227741) ORDER BY g.guid").unwrap();
+    let mut rows = query.query([]).unwrap();
+    while let Some(row) = rows.next().unwrap() {
+        let values: Vec<rusqlite::types::Value> =
+            (0..24).map(|index| row.get(index).unwrap()).collect();
+        let mut spawn = values[..8].to_vec();
+        spawn.push(values[20].clone());
+        target
+            .execute(
+                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?,?)",
+                rusqlite::params_from_iter(&spawn),
+            )
+            .unwrap();
+        let mut template = vec![values[1].clone()];
+        template.extend_from_slice(&values[8..14]);
+        template.extend_from_slice(&values[21..24]);
+        target
+            .execute(
+                "INSERT INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
+                rusqlite::params_from_iter(&template),
+            )
+            .unwrap();
+        let mut display = vec![values[9].clone()];
+        display.extend_from_slice(&values[14..20]);
+        target
+            .execute(
+                "INSERT INTO game_object_display_info VALUES (?,?,?,?,?,?,?)",
+                rusqlite::params_from_iter(&display),
+            )
+            .unwrap();
+    }
+    crate::game_objects::load_game_object_spawns(&target).unwrap()
+}
+
+#[test]
+fn authored_warsong_new_flags_are_loaded_as_usable_world_objects() {
+    let flags = source_warsong_flags();
+    assert_eq!(flags.0.len(), 2);
+    for flag in flags.0 {
+        assert!(flag.info.is_usable());
+        assert_eq!(flag.map_id, 2106);
+    }
 }
 
 fn close(a: Vec3, b: Vec3) -> bool {
@@ -118,6 +209,7 @@ fn entrant(character_id: u64, group: Option<u64>) -> InstanceEntrant {
         group,
         leader: if group.is_some() { 1 } else { character_id },
         difficulty_id: store::DIFFICULTY_NORMAL,
+        ..Default::default()
     }
 }
 
@@ -161,6 +253,66 @@ fn group_members_share_a_stockade_copy_and_a_solo_player_gets_its_own() {
     assert_eq!(
         instances.find_instance(store, STOCKADE, entrant(1, None), SUNDAY_NOON),
         None
+    );
+}
+
+#[test]
+fn warsong_rosters_share_only_their_reserved_copy_without_dungeon_locks() {
+    let store = map_store().expect("local map catalog");
+    let template = shared::battleground::warsong_gulch();
+    let mut instances = InstanceManager::default();
+    let first_roster: Vec<u64> = (1..=10).collect();
+    let second_roster: Vec<u64> = (11..=20).collect();
+    let capacity = u32::from(template.team_size) * 2;
+    assert_eq!(
+        instances.create_map(store, template.map_id, entrant(1, None), at(0.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    let first = instances
+        .create_battleground_map(store, template.map_id, &first_roster, capacity, at(0.0))
+        .unwrap();
+    let second = instances
+        .create_battleground_map(store, template.map_id, &second_roster, capacity, at(0.0))
+        .unwrap();
+    assert_ne!(first, second);
+    for (roster, expected) in [(&first_roster, first), (&second_roster, second)] {
+        for character_id in roster {
+            let resolved = instances
+                .create_map(
+                    store,
+                    template.map_id,
+                    entrant(*character_id, Some(7)),
+                    at(1.0),
+                )
+                .unwrap();
+            assert_eq!(resolved.map, expected);
+            assert!(!resolved.created);
+            assert_eq!(
+                instances.player_cannot_enter(
+                    store,
+                    template.map_id,
+                    entrant(*character_id, None),
+                    90,
+                    SUNDAY_NOON
+                ),
+                None
+            );
+        }
+    }
+    assert_eq!(
+        instances.create_map(store, template.map_id, entrant(21, None), at(1.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        instances.cannot_enter(first, entrant(11, None), SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    assert!(instances.lock_copies_in_use().is_empty());
+    assert!(
+        instances
+            .take_expired(INSTANCE_UNLOAD_DELAY_SECS + 1.0)
+            .is_empty(),
+        "no invented battleground reservation expiry"
     );
 }
 
@@ -218,11 +370,11 @@ fn an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh() {
 }
 
 #[test]
-fn raids_and_world_maps_without_npc_data_are_not_hosted() {
+fn world_maps_without_npc_data_are_not_hosted() {
     let Some(store) = map_store() else { return };
     let instances = InstanceManager::default();
-    // Outland (530); Molten Core (409), a raid.
-    for map_id in [530, 409] {
+    // Outland (530) is not hosted.
+    for map_id in [530] {
         assert_eq!(
             instances.player_cannot_enter(store, map_id, entrant(1, None), 80, SUNDAY_NOON),
             Some(TransferAbortReason::MapNotAllowed),
@@ -390,6 +542,8 @@ impl Harness {
                     pair::<WorldServerInfo>(),
                     pair::<SetDungeonDifficulty>(),
                     pair::<DungeonDifficultySet>(),
+                    pair::<SetRaidDifficulty>(),
+                    pair::<RaidDifficultySet>(),
                 ),
             ))
             .id();
@@ -445,6 +599,25 @@ impl Harness {
         self.advance(3);
     }
 
+    fn receive_pvp_updates(
+        &mut self,
+        frames: usize,
+    ) -> std::collections::HashMap<Entity, Vec<PvpStateUpdate>> {
+        let mut received = std::collections::HashMap::<Entity, Vec<PvpStateUpdate>>::new();
+        for _ in 0..frames {
+            self.advance(1);
+            let world = self.app.world_mut();
+            let mut receivers = world.query::<(Entity, &mut MessageReceiver<PvpStateUpdate>)>();
+            for (connection, mut receiver) in receivers.iter_mut(world) {
+                received
+                    .entry(connection)
+                    .or_default()
+                    .extend(receiver.receive());
+            }
+        }
+        received
+    }
+
     fn map_of(&self, who: &Traveler) -> Option<InMap> {
         self.app.world().get::<InMap>(who.player).copied()
     }
@@ -467,6 +640,7 @@ impl Harness {
                         level: 20,
                         portrait: Default::default(),
                         dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                        raid_difficulty: crate::maps::RaidDifficulty::default(),
                     },
                 )
             })
@@ -582,6 +756,241 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
         h.creatures_in(b).len(),
         STOCKADE_CREATURES,
         "the occupied copy stays"
+    );
+}
+
+#[test]
+fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
+    let flags = source_warsong_flags();
+    let source_flags = flags.clone();
+    let mut h = harness_with(|app| {
+        app.insert_resource(flags);
+        app.insert_resource(crate::faction::FactionTemplates::default());
+        app.add_plugins((
+            crate::pvp::PvpPlugin,
+            crate::npc_interaction::NpcInteractionPlugin,
+        ));
+    })
+    .unwrap();
+    let template = shared::battleground::warsong_gulch();
+    let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
+    let players: Vec<_> = (1..=10).map(|id| h.spawn(id, STORMWIND, origin)).collect();
+    for who in &players {
+        h.app.world_mut().entity_mut(who.player).insert((
+            crate::pvp::PlayerPvpState::default(),
+            shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
+        ));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForBattleground>(),
+            pair::<RespondToBattlegroundInvite>(),
+            pair::<LeaveBattleground>(),
+            pair::<UseGameObject>(),
+            pair::<PvpStateUpdate>(),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(QueueForBattleground {
+                battleground_id: template.id,
+            });
+    }
+    let updates = h.receive_pvp_updates(5);
+    let invitations: Vec<_> = players
+        .iter()
+        .map(|who| {
+            updates[&who.connection]
+                .iter()
+                .filter_map(|update| update.snapshot.as_ref())
+                .filter_map(|snapshot| snapshot.battleground.clone())
+                .last()
+                .expect("typed invitation")
+        })
+        .collect();
+    let match_id = invitations[0].match_id;
+    for (who, invitation) in players.iter().zip(&invitations) {
+        assert_eq!(invitation.match_id, match_id);
+        assert_eq!(invitation.map_id, 2106);
+        assert_eq!(invitation.invitation_time_left_secs, None);
+        assert!(!invitation.accepted);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(RespondToBattlegroundInvite {
+                match_id,
+                accepted: true,
+            });
+    }
+    h.receive_pvp_updates(5);
+    for (who, invitation) in players.iter().zip(&invitations) {
+        assert_eq!(
+            h.map_of(who),
+            None,
+            "accepted player waits for WorldPortAck"
+        );
+        let messages = h.new_worlds(who);
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].map_id, 2106);
+        assert_eq!(messages[0].map_directory, "warsonggulch2");
+        let safe_id = match invitation.team {
+            shared::battleground::BgTeam::A => 7051,
+            shared::battleground::BgTeam::B => 7050,
+        };
+        let destination = map_store().unwrap().safe_locs[&safe_id];
+        assert!(close(
+            wow(&Position {
+                x: messages[0].position[0],
+                y: messages[0].position[1],
+                z: messages[0].position[2]
+            }),
+            destination.position
+        ));
+    }
+    for who in &players {
+        h.ack(who);
+    }
+    let shared_map = h.map_of(&players[0]).unwrap();
+    assert_eq!(shared_map.map_id, 2106);
+    assert_ne!(shared_map.instance_id, 0);
+    for who in &players {
+        assert_eq!(h.map_of(who), Some(shared_map));
+    }
+    assert!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .lock_copies_in_use()
+            .is_empty()
+    );
+    let alliance = source_flags
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == WARSONG_ALLIANCE_FLAG_ENTRY)
+        .unwrap();
+    let horde = source_flags
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == WARSONG_HORDE_FLAG_ENTRY)
+        .unwrap();
+    let carrier = &players[0];
+    for capture in 1..=3 {
+        let flag_entity = {
+            let world = h.app.world_mut();
+            let mut objects = world.query::<(Entity, &GameObjectInfo, &InMap)>();
+            objects
+                .iter(world)
+                .find_map(|(entity, info, map)| {
+                    (info.entry == WARSONG_HORDE_FLAG_ENTRY && *map == shared_map).then_some(entity)
+                })
+                .expect("authored enemy flag spawned")
+        };
+        h.walk_to(carrier, horde.position);
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<UseGameObject>>(carrier.connection)
+            .unwrap()
+            .send::<InteractionChannel>(UseGameObject {
+                object: flag_entity.to_bits(),
+            });
+        h.receive_pvp_updates(5);
+        let carried = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(carrier.player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            carried.flags.flag_b,
+            shared::battleground::FlagState::Carried { carrier: 1 }
+        );
+        h.walk_to(carrier, alliance.position);
+        h.receive_pvp_updates(5);
+        let scored = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(carrier.player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap();
+        assert_eq!(scored.score_a, capture);
+        assert_eq!(scored.score_b, 0);
+        assert_eq!(scored.flags.flag_b, shared::battleground::FlagState::AtBase);
+        assert_eq!(
+            scored.honor_reward, None,
+            "never apply synthetic legacy rewards"
+        );
+        assert_eq!(scored.players.len(), 10);
+        assert_eq!(
+            scored
+                .players
+                .iter()
+                .find(|row| row.character_id == 1)
+                .unwrap()
+                .flag_captures,
+            capture
+        );
+    }
+    for who in &players {
+        let result = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap();
+        assert_eq!(result.phase, shared::battleground::BgPhase::Ended);
+        assert_eq!(
+            result.outcome,
+            Some(shared::battleground::BgOutcome::Winner(
+                shared::battleground::BgTeam::A
+            ))
+        );
+    }
+    for who in &players {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in &players {
+        assert_eq!(h.map_of(who), None, "return waits for WorldPortAck");
+        let returns = h.new_worlds(who);
+        assert_eq!(returns.len(), 1);
+        assert_eq!(returns[0].map_id, 0);
+        assert!(close(
+            wow(&Position {
+                x: returns[0].position[0],
+                y: returns[0].position[1],
+                z: returns[0].position[2]
+            }),
+            origin
+        ));
+        h.ack(who);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(h.position(who), origin));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+    assert!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .copy_difficulty(shared_map)
+            .is_none()
     );
 }
 
@@ -1375,5 +1784,291 @@ fn only_a_group_leader_sets_the_groups_difficulty_for_every_member() {
             .unwrap()
             .difficulty_id,
         23
+    );
+}
+
+#[test]
+fn raid_entry_legacy_raid_copy_and_weekly_bind_resume() {
+    let store = map_store().expect("canonical map data");
+    let mut instances = InstanceManager::default();
+    let mut raider = entrant(71, None);
+    raider.difficulty_id = 9; // Difficulty.db2: Molten Core 40 Player.
+    assert_eq!(
+        instances.player_cannot_enter(store, 409, raider, 80, SUNDAY_NOON),
+        None
+    );
+    let copy = instances
+        .create_map(store, 409, raider, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(copy).unwrap().difficulty_id, 9);
+    let entries = *store.map_difficulty(409, 9).unwrap();
+    assert_eq!(entries.reset_interval, store::ResetInterval::Weekly);
+    let player = World::new().spawn_empty().id();
+    instances.add_player(copy, player);
+    assert_eq!(
+        instances.update_instance_lock(copy, &[(player, 71)], 1, Some(0), SUNDAY_NOON),
+        vec![player]
+    );
+    let saved = instances.locks.saved();
+    let mut reloaded = InstanceManager::with_locks(locks::InstanceLocks::from_saved(saved));
+    let resumed = reloaded
+        .create_map(store, 409, raider, at(1.0))
+        .unwrap()
+        .map;
+    assert_eq!(resumed.instance_id, copy.instance_id);
+    assert_eq!(reloaded.initial_done_bosses(resumed), 1);
+}
+
+#[test]
+fn raid_entry_current_requires_raid_but_legacy_allows_solo_and_resolves_separate_selections() {
+    let store = map_store().unwrap();
+    let instances = InstanceManager::default();
+    let mut player = entrant(71, Some(7));
+    assert_eq!(
+        instances.player_cannot_enter(store, 2939, player, 90, SUNDAY_NOON),
+        Some(TransferAbortReason::NeedGroup)
+    );
+    player.raid_group = true;
+    // Actual pinned map condition, not a made-up map/level.
+    assert_eq!(
+        instances.player_cannot_enter(store, 2939, player, 90, SUNDAY_NOON),
+        None
+    );
+    let mut instances = instances;
+    player.raid_difficulty.primary = 15;
+    player.raid_difficulty.legacy = 4;
+    let modern = instances
+        .create_map(store, 2522, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(modern).unwrap().difficulty_id, 15);
+    let legacy = instances
+        .create_map(store, 533, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(legacy).unwrap().difficulty_id, 4);
+    let dungeon = instances
+        .create_map(store, 34, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(dungeon).unwrap().difficulty_id, 1);
+}
+
+#[test]
+fn raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later() {
+    let store = map_store().unwrap();
+    let entries = store.map_difficulty(409, 9).unwrap();
+    let reset = locks::next_reset_time(entries.reset_interval, SUNDAY_NOON);
+    let mut locks = locks::InstanceLocks::default();
+    locks.create_for_new_instance(71, entries, 8, SUNDAY_NOON);
+    locks.update_for_player(
+        71,
+        entries,
+        &locks::LockUpdate {
+            instance_id: 8,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    assert!(locks.find_active_lock(71, entries, reset - 1).is_some());
+    assert!(locks.find_active_lock(71, entries, reset).is_none());
+    locks.set_extended(71, entries, true, reset);
+    let lock = locks.find_active_lock(71, entries, reset).unwrap();
+    assert_eq!(lock.effective_expiry(entries, reset), reset + 604800);
+    locks.set_extended(71, entries, false, reset);
+    assert!(locks.find_active_lock(71, entries, reset).is_none());
+}
+
+#[test]
+#[ignore = "needs RAID_WORLD_DB: a prepared raid world.db copy (docs/specs, raid-entry)"]
+fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
+    let path = std::env::var("RAID_WORLD_DB").expect("prepared read-only raid copy");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let store = store::load_map_store(&conn).unwrap();
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(ServerClock {
+        fixed_unix: Some(SUNDAY_NOON),
+        offset_secs: 0,
+    });
+    let mut instances = InstanceManager::default();
+    let copy = instances
+        .create_map(&store, 409, entrant(71, Some(7)), at(0.0))
+        .unwrap()
+        .map;
+    let mut outsider = entrant(73, Some(8));
+    outsider.leader = 73;
+    let other = instances
+        .create_map(&store, 409, outsider, at(0.0))
+        .unwrap()
+        .map;
+    let mut players = Vec::new();
+    for (id, map) in [(71, copy), (72, copy), (73, other)] {
+        let player = world
+            .spawn((
+                Player {
+                    name: format!("Raider{id}"),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                ClientId(id),
+                map,
+            ))
+            .id();
+        instances.add_player(map, player);
+        players.push(player);
+    }
+    world.insert_resource(store);
+    world.insert_resource(instances);
+    let lucifron = world
+        .spawn((
+            shared::components::Npc {
+                template_id: 12118,
+                name: "Lucifron".into(),
+            },
+            copy,
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    crate::combat::mark_npc_dead_world(&mut world, lucifron);
+    let instances = world.resource::<InstanceManager>();
+    for id in [71, 72] {
+        let lock = instances
+            .locks
+            .lock(id, (409, 0))
+            .expect("boss death permanently saved both present raiders");
+        assert_eq!(lock.data.completed_encounters, 1);
+        assert_eq!(lock.instance_id, copy.instance_id);
+    }
+    assert!(instances.locks.lock(73, (409, 0)).is_none());
+    let entries = crate::scripted_ai::instance_script::done_boss_entries(
+        world.resource::<MapStore>(),
+        409,
+        1,
+    );
+    assert_eq!(entries, vec![12118]);
+}
+
+#[test]
+fn raid_entry_legacy_flexible_lock_uses_encounters_not_one_instance_id() {
+    let store = map_store().unwrap();
+    assert!(!store.map_difficulty(533, 3).unwrap().is_instance_id_bound());
+    assert!(
+        store
+            .map_difficulty(2522, 16)
+            .unwrap()
+            .is_instance_id_bound()
+    );
+}
+#[test]
+fn raid_entry_extended_copy_does_not_expire_at_its_original_weekly_reset() {
+    let store = map_store().unwrap();
+    let mut instances = InstanceManager::default();
+    let copy = instances
+        .create_map(store, 409, entrant(71, None), at(0.0))
+        .unwrap()
+        .map;
+    let player = World::new().spawn_empty().id();
+    instances.add_player(copy, player);
+    instances.update_instance_lock(copy, &[(player, 71)], 1, Some(0), SUNDAY_NOON);
+    let entries = store.map_difficulty(409, 9).unwrap();
+    let reset = locks::next_reset_time(entries.reset_interval, SUNDAY_NOON);
+    instances.locks.set_extended(71, entries, true, SUNDAY_NOON);
+    assert!(
+        instances
+            .expire_locked_copies(instances::Now {
+                elapsed: 100.0,
+                unix: reset
+            })
+            .is_empty()
+    );
+}
+
+#[test]
+fn raid_entry_flexible_saved_player_can_join_equal_progress_but_not_unkilled_encounters() {
+    let store = map_store().unwrap();
+    let entries = store.map_difficulty(533, 3).unwrap();
+    let mut locks = locks::InstanceLocks::default();
+    locks.create_for_new_instance(71, entries, 8, SUNDAY_NOON);
+    locks.update_for_player(
+        71,
+        entries,
+        &locks::LockUpdate {
+            instance_id: 8,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    assert_eq!(locks.can_join(71, entries, 9, SUNDAY_NOON, 1), None);
+    assert_eq!(locks.can_join(71, entries, 9, SUNDAY_NOON, 3), None);
+    assert_eq!(
+        locks.can_join(71, entries, 9, SUNDAY_NOON, 0),
+        Some(TransferAbortReason::AlreadyCompletedEncounter)
+    );
+}
+
+#[test]
+fn raid_entry_only_leader_sets_raid_selections_over_the_real_message_receiver_outside_instances() {
+    let mut h = harness().unwrap();
+    let leader = h.spawn(1, InMap::continent(0), Vec3::ZERO);
+    let member = h.spawn(2, InMap::continent(0), Vec3::ZERO);
+    h.group(&[&leader, &member]);
+    let send = |h: &mut Harness, who: &Traveler, difficulty_id: u32, legacy: bool| {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<SetRaidDifficulty>>(who.connection)
+            .unwrap()
+            .send::<InstanceChannel>(SetRaidDifficulty {
+                difficulty_id,
+                legacy,
+            });
+        h.advance(3);
+    };
+    send(&mut h, &member, 15, false);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<GroupRegistry>()
+            .raid_difficulty_of(2)
+            .unwrap(),
+        RaidDifficulty::default()
+    );
+    send(&mut h, &leader, 15, false);
+    send(&mut h, &leader, 6, true);
+    for who in [&leader, &member] {
+        assert_eq!(
+            *h.app.world().get::<RaidDifficulty>(who.player).unwrap(),
+            RaidDifficulty {
+                primary: 15,
+                legacy: 6
+            }
+        );
+    }
+    let store = h.app.world().resource::<MapStore>().clone();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 409, entrant(1, None), at(0.0))
+        .unwrap()
+        .map;
+    h.app.world_mut().entity_mut(leader.player).insert(copy);
+    send(&mut h, &leader, 14, false);
+    send(&mut h, &leader, 3, true);
+    assert_eq!(
+        *h.app.world().get::<RaidDifficulty>(leader.player).unwrap(),
+        RaidDifficulty {
+            primary: 15,
+            legacy: 6
+        }
     );
 }

@@ -1037,6 +1037,7 @@ fn member(entity: Entity, name: &str, class: u8) -> OnlineMember {
         level: 10,
         portrait: Default::default(),
         dungeon_difficulty: 1,
+        raid_difficulty: crate::maps::RaidDifficulty::default(),
     }
 }
 
