@@ -35,12 +35,13 @@ def decode_locks(data):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db2", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--world-db", required=True, type=Path)
     args = parser.parse_args()
     content = decode_locks(args.db2.read_bytes())
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(content, sort_keys=True) + "\n")
-    print(f"{len(content['locks'])} authored locks → {args.output}")
+    # SQLite resolves world.db symlinks. Keep immutable companion data by that source.
+    output = args.world_db.resolve(strict=True).with_name("game_object_locks.json")
+    output.write_text(json.dumps(content, sort_keys=True) + "\n")
+    print(f"{len(content['locks'])} authored locks → {output}")
 
 
 if __name__ == "__main__":
