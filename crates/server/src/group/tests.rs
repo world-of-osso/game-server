@@ -402,7 +402,7 @@ fn countdown_server_clock_expires_once_for_every_member() {
     invite_and_accept(&mut app, &alice, &bob, "Bob");
     send(&mut app, &alice, GroupCountdownRequest { seconds: 10 });
     pump(&mut app);
-    countdowns(&mut app, &alice);
+    let deadline = countdowns(&mut app, &alice).pop().unwrap().deadline_unix_ms;
     countdowns(&mut app, &bob);
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_secs(4),
@@ -419,6 +419,7 @@ fn countdown_server_clock_expires_once_for_every_member() {
         assert_eq!(
             countdowns(&mut app, client),
             vec![GroupCountdownUpdate {
+                deadline_unix_ms: deadline,
                 initiator_name: "Alice".into(),
                 duration_secs: 10,
                 time_remaining_secs: 0.0,

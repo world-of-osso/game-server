@@ -225,7 +225,11 @@ fn apply_commands(
         effects.extend(registry.respond_ready_check(from, msg.ready));
     }
     for (from, msg) in drain(&mut rx.countdowns, players) {
-        effects.extend(registry.set_countdown(from, msg.seconds));
+        let now_unix_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("server wall clock predates Unix epoch")
+            .as_millis() as u64;
+        effects.extend(registry.set_countdown(from, msg.seconds, now_unix_ms));
     }
     for (from, msg) in drain(&mut rx.raid_targets, players) {
         effects.extend(registry.set_raid_target(from, msg.target, msg.icon));

@@ -4,7 +4,9 @@ Server-authoritative Retail Mainline player countdowns; native parity is owned b
 
 ## What it must do
 
-- [ ] The group leader can start or replace a countdown using its selected duration, or cancel with zero.
+- [ ] The group leader or raid assistant can start or replace a countdown using its selected duration, or cancel with zero.
+- [ ] Only the raid leader grants/removes assistants; leaving or conversion to party removes assistant privilege.
+- [ ] Starts carry a UTC deadline from the injected wall-clock value, so receivers can reject stale delivery.
 - [ ] Every online group member, including the initiator, receives the same initiator/duration/remaining snapshot. Outsiders receive none.
 - [ ] Ordinary members and solo players cannot start a group countdown.
 - [ ] The server clock expires the countdown once and broadcasts zero remaining with the original positive duration. Cancellation instead has zero original duration.
@@ -24,7 +26,7 @@ Server-authoritative Retail Mainline player countdowns; native parity is owned b
 
 ## Known gaps (current cycle)
 
-- [ ] Assistant permissions, native UI/audio/manager control and live multi-account acceptance.
+- [ ] Native UI/audio/manager control and live multi-account acceptance. Host-client assistant/leader/revocation tests pass; final proof pending.
 - [ ] Retail maximum-duration constant's numeric value is absent from available Lua; no guessed limit.
 - [ ] Existing ready-check AFK summary and recipient notification.
 
