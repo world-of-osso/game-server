@@ -16,7 +16,7 @@ mod batch9;
 pub(super) use batch9::{cast_effect, update_ground_pulses};
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
-pub(crate) use batch13::{HAUNT, RAPID_FIRE, haunt_removed, rapid_fire_tick};
+pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch11::effect_enabled(world, caster, spell, index) && batch13::effect_enabled(spell, index)
@@ -92,8 +92,8 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
-        (batch13::REND, 0) => Some(batch13::rend_bleed),
-        (batch13::ASPECT_WILD, 0) => Some(batch13::wild_primary),
+        (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
+        (batch13::ASPECT_WILD, 0) => Some(batch13::cast_wild_primary),
         (batch12::FERAL_SPIRIT, 0) => Some(batch12::summon_wolves),
         (batch12::BUTCHERY, 0) => Some(batch12::butchery_bleed),
         (batch11::VOID_VOLLEY, 0) => Some(batch11::volley),
@@ -263,7 +263,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
-        batch13::BESTIAL_WRATH => Some(batch13::bestial_wrath),
+        batch13::BESTIAL_WRATH => Some(batch13::buff_and_strike_pet),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
@@ -887,7 +887,7 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
-        batch13::MORTAL_STRIKE => Some(batch13::mortal_wounds),
+        batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),
         batch6::BUTCHERY => Some(batch6::butchery),
