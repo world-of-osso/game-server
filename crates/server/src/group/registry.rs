@@ -616,12 +616,13 @@ impl GroupRegistry {
 
     // --- Player countdown ---
 
-    pub fn set_countdown(&mut self, from: CharacterId, seconds: u32) -> Effects {
+    pub fn set_countdown(&mut self, from: CharacterId, seconds: u32, now_unix_ms: u64) -> Effects {
         let group_id = match self.privileged_group(from) {
             Ok(id) => id,
             Err(effect) => return vec![effect],
         };
         let update = GroupCountdownUpdate {
+            deadline_unix_ms: now_unix_ms + u64::from(seconds) * 1000,
             initiator_name: self.name_of(from),
             duration_secs: seconds,
             time_remaining_secs: seconds as f32,
