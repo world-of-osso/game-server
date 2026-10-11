@@ -869,6 +869,7 @@ impl CreatureAi for SmartAi {
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, killer: Option<Entity>) {
+        bevy::log::debug!(creature = ?ctx.me, ?killer, position = ?ctx.position(), path = ?self.escort.as_ref().map(|path| path.path_id), driver = "escort_death", "creature died");
         if let Some(boss) = &mut self.boss {
             boss.just_died(ctx);
         }

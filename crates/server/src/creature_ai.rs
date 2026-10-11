@@ -814,6 +814,7 @@ pub(crate) fn chase_system(
             // In reach: `ChaseMovementGenerator` turns it to face the target (`SetInFront`).
             stride.facing = facing_along(target_pos.x - pos.x, target_pos.z - pos.z);
         }
+        bevy::log::debug!(?entity, from = ?*pos, to = ?next_position, ?state, driver = "chase", "combat movement");
         queues.apply(entity, &mut pos, bearing, stride);
     }
 }
