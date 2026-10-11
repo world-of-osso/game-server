@@ -11,6 +11,7 @@ mod batch16;
 mod batch17;
 mod batch19;
 mod batch20;
+mod batch21;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -35,6 +36,7 @@ pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
 };
+pub(super) use batch21::berserk_combo_bonus;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch19::effect_enabled(world, caster, spell, index)
