@@ -70,7 +70,7 @@ fn class_completeness_native_label_vulnerability_excludes_other_spell_and_caster
     crate::auras::remove_auras(
         h.app.world_mut(),
         h.npc,
-        crate::auras::RemoveReason::Cancel,
+        crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == PIERCING_CHILL,
     );
     let caster = h.caster;
