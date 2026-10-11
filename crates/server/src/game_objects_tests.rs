@@ -151,6 +151,50 @@ fn dungeon_population_loads_all_model_bearing_instance_gameobjects() {
 }
 
 #[test]
+fn follower_normal_population_spawns_normal_gameobjects_in_205_copy() {
+    let normal = GameObjectSpawn {
+        guid: 1,
+        map_id: 2521,
+        info: GameObjectInfo {
+            entry: 206038,
+            go_type: GAMEOBJECT_TYPE_GENERIC,
+            display_id: 200,
+            name: "Small Fire".into(),
+            scale: 0.5,
+        },
+        position: Vec3::new(1386.2, -169.719, 131.0),
+        orientation: 0.0,
+        bounds: GameObjectBounds {
+            min: Vec3::ZERO,
+            max: Vec3::ONE,
+            scale: 0.5,
+            orientation: 0.0,
+        },
+        spawn_difficulties: vec![1, 2, 23],
+        chair: None,
+        quest_object: None,
+    };
+    let mut mythic = normal.clone();
+    mythic.guid = 2;
+    mythic.spawn_difficulties = vec![8, 23];
+    let spawns = GameObjectSpawns(vec![normal, mythic]);
+    let mut world = World::new();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, &world);
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 7,
+    };
+    assert_eq!(spawn_map_game_objects(&mut commands, &spawns, map, 205), 1);
+    queue.apply(&mut world);
+    assert_eq!(world.query::<&GameObjectInfo>().iter(&world).count(), 1);
+    assert_eq!(
+        *world.query::<&crate::maps::InMap>().single(&world).unwrap(),
+        map
+    );
+}
+
+#[test]
 fn reach_is_the_model_box_grown_by_five_yards() {
     let bounds = GameObjectBounds {
         min: Vec3::new(-0.7, -1.95, 0.0),

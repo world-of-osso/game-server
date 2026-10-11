@@ -182,6 +182,11 @@ enum AdminRequest {
         character_name: String,
         copper: u64,
     },
+    GrantKeystone {
+        character_name: String,
+        challenge_id: u32,
+        level: u32,
+    },
     /// `count` of `item_id` into the character's bags.
     GrantItem {
         character_name: String,
@@ -660,6 +665,18 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "combat-log" => parse_combat_log(args),
         "set-gold" => parse_set_gold(args),
         "grant-item" => parse_grant_item(args),
+        "grant-keystone" => {
+            require_args(
+                args,
+                5,
+                "grant-keystone <character_name> <challenge_id> <level>",
+            );
+            AdminRequest::GrantKeystone {
+                character_name: args[2].clone(),
+                challenge_id: parse_number(&args[3], "challenge_id"),
+                level: parse_number(&args[4], "level"),
+            }
+        }
         "quest-complete" => {
             require_args(args, 4, "quest-complete <character_name> <quest_id>");
             AdminRequest::QuestComplete {

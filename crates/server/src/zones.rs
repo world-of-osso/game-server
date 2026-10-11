@@ -1005,6 +1005,42 @@ mod tests {
     }
 
     #[test]
+    fn follower_normal_population_spawns_normal_only_and_keeps_follower_difficulty() {
+        let mut normal = make_spawn(42, 10.0, 20.0, 30.0);
+        normal.map = 2521;
+        normal.spawn_difficulties = vec![1, 2, 23];
+        let mut mythic = make_spawn(43, 40.0, 50.0, 60.0);
+        mythic.map = 2521;
+        mythic.spawn_difficulties = vec![8, 23];
+        let data = make_world_data(
+            vec![make_template(42, 1.0, 5555), make_template(43, 1.0, 5555)],
+            vec![normal, mythic],
+        );
+        let mut world = World::new();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, &world);
+        let map = crate::maps::InMap {
+            map_id: 2521,
+            instance_id: 7,
+        };
+        let content = MapContent {
+            map,
+            difficulty_id: 205,
+            dead_bosses: Vec::new(),
+        };
+        assert_eq!(spawn_map_creatures(&mut commands, &data, content, false), 1);
+        queue.apply(&mut world);
+        let units: Vec<_> = world
+            .query::<(&Npc, &CreatureDifficulty, &crate::maps::InMap)>()
+            .iter(&world)
+            .collect();
+        assert_eq!(units.len(), 1);
+        assert_eq!(units[0].0.template_id, 42);
+        assert_eq!(units[0].1.0, 205);
+        assert_eq!(*units[0].2, map);
+    }
+
+    #[test]
     fn dungeon_population_spawns_outside_the_old_appearance_allowlist() {
         for map_id in [36, 43, 389, 643] {
             let mut spawn = make_spawn(42, 10.0, 20.0, 30.0);
