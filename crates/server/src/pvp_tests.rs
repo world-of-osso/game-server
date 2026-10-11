@@ -99,6 +99,8 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
         InvitedBattleground {
             instance: BgInstance::from_match(&matched, &template),
             accepted: BTreeSet::new(),
+            map: None,
+            origins: BTreeMap::new(),
         },
     );
     respond_to_battleground_invitation(&mut state, 17, 1, true).unwrap();

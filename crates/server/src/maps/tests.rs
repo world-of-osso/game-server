@@ -165,6 +165,66 @@ fn group_members_share_a_stockade_copy_and_a_solo_player_gets_its_own() {
 }
 
 #[test]
+fn warsong_rosters_share_only_their_reserved_copy_without_dungeon_locks() {
+    let store = map_store().expect("local map catalog");
+    let template = shared::battleground::warsong_gulch();
+    let mut instances = InstanceManager::default();
+    let first_roster: Vec<u64> = (1..=10).collect();
+    let second_roster: Vec<u64> = (11..=20).collect();
+    let capacity = u32::from(template.team_size) * 2;
+    assert_eq!(
+        instances.create_map(store, template.map_id, entrant(1, None), at(0.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    let first = instances
+        .create_battleground_map(store, template.map_id, &first_roster, capacity, at(0.0))
+        .unwrap();
+    let second = instances
+        .create_battleground_map(store, template.map_id, &second_roster, capacity, at(0.0))
+        .unwrap();
+    assert_ne!(first, second);
+    for (roster, expected) in [(&first_roster, first), (&second_roster, second)] {
+        for character_id in roster {
+            let resolved = instances
+                .create_map(
+                    store,
+                    template.map_id,
+                    entrant(*character_id, Some(7)),
+                    at(1.0),
+                )
+                .unwrap();
+            assert_eq!(resolved.map, expected);
+            assert!(!resolved.created);
+            assert_eq!(
+                instances.player_cannot_enter(
+                    store,
+                    template.map_id,
+                    entrant(*character_id, None),
+                    90,
+                    SUNDAY_NOON
+                ),
+                None
+            );
+        }
+    }
+    assert_eq!(
+        instances.create_map(store, template.map_id, entrant(21, None), at(1.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        instances.cannot_enter(first, entrant(11, None), SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    assert!(instances.lock_copies_in_use().is_empty());
+    assert!(
+        instances
+            .take_expired(INSTANCE_UNLOAD_DELAY_SECS + 1.0)
+            .is_empty(),
+        "no invented battleground reservation expiry"
+    );
+}
+
+#[test]
 fn a_full_stockade_copy_refuses_the_sixth_player_and_a_stranger_to_its_group() {
     let Some(store) = map_store() else { return };
     let mut world = World::new();
@@ -445,6 +505,25 @@ impl Harness {
         self.advance(3);
     }
 
+    fn receive_pvp_updates(
+        &mut self,
+        frames: usize,
+    ) -> std::collections::HashMap<Entity, Vec<PvpStateUpdate>> {
+        let mut received = std::collections::HashMap::<Entity, Vec<PvpStateUpdate>>::new();
+        for _ in 0..frames {
+            self.advance(1);
+            let world = self.app.world_mut();
+            let mut receivers = world.query::<(Entity, &mut MessageReceiver<PvpStateUpdate>)>();
+            for (connection, mut receiver) in receivers.iter_mut(world) {
+                received
+                    .entry(connection)
+                    .or_default()
+                    .extend(receiver.receive());
+            }
+        }
+        received
+    }
+
     fn map_of(&self, who: &Traveler) -> Option<InMap> {
         self.app.world().get::<InMap>(who.player).copied()
     }
@@ -582,6 +661,104 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
         h.creatures_in(b).len(),
         STOCKADE_CREATURES,
         "the occupied copy stays"
+    );
+}
+
+#[test]
+fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
+    let mut h = harness_with(|app| {
+        app.add_plugins(crate::pvp::PvpPlugin);
+    })
+    .unwrap();
+    let template = shared::battleground::warsong_gulch();
+    let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
+    let players: Vec<_> = (1..=10).map(|id| h.spawn(id, STORMWIND, origin)).collect();
+    for who in &players {
+        h.app
+            .world_mut()
+            .entity_mut(who.player)
+            .insert(crate::pvp::PlayerPvpState::default());
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForBattleground>(),
+            pair::<RespondToBattlegroundInvite>(),
+            pair::<PvpStateUpdate>(),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(QueueForBattleground {
+                battleground_id: template.id,
+            });
+    }
+    let updates = h.receive_pvp_updates(5);
+    let invitations: Vec<_> = players
+        .iter()
+        .map(|who| {
+            updates[&who.connection]
+                .iter()
+                .filter_map(|update| update.snapshot.as_ref())
+                .filter_map(|snapshot| snapshot.battleground.clone())
+                .last()
+                .expect("typed invitation")
+        })
+        .collect();
+    let match_id = invitations[0].match_id;
+    for (who, invitation) in players.iter().zip(&invitations) {
+        assert_eq!(invitation.match_id, match_id);
+        assert_eq!(invitation.map_id, 2106);
+        assert_eq!(invitation.invitation_time_left_secs, None);
+        assert!(!invitation.accepted);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(RespondToBattlegroundInvite {
+                match_id,
+                accepted: true,
+            });
+    }
+    h.receive_pvp_updates(5);
+    for (who, invitation) in players.iter().zip(&invitations) {
+        assert_eq!(
+            h.map_of(who),
+            None,
+            "accepted player waits for WorldPortAck"
+        );
+        let messages = h.new_worlds(who);
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].map_id, 2106);
+        assert_eq!(messages[0].map_directory, "warsonggulch2");
+        let safe_id = match invitation.team {
+            shared::battleground::BgTeam::A => 7051,
+            shared::battleground::BgTeam::B => 7050,
+        };
+        let destination = map_store().unwrap().safe_locs[&safe_id];
+        assert!(close(
+            wow(&Position {
+                x: messages[0].position[0],
+                y: messages[0].position[1],
+                z: messages[0].position[2]
+            }),
+            destination.position
+        ));
+    }
+    for who in &players {
+        h.ack(who);
+    }
+    let shared_map = h.map_of(&players[0]).unwrap();
+    assert_eq!(shared_map.map_id, 2106);
+    assert_ne!(shared_map.instance_id, 0);
+    for who in &players {
+        assert_eq!(h.map_of(who), Some(shared_map));
+    }
+    assert!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .lock_copies_in_use()
+            .is_empty()
     );
 }
 

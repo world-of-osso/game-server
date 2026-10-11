@@ -172,28 +172,31 @@ fn save_instance_locks(
 
 /// `MapManager::Update` → `Map::CanUnload`: an instance empty for the unload delay is
 /// removed with everything in it; the next entry creates a fresh copy.
-fn unload_expired_instances(
-    time: Res<Time>,
-    mut instances: ResMut<InstanceManager>,
-    entities: Query<(Entity, &InMap)>,
-    mut commands: Commands,
-) {
-    let expired = instances.take_expired(time.elapsed_secs_f64());
-    if expired.is_empty() {
-        return;
+fn unload_expired_instances(world: &mut World) {
+    let elapsed = world.resource::<Time>().elapsed_secs_f64();
+    let expired = world
+        .resource_mut::<InstanceManager>()
+        .take_expired(elapsed);
+    if !expired.is_empty() {
+        unload_map_content(world, &expired);
+        info!("Unloaded instances {expired:?}");
     }
-    for (entity, map) in &entities {
-        if expired.contains(map) {
-            commands.entity(entity).despawn();
-        }
+}
+
+/// Both timed dungeon unload and explicit match close remove the same map-owned data.
+pub(crate) fn unload_map_content(world: &mut World, maps: &[InMap]) {
+    let mut query = world.query::<(Entity, &InMap)>();
+    let entities: Vec<_> = query
+        .iter(world)
+        .filter_map(|(entity, map)| maps.contains(map).then_some(entity))
+        .collect();
+    for entity in entities {
+        world.despawn(entity);
     }
-    info!("Unloaded instances {expired:?}");
-    commands.queue(move |world: &mut World| {
-        if let Some(mut pools) = world.get_resource_mut::<crate::spawn_pools::PoolSpawns>() {
-            pools.0.retain(|map, _| !expired.contains(map));
-        }
-        crate::scripted_ai::instance_script::unload_instance_scripts(world, &expired);
-    });
+    if let Some(mut pools) = world.get_resource_mut::<crate::spawn_pools::PoolSpawns>() {
+        pools.0.retain(|map, _| !maps.contains(map));
+    }
+    crate::scripted_ai::instance_script::unload_instance_scripts(world, maps);
 }
 
 #[cfg(test)]
