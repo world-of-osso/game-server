@@ -26,7 +26,7 @@ These are eleven specs across ten classes. No Rogue/Death Knight/Demon Hunter fo
 
 ## Runtime bridge
 
-`followers/` loads verified profiles and populated difficulty205 destinations, fills the selected player role to1 tank/1 healer/3 damage, uses authenticated templates/models and applies aura458324. Companion group identities occupy the high half of the runtime group-ID space; they are not persisted characters. Existing party rosters and health updates include the NPCs.
+`followers/` loads verified profiles and populated difficulty205 destinations, fills the selected player role to1 tank/1 healer/3 damage, uses authenticated templates/models and native labelled-spec passives. Spell458324 is not assigned in the source/runtime addon rows; it must not be inferred from its name. Companion group identities occupy the high half of the runtime group-ID space; they are not persisted characters. Existing party rosters and health updates include the NPCs.
 
 Role AI uses ordinary `creature_cast`, native cooldowns/costs/passives, threat/taunt, chase and owner-follow systems. Tanks recover an ally's attacker with their real taunt and approach melee reach; healers pick the lowest living party-health fraction before damage; damage roles use bounded cooldown/filler priorities. Missing cast-range metadata stops combat instead of substituting melee. The bridge uses native class/spec/level stats and consistent health/mana; it does not infer NPC gear. Holy Priest137031 activates the sourced Flash Heal mana-cost row, so passives must be applied rather than allowing a free heal.
 
@@ -52,7 +52,7 @@ A second run reproduced wrong difficulty on a character saved inside Normal Ruby
 
 ## Combat ownership and reward boundary
 
-A real difficulty205 Juggernaut kill exposed two ownership omissions. Followers copied the owner's faction but lacked `UNIT_FLAG_PLAYER_CONTROLLED`, so Ruby faction16 could not retaliate against them under the existing PvC relation rules. They also lacked `ClientId` (correctly: not persisted characters), and `CreatureTap::record_damage` only recognized direct player attackers, leaving companion-only kills untapped. Initialization now marks controlled ownership; damage attribution resolves `Follower.owner` to the authenticated character before the existing subgroup reward logic. Ordinary unrelated NPCs still grant no player credit. Targeted tests exercise actual lethal Fireball/tap replication and Ruby's real faction16 retaliation boundary.
+A real difficulty205 Juggernaut kill exposed two ownership omissions. Followers copied the owner's faction but did not mark controlled ownership. Their inferred458324 bootstrap also gave type4 invisibility, which the old boolean visibility handling hid from every client and rejected as a hostile spell target. They also lacked `ClientId` (correctly: not persisted characters), and `CreatureTap::record_damage` only recognized direct player attackers, leaving companion-only kills untapped. Neither TDB nor runtime addon data assigns458324 to these templates. Lead explicitly approved removing the inferred application (not stripping an assigned aura or bypassing detection); native labelled-spec passives remain. No invis-detection merge or separate visibility model is part of this fix. Initialization marks controlled ownership; damage attribution resolves `Follower.owner` to the authenticated character before the existing subgroup reward logic. Ordinary unrelated NPCs still grant no player credit. Targeted tests exercise actual lethal Fireball/tap replication and Ruby's real faction16 retaliation boundary.
 
 Source loot remains separate: Melidrussa188252 has lootid0 in base and every imported difficulty, and neither source nor runtime creature loot table has entry188252. Owner attribution cannot create absent authored drops; no loot rows were invented. The native first-boss/loot/both-skin goal remains open.
 
@@ -72,7 +72,7 @@ Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-202
 ## Proof ledger
 
 - Profile SQL: initial RED; current2/2 behavioral tests pass, including repeated application, source display preservation and refusal to overwrite the source database; no ResourceWarnings.
-- Role/executor/catalog: current7/7 targeted tests pass. Actual Fireball damage, Hand of Reckoning threat, lowest-health Flash Heal/native cost, authored458324 initialization, role composition, source-range refusal and admission-source gating are exercised.
+- Role/executor/catalog: current7/7 targeted tests pass. Actual Fireball damage, Hand of Reckoning threat, lowest-health Flash Heal/native cost, native initialization, role composition, source-range refusal and admission-source gating are exercised. The old458324 assertion described an unsupported bootstrap and is superseded by a no-unassigned-aura regression.
 - Party integration: loopback roster/health test passes; five members remain online and changed Garrick health reaches the player. This is not rendered party-frame proof.
 - Native host/transport:2/2 targeted tests pass, including ephemeral UDP request/refusal round trip and decoded native account state. Source protocol pinnedb452322 for that proof.
 - Server cargo check and cargo fmt --check pass. No full suites were run. Evidence logs live in the diagnostics directory, not only slot targets.

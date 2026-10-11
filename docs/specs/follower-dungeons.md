@@ -13,6 +13,8 @@ Additional user-approved workaround (2026-10-11): follower difficulty205 runs re
 - [x] Audit canonical world.db read-only; distinguish reference spawns from runtime content and report absent escort spell assignments.
 - [x] Refuse a CLI output/report destination equal to an input or the audited database.
 
+Spell458324 is not assigned by the follower templates' TDB/runtime addon data. Do not bootstrap it from its name; this hides the companions and breaks retaliation. Apply native spec passives and only the explicitly approved player-spec bridge spells.
+
 ### Gameplay (acceptance remains open until behavioral/live proof)
 - [ ] Solo follower queue creates a five-member party, fills tank/healer/DPS roles, enters an instance with canonical authored spawns, follows/regroups and finishes the dungeon.
 - [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use bounded spec-spell priorities. All roles reuse server spell execution and navigation. Companions are player-affected combat units, not persisted characters; their real spell damage credits the authenticated owner/group for kill rewards.
@@ -31,7 +33,7 @@ Additional user-approved workaround (2026-10-11): follower difficulty205 runs re
 ## Tests asserting this spec
 - `scripts/tests/test_follower_import.py` — source binary to SQLite round-trip, exact authentic spell rows, reapplication/preservation, invalid layout/source, read-only audit and database output rejection.
 - `scripts/tests/test_follower_profiles.py` — eleven verified profiles, source model preservation, repeated SQL application and database-overwrite refusal.
-- `crates/server/src/followers/{tests,catalog_tests}.rs` — role composition, real damage/heal/taunt/cost/aura initialization, missing-source refusal and exact Normal population admission-data gating and205 creature/game-object copy spawning.
+- `crates/server/src/followers/{tests,catalog_tests}.rs` — role composition, real damage/heal/taunt/cost/native initialization, refusal of the unassigned458324 bootstrap, owner kill credit and retaliation, missing-source refusal and exact Normal population admission-data gating and205 creature/game-object copy spawning.
 - `crates/server/src/group/follower_tests.rs` — real loopback companion online roster and health changes.
 
 ## Known gaps (current cycle)
