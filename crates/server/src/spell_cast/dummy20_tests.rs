@@ -135,3 +135,128 @@ fn dummy20_stormkeeper_two_instant_lightning_bolts() {
 fn dummy20_stormkeeper_two_instant_chain_lightnings() {
     stormkeeper_uses(188443);
 }
+
+#[test]
+fn dummy20_barbed_native_clock_pays_authored_total_and_expires() {
+    let mut h = fixture(&[217200], 3);
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, npc, 217200);
+    h.advance(250);
+    assert_eq!(damage(&h, 217200), vec![61; 7]);
+    assert!(!crate::auras::has_aura(h.app.world(), npc, 217200));
+    h.advance(50);
+    assert_eq!(damage(&h, 217200).len(), 7);
+}
+
+#[test]
+fn dummy20_barbed_foreign_owner_gets_only_its_fresh_budget() {
+    let mut h = fixture(&[217200], 3);
+    let caster = h.caster;
+    let npc = h.npc;
+    let other = spawn_player(&mut h.app, 3, 2.0);
+    h.advance(1);
+    apply(&mut h, caster, npc, 217200);
+    h.advance(45);
+    apply(&mut h, other, npc, 217200);
+    h.advance(250);
+    for source in [caster, other] {
+        let hits: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|e| {
+                e.spell_id == Some(217200)
+                    && e.kind == CombatLogKind::Damage
+                    && e.source == Some(source.to_bits())
+            })
+            .map(|e| e.amount)
+            .collect();
+        assert_eq!(hits, vec![61; 7]);
+    }
+}
+
+#[test]
+fn dummy20_barbed_refresh_resnapshots_new_power_without_rescaling_unpaid_old_damage() {
+    let mut h = fixture(&[217200], 3);
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, npc, 217200);
+    h.advance(45);
+    assert_eq!(damage(&h, 217200), vec![61; 2]);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .attack_power = 200.0;
+    h.inbox.log.clear();
+    apply(&mut h, caster, npc, 217200);
+    h.advance(250);
+    assert_eq!(damage(&h, 217200), vec![194; 6]);
+}
+
+#[test]
+fn dummy20_barbed_rejected_friendly_target_does_not_start_focus() {
+    let mut h = fixture(&[217200, 246152], 3);
+    let caster = h.caster;
+    h.cast_and_deliver(217200, Some(caster));
+    h.advance(180);
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert!(!h.inbox.log.iter().any(|e| e.spell_id == Some(246152)));
+}
+
+#[test]
+fn dummy20_stormkeeper_root_completion_and_cancellation() {
+    for cancel in [false, true] {
+        let mut h = fixture(&[191634, 188196], 7);
+        let caster = h.caster;
+        let npc = h.npc;
+        h.cast_and_deliver(191634, Some(caster));
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_some()
+        );
+        assert!(!crate::auras::has_aura(h.app.world(), caster, 191634));
+        if cancel {
+            super::cancel_cast(h.app.world_mut(), caster);
+        }
+        h.advance(50);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert_eq!(
+            crate::auras::has_aura(h.app.world(), caster, 191634),
+            !cancel
+        );
+        if cancel {
+            continue;
+        }
+        for remaining in [true, false] {
+            h.cast_and_deliver(188196, Some(npc));
+            assert!(
+                h.app
+                    .world()
+                    .get::<shared::casting::CastState>(caster)
+                    .is_none()
+            );
+            h.advance(35);
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), caster, 191634),
+                remaining
+            );
+        }
+        h.cast_and_deliver(188196, Some(npc));
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_some(),
+            "third bolt resumes its native cast time"
+        );
+        h.advance(80);
+        assert_eq!(
+            h.inbox.go.iter().filter(|go| go.spell_id == 188196).count(),
+            3
+        );
+    }
+}
