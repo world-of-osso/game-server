@@ -9,6 +9,7 @@ use super::{TargetPlan, attributes, cast_event, log_event, targets};
 use crate::auras::{ActiveAuras, handlers, mechanic_immunity};
 use crate::spell_info::{SpellInfo, SpellStore};
 
+const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const DEFENSE_MAGIC: u32 = 1;
@@ -54,7 +55,9 @@ fn remove_immune_effect_targets(
         let effect = &spell.effects[planned.index];
         let harmful = negative & (1 << effect.index) != 0;
         planned.units.retain(|unit| {
-            if harmful && misses.iter().any(|(missed, _)| missed == unit) {
+            // A whole-spell miss removes every effect on that unit. Numeric
+            // Dummy markers cannot turn an immune primary into a successful hit.
+            if misses.iter().any(|(missed, _)| missed == unit) {
                 return false;
             }
             if crate::auras::effect_immunity::blocks_effect(world, *unit, spell, effect)
@@ -82,7 +85,11 @@ fn roll_defense(
     if negative == 0 {
         return None;
     }
-    if mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
+    // Object::SpellHitResult/Unit::IsImmunedToSpell checks school immunity
+    // before spending resources, not only when damage is finally applied.
+    let school_immune = attributes(spell, 0) & ATTR0_NO_IMMUNITIES == 0
+        && crate::auras::immune_to_school(world.get::<ActiveAuras>(unit), spell.school_mask());
+    if school_immune || mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
         return Some(MissKind::Immune);
     }
     if attributes(spell, 3) & ATTR3_NO_AVOIDANCE != 0 {

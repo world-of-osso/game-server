@@ -10,6 +10,7 @@
 - [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
 - [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
 - [Open-world population](systems/content-import.md#open-world-population-2026-10-11) — scoped31-map TDB promotion and runtime hosting, full map/zone census, both-skin native Boralus pick; source/phase/client coverage gaps explicit.
+- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; shared537/457/416, signed Rune/Runic costs and composite-school miss boundaries; [source/proof/limits](../class-completeness.md).
 
 - [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry) — authored scripted Shadow-Blades combo doubling, real Rune-Weapon owner parry, all28 exact reviews and30 deferred revisits; [157/157/0 census/proof/limits](../spell-dummy23-coverage.md). Zero underived is no unreviewed roots, not zero missing mechanics.
 
