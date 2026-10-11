@@ -9,6 +9,7 @@ mod batch14;
 mod batch15;
 mod batch16;
 mod batch17;
+mod batch19;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -18,6 +19,7 @@ mod batch8;
 mod batch9;
 
 pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
 }
@@ -33,7 +35,8 @@ pub(crate) use batch17::{
 };
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    batch11::effect_enabled(world, caster, spell, index)
+    batch19::effect_enabled(world, caster, spell, index)
+        && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
 }
@@ -223,6 +226,9 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
+    if let Some(hook) = batch19::damage_amount(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
         batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
