@@ -19,7 +19,9 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 
 ## Implementation inventory
 
-- `crates/server/src/mythic_plus_runtime.rs` — deterministic lifecycle, authored weighted creature/event criteria, boss completion, threshold upgrades/overtime/abandonment depletion and terminal immutability. Not yet connected to gameplay.
+- `crates/server/src/mythic_plus_runtime.rs` — deterministic lifecycle, authored weighted creature/event criteria, boss completion, threshold upgrades/overtime/abandonment depletion and terminal immutability.
+- `crates/server/src/mythic_plus.rs` — durable GUID metadata, authenticated bag-owned Font slots, fresh Mythic23→Keystone8 conversion, shared ServerClock, kill/death/encounter hooks and atomic terminal key/history settlement. `GrantKeystone` is explicit administrative acquisition, not a fabricated dungeon drop rule.
+- `scripts/import_keystone_item.py` — private-copy publication of authentic local Item/ItemSparse180653; unrelated items stay untouched.
 - `scripts/import_mythic_plus.py` — copy-only, offline challenge catalog importer; does not enable gameplay.
 - `scripts/tests/test_import_mythic_plus.py` — authentic local catalog and destination safety regressions.
 
@@ -29,8 +31,8 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 
 ## Known gaps (current cycle)
 
-- [ ] Runtime keystone metadata/acquisition, Font interaction/protocol, state lifecycle and both-skin HUD are not implemented by the catalog importer.
-- [ ] Season activation/affix rotation, default death penalty, countdown duration and current rating calculation lack an established numeric source. `UnsourcedChallengeConfig` exposes `unsourced_pre_start_countdown_ms`/`unsourced_death_penalty_ms` default0 and `unsourced_seasonal_affixes_by_level`/`unsourced_rating_by_level` default empty. Rating remains `None`, not a zero score. Configured test numbers prove mechanisms only, not Retail policy. Minimum key floor and next-dungeon selection also remain unsourced; saturating level subtraction currently has no asserted Retail floor.
+- [ ] Both-skin native activation/weighted-kill/encounter/terminal proof is still pending. The runtime exists separately from the offline catalog importer.
+- [ ] Season activation/affix rotation, default death penalty, countdown duration and current rating calculation lack an established numeric source. `UnsourcedChallengeConfig` exposes `unsourced_pre_start_countdown_ms`/`unsourced_death_penalty_ms` default0 and `unsourced_seasonal_affix_rotation` and `unsourced_rating_by_level` default empty; `unsourced_season_period_secs`/`unsourced_season_epoch_unix` default0. Period0 disables rotation; a supplied period/epoch indexes explicitly supplied level-specific rotations. No active season/pool is presumed. Rating remains `None`, not a zero score. Configured test numbers prove mechanisms only, not Retail policy. Minimum key floor and next-dungeon selection also remain unsourced; saturating level subtraction currently has no asserted Retail floor.
 - [ ] Selected affix mechanics only where authored rules exist; historical affix rows are not a current active rotation.
 - [ ] Both-skin private UDP5800 native acceptance, completion/depletion and rating proof remain pending.
 
