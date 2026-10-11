@@ -47,6 +47,12 @@ Operations mutate the model; `with_appearance_sync` then rewrites the appearance
 - [Owned runtime source tests](../../../crates/server/src/inventory_source_tests.rs)
 - [Owned-commerce ledger](../../../target/owned-commerce-source-runtime/ledger.md), [requirement ledger](../../../target/source-requirements-proof/ledger.md) — exact executed revisions, scope patches, commands and saved output.
 
+## Non-visual equipment — verified 2026-10-11
+
+`ItemTemplate.unique_equipped` reads ItemSparse.Flags_0 bit `0x00080000` (`ITEM_FLAG_UNIQUE_EQUIPPABLE`, TrinityCore a352b1fa ItemTemplate.h). `equip_limit` resolves ItemSparse.LimitCategory into the pinned `item_limit_categories.tsv` export: Retail12.1.0.69933 FDID1237440/layoutB0A784BD,457 records/zero dropped, content MD5`951698610c85e466fe3e1d061142115b`. `ItemLimitCategory.Quantity` is field1 (DB2Structure.h ItemLimitCategoryEntry). Distinct Alchemist Stones35748/35749 share category130/quantity1. Missing categories fail catalog loading rather than inventing a cap. The local catalog has211 non-visual items with categories; none use the three authored condition rows (categories353/357).
+
+Native proof uses privateUDP5821, disposable fb_equip accounts and a copied world.db. Arred17512 is relocated near Northshire only in that copy; its original flags/inventory/prices remain unchanged. Mood Ring7338 is purchased through the native merchant; neck4112, ring1319 and trinkets1490/2820 are authentic admin bag grants. Both skins show all five slots, Stamina895→897 and Versatility0→1%, native ring tooltip and paired drag swap. Database reopen/migration and existing aura-stat composition have handler tests. On-equip ItemEffect triggers were not previously applied by this stat system and are not claimed here. Detailed logs/receipts remain in engine `data/diagnostics/equip-slots-2026-10-11/`; requested PNGs live in `/syncthing/AgentShared/2026-10-11/equip-slots/`.
+
 ## Networking
 
 - `send_initial_inventory` (`Added<InWorld>`) sends both snapshots, stores the view in `SentInventoryView` on the connection, and persists new placements.
