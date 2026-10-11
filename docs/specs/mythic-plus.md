@@ -11,6 +11,7 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 - [x] Show Font insertion/activation, configured countdown, elapsed/remaining time, death count/time lost, configured affixes and scenario boss/enemy-force criteria in both skins. Numeric policy absent from local sources remains disabled.
 - [x] Complete only after authored boss and force criteria; use source-backed timer thresholds for upgrades, handle failed/abandoned keys without repeat awards.
 - [x] Implement optional explicit rating policy/display and persist completed runs without fabricating a score formula. No rating is emitted by default.
+- [x] Persist versioned attributable completion records for offline armory rankings: character IDs, class/spec at settlement, completion timestamp, map/challenge, original key level/affixes, elapsed time including death penalties, authored timer and in-time result. Commit these atomically with key/history settlement; abandoned runs do not rank. Existing un-attributed runs are not backfilled. Active season remains null: historical DB2 rows alone do not select a current season. See [snapshot contract](site-snapshots.md).
 
 ## How it works
 
