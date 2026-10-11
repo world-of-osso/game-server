@@ -5,6 +5,7 @@ mod batch10;
 mod batch11;
 mod batch12;
 mod batch13;
+mod batch14;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -13,10 +14,14 @@ mod batch7;
 mod batch8;
 mod batch9;
 
-pub(super) use batch9::{cast_effect, update_ground_pulses};
+pub(super) use batch9::update_ground_pulses;
+pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
+}
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
+pub(crate) use batch14::{DEATHMARK, EYE_BEAM, EYE_BEAM_DAMAGE, deathmark_energy};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch11::effect_enabled(world, caster, spell, index) && batch13::effect_enabled(spell, index)
@@ -92,6 +97,11 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
+        (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
+        (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
+        (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
+        (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
         (batch13::ASPECT_WILD, 0) => Some(batch13::cast_wild_primary),
         (batch12::FERAL_SPIRIT, 0) => Some(batch12::summon_wolves),
@@ -161,6 +171,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
                 .resource::<crate::spell_info::SpellStore>()

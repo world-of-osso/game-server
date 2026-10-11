@@ -134,7 +134,12 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
     };
     let max_health = world.get::<Health>(unit).map_or(0.0, |health| health.max);
     match tick.aura_type {
-        PERIODIC_DAMAGE => effects::deal_damage(world, &ctx, unit, tick.amount, false, true),
+        PERIODIC_DAMAGE => {
+            effects::deal_damage(world, &ctx, unit, tick.amount, false, true);
+            if spell.id == crate::spell_cast::scripts::DEATHMARK && tick.effect_index == 0 {
+                crate::spell_cast::scripts::deathmark_energy(world, tick.caster, spell);
+            }
+        }
         PERIODIC_DAMAGE_PERCENT => effects::deal_damage(
             world,
             &ctx,
@@ -157,7 +162,11 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         PERIODIC_TRIGGER_SPELL => crate::spell_cast::cast_triggered(
             world,
             tick.caster,
-            tick.trigger_spell,
+            if spell.id == crate::spell_cast::scripts::EYE_BEAM && tick.effect_index == 0 {
+                crate::spell_cast::scripts::EYE_BEAM_DAMAGE
+            } else {
+                tick.trigger_spell
+            },
             Some(unit),
             TICK_TRIGGER_DEPTH,
         ),
