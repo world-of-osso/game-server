@@ -229,29 +229,18 @@ fn update_player_events(
         if let Some((account, character)) = owner
             && let Some(db) = world.get_resource::<GameDatabase>()
         {
-            loop {
-                let (aggregate, account_toasts) = account_store::save_account_progress(
-                    &db.db,
+            toasts.extend(account_store::sync_account_progress(
+                &db.db,
+                &mut state,
+                &catalog,
+                account_store::AccountUpdate {
                     account,
                     character,
-                    &state,
-                    &catalog,
                     completed_map,
                     race,
                     now,
-                );
-                state.account = Some(Box::new(aggregate));
-                toasts.extend(account_toasts);
-                let character_toasts =
-                    catalog.grant_completed(&mut state, completed_map, race, false);
-                if character_toasts.is_empty() {
-                    break;
-                }
-                for toast in &character_toasts {
-                    state.earned_at.insert(toast.achievement_id, now);
-                }
-                toasts.extend(character_toasts);
-            }
+                },
+            ));
         }
         let snapshot = catalog.snapshot(&state, race);
         world.entity_mut(player).insert(state);

@@ -238,6 +238,9 @@ impl AchievementCatalog {
         self.definitions
             .values()
             .filter(|definition| self.faction_matches(definition.faction, race))
+            .filter(|definition| {
+                !self.window.has_account_flag(definition.id) || state.account.is_some()
+            })
             .map(|definition| {
                 let state = self.definition_state(state, definition.id);
                 let progress = self.tree_progress(definition.root, state);
@@ -400,10 +403,10 @@ impl AchievementCatalog {
             && criteria.kind == 8
         {
             return (state.earned_ids.contains(&criteria.asset)
-                || state
-                    .account
-                    .as_deref()
-                    .is_some_and(|account| account.earned_ids.contains(&criteria.asset)))
+                || state.account.as_deref().is_some_and(|account| {
+                    self.window.has_account_flag(criteria.asset)
+                        && account.earned_ids.contains(&criteria.asset)
+                }))
             .then_some(1);
         }
         state.criteria_progress.get(&id).copied()

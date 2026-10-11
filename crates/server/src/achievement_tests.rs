@@ -247,7 +247,8 @@ fn achievements2_skill_rank_uses_current_base_rank_not_maximum_or_increment() {
 
 #[test]
 fn achievements2_spell_targets_credit_recipient_not_caster_and_count_once_per_hit() {
-    let mut h = crate::spell_cast::test_harness::harness_with(vec![], &[24737], 1, false).unwrap();
+    let mut h =
+        crate::spell_cast::test_harness::harness_with(vec![], &[24733, 24732], 1, false).unwrap();
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(load_achievement_catalog(&conn).unwrap());
@@ -263,24 +264,24 @@ fn achievements2_spell_targets_credit_recipient_not_caster_and_count_once_per_hi
         .world_mut()
         .entity_mut(recipient)
         .insert(PlayerAchievementState::default());
-    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24737, Some(recipient), u8::MAX);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24733, Some(recipient), u8::MAX);
     assert!(
         !h.app
             .world()
             .get::<PlayerAchievementState>(recipient)
             .unwrap()
             .criteria_progress
-            .contains_key(&3210)
+            .contains_key(&3209)
     );
     for expected in [1, 2] {
-        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24737, Some(recipient), 0);
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24733, Some(recipient), 0);
         assert_eq!(
             h.app
                 .world()
                 .get::<PlayerAchievementState>(recipient)
                 .unwrap()
                 .criteria_progress
-                .get(&3210),
+                .get(&3209),
             Some(&expected)
         );
     }
@@ -290,8 +291,101 @@ fn achievements2_spell_targets_credit_recipient_not_caster_and_count_once_per_hi
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
-            .contains_key(&3210)
+            .contains_key(&3209)
     );
+}
+
+#[test]
+fn achievements2_account_migration_keeps_dates_and_distinct_counter_semantics_after_deletion() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (first, _) = persistence::create_character(&db, 17, "Counterone", 1, 1).unwrap();
+    let (second, _) = persistence::create_character(&db, 17, "Countertwo", 1, 1).unwrap();
+    let mut a = PlayerAchievementState::default();
+    a.criteria_progress
+        .extend([(1832, 2), (5565, 100), (38400, 1)]);
+    a.earned_ids.insert(4899);
+    a.earned_at.insert(4899, 123);
+    let mut b = PlayerAchievementState::default();
+    b.criteria_progress
+        .extend([(1832, 3), (5565, 200), (38400, 1)]);
+    b.earned_ids.insert(4899);
+    b.earned_at.insert(4899, 100);
+    persistence::save_achievements(&db, second, &b);
+    let (aggregate, toasts) = account_store::save_account_progress(
+        &db,
+        &a,
+        &catalog,
+        account_store::AccountUpdate {
+            account: 17,
+            character: first,
+            completed_map: None,
+            race: 1,
+            now: 999,
+        },
+    );
+    assert_eq!(aggregate.criteria_progress[&1832], 5);
+    assert_eq!(aggregate.criteria_progress[&5565], 200);
+    assert_eq!(aggregate.criteria_progress[&38400], 1);
+    assert_eq!(aggregate.earned_at[&4899], 100);
+    assert!(!toasts.iter().any(|toast| toast.achievement_id == 4899));
+    assert_eq!(persistence::load_achievements(&db, first), a);
+    assert_eq!(persistence::load_achievements(&db, second), b);
+    persistence::delete_character(&db, 17, second).unwrap();
+    drop(db);
+    let db = redb::Database::open(file.path()).unwrap();
+    let (aggregate, _) = account_store::save_account_progress(
+        &db,
+        &a,
+        &catalog,
+        account_store::AccountUpdate {
+            account: 17,
+            character: first,
+            completed_map: None,
+            race: 1,
+            now: 1000,
+        },
+    );
+    assert_eq!(aggregate.criteria_progress[&1832], 5);
+    assert_eq!(aggregate.earned_at[&4899], 100);
+}
+
+#[test]
+fn achievements2_exploration_without_overlay_mapping_never_fabricates_area_credit() {
+    assert_unsupported_achievement(627, 502, 1);
+}
+
+#[test]
+fn achievements2_reputation_without_retail_standing_never_fabricates_exalted_credit() {
+    assert_unsupported_achievement(944, 2011, 63_000);
+}
+
+fn assert_unsupported_achievement(id: u32, criterion: u32, counter: u64) {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    state.criteria_progress.insert(criterion, counter);
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    assert!(!state.earned_ids.contains(&id));
+    let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Criteria {
+            achievement_id: id,
+            after_id: 0,
+        },
+        1,
+    ) else {
+        panic!("criteria page")
+    };
+    let row = criteria
+        .iter()
+        .find(|row| row.criteria_id == criterion)
+        .unwrap();
+    assert!(!row.progress_supported);
+    assert!(!row.completed);
 }
 
 #[path = "achievement_normal_lock_tests.rs"]

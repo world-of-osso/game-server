@@ -35,11 +35,21 @@ Type8 counters derive directly from earned IDs rather than a second stored count
 
 Faction matching uses `faction_template_for_race` and imported FactionTemplate group bits (Alliance2/Horde4), avoiding the older coarse race-team helper. Grant, snapshot and catalog/criteria eligibility use the same raw Achievement.Faction encoding: -1 both,0 Horde,1 Alliance. `DBCEnums.h:69-74` and `AchievementMgr.cpp:97-102` at TrinityCore `a352b1fa` confirm encoding/rejection. Retail Lua enumerates faction-filtered native API rows (`Mainline/Blizzard_AchievementUI.lua:862,1019,1235`); it does not implement numeric faction mapping itself.
 
-Retail `Blizzard_FrameXMLBase/Constants.lua:123` defines `ACHIEVEMENT_FLAGS_ACCOUNT = 0x00020000`; AchievementUI `:1243` tests that bit. The old0x10000 exclusion was SHOW_CRITERIA_MEMBERS, not account scope. Corrected grants exclude0x20000; account catalog rows carry unevaluated criteria/current0 and no earned/date claims even when legacy character-local JSON records exist. Persisted historical IDs/counters are not erased; the next account-persistence slice owns migration. Stockade633 remains character-scope (flags0).
+Retail `Blizzard_FrameXMLBase/Constants.lua:123` defines `ACHIEVEMENT_FLAGS_ACCOUNT = 0x00020000`; AchievementUI `:1243` tests that bit. The old0x10000 exclusion was SHOW_CRITERIA_MEMBERS, not account scope. Slice1 excluded0x20000 and kept account rows unevaluated while retaining historical JSON. Slice2 below replaces that exclusion with account aggregation; character counters are never presented as account totals. Stockade633 remains character-scope (flags0).
 
 Corrected pinned census: old0/5/165, both-faction207 (all factions225); new0/5/8/27/165 gives common492, Alliance564, Horde559, union631. Types27 and8 separately add357 and47 against the corrected all-faction baseline; their combination adds406. Earlier561→2135 figures used the wrong account mask and are historical, not final coverage.
 
 Source: TrinityCore `a352b1fa`, `src/server/game/Achievements/CriteriaHandler.cpp:1446-1449` checks the required earned achievement; `:1503-1516` matches quest ID and checks rewarded quest status at login. The following CriteriaDataSet checks remain outside this DB2-only evaluator. Retail `Blizzard_AchievementUI/Mainline/Blizzard_AchievementUI.lua` remains the existing presentation source; Forever changes artwork only. Native proof and final trackable counts are recorded in the slice handoff, not implied by source inspection.
+
+## Account aggregation and additional criteria (slice2, 2026-10-11)
+
+`achievement_account.rs` writes the character contribution and `account_achievements_v1` JSON in one redb transaction. Lazy migration reads all current account characters' historical achievement JSON without rewriting sibling rows. Contributions are retained after character deletion. Additive kill/cast/target/encounter counters sum across contributions; boolean quest facts and absolute level/skill values take max. Earned IDs survive, and known dates take the earliest recorded value; unknown dates remain unknown. A presentation-only `account` field is skipped by character serialization. Account dependencies may consume any character's earned IDs; character dependencies consume their own IDs and only account-flag IDs from the aggregate. Cross-scope grants iterate to a fixed point.
+
+Types29 and28 require locally imported spell IDs and match that exact asset. Cast credit occurs only after cast/target/resource validation; valid triggered casts also credit. Target credit uses distinct hit recipients after missile/defense filtering, before effects, not the caster. Type7 requires an authored local SkillLine and sets the current nonzero base rank on load/change, not its cap or an increment. Pinned primary references: TrinityCore a352b1fa `Spell.cpp:3541–3550,2876–2880`; `CriteriaHandler.cpp:601–604,1463–1469`. Local TDB1210 `criteria_data` adds holiday404 to cast criteria11118–11127; these remain disabled. Criterion5258 has data_type0, not an added condition.
+
+Trackable structural union: slice1 **631**; account support **2584** (631 character/1953 account); +29 **2882** (704/2178); +7 **3151** (928/2223); +28 **3388** (1050/2338). These counts describe conditional-free trees, not playable content or full Retail parity. Types43/46 leave3388 unchanged: no local WorldMapOverlay-to-AreaID mapping is imported/exported, and current shared reputation values use Hated0/Neutral12000/Exalted63000 rather than Retail signed standing. Do not treat exploration assets as AreaTable IDs or shared63000 as a Retail standing. Primary requirements: `CriteriaHandler.cpp:1493–1509,686–691`.
+
+Tests include real4899 quests split across account characters, unchanged sibling persistence, isolation, duplicate suppression/reopen, historical dates/counter aggregation/deletion, native43779 cast and24733 target paths, skill299→250/max450, and explicit627/944 unsupported-grant refusal. Durable RED/GREEN logs and read-only census live in canonical game-engine `data/diagnostics/achievements2-2026-10-11/`; slice handoff carries the final revision/proof ledger. Existing protocol carries the aggregate snapshots/pages/toasts; no client/protocol edit.
 
 ## CriteriaTree coverage
 
@@ -87,7 +97,7 @@ The standalone native check uses `--config 'patch."https://github.com/world-of-o
 ## Sources
 
 - `scripts/import_achievements.py`, `scripts/db2_casc.py` — local extraction/export/import.
-- `crates/server/src/achievement_catalog.rs`, `achievement_window.rs`, `achievement.rs`, `dungeon_progress.rs` — catalog, bounded presentation and gameplay delivery.
+- `crates/server/src/achievement_account.rs`, `achievement_catalog.rs`, `achievement_window.rs`, `achievement.rs`, `dungeon_progress.rs` — catalog, bounded presentation and gameplay delivery.
 - [Client hookup](../../dungeon-achievements-client.md) — protocol fields, bounds and Retail sources.
 - `crates/server/src/maps/store.rs`, `instances.rs`, `locks.rs` — encounter ordering, masks and lock persistence.
 - `crates/server/src/scripted_ai/tests/dungeonach.rs` — real Stockade death/message proof.

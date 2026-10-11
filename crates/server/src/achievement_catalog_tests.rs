@@ -7,6 +7,45 @@ fn catalog() -> AchievementCatalog {
 }
 
 #[test]
+fn achievements2_other_character_earned_dependencies_do_not_grant_character_meta() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids.extend([4788, 4789]);
+    state.account = Some(Box::new(account));
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    assert!(!state.earned_ids.contains(&1205));
+}
+
+#[test]
+fn achievements2_holiday_and_missing_spell_assets_remain_untrackable() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::CastSpell(62049), None, 1);
+    assert!(!state.criteria_progress.contains_key(&11118));
+    catalog.update(&mut state, CriteriaEvent::BeSpellTarget(132022), None, 1);
+    assert!(!state.criteria_progress.contains_key(&533));
+}
+
+#[test]
+fn achievements2_pinned_snapshot_trackable_union_matches_census() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.account = Some(Box::new(PlayerAchievementState::default()));
+    let union: BTreeSet<_> = [1, 2]
+        .into_iter()
+        .flat_map(|race| {
+            catalog
+                .snapshot(&state, race)
+                .progress
+                .into_iter()
+                .map(|row| row.achievement_id)
+        })
+        .collect();
+    assert_eq!(union.len(), 3388);
+}
+
+#[test]
 fn achievements_dependencies_complete_from_historical_earned_ids_once() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
