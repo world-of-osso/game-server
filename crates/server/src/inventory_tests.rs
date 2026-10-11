@@ -263,7 +263,9 @@ fn add_nonvisual_templates(app: &mut App) {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
     let catalog = crate::item_templates::load_item_templates(&path).expect("Retail catalog");
     let mut templates = app.world_mut().resource_mut::<ItemTemplates>();
-    for id in [1116, 1319, 1490, 2820, 4112, 12344, 35748, 35749] {
+    for id in [
+        1116, 1319, 1490, 2820, 4112, 12344, 35748, 35749, 18472, 2504,
+    ] {
         templates
             .retail
             .insert(id, *catalog.retail.get(&id).expect("authentic item"));
@@ -525,6 +527,50 @@ fn nonvisual_equipment_distinct_alchemist_stones_share_db2_equip_limit() {
         35749
     );
     assert_eq!(view[&bag(4)].item_id, 35748);
+}
+
+#[test]
+fn nonvisual_equipment_keeps_class_checks_and_mainline_ranged_mapping() {
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 97, "Classwearer");
+    grant_bag_item(
+        &app,
+        client.character_id,
+        18472,
+        "Royal Seal of Eldre'Thalas",
+    );
+    grant_bag_item(&app, client.character_id, 2504, "Worn Shortbow");
+    enter_world(&mut app, &client);
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: equipped_location(EquipmentSlot::Trinket1),
+        },
+    );
+    let errors = received::<InventoryError>(&mut app, &client);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].reason, InventoryErrorReason::CantEquipEver);
+    request(&mut app, &client, EquipItem { from: bag(4) });
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let model = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap();
+    assert_eq!(
+        model.view()[&equipped_location(EquipmentSlot::MainHand)].item_id,
+        2504
+    );
+    assert!(
+        !model
+            .view()
+            .contains_key(&equipped_location(EquipmentSlot::Ranged))
+    );
+    assert_eq!(model.view()[&bag(3)].item_id, 18472);
 }
 
 #[test]
