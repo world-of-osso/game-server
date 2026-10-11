@@ -59,6 +59,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
         &PointMovement,
         &SpawnPoint,
         Option<&crate::creature_ai::CreatureState>,
+        Has<ScriptedPath>,
         Has<Walking>,
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
@@ -70,12 +71,23 @@ pub(crate) fn point_movement_system(world: &mut World) {
         movement,
         spawn,
         state,
+        escort_active,
         walking,
         rotation,
         motion,
         replicated_speed,
     ) in movers.iter_mut(world)
     {
+        if escort_active && state.is_some_and(|state| !state.is_idle()) {
+            bevy::log::debug!(
+                ?entity,
+                ?state,
+                ?movement,
+                driver = "point_suspended",
+                "combat or home movement owns the tick"
+            );
+            continue;
+        }
         let (speed, gait) = if walking {
             (spawn.speed_walk * BASE_WALK_SPEED, CreatureMotion::Walk)
         } else {
