@@ -203,9 +203,9 @@ fn cast_cooldown_button(h: &mut Harness, spell_id: u32) -> u32 {
     h.inbox
         .cooldowns
         .iter()
-        .find(|update| update.spell_id == spell_id)
+        .find(|update| update.spell_id == spell_id && !update.is_gcd)
         .unwrap()
-        .cooldown_ms
+        .duration_ms
 }
 
 #[test]
