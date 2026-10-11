@@ -162,6 +162,8 @@ pub const MOD_MANA_REGEN_PCT: u32 = 379;
 pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
 pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
+/// TC a352b1fa SpellHistory::GetChargeRecoveryTime: category-scoped ModHasteRegen.
+pub const CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN: u32 = 457;
 pub const MOD_ROOT_2: u32 = 455;
 /// SPELL_AURA_MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN (SpellAuraDefines.h:504, TrinityCore a352b1fa).
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
@@ -258,7 +260,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MECHANIC_IMMUNITY => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
-        MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
+        MOD_MAX_CHARGES
+        | CHARGE_RECOVERY_MOD
+        | CHARGE_RECOVERY_MULTIPLIER
+        | CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
         MOD_ATTACKER_MELEE_HIT_CHANCE
         | MOD_ATTACKER_RANGED_HIT_CHANCE

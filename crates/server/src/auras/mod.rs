@@ -1338,6 +1338,16 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
     let Some(auras) = world.get::<ActiveAuras>(unit) else {
         return mods;
     };
+    let haste_affected = auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
+        effect.aura_type == handlers::CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN
+            && effect.misc_values[0] as u32 == charge_category
+    });
+    if haste_affected {
+        let haste = world
+            .get::<crate::stats::CharacterStats>(unit)
+            .map_or(0.0, |stats| stats.haste_pct);
+        mods.recovery_mult /= (1.0 + haste / 100.0).max(0.01);
+    }
     for aura in auras.iter() {
         let stacks = aura.stack_multiplier();
         for effect in aura
