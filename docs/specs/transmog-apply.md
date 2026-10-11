@@ -4,11 +4,11 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 
 ## What it must do
 
-- [ ] Authored transmogrifier flags and gossip open the Transmogrify service, not a vendor.
-- [ ] Offer collected appearances valid for the equipped item's class, armor/weapon type, slot and character restrictions.
-- [ ] Stage pending changes; validate all requested GUIDs/choices before changing anything.
-- [ ] Charge authentic locally derivable target cost atomically with per-item appearance modifiers and binding; original appearance restoration is free.
-- [ ] Replicate self/observer equipment appearance and preserve through relog and gear swaps.
+- [x] Authored transmogrifier flags and gossip open the Transmogrify service, not a vendor.
+- [x] Offer locally supported collected appearances valid for the equipped item's class, armor/weapon type, slot and character restrictions.
+- [x] Stage pending changes; validate all requested GUIDs/choices before changing anything.
+- [x] Charge authentic locally derivable target cost atomically with per-item appearance modifiers and binding; original appearance restoration is free.
+- [x] Replicate self/observer equipment appearance and preserve through relog and gear swaps.
 - [ ] Permit hide options only for Retail-supported slots; illusions require authentic local data.
 - [ ] Saved outfits follow core application and use the same application validation.
 
@@ -36,7 +36,8 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - [ ] Nonzero TransmogPlayerConditionID source requirements are not yet evaluated; such sources are not offered. Artifact override appearance policy is not implemented.
 - [ ] Collection state records visual IDs, not source IDs; exact collected-source distinction remains the acquisition system's recorded gap.
 - [ ] TransmogIllusion local CSV absent; illusions disabled.
-- [ ] Native picker/pending/apply UI, outfits and two-account both-skin live proof remain unverified.
+- [x] Native picker/pending/paid-apply, self/observer rebuild and both-skin relog proven on private55087: target2850 GUID123, sources821/1181,1500copper/application; private-server restart preserved modifiers in the same redb. [Bounded native evidence](../../../game-engine/docs/wiki/systems/transmog-apply.md#native-proof--verified-2026-10-11).
+- [ ] Saved outfits remain unimplemented; this proof is not every-slot/product certification.
 
 ## Out of scope
 
