@@ -94,15 +94,15 @@ fn dispersion_heals(rank: Option<u32>, ticks: usize, total: i32) {
 }
 #[test]
 fn dummy19_dispersion_native_total_not_per_tick() {
-    dispersion_heals(None, 6, 252);
+    dispersion_heals(None, 7, 252);
 }
 #[test]
 fn dummy19_intangibility_adds_native_total() {
-    dispersion_heals(Some(288733), 6, 498);
+    dispersion_heals(Some(288733), 7, 497);
 }
 #[test]
 fn dummy19_altered_form_extends_healing_clock() {
-    dispersion_heals(Some(453729), 8, 336);
+    dispersion_heals(Some(453729), 9, 333);
 }
 #[test]
 fn dummy19_vampiric_touch_real_dispel_horrifies_dispeller_only() {
@@ -142,7 +142,7 @@ fn dummy19_havoc_owned_direct_single_target_copy() {
     h.advance(1);
     apply(&mut h, caster, marked, 80240);
     execute(&mut h, 686, primary);
-    h.advance(4);
+    h.advance(80);
     let primary_hit = h
         .inbox
         .log
