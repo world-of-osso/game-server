@@ -2,6 +2,12 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Twenty-first batch: native combo builders
+
+[Contract](../../specs/spell-dummy-scripts.md#twenty-first-batch-native-combo-builders), [source/proof/census](../../spell-dummy21-coverage.md). `effects.rs::energize` admits positive self-directed combo grants from depth0 native casts. `scripts/batch21.rs::berserk_combo_bonus` reads the active106951 index1 amount only for matching spell families; combined grant flows through ordinary pool clamping and overflow logging. Thrash's caster effect grants once, independent of its area target count. Native343216's1500ms periodic point remains independent and receives no extra builder point.
+
+Completed-root Shred/Rake/Thrash, cap/overflow, expiry, actual periodic clock, unrelated family and rejected-friendly cast prove this numeric contract.405189 over-cap recovery and script-only grants remain uncertified. Seven other reviewed roots retain exact source-field or runtime-prerequisite deferrals, including known Spiritbloom30yd range and both known empower stage tables; these are not absent-data claims.
+
 ## Twentieth batch: authored totals and next-spell uses
 
 [Contract](../../specs/spell-dummy-scripts.md#twentieth-batch-authored-totals-and-next-spell-uses), [source/proof/census](../../spell-dummy20-coverage.md). `scripts/batch20.rs` starts Barbed Shot's named246152 Focus aura once after completed root casting. `auras/refresh.rs` implements217200s2's authored five-amount damage total over the unchanged native twelve-second clock (seven initial/regular ticks). Equal distribution is inferred from the conflicting local total and clock, not independently observed Retail per-tick damage. Reapplication adds same-owner unpaid damage to that fresh total and divides across the preserved phase's future ticks, without repeating an extra-initial tick. Due ticks are paid before snapshot; foreign owners remain independent.
