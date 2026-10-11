@@ -431,6 +431,10 @@ def apply_policy(
     retail_content.build_creature_text(conn)
     if derived_merchant_records:
         derived_merchants.apply_derived_merchants(conn, derived_merchant_records)
+    # Regeneration must retain instance population, not just one-time copy imports.
+    import import_instance_population
+
+    import_instance_population.apply_population(conn, report)
 
 
 def main():

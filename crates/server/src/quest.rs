@@ -32,9 +32,7 @@ use crate::networking::PlayerLink;
 use crate::persistence::quest_store::{QuestLogData, load_quest_log, save_quest_log};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 use crate::quest_data::QuestDb;
-use crate::quest_rules::{
-    QuestPlayer, credit_area_trigger, credit_kill, credit_killed_creature, giver_status,
-};
+use crate::quest_rules::{QuestPlayer, credit_area_trigger, credit_killed_creature, giver_status};
 use crate::quest_view::{QuestLogView, bag_count, diff_log, log_entries, log_snapshot, view_of};
 
 #[path = "quest_requests.rs"]
@@ -73,10 +71,13 @@ pub struct QuestPlugin;
 impl Plugin for QuestPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<QuestDirty>();
+        app.init_resource::<crate::maps::difficulty::ServerClock>();
+        app.init_resource::<quest_requests::PendingShares>();
         app.init_resource::<crate::experience::XpAwards>();
         app.add_systems(
             Update,
             (
+                crate::quest_time::refresh,
                 send_initial_quest_log,
                 quest_requests::process_quest_requests,
             )
@@ -191,7 +192,60 @@ fn credit_quest_kills(
 /// `Player::KilledMonsterCredit(entry)` outside a kill (scripts): one kill of `entry` for
 /// `player`'s quests that count it.
 pub(crate) fn killed_monster_credit(world: &mut World, player: Entity, entry: u32) {
-    let Some(character_id) = world.get::<ClientId>(player).map(|id| id.0) else {
+    event_credit(
+        world,
+        player,
+        player,
+        crate::quest_data::ObjectiveKind::Monster,
+        entry,
+        false,
+    );
+}
+
+/// `GameObject::Use` goober credit is shared at the object's group reward distance.
+pub(crate) fn game_object_credit(world: &mut World, player: Entity, object: Entity, entry: u32) {
+    event_credit(
+        world,
+        player,
+        object,
+        crate::quest_data::ObjectiveKind::GameObject,
+        entry,
+        true,
+    );
+}
+
+fn query_event_recipients(
+    world: &mut World,
+    player: Entity,
+    source: Entity,
+    share: bool,
+) -> Option<Vec<u64>> {
+    let character = world.get::<ClientId>(player)?.0;
+    if !share {
+        return Some(vec![character]);
+    }
+    let map = world.get::<crate::maps::InMap>(source).copied()?;
+    let position = world.get::<Position>(source).cloned()?;
+    let mut state = bevy::ecs::system::SystemState::<RewardPlayers>::new(world);
+    let players = state.get(world).expect("reward player query");
+    Some(rewarded_characters(
+        &[character],
+        (&map, &position),
+        &players,
+        world.get_resource::<GroupRegistry>(),
+    ))
+}
+
+/// Spell/script event credit; personal events do not award nearby party members.
+pub(crate) fn event_credit(
+    world: &mut World,
+    player: Entity,
+    source: Entity,
+    kind: crate::quest_data::ObjectiveKind,
+    entry: u32,
+    share: bool,
+) {
+    let Some(recipients) = query_event_recipients(world, player, source, share) else {
         return;
     };
     let (Some(db), Some(quests)) = (
@@ -200,12 +254,17 @@ pub(crate) fn killed_monster_credit(world: &mut World, player: Entity, entry: u3
     ) else {
         return;
     };
-    let mut log = load_quest_log(&db.db, character_id);
-    if !credit_kill(quests, &mut log, entry) {
-        return;
+    let mut changed = Vec::new();
+    for character in recipients {
+        let mut log = load_quest_log(&db.db, character);
+        if crate::quest_rules::credit_objective(quests, &mut log, kind, entry) {
+            save_quest_log(&db.db, character, &log);
+            changed.push(character);
+        }
     }
-    save_quest_log(&db.db, character_id, &log);
-    world.resource_mut::<QuestDirty>().0.insert(character_id);
+    if !changed.is_empty() {
+        world.resource_mut::<QuestDirty>().0.extend(changed);
+    }
 }
 
 /// The quest area triggers the player stands in on its current map.

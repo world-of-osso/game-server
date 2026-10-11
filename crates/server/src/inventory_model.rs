@@ -47,6 +47,7 @@ pub(crate) struct InventoryModel {
     gold: u64,
     appearance_account: Option<u64>,
     appearance_grants: Vec<u32>,
+    transmogs: HashMap<u64, crate::transmog_store::ItemTransmog>,
 }
 
 pub(crate) fn error(reason: InventoryErrorReason, detail: impl Into<String>) -> InventoryError {
@@ -90,6 +91,7 @@ impl InventoryModel {
             gold: record.inventory.gold,
             appearance_account: record.appearance_account,
             appearance_grants: record.appearance_grants,
+            transmogs: record.transmogs,
         };
         for entry in record.equipped {
             model
@@ -103,6 +105,15 @@ impl InventoryModel {
         model.sync_containers();
         model.load_bag_items(record.inventory.items, &record.placements, mint);
         model.bind_owned_pickup_items();
+        let equipped_slots: Vec<_> = model
+            .equipped
+            .iter()
+            .filter(|(_, item)| model.transmogs.contains_key(&item.item_guid))
+            .map(|(slot, _)| *slot)
+            .collect();
+        for slot in equipped_slots {
+            model.sync_appearance(slot);
+        }
         model
     }
 
@@ -344,6 +355,7 @@ impl InventoryModel {
             definition_sources: self.definition_sources,
             appearance_account: self.appearance_account,
             appearance_grants: self.appearance_grants,
+            transmogs: self.transmogs,
         }
     }
 
@@ -659,28 +671,26 @@ impl InventoryModel {
         let Some(visual) = slot.visual_slot() else {
             return;
         };
-        let entry = self.equipped.get(&slot).map(|item| {
-            (
-                item.item_id,
-                self.inventory_type(item),
-                self.definition_source(item.item_guid),
-            )
-        });
+        let entry =
+            self.equipped
+                .get(&slot)
+                .map(|item| match self.transmogs.get(&item.item_guid) {
+                    Some(modifier) => {
+                        modifier.entry(visual, item.item_id, self.definition_source(item.item_guid))
+                    }
+                    None => EquippedAppearanceEntry {
+                        slot: visual,
+                        item_id: Some(item.item_id),
+                        definition_source: Some(self.definition_source(item.item_guid)),
+                        display_info_id: None,
+                        inventory_type: self.inventory_type(item),
+                        hidden: false,
+                    },
+                });
         let entries = &mut self.character.equipment_appearance.entries;
-        let hidden = entries
-            .iter()
-            .find(|entry| entry.slot == visual)
-            .is_some_and(|entry| entry.hidden);
         entries.retain(|entry| entry.slot != visual);
-        if let Some((item_id, inventory_type, source)) = entry {
-            entries.push(EquippedAppearanceEntry {
-                slot: visual,
-                item_id: Some(item_id),
-                definition_source: Some(source),
-                display_info_id: None,
-                inventory_type,
-                hidden,
-            });
+        if let Some(entry) = entry {
+            entries.push(entry);
         }
     }
 

@@ -2,13 +2,14 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::arena::calculate_rating;
-use shared::battleground::{BgQueue, template_by_id};
+use shared::battleground::{BgInstance, BgQueue, template_by_id};
 use shared::components::Level;
 use shared::currency::CurrencyWallet;
 use shared::protocol::{
     CurrencyStateUpdate, DequeueFromPvp, PvpBracketSnapshot, PvpStateUpdate, QueryPvpStatus,
     QueueForBattleground, QueueForRatedPvp,
 };
+use std::collections::{BTreeMap, BTreeSet};
 
 use self::pvp_support::{
     RatedParticipant, apply_single_rated_result, bracket_label, build_rated_reward,
@@ -21,6 +22,19 @@ use crate::persistence::GameDatabase;
 
 #[path = "pvp_support.rs"]
 mod pvp_support;
+
+#[path = "pvp_entry.rs"]
+mod pvp_entry;
+#[path = "pvp_invites.rs"]
+mod pvp_invites;
+use pvp_invites::process_battleground_invitation_responses;
+
+#[path = "pvp_leave.rs"]
+mod pvp_leave;
+use pvp_leave::process_battleground_leave_requests;
+#[path = "pvp_objective.rs"]
+mod pvp_objective;
+pub(crate) use pvp_objective::use_battleground_flag;
 
 const DEFAULT_RATING: u32 = 1500;
 const HONOR_CAP: u32 = 15_000;
@@ -92,6 +106,7 @@ pub enum PlayerPvpQueue {
 pub struct PlayerPvpState {
     pub progress: PlayerPvpProgress,
     pub queue: Option<PlayerPvpQueue>,
+    pub battleground: Option<shared::protocol::BattlegroundSnapshot>,
 }
 
 impl PlayerPvpState {
@@ -99,6 +114,7 @@ impl PlayerPvpState {
         Self {
             progress,
             queue: None,
+            battleground: None,
         }
     }
 }
@@ -123,10 +139,74 @@ struct RatedQueueEntry {
     queued_at: u64,
 }
 
+#[derive(Debug)]
+struct InvitedBattleground {
+    instance: BgInstance,
+    accepted: BTreeSet<u64>,
+    map: Option<crate::maps::InMap>,
+    origins: BTreeMap<u64, crate::maps::WorldLocation>,
+    flags: shared::battleground::FlagObjective,
+    scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    flag_positions: [Option<Vec3>; 2],
+}
+
 #[derive(Resource, Default)]
 struct PvpServerState {
     battleground_queue: BgQueue,
     rated_queues: Vec<RatedQueueEntry>,
+    battleground_matches: BTreeMap<u64, InvitedBattleground>,
+    next_battleground_match: u64,
+}
+
+fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32) -> Option<u64> {
+    let template = template_by_id(battleground_id)?;
+    let matched = state.battleground_queue.try_match(battleground_id)?;
+    state.next_battleground_match += 1;
+    let match_id = state.next_battleground_match;
+    state.battleground_matches.insert(
+        match_id,
+        InvitedBattleground {
+            instance: BgInstance::from_match(&matched, &template),
+            accepted: BTreeSet::new(),
+            map: None,
+            origins: BTreeMap::new(),
+            flags: Default::default(),
+            scoreboard: Vec::new(),
+            flag_positions: [None, None],
+        },
+    );
+    Some(match_id)
+}
+
+fn respond_to_battleground_invitation(
+    state: &mut PvpServerState,
+    match_id: u64,
+    character_id: u64,
+    accepted: bool,
+) -> Result<(), String> {
+    let invitation = state
+        .battleground_matches
+        .get_mut(&match_id)
+        .ok_or("battleground invitation is no longer available")?;
+    let instance = &mut invitation.instance;
+    let is_member = instance.team_a_players.contains(&character_id)
+        || instance.team_b_players.contains(&character_id);
+    if !is_member || instance.phase != shared::battleground::BgPhase::Waiting {
+        return Err("player has no invitation to this battleground".into());
+    }
+    if invitation.accepted.contains(&character_id) {
+        return Err("battleground invitation already accepted".into());
+    }
+    if accepted {
+        invitation.accepted.insert(character_id);
+    } else {
+        instance.team_a_players.retain(|id| *id != character_id);
+        instance.team_b_players.retain(|id| *id != character_id);
+    }
+    if instance.team_a_players.is_empty() && instance.team_b_players.is_empty() {
+        state.battleground_matches.remove(&match_id);
+    }
+    Ok(())
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
@@ -145,9 +225,18 @@ pub struct PvpPlugin;
 impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
+        app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);
+        app.add_systems(
+            Update,
+            process_battleground_invitation_responses.after(process_battleground_queue_requests),
+        );
+        app.add_systems(
+            Update,
+            process_battleground_leave_requests.after(process_battleground_invitation_responses),
+        );
         app.add_systems(Update, process_rated_queue_requests);
         app.add_systems(Update, process_pvp_dequeue_requests);
     }
@@ -399,6 +488,9 @@ fn queue_for_battleground(
     battleground_id: u32,
     now: u64,
 ) -> Result<String, String> {
+    if player_state.battleground.is_some() {
+        return Err("respond to the current battleground invitation first".into());
+    }
     if let Some(queue) = &player_state.queue {
         return Err(format!("already queued for {}", queue_label(queue)));
     }
@@ -424,6 +516,9 @@ fn queue_for_rated_bracket(
     bracket: PvpBracketSnapshot,
     now: u64,
 ) -> Result<String, String> {
+    if player_state.battleground.is_some() {
+        return Err("respond to the current battleground invitation first".into());
+    }
     if let Some(queue) = &player_state.queue {
         return Err(format!("already queued for {}", queue_label(queue)));
     }
@@ -474,15 +569,24 @@ fn resolve_battleground_matches(
     connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
-    while let Some(bg_match) = state.battleground_queue.try_match(battleground_id) {
-        let Some(template) = template_by_id(bg_match.bg_id) else {
-            continue;
-        };
-        let team_a = bg_match.team_a.into_iter().collect::<Vec<_>>();
-        let team_b = bg_match.team_b.into_iter().collect::<Vec<_>>();
-        for character_id in team_a.iter().chain(team_b.iter()) {
+    while let Some(match_id) = form_battleground_invitation(state, battleground_id) {
+        let invitation = &state.battleground_matches[&match_id];
+        let template = template_by_id(invitation.instance.bg_id).expect("matched template exists");
+        let teams = invitation
+            .instance
+            .team_a_players
+            .iter()
+            .map(|id| (*id, shared::battleground::BgTeam::A))
+            .chain(
+                invitation
+                    .instance
+                    .team_b_players
+                    .iter()
+                    .map(|id| (*id, shared::battleground::BgTeam::B)),
+            );
+        for (character_id, team) in teams {
             let Some((conn_entity, player_entity)) =
-                connection_for_character(connections, *character_id)
+                connection_for_character(connections, character_id)
             else {
                 continue;
             };
@@ -490,6 +594,22 @@ fn resolve_battleground_matches(
                 continue;
             };
             player_state.queue = None;
+            player_state.battleground = Some(shared::protocol::BattlegroundSnapshot {
+                match_id,
+                battleground_id: template.id,
+                name: template.name.clone(),
+                map_id: template.map_id,
+                team,
+                phase: invitation.instance.phase,
+                accepted: false,
+                invitation_time_left_secs: None,
+                score_a: invitation.instance.score_a.score,
+                score_b: invitation.instance.score_b.score,
+                flags: invitation.flags.clone(),
+                outcome: invitation.instance.outcome,
+                players: invitation.scoreboard.clone(),
+                honor_reward: None,
+            });
             send_pvp_update(
                 conn_entity,
                 &player_state,

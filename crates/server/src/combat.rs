@@ -1049,7 +1049,19 @@ fn try_swing(
         health.current,
         health_loss(training_dummy, scaled_loss),
     );
-    let became_lethal = crate::death::apply_health_damage(&mut health, loss);
+    let rescue =
+        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss);
+    let became_lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
+    if let Some(instance) = rescue {
+        commands.queue(move |world: &mut World| {
+            crate::auras::remove_instance(
+                world,
+                target_entity,
+                instance,
+                crate::auras::RemoveReason::Consumed,
+            )
+        });
+    }
     if is_npc && loss > 0.0 {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
@@ -1324,11 +1336,11 @@ pub(crate) fn deal_health_damage(
         UnitScaling::of(world, victim),
     );
     let loss = crate::level_scaling::health_loss(&attacker_scaling, &victim_scaling, damage);
-    let Some(mut health) = world.get_mut::<Health>(victim) else {
+    let Some(health) = world.get::<Health>(victim) else {
         return;
     };
     let before = health.current;
-    let lethal = crate::death::apply_health_damage(&mut health, loss);
+    let lethal = crate::auras::apply_attack_damage(world, victim, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::stand_state::stand_on_damage(world, victim);
@@ -1400,7 +1412,10 @@ pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
 /// A dead summon goes with its corpse (`TempSummon::Update`: `DEAD` → `UnSummon`).
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
-    mut corpses: Query<(Entity, &mut Corpse, Has<crate::zones::TempSummon>)>,
+    mut corpses: Query<
+        (Entity, &mut Corpse, Has<crate::zones::TempSummon>),
+        Without<crate::loot::PendingGroupLoot>,
+    >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
@@ -1553,7 +1568,10 @@ pub(crate) fn respawn_system(
             Has<crate::spawn_pools::PooledSpawn>,
             Option<&crate::vignettes::CreatureVignette>,
         ),
-        Without<crate::zones::TempSummon>,
+        (
+            Without<crate::zones::TempSummon>,
+            Without<crate::loot::PendingGroupLoot>,
+        ),
     >,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,

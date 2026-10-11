@@ -58,6 +58,32 @@ fn gathering_nodes_load_authored_herb_and_ore_models() {
 }
 
 #[test]
+#[ignore = "requires DUNGEON_POPULATION_DB pointing to an imported database copy"]
+fn dungeon_population_loads_all_model_bearing_instance_gameobjects() {
+    let path = std::env::var("DUNGEON_POPULATION_DB").expect("imported copy path");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = load_game_object_spawns(&conn).unwrap();
+    let mut statement = conn
+        .prepare(
+            "SELECT g.map,count(*) FROM content_gameobject g
+         JOIN content_gameobject_template t ON t.entry=g.id
+         JOIN game_object_display_info d ON d.ID=t.displayId
+         WHERE g.map IN (SELECT map FROM tdb_instance_template) GROUP BY g.map",
+        )
+        .unwrap();
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, u32>(0)?, row.get::<_, usize>(1)?))
+        })
+        .unwrap();
+    for row in rows {
+        let (map, expected) = row.unwrap();
+        let actual = spawns.0.iter().filter(|spawn| spawn.map_id == map).count();
+        assert_eq!(actual, expected, "map {map}");
+    }
+}
+
+#[test]
 fn reach_is_the_model_box_grown_by_five_yards() {
     let bounds = GameObjectBounds {
         min: Vec3::new(-0.7, -1.95, 0.0),

@@ -203,6 +203,7 @@ fn character_disk_abi_owned_sources_hydrate_by_guid_not_race_after_reopen() {
                 },
                 appearance_account: None,
                 appearance_grants: Vec::new(),
+                transmogs: Default::default(),
             };
             save_inventory_record(&db, id, &record);
         }
