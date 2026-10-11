@@ -46,7 +46,7 @@ impl TransmogCatalog {
         let mut stmt = conn.prepare(
             "SELECT m.ID, m.ItemAppearanceID, i.ID, a.ItemDisplayInfoID, i.Name,
              i.InventoryType, i.ClassID, i.SubclassID, i.RequiredLevel, i.AllowableClass,
-             i.AllowableRaces_0, i.AllowableRaces_1, i.Flags_1
+             i.AllowableRaces_0, i.AllowableRaces_1, i.Flags_1, a.DefaultIconFileDataID
              FROM item_modified_appearance m JOIN item_appearance a ON a.ID=m.ItemAppearanceID
              JOIN content_item i ON i.ID=m.ItemID
              WHERE a.ItemDisplayInfoID>0 AND a.TransmogPlayerConditionID=0
@@ -121,6 +121,8 @@ impl TransmogCatalog {
                     slot,
                     item_guid: equipped.item.item_guid,
                     item_id: equipped.item.item_id,
+                    definition_source: definition,
+                    inventory_type: target.inventory_type,
                     applied: record
                         .transmogs
                         .get(&equipped.item.item_guid)
@@ -165,6 +167,7 @@ fn source_from_row(row: &rusqlite::Row) -> rusqlite::Result<Source> {
             appearance_id: row.get(1)?,
             item_id: row.get(2)?,
             display_id: row.get(3)?,
+            icon_fdid: row.get(13)?,
             name: row.get(4)?,
             inventory_type: template.inventory_type,
         },
