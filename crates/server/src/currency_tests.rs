@@ -7,7 +7,7 @@ fn earn_currency_adds_to_wallet() {
 
     let message = earn_currency(&mut wallet, 1, 125).expect("earn currency");
 
-    assert_eq!(wallet.get(1), 125);
+    assert_eq!(wallet.get(1792), 125);
     assert_eq!(message, "earned 125 Honor");
 }
 
@@ -15,12 +15,12 @@ fn earn_currency_adds_to_wallet() {
 fn spend_currency_removes_from_wallet() {
     let mut wallet = CurrencyWallet::default();
     wallet
-        .add(1, 200, shared::currency::currency_by_id(1).unwrap())
+        .add(1792, 200, shared::currency::currency_by_id(1792).unwrap())
         .unwrap();
 
     let message = spend_currency(&mut wallet, 1, 50).expect("spend currency");
 
-    assert_eq!(wallet.get(1), 150);
+    assert_eq!(wallet.get(1792), 150);
     assert_eq!(message, "spent 50 Honor");
 }
 
@@ -37,13 +37,13 @@ fn spend_currency_rejects_insufficient_balance() {
 fn build_currency_snapshot_uses_currency_names() {
     let mut wallet = CurrencyWallet::default();
     wallet
-        .add(2, 75, shared::currency::currency_by_id(2).unwrap())
+        .add(1602, 75, shared::currency::currency_by_id(1602).unwrap())
         .unwrap();
 
     let snapshot = build_currency_snapshot(&wallet);
 
     assert_eq!(snapshot.entries.len(), 1);
-    assert_eq!(snapshot.entries[0].id, 2);
+    assert_eq!(snapshot.entries[0].id, 1602);
     assert_eq!(snapshot.entries[0].name, "Conquest");
     assert_eq!(snapshot.entries[0].amount, 75);
 }
@@ -53,7 +53,7 @@ fn currency_wallet_round_trips_through_persistence() {
     let db = persistence::temp_database();
     let mut wallet = CurrencyWallet::default();
     wallet
-        .add(1, 300, shared::currency::currency_by_id(1).unwrap())
+        .add(1792, 300, shared::currency::currency_by_id(1792).unwrap())
         .unwrap();
 
     persistence::save_currencies(&db, 42, &wallet);
@@ -61,3 +61,39 @@ fn currency_wallet_round_trips_through_persistence() {
 
     assert_eq!(loaded, wallet);
 }
+
+#[test]
+fn legacy_pvp_currency_balances_migrate_durably_without_duplicates() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("players.redb");
+    {
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let wallet = CurrencyWallet {
+            entries: vec![
+                shared::currency::CurrencyEntry {
+                    id: 1,
+                    amount: 300,
+                    week_earned: 300,
+                },
+                shared::currency::CurrencyEntry {
+                    id: 2,
+                    amount: 80,
+                    week_earned: 80,
+                },
+            ],
+        };
+        persistence::save_currencies(&db, 42, &wallet);
+        let migrated = persistence::load_currencies(&db, 42);
+        assert_eq!(migrated.get(1792), 300);
+        assert_eq!(migrated.get(1602), 80);
+        assert_eq!(migrated.get(1), 0);
+        assert_eq!(migrated.entries.len(), 2);
+    }
+    let db = redb::Database::open(&path).unwrap();
+    let wallet = persistence::load_currencies(&db, 42);
+    assert_eq!(wallet.get(1792), 300);
+    assert_eq!(wallet.get(1602), 80);
+    assert_eq!(wallet.week_earned(1602), 80);
+}
+

@@ -73,8 +73,12 @@ fn build_snapshot_reflects_queue_kind() {
 fn sync_progress_currencies_from_wallet_uses_wallet_amounts() {
     let mut progress = PlayerPvpProgress::default();
     let mut wallet = CurrencyWallet::default();
-    wallet.add(1, 275, currency_by_id(1).unwrap()).unwrap();
-    wallet.add(2, 120, currency_by_id(2).unwrap()).unwrap();
+    wallet
+        .add(1792, 275, currency_by_id(1792).unwrap())
+        .unwrap();
+    wallet
+        .add(1602, 120, currency_by_id(1602).unwrap())
+        .unwrap();
 
     let changed = sync_progress_currencies_from_wallet(&mut progress, &wallet);
 

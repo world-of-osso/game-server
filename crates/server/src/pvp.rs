@@ -3,7 +3,7 @@ use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::battleground::{BgQueue, template_by_id};
 use shared::components::Level;
-use shared::currency::CurrencyWallet;
+use shared::currency::{CONQUEST_CURRENCY_ID, CurrencyWallet, HONOR_CURRENCY_ID};
 use shared::protocol::{
     DequeueFromPvp, PvpBracketSnapshot, PvpStateUpdate, QueryPvpStatus, QueueForBattleground,
     QueueForRatedPvp,
@@ -21,9 +21,8 @@ mod pvp_support;
 
 const DEFAULT_RATING: u32 = 1500;
 const HONOR_CAP: u32 = 15_000;
-const CONQUEST_CAP: u32 = 1_800;
-const HONOR_CURRENCY_ID: u32 = 1;
-const CONQUEST_CURRENCY_ID: u32 = 2;
+// CurrencyTypes1602 has no static cap; WorldState31270 is unresolved.
+const CONQUEST_CAP: u32 = 0;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlayerPvpBracketState {
@@ -81,8 +80,8 @@ pub(crate) fn sync_progress_currencies_from_wallet(
     progress: &mut PlayerPvpProgress,
     wallet: &CurrencyWallet,
 ) -> bool {
-    let honor = wallet.get(HONOR_CURRENCY_ID).min(progress.honor_max);
-    let conquest = wallet.get(CONQUEST_CURRENCY_ID).min(progress.conquest_max);
+    let honor = wallet.get(HONOR_CURRENCY_ID);
+    let conquest = wallet.get(CONQUEST_CURRENCY_ID);
     let changed = progress.honor != honor || progress.conquest != conquest;
     progress.honor = honor;
     progress.conquest = conquest;
