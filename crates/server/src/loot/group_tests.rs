@@ -164,6 +164,125 @@ fn all_pass_unlocks_one_shared_item_for_exactly_one_looter() {
 }
 
 #[test]
+fn timeout_keeps_the_real_decay_boundary_lootable_until_all_pass_items_are_claimed() {
+    let (mut h, _) = grouped();
+    h.app.add_systems(
+        Update,
+        crate::combat::corpse_decay_system
+            .after(generate_corpse_loot)
+            .before(group::process_rolls),
+    );
+    let corpse = h.kill_kobold();
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(Duration::from_secs(90));
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_secs(61),
+        ));
+    h.app.update();
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::ZERO,
+        ));
+    h.settle();
+    assert!(
+        h.app.world().get::<Corpse>(corpse).is_some(),
+        "pending rolls hold the corpse's decay boundary"
+    );
+    let completed = h.take::<GroupLootRoll>();
+    assert!(completed.iter().any(|roll| roll.complete
+        && roll.winner.is_none()
+        && roll.players.iter().all(|player| {
+            player
+                .response
+                .is_some_and(|entry| entry.choice == LootRollChoice::Pass)
+        })));
+    h.open(corpse, true);
+    assert_eq!(h.count_of(MOSS_AGATE), 1);
+}
+
+#[test]
+fn ineligible_need_is_refused_without_auto_passing_the_member() {
+    let (mut h, other) = grouped();
+    h.app
+        .world_mut()
+        .resource_mut::<ItemTemplates>()
+        .retail
+        .get_mut(&MOSS_AGATE)
+        .unwrap()
+        .allowable_class = 1;
+    h.app
+        .world_mut()
+        .get_mut::<Player>(other.player)
+        .unwrap()
+        .class = 8;
+    h.kill_kobold();
+    let roll = h.take::<GroupLootRoll>().remove(0);
+    let guest = roll
+        .players
+        .iter()
+        .find(|player| player.character_id == other.character_id)
+        .unwrap();
+    assert!(!guest.can_need);
+    assert_eq!(
+        guest.need_reason.as_deref(),
+        Some("Your class may not roll need on this item.")
+    );
+    h.send::<_, LootChannel>(
+        other,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Need,
+        },
+    );
+    h.send::<_, LootChannel>(
+        h.looter,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Pass,
+        },
+    );
+    assert_eq!(owned(&h, other.character_id, MOSS_AGATE), 0);
+    h.send::<_, LootChannel>(
+        other,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Greed,
+        },
+    );
+    assert_eq!(owned(&h, other.character_id, MOSS_AGATE), 1);
+}
+
+#[test]
+fn completed_last_roll_removes_the_corpses_group_sparkles() {
+    let (mut h, other) = grouped();
+    let corpse = h.kill_kobold();
+    let roll = h.take::<GroupLootRoll>().remove(0);
+    h.open(corpse, true); // claim shared coins while the item is still blocked
+    h.take::<CorpseLootable>();
+    h.send::<_, LootChannel>(
+        h.looter,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Greed,
+        },
+    );
+    h.send::<_, LootChannel>(
+        other,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Need,
+        },
+    );
+    assert_eq!(
+        h.take::<CorpseLootable>(),
+        [lootable(corpse, false), lootable(corpse, false)]
+    );
+}
+
+#[test]
 fn group_kill_broadcasts_one_shared_item_roll_not_two_personal_items() {
     let (mut h, other) = grouped();
     let corpse = h.kill_kobold();
