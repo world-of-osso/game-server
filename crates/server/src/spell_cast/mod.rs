@@ -44,6 +44,12 @@ mod dummy19_boundary_tests;
 #[cfg(test)]
 mod dummy19_tests;
 #[cfg(test)]
+mod dummy20_tests;
+#[cfg(test)]
+mod dummy21_tests;
+#[cfg(test)]
+mod dummy22_tests;
+#[cfg(test)]
 mod dummy2_tests;
 #[cfg(test)]
 mod dummy3_tests;
