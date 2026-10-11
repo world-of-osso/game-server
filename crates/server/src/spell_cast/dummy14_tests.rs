@@ -163,10 +163,14 @@ fn dummy14_deathmark_restores_native_total_energy_on_bleed_clock() {
 }
 
 #[test]
-fn dummy14_eye_beam_native_ten_primary_hits_with_ranked_guaranteed_crit() {
+fn dummy14_eye_beam_native_initial_plus_ten_primary_hits_with_ranked_guaranteed_crit() {
     for rank in [false, true] {
         let mut h = harness(Vec::new(), &[198013, 198030, 320415], 12).unwrap();
         let caster = h.caster;
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert(crate::class_progression::KnownSpells::fixture(vec![198013]));
         if rank {
             apply(&mut h, caster, caster, 320415);
         }
@@ -184,7 +188,11 @@ fn dummy14_eye_beam_native_ten_primary_hits_with_ranked_guaranteed_crit() {
                     && e.kind == CombatLogKind::Damage
             })
             .collect();
-        assert_eq!(hits.len(), 10, "{hits:?}");
+        assert_eq!(
+            hits.len(),
+            11,
+            "native EXTRA_INITIAL_PERIOD plus ten200ms ticks: {hits:?}"
+        );
         assert!(hits.iter().all(|e| e.crit == rank));
         assert!(
             hits.iter()
@@ -201,11 +209,17 @@ fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
     let hostile = spawn_npc(&mut h.app, 27.9);
     let far = spawn_npc(&mut h.app, 28.1);
     let player = spawn_player(&mut h.app, 1, 23.0);
+    let hostile_faction = h
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(target)
+        .unwrap()
+        .0;
     h.app
         .world_mut()
         .get_mut::<shared::components::UnitFactionTemplate>(player)
         .unwrap()
-        .0 = 7;
+        .0 = hostile_faction;
     cast_at(&mut h, 191427, [20.0, 0.0, 0.0]);
     assert!(varied(44.0).contains(&(5000.0 - h.health(target))));
     assert!(varied(44.0).contains(&(5000.0 - h.health(hostile))));
