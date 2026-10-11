@@ -20,6 +20,8 @@ class RaidEncountersTest(unittest.TestCase):
                                      root / 'db2/1240336.db2', root / 'db2/1301155.db2',
                                      output, report)
             self.assertIn((409, 12118, 663, 0, 1519, 3733, 13031), bindings)
+            dungeon_maps = {row[0] for row in bindings if row[0] == 43}
+            self.assertEqual(dungeon_maps, {43}, 'authentic Wailing Caverns bindings absent')
             self.assertFalse(any(row[0] == 409 and row[2] in (665, 669, 671) for row in bindings))
             self.assertTrue(any(row['encounter_id'] == 665 for row in gaps))
             with closing(sqlite3.connect(':memory:')) as conn:
