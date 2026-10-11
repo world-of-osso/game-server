@@ -332,6 +332,140 @@ fn smartai_coverage_ooc_timed_list_waits_through_combat() {
 }
 
 #[test]
+fn smartai_coverage_ranked_orientation_turns_actor_not_selected_target() {
+    use shared::components::Rotation;
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    world.entity_mut(creature).insert(Rotation::default());
+    world.entity_mut(player).insert((
+        Position {
+            x: 10.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        Rotation {
+            y: 0.7,
+            ..Default::default()
+        },
+    ));
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    let mut action = tdb_action(-650127, 0, 1);
+    ai.execute_action(&mut ctx, &action, None);
+    let expected = action.target_position[3] + std::f32::consts::FRAC_PI_2;
+    assert!((ctx.world.get::<Rotation>(creature).unwrap().y - expected).abs() < 0.0001);
+    action.target_type = TARGET_ACTION_INVOKER;
+    ai.execute_action(&mut ctx, &action, Some(player));
+    assert!(
+        (ctx.world.get::<Rotation>(creature).unwrap().y - std::f32::consts::FRAC_PI_2).abs()
+            < 0.0001
+    );
+    assert_eq!(ctx.world.get::<Rotation>(player).unwrap().y, 0.7);
+}
+
+#[test]
+fn smartai_coverage_ranked_emote_state_changes_selected_unit_and_preserves_stance() {
+    use shared::components::UnitPose;
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut pose = UnitPose::default();
+    pose.stand_state = shared::components::StandState::Sit;
+    world.entity_mut(creature).insert(pose);
+    world.entity_mut(player).insert(pose);
+    let mut action = tdb_action(-313655, 0, 0);
+    action.target_type = TARGET_ACTION_INVOKER;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, Some(player));
+    assert_eq!(ctx.world.get::<UnitPose>(player).unwrap().emote_state, 233);
+    assert_eq!(
+        ctx.world.get::<UnitPose>(player).unwrap().stand_state,
+        shared::components::StandState::Sit
+    );
+    assert_eq!(ctx.world.get::<UnitPose>(creature).unwrap().emote_state, 0);
+    action.action_params[0] = 0;
+    ai.execute_action(&mut ctx, &action, Some(player));
+    assert_eq!(ctx.world.get::<UnitPose>(player).unwrap().emote_state, 0);
+}
+
+#[test]
+fn smartai_coverage_timed_list_chance_controls_observable_flag_action() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut action = tdb_action(197800, 9, 2);
+    action.event_params = [0; 5];
+    let mut call = tdb_action(1978, 0, 1);
+    call.action_params = [900002, 2, 1, 0, 0, 0, 0];
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    for chance in [0, 50, 100] {
+        action.chance = chance;
+        ctx.world
+            .resource_mut::<SmartScripts>()
+            .1
+            .insert(900002, Arc::new(vec![action.clone()]));
+        let mut executed = 0;
+        for _ in 0..256 {
+            ctx.world.get_mut::<NpcFlags>(creature).unwrap().0 = 2;
+            ai.execute_action(&mut ctx, &call, Some(player));
+            ai.update_timed_list(&mut ctx, 1);
+            executed += usize::from(ctx.world.get::<NpcFlags>(creature).unwrap().0 == 0);
+        }
+        if chance == 50 {
+            assert!(
+                executed > 0 && executed < 256,
+                "50-percent actions must both execute and skip: {executed}"
+            );
+        } else {
+            assert_eq!(
+                executed, 256,
+                "pinned zero chance means unconditional, like100"
+            );
+        }
+    }
+}
+
+#[test]
+fn smartai_coverage_timed_list_random_initial_delay_respects_both_endpoints() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut action = tdb_action(197800, 9, 2);
+    action.event_params = [20, 40, 0, 0, 0];
+    let mut call = tdb_action(1978, 0, 1);
+    call.action_params = [900003, 2, 1, 0, 0, 0, 0];
+    world
+        .resource_mut::<SmartScripts>()
+        .1
+        .insert(900003, Arc::new(vec![action]));
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    let mut delayed_past_minimum = false;
+    for _ in 0..128 {
+        ctx.world.get_mut::<NpcFlags>(creature).unwrap().0 = 2;
+        ai.execute_action(&mut ctx, &call, Some(player));
+        let mut observed = None;
+        for elapsed in 1..=40 {
+            ai.update_timed_list(&mut ctx, 1);
+            if ctx.world.get::<NpcFlags>(creature).unwrap().0 == 0 {
+                observed = Some(elapsed);
+                break;
+            }
+        }
+        let elapsed = observed.expect("an authored20..40ms flag action must run by its maximum");
+        assert!(elapsed >= 20, "action ran before its minimum: {elapsed}");
+        delayed_past_minimum |= elapsed > 20;
+    }
+    assert!(
+        delayed_past_minimum,
+        "variable delay must not always select its minimum"
+    );
+}
+
+#[test]
 fn smartai_coverage_nested_timed_list_does_not_start_after_outer_finishes() {
     let (_temp, mut world, mut ai, creature, player) = erland();
     let mut nested = tdb_action(1978, 0, 1);
