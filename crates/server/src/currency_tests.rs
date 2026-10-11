@@ -97,3 +97,19 @@ fn legacy_pvp_currency_balances_migrate_durably_without_duplicates() {
     assert_eq!(wallet.week_earned(1602), 80);
 }
 
+#[test]
+fn pvp_currency_client_request_cannot_mint_progression() {
+    let mut wallet = CurrencyWallet::default();
+    for currency_id in [1792, 1602] {
+        let request = EarnCurrency {
+            currency_id,
+            amount: 100,
+        };
+        let result = <EarnCurrency as CurrencyRequest>::apply(&mut wallet, &request);
+        assert!(
+            result.is_err(),
+            "PvP currency must be awarded by a played match, not a client amount"
+        );
+    }
+    assert!(wallet.entries.is_empty());
+}
