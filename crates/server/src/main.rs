@@ -38,6 +38,7 @@ mod equipment_admin_types;
 mod experience;
 mod faction;
 mod faction_reaction;
+mod followers;
 mod frame_stats;
 mod friends;
 mod game_objects;
