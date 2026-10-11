@@ -330,7 +330,7 @@ impl SpellHistory {
         }
     }
 
-    fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub(crate) fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         self.spell_ready_at
             .get(&spell.id)
