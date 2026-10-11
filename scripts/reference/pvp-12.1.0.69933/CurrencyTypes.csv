@@ -1,0 +1,3 @@
+ID,Name_lang,Description_lang,InventoryIconFileID,MaxQty,MaxEarnablePerWeek,AwardConditionID,MaxQtyWorldStateID,Flags_0,Flags_1
+1602,Conquest,Earned from Rated PvP activities. Used to purchase Rated PvP equipment.,1523630,0,0,146857,31270,2097546,1
+1792,Honor,Used to purchase Unrated PvP equipment.,1455894,15000,0,0,0,2,0
