@@ -56,6 +56,8 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch10](systems/spell-casting.md#tenth-batch-low-count-spec-paths) — eight low-count spec paths,11 native functions,170→168 Dummy roots and full40-spec before/after table; talent/transfer/actor gaps retained.
 
 - [Class spell batch9](systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks) — nine local Mainline paths, fixed ground pulses/owned marks/shield lifetimes,40-spec census coverage;171→170 Dummy roots, retained range/talent gaps.
+- [Toy-effects7 visual-only audit](systems/toys.md#toy-effects7-visual-only-audit-2026-10-10) — hat/rabbit, cosmetic barrier channel and conditional drake basket;107/1166,39 toy passes, retained guardian regression failure.
+
 - [Toy-effects6 follow-up](systems/toys.md#toy-effects6-follow-up-2026-10-10) — Duck Lovie104/1166 census,261 spell/36 toy regression passes, client condition/appearance follow-up and explicit remaining live/script gaps.
 
 - [Class spell batch8](systems/spell-casting.md#eighth-batch-projectile-taunt-and-low-coverage-paths) — Reap line, actual Provoke/owned statue and eight additional bounded paths; per-spell behavioral proof,172→171 Dummy roots and retained variants.
