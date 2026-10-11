@@ -3,6 +3,96 @@ use super::test_harness::*;
 use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
+fn rune_weapon() -> Harness {
+    let ids = [49028, 81256];
+    let mut h = harness(Vec::new(), &ids, 6).unwrap();
+    h.app.insert_resource(crate::world_data::load_world_data(
+        &world_db().unwrap().powers_db,
+    ));
+    let source = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&source).unwrap());
+    h
+}
+
+fn cast_rune_weapon(h: &mut Harness) {
+    let caster = h.caster;
+    h.cast_and_deliver(49028, Some(caster));
+    h.advance(4);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|event| event.spell_id == 49028));
+}
+
+#[test]
+fn dummy23_rune_weapon_completed_root_grants_owner_native_parry() {
+    let mut h = rune_weapon();
+    let ally = spawn_player(&mut h.app, 6, 3.0);
+    cast_rune_weapon(&mut h);
+    let world = h.app.world_mut();
+    let summons: Vec<_> = world
+        .query::<&super::summon::SummonedCreature>()
+        .iter(world)
+        .filter(|s| s.spell_id == 49028)
+        .collect();
+    assert_eq!(summons.len(), 1);
+    assert_eq!(summons[0].owner, h.caster);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 81256));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::StatModifiers>(h.caster)
+            .unwrap()
+            .parry_pct,
+        30.0
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), ally, 81256));
+}
+
+#[test]
+fn dummy23_rune_weapon_native_lifetime_ends_summon_and_owner_parry() {
+    let mut h = rune_weapon();
+    cast_rune_weapon(&mut h);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 81256));
+    h.advance(170);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 81256));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::StatModifiers>(h.caster)
+            .unwrap()
+            .parry_pct,
+        0.0
+    );
+    let world = h.app.world_mut();
+    assert_eq!(
+        world
+            .query::<&super::summon::SummonedCreature>()
+            .iter(world)
+            .filter(|s| s.spell_id == 49028)
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn dummy23_rune_weapon_missing_real_template_rejects_without_parry() {
+    let mut h = rune_weapon();
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .remove(&27893);
+    let caster = h.caster;
+    h.cast_and_deliver(49028, Some(caster));
+    h.advance(4);
+    assert!(!h.inbox.failed.is_empty());
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 81256));
+}
+
 fn fixture() -> Harness {
     let ids = [121471, 53, 185438, 197835];
     let spells = ids
