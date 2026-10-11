@@ -18,6 +18,20 @@ class InstancePopulationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "world.db"):
                 importer.import_database(path)
 
+    def test_linked_destinations_are_refused_without_writing(self):
+        import import_instance_population as importer
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.sqlite"
+            source.write_bytes(b"untouched")
+            symbolic = Path(directory) / "symbolic.sqlite"
+            symbolic.symlink_to(source)
+            hard = Path(directory) / "hard.sqlite"
+            os.link(source, hard)
+            for path in (symbolic, hard):
+                with self.assertRaisesRegex(ValueError, "copy"):
+                    importer.import_database(path)
+            self.assertEqual(source.read_bytes(), b"untouched")
+
     @unittest.skipUnless(os.environ.get("DUNGEON_POPULATION_SOURCE"), "requires authentic world.db")
     def test_all_instance_maps_match_eligible_tdb_and_keep_world_content(self):
         import import_instance_population as importer
@@ -28,10 +42,18 @@ class InstancePopulationTest(unittest.TestCase):
                 with sqlite3.connect(destination) as copy:
                     original.backup(copy)
             with sqlite3.connect(destination) as conn:
-                before = conn.execute("SELECT * FROM content_creature WHERE map=2991 ORDER BY guid").fetchall()
+                outside = "map NOT IN (SELECT map FROM tdb_instance_template)"
+                before = conn.execute(f"SELECT * FROM content_creature WHERE {outside} ORDER BY guid").fetchall()
+                before_objects = conn.execute(f"SELECT * FROM content_gameobject WHERE {outside} ORDER BY guid").fetchall()
+                before_loot = conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 ORDER BY entry").fetchall()
             importer.import_database(destination)
             with sqlite3.connect(destination) as conn:
-                self.assertEqual(before, conn.execute("SELECT * FROM content_creature WHERE map=2991 ORDER BY guid").fetchall())
+                self.assertEqual(before, conn.execute(f"SELECT * FROM content_creature WHERE {outside} ORDER BY guid").fetchall())
+                self.assertEqual(before_objects, conn.execute(f"SELECT * FROM content_gameobject WHERE {outside} ORDER BY guid").fetchall())
+                self.assertEqual(before_loot, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 ORDER BY entry").fetchall())
+                entries = "SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)"
+                self.assertEqual(conn.execute(f"SELECT entry,name FROM tdb_creature_template WHERE entry IN ({entries}) ORDER BY entry").fetchall(), conn.execute(f"SELECT entry,name FROM content_creature_template WHERE entry IN ({entries}) ORDER BY entry").fetchall())
+                self.assertEqual(conn.execute(f"SELECT * FROM tdb_creature_template_model WHERE CreatureID IN ({entries}) ORDER BY CreatureID,Idx").fetchall(), conn.execute(f"SELECT * FROM content_creature_template_model WHERE CreatureID IN ({entries}) ORDER BY CreatureID,Idx").fetchall())
                 for row in importer.population_counts(conn):
                     with self.subTest(map=row["map"]):
                         self.assertEqual(row["eligible_creatures"], row["after_creatures"])
@@ -44,6 +66,12 @@ class InstancePopulationTest(unittest.TestCase):
             importer.import_database(destination)
             with sqlite3.connect(destination) as conn:
                 self.assertEqual(421, conn.execute("SELECT count(*) FROM content_creature WHERE map=36").fetchone()[0])
+                before_failed_import = conn.execute("SELECT * FROM content_creature WHERE map=36 ORDER BY guid").fetchall()
+                conn.execute("DROP TABLE tdb_creature_template_model")
+            with self.assertRaises(sqlite3.OperationalError):
+                importer.import_database(destination)
+            with sqlite3.connect(destination) as conn:
+                self.assertEqual(before_failed_import, conn.execute("SELECT * FROM content_creature WHERE map=36 ORDER BY guid").fetchall())
 
 
 if __name__ == "__main__":
