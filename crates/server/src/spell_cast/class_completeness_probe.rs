@@ -232,6 +232,15 @@ fn census_harness(class: u8) -> Harness {
     h.app.insert_resource(data.store.clone());
     h.app
         .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+    // Cargo executes tests from the crate directory; production's relative
+    // data/world.db startup path is not this fixture's authored database.
+    let conn = rusqlite::Connection::open_with_flags(
+        &data.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::teleport_positions::load_positions(&conn).unwrap());
     h
 }
 
