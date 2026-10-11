@@ -14,14 +14,27 @@ pub(crate) struct Recipe {
 pub(crate) struct OrderCatalog(pub HashMap<u32, Recipe>);
 
 pub(crate) fn load_catalog(conn: &Connection) -> Result<OrderCatalog, String> {
-    if !conn
-        .table_exists(None, "crafting_order")
-        .map_err(|e| e.to_string())?
-    {
+    let imported: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM pragma_table_list WHERE name='crafting_order')",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if !imported {
         // Feature explicitly unavailable until the copy-only import is supplied.
         return Ok(OrderCatalog::default());
     }
-    let mut query=conn.prepare("SELECT a.Spell,a.SkillLine,e.EffectItemType,MAX(1,CAST(ROUND(e.EffectBasePointsF) AS INTEGER)) FROM crafting_order o JOIN skill_line_ability a ON a.ID=o.SkillLineAbilityID JOIN spell_effect e ON e.SpellID=a.Spell WHERE e.Effect=24 AND e.DifficultyID=0 AND e.EffectItemType>0").map_err(|e|e.to_string())?;
+    let mut query = conn
+        .prepare(
+            "SELECT a.Spell, a.SkillLine, e.EffectItemType,
+                MAX(1, CAST(ROUND(e.EffectBasePointsF) AS INTEGER))
+         FROM crafting_order o
+         JOIN skill_line_ability a ON a.ID=o.SkillLineAbilityID
+         JOIN spell_effect e ON e.SpellID=a.Spell
+         WHERE e.Effect=24 AND e.DifficultyID=0 AND e.EffectItemType>0",
+        )
+        .map_err(|e| e.to_string())?;
     let rows = query
         .query_map([], |row| {
             Ok(Recipe {
