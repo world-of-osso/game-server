@@ -4,7 +4,7 @@ Verified 2026-10-10. The achievements live audit fell because its destination us
 
 ## Root cause
 
-Audit snapshots in engine `data/diagnostics/achievements-2026-10-10/live-modern/` record WoW XY `(-11625.6,-54.5569)`, dead/falling client positions and an authoritative position restored to Z `11.0223`. Legacy `creature` guid532, Hemet Nesingwary Jr.715, is `(-11628.6,-54.5569,11.0223)`; the audit offset X three yards. Runtime `content_creature` guid20337067 instead places Hemet at `(-11653.4,-61.026,16.313)`.
+Audit snapshots in engine `data/diagnostics/achievements-2026-10-10/live-modern/` record WoW XY `(-11625.6,-54.5569)`, dead/falling client positions and an authoritative position restored to Z `11.0223`. Legacy `creature` guid532, Hemet Nesingwary Jr.715, is `(-11628.6,-54.5569,11.0223)`; the audit XY matches a three-yard X offset from that row, and Z matches exactly. This strongly indicates legacy spawn coordinates supplied the target; the original teleport command was not retained in the provided diagnostics. Runtime `content_creature` guid20337067 instead places Hemet at `(-11653.4,-61.026,16.313)`.
 
 Azeroth WDT775971 MAID tile `(row32,col53)` references root778052. It exists and parses; its terrain at the audit XY is **16.238565**, 5.216265 yards above the erroneous Z. The sampled high-resolution MCNK hole mask is zero. Shared collision correctly rejects a floor above step reach. Changing collision to lift underground teleports would hide the bad input.
 
