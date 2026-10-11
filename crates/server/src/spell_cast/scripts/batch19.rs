@@ -11,6 +11,8 @@ const HAVOC: u32 = 80240;
 const VAMPIRIC_TOUCH: u32 = 34914;
 const VAMPIRIC_HORROR: u32 = 87204;
 const EXTRA_INITIAL_PERIOD: u32 = 0x200;
+//5740's owned ground pulses use single-selected42223 children for each enemy.
+const RAIN_OF_FIRE_AREA_CHILD: u32 = 42223;
 
 ///44614s1 names three equal228596 triggers, rather than all four catalog slots.
 pub(in crate::spell_cast) fn effect_enabled(
@@ -148,6 +150,9 @@ pub(crate) fn copy_havoc(
 }
 
 fn is_havoc_single_target(world: &World, spell: &SpellInfo) -> bool {
+    if spell.id == RAIN_OF_FIRE_AREA_CHILD {
+        return false;
+    }
     let family = spell
         .class_options
         .as_ref()

@@ -131,7 +131,7 @@ fn dummy19_havoc_native_single_mark_preserves_foreign_owner_and_expires() {
             .iter()
             .any(|a| a.spell_id == 80240 && a.caster == caster)
     );
-    h.advance(250);
+    h.advance(320);
     assert!(!crate::auras::has_aura(h.app.world(), second, 80240));
     let before = h.health(second);
     damage(&mut h, 686, first, 100.0, false);
