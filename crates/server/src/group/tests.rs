@@ -329,6 +329,10 @@ fn countdown_server_clock_expires_once_for_every_member() {
         .resource_mut::<Time<Virtual>>()
         .set_max_delta(Duration::from_secs(4));
     pump(&mut app);
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::ZERO,
+    ));
+    pump(&mut app);
     for client in [&alice, &bob] {
         assert_eq!(
             countdowns(&mut app, client),
