@@ -23,7 +23,7 @@ impl SummonLifetime {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(super) struct GroupMember {
     entry: u32,
     position: [f32; 4],
