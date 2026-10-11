@@ -359,6 +359,23 @@ fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
 #[test]
 fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
     let mut h = darkglare_harness();
+    let pet = spawn_player(&mut h.app, 9, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(pet)
+        .remove::<shared::components::Player>()
+        .insert(crate::hunter_pet::HunterPet {
+            owner: h.caster,
+            slot: 0,
+        });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::hunter_pet::PetStable {
+            character_id: 1,
+            stored: default(),
+            summoned: Some(pet),
+        });
     let actor = darkglare(&mut h);
     let other = spawn_npc(&mut h.app, 25.0);
     h.app
@@ -378,11 +395,18 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
     let before = h.health(other);
     h.advance(50);
     assert_eq!(h.health(other), before);
-    assert!(crate::hunter_pet::summoned_pet(h.app.world(), h.caster).is_none());
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(h.app.world(), h.caster),
+        Some(pet)
+    );
     h.advance(300);
     assert!(
         h.app.world().get_entity(actor).is_err(),
         "native20sec expiry"
+    );
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(h.app.world(), h.caster),
+        Some(pet)
     );
 }
 
