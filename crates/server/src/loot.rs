@@ -693,7 +693,14 @@ fn close_invalid_loot(
 /// A decayed corpse (no longer `Corpse`) loses its loot; its remaining looters are
 /// told it is no longer lootable.
 fn drop_decayed_loot(
-    decayed: Query<(Entity, &CorpseLoot), (Without<Corpse>, Without<ItemLoot>)>,
+    decayed: Query<
+        (Entity, &CorpseLoot),
+        (
+            Without<Corpse>,
+            Without<ItemLoot>,
+            Without<shared::protocol::GameObjectInfo>,
+        ),
+    >,
     connections: Query<(Entity, &InWorld)>,
     mut senders: LootSenders,
     mut commands: Commands,
