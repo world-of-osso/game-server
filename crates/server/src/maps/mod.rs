@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use shared::components::{Player, Position};
 
 pub(crate) use difficulty::{DungeonDifficulty, ServerClock};
-pub(crate) use instances::{HOSTED_CONTINENTS, InstanceManager, NPC_APPEARANCE_MAPS};
+pub(crate) use instances::{HOSTED_CONTINENTS, InstanceManager};
 pub(crate) use login::LoginMaps;
 pub(crate) use store::MapStore;
 pub(crate) use transfer::{MapTransfer, TeleportOptions, teleport_to};
