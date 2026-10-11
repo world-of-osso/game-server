@@ -51,7 +51,7 @@ Three complete zero-valued dummy-aura spells have source-backed visual-only acti
 
 Hat casting takes2000ms and its aura lasts5000ms; no NPC rabbit is synthesized. Barrier is a10000ms cosmetic channel, not an absorb or collidable object. Basket retains the authentic405634 aura and all visual conditions, not a forced player/mount model change. Client mount-condition selection, rendered attachments and sounds are not certified by server admission. All three runtime item definitions and required spell rows already exist; no importer or database write is needed.
 
-Source receipt: canonical engine `data/diagnostics/toy-effects7-2026-10-10/selected-source.json`; full baseline census and ranked candidates are beside it. Haunt tick action, cloak Type17 payload, Scoots ModifierTree303980 and aura233 remain excluded. [Contract](../../specs/toys.md).
+Census104→107/1166 (+3, no removals) on unchanged reference data. Behavioral RED3 refusals became GREEN3; post-origin/master toy39/39, format/check pass without warnings. The required one-shot spell_cast gate passed314/315: unchanged guardian sacrifice fixture `guardians_sacrifice_splits_spell_damage_and_stops_on_native_health_floor` failed its random-damage transfer expectation at guardian_tests.rs113. That unrelated failure is retained, not hidden by a rerun or changed toy semantics. Source receipt: canonical engine `data/diagnostics/toy-effects7-2026-10-10/selected-source.json`; full baseline census and ranked candidates are beside it. Haunt tick action, cloak Type17 payload, Scoots ModifierTree303980 and aura233 remain excluded. [Contract](../../specs/toys.md).
 
 ## Account state and transport
 
