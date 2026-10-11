@@ -156,6 +156,25 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     }
 }
 
+/// TC a352b1fa Spell.cpp:3541-3550: successful regular and triggered casts.
+pub(crate) fn record_spell_cast(world: &mut World, caster: Entity, spell: u32) {
+    record_criteria_event(world, caster, CriteriaEvent::CastSpell(spell));
+}
+
+fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
+    if !world
+        .get_resource::<AchievementCatalog>()
+        .is_some_and(|catalog| catalog.tracks(event))
+    {
+        return;
+    }
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &[event], None)
+        && let Some(connection) = connection_for_player(world, player)
+    {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
 fn connection_for_player(world: &mut World, player: Entity) -> Option<Entity> {
     world
         .query_filtered::<(Entity, &PlayerLink), With<Authenticated>>()

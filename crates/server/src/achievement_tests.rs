@@ -130,6 +130,50 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
     assert!(toasts.is_empty());
 }
 
+#[test]
+fn achievements2_successful_spell_cast_counts_once_and_rejected_trigger_does_not() {
+    let mut h = crate::spell_cast::test_harness::harness_with(vec![], &[43779], 1, false).unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .init_resource::<crate::maps::ServerClock>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 43779, None, u8::MAX);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&1832)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 43779, None, 0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&1832),
+        Some(&1)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 43779, None, 0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&1832),
+        Some(&2)
+    );
+}
+
 #[path = "achievement_normal_lock_tests.rs"]
 mod normal_locks;
 
