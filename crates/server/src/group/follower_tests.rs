@@ -17,6 +17,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             level: 80,
             portrait: Default::default(),
             dungeon_difficulty: 205,
+            raid_difficulty: Default::default(),
         },
     )]);
     let mut members = Vec::new();
