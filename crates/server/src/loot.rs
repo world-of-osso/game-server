@@ -91,6 +91,61 @@ pub(crate) fn open_item_loot(
     }
 }
 
+/// Open a validated chest through the existing loot window and inventory path.
+pub(crate) fn open_game_object_loot(
+    world: &mut World,
+    player: Entity,
+    object: Entity,
+    character: u64,
+    loot_id: u32,
+) -> Result<(), shared::protocol::InteractionError> {
+    let db = world.resource::<GameDatabase>();
+    let quests = world.resource::<QuestDb>();
+    let log = load_quest_log(&db.db, character);
+    let inventory = persistence::load_inventory(&db.db, character);
+    let bag_count = |item| {
+        inventory
+            .items
+            .iter()
+            .filter(|slot| slot.item_id == item)
+            .map(|slot| slot.stack_count)
+            .sum()
+    };
+    let rolled = world.resource::<LootTables>().roll_game_object(
+        loot_id,
+        world.resource::<ItemTemplates>(),
+        |item| quest_needs_item(quests, &log, item, bag_count),
+        &mut rand::thread_rng(),
+    );
+    let slots = loot_slots(rolled, world.resource::<VendorCatalog>());
+    let mut connections = world.query::<(Entity, &InWorld, &PlayerLink)>();
+    let connection = connections
+        .iter(world)
+        .find(|(_, in_world, link)| in_world.character_id == character && link.0 == player)
+        .map(|(entity, _, _)| entity)
+        .ok_or(shared::protocol::InteractionError::InvalidTarget)?;
+    let response = LootResponse {
+        corpse: object.to_bits(),
+        auto: false,
+        slots: remaining_slots(&slots),
+    };
+    if world.get::<CorpseLoot>(object).is_none() {
+        world.entity_mut(object).insert(CorpseLoot::default());
+    }
+    world
+        .get_mut::<CorpseLoot>(object)
+        .expect("inserted chest loot")
+        .looters
+        .insert(character, slots);
+    world
+        .entity_mut(connection)
+        .insert(ActiveLoot { corpse: object });
+    if let Some(mut sender) = world.get_mut::<MessageSender<LootResponse>>(connection) {
+        sender.send::<LootChannel>(response);
+    }
+    Ok(())
+}
+
 /// The loot source whose loot window a connection has open.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ActiveLoot {
@@ -377,6 +432,8 @@ type Corpses<'w, 's> = Query<
         &'static mut CorpseLoot,
         Option<&'static mut Corpse>,
         Option<&'static mut DeathState>,
+        Option<&'static crate::game_objects::GameObjectBounds>,
+        Option<&'static crate::maps::InMap>,
     ),
 >;
 
@@ -385,7 +442,15 @@ type Corpses<'w, 's> = Query<
 struct Looting<'w, 's> {
     store: LootStore<'w>,
     corpses: Corpses<'w, 's>,
-    players: Query<'w, 's, (&'static Position, &'static Health)>,
+    players: Query<
+        'w,
+        's,
+        (
+            &'static Position,
+            &'static Health,
+            Option<&'static crate::maps::InMap>,
+        ),
+    >,
     senders: LootSenders<'w, 's>,
 }
 
@@ -397,11 +462,11 @@ impl Looting<'_, '_> {
         character_id: u64,
         corpse: Entity,
     ) -> Result<Vec<LootSlot>, LootError> {
-        let (corpse_position, loot, ..) = self
+        let (corpse_position, loot, _, _, bounds, map) = self
             .corpses
             .get(corpse)
             .map_err(|_| LootError::NoPermission)?;
-        let (player_position, health) = self
+        let (player_position, health, player_map) = self
             .players
             .get(player)
             .map_err(|_| LootError::NoPermission)?;
@@ -412,7 +477,20 @@ impl Looting<'_, '_> {
             .looters
             .get(&character_id)
             .ok_or(LootError::NoPermission)?;
-        if distance(player_position, corpse_position) > INTERACTION_DISTANCE {
+        if map.is_some() && map != player_map {
+            return Err(LootError::NoPermission);
+        }
+        let in_reach = bounds.map_or_else(
+            || distance(player_position, corpse_position) <= INTERACTION_DISTANCE,
+            |bounds| {
+                bounds.reaches(
+                    crate::game_objects::wow_position(corpse_position),
+                    crate::game_objects::wow_position(player_position),
+                    crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE,
+                )
+            },
+        );
+        if !in_reach {
             return Err(LootError::TooFar);
         }
         Ok(remaining_slots(slots))
@@ -440,7 +518,8 @@ impl Looting<'_, '_> {
             .ok_or(LootError::NoPermission)?;
         self.store.take(character_id, &content)?;
         self.senders.removed(connection, corpse, slot);
-        let (_, mut loot, mut decay, mut death) = self.corpses.get_mut(corpse).expect("read above");
+        let (_, mut loot, mut decay, mut death, ..) =
+            self.corpses.get_mut(corpse).expect("read above");
         let slots = loot.looters.get_mut(&character_id).expect("read above");
         slots[usize::from(slot)] = None;
         if slots.iter().any(Option::is_some) {
@@ -543,7 +622,7 @@ fn process_loot_slots(
     mut looting: Looting,
     mut commands: Commands,
 ) {
-    for (connection, in_world, _, active, mut receiver) in &mut requests {
+    for (connection, in_world, link, active, mut receiver) in &mut requests {
         let mut current = active.map(|active| active.corpse);
         for request in receiver.receive() {
             let Some(corpse) = current.filter(|corpse| corpse.to_bits() == request.corpse) else {
@@ -552,6 +631,10 @@ fn process_loot_slots(
                     .failed(connection, request.corpse, LootError::NoPermission);
                 continue;
             };
+            if let Err(error) = looting.open(link.0, in_world.character_id, corpse) {
+                looting.senders.failed(connection, request.corpse, error);
+                continue;
+            }
             match looting.take(connection, in_world.character_id, corpse, request.slot) {
                 Ok(true) => {
                     current = None;

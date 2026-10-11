@@ -122,7 +122,7 @@ pub(crate) fn use_object(
         }
     }
     if info.go_type == 3 {
-        return Err(InteractionError::InvalidTarget);
+        crate::loot::open_game_object_loot(world, player, object, character, state.loot)?;
     } else {
         crate::quest::game_object_credit(world, player, object, info.entry);
     }
