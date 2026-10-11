@@ -110,7 +110,9 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1) || (spell_id == 740 && effect_index == 5)
+    (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
+        || (spell_id == 740 && effect_index == 5)
+        || (spell_id == 190456 && matches!(effect_index, 1 | 3))
 }
 
 /// Mainline740s6 supplies the caster's Tranquility shield cap.
@@ -120,6 +122,11 @@ pub(super) fn absorb_amount(
     spell: &crate::spell_info::SpellInfo,
     effect: &crate::spell_info::SpellEffect,
 ) -> Option<f32> {
+    //190456's local tooltip explicitly includes (1 + $@versadmg) in its capacity.
+    if (spell.id, effect.index) == (190456, 0) {
+        let amount = crate::spell_cast::effects::scaled_amount(world, caster, spell, effect);
+        return Some(amount * crate::spell_cast::effects::versatility_multiplier(world, caster));
+    }
     let percent_index = match (spell.id, effect.index) {
         (740, 4) => 5,
         //122470s3: shield capacity is50% max health. Redirect s4 remains separate.

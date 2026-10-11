@@ -427,7 +427,7 @@ fn with_variance(amount: f32, variance: f32) -> f32 {
 }
 
 /// 1 + the caster's versatility (players only).
-fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
+pub(crate) fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
     world
         .get::<CharacterStats>(caster)
         .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)

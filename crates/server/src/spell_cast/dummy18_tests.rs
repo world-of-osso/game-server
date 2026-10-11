@@ -363,3 +363,41 @@ fn dummy18_ignore_pain_versatility_scales_budget_below_cap() {
         world_db().unwrap().store.get(190456).unwrap().effects[0].bonus_coefficient_from_ap;
     assert!((absorbed - coefficient * 2.0).abs() < 0.01);
 }
+
+#[test]
+fn dummy18_native_roots_reach_leech_through_completed_casts() {
+    for (root, aura, class) in [
+        (34914, 34914, 5),
+        (335467, 335467, 5),
+        (234153, 234153, 9),
+        (50842, 55078, 6),
+        (205179, 205179, 9),
+    ] {
+        let mut h = fixture(&[root, aura], class);
+        if root == 335467 {
+            h.set_power(PowerType::Insanity, 10_000.0);
+        }
+        let npc = h.npc;
+        h.cast_and_deliver(root, Some(npc));
+        h.advance(105);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "root {root}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|e| e.spell_id == Some(aura) && e.kind == CombatLogKind::Damage && e.periodic),
+            "root {root} damage"
+        );
+        assert!(
+            h.inbox.log.iter().any(|e| e.spell_id == Some(aura)
+                && e.kind == CombatLogKind::Heal
+                && e.periodic
+                && e.target == Some(h.caster.to_bits())),
+            "root {root} healing"
+        );
+    }
+}
