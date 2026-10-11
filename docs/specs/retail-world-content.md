@@ -18,6 +18,18 @@ Where it's built:
 
 How it works: [content import](../wiki/systems/content-import.md).
 
+## Instance population (2026-10-11)
+
+All maps in the canonical TDB `instance_template` take authentic TDB creature/gameobject spawns, templates, models, addons, formations, equipment and paths through the copy-only [instance importer](../wiki/systems/content-import.md#instance-population-2026-10-11). The historical four-map importer below remains the world/quest/vendor policy; instance population runs after it during regeneration.
+
+- [ ] Every instance map imports source-backed base-phase rows at its MapDifficulty difficulties; conditional phases, terrain swaps and phase-use flags are counted separately, never flattened into visible base-phase spawns.
+- [ ] Same-ID legacy instance templates/models must not override TDB identity. Missing source templates remain explicit deficits; missing display/asset metadata never causes fabricated models.
+- [ ] A map copy spawns its eligible creatures independent of client appearance-cache coverage, at the copy's difficulty and excluding dead bosses/event/pool restrictions.
+- [ ] Copy importer refuses `world.db`, symlinks and hardlinks; repeated application preserves world-map spawns and existing source-backed loot references.
+- [ ] Private-port client proof covers visible, attackable creatures in representative dungeons and both skins.
+
+Raid admission/lockout UX (rank 5), encounter scripting (rank 2), phase progression and unsupported gameobject interaction types remain separate gaps; importing their authentic rows is not proof those gameplay systems work.
+
 ## What it must do
 
 Spawn and id rules
