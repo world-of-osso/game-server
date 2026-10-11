@@ -1,0 +1,221 @@
+//! Bounded local Mainline contracts; real casts/periods, fixed hit/crit fixtures.
+use super::test_harness::*;
+use bevy::prelude::*;
+use shared::components::{Position, PowerType};
+use shared::protocol::CombatLogKind;
+
+fn execute(h: &mut Harness, id: u32, target: Option<Entity>) {
+    let spell = world_db().unwrap().store.get(id).unwrap();
+    super::execute_cast(h.app.world_mut(), h.caster, spell, target).unwrap();
+}
+fn apply(h: &mut Harness, caster: Entity, target: Entity, id: u32) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: id,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+}
+fn cast_at(h: &mut Harness, id: u32, at: [f32; 3]) {
+    let mut spell = world_db().unwrap().store.get(id).unwrap().clone();
+    spell.cast_destination = Some(at);
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None).unwrap();
+}
+
+#[test]
+fn dummy14_frozen_orb_hit_applies_owned_chilled_and_expires() {
+    let mut h = harness(Vec::new(), &[84721, 205708], 8).unwrap();
+    let target = h.npc;
+    cast_at(&mut h, 84721, [3.0, 0.0, 0.0]);
+    assert!(crate::auras::has_aura(h.app.world(), target, 205708));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(target)
+            .unwrap()
+            .movement_speed,
+        0.5
+    );
+    h.advance(170);
+    assert!(!crate::auras::has_aura(h.app.world(), target, 205708));
+}
+
+#[test]
+fn dummy14_blizzard_hit_uses_its_own_slow_not_orb_duration() {
+    let mut h = harness(Vec::new(), &[190357, 12486], 8).unwrap();
+    let target = h.npc;
+    cast_at(&mut h, 190357, [3.0, 0.0, 0.0]);
+    assert!(crate::auras::has_aura(h.app.world(), target, 12486));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(target)
+            .unwrap()
+            .movement_speed,
+        0.5
+    );
+    h.advance(65);
+    assert!(!crate::auras::has_aura(h.app.world(), target, 12486));
+}
+
+fn pet(h: &mut Harness) -> Entity {
+    let owner = h.caster;
+    let pet = spawn_player(&mut h.app, 3, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(pet)
+        .remove::<shared::components::Player>()
+        .insert(crate::hunter_pet::HunterPet { owner, slot: 0 });
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::hunter_pet::PetStable {
+            character_id: 1,
+            stored: default(),
+            summoned: Some(pet),
+        });
+    pet
+}
+#[test]
+fn dummy14_survival_kill_command_routes_named_damage_from_owned_pet() {
+    let mut h = harness(Vec::new(), &[259489, 259277], 3).unwrap();
+    let pet = pet(&mut h);
+    let target = h.npc;
+    execute(&mut h, 259489, Some(target));
+    assert_eq!(h.health(target), 4700.0, "3AP from actual pet, fixed100AP");
+    h.advance(1);
+    let hits: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(259277) && e.kind == CombatLogKind::Damage)
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].source, Some(pet.to_bits()));
+}
+#[test]
+fn dummy14_survival_kill_command_never_borrows_a_foreign_pet() {
+    let mut h = harness(Vec::new(), &[259489, 259277], 3).unwrap();
+    let p = pet(&mut h);
+    let foreign = spawn_player(&mut h.app, 3, 0.0);
+    h.app
+        .world_mut()
+        .get_mut::<crate::hunter_pet::HunterPet>(p)
+        .unwrap()
+        .owner = foreign;
+    let target = h.npc;
+    execute(&mut h, 259489, Some(target));
+    assert_eq!(h.health(target), 5000.0);
+}
+
+#[test]
+fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
+    let mut h = harness(Vec::new(), &[259495, 265163, 265157, 269747], 3).unwrap();
+    h.set_power(PowerType::Focus, 100.0);
+    let target = h.npc;
+    let other = spawn_npc(&mut h.app, 4.0);
+    execute(&mut h, 259495, Some(target));
+    assert!(varied(157.95 * 1.8).contains(&(5000.0 - h.health(target))));
+    assert!(crate::auras::has_aura(h.app.world(), target, 269747));
+    assert_eq!(
+        h.health(other),
+        5000.0,
+        "cone unimplemented, no guessed splash"
+    );
+    h.advance(125);
+    let ticks: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(269747) && e.kind == CombatLogKind::Damage)
+        .collect();
+    assert_eq!(ticks.len(), 6);
+    assert!(
+        ticks
+            .iter()
+            .all(|e| varied(20.988).contains(&(e.amount as f32)))
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), target, 269747));
+}
+
+#[test]
+fn dummy14_deathmark_restores_native_total_energy_on_bleed_clock() {
+    for active in [false, true] {
+        let mut h = harness(Vec::new(), &[360194], 4).unwrap();
+        let caster = h.caster;
+        let target = h.npc;
+        if active {
+            apply(&mut h, caster, target, 360194);
+        }
+        h.set_power(PowerType::Energy, 0.0);
+        h.advance(41);
+        assert_eq!(h.power(PowerType::Energy), if active { 30.5 } else { 20.5 });
+    }
+}
+
+#[test]
+fn dummy14_eye_beam_native_ten_cone_hits_with_ranked_guaranteed_crit() {
+    for rank in [false, true] {
+        let mut h = harness(Vec::new(), &[198013, 198030, 320415], 12).unwrap();
+        let caster = h.caster;
+        if rank {
+            apply(&mut h, caster, caster, 320415);
+        }
+        h.set_power(PowerType::Fury, 100.0);
+        let target = h.npc;
+        h.cast_and_deliver(198013, Some(target));
+        h.advance(45);
+        let hits: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|e| {
+                e.spell_id == Some(198030)
+                    && e.target == Some(target.to_bits())
+                    && e.kind == CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(hits.len(), 10, "{hits:?}");
+        assert!(hits.iter().all(|e| e.crit == rank));
+        assert!(
+            hits.iter()
+                .all(|e| varied(40.26 * if rank { 2.0 } else { 1.0 }).contains(&(e.amount as f32)))
+        );
+    }
+}
+
+#[test]
+fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
+    let mut h = harness(Vec::new(), &[191427, 200166, 247121, 162264, 201453], 12).unwrap();
+    let target = h.npc;
+    h.app.world_mut().get_mut::<Position>(target).unwrap().x = 20.0;
+    let hostile = spawn_npc(&mut h.app, 27.9);
+    let far = spawn_npc(&mut h.app, 28.1);
+    let player = spawn_player(&mut h.app, 1, 23.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::UnitFactionTemplate>(player)
+        .unwrap()
+        .0 = 7;
+    cast_at(&mut h, 191427, [20.0, 0.0, 0.0]);
+    assert_eq!(h.health(target), 4956.0);
+    assert_eq!(h.health(hostile), 4956.0);
+    assert_eq!(h.health(far), 5000.0);
+    assert!(crate::auras::has_aura(h.app.world(), target, 200166));
+    assert!(crate::auras::has_aura(h.app.world(), player, 247121));
+    assert!(!crate::auras::has_aura(h.app.world(), player, 200166));
+}
+
+#[test]
+fn dummy14_consume_generates_named_fury_once_without_optional_fragments() {
+    let mut h = harness(Vec::new(), &[473662, 1261710], 12).unwrap();
+    h.set_power(PowerType::Fury, 0.0);
+    let target = h.npc;
+    execute(&mut h, 473662, Some(target));
+    assert_eq!(h.power(PowerType::Fury), 8.0);
+    assert!(varied(315.0).contains(&(5000.0 - h.health(target))));
+}

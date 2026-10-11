@@ -216,6 +216,18 @@ Sources: only local Mainline12.1.0.69933 descriptions/effects/variables and read
 
 Scope/ranking: [all40-spec table](../spell-mechanics-coverage.md). Flat optional costs affect six ranked roots/seven memberships; native per-resource duration affects three/four (overlapping roots, not nine unique closures). Actor family ties at six roots but has no established native spell rotation/budget mapping. Damage-copy fields and actor scripts remain unresolved. No world.db writes or new importer is needed for these resource paths; `OptionalCostPct`, resource-rank cap extensions and whole-ability parity are not certified.
 
+### Fourteenth batch: local hit, actor and periodic consumers
+
+- [x] Frozen Orb84721 hits apply named205708; Blizzard190357 hits apply named12486. Only landed hits refresh owned slows, with each native duration. Orb movement/pursuit and Blizzard field generation remain separate gaps.
+- [x] Survival Kill Command259489 routes named259277 from the caster's actual owned persistent pet to the explicit enemy. Foreign pets are excluded; native root Focus gain remains generic. Pet inheritance/AI and260285 talent remain uncertified.
+- [x] Wildfire Bomb259495 resolves named265157 at its primary with s3's80% bonus and named269747's native owned bleed. The179 cone actor, secondary targets and s2 reduced-damage curve remain unsupported. No invented splash geometry.
+- [x] Deathmark360194 restores s3's80 Energy over its native16sec bleed clock, only while that owned aura ticks. Named poison duplication/vulnerability remain uncertified.
+- [x] Eye Beam198013 ticks named198030 on its native200ms channel clock. Local variable316 authors ten base waves; active320415 guarantees critical strikes. Ordinary crit applies without that rank. Channel cancellation stops attacks; extended duration/soft cap/343311 haste remain unsupported.
+- [x] Metamorphosis191427 resolves named200166 damage within the tooltip's8yd destination area, stuns nonplayers and applies247121 daze to players instead. Native endpoint movement is retained; leap traversal/talent cooldown resets remain uncertified.
+- [x] Consume473662 awards named1261710 Fury once on the actual root hit. Optional fragment generation remains unsupported.
+
+Sources: local Mainline12.1.0.69933 DB2/read-only world.db; no C++ bodies or external sources. These are eight bounded entries, not full rotation parity.
+
 ## Known gaps (current cycle)
 
 - [ ] Unknown Dummy fields remain unsupported; no generic no-op handlers. Source diagnostics list remaining marker and talent contracts.
