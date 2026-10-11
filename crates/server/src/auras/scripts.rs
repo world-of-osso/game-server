@@ -110,7 +110,11 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1) || (spell_id == 740 && effect_index == 5)
+    (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
+        || (spell_id == 740 && effect_index == 5)
+        || (spell_id == 190456 && matches!(effect_index, 1 | 3))
+        || (spell_id == 31850 && effect_index == 1)
+        || (spell_id == 288733 && effect_index == 1)
 }
 
 /// Mainline740s6 supplies the caster's Tranquility shield cap.
@@ -120,6 +124,11 @@ pub(super) fn absorb_amount(
     spell: &crate::spell_info::SpellInfo,
     effect: &crate::spell_info::SpellEffect,
 ) -> Option<f32> {
+    //190456's local tooltip explicitly includes (1 + $@versadmg) in its capacity.
+    if (spell.id, effect.index) == (190456, 0) {
+        let amount = crate::spell_cast::effects::scaled_amount(world, caster, spell, effect);
+        return Some(amount * crate::spell_cast::effects::versatility_multiplier(world, caster));
+    }
     let percent_index = match (spell.id, effect.index) {
         (740, 4) => 5,
         //122470s3: shield capacity is50% max health. Redirect s4 remains separate.
@@ -150,6 +159,8 @@ pub(super) fn snapshot_periodic_amount(
     if spell.id == RAKE_BLEED && effect.index == 0 {
         crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
     } else {
+        let amount =
+            crate::spell_cast::scripts::dispersion_tick(world, caster, spell, effect.index, amount);
         crate::spell_cast::scripts::snapshot_combustion(world, caster, spell, effect.index, amount)
     }
 }
@@ -196,6 +207,28 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        80240,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::scripts::replace_havoc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::LIFEBLOOM,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::scripts::replace_lifebloom),
+            on_remove: Some(crate::spell_cast::scripts::bloom_lifebloom),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::CENARION_WARD,
+        AuraScript {
+            on_proc: Some(crate::spell_cast::scripts::heal_cenarion_ward),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         53563,
         AuraScript {

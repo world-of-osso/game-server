@@ -46,6 +46,12 @@ pub(super) fn apply_rank_request(
     }
     let mut guild = load_guild(db, guild_id);
     let actor_rank = load_guild_member_rank(db, &guild, actor);
+    if matches!(
+        request,
+        GuildRankRequest::Leave | GuildRankRequest::RemoveMember { .. }
+    ) {
+        return remove_member(db, guild_id, actor, actor_rank, &guild, request);
+    }
     let mut members: Vec<_> = list_guild_members(db, guild_id)
         .into_iter()
         .map(|m| {
@@ -72,6 +78,40 @@ pub(super) fn apply_rank_request(
         .map(|(id, _, rank)| (id, rank))
         .collect();
     save_guild_ranks(db, guild_id, &guild, &positions);
+    Ok(())
+}
+
+fn remove_member(
+    db: &redb::Database,
+    guild_id: u32,
+    actor: u64,
+    actor_rank: u8,
+    guild: &GuildData,
+    request: GuildRankRequest,
+) -> Result<(), GuildRankError> {
+    let target = match request {
+        GuildRankRequest::Leave => {
+            if actor_rank == 0 {
+                return Err(GuildRankError::LeaderCannotLeave);
+            }
+            actor
+        }
+        GuildRankRequest::RemoveMember { character_name } => {
+            if !character_has_right(db, actor, guild_id, GUILD_RIGHT_REMOVE) {
+                return Err(GuildRankError::Permissions);
+            }
+            let target = list_guild_members(db, guild_id)
+                .into_iter()
+                .find(|member| member.name.eq_ignore_ascii_case(&character_name))
+                .ok_or(GuildRankError::MemberNotFound)?;
+            if load_guild_member_rank(db, guild, target.character_id) <= actor_rank {
+                return Err(GuildRankError::RankTooHigh);
+            }
+            target.character_id
+        }
+        _ => unreachable!("only membership removal requests"),
+    };
+    persistence::remove_character_guild(db, target);
     Ok(())
 }
 
@@ -199,6 +239,9 @@ fn edit_rank(
                 withdrawals_per_day,
             };
         }
+        GuildRankRequest::Leave | GuildRankRequest::RemoveMember { .. } => {
+            return Err(GuildRankError::Permissions);
+        }
         GuildRankRequest::Query => {}
         GuildRankRequest::Promote { .. } | GuildRankRequest::Demote { .. } => {
             unreachable!("handled before rank editing")
@@ -260,14 +303,18 @@ fn rank_settings(rank: &GuildRankData, index: usize) -> GuildRankSettings {
     }
 }
 
-fn snapshot(db: &redb::Database, character: u64, error: Option<GuildRankError>) -> GuildRanksState {
+pub(crate) fn snapshot(
+    db: &redb::Database,
+    character: u64,
+    error: Option<GuildRankError>,
+) -> GuildRanksState {
     let Some(membership) = persistence::load_character_guild(db, character) else {
         return GuildRanksState {
             ranks: Vec::new(),
             members: Vec::new(),
             own_rank: u8::MAX,
             tab_names: Vec::new(),
-            error: Some(GuildRankError::NotInGuild),
+            error,
         };
     };
     let guild = load_guild(db, membership.guild_id);
@@ -301,7 +348,16 @@ type Receivers<'w, 's> = Query<
     ),
     With<Authenticated>,
 >;
-type Connections<'w, 's> = Query<'w, 's, (Entity, &'static InWorld), With<Authenticated>>;
+type Connections<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static InWorld,
+        &'static crate::networking::PlayerLink,
+    ),
+    With<Authenticated>,
+>;
 
 pub(super) fn process_rank_requests(
     db: Res<GameDatabase>,
@@ -309,11 +365,16 @@ pub(super) fn process_rank_requests(
     connections: Connections,
     mut senders: Query<&mut MessageSender<GuildRanksState>>,
     mut changed: ResMut<ChangedGuilds>,
+    mut commands: Commands,
 ) {
     for (connection, world, mut receiver) in &mut receivers {
         for request in receiver.receive() {
             let membership = persistence::load_character_guild(&db.db, world.character_id);
             let query = matches!(request, GuildRankRequest::Query);
+            let previous_members = membership
+                .as_ref()
+                .map(|g| list_guild_members(&db.db, g.guild_id))
+                .unwrap_or_default();
             let result = membership
                 .as_ref()
                 .ok_or(GuildRankError::NotInGuild)
@@ -326,10 +387,18 @@ pub(super) fn process_rank_requests(
             }
             let guild_id = membership.expect("successful guild request").guild_id;
             changed.0.push(guild_id);
-            for (recipient, recipient_world) in &connections {
-                if persistence::load_character_guild(&db.db, recipient_world.character_id)
-                    .is_some_and(|g| g.guild_id == guild_id)
+            for (recipient, recipient_world, link) in &connections {
+                if previous_members
+                    .iter()
+                    .any(|member| member.character_id == recipient_world.character_id)
                 {
+                    if persistence::load_character_guild(&db.db, recipient_world.character_id)
+                        .is_none()
+                    {
+                        commands
+                            .entity(link.0)
+                            .remove::<shared::components::GuildMembership>();
+                    }
                     if let Ok(mut sender) = senders.get_mut(recipient) {
                         sender.send::<GuildChannel>(snapshot(
                             &db.db,

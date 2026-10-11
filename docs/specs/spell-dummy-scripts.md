@@ -1,10 +1,78 @@
 # Class spell scripts
 
+## Twenty-third batch: authored combo builders and Rune Weapon parry
+
+- [x] Active121471 doubles197835's authored per-enemy combo grant using its native100-percent effect3. Each landed enemy grants two instead of one; ordinary pool caps apply. No active aura/expiry retains one; native Backstab modifiers remain unchanged and must not double twice.
+- [x] Actual49028 Rune Weapon spawn grants its owner native81256 parry30% for the native8sec lifetime. Early summon despawn removes the owner buff. A missing authentic27893 template spawns nothing and grants no parry; existing root cast admission is unchanged.
+- [ ]49028 attack mirroring and its50707/1206/10/8 Dummy fields remain unbound; parry is not full Rune Weapon parity.
+- [ ]121471's20-percent additional Shadow damage remains separate and underivable locally: no proc-event/child binding establishes damage basis, melee/spell eligibility or279043 dispatch. Native combo certification is not full Shadow Blades parity.
+
+Source: local Mainline12.1.0.69933 description “causing your combo point generating abilities to generate double combo points”;197835s2 supplies per-target points. Native121471 masks do not match197835's scripted effect1. [Batch23 census/proof](../spell-dummy23-coverage.md).
+
+## Twenty-second batch: native Rewind non-raid healing
+
+- [x] Rewind363534s4 increases its existing native healing by200% when its caster is outside a raid; solo and party casters receive three times the native amount, raid casters retain it. Ordinary heal cap/overheal handling remains authoritative.
+- [x] Mind Flay15407s4 is the authored six-tick count, not an extra resource grant: native4500ms/750ms pays six300-raw Insanity ticks. Cancellation stops target damage and self resource; cap/overflow and friendly rejection remain native.
+- [ ] Rewind's five-second incoming-damage history, historical30% amount/distribution and376210 rank remain unimplemented. Native0.4 SP per tick is an existing minimum, not a replacement for the historical component. Neither spell's full talent/haste/rotation parity is claimed.
+
+Sources and exact deferred-root reasons: [batch22](../spell-dummy22-coverage.md). Mainline12.1.0.69933 local data only; no generic Dummy no-op or guessed history.
+
 Spell-specific behaviours beyond generic Retail effects live in `crates/server/src/spell_cast/scripts.rs` and `crates/server/src/auras/scripts.rs`. Generic dispatch alone is not gameplay coverage. See [spell casting](../wiki/systems/spell-casting.md).
 
 Generic guardian actors and native damage transfer have a separate [contract](spell-guardians.md) and [all40-spec/source boundary inventory](../spell-guardians-coverage.md). They do not imply closure of unknown summon Dummy roots.
 
 ## What it must do
+
+### Twenty-first-batch native combo builders
+
+- [x] Active Berserk106951 adds its authored s2 amount to positive native self-directed ENERGIZE combo-point effects of untriggered same-family casts. Shred, Rake and Thrash gain one additional point; Thrash grants once per cast, not once per enemy. Native pool caps and overflow logging apply to the combined grant.
+- [x] The independent343216 periodic point, other spell families, rejected casts and casts after expiry receive no builder bonus. Existing periodic timing and over-cap/finisher behavior are not changed.
+
+Source: local Mainline12.1.0.69933 description “Combo point generating abilities generate $s2 additional combo $lpoint:points;.” and aura4 index1 Base1. Tests: `spell_cast/dummy21_tests.rs`. This consumes the numeric Dummy field only; full Berserk/rotation parity, script-only resource grants and405189 over-cap storage remain uncertified. Seven other reviewed roots retain exact source boundaries in [batch21 coverage](../spell-dummy21-coverage.md).
+
+### Twentieth-batch authored totals and next-spell uses
+
+- [x] Barbed Shot217200 distributes its authored s2-tick damage total over its unchanged native initial/regular schedule. Local s2=5 versus native seven ticks is reconciled by equal distribution, an inference from total and clock, not independently observed Retail tick amounts. Same-owner reapplication adds unpaid damage to the new total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; rejected casts do not grant it.
+- [x] Stormkeeper191634 grants its s5 empowered-spell uses instead of the single options-row charge. Each matching completed Lightning Bolt/Chain Lightning consumes one use; unrelated spells do not. Native modifiers remain authoritative. Elemental Overload targeting/variants remain uncertified.
+
+Tests: `spell_cast/dummy20_tests.rs`. Local Mainline12.1.0.69933 and TDB1210 only; [coverage](../spell-dummy20-coverage.md), [runtime](../wiki/systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses). Audited but unidentified Dummy fields are retained, not no-op closures.
+
+### Nineteenth-batch counts, healing totals and owned damage
+
+- [x] Flurry44614 casts its native s1 count of228596/228354 bolts, not all four stored trigger slots. Optional Freezing/talent bridges remain uncertified.
+- [x] Mutilate1329 variable394 halves27576's damage and leaves5374 unchanged; no universal offhand multiplier is inferred.
+- [x] Dispersion47585 variable872 heals its native total over its native initial/regular ticks. Intangibility288733 adds s2 to that total; Altered Form453729's existing native duration modifier extends the healing clock. Equal tick distribution is derived from the total and unchanged native clock, not a new timer. Per-tick rounding remains normal engine rounding.
+- [x] Successful34914 dispel applies native87204 Horror to the dispeller, from the original aura owner. Expiry/cancellation never retaliate. Root aura4 Base2 remains unidentified.
+- [x] Havoc80240 copies s1 percent of effective direct single-target Warlock spell damage to the owned marked victim, without recursive copies or a second source modifier/critical roll. Destination immunity/absorption/mitigation still apply. Native single-target ownership excludes replaced marks but preserves foreign owners. Periodic/area/foreign-owner/expired marks do not copy. Range, specialized child selectors, destination mitigation parity and talent variants remain uncertified.
+- [x] Ardent Defender31850s2 restores native percent-max health on the next otherwise fatal attack and consumes the aura once. Spell/direct/redirect paths share health application; melee reserves its rescue before deferred removal, preventing two spends before command flush. Environmental damage remains separate. Ordinary melee outcome/live parity and unrelated aura316/118/137 semantics remain uncertified.
+
+Eight spell/rank entries, not eight new script bindings or whole-spec parity. Real store children, local Mainline12.1.0.69933 CSV/read-only world.db and TDB1210 registration evidence only. Tests: `spell_cast/dummy19_tests.rs`, `spell_cast/dummy19_boundary_tests.rs`. [Runtime](../wiki/systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [all40/source/proof](../spell-dummy19-coverage.md).
+
+### Eighteenth-batch native leech and reapplication contracts
+
+- Health leech effect9 and periodic aura53 deal native SP/AP damage, then heal their caster using the native amplitude times effective damage. Immunity, absorption and overkill produce no copied healing; no second power/modifier/crit roll on the copy. Native tick phase and expiry remain authoritative.
+- Positive native paths: Vampiric Touch34914, Shadow Word: Madness335467 (direct and periodic), Drain Life234153, Blood Plague55078 and Phantom Singularity205179's primary aura53. Singularity's area Dummy is retained, not a guessed duplicate area pulse.
+- Madness's explicit reapplication rule adds unpaid same-owner periodic damage to the new effect. Resolve already-due ticks first; preserve tick phase and foreign ownership. No universal Pandemic threshold is implied.
+- Ignore Pain190456 includes its native tooltip's versatility factor in shield capacity and uses s2 as the per-hit absorb fraction; Protection73 accumulates remaining shields up to its s4 percent-health cap. Aura142 and other class/talent variants remain separate gaps.
+- Improved Conflagrate267115's Charges modifier grants an additional117828 use per successful ranked Conflagrate; native MaxAuraStacks supplies cap4. Magnitude stays30% per use.
+- Obliterate49020's local description variable608 selects dual-wield222024/66198 and1264082/1264083, or two-hand325461 and1264084, never all six. Zero/75 Dummy fields remain underived.
+
+Eight bounded root entries, not complete rotations. Sources: local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210 names. Karma redirect, Lifebloom threshold, guardians and retained marker/talent gaps are not inferred. Tests load real store rows. [Runtime](../wiki/systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication), [proof/census/all40](../spell-dummy18-coverage.md).
+
+### Seventeenth-batch named resources and restorative hooks
+
+| Entry | Required bounded behaviour |
+|---|---|
+|Shadow Bolt686|Completed root grants194192 once only in Demonology266; no grant in other/no active specs.|
+|Conflagrate17962|Actual root damage grants245330 once;196406 grants one117828 use. Native cap2 and successive eligible casts consume one use each at30%, not stacked60%.|
+|Soul Fire6353|Completed root grants281490 once; actual damage applies base157736 periodic aura or445474 when445465 is active, not both. Optional vulnerabilities/tick resources are excluded.|
+|Blood Boil50842|Each damage-hit enemy receives base55078 disease unless learned212744 selects the explicit replacement branch; allies/out-of-area excluded. Descendant markers remain gaps; batch18 adds native leech ticks.|
+|Marrowrend195182|Successful damage hit grants195182s3 stacks of named195181, up to its native cap10. Bone Shield melee depletion/haste/markers remain separate.|
+|Lifebloom33763|Natural expiry/dispel casts33778 onto the protected ally once; cancellation/death/replacement never bloom. One active target per owner; foreign owners remain independent. Near-expiration refresh threshold is underivable, not guessed.|
+|Regrowth8936|231032 adds its native40% probability to initial healing when any existing Regrowth affects the target, including foreign-owner HoTs. No rank/no HoT preserves base probability.|
+|Cenarion Ward102351|Actual damage consumes the ward's native charge and applies102352 from its owner onto its protected unit; heals/fully absorbed hits do not consume it. Native8000ms/2000ms + extra-initial attribute gives five heals; expiry stops them.|
+
+Sources only local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210. Tests load real child rows, never fabricated children. Eight roots, not complete rotations; guardian/Karma/Eye Beam/source gaps retained. [Proof/census/all40](../spell-dummy17-coverage.md); [runtime](../wiki/systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks).
 
 ### Sixteenth-batch low-count rank and charge contracts
 

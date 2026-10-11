@@ -35,6 +35,8 @@ pub enum SpellModOp {
     PeriodicHealingAndDamage = 22,
     PointsIndex2 = 23,
     BonusCoefficient = 24,
+    ///267115's authored additional Backdraft use modifier.
+    Charges = 31,
     PointsIndex3 = 32,
     PointsIndex4 = 33,
     PowerCost1 = 34,
@@ -149,8 +151,8 @@ pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, 
     };
     let (flat, mult) =
         matching(auras, spell, op).fold((0.0, 1.0), |(flat, mult), (aura, effect)| {
-            //53390's stacks are uses of the same20% reduction, not magnitude.
-            let stacks = if aura.spell_id == 53390 {
+            //Tidal Waves/Backdraft stacks are next-spell uses, not magnitude.
+            let stacks = if matches!(aura.spell_id, 53390 | 117828) {
                 1.0
             } else {
                 aura.stack_multiplier()
@@ -184,23 +186,23 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .map(|aura| aura.instance_id)
         .collect();
     for id in used {
-        if consume_tidal_stack(world, caster, id) {
+        if consume_stacked_use(world, caster, id) {
             continue;
         }
         super::spend_charge(world, caster, id);
     }
 }
 
-///53390 grants two accumulated next-spell uses with a native one-charge field.
+///53390/117828 grant accumulated next-spell uses with one native proc charge.
 ///Keep that charge while another stack remains; final use follows normal removal.
-fn consume_tidal_stack(world: &mut World, caster: Entity, instance: u32) -> bool {
+fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
         return false;
     };
     let Some(aura) = auras.get_mut(instance) else {
         return false;
     };
-    if aura.spell_id != 53390 || aura.stacks <= 1 {
+    if !matches!(aura.spell_id, 53390 | 117828) || aura.stacks <= 1 {
         return false;
     }
     aura.stacks -= 1;

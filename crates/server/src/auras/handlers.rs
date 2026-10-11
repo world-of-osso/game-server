@@ -52,6 +52,8 @@ pub const DUMMY: u32 = 4;
 pub const MOD_CONFUSE: u32 = 5;
 pub const MOD_FEAR: u32 = 7;
 pub const PERIODIC_HEAL: u32 = 8;
+/// SpellEffect amplitude supplies the fraction of effective damage returned as health.
+pub const PERIODIC_LEECH: u32 = 53;
 /// Read at threat-generation time by creature_aggro::threat_multiplier.
 pub const MOD_THREAT: u32 = 10;
 pub const MOD_TAUNT: u32 = 11;
@@ -170,6 +172,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
     Some(match aura_type {
         PERIODIC_DAMAGE
+        | PERIODIC_LEECH
         | PERIODIC_HEAL
         | OBS_MOD_HEALTH
         | OBS_MOD_POWER
@@ -315,5 +318,8 @@ pub fn breaks_on_damage(aura_type: u32) -> bool {
 /// Types whose amount adds SP/AP coefficients (TrinityCore applies spell
 /// power only to damage, heal and absorb amounts); others use base points.
 pub fn scales_with_power(aura_type: u32) -> bool {
-    matches!(aura_type, PERIODIC_DAMAGE | PERIODIC_HEAL | SCHOOL_ABSORB)
+    matches!(
+        aura_type,
+        PERIODIC_DAMAGE | PERIODIC_LEECH | PERIODIC_HEAL | SCHOOL_ABSORB
+    )
 }
