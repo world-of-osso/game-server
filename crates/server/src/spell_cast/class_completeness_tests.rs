@@ -45,6 +45,7 @@ fn hit(h: &mut Harness, spell_id: u32) -> f32 {
         .unwrap()
         .clone();
     super::execute_cast(h.app.world_mut(), h.caster, &spell, Some(h.npc)).unwrap();
+    h.advance(10); // Native Chill Streak has a 20 yd/s missile.
     5000.0 - h.health(h.npc)
 }
 
