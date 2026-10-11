@@ -50,6 +50,7 @@ External resources, tooling, data sources, development workflow.
 - [Toy-effects10 cosmetic auras](systems/toys.md#toy-effects10-cosmetic-target-and-growth-auras-2026-10-10) — source-bound refreshment/crystal/swarm auras, real target/trigger/lifetime fixtures; retained gameplay scripts and rendering limits.
 
 - [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10) — authentic15 banner item definitions and16 scenery templates; source-bound locations, wild faction and expiry, imported-copy census109→125, no shared DB write.
+- [Class spell batch15](systems/spell-casting.md#fifteenth-batch-native-health-weapon-ranks-and-delayed-hits) — eight local health/weapon/rank/heal-copy/delayed-hit contracts;163 remaining Dummy roots,98/65 reviewed/underived, [all40 table](../spell-dummy15-coverage.md). Karma redirect/guardian/Eye Beam gaps retained.
 
 - [Class spell batch14](systems/spell-casting.md#fourteenth-batch-owned-hits-and-native-clocks) — eight local hit/pet/periodic consumers;164 remaining Dummy roots,93/71 reviewed/underived and [all40 proof table](../spell-dummy14-coverage.md); primary-only geometry/data discrepancies explicit.
 
