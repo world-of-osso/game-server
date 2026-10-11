@@ -103,3 +103,5 @@ Own server :5085 (world.db = `world-stockadebosses-20260927.db`, copied game.red
 - Report per-bound-creature full/partial/none SmartAI coverage. Full means all authored entry-keyed rows are within current event/action/target/flag support, not complete Retail encounter mechanics or spell-effect/numeric parity. None means no authored cast rows; existing Stockade script mechanics are the explicit preservation exception.
 
 Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/death/save fixtures; private both-skin Skum3674/encounter589 lifecycle captures at UDP5830. Controlled admin damage exercises production damage/death boundaries, not ordinary solo balance. Skum display4203 remains outside imported appearance coverage; no replacement model or mechanics are introduced.
+
+- Existing BossAi summon ownership hooks are preserved: JustSummoned tracks owned summons; evade/death cleanup despawns them, and SummonedCreatureDespawn removes ownership. This adds no summon ability.
