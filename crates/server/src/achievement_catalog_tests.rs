@@ -7,6 +7,65 @@ fn catalog() -> AchievementCatalog {
 }
 
 #[test]
+fn achievements_dependencies_cascade_from_existing_earned_ids_once() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(1), None)
+            .is_empty()
+    );
+    // Retail Outland Explorer's seven children; Universal Explorer lacks only Outland.
+    state.earned_ids.extend([863, 864, 843, 867, 862, 866, 865]);
+    state
+        .earned_ids
+        .extend([45, 43, 42, 4868, 6974, 11188, 8935, 12988]);
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None);
+    for id in [44, 46] {
+        assert!(
+            state.earned_ids.contains(&id),
+            "missing dependency achievement {id}"
+        );
+        assert_eq!(
+            toasts
+                .iter()
+                .filter(|toast| toast.achievement_id == id)
+                .count(),
+            1
+        );
+    }
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(1), None)
+            .is_empty()
+    );
+}
+
+#[test]
+fn achievements_quest_asset_and_repeat_credit_preserve_boolean_progress() {
+    let catalog = catalog();
+    println!(
+        "trackable achievement snapshot rows: {}",
+        catalog
+            .snapshot(&PlayerAchievementState::default())
+            .progress
+            .len()
+    );
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::CompleteQuest(11891), None);
+    assert!(!state.earned_ids.contains(&561));
+    let toasts = catalog.update(&mut state, CriteriaEvent::CompleteQuest(11892), None);
+    assert!(toasts.iter().any(|toast| toast.achievement_id == 561));
+    assert_eq!(state.criteria_progress[&347], 1);
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::CompleteQuest(11892), None)
+            .is_empty()
+    );
+    assert_eq!(state.criteria_progress[&347], 1);
+}
+
+#[test]
 fn dungeonach_real_level_rows_grant_at_thresholds() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
@@ -118,6 +177,8 @@ fn dungeonach_criteria_progress_persists_across_database_reopen() {
     let mut state = PlayerAchievementState::default();
     catalog.update(&mut state, CriteriaEvent::ReachLevel(20), None);
     catalog.update(&mut state, CriteriaEvent::KillCreature(46254), None);
+    catalog.update(&mut state, CriteriaEvent::CompleteQuest(11892), None);
+    assert!(state.earned_ids.contains(&561));
     {
         let db = redb::Database::create(file.path()).unwrap();
         crate::persistence::create_tables(&db);

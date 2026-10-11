@@ -65,6 +65,89 @@ fn setup_app() -> Option<App> {
     setup_app_with(|_| {})
 }
 
+#[test]
+fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use shared::protocol::AchievementStateUpdate;
+    let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic quest data required");
+    let client = spawn_client(&mut app, 80);
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(PlayerAchievementState::default());
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    enter_world(&mut app, &client);
+    received::<AchievementStateUpdate>(&mut app, &client);
+    // Authored negative prerequisite group: every preceding D.E.H.T.A. quest.
+    for quest_id in [11866, 11868, 11872, 11879, 11884] {
+        mark_rewarded(&app, &client, quest_id);
+    }
+    let giver = spawn_npc(&mut app, 25809, 0.0);
+    accept(&mut app, &client, giver, 11892);
+    let errors = received::<QuestFailed>(&mut app, &client);
+    assert!(errors.is_empty(), "quest acceptance failed: {errors:?}");
+    // Incomplete and rejected rewards must not credit achievements.
+    turn_in(&mut app, &client, giver, 11892, None);
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .earned_ids
+            .contains(&561)
+    );
+    received::<QuestFailed>(&mut app, &client);
+    kill(&mut app, &client, 25804, 1);
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .earned_ids
+            .contains(&561)
+    );
+    turn_in(&mut app, &client, giver, 11892, Some(0));
+    let errors = received::<QuestFailed>(&mut app, &client);
+    assert!(errors.is_empty(), "quest reward failed: {errors:?}");
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(11892));
+    let updates = received::<AchievementStateUpdate>(&mut app, &client);
+    assert_eq!(
+        updates
+            .iter()
+            .filter(|update| update
+                .completed
+                .as_ref()
+                .is_some_and(|toast| toast.achievement_id == 561))
+            .count(),
+        1
+    );
+    let saved = persistence::load_achievements(db(&app), client.character_id);
+    assert!(saved.earned_ids.contains(&561));
+    assert_eq!(saved.criteria_progress[&347], 1);
+    assert!(saved.earned_at.contains_key(&561));
+    app.world_mut()
+        .entity_mut(client.connection)
+        .remove::<InWorld>();
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(saved.clone());
+    enter_world(&mut app, &client);
+    assert_eq!(
+        *app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap(),
+        saved
+    );
+    assert!(
+        received::<AchievementStateUpdate>(&mut app, &client)
+            .iter()
+            .all(|update| update.completed.is_none())
+    );
+}
+
 /// `setup_app` plus the plugins `add_plugins` adds before the app is finished.
 fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
     let quests = test_quest_db()?.clone();

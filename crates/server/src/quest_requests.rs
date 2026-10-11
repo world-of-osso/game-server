@@ -131,6 +131,7 @@ pub(super) struct QuestSideEffects<'w> {
 /// Everything a request touches besides storage.
 #[derive(SystemParam)]
 pub(super) struct QuestIo<'w, 's> {
+    commands: Commands<'w, 's>,
     units: QuestUnits<'w, 's>,
     senders: QuestSenders<'w, 's>,
     effects: QuestSideEffects<'w>,
@@ -454,6 +455,10 @@ impl<'a> QuestSession<'a, '_, '_> {
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
         self.persist_reward(&inventory, &log, self.reward_appearances(quest, &items));
+        let character = self.character();
+        self.io.commands.queue(move |world: &mut World| {
+            crate::achievement::record_quest_reward(world, character, quest_id);
+        });
         // `RewardQuest`: no XP at the cap.
         let level = self.requester.player.level;
         let xp = if level >= MAX_LEVEL {

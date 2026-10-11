@@ -27,6 +27,14 @@ Supported counters: kill creature type 0 accumulates, reach-level type 5 retains
 
 DB2 Retail level rows: 6/7/9/14783/15805/19459 for levels 10/20/40/60/70/80; these are not the old placeholder 1–6. Additional active Retail level rows (30,45,50) are also data-driven.
 
+## Quest and earned-achievement criteria (slice 1, 2026-10-10)
+
+`quest_requests::choose_reward` queues achievement credit only after its inventory/quest-log transaction commits. Deferred execution resolves the authenticated character's live player, updates type27 matching quest IDs to 1 and persists the achievement snapshot/date before sending existing toast messages. Login replays persisted rewarded quests, recovering pre-feature history or a process exit between reward commit and deferred credit; login suppresses toasts. No redb schema migration is needed: the existing JSON counters/dates and quest-log rewarded IDs already represent this state.
+
+Type8 counters derive directly from earned IDs rather than a second stored counter. Grant evaluation repeats until no additional definitions complete, supporting multi-level dependency chains independently of ID order without duplicate grants. Existing faction/account/statistic, missing-row, conditional, timer and unsupported-tree exclusions remain unchanged. Data additions and protocol/client changes are unnecessary for this slice.
+
+Source: TrinityCore `a352b1fa`, `src/server/game/Achievements/CriteriaHandler.cpp:1389-1392` checks the required earned achievement; `:1444-1461` matches quest ID and checks rewarded quest status at login. Retail `Blizzard_AchievementUI/Mainline/Blizzard_AchievementUI.lua` remains the existing presentation source; Forever changes artwork only. Native proof and final trackable counts are recorded in the slice handoff, not implied by source inspection.
+
 ## CriteriaTree coverage
 
 No TrinityCore checkout is available under `~/Repos`; interpretation uses observed local DB2 fields, not a fetched source. Operator 0 compares a criterion counter with Amount; 4 requires all children; 8 requires Amount completed children; 7 counts direct children with positive criterion counters. Operators 5/6/9 aggregate descendant counters by sum/max/weighted sum. Supported catalog trees exclude missing references, cycles, unknown/inverse operators, unsupported criterion types and conditional/timed criteria. These interpretations are inferred DB2 semantics, not independently source-verified Retail parity. Concrete level and Stockade trees anchor the All/Any behavior; count tests distinguish positive progress from completed thresholds.
