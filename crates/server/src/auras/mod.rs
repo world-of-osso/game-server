@@ -387,6 +387,13 @@ impl ActiveAuras {
 #[derive(Resource, Debug, Default)]
 pub struct UnhandledAuras(HashSet<(u32, u32)>);
 
+#[cfg(test)]
+pub(crate) fn take_unhandled_auras(world: &mut World) -> Vec<(u32, u32)> {
+    let mut types: Vec<_> = world.resource_mut::<UnhandledAuras>().0.drain().collect();
+    types.sort_unstable();
+    types
+}
+
 fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
 }
@@ -1124,12 +1131,16 @@ pub fn is_immune(world: &World, unit: Entity, school_mask: u32) -> bool {
 /// Shared school immunity check for spell damage and queried melee targets.
 pub(crate) fn immune_to_school(auras: Option<&ActiveAuras>, school_mask: u32) -> bool {
     let school = school_or_physical(school_mask);
-    auras.is_some_and(|auras| {
-        auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
-            effect.aura_type == handlers::SCHOOL_IMMUNITY
-                && effect.misc_values[0] as u32 & school != 0
-        })
-    })
+    let immunity_mask = auras.map_or(0, |auras| {
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .filter(|effect| effect.aura_type == handlers::SCHOOL_IMMUNITY)
+            .fold(0, |mask, effect| mask | effect.misc_values[0] as u32)
+    });
+    // TC IsImmunedToSpell: all of a composite school must be covered;
+    // separate immunity auras may supply the combined mask.
+    immunity_mask & school == school
 }
 
 /// Chance in percent that `unit` reflects a spell of `school_mask`
@@ -1175,9 +1186,14 @@ pub fn damage_taken_multiplier(
                 let stacks = aura.stack_multiplier();
                 aura.effects
                     .iter()
-                    .filter(|effect| {
-                        effect.aura_type == handlers::MOD_SPELL_DAMAGE_FROM_CASTER
-                            && scripts::affects_incoming_spell(aura, effect, spell)
+                    .filter(|effect| match effect.aura_type {
+                        handlers::MOD_SPELL_DAMAGE_FROM_CASTER => {
+                            scripts::affects_incoming_spell(aura, effect, spell)
+                        }
+                        handlers::MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => {
+                            spell.labels.contains(&(effect.misc_values[0] as u32))
+                        }
+                        _ => false,
                     })
                     .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
             })
@@ -1337,6 +1353,16 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
     let Some(auras) = world.get::<ActiveAuras>(unit) else {
         return mods;
     };
+    let haste_affected = auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
+        effect.aura_type == handlers::CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN
+            && effect.misc_values[0] as u32 == charge_category
+    });
+    if haste_affected {
+        let haste = world
+            .get::<crate::stats::CharacterStats>(unit)
+            .map_or(0.0, |stats| stats.haste_pct);
+        mods.recovery_mult /= (1.0 + haste / 100.0).max(0.01);
+    }
     for aura in auras.iter() {
         let stacks = aura.stack_multiplier();
         for effect in aura

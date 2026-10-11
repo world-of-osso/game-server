@@ -8,6 +8,12 @@ Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulf
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Level80 class completeness
+
+[Contract](../../specs/class-completeness.md), [implementation/source/proof limits](../../class-completeness.md). The expanded native-row census covers all13 classes/all40 specs and7827 build-union memberships, including talent/hero/passive entries. Working means the controlled cast/passive dispatch boundary, not every legal loadout or full rotation; exact effect/aura, data, target and resource gaps remain in the durable handoff.
+
+Shared native aura537 matches label plus aura owner;457 scopes charge haste by category and preserves running progress;416 applies masked spell/category cooldown haste with native millisecond truncation. Signed SpellPower costs now grant authored Runic power instead of being clamped away. School immunity/whole-spell misses are classified before Rune payment; composite schools require the combined immunity mask. Native level80 generator/spender/cap/rejection/immune and partial-Shadowfrost cases have targeted RED/GREEN proof. No guessed coefficients, marker no-ops, DB writes, master merge or realm port.
+
 ## Twenty-third batch: authored combo builders and Rune Weapon parry
 
 [Contract](../../specs/spell-dummy-scripts.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry), [source/census/proof](../../spell-dummy23-coverage.md). `scripts/batch5.rs::shuriken_storm` applies active121471's native100-percent effect3 to197835's scripted per-enemy combo grant. Native Backstab energize already matches121471's modifier masks; the scripted Storm effect does not. This named correction does not double native builders twice or invent a Shadow-damage copy.
