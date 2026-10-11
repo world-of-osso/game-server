@@ -843,7 +843,15 @@ impl InventoryModel {
         let target = valid
             .iter()
             .find(|slot| !self.equipped.contains_key(*slot))
-            .or(valid.first())
+            .or_else(|| {
+                valid.iter().min_by_key(|slot| {
+                    let equipped = self.equipped.get(*slot).expect("occupied candidate slot");
+                    self.template(equipped)
+                        .expect("equipped definition")
+                        .scaling
+                        .item_level
+                })
+            })
             .unwrap_or(first);
         self.swap(from, ItemLocation::Equipment(*target))
     }
