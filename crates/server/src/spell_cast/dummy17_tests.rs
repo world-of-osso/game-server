@@ -5,7 +5,18 @@ use shared::components::{ActiveSpec, Health, PowerType};
 use shared::protocol::CombatLogKind;
 
 fn fixture(ids: &[u32], roots: &[u32], class: u8) -> Harness {
-    let mut h = harness(Vec::new(), ids, class).unwrap();
+    //Only random variance is pinned; IDs, amounts, masks, clocks and costs remain native.
+    let spells = ids
+        .iter()
+        .map(|id| {
+            let mut spell = world_db().unwrap().store.get(*id).unwrap().clone();
+            for effect in &mut spell.effects {
+                effect.variance = 0.0;
+            }
+            spell
+        })
+        .collect();
+    let mut h = harness(spells, &[], class).unwrap();
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -15,8 +26,14 @@ fn fixture(ids: &[u32], roots: &[u32], class: u8) -> Harness {
     h
 }
 fn execute(h: &mut Harness, id: u32, target: Option<Entity>) {
-    let spell = world_db().unwrap().store.get(id).unwrap();
-    super::execute_cast(h.app.world_mut(), h.caster, spell, target).unwrap();
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(id)
+        .unwrap()
+        .clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, target).unwrap();
 }
 fn apply(h: &mut Harness, caster: Entity, target: Entity, id: u32, mask: u32) {
     crate::auras::apply_aura(
@@ -114,11 +131,21 @@ fn dummy17_conflagrate_grants_named_fragments_and_ranked_backdraft_uses() {
         assert_eq!(stack_count(&h, 117828), u32::from(ranked));
         if ranked {
             execute(&mut h, 17962, Some(npc));
+            execute(&mut h, 17962, Some(npc));
             assert_eq!(stack_count(&h, 117828), 2);
-            for _ in 0..2 {
+            for remaining in [1, 0] {
                 let spell = world_db().unwrap().store.get(29722).unwrap();
                 assert_eq!(super::cast_time_ms(h.app.world(), caster, spell), 1400);
-                execute(&mut h, 29722, Some(npc));
+                h.cast_and_deliver(29722, Some(npc));
+                let cast = h
+                    .app
+                    .world()
+                    .get::<shared::casting::CastState>(caster)
+                    .unwrap();
+                assert!((cast.duration - 1.4).abs() < 0.001);
+                h.advance(45);
+                assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+                assert_eq!(stack_count(&h, 117828), remaining);
             }
             assert_eq!(stack_count(&h, 117828), 0);
             let spell = world_db().unwrap().store.get(29722).unwrap();
@@ -341,5 +368,61 @@ fn dummy17_cenarion_ward_ignores_healing_and_fully_absorbed_damage() {
     apply(&mut h, healer, caster, 17, 1);
     incoming(&mut h, caster);
     assert!(owned(&h, caster, caster, 102351));
+    assert!(!owned(&h, caster, caster, 102352));
+}
+
+#[test]
+fn dummy17_immune_enemies_get_no_hit_dependent_fragments_marks_or_bones() {
+    for root in [17962, 50842, 195182, 6353] {
+        let mut h = fixture(
+            &[
+                root, 642, 245330, 196406, 117828, 55078, 195181, 281490, 157736, 445474,
+            ],
+            &[root],
+            if matches!(root, 50842 | 195182) { 6 } else { 9 },
+        );
+        let npc = h.npc;
+        apply(&mut h, npc, npc, 642, u32::MAX);
+        let caster = h.caster;
+        apply(&mut h, caster, caster, 196406, u32::MAX);
+        if matches!(root, 17962 | 6353) {
+            h.set_power(PowerType::SoulShards, 0.0);
+        }
+        execute(&mut h, root, if root == 50842 { None } else { Some(npc) });
+        h.advance(15);
+        assert_eq!(h.health(npc), 5000.0);
+        for mark in [55078, 157736, 445474] {
+            assert!(!owned(&h, npc, caster, mark));
+        }
+        for buff in [195181, 117828] {
+            assert!(!owned(&h, caster, caster, buff));
+        }
+        if root == 17962 {
+            assert_eq!(h.power(PowerType::SoulShards), 0.0);
+        }
+        if root == 6353 {
+            assert_eq!(h.power(PowerType::SoulShards), 10.0);
+        }
+    }
+}
+
+#[test]
+fn dummy17_cenarion_ward_has_four_native_heals_then_expires_without_retriggering() {
+    let mut h = fixture(&[102351, 102352, 133], &[102351], 11);
+    let caster = h.caster;
+    execute(&mut h, 102351, Some(caster));
+    incoming(&mut h, caster);
+    h.advance(170);
+    assert!(!owned(&h, caster, caster, 102351));
+    assert!(!owned(&h, caster, caster, 102352));
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(|e| e.spell_id == Some(102352) && e.periodic && e.kind == CombatLogKind::Heal)
+            .count(),
+        4
+    );
+    incoming(&mut h, caster);
     assert!(!owned(&h, caster, caster, 102352));
 }
