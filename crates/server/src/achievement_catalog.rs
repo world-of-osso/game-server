@@ -20,6 +20,7 @@ const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
+    SkillRank(u32, u16),
     CompleteQuest(u32),
     CastSpell(u32),
     DefeatEncounter(u32),
@@ -30,6 +31,7 @@ impl CriteriaEvent {
         match self {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
+            Self::SkillRank(_, _) => 7,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
             Self::DefeatEncounter(_) => 165,
@@ -42,6 +44,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::SkillRank(asset, _) => asset == criteria.asset,
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
@@ -144,6 +147,7 @@ impl AchievementCatalog {
             let counter = state.criteria_progress.entry(id).or_default();
             *counter = match event {
                 CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+                CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
                 CriteriaEvent::CompleteQuest(_) => 1,
                 _ => counter.saturating_add(1),
             };
@@ -451,7 +455,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset) FROM criteria c")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -465,6 +469,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: (matches!(kind, 0 | 5 | 8 | 27 | 165)
+                    || (kind == 7 && row.get::<_, bool>(9)?)
                     || (kind == 29
                         && row.get::<_, bool>(8)?
                         && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
