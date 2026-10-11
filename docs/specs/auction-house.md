@@ -46,6 +46,7 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 - [x] Prove browse/filter/paging/drilldown and create/bid/buyout/cancel through `game-cli` first, using actual auctioneer coordinates and interactions, actual listing prices and persisted inventory/gold/mail outcomes. No fallback global price proxy substitutes for listing evidence.
 - [x] Bounded native seller/buyer/large/mail sequences pass saved exit-0 runs and independent agent51 audit, using server grouped results and real AuctionID actions. [Sibling engine proof](../wiki/systems/auction-house.md#bounded-native-audit) owns details and limits; not clean world assets or full conversion.
 - [x] Auction query request-to-response latency is below 200 ms at the recorded acceptance workloads. Record revision, population, workload, paging, client and timing boundary; separately measure grouped browse and flat drilldown.
+- The existing `query_300k_listings_under_200ms` model-query test enforces <200 ms in both default debug/test and release profiles; no release-only exemption or workspace-gate skip. This test measures flat Name page 0, MinBid page 2000 and mixed-case text Buyout page 1 over 300000 listings, not grouped browse or network latency. [Current unskipped gate proof](../wiki/systems/auction-house.md#unskipped-300k-query-gate-2026-10-10).
 
 Auction durations, equal bot/player fees and expiry returns are owned by [bot economy](bot-economy.md), not redefined here.
 
