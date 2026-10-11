@@ -71,6 +71,7 @@ fn housing_map_rows_keep_authored_identity_without_public_admission() {
         leader: 30,
         group: None,
         difficulty_id: 0,
+        ..Default::default()
     };
     let now = instances::Now {
         elapsed: 0.0,
@@ -91,6 +92,71 @@ fn housing_map_rows_keep_authored_identity_without_public_admission() {
             Err(TransferAbortReason::MapNotAllowed)
         );
     }
+}
+
+#[test]
+fn housing_copies_require_authority_and_isolate_properties_without_difficulty() {
+    let store = map_store().expect("authentic world map catalog");
+    let mut manager = InstanceManager::default();
+    let owner = entrant(30, None);
+    let visitor = entrant(31, None);
+    let stranger = entrant(32, None);
+    let first = manager
+        .authorize_housing_entry(store, 2783, 1, owner.character_id)
+        .unwrap();
+    let second = manager
+        .authorize_housing_entry(store, 2783, 2, visitor.character_id)
+        .unwrap();
+    assert_ne!(first.map, second.map);
+    assert!(first.created && second.created);
+    assert!(manager.copy_difficulty(first.map).is_none());
+    assert!(manager.lock_copies_in_use().is_empty());
+    assert_eq!(
+        manager.create_map(store, 2783, owner, at(0.0)).unwrap().map,
+        first.map
+    );
+    assert_eq!(
+        manager
+            .create_map(store, 2783, visitor, at(0.0))
+            .unwrap()
+            .map,
+        second.map
+    );
+    assert_eq!(
+        manager.create_map(store, 2783, stranger, at(0.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        manager.cannot_enter(first.map, stranger, SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        manager.cannot_enter(first.map, visitor, SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    let visit = manager
+        .authorize_housing_entry(store, 2783, 1, visitor.character_id)
+        .unwrap();
+    assert_eq!(visit.map, first.map);
+    assert!(!visit.created);
+    assert_eq!(manager.cannot_enter(first.map, visitor, SUNDAY_NOON), None);
+    assert_eq!(
+        manager.player_cannot_enter(store, 2783, owner, 80, SUNDAY_NOON),
+        None
+    );
+    assert_eq!(
+        manager.player_cannot_enter(store, 2783, stranger, 80, SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    manager.revoke_housing_entry(owner.character_id);
+    assert_eq!(
+        manager.create_map(store, 2783, owner, at(0.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        manager.authorize_housing_entry(store, STOCKADE, 1, owner.character_id),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
 }
 
 fn map_store() -> Option<&'static MapStore> {

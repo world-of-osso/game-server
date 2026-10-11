@@ -24,6 +24,9 @@ use super::locks::{InstanceLocks, LockData, NormalInstanceLock, next_reset_time}
 use super::store::{InstanceType, MapDifficulty, MapStore};
 use crate::group::GroupId;
 
+#[path = "housing.rs"]
+mod housing;
+
 /// `Instance.UnloadDelay` default (worldserver.conf.dist): 30 minutes.
 pub const INSTANCE_UNLOAD_DELAY_SECS: f64 = 1800.0;
 /// `MIN_UNLOAD_DELAY`: an expired copy left empty unloads at once.
@@ -93,6 +96,8 @@ pub struct InstanceManager {
     next_instance_id: u32,
     copies: HashMap<InMap, InstanceCopy>,
     battleground_by_character: HashMap<u64, InMap>,
+    housing_copies: HashMap<(u32, u64), InMap>,
+    housing_by_character: HashMap<u64, InMap>,
     recent_by_character: HashMap<(u64, u32), u32>,
     /// `Group::m_recentInstances`: map → (instance owner, instance id).
     recent_by_group: HashMap<(GroupId, u32), (u64, u32)>,
@@ -109,6 +114,8 @@ impl Default for InstanceManager {
             next_instance_id: 1,
             copies: HashMap::new(),
             battleground_by_character: HashMap::new(),
+            housing_copies: HashMap::new(),
+            housing_by_character: HashMap::new(),
             recent_by_character: HashMap::new(),
             recent_by_group: HashMap::new(),
             locks: InstanceLocks::default(),
@@ -317,6 +324,13 @@ impl InstanceManager {
                 .get(&entrant.character_id)
                 .copied()
                 .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
+                .map(|map| ResolvedMap {
+                    map,
+                    created: false,
+                })
+                .ok_or(TransferAbortReason::MapNotAllowed),
+            InstanceType::House | InstanceType::Neighborhood => self
+                .authorized_housing_map(entrant.character_id, map_id)
                 .map(|map| ResolvedMap {
                     map,
                     created: false,
@@ -583,6 +597,10 @@ impl InstanceManager {
         entrant: InstanceEntrant,
         unix: i64,
     ) -> Option<TransferAbortReason> {
+        if self.housing_property(map).is_some() {
+            return (self.housing_by_character.get(&entrant.character_id) != Some(&map))
+                .then_some(TransferAbortReason::MapNotAllowed);
+        }
         let copy = self.copies.get(&map)?;
         if copy.battleground
             && self.battleground_by_character.get(&entrant.character_id) != Some(&map)
@@ -650,6 +668,11 @@ impl InstanceManager {
                     _ => Some(TransferAbortReason::MapNotAllowed),
                 }
             }
+            InstanceType::House | InstanceType::Neighborhood => self
+                .authorized_housing_map(entrant.character_id, map_id)
+                .map_or(Some(TransferAbortReason::MapNotAllowed), |map| {
+                    self.cannot_enter(map, entrant, unix)
+                }),
             _ => Some(TransferAbortReason::MapNotAllowed),
         }
     }
