@@ -168,6 +168,7 @@ impl Plugin for SpellCastPlugin {
                     powers::update_max_powers,
                     powers::regenerate_powers,
                     runes::regenerate_runes,
+                    sync_charge_recovery,
                     advance_casts.after(crate::networking::process_player_inputs),
                     missiles::resolve_due_hits,
                     start_queued_casts,
@@ -378,8 +379,14 @@ impl SpellHistory {
                 next_ready_at: 0.0,
             });
         state.max = max;
-        state.recharge_secs = f64::from(recharge_ms) / 1000.0;
         state.refresh(now);
+        let recharge_secs = f64::from(recharge_ms) / 1000.0;
+        if state.used > 0 && state.recharge_secs != recharge_secs {
+            // TC UpdateChargeRecoveryRate preserves completed progress, not elapsed time.
+            let ratio = recharge_secs / state.recharge_secs;
+            state.next_ready_at = now + (state.next_ready_at - now) * ratio;
+        }
+        state.recharge_secs = recharge_secs;
         Some(state)
     }
 }
@@ -387,6 +394,41 @@ impl SpellHistory {
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
     crate::auras::charge_mods(world, caster, category)
+}
+
+/// Running charge clocks follow haste/aura changes even without another cast.
+fn sync_charge_recovery(world: &mut World) {
+    let pending: Vec<(Entity, u32)> = world
+        .query::<(Entity, &SpellHistory)>()
+        .iter(world)
+        .flat_map(|(unit, history)| {
+            history
+                .charges
+                .values()
+                .filter(|state| state.used > 0)
+                .map(move |state| (unit, state.spell_id))
+        })
+        .collect();
+    for (unit, spell_id) in pending {
+        refresh_charge_recovery(world, unit, spell_id);
+    }
+}
+
+fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(spell_id)
+        .expect("pending charge spell must remain in the catalog")
+        .clone();
+    let category = spell.categories.as_ref().unwrap().charge_category;
+    let mods = charge_mods(world, unit, &spell);
+    let now = now(world);
+    let mut history = world.get_mut::<SpellHistory>(unit).unwrap();
+    let before = history.charges[&category];
+    let after = *history.charges_mut(&spell, now, mods).unwrap();
+    if before.used != after.used || before.recharge_secs != after.recharge_secs {
+        send_charges(world, unit, &after, now);
+    }
 }
 
 fn gcd_category(spell: &SpellInfo) -> u32 {
