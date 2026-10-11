@@ -113,6 +113,28 @@ fn dummy22_rewind_bonus_uses_native_heal_cap_and_overheal() {
     );
 }
 
+#[test]
+fn dummy22_rewind_named_bonus_does_not_triple_flash_heal() {
+    let mut spell = world_db().unwrap().store.get(2061).unwrap().clone();
+    for effect in &mut spell.effects {
+        effect.variance = 0.0;
+    }
+    let mut h = harness(vec![spell], &[2061], 5).unwrap();
+    let caster = h.caster;
+    h.app.world_mut().get_mut::<Health>(caster).unwrap().current = 100.0;
+    h.cast_and_deliver(2061, Some(caster));
+    h.advance(100);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let heals: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(2061) && e.kind == CombatLogKind::Heal)
+        .map(|e| e.amount)
+        .collect();
+    assert_eq!(heals, vec![682]);
+}
+
 fn mind_flay() -> Harness {
     let mut spell = world_db().unwrap().store.get(15407).unwrap().clone();
     for effect in &mut spell.effects {

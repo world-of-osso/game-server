@@ -164,6 +164,12 @@ impl GroupRegistry {
         }
     }
 
+    /// Whether the character belongs to a raid, rather than a party or no group.
+    pub fn is_in_raid(&self, member: CharacterId) -> bool {
+        self.group_of(member)
+            .is_some_and(|(_, group)| group.is_raid)
+    }
+
     /// Every member of the character's group (including itself); empty when ungrouped.
     pub fn group_members(&self, member: CharacterId) -> Vec<CharacterId> {
         self.group_of(member)

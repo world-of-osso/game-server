@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Twenty-second batch: native Rewind non-raid healing
+
+Rewind363534's native effect0 already scales each periodic heal by0.4 SP. SpellMisc's EXTRA_INITIAL_PERIOD,4sec duration and1000ms period yield five ticks, matching local description variable775's minimum. Its previously skipped s4=200 is now consumed by a named healing multiplier: GroupRegistry's caster membership distinguishes raids from parties/solo, without changing recipient selection, native amount, clock, rounding or overflow. This does not implement s2/s3's historical-damage component. [Contract](../../specs/spell-dummy-scripts.md#twenty-second-batch-native-rewind-non-raid-healing), [sources/proof/census](../../spell-dummy22-coverage.md).
+
+Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulfill the s4=6 total-count field. Behavioral tests certify cadence, wire cancellation, cap/overflow and rejected friendly casts. No additional six-point grant, registration-only no-op or production Mind Flay change.
+
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
 ## Twenty-first batch: native combo builders
