@@ -36,7 +36,7 @@ Karma's native70% redirect field has no locally determined period/accumulation r
 |710ce4b|Native channel/cancellation and partial-absorb/no-double-versatility proofs pass; shield versatility capacity exposes one genuine failure: **12/13**.|
 |edfa536|Native capacity factor plus completed-root fixtures: **14/14 GREEN**, compiler warning-free.|
 
-Final origin/master integration and requested single spell_cast gate are recorded below after execution. No full-crate/live/full-rotation or independent verifier claim; parent owns integration acceptance.
+Feature/master merge83c5fb3 integrates origin/master632f3ae's account-achievement changes; no class/aura production changes beyond edfa536. Requested `cargo test -p server --bin game-server spell_cast` ran **ONCE:404/404**, including all14 batch18 functions, compiler warning-free. `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` pass at83c5fb3. Later changes are docs/proof only. Manual changed-Rust readability audit; metric executable unavailable, no warning suppressions. No full-crate/live/full-rotation or independent verifier claim; parent owns integration acceptance.
 
 Durable evidence: `game-engine/data/diagnostics/spell-dummy18-2026-10-11/` — exact before/after source snapshots, source-equivalence receipts, census/table generators, RED/GREEN logs and proof ledger.
 

@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-11
 
-Matrix: batch18 production `edfa536`, inheriting batch17/guardian follow-up. [Capabilities/all40/proof](spell-dummy18-coverage.md). Census **163 roots,103 reviewed/60 underived**, versus164/100/64 before. Ignore Pain closes its consumed Dummy fields; aura142 remains a non-Dummy gap. E3=114/122, aura4=66/74, aura226=18/19. Native targeted14/14 includes completed roots and actual Drain Life cancellation/expiry; generic registry admission is not full spell parity. Karma/guardian/Lifebloom threshold/Eye Beam/live limits retained.
+Matrix: batch18 production `edfa536`, inheriting batch17/guardian follow-up. [Capabilities/all40/proof](spell-dummy18-coverage.md). Census **163 roots,103 reviewed/60 underived**, versus164/100/64 before. Ignore Pain closes its consumed Dummy fields; aura142 remains a non-Dummy gap. E3=114/122, aura4=66/74, aura226=18/19. Native targeted14/14 includes completed roots and actual Drain Life cancellation/expiry. Feature/master83c5fb3's requested single spell_cast404/404 and fmt/check pass, warning-free; later edits docs/proof only. Generic registry admission is not full spell parity. Karma/guardian/Lifebloom threshold/Eye Beam/live limits retained.
 
 ## Scope and classification
 
