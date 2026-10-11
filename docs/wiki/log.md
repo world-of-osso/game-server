@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [SmartAI summon lifecycle](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): actual child initialization54, parent17 and timed-despawn35 dispatch; two lifecycle regressions fail before implementation. Generic summon boundary owns each callback once.
+
 - 2026-10-11 — [SmartAI ranked actions](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): orientation66 and looping emote17 (1,998 total/1,116 quest-linked rows) follow pinned TC semantics; two real-row missing-action regressions. Timed chance/max-delay proofs exercise existing behavior; live escort remains separate.
 
 - 2026-10-11 — [SmartAI motion authority](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): authentic Wizzle acceptance plus production fixed-schedule point/wander integration reproduces a second0.125-yard stride; active escort ownership excludes idle roaming. Client stall/home-return and both-skin live acceptance still pending.

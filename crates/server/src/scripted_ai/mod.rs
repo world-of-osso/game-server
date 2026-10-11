@@ -100,6 +100,7 @@ pub enum Hook {
     },
     EnterEvadeMode,
     JustSummoned(Entity),
+    IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
     UpdateAi(u32),
@@ -131,6 +132,7 @@ pub trait CreatureAi: Send + Sync + 'static {
         self.reset(ctx);
     }
     fn just_summoned(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
+    fn is_summoned_by(&mut self, _ctx: &mut Ctx, _summoner: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
@@ -324,6 +326,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         }
         Hook::EnterEvadeMode => ai.enter_evade_mode(&mut ctx),
         Hook::JustSummoned(summon) => ai.just_summoned(&mut ctx, summon),
+        Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
@@ -522,9 +525,7 @@ impl Ctx<'_> {
     /// `WorldObject::SummonCreature(entry, pos)` (TEMPSUMMON_MANUAL_DESPAWN) at a
     /// WoW position `[x, y, z, o]`; the summoner's `JustSummoned` follows.
     pub fn summon_creature(&mut self, entry: u32, position: [f32; 4]) -> Option<Entity> {
-        let summon = crate::zones::summon_creature(self.world, self.me, entry, position)?;
-        dispatch(self.world, self.me, Hook::JustSummoned(summon));
-        Some(summon)
+        crate::zones::summon_creature(self.world, self.me, entry, position)
     }
 
     /// `MotionMaster::MovePoint(id, pos)` of `unit`, walking when it walks.

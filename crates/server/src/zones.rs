@@ -372,6 +372,16 @@ pub(crate) fn summon_creature(
     });
     queue.apply(world);
     if let Some(summon) = summon {
+        crate::scripted_ai::dispatch(
+            world,
+            summon,
+            crate::scripted_ai::Hook::IsSummonedBy(summoner),
+        );
+        crate::scripted_ai::dispatch(
+            world,
+            summoner,
+            crate::scripted_ai::Hook::JustSummoned(summon),
+        );
         info!("{summoner} summoned creature {entry} as {summon} at {position:?}");
     }
     summon
