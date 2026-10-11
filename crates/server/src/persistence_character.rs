@@ -168,8 +168,32 @@ pub fn set_character_guild_by_id(
             .insert(character_id, encoded.as_slice())
             .expect("insert character guild");
     }
+    crate::persistence::charters::join_guild_in(&write, character_id, guild_id, guild_name);
     write.commit().expect("Failed to commit character guild");
     Ok(())
+}
+
+/// Remove membership and guild-local rank/note/invite in one durable transaction.
+/// Daily bank usage remains, so leaving/rejoining cannot reset today's allowance.
+pub fn remove_character_guild(db: &Database, character_id: u64) {
+    let txn = db.begin_write().expect("begin guild member removal");
+    txn.open_table(CHARACTER_GUILDS)
+        .expect("open memberships")
+        .remove(character_id)
+        .expect("remove membership");
+    txn.open_table(crate::persistence::banks::GUILD_MEMBER_RANKS)
+        .expect("open ranks")
+        .remove(character_id)
+        .expect("remove rank");
+    txn.open_table(GUILD_MEMBER_NOTES)
+        .expect("open notes")
+        .remove(character_id)
+        .expect("remove note");
+    txn.open_table(PENDING_GUILD_INVITES)
+        .expect("open invites")
+        .remove(character_id)
+        .expect("remove invite");
+    txn.commit().expect("commit guild member removal");
 }
 
 pub fn set_pending_guild_invite(
@@ -197,6 +221,63 @@ pub fn set_pending_guild_invite(
     write
         .commit()
         .expect("Failed to commit pending guild invite");
+}
+
+pub fn accept_pending_guild_invite(
+    db: &Database,
+    character_id: u64,
+) -> Result<PendingGuildInviteData, String> {
+    let invite = load_pending_guild_invite(db, character_id).ok_or("No pending guild invite")?;
+    let rank = crate::persistence::banks::load_guild(db, invite.guild_id).lowest_rank();
+    let membership = GuildMembershipData {
+        guild_id: invite.guild_id,
+        guild_name: invite.guild_name.clone(),
+    };
+    let encoded = bitcode::encode(&membership);
+    let txn = db.begin_write().expect("begin guild invite acceptance");
+    {
+        let mut members = txn.open_table(CHARACTER_GUILDS).expect("open memberships");
+        if members
+            .get(character_id)
+            .expect("read membership")
+            .is_some()
+        {
+            return Err("You are already in a guild.".into());
+        }
+        members
+            .insert(character_id, encoded.as_slice())
+            .expect("join guild");
+    }
+    txn.open_table(crate::persistence::banks::GUILD_MEMBER_RANKS)
+        .expect("open ranks")
+        .insert(character_id, rank)
+        .expect("assign initial rank");
+    txn.open_table(PENDING_GUILD_INVITES)
+        .expect("open invites")
+        .remove(character_id)
+        .expect("consume invite");
+    crate::persistence::charters::join_guild_in(
+        &txn,
+        character_id,
+        invite.guild_id,
+        &invite.guild_name,
+    );
+    txn.commit().expect("commit guild invite acceptance");
+    Ok(invite)
+}
+
+pub fn load_pending_guild_invite(
+    db: &Database,
+    character_id: u64,
+) -> Option<PendingGuildInviteData> {
+    let txn = db.begin_read().expect("begin pending invite read");
+    let table = txn
+        .open_table(PENDING_GUILD_INVITES)
+        .expect("open pending invites");
+    table
+        .get(character_id)
+        .expect("read pending invite")
+        .map(|raw| bitcode::decode(raw.value()).expect("decode pending invite"))
 }
 
 pub fn take_pending_guild_invite(
