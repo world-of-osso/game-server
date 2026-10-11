@@ -262,6 +262,124 @@ fn dummy12_shield_of_righteous_applies_native_armor_buff_and_expires() {
 }
 
 #[test]
+fn dummy12_shield_cone_excludes_rear_side_far_and_ally_and_buffs_empty_cast() {
+    let mut h = harness(Vec::new(), &[53600, 132403, 403460, 407467], 2).unwrap();
+    let rear = spawn_npc(&mut h.app, -3.0);
+    let side = spawn_npc(&mut h.app, 2.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(side)
+        .unwrap()
+        .z = 3.5;
+    let edge = spawn_npc(&mut h.app, 3.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(edge)
+        .unwrap()
+        .z = 5.0;
+    let far = spawn_npc(&mut h.app, 7.0);
+    let ally = spawn_player(&mut h.app, 2, 3.0);
+    h.set_power(PowerType::HolyPower, 3.0);
+    let spell = world_db().unwrap().store.get(53600).unwrap();
+    super::execute_cast(h.app.world_mut(), h.caster, spell, None).unwrap();
+    for target in [h.npc, edge] {
+        assert!(varied(95.0).contains(&(5000.0 - h.health(target))));
+    }
+    for target in [rear, side, far] {
+        assert_eq!(h.health(target), 5000.0);
+    }
+    assert_eq!(h.health(ally), 1000.0);
+    h.advance(110);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .x = 50.0;
+    h.set_power(PowerType::HolyPower, 3.0);
+    super::execute_cast(h.app.world_mut(), h.caster, spell, None).unwrap();
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 132403));
+}
+
+#[test]
+fn dummy12_rake_reapplication_replaces_stealth_snapshot_without_retroactive_bonus() {
+    let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
+    let caster = h.caster;
+    apply(&mut h, caster, caster, 768, u32::MAX);
+    apply(&mut h, caster, caster, 231052, u32::MAX);
+    apply(&mut h, caster, caster, 5215, 1);
+    let root = world_db().unwrap().store.get(1822).unwrap();
+    super::execute_cast(h.app.world_mut(), caster, root, Some(h.npc)).unwrap();
+    h.advance(65);
+    assert!(
+        damage(&h, 155722, h.npc)
+            .iter()
+            .all(|&n| varied(29.4 * 1.6).contains(&(n as f32)))
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 5215,
+    );
+    h.inbox.log.clear();
+    h.set_power(PowerType::Energy, 100.0);
+    super::execute_cast(h.app.world_mut(), caster, root, Some(h.npc)).unwrap();
+    h.advance(65);
+    assert_eq!(damage(&h, 155722, h.npc), vec![29]);
+    apply(&mut h, caster, caster, 5215, 1);
+    h.inbox.log.clear();
+    h.advance(65);
+    assert_eq!(damage(&h, 155722, h.npc), vec![29]);
+}
+
+#[test]
+fn dummy12_gargoyle_foreign_owner_spend_and_triggered_cast_do_not_empower() {
+    let ids = [49206, 51963, 61777, 1242147, 211947, 47541, 47632, 77575];
+    let mut h = harness(Vec::new(), &ids, 6).unwrap();
+    actor_data(&mut h);
+    h.select(Some(h.npc));
+    h.advance(4);
+    h.cast_and_deliver(49206, Some(h.npc));
+    let actor = actors(&mut h, 27829)[0];
+    h.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::stats::CharacterStats {
+            attack_power: 100.0,
+            ..default()
+        });
+    let observer = spawn_peer_connection(&mut h.app, actor, 2);
+    let foreign = spawn_player(&mut h.app, 6, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(foreign)
+        .insert(super::powers::PowerPools::from_table(
+            &power_table(world_db().unwrap()),
+            [PowerType::RunicPower],
+        ));
+    super::powers::change_power(h.app.world_mut(), foreign, PowerType::RunicPower, 1000.0);
+    apply(&mut h, foreign, foreign, 1242147, u32::MAX);
+    super::execute_cast(
+        h.app.world_mut(),
+        foreign,
+        world_db().unwrap().store.get(47541).unwrap(),
+        Some(h.npc),
+    )
+    .unwrap();
+    super::cast_triggered(h.app.world_mut(), h.caster, 47541, Some(h.npc), 1);
+    assert!(!crate::auras::has_aura(h.app.world(), actor, 211947));
+    advance_actor_logs(&mut h, observer, 120);
+    assert!(!damage(&h, 51963, h.npc).is_empty());
+    assert!(
+        damage(&h, 51963, h.npc)
+            .iter()
+            .all(|&n| varied(34.776 * 2.0).contains(&(n as f32)))
+    );
+    h.advance(600);
+    assert!(h.app.world().get_entity(actor).is_err());
+}
+
+#[test]
 fn dummy12_butchery_talent_bleeds_hit_enemies_only() {
     for talented in [false, true] {
         let mut h = harness(Vec::new(), &[212436, 459868, 459870], 3).unwrap();
