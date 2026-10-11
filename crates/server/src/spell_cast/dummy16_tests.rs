@@ -155,6 +155,57 @@ fn dummy16_arcane_power_mana_discount_requires_native_rank() {
     }
 }
 #[test]
+fn dummy16_arcane_power_discount_ends_at_native_expiry() {
+    let mut h = fixture(&[12042, 343208, 133], &[12042, 133], 8);
+    apply(&mut h, 343208);
+    apply(&mut h, 12042);
+    let duration = world_db()
+        .unwrap()
+        .store
+        .get(12042)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .duration
+        .unwrap()
+        .duration_ms;
+    h.advance((duration / 50 + 2) as usize);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 12042));
+    let before = h.app.world().get::<Mana>(h.caster).unwrap().current;
+    let target = h.npc;
+    execute(&mut h, 133, Some(target));
+    assert_eq!(
+        before - h.app.world().get::<Mana>(h.caster).unwrap().current,
+        100.0
+    );
+}
+
+#[test]
+fn dummy16_judgment_immune_primary_never_generates_rank_power() {
+    for root in [20271, 275773] {
+        let mut h = fixture(&[root, 315867, 220637, 642], &[root], 2);
+        apply(&mut h, 315867);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.npc,
+                target: h.npc,
+                spell_id: 642,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.set_power(PowerType::HolyPower, 0.0);
+        let target = h.npc;
+        execute(&mut h, root, Some(target));
+        h.advance(10);
+        assert_eq!(h.power(PowerType::HolyPower), 0.0);
+        assert_eq!(h.health(target), 5000.0);
+    }
+}
+
+#[test]
 fn dummy16_arcane_blast_snapshots_pre_gain_charge_damage_and_cost() {
     for charges in [0.0, 2.0, 4.0] {
         let mut h = fixture(&[30451, 36032], &[30451], 8);
@@ -212,7 +263,7 @@ fn dummy16_arcane_blast_charge_cast_time_and_unaffordable_cast_boundary() {
     assert_eq!(h.health(h.npc), 5000.0);
 }
 #[test]
-fn dummy16_healing_wave_heals_only_native_primary_and_rejects_enemy() {
+fn dummy16_healing_wave_heals_only_native_primary_and_never_enemy() {
     let mut h = fixture(&[77472], &[77472], 7);
     let ally = spawn_player(&mut h.app, 7, 3.0);
     let other = spawn_player(&mut h.app, 7, 4.0);
@@ -231,16 +282,19 @@ fn dummy16_healing_wave_heals_only_native_primary_and_rejects_enemy() {
     assert!(varied(1501.0).contains(&(h.health(ally) - 100.0)));
     assert_eq!(h.health(other), 100.0);
     assert_eq!(h.health(h.npc), 5000.0);
-    let mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Health {
+            current: 100.0,
+            max: 5000.0,
+        });
+    //Existing friendly-cast selection chooses self when selection is hostile.
     h.cast_and_deliver(77472, Some(h.npc));
-    assert_eq!(h.inbox.failed.len(), 1);
-    assert!(
-        h.app
-            .world()
-            .get::<shared::casting::CastState>(h.caster)
-            .is_none()
-    );
-    assert_eq!(h.app.world().get::<Mana>(h.caster).unwrap().current, mana);
+    h.advance(45);
+    assert!(h.inbox.failed.is_empty());
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert!(varied(1501.0).contains(&(h.health(h.caster) - 100.0)));
 }
 
 fn tidal_stacks(h: &Harness) -> u8 {
