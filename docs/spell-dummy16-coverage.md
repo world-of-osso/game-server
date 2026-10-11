@@ -31,7 +31,7 @@ Frozen8ff636a before and9721cec after both reproduce **163 remaining Dummy roots
 -5a4e48a implementation:8/9 targeted pass.64fb234 diagnostic shows Healing Wave45 fails at cast admission, not Tidal consumption.
 -d060007 adds named Healing Wave single-primary plan, needed for genuine Tidal use testing.9/10 pass; remaining fixture wrongly expected hostile friendly-cast selection to reject rather than existing self selection.
 -9721cec corrects that observable selection assertion and adds native expiry/immune boundaries. **12/12 targeted pass**, warning-free. Current production/source/census proof covers this revision. Manual readability audit: short named new functions, no suppressions; expanded existing cost pipeline remains long, no unrelated refactor. Automated metric tool unavailable.
--Post-origin/master single requested spell_cast gate and fmt/check: pending integration below; no live/full-rotation/independent acceptance claim.
+-e0fa018 merges origin/master into this feature branch (wiki index conflict resolved by preserving both entries). Requested `cargo test -p server --bin game-server spell_cast` runs ONCE: **372/372 pass**, warning-free. `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` pass. Later edits are docs/proof only; no repeated broad gate, live/full-rotation/independent acceptance claim.
 
 Durable evidence: `game-engine/data/diagnostics/spell-dummy16-2026-10-10/` — source tars/generators, native row/equivalence receipts, exact census/all40 before/after, RED/GREEN logs and proof ledger. Parent owns independent integration acceptance.
 
