@@ -6,10 +6,16 @@ use shared::components::{Health, Position};
 use shared::protocol::{GameObjectInfo, InteractionChannel, UseGameObject};
 
 fn portal_fixture() -> Harness {
-    let mut h = harness_with_plugins(Vec::new(), &[10059, 17334, 121857], 8, false, |app| {
-        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
-        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
-    })
+    let mut h = harness_with_plugins(
+        Vec::new(),
+        &[10059, 17334, 121857, 11416, 44089, 121851],
+        8,
+        false,
+        |app| {
+            app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
+        },
+    )
     .unwrap();
     let data = world_db().unwrap();
     let conn = rusqlite::Connection::open_with_flags(
@@ -48,6 +54,48 @@ fn spawn_portal(h: &mut Harness) -> Entity {
         .collect();
     assert_eq!(objects.len(), 1);
     objects[0]
+}
+
+#[test]
+fn class_completeness_native_portal_identity_condition_keeps_signed_alliance_race_mask() {
+    let mut h = portal_fixture();
+    let spell = world_db().unwrap().store.get(11416).unwrap().clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native Ironforge portal");
+    let world = h.app.world_mut();
+    let portal = world
+        .query::<(Entity, &GameObjectInfo)>()
+        .iter(world)
+        .find(|(_, info)| info.entry == 176497)
+        .unwrap()
+        .0;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(h.caster)
+        .unwrap()
+        .race = 2;
+    let before = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert_eq!(
+        crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, portal),
+        Err(shared::protocol::InteractionError::InvalidTarget)
+    );
+    assert_eq!(*h.app.world().get::<Position>(h.caster).unwrap(), before);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(h.caster)
+        .unwrap()
+        .race = 1;
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, portal).unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let destinations = super::teleport_positions::load_positions(&conn).unwrap();
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        destinations.0[&(121851, 0)].bevy_position()
+    );
 }
 
 #[test]
