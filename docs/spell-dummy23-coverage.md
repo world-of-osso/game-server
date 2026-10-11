@@ -80,7 +80,7 @@ Current local115057 landing and265888 Mongoose Bite rows are available and exact
 |2efadd4|`cargo test --locked -p server --bin game-server dummy23_rune_weapon`:2 genuine missing-parry RED failures. Third test incorrectly expected missing template to reject root; corrected to actual no-actor/no-buff contract, not claimed as feature RED.|
 |449bb8e|`cargo test --locked -p server --bin game-server dummy23`:**12/12 GREEN**, warning-free. Native/scripted combo plus real Rune Weapon actor/owner/stat/lifetime boundary.|
 
-Final check/fmt results are appended after execution. Changed-Rust readability manually audited; metrics executable unavailable. No full suites, spell_cast gate, live server, realm/full-rotation or independent-verifier claim.
+At integrated docs revision **1674fb2** (Rust unchanged from449bb8e), `cargo check --locked -p server --bin game-server` and `cargo fmt --all --check` both exit0, warning-free. The first parallel check call returned no result/logs; after confirming no active check, the bounded command produced saved exit0 evidence. Later docs-only updates do not invalidate12/12 GREEN or check/fmt. Changed-Rust readability manually audited; metrics executable unavailable. No full suites, spell_cast gate, live server, realm/full-rotation or independent-verifier claim.
 
 Cargo pins existing local shared-protocol44b2b0f with `--config patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy20-2026-10-11/shared-protocol"`; original `[patch]` block retained. No master merge/deployment/UDP5000.
 
