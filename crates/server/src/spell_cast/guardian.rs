@@ -61,12 +61,17 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
         return;
     }
     let entry = world.get::<Npc>(actor).unwrap().template_id;
-    let spells = world
-        .resource::<GuardianSpells>()
-        .0
-        .get(&entry)
-        .cloned()
-        .unwrap_or_default();
+    let spells = match (summon.spell_id, entry) {
+        // Native205180 description explicitly names $205231s1. TDB1210 has
+        // no103673 creature spell row; this is not an Imp/Firebolt substitute.
+        (205180, 103673) => vec![205231],
+        _ => world
+            .resource::<GuardianSpells>()
+            .0
+            .get(&entry)
+            .cloned()
+            .unwrap_or_default(),
+    };
     if spells.is_empty() {
         warn!(
             "Guardian creature {entry}: no local creature spell binding; actor has no guessed attack"
