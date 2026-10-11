@@ -153,12 +153,14 @@ fn dummy15_combustion_pyromaniac_snapshots_native_crit_fraction_and_rank_base() 
         let target = h.npc;
         super::cast_triggered(h.app.world_mut(), caster, 133, Some(target), 1);
         h.advance(10);
-        // Fireball2.25SP, guaranteed Combustion crit;10% base +20% of20% =14%.
-        let expected = 225.0 * 2.0 * if ranked { 1.14 } else { 1.0 };
+        // Native Fireball3.88125SP; Combustion crit;10% base +20% of20% =14%.
+        let expected = 388.125 * 2.0 * if ranked { 1.14 } else { 1.0 };
         assert!(
             amounts(&h, 133, target, CombatLogKind::Damage)
                 .iter()
-                .all(|&n| varied(expected).contains(&(n as f32)))
+                .all(|&n| varied(expected).contains(&(n as f32))),
+            "rank{ranked}: {:?}",
+            amounts(&h, 133, target, CombatLogKind::Damage)
         );
         assert_eq!(amounts(&h, 133, target, CombatLogKind::Damage).len(), 1);
     }
