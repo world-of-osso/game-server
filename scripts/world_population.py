@@ -28,6 +28,8 @@ def preserve_rows(conn, table, where, keys):
     """Snapshot preexisting shared dependencies; restore by their actual keys."""
     saved = f"world_kept_{table}"
     conn.execute(f"CREATE TEMP TABLE {saved} AS SELECT * FROM {table} WHERE {where}")
+    if keys is not None:
+        conn.execute(f"CREATE INDEX temp.{saved}_keys ON {saved} ({','.join(keys)})")
     return table, saved, keys, where
 
 
