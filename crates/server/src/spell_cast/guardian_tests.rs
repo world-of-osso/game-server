@@ -250,27 +250,23 @@ fn guardians_sacrifice_splits_direct_damage_and_excludes_foreign_map() {
 }
 
 // Tests load the real prepared overlay, never a substituted Imp template.
-fn darkglare(h: &mut Harness) -> Entity {
-    static PREPARED: std::sync::OnceLock<tempfile::TempDir> = std::sync::OnceLock::new();
-    let directory = PREPARED.get_or_init(|| {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("prepared.sqlite");
-        std::fs::copy(&world_db().unwrap().powers_db, &path).unwrap();
-        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../scripts/add_guardian_templates.py");
-        let result = std::process::Command::new("python3")
-            .arg(script)
-            .arg("--db")
-            .arg(&path)
-            .output()
-            .unwrap();
-        assert!(
-            result.status.success(),
-            "{}",
-            String::from_utf8_lossy(&result.stderr)
-        );
-        directory
-    });
+fn spawn_darkglare(h: &mut Harness) -> Entity {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("prepared.sqlite");
+    std::fs::copy(&world_db().unwrap().powers_db, &path).unwrap();
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts/add_guardian_templates.py");
+    let result = std::process::Command::new("python3")
+        .arg(script)
+        .arg("--db")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
     h.app.insert_resource(crate::world_data::load_world_data(
         &directory.path().join("prepared.sqlite"),
     ));
@@ -320,7 +316,7 @@ fn darkglare(h: &mut Harness) -> Entity {
         .unwrap()
 }
 
-fn darkglare_harness() -> Harness {
+fn build_darkglare_harness() -> Harness {
     let mut beam = world_db().unwrap().store.get(205231).unwrap().clone();
     // Pin only variance to exercise exact damage and power changes, not RNG.
     beam.effects[0].variance = 0.0;
@@ -329,8 +325,8 @@ fn darkglare_harness() -> Harness {
 
 #[test]
 fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
-    let mut h = darkglare_harness();
-    let actor = darkglare(&mut h);
+    let mut h = build_darkglare_harness();
+    let actor = spawn_darkglare(&mut h);
     h.advance(2);
     assert_eq!(
         h.app
@@ -358,7 +354,7 @@ fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
 
 #[test]
 fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
-    let mut h = darkglare_harness();
+    let mut h = build_darkglare_harness();
     let pet = spawn_player(&mut h.app, 9, 2.0);
     h.app
         .world_mut()
@@ -376,7 +372,7 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
             stored: default(),
             summoned: Some(pet),
         });
-    let actor = darkglare(&mut h);
+    let actor = spawn_darkglare(&mut h);
     let other = spawn_npc(&mut h.app, 25.0);
     h.app
         .world_mut()
