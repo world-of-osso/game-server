@@ -136,6 +136,47 @@ fn quest_share_accept_replay_and_party_change_use_real_message_path() {
         received::<QuestPushResult>(&mut app, &a)[0].reason,
         QuestPushReason::OnQuest
     );
+    let rejection = received::<QuestPushResult>(&mut app, &b);
+    assert_eq!(rejection[0].reason, QuestPushReason::OnQuest);
+    assert!(rejection[0].recipient);
+    assert_eq!(rejection[0].player_name, "ShareA");
+    assert_eq!(rejection[0].quest_title, "The Fargodeep Mine");
+    request(
+        &mut app,
+        &b,
+        AbandonQuest {
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    request(
+        &mut app,
+        &a,
+        PushQuestToParty {
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    let offer = received::<QuestShareOffer>(&mut app, &b).remove(0);
+    app.world_mut()
+        .resource_mut::<crate::group::GroupRegistry>()
+        .leave(b.character_id);
+    request(
+        &mut app,
+        &b,
+        QuestPushResponse {
+            offer_id: offer.offer_id,
+            accepted: true,
+        },
+    );
+    assert!(
+        load_quest_log(db(&app), b.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .is_none()
+    );
+    assert!(
+        received::<QuestPushResult>(&mut app, &a)
+            .iter()
+            .any(|result| result.reason == QuestPushReason::NotAllowed)
+    );
 }
 
 #[test]

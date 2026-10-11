@@ -277,7 +277,33 @@ impl<'a> QuestSession<'a, '_, '_> {
             connection,
             QuestPushResult {
                 quest_id,
+                quest_title: self
+                    .quests
+                    .quests
+                    .get(&quest_id)
+                    .map_or_else(String::new, |q| q.title.clone()),
+                recipient: false,
                 player_name,
+                reason,
+            },
+        );
+    }
+
+    fn recipient_result(
+        &mut self,
+        connection: Entity,
+        quest_id: u32,
+        sender_name: String,
+        reason: QuestPushReason,
+    ) {
+        send(
+            &mut self.io.senders.push_results,
+            connection,
+            QuestPushResult {
+                quest_id,
+                quest_title: self.quests.quests[&quest_id].title.clone(),
+                recipient: true,
+                player_name: sender_name,
                 reason,
             },
         );
@@ -394,6 +420,16 @@ impl<'a> QuestSession<'a, '_, '_> {
                 reason,
             );
             if reason != QuestPushReason::Success {
+                if reason != QuestPushReason::Busy
+                    && reason != QuestPushReason::CrossFactionRestricted
+                {
+                    self.recipient_result(
+                        connection,
+                        quest_id,
+                        self.requester.name.clone(),
+                        reason,
+                    );
+                }
                 continue;
             }
             self.io.shares.next_id += 1;
@@ -479,11 +515,9 @@ impl<'a> QuestSession<'a, '_, '_> {
             reason,
         );
         if response.accepted && reason != QuestPushReason::Accepted {
-            send(
-                &mut self.io.senders.failed,
-                self.requester.connection,
-                failed(offer.quest, QuestFailedReason::NotAvailable),
-            );
+            if let Some(sender) = resolve_requester(&self.io.units, sender_connection) {
+                self.recipient_result(self.requester.connection, offer.quest, sender.name, reason);
+            }
         }
     }
 
