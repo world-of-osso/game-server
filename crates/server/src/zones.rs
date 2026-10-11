@@ -1032,7 +1032,10 @@ mod tests {
     fn world_population_real_copy_spawns_living_expansion_creatures() {
         let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
         let data = crate::world_data::load_world_data(std::path::Path::new(&path));
-        for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+        // Zandalar1642 has only one eligible source row: an inactive event12
+        // Headless Ghost. Do not invent hub NPCs or activate that event.
+        assert!(!data.spawns_by_map.contains_key(&1642));
+        for map_id in [2444, 2552, 2601, 2222, 1643] {
             let mut world = World::new();
             let mut queue = bevy::ecs::world::CommandQueue::default();
             let mut commands = Commands::new(&mut queue, &world);
