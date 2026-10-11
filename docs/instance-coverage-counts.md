@@ -36,6 +36,12 @@ python3 /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/instance-
 
 Lead owns publication/swap/runtime reload. The private population.sqlite is evidence, not a canonical replacement.
 
+## Master integration proof (2026-10-11)
+
+Merge `c5f810f1` retains DB2 selection and master's resolved TDB loot/gold bindings plus scoped `world-promote` API. Fresh read-only canonical backup and imported private copy live under engine `data/diagnostics/instance-coverage-2026-10-11/merge/`. `audit.json` and `row-proof.json` prove231 selected maps, zero bidirectional differences across the existing124-map projection of42 content tables, and zero differences across the31 promoted open-world maps' content projection. The23 added creature-populated dungeons and3 raids retain their authored rows; selected creature counts35260→41925 and gameobjects7676→8657. These net changes include replacement of legacy content on newly selected maps, not only insertions.
+
+All15 base and15 difficulty Wowhead bindings remain unchanged, including Hogger46254/loot30046254 with five item rows. Cobrahn3669 retains loot20003669, gold87–168 and eight item rows in both base/difficulty bindings. Targeted importer tests7/7 and scoped world-promote overlay/idempotency process test1/1 passed on this merged importer. The existing lead command above remains valid and creates only a private copy; publication remains lead-owned.
+
 ## Per-map census
 
 C/GO counts. Old marks TDB-template maps. Entrance = loaded inbound teleport count; Walk = from a hosted continent and party admission; Ground = all server ground files present. Data gaps are source counts, not import failures.
