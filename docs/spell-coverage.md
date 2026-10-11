@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-11
 
-Matrix: batch21 code snapshot `1aef6ea`, based exactly on origin/spell-dummy20 `d2796d9`. [Capabilities/all40/source/proof](spell-dummy21-coverage.md). Census **157 roots,117 reviewed/40 underived**, versus158/110/48 before. Berserk closes its authored extra combo-point field; seven retained roots have exact source-field/runtime-prerequisite reasons. E3=111/119, aura4=63/71, aura226=18/19. Native targeted8/8, warning-free. Final one-shot spell_cast/fmt/check and independent artifact verification pending. Shared verification dependency frozen at local44b2b0f; no master merge/live/server/UDP5000.
+Matrix: batch21 code snapshot `1aef6ea`, based exactly on origin/spell-dummy20 `d2796d9`. [Capabilities/all40/source/proof](spell-dummy21-coverage.md). Census **157 roots,117 reviewed/40 underived**, versus158/110/48 before. Berserk closes its authored extra combo-point field; seven retained roots have exact source-field/runtime-prerequisite reasons. E3=111/119, aura4=63/71, aura226=18/19. Native targeted8/8; requested integratedea6a007 spell_cast ONCE435/435, fmt/check exit0, warning-free (code1aef6ea unchanged). Main-thread proof only; no independent/full-server/live acceptance claim. Shared verification dependency frozen at local44b2b0f; no master merge/live/server/UDP5000.
 
 Source: game-server spell-dummy21 code revision `1aef6ea0c313179b80173dc0a8ceffac2bebdc1a`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
 
