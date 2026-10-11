@@ -49,6 +49,7 @@ mod ground;
 mod group;
 mod guild;
 mod guild_bank;
+mod housing_catalog;
 mod hunter_pet;
 mod ignore_list;
 mod inspect;
