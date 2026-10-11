@@ -7,9 +7,34 @@ use std::collections::{HashMap, HashSet};
 pub struct UnsourcedChallengeConfig {
     pub unsourced_pre_start_countdown_ms: u64,
     pub unsourced_death_penalty_ms: u64,
-    pub unsourced_seasonal_affixes_by_level: HashMap<u32, Vec<u32>>,
+    pub unsourced_seasonal_affix_rotation: Vec<HashMap<u32, Vec<u32>>>,
+    pub unsourced_season_period_secs: u64,
+    pub unsourced_season_epoch_unix: i64,
     pub unsourced_rating_by_level: HashMap<u32, u32>,
 }
+impl UnsourcedChallengeConfig {
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.unsourced_season_period_secs > 0
+            && self.unsourced_seasonal_affix_rotation.is_empty()
+        {
+            return Err("Enabled unsourced season period requires explicit rotation rows");
+        }
+        Ok(())
+    }
+    pub fn affixes_at(&self, unix: i64, level: u32) -> Vec<u32> {
+        if self.unsourced_season_period_secs == 0 || unix < self.unsourced_season_epoch_unix {
+            return Vec::new();
+        }
+        let elapsed = unix.saturating_sub(self.unsourced_season_epoch_unix) as u64;
+        let period = elapsed / self.unsourced_season_period_secs;
+        let index = (period % self.unsourced_seasonal_affix_rotation.len() as u64) as usize;
+        self.unsourced_seasonal_affix_rotation[index]
+            .get(&level)
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ChallengeDefinition {
     pub challenge_id: u32,
@@ -262,6 +287,22 @@ mod tests {
         assert_eq!(r.snapshot.resulting_level, Some(7));
         assert_eq!(r.snapshot.phase, ChallengePhase::Abandoned);
     }
+    #[test]
+    fn mythic_runtime_unsourced_rotation_is_disabled_until_a_period_is_supplied() {
+        let mut config = UnsourcedChallengeConfig::default();
+        config.unsourced_seasonal_affix_rotation = vec![
+            HashMap::from([(8, vec![147])]),
+            HashMap::from([(8, vec![165])]),
+        ];
+        config.unsourced_season_epoch_unix = 100;
+        assert!(config.affixes_at(100, 8).is_empty());
+        config.unsourced_season_period_secs = 2; // Fixture policy input, not a Retail season duration.
+        assert_eq!(config.affixes_at(100, 8), vec![147]);
+        assert_eq!(config.affixes_at(102, 8), vec![165]);
+        assert_eq!(config.affixes_at(104, 8), vec![147]);
+        assert!(config.affixes_at(99, 8).is_empty());
+    }
+
     #[test]
     fn mythic_runtime_unknown_policy_defaults_disabled() {
         let mut r = run();
