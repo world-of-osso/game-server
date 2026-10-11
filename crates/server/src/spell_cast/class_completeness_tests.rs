@@ -1,11 +1,15 @@
 //! Shared, source-derived class effects against native Retail rows.
 use super::test_harness::*;
+use crate::stats::CharacterStats;
 use bevy::prelude::*;
 use shared::components::Health;
 
 const PIERCING_CHILL: u32 = 377359;
 const CHILL_STREAK: u32 = 204167;
 const FROSTBOLT: u32 = 116;
+const PALADIN_PASSIVE: u32 = 137026;
+const CRUSADER_STRIKE: u32 = 35395;
+const CHARGE: u32 = 100;
 
 fn fixture() -> Harness {
     let data = world_db().expect("real world.db");
@@ -92,4 +96,85 @@ fn class_completeness_native_label_vulnerability_expires() {
         PIERCING_CHILL
     ));
     assert_eq!(hit(&mut h, CHILL_STREAK), base);
+}
+
+fn charge_fixture(passive: bool, haste: f32) -> Harness {
+    let ids = if passive {
+        vec![PALADIN_PASSIVE, CRUSADER_STRIKE, CHARGE]
+    } else {
+        vec![CRUSADER_STRIKE, CHARGE]
+    };
+    let mut h = harness(Vec::new(), &ids, 2).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = haste;
+    h.advance(2);
+    h
+}
+
+fn cast_charge_button(h: &mut Harness, spell_id: u32) -> shared::protocol::SpellChargesUpdate {
+    h.inbox.charges.clear();
+    h.cast_and_deliver(spell_id, Some(h.npc));
+    h.advance(2);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.inbox
+        .charges
+        .iter()
+        .find(|update| update.spell_id == spell_id)
+        .unwrap()
+        .clone()
+}
+
+#[test]
+fn class_completeness_native_charge_haste_halves_crusader_strike_recovery() {
+    let mut base = charge_fixture(false, 100.0);
+    let normal = cast_charge_button(&mut base, CRUSADER_STRIKE);
+    let mut h = charge_fixture(true, 100.0);
+    let fast = cast_charge_button(&mut h, CRUSADER_STRIKE);
+    assert_eq!(fast.recharge_ms, normal.recharge_ms / 2);
+    h.advance((fast.recharge_ms / 50) as usize);
+    let regenerated = cast_charge_button(&mut h, CRUSADER_STRIKE);
+    assert_eq!(regenerated.current, regenerated.max - 1);
+}
+
+#[test]
+fn class_completeness_native_charge_haste_excludes_other_category_and_zero_haste() {
+    let mut base = charge_fixture(false, 100.0);
+    charge_range(&mut base);
+    let normal = cast_charge_button(&mut base, CHARGE);
+    let mut h = charge_fixture(true, 100.0);
+    charge_range(&mut h);
+    assert_eq!(
+        cast_charge_button(&mut h, CHARGE).recharge_ms,
+        normal.recharge_ms
+    );
+    let mut zero = charge_fixture(true, 0.0);
+    let mut absent = charge_fixture(false, 0.0);
+    assert_eq!(
+        cast_charge_button(&mut zero, CRUSADER_STRIKE).recharge_ms,
+        cast_charge_button(&mut absent, CRUSADER_STRIKE).recharge_ms
+    );
+}
+
+#[test]
+fn class_completeness_native_charge_haste_retimes_inflight_recovery() {
+    let mut h = charge_fixture(true, 0.0);
+    let normal = cast_charge_button(&mut h, CRUSADER_STRIKE);
+    h.advance(40);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 100.0;
+    let faster = cast_charge_button(&mut h, CRUSADER_STRIKE);
+    assert_eq!(faster.recharge_ms, normal.recharge_ms / 2);
+    // Two seconds plus bounded loopback delivery have elapsed since the first use.
+    let expected = normal.remaining_ms.saturating_sub(2000) / 2;
+    assert!(
+        faster.remaining_ms.abs_diff(expected) <= 150,
+        "{:?} vs {expected}",
+        faster
+    );
 }
