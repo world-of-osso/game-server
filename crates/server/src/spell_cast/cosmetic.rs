@@ -7,6 +7,7 @@ use crate::spell_info::SpellInfo;
 /// action. Both the audit AND current DB2 shape must agree; metadata drift blocks.
 const VISUAL_ONLY_SPELLS: &[u32] = &[
     45416, 45418,  // Dancing Insoles, Fire Festival Batons
+    71909,  // The Heartbreaker's authored sob animations/heart attachment
     128327, // Iron Belly Spirits (friendly-target mug/refreshment visual)
     128328, // Ken-Ken's Mask (friendly-target attachment)
     131317, 131318, // Alliance / Horde fireworks
@@ -15,6 +16,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     176457, // Fruit Basket
     176594, // Touch of the Naaru
     185712, // Seafarer's Slidewhistle
+    193333, // Death's Door Charm's Helheim ghost-state attachment
     196783, // Darkshard Fragment (crystal growth attachments)
     203657, // Noble's Eternal Elementium Signet
     217708, // Gravil Goldbraid's Famous Sausage Hat
@@ -30,6 +32,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
+    408067,  // B.B.F. Fist's selected-target animations/hand attachment
+    430760,  // Abyss Caller Horn's authored water visual, not gameplay water
     443689,  // Toxic Victory
     447446,  // Cherry Blossom Trail
     455023,  // Filmless Camera
