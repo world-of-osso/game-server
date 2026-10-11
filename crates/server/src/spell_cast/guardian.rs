@@ -56,7 +56,8 @@ pub(super) struct GuardianActor {
 
 pub(super) fn initialize(world: &mut World, actor: Entity) {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
-    if !summon.properties.is_guardian() {
+    // Mainline49206 uses pet-title3238, but is a temporary Gargoyle actor.
+    if !summon.properties.is_guardian() && summon.spell_id != 49206 {
         return;
     }
     let entry = world.get::<Npc>(actor).unwrap().template_id;

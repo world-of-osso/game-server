@@ -24,6 +24,8 @@ mod dummy10_tests;
 #[cfg(test)]
 mod dummy11_tests;
 #[cfg(test)]
+mod dummy12_tests;
+#[cfg(test)]
 mod dummy2_tests;
 #[cfg(test)]
 mod dummy3_tests;
@@ -1440,6 +1442,7 @@ fn execute_cast(
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     spend_costs(world, caster, &costs);
+    scripts::empower_gargoyles(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
     start_cooldowns(world, caster, spell);
     log_event(

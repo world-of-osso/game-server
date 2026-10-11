@@ -457,6 +457,7 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
+    let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let period_ms = if effect.aura_period_ms > 0 {
         spell_mods::modify(
             world,
@@ -1139,7 +1140,10 @@ pub fn damage_taken_multiplier(
             })
             .product()
     });
-    taken * from_caster * scripts::outgoing_to_owner_multiplier(world, attacker, target)
+    taken
+        * from_caster
+        * scripts::unstable_affliction_multiplier(world, attacker, target)
+        * scripts::outgoing_to_owner_multiplier(world, attacker, target)
 }
 
 /// SCHOOL_ABSORB 69: matching absorbs (MiscValue school mask) soak damage,
