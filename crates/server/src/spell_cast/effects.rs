@@ -45,6 +45,8 @@ pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_DUMMY: u32 = 3;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
+pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
+pub const EFFECT_KILL_CREDIT: u32 = 134;
 pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
 pub const EFFECT_ENERGIZE: u32 = 30;
 pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
@@ -87,6 +89,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_SCHOOL_DAMAGE => school_damage,
         EFFECT_HEALTH_LEECH => health_leech,
+        EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
         crate::death::resurrection::EFFECT_RESURRECT
         | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
@@ -117,6 +120,22 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
+}
+
+/// TC EffectKillCreditPersonal/EffectKillCredit: credit the hit player, not the caster
+/// or the NPC hit. Only effect134 shares with that player's nearby group.
+fn quest_kill_credit(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if world.get::<shared::components::Player>(target).is_none() {
+        return;
+    }
+    crate::quest::event_credit(
+        world,
+        target,
+        target,
+        crate::quest_data::ObjectiveKind::Monster,
+        effect.misc_values[0] as u32,
+        effect.effect == EFFECT_KILL_CREDIT,
+    );
 }
 
 fn attack_me(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {

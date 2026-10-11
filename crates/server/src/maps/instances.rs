@@ -29,8 +29,14 @@ pub const INSTANCE_UNLOAD_DELAY_SECS: f64 = 1800.0;
 /// `MIN_UNLOAD_DELAY`: an expired copy left empty unloads at once.
 const MIN_UNLOAD_DELAY_SECS: f64 = 1.0;
 
-/// The world maps the server hosts; other world maps are refused.
-pub const HOSTED_CONTINENTS: [u32; 3] = [0, 1, 2991];
+/// World maps with local terrain and promoted TDB1210 content, plus the existing
+/// Eastern Kingdoms, Kalimdor and Zephras realms. Other world maps remain refused.
+/// See docs/world-population-counts.md for source/terrain/exclusion evidence.
+pub const HOSTED_CONTINENTS: [u32; 34] = [
+    0, 1, 870, 1064, 1116, 1220, 1265, 1464, 1479, 1481, 1502, 1642, 1643, 1669, 1860, 1865, 2081,
+    2127, 2175, 2222, 2241, 2268, 2297, 2374, 2444, 2454, 2552, 2570, 2601, 2694, 2738, 2771, 2785,
+    2991,
+];
 
 /// Who a player enters instances with: its character, its group and the group's
 /// leader, and the dungeon difficulty it enters at (the group's in a group).
@@ -42,11 +48,28 @@ pub struct InstanceEntrant {
     pub leader: u64,
     /// `Group::GetDifficultyID` / `Player::GetDifficultyID` for dungeons.
     pub difficulty_id: u32,
+    pub raid_difficulty: super::RaidDifficulty,
+    pub raid_group: bool,
+}
+
+impl Default for InstanceEntrant {
+    fn default() -> Self {
+        Self {
+            character_id: 0,
+            group: None,
+            leader: 0,
+            difficulty_id: 1,
+            raid_difficulty: super::RaidDifficulty::default(),
+            raid_group: false,
+        }
+    }
 }
 
 #[derive(Debug)]
 struct InstanceCopy {
     difficulty: MapDifficulty,
+    /// Admission is the match roster, independent of dungeon group/lock ownership.
+    battleground: bool,
     max_players: u32,
     /// `InstanceMap::GetOwningGroup`: the group that created it.
     owning_group: Option<GroupId>,
@@ -69,6 +92,7 @@ struct InstanceCopy {
 pub struct InstanceManager {
     next_instance_id: u32,
     copies: HashMap<InMap, InstanceCopy>,
+    battleground_by_character: HashMap<u64, InMap>,
     recent_by_character: HashMap<(u64, u32), u32>,
     /// `Group::m_recentInstances`: map → (instance owner, instance id).
     recent_by_group: HashMap<(GroupId, u32), (u64, u32)>,
@@ -84,6 +108,7 @@ impl Default for InstanceManager {
         Self {
             next_instance_id: 1,
             copies: HashMap::new(),
+            battleground_by_character: HashMap::new(),
             recent_by_character: HashMap::new(),
             recent_by_group: HashMap::new(),
             locks: InstanceLocks::default(),
@@ -147,7 +172,21 @@ impl InstanceManager {
         map_id: u32,
         entrant: InstanceEntrant,
     ) -> Option<&'a MapDifficulty> {
-        store.downscaled_map_difficulty(map_id, entrant.difficulty_id)
+        let requested = if store.map(map_id)?.instance_type == InstanceType::Raid {
+            let default = store.default_map_difficulty(map_id)?;
+            if store
+                .difficulty_entries
+                .get(&default.difficulty_id)?
+                .is_legacy()
+            {
+                entrant.raid_difficulty.legacy
+            } else {
+                entrant.raid_difficulty.primary
+            }
+        } else {
+            entrant.difficulty_id
+        };
+        store.downscaled_map_difficulty(map_id, requested)
     }
 
     /// `Group::GetRecentInstanceOwner`, or the player outside a group.
@@ -248,9 +287,95 @@ impl InstanceManager {
             .map(map_id)
             .ok_or(TransferAbortReason::MapNotAllowed)?;
         match entry.instance_type {
-            InstanceType::Party => self.create_dungeon(store, map_id, entrant, now),
+            InstanceType::Raid if entry.expansion_id >= 11 && !entrant.raid_group => {
+                Err(TransferAbortReason::NeedGroup)
+            }
+            InstanceType::Party | InstanceType::Raid => {
+                self.create_dungeon(store, map_id, entrant, now)
+            }
+            InstanceType::Battleground => self
+                .battleground_by_character
+                .get(&entrant.character_id)
+                .copied()
+                .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
+                .map(|map| ResolvedMap {
+                    map,
+                    created: false,
+                })
+                .ok_or(TransferAbortReason::MapNotAllowed),
             _ => Err(TransferAbortReason::MapNotAllowed),
         }
+    }
+
+    /// Create one match-owned map using its authored difficulty0 and team capacity.
+    /// No dungeon locks, group binding or invented reservation-expiry timer.
+    pub fn create_battleground_map(
+        &mut self,
+        store: &MapStore,
+        map_id: u32,
+        participants: &[u64],
+        capacity: u32,
+        now: Now,
+    ) -> Result<InMap, TransferAbortReason> {
+        if store
+            .map(map_id)
+            .is_none_or(|entry| entry.instance_type != InstanceType::Battleground)
+            || participants.is_empty()
+            || participants.len() > capacity as usize
+            || participants
+                .iter()
+                .any(|id| self.battleground_by_character.contains_key(id))
+        {
+            return Err(TransferAbortReason::MapNotAllowed);
+        }
+        let difficulty = store
+            .map_difficulty(map_id, 0)
+            .ok_or(TransferAbortReason::Difficulty(0))?;
+        let owner = participants[0];
+        let entrant = InstanceEntrant {
+            character_id: owner,
+            leader: owner,
+            group: None,
+            difficulty_id: 0,
+            raid_difficulty: Default::default(),
+            raid_group: false,
+        };
+        let map = InMap {
+            map_id,
+            instance_id: self.generate_instance_id(),
+        };
+        self.insert_copy(store, map, difficulty, entrant, owner, now);
+        let copy = self.copies.get_mut(&map).expect("created copy");
+        copy.battleground = true;
+        copy.max_players = capacity;
+        copy.unload_at = None;
+        for character_id in participants {
+            self.battleground_by_character.insert(*character_id, map);
+        }
+        Ok(map)
+    }
+
+    pub fn unassign_battleground_player(&mut self, map: InMap, character_id: u64) {
+        if self.battleground_by_character.get(&character_id) == Some(&map) {
+            self.battleground_by_character.remove(&character_id);
+        }
+    }
+
+    /// Explicit match close, not a fabricated battleground idle timer.
+    pub fn close_battleground_map(&mut self, map: InMap) -> bool {
+        let empty_match = self
+            .copies
+            .get(&map)
+            .is_some_and(|copy| copy.battleground && copy.players.is_empty());
+        let unassigned = self
+            .battleground_by_character
+            .values()
+            .all(|reserved| *reserved != map);
+        if empty_match && unassigned {
+            self.copies.remove(&map);
+            return true;
+        }
+        false
     }
 
     fn create_dungeon(
@@ -365,6 +490,7 @@ impl InstanceManager {
             map,
             InstanceCopy {
                 difficulty: *entries,
+                battleground: false,
                 max_players,
                 owning_group: entrant.group,
                 lock_owner: entries.has_reset_schedule().then_some(owner),
@@ -439,6 +565,11 @@ impl InstanceManager {
         unix: i64,
     ) -> Option<TransferAbortReason> {
         let copy = self.copies.get(&map)?;
+        if copy.battleground
+            && self.battleground_by_character.get(&entrant.character_id) != Some(&map)
+        {
+            return Some(TransferAbortReason::MapNotAllowed);
+        }
         if copy.players.len() as u32 >= copy.max_players {
             return Some(TransferAbortReason::MaxPlayers);
         }
@@ -448,6 +579,7 @@ impl InstanceManager {
                 &copy.difficulty,
                 map.instance_id,
                 unix,
+                copy.initial_data.completed_encounters,
             )
         {
             return Some(reason);
@@ -462,7 +594,7 @@ impl InstanceManager {
     /// the map must offer a difficulty the entrant's downscales to, a player at `level`
     /// must meet its level conditions (`Player::Satisfy`), and the copy the entrant is
     /// bound to must admit it. World maps other than the hosted continents,
-    /// raids, battlegrounds and scenarios are not hosted.
+    /// battlegrounds and scenarios are not hosted. Current-expansion raids require a raid group.
     pub fn player_cannot_enter(
         &self,
         store: &MapStore,
@@ -478,7 +610,10 @@ impl InstanceManager {
             return Some(TransferAbortReason::MapNotAllowed);
         };
         match entry.instance_type {
-            InstanceType::Party => {
+            InstanceType::Raid if entry.expansion_id >= 11 && !entrant.raid_group => {
+                Some(TransferAbortReason::NeedGroup)
+            }
+            InstanceType::Party | InstanceType::Raid => {
                 let Some(difficulty) = Self::entry_difficulty(store, map_id, entrant) else {
                     return Some(TransferAbortReason::Difficulty(entrant.difficulty_id));
                 };
@@ -487,6 +622,14 @@ impl InstanceManager {
                 }
                 self.find_instance(store, map_id, entrant, unix)
                     .and_then(|map| self.cannot_enter(map, entrant, unix))
+            }
+            InstanceType::Battleground => {
+                match self.battleground_by_character.get(&entrant.character_id) {
+                    Some(&map) if map.map_id == map_id && self.copies.contains_key(&map) => {
+                        self.cannot_enter(map, entrant, unix)
+                    }
+                    _ => Some(TransferAbortReason::MapNotAllowed),
+                }
             }
             _ => Some(TransferAbortReason::MapNotAllowed),
         }
@@ -508,6 +651,9 @@ impl InstanceManager {
             && copy.players.remove(&player)
             && copy.players.is_empty()
         {
+            if copy.battleground {
+                return;
+            }
             let expired = copy
                 .lock_owner
                 .and_then(|owner| locks.lock(owner, copy.difficulty.lock_key()))
@@ -532,6 +678,8 @@ impl InstanceManager {
             .collect();
         for map in &expired {
             self.copies.remove(map);
+            self.battleground_by_character
+                .retain(|_, reserved| reserved != map);
             if self.normal_locks.remove(&map.instance_id).is_some() {
                 self.locks_dirty = true;
             }
@@ -548,7 +696,12 @@ impl InstanceManager {
             let Some(at) = copy.expires_at else {
                 continue;
             };
-            if at >= now.unix {
+            let at = copy
+                .lock_owner
+                .and_then(|owner| self.locks.lock(owner, copy.difficulty.lock_key()))
+                .filter(|lock| lock.extended)
+                .map_or(at, |lock| lock.effective_expiry(&copy.difficulty, now.unix));
+            if at > now.unix {
                 continue;
             }
             copy.expires_at = Some(next_reset_time(copy.difficulty.reset_interval, now.unix));

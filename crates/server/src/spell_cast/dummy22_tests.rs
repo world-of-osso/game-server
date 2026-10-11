@@ -31,6 +31,7 @@ fn rewind(grouped: bool, raid: bool) -> Harness {
                         level: 10,
                         portrait: default(),
                         dungeon_difficulty: 1,
+                        raid_difficulty: Default::default(),
                     },
                 )
             })

@@ -947,11 +947,19 @@ fn startup_load_world_data(mut commands: Commands) {
     commands.insert_resource(maps);
     let achievements = crate::achievement::load_achievement_catalog(&conn)
         .expect("Failed to load achievements; run scripts/import_achievements.py with locally extracted DB2s");
+    let scenarios = crate::achievement::load_scenarios(&conn, &achievements).expect(
+        "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
+    );
+    commands.insert_resource(scenarios);
     commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
+    commands
+        .insert_resource(crate::pvp::pvp_talents::Catalog::load(&conn).expect(
+            "Load local PvP catalog; run scripts/import-pvp-progression.py before startup",
+        ));
 }
 
 pub struct WorldDataPlugin;

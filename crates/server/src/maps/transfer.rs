@@ -133,7 +133,7 @@ fn facing_rotation(orientation: f32) -> Rotation {
     }
 }
 
-fn current_location(world: &World, player: Entity, map_id: u32) -> WorldLocation {
+pub(crate) fn current_location(world: &World, player: Entity, map_id: u32) -> WorldLocation {
     let position = *world
         .get::<Position>(player)
         .expect("player has a Position");
@@ -386,6 +386,10 @@ pub(crate) fn entrant_of(world: &World, player: Entity) -> InstanceEntrant {
         world.get_resource::<GroupRegistry>(),
         character_id,
         own_difficulty,
+        world
+            .get::<super::RaidDifficulty>(player)
+            .copied()
+            .unwrap_or_default(),
     )
 }
 
@@ -394,6 +398,7 @@ pub(crate) fn entrant_for(
     groups: Option<&GroupRegistry>,
     character_id: u64,
     own_difficulty: u32,
+    own_raid_difficulty: super::RaidDifficulty,
 ) -> InstanceEntrant {
     let group = groups.and_then(|groups| groups.group_id_of(character_id));
     InstanceEntrant {
@@ -405,6 +410,10 @@ pub(crate) fn entrant_for(
         difficulty_id: groups
             .and_then(|groups| groups.dungeon_difficulty_of(character_id))
             .unwrap_or(own_difficulty),
+        raid_difficulty: groups
+            .and_then(|g| g.raid_difficulty_of(character_id))
+            .unwrap_or(own_raid_difficulty),
+        raid_group: groups.is_some_and(|g| g.is_raid_of(character_id)),
     }
 }
 
