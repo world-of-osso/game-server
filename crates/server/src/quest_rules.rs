@@ -278,6 +278,16 @@ pub(crate) fn credit_killed_creature(
 /// `KilledMonsterCredit`: add one kill to every unfinished objective of a quest
 /// in the log that counts `creature_entry`. Returns whether anything changed.
 pub(crate) fn credit_kill(db: &QuestDb, log: &mut QuestLogData, creature_entry: u32) -> bool {
+    credit_objective(db, log, ObjectiveKind::Monster, creature_entry)
+}
+
+/// An authored event advances every matching counted objective, never another Type.
+pub(crate) fn credit_objective(
+    db: &QuestDb,
+    log: &mut QuestLogData,
+    kind: ObjectiveKind,
+    object_id: u32,
+) -> bool {
     let mut changed = false;
     for active in &mut log.active {
         let Some(quest) = db.quests.get(&active.quest_id) else {
@@ -285,8 +295,8 @@ pub(crate) fn credit_kill(db: &QuestDb, log: &mut QuestLogData, creature_entry: 
         };
         active.counts.resize(quest.objectives.len(), 0);
         for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
-            if objective.kind == ObjectiveKind::Monster
-                && objective.object_id == creature_entry
+            if objective.kind == kind
+                && objective.object_id == object_id
                 && *count < objective.required
             {
                 *count += 1;
