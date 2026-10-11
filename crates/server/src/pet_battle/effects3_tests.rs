@@ -13,7 +13,10 @@ fn pet_battle_effects3_next_used_ability_lock_is_wearer_owned_and_one_shot() {
                 &mut Fixed(500000),
             )
             .unwrap();
-        assert_eq!(damage(&events).len(), 1, "next attack still executes");
+        assert_eq!(damage(&events), vec![120], "next Bite110 still executes");
+        assert_eq!(b.teams[0].pets[0].health, 9880);
+        assert_eq!(b.teams[1].pets[0].lockouts, [5, 0, 0]);
+        assert_eq!(b.teams[0].pets[0].lockouts, [0; 3]);
         assert!(
             b.auras.is_empty(),
             "one-shot aura removes itself from wearer"
@@ -70,6 +73,34 @@ fn pet_battle_effects3_next_ability_aura_waits_through_pass_and_swap() {
 }
 
 #[test]
+fn pet_battle_effects3_lock_does_not_abort_committed_deep_breath() {
+    let c = catalog();
+    let mut b = battle(&c, 7, 7, [522, 110, 123]);
+    b.teams[0].pets[0].stats.speed = 200;
+    b.teams[1].pets[0].abilities = [169, 110, 123];
+    let (b, _) = b
+        .step(
+            &c,
+            [Action::Ability(522), Action::Ability(169)],
+            &mut Fixed(500000),
+        )
+        .unwrap();
+    assert_eq!(b.teams[1].pets[0].lockouts, [5, 0, 0]);
+    assert_eq!(b.teams[1].pets[0].continuation, Some((169, 2)));
+    let (b, _) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+    assert_eq!(b.teams[1].pets[0].lockouts, [4, 0, 0]);
+    let (b, events) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
+    assert_eq!(b.teams[1].pets[0].lockouts, [3, 0, 0]);
+    assert_eq!(damage(&events).len(), 1);
+    assert_eq!(b.teams[1].pets[0].continuation, None);
+    assert!(
+        b.step(&c, [Action::Pass, Action::Ability(169)], &mut NoDraw)
+            .unwrap_err()
+            .contains("locked out")
+    );
+}
+
+#[test]
 fn pet_battle_effects3_missed_lock_aura_does_not_lock_next_ability() {
     let c = catalog();
     let mut b = battle(&c, 7, 7, [1858, 110, 123]);
@@ -108,6 +139,26 @@ fn pet_battle_effects3_mind_games_locks_own_one_based_slots_not_opponent() {
         )
         .unwrap();
     assert_eq!(damage(&events), Vec::<i32>::new());
+    assert_eq!(b.teams[0].pets[0].lockouts, [9, 9, 0]);
+    let mut waiting = b.clone();
+    for remaining in (1..9).rev() {
+        assert!(
+            waiting
+                .step(&c, [Action::Ability(110), Action::Pass], &mut NoDraw)
+                .unwrap_err()
+                .contains("locked out")
+        );
+        waiting = waiting
+            .step(&c, [Action::Pass; 2], &mut Fixed(500000))
+            .unwrap()
+            .0;
+        assert_eq!(waiting.teams[0].pets[0].lockouts, [remaining, remaining, 0]);
+    }
+    assert!(
+        waiting
+            .step(&c, [Action::Ability(110), Action::Pass], &mut Fixed(500000))
+            .is_ok()
+    );
     for id in [110, 123] {
         assert!(
             b.step(&c, [Action::Ability(id), Action::Pass], &mut NoDraw)
