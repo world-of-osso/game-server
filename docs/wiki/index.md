@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
+
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
 - [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
@@ -59,6 +61,10 @@ External resources, tooling, data sources, development workflow.
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 
 ## systems/
+
+- [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
+
+- [Class spell batch20](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses) — Barbed Shot total/rollover/Focus and Stormkeeper two-use count;158 remaining Dummy roots/110 reviewed/48 underived, six exact source deferrals and [all40/proof/limits](../spell-dummy20-coverage.md).
 
 - [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
 
