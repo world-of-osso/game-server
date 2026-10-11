@@ -295,4 +295,6 @@ pub(crate) fn write_inventory_record(
             .insert(*guid, bitcode::encode(data).as_slice())
             .expect("write item instance");
     }
+    drop(instances);
+    super::charters::prune_destroyed_in(txn, character_id, record);
 }
