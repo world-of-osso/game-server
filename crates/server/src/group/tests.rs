@@ -7,9 +7,10 @@ use shared::components::{
 };
 use shared::death::DeathState;
 use shared::protocol::{
-    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot,
-    MINIMAP_PING_MAP_HALFSIZE, MinimapPing, MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons,
-    ReadyCheckAnswer, SetRaidTarget,
+    GroupAssistants, GroupCountdownRequest, GroupCountdownUpdate, GroupMemberState,
+    GroupMemberStates, GroupMessageCode, GroupRoleSnapshot, MINIMAP_PING_MAP_HALFSIZE, MinimapPing,
+    MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons, ReadyCheckAnswer, SetGroupAssistant,
+    SetRaidTarget,
 };
 
 use crate::death::PlayerDeathState;
@@ -45,6 +46,10 @@ fn setup_app_with(extra: impl FnOnce(&mut App)) -> App {
     app.register_message::<ConvertGroupToRaid>();
     app.register_message::<MinimapPingRequest>();
     app.register_message::<MinimapPing>();
+    app.register_message::<GroupCountdownRequest>();
+    app.register_message::<GroupCountdownUpdate>();
+    app.register_message::<SetGroupAssistant>();
+    app.register_message::<GroupAssistants>();
     app.add_plugins(GroupPlugin);
     extra(&mut app);
     app.add_systems(Update, collect_inbox);
@@ -136,6 +141,14 @@ fn connect(app: &mut App, character_id: u64, name: &str) -> Client {
                 MessageReceiver::<MinimapPingRequest>::default(),
                 MessageSender::<MinimapPing>::default(),
                 MessageReceiver::<MinimapPing>::default(),
+                MessageSender::<GroupCountdownRequest>::default(),
+                MessageReceiver::<GroupCountdownRequest>::default(),
+                MessageSender::<GroupCountdownUpdate>::default(),
+                MessageReceiver::<GroupCountdownUpdate>::default(),
+                MessageSender::<SetGroupAssistant>::default(),
+                MessageReceiver::<SetGroupAssistant>::default(),
+                MessageSender::<GroupAssistants>::default(),
+                MessageReceiver::<GroupAssistants>::default(),
             ),
         ))
         .id();
@@ -162,6 +175,8 @@ struct Inbox {
     member_states: Vec<GroupMemberStates>,
     raid_targets: Vec<RaidTargetIcons>,
     minimap_pings: Vec<MinimapPing>,
+    countdowns: Vec<GroupCountdownUpdate>,
+    assistants: Vec<GroupAssistants>,
     inventory_errors: Vec<shared::protocol::InventoryError>,
 }
 
@@ -176,6 +191,8 @@ fn collect_inbox(
         &mut MessageReceiver<GroupMemberStates>,
         &mut MessageReceiver<RaidTargetIcons>,
         &mut MessageReceiver<MinimapPing>,
+        &mut MessageReceiver<GroupCountdownUpdate>,
+        &mut MessageReceiver<GroupAssistants>,
     )>,
 ) {
     for (
@@ -188,6 +205,8 @@ fn collect_inbox(
         mut states,
         mut raid_targets,
         mut minimap_pings,
+        mut countdowns,
+        mut assistants,
     ) in &mut connections
     {
         inbox.rosters.extend(rosters.receive());
@@ -198,6 +217,8 @@ fn collect_inbox(
         inbox.member_states.extend(states.receive());
         inbox.raid_targets.extend(raid_targets.receive());
         inbox.minimap_pings.extend(minimap_pings.receive());
+        inbox.countdowns.extend(countdowns.receive());
+        inbox.assistants.extend(assistants.receive());
     }
 }
 
@@ -256,6 +277,158 @@ fn invite_and_accept(app: &mut App, leader: &Client, invitee: &Client, name: &st
     pump(app);
     send(app, invitee, RespondGroupInvite { accept: true });
     pump(app);
+}
+
+fn countdowns(app: &mut App, client: &Client) -> Vec<GroupCountdownUpdate> {
+    std::mem::take(&mut inbox(app, client).countdowns)
+}
+
+#[test]
+fn countdown_broadcasts_start_replacement_cancel_to_three_group_members_only() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let carol = connect(&mut app, 3, "Carol");
+    let outsider = connect(&mut app, 4, "Outsider");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    invite_and_accept(&mut app, &alice, &carol, "Carol");
+    for seconds in [10, 20, 0] {
+        send(&mut app, &alice, GroupCountdownRequest { seconds });
+        pump(&mut app);
+        for client in [&alice, &bob, &carol] {
+            let updates = countdowns(&mut app, client);
+            assert_eq!(updates.len(), 1);
+            assert_eq!(updates[0].initiator_name, "Alice");
+            assert_eq!(updates[0].duration_secs, seconds);
+            assert_eq!(updates[0].time_remaining_secs, seconds as f32);
+        }
+        assert!(countdowns(&mut app, &outsider).is_empty());
+    }
+}
+
+#[test]
+fn countdown_rejects_ordinary_member_and_solo_player_requests() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let outsider = connect(&mut app, 3, "Outsider");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    for client in [&bob, &outsider] {
+        send(&mut app, client, GroupCountdownRequest { seconds: 10 });
+        pump(&mut app);
+        assert!(countdowns(&mut app, &alice).is_empty());
+        assert!(countdowns(&mut app, &bob).is_empty());
+    }
+    assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
+    assert!(codes(&mut app, &outsider).contains(&GroupMessageCode::NotInGroup));
+}
+
+#[test]
+fn countdown_raid_assistant_can_start_readycheck_and_countdown_until_revoked() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    send(&mut app, &alice, ConvertGroupToRaid);
+    pump(&mut app);
+    send(
+        &mut app,
+        &alice,
+        SetGroupAssistant {
+            name: "Bob".into(),
+            assistant: true,
+        },
+    );
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(
+            inbox(&mut app, client).assistants.last().unwrap().members,
+            ["Bob"]
+        );
+    }
+    send(&mut app, &bob, StartReadyCheck);
+    send(&mut app, &bob, GroupCountdownRequest { seconds: 10 });
+    pump(&mut app);
+    assert_eq!(
+        ready_checks(&mut app, &alice)
+            .last()
+            .unwrap()
+            .initiator_name,
+        "Bob"
+    );
+    assert_eq!(
+        countdowns(&mut app, &alice).last().unwrap().initiator_name,
+        "Bob"
+    );
+    send(
+        &mut app,
+        &bob,
+        SetGroupAssistant {
+            name: "Alice".into(),
+            assistant: true,
+        },
+    );
+    pump(&mut app);
+    assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
+    send(
+        &mut app,
+        &alice,
+        SetGroupAssistant {
+            name: "Bob".into(),
+            assistant: false,
+        },
+    );
+    pump(&mut app);
+    assert!(
+        inbox(&mut app, &bob)
+            .assistants
+            .last()
+            .unwrap()
+            .members
+            .is_empty()
+    );
+    countdowns(&mut app, &bob);
+    send(&mut app, &bob, GroupCountdownRequest { seconds: 0 });
+    pump(&mut app);
+    assert!(countdowns(&mut app, &bob).is_empty());
+    assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
+}
+
+#[test]
+fn countdown_server_clock_expires_once_for_every_member() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    send(&mut app, &alice, GroupCountdownRequest { seconds: 10 });
+    pump(&mut app);
+    let deadline = countdowns(&mut app, &alice).pop().unwrap().deadline_unix_ms;
+    countdowns(&mut app, &bob);
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_secs(4),
+    ));
+    app.world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(Duration::from_secs(4));
+    pump(&mut app);
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::ZERO,
+    ));
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(
+            countdowns(&mut app, client),
+            vec![GroupCountdownUpdate {
+                deadline_unix_ms: deadline,
+                initiator_name: "Alice".into(),
+                duration_secs: 10,
+                time_remaining_secs: 0.0,
+            }]
+        );
+    }
+    pump(&mut app);
+    assert!(countdowns(&mut app, &alice).is_empty());
+    assert!(countdowns(&mut app, &bob).is_empty());
 }
 
 #[test]
@@ -573,15 +746,50 @@ fn role_and_loot_method_show_in_roster() {
         notice_codes(&registry.set_role(2, "P1", GroupRoleSnapshot::Tank), 2),
         [GroupMessageCode::NotLeader]
     );
-    let loot = registry.set_loot_method(1, shared::loot::LootMode::RoundRobin);
+    let loot = registry.set_loot_method(1, shared::loot::LootMode::PersonalLoot);
 
-    assert_eq!(
-        notice_codes(&loot, 2),
-        [GroupMessageCode::SetLootRoundRobin]
-    );
+    assert_eq!(notice_codes(&loot, 2), [GroupMessageCode::SetLootPersonal]);
     let roster = registry.build_roster(1, &view).expect("roster");
     assert_eq!(roster.members[1].role, GroupRoleSnapshot::Healer);
-    assert_eq!(roster.loot_method, shared::loot::LootMode::RoundRobin);
+    assert_eq!(roster.loot_method, shared::loot::LootMode::PersonalLoot);
+}
+
+#[test]
+fn mainline_loot_method_and_quality_threshold_are_leader_owned() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 2);
+    assert_eq!(
+        notice_codes(
+            &registry.set_loot_method(2, shared::loot::LootMode::PersonalLoot),
+            2
+        ),
+        [GroupMessageCode::NotLeader]
+    );
+    assert_eq!(
+        notice_codes(&registry.set_loot_threshold(2, 4), 2),
+        [GroupMessageCode::NotLeader]
+    );
+    for mode in [
+        shared::loot::LootMode::FreeForAll,
+        shared::loot::LootMode::RoundRobin,
+        shared::loot::LootMode::NeedBeforeGreed,
+    ] {
+        assert_eq!(
+            notice_codes(&registry.set_loot_method(1, mode), 1),
+            [GroupMessageCode::LootMethodUnavailable]
+        );
+    }
+    registry.set_loot_method(1, shared::loot::LootMode::GroupLoot);
+    registry.set_loot_threshold(1, 4);
+    assert_eq!(
+        registry.loot_policy_of(2),
+        Some((shared::loot::LootMode::GroupLoot, 4))
+    );
+    registry.set_loot_threshold(1, 1);
+    assert_eq!(
+        registry.loot_policy_of(2),
+        Some((shared::loot::LootMode::GroupLoot, 4))
+    );
 }
 
 fn cancelled_invitees(effects: &[GroupEffect]) -> Vec<(CharacterId, String)> {
@@ -1383,6 +1591,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             .into_iter()
             .collect(),
             forever: Default::default(),
+            loot_need: Default::default(),
         });
         app.register_message::<InventorySnapshot>();
         app.register_message::<EquipmentSnapshot>();

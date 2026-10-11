@@ -738,6 +738,7 @@ mod tests {
             .into_iter()
             .collect(),
             forever: Default::default(),
+            loot_need: Default::default(),
         };
         let mut catalog = crate::merchant::VendorCatalog::default();
         catalog.goods.insert(
@@ -862,6 +863,7 @@ mod tests {
         log.active.push(persistence::quest_store::ActiveQuestData {
             quest_id: 26391,
             counts: vec![3],
+            ..Default::default()
         });
         persistence::quest_store::save_quest_log(&db.db, character_id, &log);
 

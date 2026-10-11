@@ -113,6 +113,8 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
     (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
+        || (spell_id == 31850 && effect_index == 1)
+        || (spell_id == 288733 && effect_index == 1)
 }
 
 /// Mainline740s6 supplies the caster's Tranquility shield cap.
@@ -157,6 +159,8 @@ pub(super) fn snapshot_periodic_amount(
     if spell.id == RAKE_BLEED && effect.index == 0 {
         crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
     } else {
+        let amount =
+            crate::spell_cast::scripts::dispersion_tick(world, caster, spell, effect.index, amount);
         crate::spell_cast::scripts::snapshot_combustion(world, caster, spell, effect.index, amount)
     }
 }
@@ -203,6 +207,13 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        80240,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::scripts::replace_havoc),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         crate::spell_cast::scripts::LIFEBLOOM,
         AuraScript {

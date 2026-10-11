@@ -81,6 +81,7 @@ pub(crate) struct CreatureLoot {
 #[derive(Resource, Debug, Clone, Default)]
 pub(crate) struct LootTables {
     pub creature: HashMap<u32, LootTemplate>,
+    pub game_object: HashMap<u32, LootTemplate>,
     pub reference: HashMap<u32, LootTemplate>,
     pub disenchant: HashMap<u32, LootTemplate>,
     pub gameobject: HashMap<u32, LootTemplate>,
@@ -96,7 +97,7 @@ pub(crate) struct DroppedItem {
     pub item_id: u32,
     pub count: u32,
     group: u8,
-    needs_quest: bool,
+    pub(super) needs_quest: bool,
 }
 
 /// What one player's kill yields: items in slot order, then coins.
@@ -211,6 +212,24 @@ impl LootTables {
         RolledLoot {
             items: normal,
             copper: money_loot(info.min_gold, info.max_gold, rng),
+        }
+    }
+
+    /// A chest's authored loot, filtered by the player's active item objectives.
+    pub fn roll_game_object(
+        &self,
+        loot_id: u32,
+        items: &ItemTemplates,
+        needs_quest_item: impl Fn(u32) -> bool,
+        rng: &mut impl Rng,
+    ) -> RolledLoot {
+        let mut drops = Vec::new();
+        if let Some(template) = self.game_object.get(&loot_id) {
+            self.process(template, items, &needs_quest_item, rng, &mut drops);
+        }
+        RolledLoot {
+            items: drops,
+            copper: 0,
         }
     }
 
@@ -445,6 +464,7 @@ pub(crate) fn load_disenchant_tables(conn: &Connection) -> rusqlite::Result<Loot
 pub(crate) fn load_loot_tables(conn: &Connection) -> rusqlite::Result<LootTables> {
     Ok(LootTables {
         creature: load_templates(conn, "content_creature_loot_template")?,
+        game_object: load_templates(conn, "content_gameobject_loot_template")?,
         reference: load_templates(conn, "content_reference_loot_template")?,
         disenchant: HashMap::new(),
         gameobject: load_templates(conn, "content_gameobject_loot_template")?,

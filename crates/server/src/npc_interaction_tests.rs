@@ -15,6 +15,9 @@ use super::*;
 use crate::faction::world_db_faction_templates;
 use crate::gold::GoldUpdateQueue;
 
+#[path = "transmog_tests.rs"]
+mod transmog_tests;
+
 const HUMAN_TEMPLATE: u32 = 1;
 const ORC_TEMPLATE: u32 = 2;
 /// Auctioneer Fitch, Stormwind Trade District (creature guid 79705, npcflag 0x200000, faction 12).
@@ -55,6 +58,10 @@ struct Harness {
 }
 
 fn harness(player_faction: u32) -> Option<Harness> {
+    harness_with(player_faction, |_| {})
+}
+
+fn harness_with(player_faction: u32, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let conn = world_db()?;
     let templates = world_db_faction_templates()?;
     let catalog = load_gossip_catalog(&conn).unwrap();
@@ -80,6 +87,7 @@ fn harness(player_faction: u32) -> Option<Harness> {
         crate::auction_house::AuctionHousePlugin,
     ));
     app.insert_resource(catalog);
+    extra(&mut app);
     app.finish();
     app.cleanup();
     let player = app
@@ -179,7 +187,7 @@ impl Harness {
                     template_id: entry,
                     name,
                 },
-                NpcFlags::from_azerothcore(npcflag),
+                NpcFlags(u64::from(npcflag)),
                 Position {
                     x: bx,
                     y: by,

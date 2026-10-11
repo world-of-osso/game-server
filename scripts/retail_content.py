@@ -12,13 +12,13 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1, 34, 670)
+RETAIL_MAPS = (0, 1, 34, 670, 2106)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
 # spawns in it are seen by everyone, like PhaseId 0.
 DEFAULT_PHASE = 169
 # Map.db2 InstanceType of open world (0, spawns at DIFFICULTY_NONE) and party dungeons (1, MAP_INSTANCE: a copy
 # spawns at its difficulty, one of the map's MapDifficulty.db2 rows).
-INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY = 0, 1
+INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND = 0, 1, 3
 # TrinityCore guids reach 11.8M and 10 collide with kept AzerothCore spawns
 # (maps 229, 230, 530, 609); AzerothCore's reach 5.3M.
 RETAIL_GUID_OFFSET = 20_000_000
@@ -48,17 +48,17 @@ SPAWN_DIFFICULTIES = f"""(SELECT group_concat(difficulty, ',') FROM (SELECT r.di
 
 def create_retail_map_table(conn):
     """temp.retail_map: each (RETAIL_MAPS map, difficulty its copies spawn at): 0 for open world, every
-    MapDifficulty.db2 DifficultyID of a party dungeon."""
+    MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use0."""
     rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({MAP_LIST})"))
     missing = [m for m in RETAIL_MAPS if m not in rows]
-    unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY)}
+    unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND)}
     if missing or unhosted:
         raise SystemExit(f"RETAIL_MAPS without a Map.db2 row {missing} or with an unhosted InstanceType {unhosted}")
     conn.execute("DROP TABLE IF EXISTS temp.retail_map")
     conn.execute("""CREATE TEMP TABLE retail_map (map_id INTEGER NOT NULL, difficulty INTEGER NOT NULL,
         PRIMARY KEY (map_id, difficulty))""")
     for map_id, instance_type in sorted(rows.items()):
-        if instance_type == INSTANCE_TYPE_WORLD:
+        if instance_type in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_BATTLEGROUND):
             difficulties = [0]
         else:
             difficulties = [d for (d,) in conn.execute(
@@ -188,14 +188,14 @@ def resolve_difficulty_rows(conn, spawned):
     return resolved
 
 
-def create_difficulty_table(conn):
+def create_difficulty_table(conn, *, map_list=MAP_LIST, base_phase=BASE_PHASE):
     """temp.spawn_map_difficulty: each (entry, difficulty) a Retail spawn of it spawns at.
     temp.spawn_row: the creature_template_difficulty row each of those uses (resolve_difficulty_rows).
     temp.tdb_difficulty: the row of the entry's lowest spawn difficulty, or DifficultyID 0 for entries spawned
     nowhere, the entry's content_creature_template values."""
     conn.execute(f"""CREATE TEMP TABLE spawn_map_difficulty AS SELECT DISTINCT c.id AS entry, r.difficulty
         FROM tdb_creature c JOIN temp.retail_map r ON r.map_id = c.map
-        WHERE c.map IN ({MAP_LIST}) AND {BASE_PHASE}
+        WHERE c.map IN ({map_list}) AND {base_phase}
           AND {SPAWN_DIFFICULTY_MATCH}""")
     spawned = conn.execute("SELECT entry, difficulty FROM temp.spawn_map_difficulty").fetchall()
     resolved = resolve_difficulty_rows(conn, spawned)
@@ -260,10 +260,12 @@ TOY_SUMMON_ENTRIES = f"""SELECT s.EffectMiscValue_0 FROM toy t
     UNION SELECT entry FROM tdb_creature_template WHERE entry IN {TOY_SCENERY_SUMMON_ENTRIES}"""
 
 
-def insert_tdb_templates(conn, entries):
+def insert_tdb_templates(conn, entries, *, replace_legacy=False):
     """TrinityCore's templates (difficulty 0 values, ContentTuning levels) of the `entries` query AzerothCore lacks
     and content_creature_template does not hold yet. Needs temp.tdb_difficulty, content_tuning_level and
     health_expansion."""
+    # Instance imports replace same-ID legacy templates with their authentic Retail identity.
+    legacy_filter = "" if replace_legacy else "AND t.entry NOT IN (SELECT entry FROM creature_template)"
     # npcflag's high word is npcflag2. Levels are the ContentTuning range (level 1 without one).
     conn.execute(f"""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
             minlevel, maxlevel, exp, faction, npcflag, speed_walk, speed_run, scale, rank, dmgschool, DamageModifier,
@@ -283,7 +285,7 @@ def insert_tdb_templates(conn, entries):
         JOIN temp.tdb_difficulty d ON d.Entry = t.entry
         LEFT JOIN content_tuning_level l ON l.ID = d.ContentTuningID
         WHERE t.entry IN ({entries})
-          AND t.entry NOT IN (SELECT entry FROM creature_template)
+          {legacy_filter}
           AND t.entry NOT IN (SELECT entry FROM content_creature_template)""")
 
 
@@ -666,7 +668,7 @@ def build_pools(conn, report):
     conn.execute("INSERT INTO content_game_event_pool SELECT eventEntry, pool_entry FROM tdb_game_event_pool")
 
 
-def build_gameobject_templates(conn, report):
+def build_gameobject_templates(conn, report, *, retain_missing_displays=False):
     """TrinityCore's template (Data0-23, chest loot ids offset) replaces AzerothCore's for Retail-spawned entries."""
     retail = "SELECT DISTINCT id FROM temp.retail_gameobject"
     conn.execute(f"DELETE FROM content_gameobject_template WHERE entry IN ({retail})")
@@ -678,14 +680,18 @@ def build_gameobject_templates(conn, report):
     mapped = data.replace("Data1,", f"CASE WHEN type IN {loot_types} AND Data1 <> 0 THEN Data1 + {TDB_LOOT_OFFSET} "
                                    "ELSE Data1 END,", 1)
     displayed = "(displayId = 0 OR displayId IN (SELECT ID FROM game_object_display_info))"
+    included = "1" if retain_missing_displays else displayed
     conn.execute(f"""INSERT INTO content_gameobject_template (entry, type, displayId, name, IconName, castBarCaption, unk1,
             size, {data}, AIName, ScriptName, VerifiedBuild)
         SELECT entry, type, displayId, name, IconName, castBarCaption, unk1, size, {mapped}, AIName, ScriptName,
             VerifiedBuild
-        FROM tdb_gameobject_template WHERE entry IN ({retail}) AND {displayed}""")
+        FROM tdb_gameobject_template WHERE entry IN ({retail}) AND {included}""")
     for entry, display in conn.execute(f"""SELECT entry, displayId FROM tdb_gameobject_template
             WHERE entry IN ({retail}) AND NOT {displayed}"""):
-        report.drop("tdb_gameobject_template", f"entry={entry}", display, "display not in Retail GameObjectDisplayInfo")
+        reason = "display absent from Retail GameObjectDisplayInfo"
+        if retain_missing_displays:
+            reason += "; authentic template retained, rendering unavailable"
+        report.drop("tdb_gameobject_template", f"entry={entry}", display, reason)
     for n in range(AZEROTHCORE_DATA_FIELDS, TDB_DATA_FIELDS):
         for entry, value in conn.execute(f"""SELECT entry, Data{n} FROM tdb_gameobject_template
                 WHERE entry IN (SELECT entry FROM content_gameobject_template) AND entry IN ({retail})

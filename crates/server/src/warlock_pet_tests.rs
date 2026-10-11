@@ -45,6 +45,10 @@ struct ImpHarness {
 
 impl ImpHarness {
     fn login(path: &Path) -> Self {
+        Self::login_with_spells(path, 3, &[SUMMON_IMP, FIREBOLT])
+    }
+
+    fn login_with_spells(path: &Path, level: u8, known: &[u32]) -> Self {
         let conn = Connection::open_with_flags(
             crate::test_data::world_db_path(),
             OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -52,29 +56,29 @@ impl ImpHarness {
         .unwrap();
         let spells = load_pet_levelup_spells(&conn).unwrap();
         let mut data = load_world_data(&crate::test_data::world_db_path());
-        data.templates.retain(|entry, _| *entry == IMP);
+        data.templates
+            .retain(|entry, _| [416, 417, 1860, 1863, 17252, 184600].contains(entry));
         let db = redb::Database::create(path).unwrap();
         persistence::create_tables(&db);
-        let mut h =
-            harness_with_plugins(Vec::new(), &[SUMMON_IMP, FIREBOLT], WARLOCK, true, |app| {
-                app.insert_resource(data);
-                app.insert_resource(spells);
-                app.insert_resource(GameDatabase { db });
-                app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
-                app.add_systems(PreUpdate, defer_initial_pet_login);
-                app.add_systems(
-                    FixedUpdate,
-                    (
-                        process_pet_actions,
-                        process_pet_autocast_toggles,
-                        pet_ai_system,
-                    )
-                        .chain()
-                        .after(crate::combat::auto_attack_system),
-                );
-            })
-            .expect("real spell data");
-        h.app.world_mut().entity_mut(h.caster).insert(Level(3));
+        let mut h = harness_with_plugins(Vec::new(), known, WARLOCK, true, |app| {
+            app.insert_resource(data);
+            app.insert_resource(spells);
+            app.insert_resource(GameDatabase { db });
+            app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
+            app.add_systems(PreUpdate, defer_initial_pet_login);
+            app.add_systems(
+                FixedUpdate,
+                (
+                    process_pet_actions,
+                    process_pet_autocast_toggles,
+                    pet_ai_system,
+                )
+                    .chain()
+                    .after(crate::combat::auto_attack_system),
+            );
+        })
+        .expect("real spell data");
+        h.app.world_mut().entity_mut(h.caster).insert(Level(level));
         // Keep the full live spell catalog, not the generic harness's three-spell fixture.
         let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
         h.app.insert_resource(store);
@@ -168,6 +172,147 @@ impl ImpHarness {
         self.order(shared::protocol::COMMAND_ABANDON, None);
         assert!(self.h.inbox.failed.is_empty(), "{:?}", self.h.inbox.failed);
     }
+}
+
+#[test]
+fn pet_lifecycle_warlock_authored_demons_summon_dismiss_and_reopen() {
+    // Local SpellEffect SUMMON_PET MiscValue rows; Incubus184600 is not in the active
+    // content template view and is recorded as a separate source-data boundary.
+    for (spell, entry) in [
+        (688, 416),
+        (697, 1860),
+        (712, 1863),
+        (691, 417),
+        (30146, 17252),
+        (366222, 1863),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("demons.redb");
+        let mut first = ImpHarness::login_with_spells(&path, 60, &[spell]);
+        first.h.cast(spell, None);
+        first.advance(150);
+        assert!(
+            first.h.inbox.failed.is_empty(),
+            "spell{spell}: {:?}",
+            first.h.inbox.failed
+        );
+        let pet = first.pet().expect("authored demon summoned");
+        assert_eq!(
+            first.h.app.world().get::<Npc>(pet).unwrap().template_id,
+            entry
+        );
+        let max_health = first.h.app.world().get::<Health>(pet).unwrap().max;
+        // Felhunter's legacy expansion base-health row is1; preserve a legal wound
+        // within the computed maximum, not an over-max fixture.
+        let wounded_health = 23.0_f32.min(max_health * 0.5);
+        println!("spell{spell} entry{entry}: max={max_health}, wound={wounded_health}");
+        first
+            .h
+            .app
+            .world_mut()
+            .get_mut::<Health>(pet)
+            .unwrap()
+            .current = wounded_health;
+        first.advance(3);
+        drop(first);
+        let mut reloaded = ImpHarness::login_with_spells(&path, 60, &[spell]);
+        let pet = reloaded.pet().expect("saved demon relogged");
+        assert_eq!(
+            reloaded.h.app.world().get::<Npc>(pet).unwrap().template_id,
+            entry
+        );
+        assert_eq!(
+            reloaded.h.app.world().get::<Health>(pet).unwrap().current,
+            wounded_health,
+            "spell{spell}: wounded health changed across storage reopen"
+        );
+        reloaded.dismiss();
+        assert!(reloaded.pet().is_none());
+        drop(reloaded);
+        let mut dismissed = ImpHarness::login_with_spells(&path, 60, &[spell]);
+        assert!(dismissed.pet().is_none(), "dismissed demon auto-restored");
+        dismissed.h.cast(spell, None);
+        dismissed.advance(150);
+        assert!(
+            dismissed.h.inbox.failed.is_empty(),
+            "{:?}",
+            dismissed.h.inbox.failed
+        );
+        let pet = dismissed.pet().expect("explicit resummon after dismiss");
+        assert_eq!(
+            dismissed.h.app.world().get::<Npc>(pet).unwrap().template_id,
+            entry
+        );
+        let health = dismissed.h.app.world().get::<Health>(pet).unwrap();
+        assert_eq!(
+            health.current, health.max,
+            "explicit summon starts living/full"
+        );
+    }
+}
+
+#[test]
+fn pet_lifecycle_fel_domination_accelerates_one_authored_summon() {
+    const FEL_DOMINATION: u32 = 333_889;
+    let directory = tempfile::tempdir().unwrap();
+    let mut normal =
+        ImpHarness::login_with_spells(&directory.path().join("normal.redb"), 60, &[SUMMON_IMP]);
+    normal.h.cast(SUMMON_IMP, None);
+    normal.advance(20);
+    assert!(
+        normal.pet().is_none(),
+        "ordinary six-second summon completed within one second"
+    );
+    assert!(
+        normal.h.inbox.failed.is_empty(),
+        "{:?}",
+        normal.h.inbox.failed
+    );
+
+    let mut accelerated = ImpHarness::login_with_spells(
+        &directory.path().join("accelerated.redb"),
+        60,
+        &[SUMMON_IMP, FEL_DOMINATION],
+    );
+    accelerated.h.cast(FEL_DOMINATION, None);
+    accelerated.advance(3);
+    assert!(
+        accelerated.h.inbox.failed.is_empty(),
+        "{:?}",
+        accelerated.h.inbox.failed
+    );
+    assert!(
+        accelerated
+            .h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(accelerated.h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == FEL_DOMINATION)
+    );
+    accelerated.h.cast(SUMMON_IMP, None);
+    accelerated.advance(20);
+    assert!(
+        accelerated.h.inbox.failed.is_empty(),
+        "{:?}",
+        accelerated.h.inbox.failed
+    );
+    assert!(
+        accelerated.pet().is_some(),
+        "90% faster summon did not complete within one second"
+    );
+    assert!(
+        !accelerated
+            .h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(accelerated.h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == FEL_DOMINATION),
+        "next-summon charge was not consumed"
+    );
 }
 
 #[test]
