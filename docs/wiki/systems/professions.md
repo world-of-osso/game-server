@@ -4,6 +4,8 @@ For the seven-table staging reference importer and modern recipe resolver handof
 
 Professions in `crates/server/src/profession.rs`, with `profession/data.rs` (world.db data) and `profession/trainer.rs` (trainer frames). The spec is [professions](../../specs/professions.md). Opening the trainer role is covered by [npc-interaction](npc-interaction.md); crafting casts go through [spell-casting](spell-casting.md).
 
+See [[gathering]] for the gathering-nodes branch's authored resource loop and explicit acceptance boundary.
+
 ## Model
 
 Retail splits a profession into a parent `SkillLine` (197 Tailoring) and one child line per expansion (2540 Classic Tailoring, `ParentSkillLineID` 197, `ParentTierIndex` 4). `PlayerProfessions { lines, spells }` holds each learned line (`skill_line`, `step`, `rank`, `max_rank`) and every spell learned through professions. It is saved (redb `profession_state`, bitcode) and sent as `ProfessionSnapshot` whenever it changes (`save_and_send_professions`, `Changed<PlayerProfessions>`), which includes entering the world. The AzerothCore-era `professions` table (placeholder Mining/Blacksmithing) is deleted by `create_tables`.
