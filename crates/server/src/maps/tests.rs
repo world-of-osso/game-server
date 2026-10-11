@@ -22,6 +22,31 @@ use crate::group::{GroupRegistry, OnlineMember, OnlineView};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::persistence::ClientId;
 
+#[test]
+fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
+    let store = map_store().expect("authentic map metadata");
+    let mut manager = InstanceManager::default();
+    let player = entrant(9820, None);
+    for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+        assert_eq!(
+            manager.player_cannot_enter(store, map_id, player, 80, SUNDAY_NOON),
+            None,
+            "open-world map {map_id} refused"
+        );
+        let resolved = manager
+            .create_map(store, map_id, player, at(0.0))
+            .expect("hosted open-world map");
+        assert_eq!(resolved.map, InMap::continent(map_id));
+        assert!(!resolved.created);
+    }
+    // An unselected development/unused map remains refused.
+    assert!(
+        manager
+            .player_cannot_enter(store, 13, player, 80, SUNDAY_NOON)
+            .is_some()
+    );
+}
+
 const STOCKADE: u32 = 34;
 /// `areatrigger_teleport` 101 "Stormwind Jail Entrance Target": its AreaTrigger box
 /// center in Stormwind City.
@@ -184,6 +209,7 @@ fn entrant(character_id: u64, group: Option<u64>) -> InstanceEntrant {
         group,
         leader: if group.is_some() { 1 } else { character_id },
         difficulty_id: store::DIFFICULTY_NORMAL,
+        ..Default::default()
     }
 }
 
@@ -344,11 +370,11 @@ fn an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh() {
 }
 
 #[test]
-fn raids_and_world_maps_without_npc_data_are_not_hosted() {
+fn world_maps_without_npc_data_are_not_hosted() {
     let Some(store) = map_store() else { return };
     let instances = InstanceManager::default();
-    // Outland (530); Molten Core (409), a raid.
-    for map_id in [530, 409] {
+    // Outland (530) is not hosted.
+    for map_id in [530] {
         assert_eq!(
             instances.player_cannot_enter(store, map_id, entrant(1, None), 80, SUNDAY_NOON),
             Some(TransferAbortReason::MapNotAllowed),
@@ -516,6 +542,8 @@ impl Harness {
                     pair::<WorldServerInfo>(),
                     pair::<SetDungeonDifficulty>(),
                     pair::<DungeonDifficultySet>(),
+                    pair::<SetRaidDifficulty>(),
+                    pair::<RaidDifficultySet>(),
                 ),
             ))
             .id();
@@ -612,6 +640,7 @@ impl Harness {
                         level: 20,
                         portrait: Default::default(),
                         dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                        raid_difficulty: crate::maps::RaidDifficulty::default(),
                     },
                 )
             })
@@ -1150,6 +1179,63 @@ fn level_nine_is_refused_and_level_ten_enters_the_stockade() {
     assert_eq!(new_world.map_id, STOCKADE);
     assert!(h.aborts(&ten).is_empty());
     assert_eq!(h.map_of(&ten).map(|map| map.map_id), Some(STOCKADE));
+}
+
+#[test]
+fn follower_admission_from_normal_ruby_transfers_to_a_distinct_205_copy() {
+    let mut h = harness().unwrap();
+    let player = h.spawn_at_level(30, 80, STORMWIND, STOCKADE_EXIT_TARGET);
+    let destination = WorldLocation {
+        map_id: 2521,
+        position: Vec3::new(1386.2, -169.719, 131.0),
+        orientation: 0.0,
+    };
+    assert!(teleport_to(
+        h.app.world_mut(),
+        player.player,
+        destination,
+        TeleportOptions::default()
+    ));
+    h.new_worlds(&player);
+    h.ack(&player);
+    let normal = h.map_of(&player).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .copy_difficulty(normal)
+            .unwrap()
+            .difficulty_id,
+        1
+    );
+    // Follower begin_run sets205 before teleporting to the authored entrance.
+    h.app
+        .world_mut()
+        .entity_mut(player.player)
+        .insert(DungeonDifficulty(205));
+    assert!(teleport_to(
+        h.app.world_mut(),
+        player.player,
+        destination,
+        TeleportOptions::default()
+    ));
+    assert!(
+        h.app.world().get::<MapTransfer>(player.player).is_some(),
+        "Follower admission must not near-teleport within the Normal copy"
+    );
+    assert_eq!(h.new_worlds(&player).pop().unwrap().map_id, 2521);
+    h.ack(&player);
+    let follower = h.map_of(&player).unwrap();
+    assert_ne!(normal, follower);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .copy_difficulty(follower)
+            .unwrap()
+            .difficulty_id,
+        205
+    );
 }
 
 #[test]
@@ -1755,5 +1841,321 @@ fn only_a_group_leader_sets_the_groups_difficulty_for_every_member() {
             .unwrap()
             .difficulty_id,
         23
+    );
+}
+
+#[test]
+fn raid_entry_legacy_raid_copy_and_weekly_bind_resume() {
+    let store = map_store().expect("canonical map data");
+    let mut instances = InstanceManager::default();
+    let mut raider = entrant(71, None);
+    raider.difficulty_id = 9; // Difficulty.db2: Molten Core 40 Player.
+    assert_eq!(
+        instances.player_cannot_enter(store, 409, raider, 80, SUNDAY_NOON),
+        None
+    );
+    let copy = instances
+        .create_map(store, 409, raider, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(copy).unwrap().difficulty_id, 9);
+    let entries = *store.map_difficulty(409, 9).unwrap();
+    assert_eq!(entries.reset_interval, store::ResetInterval::Weekly);
+    let player = World::new().spawn_empty().id();
+    instances.add_player(copy, player);
+    assert_eq!(
+        instances.update_instance_lock(copy, &[(player, 71)], 1, Some(0), SUNDAY_NOON),
+        vec![player]
+    );
+    let saved = instances.locks.saved();
+    let mut reloaded = InstanceManager::with_locks(locks::InstanceLocks::from_saved(saved));
+    let resumed = reloaded
+        .create_map(store, 409, raider, at(1.0))
+        .unwrap()
+        .map;
+    assert_eq!(resumed.instance_id, copy.instance_id);
+    assert_eq!(reloaded.initial_done_bosses(resumed), 1);
+}
+
+#[test]
+fn raid_entry_current_requires_raid_but_legacy_allows_solo_and_resolves_separate_selections() {
+    let store = map_store().unwrap();
+    let instances = InstanceManager::default();
+    let mut player = entrant(71, Some(7));
+    assert_eq!(
+        instances.player_cannot_enter(store, 2939, player, 90, SUNDAY_NOON),
+        Some(TransferAbortReason::NeedGroup)
+    );
+    player.raid_group = true;
+    // Actual pinned map condition, not a made-up map/level.
+    assert_eq!(
+        instances.player_cannot_enter(store, 2939, player, 90, SUNDAY_NOON),
+        None
+    );
+    let mut instances = instances;
+    player.raid_difficulty.primary = 15;
+    player.raid_difficulty.legacy = 4;
+    let modern = instances
+        .create_map(store, 2522, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(modern).unwrap().difficulty_id, 15);
+    let legacy = instances
+        .create_map(store, 533, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(legacy).unwrap().difficulty_id, 4);
+    let dungeon = instances
+        .create_map(store, 34, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(dungeon).unwrap().difficulty_id, 1);
+}
+
+#[test]
+fn raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later() {
+    let store = map_store().unwrap();
+    let entries = store.map_difficulty(409, 9).unwrap();
+    let reset = locks::next_reset_time(entries.reset_interval, SUNDAY_NOON);
+    let mut locks = locks::InstanceLocks::default();
+    locks.create_for_new_instance(71, entries, 8, SUNDAY_NOON);
+    locks.update_for_player(
+        71,
+        entries,
+        &locks::LockUpdate {
+            instance_id: 8,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    assert!(locks.find_active_lock(71, entries, reset - 1).is_some());
+    assert!(locks.find_active_lock(71, entries, reset).is_none());
+    locks.set_extended(71, entries, true, reset);
+    let lock = locks.find_active_lock(71, entries, reset).unwrap();
+    assert_eq!(lock.effective_expiry(entries, reset), reset + 604800);
+    locks.set_extended(71, entries, false, reset);
+    assert!(locks.find_active_lock(71, entries, reset).is_none());
+}
+
+#[test]
+#[ignore = "needs RAID_WORLD_DB: a prepared raid world.db copy (docs/specs, raid-entry)"]
+fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
+    let path = std::env::var("RAID_WORLD_DB").expect("prepared read-only raid copy");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let store = store::load_map_store(&conn).unwrap();
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(ServerClock {
+        fixed_unix: Some(SUNDAY_NOON),
+        offset_secs: 0,
+    });
+    let mut instances = InstanceManager::default();
+    let copy = instances
+        .create_map(&store, 409, entrant(71, Some(7)), at(0.0))
+        .unwrap()
+        .map;
+    let mut outsider = entrant(73, Some(8));
+    outsider.leader = 73;
+    let other = instances
+        .create_map(&store, 409, outsider, at(0.0))
+        .unwrap()
+        .map;
+    let mut players = Vec::new();
+    for (id, map) in [(71, copy), (72, copy), (73, other)] {
+        let player = world
+            .spawn((
+                Player {
+                    name: format!("Raider{id}"),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                ClientId(id),
+                map,
+            ))
+            .id();
+        instances.add_player(map, player);
+        players.push(player);
+    }
+    world.insert_resource(store);
+    world.insert_resource(instances);
+    let lucifron = world
+        .spawn((
+            shared::components::Npc {
+                template_id: 12118,
+                name: "Lucifron".into(),
+            },
+            copy,
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let history_file = tempfile::NamedTempFile::new().unwrap();
+    world.insert_resource(crate::persistence::GameDatabase {
+        db: redb::Database::create(history_file.path()).unwrap(),
+    });
+    crate::combat::mark_npc_dead_world(&mut world, lucifron);
+    {
+        use redb::ReadableDatabase;
+        let txn = world
+            .resource::<crate::persistence::GameDatabase>()
+            .db
+            .begin_read()
+            .unwrap();
+        let table = txn
+            .open_table(::server::raid_history_store::FIRST_KILLS)
+            .unwrap();
+        for id in [71, 72] {
+            let key = format!("character:{id}:409:9:663");
+            let record: ::server::raid_history_store::FirstKill =
+                serde_json::from_slice(table.get(key.as_str()).unwrap().unwrap().value()).unwrap();
+            assert_eq!(record.first_kill_at, SUNDAY_NOON);
+            assert_eq!(
+                record
+                    .participants
+                    .iter()
+                    .map(|p| p.character_id.as_str())
+                    .collect::<Vec<_>>(),
+                vec!["71", "72"]
+            );
+        }
+        assert!(table.get("character:73:409:9:663").unwrap().is_none());
+    }
+    let instances = world.resource::<InstanceManager>();
+    for id in [71, 72] {
+        let lock = instances
+            .locks
+            .lock(id, (409, 0))
+            .expect("boss death permanently saved both present raiders");
+        assert_eq!(lock.data.completed_encounters, 1);
+        assert_eq!(lock.instance_id, copy.instance_id);
+    }
+    assert!(instances.locks.lock(73, (409, 0)).is_none());
+    let entries = crate::scripted_ai::instance_script::done_boss_entries(
+        world.resource::<MapStore>(),
+        409,
+        1,
+    );
+    assert_eq!(entries, vec![12118]);
+}
+
+#[test]
+fn raid_entry_legacy_flexible_lock_uses_encounters_not_one_instance_id() {
+    let store = map_store().unwrap();
+    assert!(!store.map_difficulty(533, 3).unwrap().is_instance_id_bound());
+    assert!(
+        store
+            .map_difficulty(2522, 16)
+            .unwrap()
+            .is_instance_id_bound()
+    );
+}
+#[test]
+fn raid_entry_extended_copy_does_not_expire_at_its_original_weekly_reset() {
+    let store = map_store().unwrap();
+    let mut instances = InstanceManager::default();
+    let copy = instances
+        .create_map(store, 409, entrant(71, None), at(0.0))
+        .unwrap()
+        .map;
+    let player = World::new().spawn_empty().id();
+    instances.add_player(copy, player);
+    instances.update_instance_lock(copy, &[(player, 71)], 1, Some(0), SUNDAY_NOON);
+    let entries = store.map_difficulty(409, 9).unwrap();
+    let reset = locks::next_reset_time(entries.reset_interval, SUNDAY_NOON);
+    instances.locks.set_extended(71, entries, true, SUNDAY_NOON);
+    assert!(
+        instances
+            .expire_locked_copies(instances::Now {
+                elapsed: 100.0,
+                unix: reset
+            })
+            .is_empty()
+    );
+}
+
+#[test]
+fn raid_entry_flexible_saved_player_can_join_equal_progress_but_not_unkilled_encounters() {
+    let store = map_store().unwrap();
+    let entries = store.map_difficulty(533, 3).unwrap();
+    let mut locks = locks::InstanceLocks::default();
+    locks.create_for_new_instance(71, entries, 8, SUNDAY_NOON);
+    locks.update_for_player(
+        71,
+        entries,
+        &locks::LockUpdate {
+            instance_id: 8,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    assert_eq!(locks.can_join(71, entries, 9, SUNDAY_NOON, 1), None);
+    assert_eq!(locks.can_join(71, entries, 9, SUNDAY_NOON, 3), None);
+    assert_eq!(
+        locks.can_join(71, entries, 9, SUNDAY_NOON, 0),
+        Some(TransferAbortReason::AlreadyCompletedEncounter)
+    );
+}
+
+#[test]
+fn raid_entry_only_leader_sets_raid_selections_over_the_real_message_receiver_outside_instances() {
+    let mut h = harness().unwrap();
+    let leader = h.spawn(1, InMap::continent(0), Vec3::ZERO);
+    let member = h.spawn(2, InMap::continent(0), Vec3::ZERO);
+    h.group(&[&leader, &member]);
+    let send = |h: &mut Harness, who: &Traveler, difficulty_id: u32, legacy: bool| {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<SetRaidDifficulty>>(who.connection)
+            .unwrap()
+            .send::<InstanceChannel>(SetRaidDifficulty {
+                difficulty_id,
+                legacy,
+            });
+        h.advance(3);
+    };
+    send(&mut h, &member, 15, false);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<GroupRegistry>()
+            .raid_difficulty_of(2)
+            .unwrap(),
+        RaidDifficulty::default()
+    );
+    send(&mut h, &leader, 15, false);
+    send(&mut h, &leader, 6, true);
+    for who in [&leader, &member] {
+        assert_eq!(
+            *h.app.world().get::<RaidDifficulty>(who.player).unwrap(),
+            RaidDifficulty {
+                primary: 15,
+                legacy: 6
+            }
+        );
+    }
+    let store = h.app.world().resource::<MapStore>().clone();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 409, entrant(1, None), at(0.0))
+        .unwrap()
+        .map;
+    h.app.world_mut().entity_mut(leader.player).insert(copy);
+    send(&mut h, &leader, 14, false);
+    send(&mut h, &leader, 3, true);
+    assert_eq!(
+        *h.app.world().get::<RaidDifficulty>(leader.player).unwrap(),
+        RaidDifficulty {
+            primary: 15,
+            legacy: 6
+        }
     );
 }

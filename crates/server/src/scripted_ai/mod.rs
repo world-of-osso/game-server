@@ -18,12 +18,10 @@
 pub mod boss_ai;
 pub mod creature_text;
 pub mod event_map;
-pub mod grim_batol;
 pub mod instance_script;
 pub mod movement;
 pub mod smart_ai;
 pub mod the_stockade;
-pub mod wailing_caverns;
 
 use std::collections::VecDeque;
 
@@ -174,11 +172,8 @@ pub struct CreatureAiState {
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
-    if script_name == SMART_AI {
+    if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
-    }
-    if script_name.is_empty() {
-        return grim_batol::creature_ai(world, creature);
     }
     the_stockade::creature_ai(world, creature, script_name)
 }
@@ -191,8 +186,7 @@ const SMART_AI: &str = "SmartAI";
 /// (`Creature::AIM_Initialize` at `AddToMap`; `FactorySelector::SelectAI` prefers the
 /// ScriptName).
 pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
-    let scriptless_boss = script_name.is_empty() && grim_batol::boss_id_of(entry).is_some();
-    let script_name = if the_stockade::is_creature_script(script_name) || scriptless_boss {
+    let script_name = if the_stockade::is_creature_script(script_name) {
         Some(script_name.to_owned())
     } else {
         None
@@ -203,8 +197,11 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
             .into_world_mut()
             .commands()
             .queue(move |world: &mut World| {
-                let name = script_name
-                    .or_else(|| smart_ai::has_script(world, entry).then(|| SMART_AI.to_owned()));
+                let name = script_name.or_else(|| {
+                    (smart_ai::has_script(world, entry)
+                        || instance_script::bound_boss(world, creature).is_some())
+                    .then(|| SMART_AI.to_owned())
+                });
                 let Some(name) = name else {
                     return;
                 };

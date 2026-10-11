@@ -1,0 +1,33 @@
+# Level-80 class completeness
+
+Audit scope: all 13 classes / 40 Mainline 12.1.0.69933 specs, including Devourer. Membership is a union of class/spec spells and selectable class/spec/hero talents at level 80; not a simultaneously legal talent loadout or a claim every race learns race-gated entries. Census does not promote positive partial spell tests to full ability certificates. Missing scripts, coefficients, empower/movement/guardian lifecycles and resource reservoirs remain gaps.
+
+Durable per-spec/per-spell results and proof ledger: `/home/osso/.worktrees/handoff-class-completeness.md`. Regenerator, manifest, source receipts and command logs: engine `data/diagnostics/class-completeness-2026-10-11/`. Previous [Dummy23 census](spell-dummy23-coverage.md) reviewed all 157 roots, but explicitly excludes full talent trees and level-80 membership.
+
+## Shared native label vulnerability (aura537)
+
+`MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL` now multiplies incoming spell damage only for the aura caster and native `SpellLabel` in `EffectMiscValue_0`. This is TrinityCore a352b1fa `Unit.cpp:7066–7069`, not a new per-spell coefficient. Percent amounts and stack counts come from the live aura. Existing aura271 behavior is unchanged.
+
+Native Piercing Chill377359 is +12% to label1615 (Chill Streak204167). Tests exercise the real 20yd/s missile impact, same-owner amplification, unrelated Frostbolt116, another caster and expiry. Only fixture variance is zeroed. RED:115 damage instead of129; no coefficient/label mutation. Other mechanics on these abilities are not certified by this fixture.
+
+## Shared native charge haste (aura457)
+
+`CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN` applies once only to its native charge category, multiplying recovery by the owner's haste-regen factor. Zero aura amount is a selector, not a zero-percent bonus. Source: TrinityCore a352b1fa `SpellHistory.cpp::GetChargeRecoveryTime` (category check and ModHasteRegen multiplication, lines1000–1001). The class stat representation already uses one Retail haste percent.
+
+Running charge clocks preserve completed progress when the recovery rate changes (`UpdateChargeRecoveryRate`, lines880–909). A FixedUpdate reconciliation publishes changed recovery and completed charges without requiring another cast. Native Paladin137026/Crusader Strike35395 (category1627,6000ms) proves100% haste→3000ms, charge regeneration and mid-recovery retiming. Zero-haste, absent-passive and unrelated Charge100/category1386 are controls. No charge count/cost/DB2 coefficient mutation.
+
+## Shared native cooldown haste (aura416)
+
+Native spell-class masks decide which spell and category cooldowns use haste regen; unrelated spells remain unchanged. Source: TrinityCore a352b1fa `SpellHistory.cpp:425–429` (both cooldowns multiplied by `ModHasteRegen`). Warrior137047/Mortal Strike12294 and Bloodthirst23881 exercise spell6000ms and category4500ms timers at100% haste. Heroic Throw57755 and zero-haste are controls. GCD is still the separate aura417 contract; no new guessed cooldown amount. Fractional native millisecond durations truncate (6000ms at40% haste→4285ms), not round. A separate no-recast charge test verifies the FixedUpdate rate notification and eventual replenishment with no new SpellGo.
+
+## Signed native class resource costs
+
+Fifteen learned DK SpellPower rows encode Runic generation as negative ManaCost (e.g.49184 Rune1 and Runic-100,195182 Runic-200,206930 Runic-150). The cast pipeline previously clamped those rows away. Native signed amounts now survive cost selection/modifiers and subtracting them grants capped raw power. Source: TrinityCore a352b1fa `SpellInfo.cpp:4147,4246–4249` preserves original sign; `Spell.cpp:5444–5503` subtracts signed amounts and applies discounted-primary-miss rules. Modifiers cannot turn a positive fee into a grant or reverse a native grant. Percentage mana amounts still use base mana. Health gains cannot exceed max.
+
+Discounted primary misses do not consume runes or grant negative-cost power; normal cost admission still runs before the hit plan. School immunity is now classified in the hit plan before resource payment (`Object.cpp:1947`, `Unit.cpp:7740`), instead of only suppressing final damage. This is the observed Ice Block boundary's root cause; no resource-only immunity workaround. Full-school coverage is required for composite schools: learned Soul Reaper343294/Putrefy1247378 are Shadowfrost48. Native Frost7940 alone must not stop that cast, while separate native Shadow7743 plus Frost7940 combine into full immunity. The same corrected mask union is used by hit planning and final damage. Genuine level80 RED: Howling Blast grants0 instead of100 raw,950 cap stays950 instead of1000; native Ice Block immune target spends a rune instead of preserving6. Tests also cover unavailable-rune rejection, exact450 raw Death Strike spend,3 Holy Power Word of Glory,3 Essence Disintegrate, and native197911 Wrath6-Astral/Starsurge40-Astral. The initial Astral control lacked required197911 and is recorded as a fixture issue, not a feature RED. Other scripts/auras on these abilities remain independently partial.
+
+## Native-row runtime probe
+
+Opt-in `class_completeness_level80_probe` consumes the expanded membership manifest. Each case gets fresh level80 caster/target entities, native class/spec passives, full native resource pools and a granted root spell, through HostClient `SpellCastIntent` (passives use native KnownSpells sync). It records cast success/rejection, actual warning tuples, combat logs and raw pool snapshots. Target relation follows the production script target plan; range, peaceful-only state and ground destination flags come from native rows. Resurrection targets an actual dead friendly fixture. Full native SpellStore and authored WorldData templates are loaded read-only; no fabricated pet/demon/template data. Observation is cast-time plus10seconds. This is a controlled base-build probe, not a talent-purchase/persistence, full-duration/channel, normal-equipment, guardian-AI/stat-inheritance or complete-rotation certification. Optional mutually exclusive talents are not enabled together. Numeric coefficients/costs are never changed by the probe; generous fixture health/AP/mana only isolate cast admission/effect dispatch.
+
+No world.db writes, no master merge, no live realm or UDP5000 use.
