@@ -2,13 +2,21 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Eighteenth batch: native leech and reapplication
+
+[Contract](../../specs/spell-dummy-scripts.md#eighteenth-batch-native-leech-and-reapplication-contracts), [proof/census/all40](../../spell-dummy18-coverage.md). Effect9 and aura53 share damage resolution with ordinary attacks; the resolver returns damage less overkill after immunity, absorbs, routing and scaling. Leech copies that amount through normal living-health clamping/logging, without another power, multiplier or crit roll. Periodic leech snapshots native SP/AP amounts, reads the original effect's amplitude and preserves existing tick scheduling.
+
+`auras/refresh.rs` implements only named local rules:335467 redistributes unpaid same-owner damage over the refreshed phase's future ticks, paying due ticks before snapshot;190456 includes its explicit versatility capacity factor, spends s2 percent of each incoming hit and Protection73 accumulates remaining shields to s4 percent of maximum health. No generic Pandemic threshold or Karma redirect is invented. Conflagrate's existing grant now reads the native Charges31 modifier;267115 separately raises its117828 stack cap. Obliterate reuses the weapon-branch selector with local variable608's physical and frost child pairs.
+
+Native leech paths cover34914/335467/234153/55078 and only205179's primary aura53. Singularity's area226, Ignore Pain142, Vampiric Touch markers/dispel retaliation, talent/guardian/Karma and Lifebloom near-expiry rules remain outside this implementation. Native14/14 at edfa536 includes completed roots and actual Drain Life channel/cancellation. Frozen census164/100/64→163/103/60 closes only Ignore Pain's two consumed Dummy fields; aura142 remains. E3=114/122, aura4=66/74, aura226=18/19. All40 prior script sets/counts reproduced; generic leech is not relabelled a named script. Generic registry admission is not full ability parity. Feature/master merge83c5fb3 includes account-achievement changes from632f3ae; single requested spell_cast404/404 and fmt/check pass, compiler warning-free. Later updates are docs/proof only.
+
 ## Seventeenth batch: named resources and restorative hooks
 
 [Contract](../../specs/spell-dummy-scripts.md#seventeenth-batch-named-resources-and-restorative-hooks), [proof/all40/census](../../spell-dummy17-coverage.md). `scripts/batch17.rs` binds Shadow Bolt's spec-gated194192 gain, Conflagrate's245330 fragments/196406-gated117828 uses, Soul Fire's281490 gain and conditional base157736/445474 periodic mark, Blood Boil's55078 base disease and Marrowrend's native195181 stack grant. Shadow Bolt checks actual ActiveSpec266, not an invented passive. Blood Boil's absent212744 record is represented only by the native description's learned-spell condition, not a synthesized store row.
 
 Lifebloom hooks bloom33778 on expiry/dispel and replace only other targets bearing the same owner's33763; replacement never blooms. The near-expiration refresh threshold remains underivable. Improved Regrowth231032 adds its native probability only when the target already has8936; any owner qualifies. Cenarion Ward102351's proc predicate requires actual damage before consuming its native charge; its hook casts102352 from the real aura owner onto the protected unit, not the event's attacker. Backdraft117828 joins53390's named stack-as-use handling, preserving30% per use instead of multiplying magnitude by stack count.
 
-Guardian/Karma/Eye Beam and retained markers/talents remain excluded. No new general leech/aura53 support is inferred from Blood Plague application. Current proof and source limits live in the linked coverage ledger.
+Guardian/Karma/Eye Beam and retained markers/talents remain excluded. Batch17 did not infer general leech from disease application; batch18 adds aura53 explicitly. Current proof and source limits live in the linked coverage ledger.
 
 ## Sixteenth batch: low-count rank and charge consumers
 

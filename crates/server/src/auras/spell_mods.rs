@@ -35,6 +35,8 @@ pub enum SpellModOp {
     PeriodicHealingAndDamage = 22,
     PointsIndex2 = 23,
     BonusCoefficient = 24,
+    ///267115's authored additional Backdraft use modifier.
+    Charges = 31,
     PointsIndex3 = 32,
     PointsIndex4 = 33,
     PowerCost1 = 34,

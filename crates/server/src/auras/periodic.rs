@@ -140,6 +140,22 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
                 crate::spell_cast::scripts::deathmark_energy(world, tick.caster, spell);
             }
         }
+        PERIODIC_LEECH => {
+            let effect = spell
+                .effects
+                .iter()
+                .find(|effect| effect.index == tick.effect_index)
+                .expect("periodic effect belongs to its spell");
+            effects::deal_leech(
+                world,
+                &ctx,
+                unit,
+                tick.amount,
+                effect.amplitude,
+                false,
+                true,
+            );
+        }
         PERIODIC_DAMAGE_PERCENT => effects::deal_damage(
             world,
             &ctx,
