@@ -47,13 +47,14 @@ This prepares SQL only. `--world-db` opens SQLite `mode=ro`. The SQL atomically 
 After inspecting the artifact, the lead may back up and apply:
 
 ```python
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 
 world = Path("/home/osso/Projects/world-of-osso/game-server/data/world.db")
 source = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-ai-2026-10-11/follower-reference.sql")
-with sqlite3.connect(world) as db:
-    with sqlite3.connect(world.with_name("world.db.pre-follower-20261011")) as backup:
+with closing(sqlite3.connect(world)) as db:
+    with closing(sqlite3.connect(world.with_name("world.db.pre-follower-20261011"))) as backup:
         db.backup(backup)
     db.executescript(source.read_text())
 ```

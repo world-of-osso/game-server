@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Prepare authentic Retail follower reference SQL; never writes to world.db.
 
 Input: local CASC LFGDungeons (12.1.0.69933, FDID1361033), TDB1210 world dump.
@@ -10,6 +9,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from db2_casc import decode, read_header
@@ -87,7 +87,7 @@ def prepare_import(lfg_db2, world_sql, output):
         f"{name} {'TEXT' if width is None else 'INTEGER'} NOT NULL"
         for name, _, width in FIELDS
     )
-    with sqlite3.connect(":memory:") as staging:
+    with closing(sqlite3.connect(":memory:")) as staging:
         staging.execute(
             f"CREATE TABLE follower_lfg_dungeons ({columns},PRIMARY KEY(id))"
         )
@@ -126,7 +126,9 @@ def audit_world(world_db, lfg_db2, world_sql):
     for creature_id, _, spell_id, _ in spells:
         if spell_id:
             spell_counts[creature_id] = spell_counts.get(creature_id, 0) + 1
-    with sqlite3.connect(world_db.resolve().as_uri() + "?mode=ro", uri=True) as world:
+    with closing(
+        sqlite3.connect(world_db.resolve().as_uri() + "?mode=ro", uri=True)
+    ) as world:
         escorts = [
             {
                 "entry": entry,

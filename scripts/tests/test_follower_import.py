@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 from io import StringIO
-from unittest.mock import patch
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import follower_import
@@ -22,6 +22,7 @@ class FollowerImportTests(unittest.TestCase):
             output = Path(directory) / "followers.sql"
             follower_import.prepare_import(source, archive, output)
             db = sqlite3.connect(":memory:")
+            self.addCleanup(db.close)
             db.execute("CREATE TABLE unrelated_state (value TEXT)")
             db.execute("INSERT INTO unrelated_state VALUES ('preserved')")
             db.executescript(output.read_text())
@@ -128,9 +129,12 @@ class FollowerImportTests(unittest.TestCase):
                 "--output",
                 str(world),
             ]
-            with patch.object(sys, "argv", argv), redirect_stderr(StringIO()):
-                with self.assertRaises(SystemExit) as error:
-                    follower_import.main()
+            with (
+                patch.object(sys, "argv", argv),
+                redirect_stderr(StringIO()),
+                self.assertRaises(SystemExit) as error,
+            ):
+                follower_import.main()
             self.assertEqual(error.exception.code, 2)
             self.assertEqual(world.read_bytes(), b"must remain unchanged")
 
