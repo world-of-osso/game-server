@@ -43,6 +43,24 @@ class InstancePopulationTest(unittest.TestCase):
             self.assertEqual(source.read_bytes(), b"untouched")
 
     @unittest.skipUnless(os.environ.get("DUNGEON_POPULATION_SOURCE"), "requires authentic world.db")
+    def test_hogger_keeps_authored_wowhead_loot_when_tdb_has_none(self):
+        import import_instance_population as importer
+        source = Path(os.environ["DUNGEON_POPULATION_SOURCE"])
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "hogger.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as original:
+                with closing(sqlite3.connect(destination)) as copy:
+                    original.backup(copy)
+                authored = original.execute("SELECT * FROM content_creature_loot_template WHERE Entry=30046254 ORDER BY Item").fetchall()
+            self.assertEqual([1934, 1959, 2168, 132569, 151074], [row[1] for row in authored])
+            for _ in range(2):
+                importer.import_database(destination)
+                with closing(sqlite3.connect(destination)) as conn:
+                    self.assertEqual((30046254,), conn.execute("SELECT lootid FROM content_creature_template WHERE entry=46254").fetchone())
+                    self.assertEqual((30046254,), conn.execute("SELECT lootid FROM content_creature_template_difficulty WHERE entry=46254 AND DifficultyID=1").fetchone())
+                    self.assertEqual(authored, conn.execute("SELECT * FROM content_creature_loot_template WHERE Entry=30046254 ORDER BY Item").fetchall())
+
+    @unittest.skipUnless(os.environ.get("DUNGEON_POPULATION_SOURCE"), "requires authentic world.db")
     def test_all_instance_maps_match_eligible_tdb_and_keep_world_content(self):
         import import_instance_population as importer
         source = Path(os.environ["DUNGEON_POPULATION_SOURCE"])
@@ -67,8 +85,21 @@ class InstancePopulationTest(unittest.TestCase):
                 importer.select_instance_spawns(conn)
                 importer.retail.create_difficulty_table(conn, map_list=importer.MAPS, base_phase=importer.BASE_PHASE)
                 expected = conn.execute("SELECT s.entry,s.difficulty,CASE WHEN d.LootID=0 THEN 0 ELSE d.LootID+20000000 END,d.GoldMin,d.GoldMax FROM temp.spawn_row s JOIN tdb_creature_template_difficulty d ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty WHERE s.difficulty>0 ORDER BY s.entry,s.difficulty").fetchall()
+                def with_authored_wowhead(row):
+                    entry, difficulty, loot, low, high = row
+                    base = conn.execute("SELECT min(difficulty) FROM temp.spawn_map_difficulty WHERE entry=?", (entry,)).fetchone()[0]
+                    scrape_loot = 30000000 + entry + (0 if difficulty == base else difficulty * 1000000)
+                    authored = conn.execute("SELECT 1 FROM wowhead_creature_drop w JOIN content_creature_loot_template l ON l.Entry=? AND l.Item=w.item WHERE w.entry=? AND w.difficulty=?", (scrape_loot, entry, difficulty)).fetchone()
+                    if loot == 0 and authored:
+                        return entry, difficulty, scrape_loot, 0, 0
+                    return entry, difficulty, loot, low, high
+                expected = [with_authored_wowhead(row) for row in expected]
                 self.assertEqual(expected, conn.execute("SELECT entry,DifficultyID,lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry IN (SELECT entry FROM temp.spawn_row) ORDER BY entry,DifficultyID").fetchall())
                 expected_base = conn.execute("SELECT Entry,CASE WHEN LootID=0 THEN 0 ELSE LootID+20000000 END,GoldMin,GoldMax FROM temp.tdb_difficulty WHERE Entry IN (SELECT id1 FROM temp.instance_creature) ORDER BY Entry").fetchall()
+                expected_base = [
+                    (entry, *with_authored_wowhead((entry, conn.execute("SELECT min(difficulty) FROM temp.spawn_map_difficulty WHERE entry=?", (entry,)).fetchone()[0], loot, low, high))[2:])
+                    for entry, loot, low, high in expected_base
+                ]
                 self.assertEqual(expected_base, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE entry IN (SELECT id1 FROM temp.instance_creature) ORDER BY entry").fetchall())
                 self.assertEqual([(1179,), (2589,), (2592,), (4537,), (6460,), (6465,), (9738,), (10410,)], conn.execute("SELECT Item FROM content_creature_loot_template WHERE Entry=20003669 ORDER BY Item").fetchall())
                 entries = "SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)"
