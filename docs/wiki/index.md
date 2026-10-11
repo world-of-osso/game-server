@@ -51,6 +51,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
+
 - [Class spell batch20](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses) — Barbed Shot total/rollover/Focus and Stormkeeper two-use count;158 remaining Dummy roots/110 reviewed/48 underived, six exact source deferrals and [all40/proof/limits](../spell-dummy20-coverage.md).
 
 - [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
