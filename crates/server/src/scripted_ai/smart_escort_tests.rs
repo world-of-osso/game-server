@@ -806,6 +806,17 @@ fn smartai_coverage_summon_authentic_position_count_storage_and_expiry() {
     world
         .entity_mut(creature)
         .insert(crate::maps::InMap::continent(0));
+    let mut summoned_by = tdb_action(197800, 9, 2);
+    summoned_by.event_type = 54;
+    summoned_by.event_params = [0; 5];
+    summoned_by.action_type = ACTION_SET_NPC_FLAG;
+    summoned_by.action_params[0] = 8;
+    summoned_by.target_type = TARGET_SELF;
+    summoned_by.link = 0;
+    world
+        .resource_mut::<SmartScripts>()
+        .0
+        .insert(28636, Arc::new(vec![summoned_by]));
     let mut action = tdb_action(-98562, 0, 1);
     // Authored Heb'Jin position/type/duration; exercise generic count/storage params.
     action.action_params[4] = 2;
@@ -821,6 +832,12 @@ fn smartai_coverage_summon_authentic_position_count_storage_and_expiry() {
         .iter(ctx.world)
         .collect();
     assert_eq!(summons.len(), 2);
+    assert!(
+        summons
+            .iter()
+            .all(|&summon| ctx.world.get::<NpcFlags>(summon).unwrap().0 == 8),
+        "each actual spawned AI must receive IsSummonedBy after initialization"
+    );
     let (x, y, z) = crate::terrain_height::wow_to_bevy(
         action.target_position[0],
         action.target_position[1],
@@ -1235,6 +1252,75 @@ fn smartai_coverage_wizzle_path_end_wildcard_runs_the_next_authored_leg() {
             .expect("UINT32_MAX waypoint event is the pinned wildcard, not point zero")
             .target,
         Position { x, y, z }
+    );
+}
+
+#[test]
+fn smartai_coverage_summon_dispatch_and_expiry_execute_parent_lifecycle_hooks() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let summon = world
+        .spawn((
+            Npc {
+                template_id: 3282,
+                name: "Venture Co. Mercenary".into(),
+            },
+            NpcFlags(0),
+            crate::zones::TempSummon { summoner: creature },
+        ))
+        .id();
+    let mut created = tdb_action(197800, 9, 2);
+    created.event_type = 17;
+    created.event_params = [3282, 0, 0, 0, 0];
+    created.target_type = TARGET_ACTION_INVOKER;
+    created.action_type = ACTION_SET_NPC_FLAG;
+    created.action_params[0] = 8;
+    created.link = 0;
+    let mut removed = created.clone();
+    removed.id += 1;
+    removed.event_type = 35;
+    removed.target_type = TARGET_SELF;
+    removed.action_params[0] = 4;
+    ai.events = Arc::new(vec![created, removed]);
+    ai.states = vec![EventState::default(); 2];
+    ai.reset(&mut Ctx {
+        world: &mut world,
+        me: creature,
+    });
+    world
+        .entity_mut(creature)
+        .insert(super::super::CreatureAiState {
+            ai: Some(Box::new(ai)),
+            pending: Default::default(),
+        });
+    super::super::dispatch(
+        &mut world,
+        creature,
+        super::super::Hook::JustSummoned(player),
+    );
+    assert_eq!(
+        world.get::<NpcFlags>(creature).unwrap().0,
+        2,
+        "noncreature invokers must not match summoned-unit rows"
+    );
+    super::super::dispatch(
+        &mut world,
+        creature,
+        super::super::Hook::JustSummoned(summon),
+    );
+    assert_eq!(
+        world.get::<NpcFlags>(summon).unwrap().0,
+        8,
+        "the parent hook must receive the actual summon as invoker"
+    );
+    lifetimes::schedule_despawn(&mut world, summon, 10, 0, false);
+    lifetimes::tick_lifetimes(&mut world, 9);
+    assert_eq!(world.get::<NpcFlags>(creature).unwrap().0, 2);
+    lifetimes::tick_lifetimes(&mut world, 1);
+    assert!(world.get_entity(summon).is_err());
+    assert_eq!(
+        world.get::<NpcFlags>(creature).unwrap().0,
+        4,
+        "despawn must dispatch while the summons entry is still readable"
     );
 }
 
