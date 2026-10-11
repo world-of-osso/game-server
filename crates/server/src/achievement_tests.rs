@@ -1,6 +1,135 @@
 use super::*;
 use rusqlite::Connection;
 
+#[test]
+fn achievements2_account_quests_migrate_across_characters_without_changing_character_credit() {
+    use shared::components::CharacterAppearance;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (first, _) = persistence::create_character(&db, 17, "Firstalt", 1, 1).unwrap();
+    let (second, _) = persistence::create_character(&db, 17, "Secondalt", 1, 1).unwrap();
+    let (other, _) = persistence::create_character(&db, 18, "Otheralt", 1, 1).unwrap();
+    let mut query = conn.prepare("WITH RECURSIVE tree(ID) AS (SELECT CriteriaTree FROM achievement WHERE ID=4899 UNION SELECT t.ID FROM criteria_tree t JOIN tree ON t.Parent=tree.ID) SELECT DISTINCT c.Asset FROM tree JOIN criteria_tree t ON t.ID=tree.ID JOIN criteria c ON c.ID=t.CriteriaID WHERE c.Type=27 ORDER BY c.Asset").unwrap();
+    let quests: Vec<u32> = query
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(quests.len() > 2);
+    let mut contributions = [
+        PlayerAchievementState::default(),
+        PlayerAchievementState::default(),
+    ];
+    for (index, quest) in quests.into_iter().enumerate() {
+        catalog.update(
+            &mut contributions[index % 2],
+            CriteriaEvent::CompleteQuest(quest),
+            None,
+            1,
+        );
+    }
+    persistence::save_achievements(&db, first, &contributions[0]);
+    persistence::save_achievements(&db, second, &contributions[1]);
+    let mut world = World::new();
+    world.insert_resource(catalog);
+    world.insert_resource(GameDatabase { db });
+    world.init_resource::<crate::maps::ServerClock>();
+    let player = world
+        .spawn((
+            Player {
+                name: "Firstalt".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            contributions[0].clone(),
+        ))
+        .id();
+    let connection = world
+        .spawn((
+            Authenticated { account_id: 17 },
+            PlayerLink(player),
+            InWorld {
+                character_id: first,
+            },
+        ))
+        .id();
+    let (snapshot, toasts) =
+        update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(1)], None).unwrap();
+    assert!(
+        snapshot.earned_ids.contains(&4899),
+        "account quests must combine both characters"
+    );
+    assert_eq!(
+        toasts
+            .iter()
+            .filter(|toast| toast.achievement_id == 4899)
+            .count(),
+        1
+    );
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .earned_ids
+            .contains(&4899)
+    );
+    let saved = persistence::load_achievements(&world.resource::<GameDatabase>().db, second);
+    assert_eq!(saved, contributions[1]);
+    assert!(
+        update_player_events(&mut world, player, &[], None)
+            .unwrap()
+            .1
+            .is_empty()
+    );
+    world.entity_mut(connection).insert((
+        Authenticated { account_id: 18 },
+        InWorld {
+            character_id: other,
+        },
+    ));
+    world
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    assert!(
+        !update_player_events(&mut world, player, &[], None)
+            .unwrap()
+            .0
+            .earned_ids
+            .contains(&4899)
+    );
+    drop(world);
+    let db = redb::Database::open(file.path()).unwrap();
+    let mut world = World::new();
+    world.insert_resource(load_achievement_catalog(&conn).unwrap());
+    world.insert_resource(GameDatabase { db });
+    world.init_resource::<crate::maps::ServerClock>();
+    let player = world
+        .spawn((
+            Player {
+                name: "Secondalt".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            contributions[1].clone(),
+        ))
+        .id();
+    world.spawn((
+        Authenticated { account_id: 17 },
+        PlayerLink(player),
+        InWorld {
+            character_id: second,
+        },
+    ));
+    let (snapshot, toasts) = update_player_events(&mut world, player, &[], None).unwrap();
+    assert!(snapshot.earned_ids.contains(&4899));
+    assert!(toasts.is_empty());
+}
+
 #[path = "achievement_normal_lock_tests.rs"]
 mod normal_locks;
 

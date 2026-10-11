@@ -79,7 +79,7 @@ const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputatio
 const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
 
 /// Achievement table: PlayerId (u64) -> serialized achievement state (bytes).
-const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");
+pub(crate) const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");
 
 /// PVP table: PlayerId (u64) -> serialized pvp state (bytes).
 const PVP_STATES: TableDefinition<u64, &[u8]> = TableDefinition::new("pvp_states");

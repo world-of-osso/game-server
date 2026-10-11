@@ -12,7 +12,8 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [x] Credit quest completion only after successful reward persistence; incomplete/rejected turn-ins never credit. Repeat reward events remain boolean, not accumulated counts.
 - [x] Recover quest criteria from the character's persisted rewarded quest IDs on login; dependency criteria read persisted earned IDs and cascade newly earned meta-achievements to a fixed point. Reconnect sends snapshots without replaying earned toasts.
 - [x] Match Achievement.Faction (-1 both, 0 Horde, 1 Alliance) to the player's authored faction template; exclude opposing/neutral faction-only rows from grants, catalog/criteria pages and live progress.
-- [x] Exclude account-wide grants with Retail ACHIEVEMENT_FLAGS_ACCOUNT (0x20000), not SHOW_CRITERIA_MEMBERS (0x10000). Do not present character counters or historical character-local earned records as account progress; retain persisted history for the later account migration.
+- [x] Separate account-wide grants with Retail ACHIEVEMENT_FLAGS_ACCOUNT (0x20000), not SHOW_CRITERIA_MEMBERS (0x10000). Aggregate durable character contributions within the owning account; migrate historical progress without changing other character rows. Never persist account totals into character counters.
+- [x] Retain account earned IDs and earliest known dates across reconnect, restart and character deletion. Account criteria pages and snapshots use account aggregates; character rows use their own counters. Unrelated accounts remain isolated.
 - [x] Evaluate Single/All/Any and direct-child count operators, preserving numeric progress in redb.
 - [x] Grant Retail achievements at the previous 10/20/40/60/70/80 thresholds, using actual Retail IDs rather than placeholder 1–6; migrate persisted placeholders once.
 
@@ -58,5 +59,5 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 ## Out of scope
 
 - Client objective tracker / achievement window rendering; client stays read-only in phase 2.
-- ModifierTree, timed, world-state, account-wide, unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated. Account aggregation/persistence/migration is the next slice.
+- ModifierTree, timed, world-state and unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated.
 - Additional criteria types beyond 0/5/8/27/165.
