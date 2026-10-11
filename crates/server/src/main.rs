@@ -49,6 +49,7 @@ mod ground;
 mod group;
 mod guild;
 mod guild_bank;
+mod housing;
 mod housing_catalog;
 mod hunter_pet;
 mod ignore_list;
@@ -237,6 +238,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
+        .add_plugins(housing::HousingPlugin)
         .add_plugins(mythic_plus::MythicPlusPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)

@@ -14,8 +14,7 @@ fn import_fixture() -> Connection {
     db
 }
 
-#[test]
-fn housing_catalog_reads_authored_neighborhood_and_cornerstone_without_default_grants() {
+pub(crate) fn catalog_fixture() -> Connection {
     let db = import_fixture();
     let neighborhood = serde_json::json!({"MapID":"2735", "EntryPosition_0":"3807.760009765625", "EntryPosition_1":"-160.427001953125", "EntryPosition_2":"194.11099243164062", "EntryRotation":"163.41299438476562"});
     db.execute(
@@ -29,6 +28,12 @@ fn housing_catalog_reads_authored_neighborhood_and_cornerstone_without_default_g
         params![BUILD_KEY, plot.to_string()],
     )
     .unwrap();
+    db
+}
+
+#[test]
+fn housing_catalog_reads_authored_neighborhood_and_cornerstone_without_default_grants() {
+    let db = catalog_fixture();
     let catalog = HousingCatalog::read(&db).unwrap();
     let neighborhood = catalog.neighborhood(1).unwrap();
     assert_eq!(neighborhood.entry.map_id, 2735);
