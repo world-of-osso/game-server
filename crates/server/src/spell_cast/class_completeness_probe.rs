@@ -226,6 +226,38 @@ fn despawn_case(h: &mut Harness, retained: &HashSet<Entity>) {
     }
 }
 
+fn census_harness(class: u8) -> Harness {
+    let data = world_db().unwrap();
+    let mut h = harness(Vec::new(), &[], class).unwrap();
+    h.app.insert_resource(data.store.clone());
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+    h
+}
+
+#[test]
+fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
+    let mut h = census_harness(8);
+    let spec = Spec {
+        id: 62,
+        class: 8,
+        spells: Vec::new(),
+    };
+    let spell = Spell {
+        id: 3567,
+        passive: false,
+        origin: vec!["SkillLineAbility".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &spell);
+    assert_eq!(receipt["failed"], json!([]), "native city cast: {receipt}");
+    let destinations =
+        super::teleport_positions::load_positions(&world_db().unwrap().powers_db).unwrap();
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        destinations.0[&(3567, 0)].bevy_position()
+    );
+}
+
 #[test]
 #[ignore = "explicit read-only census with manifest/output paths; not a full suite"]
 fn class_completeness_level80_probe() {
@@ -234,15 +266,9 @@ fn class_completeness_level80_probe() {
     let manifest: Manifest =
         serde_json::from_str(&std::fs::read_to_string(input).unwrap()).unwrap();
     let mut file = std::fs::File::create(output).unwrap();
-    let data = world_db().unwrap();
     let mut records = 0;
     for spec in &manifest.specs {
-        let mut h = harness(Vec::new(), &[], spec.class).unwrap();
-        // Script-consumed rows are not necessarily linked by EffectTriggerSpell.
-        // Use the complete native store, just as production does.
-        h.app.insert_resource(data.store.clone());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+        let mut h = census_harness(spec.class);
         let retained: HashSet<_> = h
             .app
             .world_mut()
