@@ -7,9 +7,10 @@ use shared::components::{
 };
 use shared::death::DeathState;
 use shared::protocol::{
-    GroupCountdownRequest, GroupCountdownUpdate, GroupMemberState, GroupMemberStates,
-    GroupMessageCode, GroupRoleSnapshot, MINIMAP_PING_MAP_HALFSIZE, MinimapPing,
-    MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons, ReadyCheckAnswer, SetRaidTarget,
+    GroupAssistants, GroupCountdownRequest, GroupCountdownUpdate, GroupMemberState,
+    GroupMemberStates, GroupMessageCode, GroupRoleSnapshot, MINIMAP_PING_MAP_HALFSIZE, MinimapPing,
+    MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons, ReadyCheckAnswer, SetGroupAssistant,
+    SetRaidTarget,
 };
 
 use crate::death::PlayerDeathState;
@@ -47,6 +48,8 @@ fn setup_app_with(extra: impl FnOnce(&mut App)) -> App {
     app.register_message::<MinimapPing>();
     app.register_message::<GroupCountdownRequest>();
     app.register_message::<GroupCountdownUpdate>();
+    app.register_message::<SetGroupAssistant>();
+    app.register_message::<GroupAssistants>();
     app.add_plugins(GroupPlugin);
     extra(&mut app);
     app.add_systems(Update, collect_inbox);
@@ -142,6 +145,10 @@ fn connect(app: &mut App, character_id: u64, name: &str) -> Client {
                 MessageReceiver::<GroupCountdownRequest>::default(),
                 MessageSender::<GroupCountdownUpdate>::default(),
                 MessageReceiver::<GroupCountdownUpdate>::default(),
+                MessageSender::<SetGroupAssistant>::default(),
+                MessageReceiver::<SetGroupAssistant>::default(),
+                MessageSender::<GroupAssistants>::default(),
+                MessageReceiver::<GroupAssistants>::default(),
             ),
         ))
         .id();
@@ -169,6 +176,7 @@ struct Inbox {
     raid_targets: Vec<RaidTargetIcons>,
     minimap_pings: Vec<MinimapPing>,
     countdowns: Vec<GroupCountdownUpdate>,
+    assistants: Vec<GroupAssistants>,
     inventory_errors: Vec<shared::protocol::InventoryError>,
 }
 
@@ -184,6 +192,7 @@ fn collect_inbox(
         &mut MessageReceiver<RaidTargetIcons>,
         &mut MessageReceiver<MinimapPing>,
         &mut MessageReceiver<GroupCountdownUpdate>,
+        &mut MessageReceiver<GroupAssistants>,
     )>,
 ) {
     for (
@@ -197,6 +206,7 @@ fn collect_inbox(
         mut raid_targets,
         mut minimap_pings,
         mut countdowns,
+        mut assistants,
     ) in &mut connections
     {
         inbox.rosters.extend(rosters.receive());
@@ -208,6 +218,7 @@ fn collect_inbox(
         inbox.raid_targets.extend(raid_targets.receive());
         inbox.minimap_pings.extend(minimap_pings.receive());
         inbox.countdowns.extend(countdowns.receive());
+        inbox.assistants.extend(assistants.receive());
     }
 }
 
@@ -310,6 +321,77 @@ fn countdown_rejects_ordinary_member_and_solo_player_requests() {
     }
     assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
     assert!(codes(&mut app, &outsider).contains(&GroupMessageCode::NotInGroup));
+}
+
+#[test]
+fn countdown_raid_assistant_can_start_readycheck_and_countdown_until_revoked() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    send(&mut app, &alice, ConvertGroupToRaid);
+    pump(&mut app);
+    send(
+        &mut app,
+        &alice,
+        SetGroupAssistant {
+            name: "Bob".into(),
+            assistant: true,
+        },
+    );
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(
+            inbox(&mut app, client).assistants.last().unwrap().members,
+            ["Bob"]
+        );
+    }
+    send(&mut app, &bob, StartReadyCheck);
+    send(&mut app, &bob, GroupCountdownRequest { seconds: 10 });
+    pump(&mut app);
+    assert_eq!(
+        ready_checks(&mut app, &alice)
+            .last()
+            .unwrap()
+            .initiator_name,
+        "Bob"
+    );
+    assert_eq!(
+        countdowns(&mut app, &alice).last().unwrap().initiator_name,
+        "Bob"
+    );
+    send(
+        &mut app,
+        &bob,
+        SetGroupAssistant {
+            name: "Alice".into(),
+            assistant: true,
+        },
+    );
+    pump(&mut app);
+    assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
+    send(
+        &mut app,
+        &alice,
+        SetGroupAssistant {
+            name: "Bob".into(),
+            assistant: false,
+        },
+    );
+    pump(&mut app);
+    assert!(
+        inbox(&mut app, &bob)
+            .assistants
+            .last()
+            .unwrap()
+            .members
+            .is_empty()
+    );
+    countdowns(&mut app, &bob);
+    send(&mut app, &bob, GroupCountdownRequest { seconds: 0 });
+    pump(&mut app);
+    assert!(countdowns(&mut app, &bob).is_empty());
+    assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
 }
 
 #[test]

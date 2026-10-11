@@ -4,15 +4,15 @@
 //! Groups live in memory only: a group survives a member's relog because members are
 //! character ids, not entities. A group disbands once no member is online.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use shared::group::{
     GroupRole, MAX_PARTY_SIZE, PartyError, Raid, ReadyCheck, ReadyResponse, RoleAssignments,
 };
 use shared::loot::LootMode;
 use shared::protocol::{
-    GROUP_INVITE_TIMEOUT_SECS, GroupCountdownUpdate, GroupMemberSnapshot, GroupMessageCode,
-    GroupPortraitAppearance, GroupRoleSnapshot, GroupRosterSnapshot, MinimapPing,
+    GROUP_INVITE_TIMEOUT_SECS, GroupAssistants, GroupCountdownUpdate, GroupMemberSnapshot,
+    GroupMessageCode, GroupPortraitAppearance, GroupRoleSnapshot, GroupRosterSnapshot, MinimapPing,
     MinimapPingRequest, RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS, RaidTargetIcons,
     ReadyCheckAnswer, ReadyCheckMemberSnapshot, ReadyCheckUpdate,
 };
@@ -44,6 +44,7 @@ pub enum GroupEffect {
     },
     /// Send the current roster to every online member.
     Roster(GroupId),
+    Assistants(GroupId),
     /// Tell a former member it is no longer in a group.
     ClearRoster(CharacterId),
     InvitePrompt {
@@ -64,13 +65,19 @@ pub enum GroupEffect {
     },
     /// `Player::SetDungeonDifficultyID` + `SendDungeonDifficulty`: the member now enters
     /// dungeons at the group's difficulty.
-    DungeonDifficulty { to: CharacterId, difficulty_id: u32 },
+    DungeonDifficulty {
+        to: CharacterId,
+        difficulty_id: u32,
+    },
     /// Send the group's raid target icons to every online member.
     TargetIcons(GroupId),
     /// Send a solo player their own raid target icons.
     SoloTargetIcons(CharacterId),
     /// Relay a group member's minimap ping.
-    MinimapPing { to: CharacterId, ping: MinimapPing },
+    MinimapPing {
+        to: CharacterId,
+        ping: MinimapPing,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -95,6 +102,7 @@ struct Group {
     roles: RoleAssignments,
     ready_check: Option<ActiveReadyCheck>,
     countdown: Option<GroupCountdownUpdate>,
+    assistants: BTreeSet<CharacterId>,
     /// Online entity, level and portrait last reported in a roster.
     reported_online: HashMap<CharacterId, Option<(u64, u8, GroupPortraitAppearance)>>,
     /// `Group::m_dungeonDifficulty`, the leader's when the group formed.
@@ -112,6 +120,7 @@ impl Group {
             roles: RoleAssignments::default(),
             ready_check: None,
             countdown: None,
+            assistants: BTreeSet::new(),
             reported_online: HashMap::new(),
             target_icons: RaidTargetIcons::default(),
         }
@@ -391,6 +400,7 @@ impl GroupRegistry {
         let old_leader = group.raid.leader;
         let disband = group.raid.leave(member);
         group.roles.remove(member);
+        group.assistants.remove(&member);
         group.reported_online.remove(&member);
         if let Some(active) = &mut group.ready_check {
             active.check.responses.retain(|(m, _)| *m != member);
@@ -486,6 +496,7 @@ impl GroupRegistry {
             return vec![notice(leader, GroupMessageCode::GroupFull, "")];
         }
         group.is_raid = false;
+        group.assistants.clear();
         let mut effects: Effects = group
             .members()
             .into_iter()
@@ -570,10 +581,43 @@ impl GroupRegistry {
         effects
     }
 
+    pub fn set_assistant(&mut self, leader: CharacterId, name: &str, assistant: bool) -> Effects {
+        let (id, member) = match self.leader_target(leader, name) {
+            Ok(found) => found,
+            Err(effect) => return vec![effect],
+        };
+        let group = self.groups.get_mut(&id).expect("group exists");
+        if !group.is_raid {
+            return vec![notice(leader, GroupMessageCode::NotInRaid, "")];
+        }
+        if assistant {
+            group.assistants.insert(member);
+        } else {
+            group.assistants.remove(&member);
+        }
+        vec![GroupEffect::Assistants(id)]
+    }
+
+    pub fn build_assistants(&self, group_id: GroupId) -> GroupAssistants {
+        let members = self
+            .groups
+            .get(&group_id)
+            .map(|group| {
+                group
+                    .members()
+                    .into_iter()
+                    .filter(|id| group.assistants.contains(id))
+                    .map(|id| self.name_of(id))
+                    .collect()
+            })
+            .unwrap_or_default();
+        GroupAssistants { members }
+    }
+
     // --- Player countdown ---
 
     pub fn set_countdown(&mut self, from: CharacterId, seconds: u32) -> Effects {
-        let group_id = match self.led_group(from) {
+        let group_id = match self.privileged_group(from) {
             Ok(id) => id,
             Err(effect) => return vec![effect],
         };
@@ -624,7 +668,7 @@ impl GroupRegistry {
     // --- Ready check ---
 
     pub fn start_ready_check(&mut self, leader: CharacterId, online: &OnlineView) -> Effects {
-        let group_id = match self.led_group(leader) {
+        let group_id = match self.privileged_group(leader) {
             Ok(id) => id,
             Err(effect) => return vec![effect],
         };
@@ -1011,6 +1055,17 @@ impl GroupRegistry {
     fn group_of(&self, member: CharacterId) -> Option<(GroupId, &Group)> {
         let id = *self.membership.get(&member)?;
         Some((id, self.groups.get(&id)?))
+    }
+
+    fn privileged_group(&self, member: CharacterId) -> Result<GroupId, GroupEffect> {
+        let Some((id, group)) = self.group_of(member) else {
+            return Err(notice(member, GroupMessageCode::NotInGroup, ""));
+        };
+        let assistant = group.is_raid && group.assistants.contains(&member);
+        if group.raid.leader != member && !assistant {
+            return Err(notice(member, GroupMessageCode::NotLeader, ""));
+        }
+        Ok(id)
     }
 
     fn led_group(&self, leader: CharacterId) -> Result<GroupId, GroupEffect> {

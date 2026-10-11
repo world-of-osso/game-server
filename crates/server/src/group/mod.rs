@@ -11,12 +11,12 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{EquipmentAppearance, EquipmentVisualSlot, Player, UnitLevel};
 use shared::protocol::{
-    ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
+    ConvertGroupToParty, ConvertGroupToRaid, GroupAssistants, GroupChannel, GroupCommandResponse,
     GroupCountdownRequest, GroupCountdownUpdate, GroupInviteCancelled, GroupInviteIntent,
     GroupInvitePrompt, GroupPortraitAppearance, GroupRosterSnapshot, GroupUninviteIntent,
     LeaveGroup, MinimapPing, MinimapPingRequest, PromoteGroupLeader, RaidTargetIcons,
-    ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole,
-    SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
+    ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupAssistant, SetGroupLootMethod,
+    SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -57,6 +57,7 @@ struct GroupCommandReceivers<'w, 's> {
     party_converts: Receivers<'w, 's, ConvertGroupToParty>,
     subgroups: Receivers<'w, 's, SetRaidSubgroup>,
     roles: Receivers<'w, 's, SetGroupRole>,
+    assistants: Receivers<'w, 's, SetGroupAssistant>,
     loot: Receivers<'w, 's, SetGroupLootMethod>,
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
@@ -74,6 +75,7 @@ struct GroupSenders<'w, 's> {
     cancelled_invites: Query<'w, 's, &'static mut MessageSender<GroupInviteCancelled>>,
     ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
     countdowns: Query<'w, 's, &'static mut MessageSender<GroupCountdownUpdate>>,
+    assistants: Query<'w, 's, &'static mut MessageSender<GroupAssistants>>,
     raid_targets: Query<'w, 's, &'static mut MessageSender<RaidTargetIcons>>,
     minimap_pings: Query<'w, 's, &'static mut MessageSender<MinimapPing>>,
 }
@@ -207,6 +209,9 @@ fn apply_commands(
     for (from, msg) in drain(&mut rx.subgroups, players) {
         effects.extend(registry.set_subgroup(from, &msg.name, msg.subgroup));
     }
+    for (from, msg) in drain(&mut rx.assistants, players) {
+        effects.extend(registry.set_assistant(from, &msg.name, msg.assistant));
+    }
     for (from, msg) in drain(&mut rx.roles, players) {
         effects.extend(registry.set_role(from, &msg.name, msg.role));
     }
@@ -272,15 +277,25 @@ fn deliver_effects(
                 // HandleRequestPartyJoinUpdates → SendTargetIconList: a roster change
                 // (join, relog) brings the member the group's icons.
                 send_group_target_icons(registry, *group_id, connections, senders);
+                send_group_assistants(registry, *group_id, connections, senders);
             }
             GroupEffect::ClearRoster(to) => {
                 send_to(&mut senders.rosters, connections, *to, empty_roster());
+                send_to(
+                    &mut senders.assistants,
+                    connections,
+                    *to,
+                    GroupAssistants::default(),
+                );
                 send_to(
                     &mut senders.raid_targets,
                     connections,
                     *to,
                     RaidTargetIcons::default(),
                 );
+            }
+            GroupEffect::Assistants(group_id) => {
+                send_group_assistants(registry, *group_id, connections, senders);
             }
             GroupEffect::TargetIcons(group_id) => {
                 send_group_target_icons(registry, *group_id, connections, senders)
@@ -330,6 +345,23 @@ fn deliver_effects(
                 }
             }
         }
+    }
+}
+
+fn send_group_assistants(
+    registry: &GroupRegistry,
+    group_id: GroupId,
+    connections: &HashMap<CharacterId, Entity>,
+    senders: &mut GroupSenders,
+) {
+    let assistants = registry.build_assistants(group_id);
+    for member in registry.roster_members(group_id) {
+        send_to(
+            &mut senders.assistants,
+            connections,
+            member,
+            assistants.clone(),
+        );
     }
 }
 
