@@ -178,6 +178,7 @@ impl AchievementCatalog {
                     achievement_id: definition.id,
                     name: definition.name.clone(),
                     points: definition.points,
+                    icon_fdid: self.window.icon_fdid(definition.id),
                 });
             }
         }
