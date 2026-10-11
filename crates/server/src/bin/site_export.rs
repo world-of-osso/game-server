@@ -1,6 +1,5 @@
 //! Offline static-site snapshots. No server initialization or sockets.
-#[path = "../character_data.rs"]
-mod character_data;
+use server::character_data;
 #[path = "../site_snapshot.rs"]
 mod site_snapshot;
 
