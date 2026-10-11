@@ -144,6 +144,8 @@ pub const SCREEN_EFFECT: u32 = 260;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
 pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
+/// TC a352b1fa Unit::SpellDamageBonusTaken: owner + SpellLabel match.
+pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
@@ -255,7 +257,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
-        MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
+        MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
         MOD_ATTACKER_MELEE_HIT_CHANCE
