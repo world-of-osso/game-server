@@ -4,10 +4,10 @@ Import the nine additional pinned Retail 12.1.0.69933 profession tables into an 
 
 ## What it must do
 
-- [ ] Validate SHA-256, layout, raw record count, decoded row count, identity, field widths and finite floats before opening a destination.
-- [ ] Preserve DB2 copy rows, relationships and float32 values; no fabricated field semantics or quality/concentration formulas.
-- [ ] Replace only the nine named tables atomically; preserve unrelated tables and roll back schema/rows on failure.
-- [ ] Support a no-write preflight and explicit staging import without selecting canonical world.db.
+- [x] Validate SHA-256, layout, raw record count, decoded row count, identity, field widths and finite floats before opening a destination.
+- [x] Preserve DB2 copy rows, relationships and float32 values; no fabricated field semantics or quality/concentration formulas.
+- [x] Replace only the nine named tables atomically; preserve unrelated tables and roll back schema/rows on failure.
+- [x] Support a no-write preflight and explicit staging import without selecting canonical world.db.
 
 ## How it works
 
