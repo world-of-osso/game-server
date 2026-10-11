@@ -174,7 +174,7 @@ fn drain<M: lightyear::prelude::Message>(
 ) -> Vec<(CharacterId, M)> {
     let mut drained = Vec::new();
     for (link, mut receiver) in receivers.iter_mut() {
-        let Ok((_, _, client_id, _, _, _)) = players.get(link.0) else {
+        let Ok((_, _, client_id, _, _, _, _)) = players.get(link.0) else {
             receiver.receive().for_each(drop);
             continue;
         };
@@ -242,7 +242,7 @@ fn connections_by_character(
     connections
         .iter()
         .filter_map(|(conn, link)| {
-            let (_, _, client_id, _, _, _) = players.get(link.0).ok()?;
+            let (_, _, client_id, _, _, _, _) = players.get(link.0).ok()?;
             Some((client_id.0, conn))
         })
         .collect()

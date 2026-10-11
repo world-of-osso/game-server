@@ -137,6 +137,7 @@ struct Profile {
     level: u8,
     portrait: GroupPortraitAppearance,
     dungeon_difficulty: u32,
+    raid_difficulty: crate::maps::RaidDifficulty,
 }
 
 #[derive(bevy::prelude::Resource, Default)]
@@ -712,6 +713,7 @@ impl GroupRegistry {
                     level: member.level,
                     portrait: member.portrait.clone(),
                     dungeon_difficulty: member.dungeon_difficulty,
+                    raid_difficulty: member.raid_difficulty,
                 },
             );
         }
