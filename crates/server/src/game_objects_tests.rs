@@ -16,6 +16,71 @@ fn spawns() -> Option<GameObjectSpawns> {
 }
 
 #[test]
+fn core_fragment_authored_normal_copy_replicates_only_to_its_observer() {
+    use crate::interest::{InterestPlugin, NetworkVisibility};
+    use crate::maps::InMap;
+    use crate::networking::PlayerLink;
+    use lightyear::prelude::ReplicationSender;
+    let spawns = spawns().expect("real world game objects");
+    let core = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 179553 && spawn.map_id == 230)
+        .unwrap();
+    let position = game_object_bundle(core).0;
+    let copy = InMap {
+        map_id: 230,
+        instance_id: 1,
+    };
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(InterestPlugin);
+    let player = app.world_mut().spawn((position, copy)).id();
+    let connection = app
+        .world_mut()
+        .spawn((PlayerLink(player), ReplicationSender))
+        .id();
+    let outsider = app
+        .world_mut()
+        .spawn((
+            position,
+            InMap {
+                map_id: 230,
+                instance_id: 2,
+            },
+        ))
+        .id();
+    let other_connection = app
+        .world_mut()
+        .spawn((PlayerLink(outsider), ReplicationSender))
+        .id();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    spawn_map_game_objects(&mut commands, &spawns, copy, 1);
+    queue.apply(app.world_mut());
+    app.world_mut().run_schedule(FixedUpdate);
+    let mut objects = app
+        .world_mut()
+        .query::<(&GameObjectInfo, &InMap, &NetworkVisibility)>();
+    let visible = objects
+        .iter(app.world())
+        .find(|(info, map, _)| info.entry == 179553 && **map == copy)
+        .unwrap()
+        .2;
+    assert!(
+        visible.is_visible(connection),
+        "authored Core Fragment difficulty1 reaches its copy's client"
+    );
+    assert!(
+        !visible.is_visible(other_connection),
+        "same coordinates in another copy do not reveal it"
+    );
+}
+
+#[test]
 fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
     // Stormwind 4, Ironforge 2, Undercity 4, Booty Bay 2 (TrinityCore map 0 type 34).
