@@ -95,7 +95,7 @@ Server gameplay systems.
 | [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal; pinned override/form/capability/restriction rows distinguish Skyward Ascent from source-blocked Lift Off 374763 |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |
-| [[new-character-kit]] | TrinityCore Player::Create kit: CharacterLoadout items equipped/stored, playercreateinfo_action bar, server inventory gaps (bags, jewelry, dual wield) |
+| [[new-character-kit]] | Source-authored race/class start positions and facing, Mulgore underground-start fix; TrinityCore Player::Create kit and action bar, inventory gaps |
 | [[trade]] | Trade sessions, AzerothCore initiation checks, one-transaction exchange through InventoryModel, refusal keeps the window open |
 | [[mail]] | Player and Auction House mail: per-character redb mailboxes, one-transaction send/take/return, delivery delay, expiry sweep, PendingMail |
 | [[professions]] | Retail skill lines (parent + expansion child), TDB1210 trainers, crafting through the spell pipeline (reagents, tools, CREATE_ITEM, TrinityCore skill-up chances) |

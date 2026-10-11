@@ -19,7 +19,7 @@ fn skyborne_zephras_approved_starts_have_supported_ground() {
         HashMap::from([(ZEPHRAS_MAP, ZEPHRAS_WDT)]),
     );
     for race in [95, 96] {
-        let start = crate::persistence_character::start_location(race);
+        let start = crate::player_start::approved_start(race).unwrap();
         assert_eq!(start.map_id, ZEPHRAS_MAP);
         let (x, y, z) = crate::terrain_height::wow_to_bevy(start.x, start.y, start.z);
         let GroundProbe::Supported(height) = ground.ground_at(start.map_id, Vec3::new(x, y, z))
