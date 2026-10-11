@@ -1,0 +1,97 @@
+use bevy::prelude::*;
+use shared::components::{Level, Mana, UnitFactionTemplate, UnitLevel, UnitSummonedBy};
+
+use super::{Follower, Profile};
+use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
+
+pub(super) fn spawn(world: &mut World, owner: Entity, profile: Profile) -> Result<Entity, String> {
+    let position = *world
+        .get::<shared::components::Position>(owner)
+        .ok_or("follower owner has no position")?;
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let unit = crate::zones::summon_creature(world, owner, profile.entry, [x, y, z, 0.0])
+        .ok_or_else(|| format!("authentic follower template {} unavailable", profile.entry))?;
+    if let Err(error) = initialize(world, owner, unit, profile) {
+        world.despawn(unit);
+        return Err(error);
+    }
+    Ok(unit)
+}
+
+fn initialize(
+    world: &mut World,
+    owner: Entity,
+    unit: Entity,
+    profile: Profile,
+) -> Result<(), String> {
+    let level = world
+        .get::<Level>(owner)
+        .ok_or("follower owner has no level")?
+        .0;
+    let faction = *world
+        .get::<UnitFactionTemplate>(owner)
+        .ok_or("follower owner has no faction")?;
+    let (stats, pools) = class_stats(world, &profile, level)?;
+    let mana = Mana {
+        current: stats.base_mana,
+        max: stats.base_mana,
+    };
+    let form = profile.form_spell;
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_aggro::AggroRange>()
+        .insert((
+            Follower { owner, profile },
+            stats,
+            pools,
+            mana,
+            UnitLevel(level),
+            faction,
+            UnitSummonedBy(owner.to_bits()),
+            crate::creature_ai::FollowOwner::new(owner),
+        ));
+    crate::spell_cast::creature_cast(world, unit, 458324, Some(unit), true)
+        .map_err(|error| format!("authored Follower aura failed: {error:?}"))?;
+    if form != 0 {
+        crate::spell_cast::creature_cast(world, unit, form, Some(unit), true)
+            .map_err(|error| format!("follower preparation spell {form} failed: {error:?}"))?;
+    }
+    Ok(())
+}
+
+fn class_stats(
+    world: &World,
+    profile: &Profile,
+    level: u8,
+) -> Result<(crate::stats::CharacterStats, PowerPools), String> {
+    let classes = world.resource::<crate::spell_info::ClassSpells>();
+    let class = classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == profile.class_id)
+        .ok_or_else(|| format!("follower class {} absent", profile.class_id))?;
+    let spec = class
+        .specs
+        .iter()
+        .find(|spec| spec.spec_id == profile.spec_id)
+        .ok_or_else(|| format!("follower specialization {} absent", profile.spec_id))?;
+    let input = crate::stats::StatInputs {
+        class: profile.class_id,
+        race: 0,
+        level,
+        primary_stat: crate::stats::PrimaryStat::from_priority(spec.primary_stat_priority),
+        mastery_coefficient: 0.0,
+        attack_power_per_strength: class.attack_power_per_strength,
+        attack_power_per_agility: class.attack_power_per_agility,
+        gear_primary: Default::default(),
+        gear_ratings: Default::default(),
+    };
+    let stats = crate::stats::compute_character_stats(&input, None)
+        .ok_or("unsupported follower class level")?;
+    let table = world.resource::<PowerTypeTable>();
+    let pools = PowerPools::from_table(
+        table,
+        table.class_powers(class.class_id, &class.power_types),
+    );
+    Ok((stats, pools))
+}

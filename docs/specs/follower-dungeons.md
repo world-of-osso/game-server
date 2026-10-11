@@ -11,7 +11,7 @@ Retail follower dungeons must group a solo player with four role-aware NPCs and 
 - [x] Audit canonical world.db read-only; distinguish reference spawns from runtime content and report absent escort spell assignments.
 - [x] Refuse a CLI output/report destination equal to an input or the audited database.
 
-### Gameplay (user requirement; not implemented)
+### Gameplay (acceptance remains open until behavioral/live proof)
 - [ ] Solo follower queue creates a five-member party, fills tank/healer/DPS roles, enters an instance with canonical authored spawns, follows/regroups and finishes the dungeon.
 - [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use bounded spec-spell priorities. All roles reuse server spell execution and navigation.
 - [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
@@ -21,7 +21,9 @@ Retail follower dungeons must group a solo player with four role-aware NPCs and 
 - [Source audit, importer and runtime boundary](../wiki/investigations/follower-data.md)
 
 ## Implementation inventory
-- `scripts/follower_import.py` — standalone SQL preparation and optional read-only audit; no runtime consumer yet.
+- `scripts/follower_import.py` — standalone SQL preparation and optional read-only audit.
+- `scripts/follower_profiles.py` — verified eleven-follower roster, authentic template/model promotion, approved core player-spell priorities.
+- `crates/server/src/followers/` — catalog/admission, companion group identity, owner following, role priorities and ordinary spell execution; acceptance proof pending.
 - `scripts/tests/test_follower_import.py` — pinned-data import/application and failure-boundary tests.
 
 ## Tests asserting this spec
