@@ -420,3 +420,133 @@ pub(crate) fn open_font(world: &mut World, connection: Entity, font: Entity) {
     })();
     send_snapshot(world, connection, result.err());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn mythic_bag_slot_activation_and_persistent_settlement() {
+        let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").expect("private imported copy");
+        let conn =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        let definition = load_azure(&conn).unwrap().unwrap();
+        let store = crate::maps::store::load_map_store(&conn).unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut h = crate::bank_test_harness::harness_at(file.path(), "Keymaster").unwrap();
+        let player = h.player;
+        let connection = h.connection;
+        let owner = h.character_id;
+        let mut manager = InstanceManager::default();
+        let map = manager
+            .create_map(
+                &store,
+                2515,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: owner,
+                    group: None,
+                    leader: owner,
+                    difficulty_id: 8,
+                },
+                crate::maps::instances::Now {
+                    unix: 1791705600,
+                    elapsed: 0.0,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.world_mut().insert_resource(store);
+        h.app.world_mut().insert_resource(manager);
+        h.app.world_mut().entity_mut(player).insert(map);
+        h.app.world_mut().insert_resource(Challenges {
+            definition: Some(definition.clone()),
+            ..Default::default()
+        });
+        let txn = h.db().begin_write().unwrap();
+        txn.open_table(KEYS).unwrap();
+        txn.open_table(HISTORY).unwrap();
+        txn.commit().unwrap();
+        let mut inventory = h.inventory();
+        inventory.items.push(persistence::InventoryItemData {
+            item_guid: 4242,
+            item_id: 180653,
+            name: "Mythic Keystone".into(),
+            quality: 4,
+            required_level: 0,
+            stack_count: 1,
+            vendor_sell_price: 0,
+            unique_auction: false,
+        });
+        persistence::save_inventory(h.db(), owner, &inventory);
+        let key = KeystoneInfo {
+            item_guid: 4242,
+            item_id: 180653,
+            challenge_id: 401,
+            level: 8,
+            affixes: vec![],
+        };
+        save_key(h.db(), &key);
+        let font = h
+            .app
+            .world_mut()
+            .spawn((
+                map,
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                GameObjectInfo {
+                    entry: 246779,
+                    go_type: 49,
+                    display_id: 0,
+                    name: "Font of Power".into(),
+                    scale: 1.0,
+                },
+                crate::game_objects::GameObjectBounds {
+                    min: Vec3::ZERO,
+                    max: Vec3::ONE,
+                    scale: 1.0,
+                    orientation: 0.0,
+                },
+            ))
+            .id();
+        assert!(slot(h.app.world_mut(), connection, font.to_bits(), 999).is_err());
+        slot(h.app.world_mut(), connection, font.to_bits(), 4242).unwrap();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x = 100.0;
+        assert!(start(h.app.world_mut(), connection).is_err());
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 8);
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
+        start(h.app.world_mut(), connection).unwrap();
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 7);
+        assert!(start(h.app.world_mut(), connection).is_err());
+        let summary = {
+            let mut state = h.app.world_mut().resource_mut::<Challenges>();
+            let active = state.runs.get_mut(&map).unwrap();
+            for spawn in 0..82 {
+                active.run.kill(spawn, 187160);
+            }
+            for boss in [2582, 2585, 2583, 2584] {
+                active.run.boss(boss);
+            }
+            active.run.tick(now_ms());
+            active.run.snapshot.clone()
+        };
+        assert_eq!(summary.phase, ChallengePhase::Completed);
+        persist_summary(h.app.world(), &summary);
+        persist_summary(h.app.world(), &summary);
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 11);
+        {
+            let txn = h.db().begin_read().unwrap();
+            let table = txn.open_table(HISTORY).unwrap();
+            let row = table.get(summary.run_id).unwrap().unwrap();
+            assert_eq!(
+                bitcode::decode::<ChallengeRun>(row.value()).unwrap(),
+                summary
+            );
+        }
+        drop(h);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        assert_eq!(owned_keys(&reopened, owner)[0].level, 11);
+    }
+}
