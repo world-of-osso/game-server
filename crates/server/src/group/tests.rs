@@ -7,9 +7,9 @@ use shared::components::{
 };
 use shared::death::DeathState;
 use shared::protocol::{
-    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot,
-    MINIMAP_PING_MAP_HALFSIZE, MinimapPing, MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons,
-    ReadyCheckAnswer, SetRaidTarget,
+    GroupCountdownRequest, GroupCountdownUpdate, GroupMemberState, GroupMemberStates,
+    GroupMessageCode, GroupRoleSnapshot, MINIMAP_PING_MAP_HALFSIZE, MinimapPing,
+    MinimapPingRequest, RAID_TARGET_SKULL, RaidTargetIcons, ReadyCheckAnswer, SetRaidTarget,
 };
 
 use crate::death::PlayerDeathState;
@@ -45,6 +45,8 @@ fn setup_app_with(extra: impl FnOnce(&mut App)) -> App {
     app.register_message::<ConvertGroupToRaid>();
     app.register_message::<MinimapPingRequest>();
     app.register_message::<MinimapPing>();
+    app.register_message::<GroupCountdownRequest>();
+    app.register_message::<GroupCountdownUpdate>();
     app.add_plugins(GroupPlugin);
     extra(&mut app);
     app.add_systems(Update, collect_inbox);
@@ -136,6 +138,10 @@ fn connect(app: &mut App, character_id: u64, name: &str) -> Client {
                 MessageReceiver::<MinimapPingRequest>::default(),
                 MessageSender::<MinimapPing>::default(),
                 MessageReceiver::<MinimapPing>::default(),
+                MessageSender::<GroupCountdownRequest>::default(),
+                MessageReceiver::<GroupCountdownRequest>::default(),
+                MessageSender::<GroupCountdownUpdate>::default(),
+                MessageReceiver::<GroupCountdownUpdate>::default(),
             ),
         ))
         .id();
@@ -162,6 +168,7 @@ struct Inbox {
     member_states: Vec<GroupMemberStates>,
     raid_targets: Vec<RaidTargetIcons>,
     minimap_pings: Vec<MinimapPing>,
+    countdowns: Vec<GroupCountdownUpdate>,
     inventory_errors: Vec<shared::protocol::InventoryError>,
 }
 
@@ -176,6 +183,7 @@ fn collect_inbox(
         &mut MessageReceiver<GroupMemberStates>,
         &mut MessageReceiver<RaidTargetIcons>,
         &mut MessageReceiver<MinimapPing>,
+        &mut MessageReceiver<GroupCountdownUpdate>,
     )>,
 ) {
     for (
@@ -188,6 +196,7 @@ fn collect_inbox(
         mut states,
         mut raid_targets,
         mut minimap_pings,
+        mut countdowns,
     ) in &mut connections
     {
         inbox.rosters.extend(rosters.receive());
@@ -198,6 +207,7 @@ fn collect_inbox(
         inbox.member_states.extend(states.receive());
         inbox.raid_targets.extend(raid_targets.receive());
         inbox.minimap_pings.extend(minimap_pings.receive());
+        inbox.countdowns.extend(countdowns.receive());
     }
 }
 
@@ -256,6 +266,82 @@ fn invite_and_accept(app: &mut App, leader: &Client, invitee: &Client, name: &st
     pump(app);
     send(app, invitee, RespondGroupInvite { accept: true });
     pump(app);
+}
+
+fn countdowns(app: &mut App, client: &Client) -> Vec<GroupCountdownUpdate> {
+    std::mem::take(&mut inbox(app, client).countdowns)
+}
+
+#[test]
+fn countdown_broadcasts_start_replacement_cancel_to_three_group_members_only() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let carol = connect(&mut app, 3, "Carol");
+    let outsider = connect(&mut app, 4, "Outsider");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    invite_and_accept(&mut app, &alice, &carol, "Carol");
+    for seconds in [10, 20, 0] {
+        send(&mut app, &alice, GroupCountdownRequest { seconds });
+        pump(&mut app);
+        for client in [&alice, &bob, &carol] {
+            let updates = countdowns(&mut app, client);
+            assert_eq!(updates.len(), 1);
+            assert_eq!(updates[0].initiator_name, "Alice");
+            assert_eq!(updates[0].duration_secs, seconds);
+            assert_eq!(updates[0].time_remaining_secs, seconds as f32);
+        }
+        assert!(countdowns(&mut app, &outsider).is_empty());
+    }
+}
+
+#[test]
+fn countdown_rejects_ordinary_member_and_solo_player_requests() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let outsider = connect(&mut app, 3, "Outsider");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    for client in [&bob, &outsider] {
+        send(&mut app, client, GroupCountdownRequest { seconds: 10 });
+        pump(&mut app);
+        assert!(countdowns(&mut app, &alice).is_empty());
+        assert!(countdowns(&mut app, &bob).is_empty());
+    }
+    assert!(codes(&mut app, &bob).contains(&GroupMessageCode::NotLeader));
+    assert!(codes(&mut app, &outsider).contains(&GroupMessageCode::NotInGroup));
+}
+
+#[test]
+fn countdown_server_clock_expires_once_for_every_member() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    send(&mut app, &alice, GroupCountdownRequest { seconds: 10 });
+    pump(&mut app);
+    countdowns(&mut app, &alice);
+    countdowns(&mut app, &bob);
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_secs(4),
+    ));
+    app.world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(Duration::from_secs(4));
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(
+            countdowns(&mut app, client),
+            vec![GroupCountdownUpdate {
+                initiator_name: "Alice".into(),
+                duration_secs: 10,
+                time_remaining_secs: 0.0,
+            }]
+        );
+    }
+    pump(&mut app);
+    assert!(countdowns(&mut app, &alice).is_empty());
+    assert!(countdowns(&mut app, &bob).is_empty());
 }
 
 #[test]

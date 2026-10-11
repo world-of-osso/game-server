@@ -11,10 +11,10 @@ use shared::group::{
 };
 use shared::loot::LootMode;
 use shared::protocol::{
-    GROUP_INVITE_TIMEOUT_SECS, GroupMemberSnapshot, GroupMessageCode, GroupPortraitAppearance,
-    GroupRoleSnapshot, GroupRosterSnapshot, MinimapPing, MinimapPingRequest,
-    RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS, RaidTargetIcons, ReadyCheckAnswer,
-    ReadyCheckMemberSnapshot, ReadyCheckUpdate,
+    GROUP_INVITE_TIMEOUT_SECS, GroupCountdownUpdate, GroupMemberSnapshot, GroupMessageCode,
+    GroupPortraitAppearance, GroupRoleSnapshot, GroupRosterSnapshot, MinimapPing,
+    MinimapPingRequest, RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS, RaidTargetIcons,
+    ReadyCheckAnswer, ReadyCheckMemberSnapshot, ReadyCheckUpdate,
 };
 
 pub type CharacterId = u64;
@@ -57,6 +57,11 @@ pub enum GroupEffect {
     },
     /// Send the ready check state to every participant.
     ReadyCheck(GroupId),
+    /// Relay an authoritative player countdown snapshot to one group member.
+    Countdown {
+        to: CharacterId,
+        update: GroupCountdownUpdate,
+    },
     /// `Player::SetDungeonDifficultyID` + `SendDungeonDifficulty`: the member now enters
     /// dungeons at the group's difficulty.
     DungeonDifficulty { to: CharacterId, difficulty_id: u32 },
@@ -89,6 +94,7 @@ struct Group {
     is_raid: bool,
     roles: RoleAssignments,
     ready_check: Option<ActiveReadyCheck>,
+    countdown: Option<GroupCountdownUpdate>,
     /// Online entity, level and portrait last reported in a roster.
     reported_online: HashMap<CharacterId, Option<(u64, u8, GroupPortraitAppearance)>>,
     /// `Group::m_dungeonDifficulty`, the leader's when the group formed.
@@ -105,6 +111,7 @@ impl Group {
             is_raid: false,
             roles: RoleAssignments::default(),
             ready_check: None,
+            countdown: None,
             reported_online: HashMap::new(),
             target_icons: RaidTargetIcons::default(),
         }
@@ -563,6 +570,57 @@ impl GroupRegistry {
         effects
     }
 
+    // --- Player countdown ---
+
+    pub fn set_countdown(&mut self, from: CharacterId, seconds: u32) -> Effects {
+        let group_id = match self.led_group(from) {
+            Ok(id) => id,
+            Err(effect) => return vec![effect],
+        };
+        let update = GroupCountdownUpdate {
+            initiator_name: self.name_of(from),
+            duration_secs: seconds,
+            time_remaining_secs: seconds as f32,
+        };
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        if seconds == 0 && group.countdown.is_none() {
+            return Vec::new();
+        }
+        group.countdown = (seconds > 0).then(|| update.clone());
+        group
+            .members()
+            .into_iter()
+            .map(|to| GroupEffect::Countdown {
+                to,
+                update: update.clone(),
+            })
+            .collect()
+    }
+
+    fn tick_countdowns(&mut self, dt_secs: f32) -> Effects {
+        let mut effects = Vec::new();
+        for group in self.groups.values_mut() {
+            let Some(countdown) = group.countdown.as_mut() else {
+                continue;
+            };
+            countdown.time_remaining_secs = (countdown.time_remaining_secs - dt_secs).max(0.0);
+            if countdown.time_remaining_secs > 0.0 {
+                continue;
+            }
+            let update = group.countdown.take().expect("expired countdown");
+            effects.extend(
+                group
+                    .members()
+                    .into_iter()
+                    .map(|to| GroupEffect::Countdown {
+                        to,
+                        update: update.clone(),
+                    }),
+            );
+        }
+        effects
+    }
+
     // --- Ready check ---
 
     pub fn start_ready_check(&mut self, leader: CharacterId, online: &OnlineView) -> Effects {
@@ -648,7 +706,7 @@ impl GroupRegistry {
 
     /// Expires invites (treated as a decline) and ready checks.
     pub fn tick(&mut self, dt_secs: f32) -> Effects {
-        let mut effects = Vec::new();
+        let mut effects = self.tick_countdowns(dt_secs);
         let mut expired = Vec::new();
         self.invites.retain_mut(|invite| {
             invite.remaining_secs -= dt_secs;

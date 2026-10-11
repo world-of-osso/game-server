@@ -12,10 +12,11 @@ use lightyear::prelude::*;
 use shared::components::{EquipmentAppearance, EquipmentVisualSlot, Player, UnitLevel};
 use shared::protocol::{
     ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
-    GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupPortraitAppearance,
-    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, MinimapPing, MinimapPingRequest,
-    PromoteGroupLeader, RaidTargetIcons, ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck,
-    SetGroupLootMethod, SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
+    GroupCountdownRequest, GroupCountdownUpdate, GroupInviteCancelled, GroupInviteIntent,
+    GroupInvitePrompt, GroupPortraitAppearance, GroupRosterSnapshot, GroupUninviteIntent,
+    LeaveGroup, MinimapPing, MinimapPingRequest, PromoteGroupLeader, RaidTargetIcons,
+    ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole,
+    SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -59,6 +60,7 @@ struct GroupCommandReceivers<'w, 's> {
     loot: Receivers<'w, 's, SetGroupLootMethod>,
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
+    countdowns: Receivers<'w, 's, GroupCountdownRequest>,
     raid_targets: Receivers<'w, 's, SetRaidTarget>,
     minimap_pings: Receivers<'w, 's, MinimapPingRequest>,
 }
@@ -71,6 +73,7 @@ struct GroupSenders<'w, 's> {
     prompts: Query<'w, 's, &'static mut MessageSender<GroupInvitePrompt>>,
     cancelled_invites: Query<'w, 's, &'static mut MessageSender<GroupInviteCancelled>>,
     ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
+    countdowns: Query<'w, 's, &'static mut MessageSender<GroupCountdownUpdate>>,
     raid_targets: Query<'w, 's, &'static mut MessageSender<RaidTargetIcons>>,
     minimap_pings: Query<'w, 's, &'static mut MessageSender<MinimapPing>>,
 }
@@ -216,6 +219,9 @@ fn apply_commands(
     for (from, msg) in drain(&mut rx.ready_answers, players) {
         effects.extend(registry.respond_ready_check(from, msg.ready));
     }
+    for (from, msg) in drain(&mut rx.countdowns, players) {
+        effects.extend(registry.set_countdown(from, msg.seconds));
+    }
     for (from, msg) in drain(&mut rx.raid_targets, players) {
         effects.extend(registry.set_raid_target(from, msg.target, msg.icon));
     }
@@ -304,6 +310,9 @@ fn deliver_effects(
             ),
             GroupEffect::MinimapPing { to, ping } => {
                 send_to(&mut senders.minimap_pings, connections, *to, ping.clone())
+            }
+            GroupEffect::Countdown { to, update } => {
+                send_to(&mut senders.countdowns, connections, *to, update.clone());
             }
             // Applied to the player by maps::difficulty (DifficultyChanges).
             GroupEffect::DungeonDifficulty { .. } => {}
