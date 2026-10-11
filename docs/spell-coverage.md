@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-10
 
-Source: game-server spell-dummy14 code revision `95604f2`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
+Matrix baseline: game-server spell-dummy14 revision `95604f2`; local `world.db` and client DB2 `12.1.0.69933`. [Guardian follow-up](spell-guardians2-coverage.md) at `a053c9f` adds native205180/103673→205231 attack binding with direct effect28 proof, not root A. Current Dummy census **164 roots,94 reviewed/70 underived** (was93/71); numeric E3/aura4/aura226 totals and A/B/C/D matrix unchanged. All40 baseline ID sets reproduced; Affliction core named-script presence3→4. Inheritance percentages, stamina shares and guardian melee damage remain underivable from inspected local data. No realm claim.
 
 ## Scope and classification
 
