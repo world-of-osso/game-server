@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Retail follower data](investigations/follower-data.md) — 27 local follower dungeon entries, prepared source-only import, 37 escort templates without authenticated combat kits; NPC AI/queue/live proof remain blocked.
+- [Retail follower bridge](investigations/follower-data.md) — eleven verified spec profiles, approved player-spell AI and native/party behavioral proofs; zero populated205-map/entrance pairs, dungeon/both-skin live proof blocked.
 
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.

@@ -23,16 +23,20 @@ Retail follower dungeons must group a solo player with four role-aware NPCs and 
 ## Implementation inventory
 - `scripts/follower_import.py` — standalone SQL preparation and optional read-only audit.
 - `scripts/follower_profiles.py` — verified eleven-follower roster, authentic template/model promotion, approved core player-spell priorities.
-- `crates/server/src/followers/` — catalog/admission, companion group identity, owner following, role priorities and ordinary spell execution; acceptance proof pending.
+- `crates/server/src/followers/` — catalog/admission, companion group identity, owner following, role priorities and ordinary spell execution; bounded behavioral proofs pass, end-to-end acceptance remains open.
 - `scripts/tests/test_follower_import.py` — pinned-data import/application and failure-boundary tests.
 
 ## Tests asserting this spec
 - `scripts/tests/test_follower_import.py` — source binary to SQLite round-trip, exact authentic spell rows, reapplication/preservation, invalid layout/source, read-only audit and database output rejection.
+- `scripts/tests/test_follower_profiles.py` — eleven verified profiles, source model preservation, repeated SQL application and database-overwrite refusal.
+- `crates/server/src/followers/{tests,catalog_tests}.rs` — role composition, real damage/heal/taunt/cost/aura initialization, missing-source refusal and exact205 admission-data gating.
+- `crates/server/src/group/follower_tests.rs` — real loopback companion online roster and health changes.
 
 ## Known gaps (current cycle)
 - [ ] Authored NPC combat kits are absent. The approved player-spec bridge does not establish full player rotation, pet, interrupt, defensive or ground-avoidance parity.
-- [ ] Queue/group NPC identity and instance entry; combat AI and class coverage.
-- [ ] Promote selected TDB dungeon spawns/templates into runtime content through the content policy, then apply via the lead. Reference-table presence is not runtime spawn proof.
+- [ ] Live instance entry/completion and full eleven-spec combat coverage remain unproved. NPC identity/role AI have bounded behavioral proof, not end-to-end acceptance.
+- [ ] Authenticated205 population/entrance pairing: canonical instance population is present, but current data has no usable pair. Ruby has an entrance but no205 spawns;205-populated modern maps lack entrances. No synthetic coordinates or Normal→205 population remap.
+- [ ] Lead applies prepared follower reference/profile SQL to canonical; agents applied only to the explicitly authorized private copy.
 - [ ] Private live fighting proof and both-skin PNGs; no captures claimed.
 
 ## Out of scope
