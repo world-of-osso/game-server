@@ -59,6 +59,8 @@ fn damage(h: &Harness, spell: u32, target: Entity) -> Vec<i32> {
 fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
+    h.select(Some(h.npc));
+    h.advance(4);
     h.cast_and_deliver(51533, Some(h.npc));
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -161,6 +163,7 @@ fn dummy12_rake_bleed_snapshots_stealth_bonus_across_later_rank_removal() {
         let mut h = harness(Vec::new(), &[1822, 155722, 231052, 5215, 768, 163505], 11).unwrap();
         let caster = h.caster;
         apply(&mut h, caster, caster, 768, u32::MAX);
+        apply(&mut h, caster, caster, 231052, u32::MAX);
         if empowered {
             apply(&mut h, caster, caster, 5215, 1);
         }
