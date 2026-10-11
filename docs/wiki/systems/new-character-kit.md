@@ -2,6 +2,20 @@
 
 A new character gets the items and action buttons TrinityCore a352b1fa gives it in `Player::Create`. `player_create_info.rs` loads them at startup (`PlayerCreateInfos`). Character creation, from the client or from the admin `create-character` command, places the items and stores the bar.
 
+## Starting location
+
+Normal starts load from `tdb_playercreateinfo` by **race and class**, including authored facing. Creation stores the map and source orientation in the initial homebind; login applies that facing while the saved position still equals the bind. Existing saved positions are not migrated. A missing ordinary row fails creation before character persistence; no Human/default-coordinate fallback remains. TDB1210 lacks a Void Elf Demon Hunter(29,12) row. The documented DH workaround applies to every DH pair: use the same race's lowest-ID non-DH class start until Mardum1481 is implemented. Never substitute another race. Only documented unimplemented-intro capital/race-start overrides and approved Skyborne95/96 reconstruction remain. NPE and intro fields are retained by the importer, not used to enable an intro flow.
+
+The2026-10-10 no-install Mulgore target(-2917,-257,53) duplicated the old rounded Tauren start table. Root ADT784900 has terrain59.429 there: the target was6.429yards underground. Collision correctly rejects terrain above step reach; map1 data is present and nav-bakes do not supply player ground. Authentic TDB Tauren start is(-2915.55,-257.347,59.2693), orientation0.302378. The creation→real-ground→10seconds gravity regression reproduces the old failure without changing physics or admin teleport semantics. The all-pairs kit regression includes the no-install246-pair creation-catalog receipt (31race entries), validates every offered pair, and exercises all260 server-declared pairs (the extra14 are neutral/Horde Pandaren).
+
+Import with the pinned complete TDB dump, never directly into live `world.db`:
+
+```text
+python3 scripts/import-player-starts.py --db data/world.db.new --copy-from data/world.db --dump data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql
+```
+
+The tool snapshots read-only; re-importing an existing scratch destination first writes `<destination>.player-starts.bak`. It replaces only `tdb_playercreateinfo`, preserves all16 source columns including NPE/intro metadata, and refuses live basenames and symlink aliases. Caller owns publication.
+
 ## Data
 
 | What | Source | TrinityCore |
@@ -68,6 +82,8 @@ The server refuses to start without these tables.
 
 ## Sources
 
+- [player_start.rs](../../../crates/server/src/player_start.rs), [start tests](../../../crates/server/src/player_start_tests.rs), [ground regression](../../../crates/server/src/ground_tests.rs): authored starts, explicit exceptions, missing-row failure and Tauren gravity
+- [import-player-starts.py](../../../scripts/import-player-starts.py): TDB1210 full-world SQL source; [player-height contract](../../specs/player-height.md)
 - [player_create_info.rs](../../../crates/server/src/player_create_info.rs): loading, kit and creation
 - [player_create_info_tests.rs](../../../crates/server/src/player_create_info_tests.rs): real world.db characters, exact slots, backpack and bar
 - [inventory_model.rs](../../../crates/server/src/inventory_model.rs): `store_new_item_in_best_slots`, `equip_backpack_items`
