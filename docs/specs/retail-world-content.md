@@ -30,6 +30,12 @@ All maps in the canonical TDB `instance_template` take authentic TDB creature/ga
 
 Raid admission/lockout UX (rank 5), encounter scripting (rank 2), phase progression and unsupported gameobject interaction types remain separate gaps; importing their authentic rows is not proof those gameplay systems work.
 
+## Scoped battleground promotion
+
+- [x] Promote only explicitly requested Map.db2 battleground maps, using authored base-phase difficulty-0 rows and Retail GUID namespaces, in one transaction.
+- [x] Replace only selected spawns and required creature addons/templates/models/equipment and object templates/addons. Preserve all other persistent rows and table schemas, including Zephras overlay state; no overlay input is required.
+- [x] Invalid maps, unresolved templates and unsupported event/pool/formation/waypoint dependencies abort without changes. Reapplication is row-idempotent. Authentic copy tests verify WSG28/14 and all protected table rows.
+
 ## What it must do
 
 Spawn and id rules
@@ -37,7 +43,7 @@ Spawn and id rules
   - This applies to `content_creature` and to `content_gameobject`.
   - Game objects whose only event membership is positive (holiday decorations) don't spawn.
   - Other non-instance maps keep AzerothCore's rows; canonical TDB instances take the instance-population step above.
-  - WSG2106 inclusion is import-policy support, not match admission or live objective proof. TDB1210 has28 creature and14 gameobject source rows; world.db already stores them in `tdb_*` but the previous map filter excluded them from `content_*`. Lead must rebuild content; this task never writes world.db. Capture triggers and flag metadata also require the separate [battleground source import](battleground-lifecycle.md).
+  - WSG2106 inclusion is import-policy support, not match admission or live objective proof. TDB1210 has28 creature and14 gameobject source rows; world.db already stores them in `tdb_*` but the previous map filter excluded them from `content_*`. Lead may use the [scoped battleground promotion](../wiki/systems/content-import.md#scoped-battleground-promotion-2026-10-11) instead of a full rebuild; this task never writes canonical world.db. Capture triggers and flag metadata also require the separate [battleground source import](battleground-lifecycle.md).
 - [x] Spawns (verified 2026-09-26, `world-stockade-20260926.db`; before → after the phase-169 and Stockade import): creatures map 0 45,317 → 50,930, map 1 49,853 → 52,309, map 34 93 → 143; game objects map 0 11,582 → 12,654, map 1 10,295 → 11,250, map 34 18 → 34. The Stockade's 143 creatures (Hogger, Lord Overheat, Randolph Moloch, Riverpaw and fire-elemental trash, prisoners, guards) replace AzerothCore's 93 Classic ones (Targorr, Bazil Thredd, ...); its game objects are 33 fires and a bonfire (Retail has no Stockade doors or chests).
 - [x] An entry's template values come from the `creature_template_difficulty` row of its spawns' difficulty (`CreatureTemplate::GetDifficulty`: the difficulty's row, else its `Difficulty.db2` `FallbackDifficultyID` chain Mythic → Heroic → Normal → None). `content_creature_template` takes the row of the entry's lowest spawn difficulty: a Stockade entry's (ContentTuning, health, loot, gold) its `DifficultyID` 1 row, else 0. Hogger: ContentTuning 215 (10-30), LevelScalingDelta +2. Bruegal Ironknuckle keeps loot 1720.
 - [x] `content_creature_template_difficulty` has one row per dungeon difficulty an entry spawns at (entry, DifficultyID, levels, exp, ContentTuningID, HealthScalingExpansion, LevelScalingDelta, Health/Mana/Armor/Damage modifiers, lootid, mingold, maxgold) from its resolved row: General Umbriss Normal ContentTuning 253 (30-35), Heroic 1118 (35); Trogg Dweller Heroic has no row and takes Normal's. 138 rows (Grim Batol).

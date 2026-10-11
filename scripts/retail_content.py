@@ -46,11 +46,12 @@ SPAWN_DIFFICULTIES = f"""(SELECT group_concat(difficulty, ',') FROM (SELECT r.di
     WHERE r.map_id = map AND {SPAWN_DIFFICULTY_MATCH} ORDER BY r.difficulty))"""
 
 
-def create_retail_map_table(conn):
+def create_retail_map_table(conn, map_ids=RETAIL_MAPS):
     """temp.retail_map: each (RETAIL_MAPS map, difficulty its copies spawn at): 0 for open world, every
     MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use0."""
-    rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({MAP_LIST})"))
-    missing = [m for m in RETAIL_MAPS if m not in rows]
+    map_list = ", ".join(str(int(m)) for m in map_ids)
+    rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({map_list})"))
+    missing = [m for m in map_ids if m not in rows]
     unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND)}
     if missing or unhosted:
         raise SystemExit(f"RETAIL_MAPS without a Map.db2 row {missing} or with an unhosted InstanceType {unhosted}")

@@ -140,6 +140,12 @@ Retail DB2 has quest ids but no titles, so only id presence is measurable. 8,492
 
 TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`21` Kargath → New Kargath, `26` Auberdine → Lor'danel); 6 absent. TaxiPath: 879 of 915 (96.1%) same id with the same endpoints.
 
+## Scoped battleground promotion (2026-10-11)
+
+Use `python3 scripts/promote-battlegrounds.py --db data/world.db --only-maps 2106` from the server checkout after importing the [battleground source catalogs](../../specs/battleground-lifecycle.md). This existing-database, transactional operation promotes only the selected battlegrounds' base-phase difficulty-0 spawns and their templates/models/addons/equipment, reusing Retail policy projections. It does not clear Zephras ownership or read the missing overlay JSON. Do not use a full policy rebuild to accomplish this promotion.
+
+Other maps' spawn rows and all unrelated tables/rows retain their exact values and schemas. Referenced template keys may change even when another map shares them. Event/pool/formation/waypoint-dependent battlegrounds fail explicitly without writes; those catalogs are outside this scoped mode. Copy-based regression: `BATTLEGROUND_PROMOTION_SOURCE=/path/to/world.db python3 -m unittest scripts.tests.test_promote_battlegrounds` compares every persistent table's protected rows/schema, verifies WSG's authored28 creatures/14 objects and repeat idempotence, and rejects mixed invalid maps atomically.
+
 ## Content policy (content_policy.py)
 
 `import-azerothcore.sh` runs `content_policy.py` after the DB2 import; it rebuilds every `content_*` table in one transaction (about 1 s) and writes every dropped row or zeroed reward to `data/reports/content-dropped.csv` (`table,key,source_id,reason`). The server should read `content_*`, not the raw dump tables, for items, vendors, quests and loot. Gossip, `npc_text`, `broadcast_text` and `points_of_interest` carry no mapped ids and are read raw.
