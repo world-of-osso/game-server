@@ -2,6 +2,8 @@
 
 Verified: 2026-10-11. The [contract](../../specs/mythic-plus.md) owns scope; [local source qualification](../../mythic-plus-data.md) owns catalog identities/numeric evidence. This implements the qualified Azure Vault loop, not complete Retail season/combat parity.
 
+Future attributable completion records for the static armory are separate from the frozen wire/run ABI; see [[site-snapshots]]. Legacy anonymous history is not backfilled.
+
 ## Content
 
 The offline catalog importer validates destination independence and six DB2 layouts before one atomic replacement. A separate copy-only item publication script projects existing Item/ItemSparse180653 into content_item. Neither writes canonical world.db.
@@ -29,6 +31,10 @@ Scenario-event92 weights are preserved/testable but producers are not connected.
 - [Runtime adapter](../../../crates/server/src/mythic_plus.rs), [pure lifecycle](../../../crates/server/src/mythic_plus_runtime.rs), [catalog](../../../crates/server/src/mythic_plus_catalog.rs).
 - [Azure encounter identities](../../../crates/server/src/scripted_ai/encounter_compat.csv), [encounter DONE hook](../../../crates/server/src/scripted_ai/instance_script.rs).
 - [Source qualification](../../mythic-plus-data.md), [contract](../../specs/mythic-plus.md), [catalog importer](../../../scripts/import_mythic_plus.py), [item projection](../../../scripts/import_keystone_item.py).
+
+## Party key sharing
+
+The built-in [Mythic Mentor contract](../../specs/mythic-mentor.md) owns party summary visibility and bag authority. Producer: [mythic_mentor.rs](../../../crates/server/src/mythic_mentor.rs). Final native/private proof and screenshots are [client-owned](../../../../game-engine/docs/wiki/systems/mythic-mentor.md); server6a07a86d's targeted persisted-bag/roster/recipient/raid test passes. No addon messaging or peer bag GUID disclosure. Follower-party integration reads grouped names/classes from the registry's roster identity, not character storage: companions use runtime-only IDs and have no bag keys. A real companion-party regression reproduced the old character lookup panic, then verifies five rows with all four NPCs having no key.
 
 ## See Also
 

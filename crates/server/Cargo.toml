@@ -26,6 +26,9 @@ tokio = { version = "1", features = ["rt-multi-thread"] }
 peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0" }
 rusqlite = { version = "0.35", features = ["bundled"] }
 serde_json = "1"
+# Offline armory icon conversion from existing local BLP caches; PNG is the web contract.
+image-blp = "1"
+image = { version = "0.24.9", default-features = false, features = ["png"] }
 # Local wall clock for the game time (GameTime::GetWowTime).
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
@@ -40,6 +43,10 @@ path = "src/main.rs"
 [[bin]]
 name = "game-server-admin"
 path = "src/bin/admin.rs"
+
+[[bin]]
+name = "game-server-site-export"
+path = "src/bin/site_export.rs"
 
 [dev-dependencies]
 # Exercise pre-world replication and auth traffic against a real local client.
