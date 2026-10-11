@@ -399,6 +399,7 @@ mod copy_tests {
                             owner,
                             profile: profile.clone(),
                         },
+                        crate::zones::TempSummon { summoner: owner },
                         shared::components::Npc {
                             template_id: profile.entry,
                             name: profile.name.clone(),
