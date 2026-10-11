@@ -369,6 +369,7 @@ fn record_helper_persists_layout_instances_character_and_inventory() {
         definition_sources: HashMap::from([(501, shared::item_data::ItemDefinitionSource::Retail)]),
         appearance_account: None,
         appearance_grants: Vec::new(),
+        transmogs: Default::default(),
     };
     commit_market(
         &db,

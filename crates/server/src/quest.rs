@@ -73,10 +73,13 @@ pub struct QuestPlugin;
 impl Plugin for QuestPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<QuestDirty>();
+        app.init_resource::<crate::maps::difficulty::ServerClock>();
+        app.init_resource::<quest_requests::PendingShares>();
         app.init_resource::<crate::experience::XpAwards>();
         app.add_systems(
             Update,
             (
+                crate::quest_time::refresh,
                 send_initial_quest_log,
                 quest_requests::process_quest_requests,
             )
