@@ -604,6 +604,7 @@ fn insert_player_spawn_components(
     commands.entity(entity).insert((
         crate::networking::FallTracker::grounded(by),
         crate::mirror_timers::MirrorTimers::default(),
+        shared::components::CombatStatus(false),
     ));
     crate::durability::insert_equipped_durability(commands, entity, data);
     insert_player_init_state(commands, entity, init)
