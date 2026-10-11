@@ -50,6 +50,57 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
 }
 
 #[test]
+fn class_completeness_native_random_summons_use_authored_caster_or_target_ring() {
+    for (spell_id, class, entry, effect_index) in [(1276452, 9, 258584, 1), (123904, 10, 63508, 0)]
+    {
+        let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
+        let data = world_db().unwrap();
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+        let conn = rusqlite::Connection::open_with_flags(
+            &data.powers_db,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+        let spell = data.store.get(spell_id).unwrap().clone();
+        let effect = &spell.effects[effect_index];
+        let slot = usize::from(spell_id == 123904);
+        let origin = if spell_id == 123904 {
+            super::targets::position(h.app.world(), h.npc).unwrap()
+        } else {
+            Vec3::ZERO
+        };
+        let authored_radius = super::targets::radius(effect, slot);
+        let points: Vec<_> = (0..32)
+            .map(|_| {
+                super::targets::effect_dest(h.app.world(), h.caster, Some(h.npc), effect, None)
+                    .expect("native random destination")
+                    .position
+            })
+            .collect();
+        for point in &points {
+            assert!((point.distance(origin) - authored_radius).abs() < 0.001);
+        }
+        assert!(points.iter().any(|point| point.distance(points[0]) > 0.1));
+        super::execute_cast(h.app.world_mut(), h.caster, &spell, Some(h.npc))
+            .expect("native random summon");
+        let caster = h.caster;
+        let world = h.app.world_mut();
+        let owned: Vec<_> = world
+            .query::<(
+                &shared::components::Npc,
+                &shared::components::UnitSummonedBy,
+            )>()
+            .iter(world)
+            .filter(|(npc, owner)| npc.template_id == entry && owner.0 == caster.to_bits())
+            .collect();
+        assert_eq!(owned.len(), 1, "native summon {spell_id}");
+    }
+}
+
+#[test]
 fn class_completeness_native_destination_radius_uses_random_direction_not_fixed_front() {
     let h = harness(Vec::new(), &[46585], 6).unwrap();
     let spell = world_db().unwrap().store.get(46585).unwrap();

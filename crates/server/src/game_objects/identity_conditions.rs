@@ -1,5 +1,5 @@
 //! Bounded native PlayerCondition class/race predicates for spellcaster objects.
-//! TC a352b1fa ConditionMgr.cpp:2783-2834, DBCEnums.h:2101. Other authored predicates
+//! TC a352b1fa ConditionMgr.cpp:2903-2959, DBCEnums.h:2189-2203. Other authored predicates
 //! remain explicit unsupported conditions, never an unconditional allow.
 use rusqlite::{Connection, OptionalExtension, Row};
 use shared::components::Player;
@@ -104,4 +104,51 @@ fn unsupported_field(row: &Row) -> rusqlite::Result<Option<String>> {
         }
     }
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn class_completeness_native_death_gate_condition_accepts_only_death_knights() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        // Native50977 creates190942; TDB Data5=40073 authors ClassMask32.
+        let condition_id: u32 = conn
+            .query_row(
+                "SELECT Data5 FROM tdb_gameobject_template WHERE entry=190942",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let condition = load_condition(&conn, condition_id).unwrap().unwrap();
+        for class in crate::race_class::PLAYABLE_CLASSES {
+            let player = Player {
+                name: "Gateuser".into(),
+                race: 1,
+                class,
+                appearance: Default::default(),
+            };
+            assert_eq!(
+                condition.permits(&player),
+                class == 6,
+                "native class {class}"
+            );
+        }
+    }
+
+    #[test]
+    fn class_completeness_native_portal_condition_never_drops_authored_modifier_tree() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        // Authored114864 contains ModifierTree382363 plus InvertModifierTree.
+        assert!(load_condition(&conn, 114864).unwrap().is_err());
+    }
 }
