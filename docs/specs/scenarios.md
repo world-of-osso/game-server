@@ -12,6 +12,8 @@ Gnomeregan: map90, normal difficulty1, Scenario649, main Step1176, root36986, le
 
 Standalone scenario maps currently have no canonical spawns. Populated multi-main-stage scenarios require scripted criteria92 and world-state modifiers absent from existing achievement evaluation; do not bypass those requirements. These remain separate content coverage gaps.
 
+Native acceptance evidence and fixture limits live in the [shared system page](../../../game-engine/docs/wiki/systems/scenarios.md#coverage-boundary). Do not equate HP-primed death-credit proof with full-health solo combat. Authored multi-main-stage live content, optional bonus tracker, scenario reward quests, transition animation/sound and widget-driven stages remain gaps.
+
 ## Data preparation (no canonical writes)
 
 Extract FDIDs1139062 and1132761 with installed casc-local into engine `data/db2/12.1.0.69933`. Then run `python3 scripts/import_scenarios.py --db2-dir <that directory> --tdb <local TDB_full_world_1210.26091_2026_09_09.sql> --db <private copy.db>`. Existing Criteria/CriteriaTree CSVs are required. Importer replaces only scenario/scenario_step/scenario_map and criteria reference tables, records the build and imports no creature/gameobject rows. The CLI refuses canonical `data/world.db`.

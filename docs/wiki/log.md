@@ -824,3 +824,7 @@ Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hoo
 ## 2026-10-11 — Cobrahn encounter
 
 Bounded local-data Wailing Caverns SmartAI lifecycle and aggro dialogue documented in [[boss-scripts]]. Behavioral RED exposed absent encounter state. Both-skin native entry/pull/death/tracker credit inspected;20 regression passes, one explicit population-copy loot gate fails due lost authored binding. Actor4213 and physical portal traversal remain unproved; full playable acceptance is blocked, not complete.
+
+## 2026-10-11 — Scenarios
+
+Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reuse and stage snapshots. Native proof/fixture boundary lives in [shared system SSOT](../../../game-engine/docs/wiki/systems/scenarios.md); [server contract](../specs/scenarios.md).
