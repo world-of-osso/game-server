@@ -863,6 +863,60 @@ fn smartai_coverage_tracking_completion_auto_rewards_without_accept_and_is_idemp
     );
 }
 
+#[test]
+fn smartai_coverage_wizzle_path_end_wildcard_runs_the_next_authored_leg() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    let conn = Connection::open(temp.path().join("escort.sqlite")).unwrap();
+    conn.execute(
+        "ATTACH DATABASE ?1 AS tdb",
+        [crate::test_data::world_db_path().to_str().unwrap()],
+    )
+    .unwrap();
+    conn.execute_batch("DELETE FROM content_creature_template;
+        INSERT INTO content_creature_template SELECT * FROM tdb.tdb_creature_template WHERE entry=3439;
+        DELETE FROM tdb_smart_scripts;
+        INSERT INTO tdb_smart_scripts SELECT * FROM tdb.tdb_smart_scripts WHERE entryorguid=3439 OR entryorguid BETWEEN 343900 AND 343903;
+        DELETE FROM tdb_waypoint_path; DELETE FROM tdb_waypoint_path_node;
+        INSERT INTO tdb_waypoint_path SELECT * FROM tdb.tdb_waypoint_path WHERE PathId IN (2751201,2751209,2751217);
+        INSERT INTO tdb_waypoint_path_node SELECT * FROM tdb.tdb_waypoint_path_node WHERE PathId IN (2751201,2751209,2751217);").unwrap();
+    let scripts = load_smart_scripts(&temp.path().join("escort.sqlite")).unwrap();
+    ai.events = scripts.0[&3439].clone();
+    ai.states = vec![EventState::default(); ai.events.len()];
+    world.insert_resource(scripts);
+    world.get_mut::<Npc>(creature).unwrap().template_id = 3439;
+    let nodes: Vec<u32> = conn
+        .prepare("SELECT NodeId FROM tdb_waypoint_path_node WHERE PathId=2751201 ORDER BY NodeId")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let wow: (f32,f32,f32) = conn.query_row("SELECT PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId=2751209 AND NodeId=1", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?))).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(wow.0, wow.1, wow.2);
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.reset(&mut ctx);
+    ai.quest_accepted(&mut ctx, player, 863);
+    ai.update_ai(&mut ctx, 50);
+    ai.update_ai(&mut ctx, 6001);
+    for node in nodes {
+        ctx.world
+            .entity_mut(creature)
+            .remove::<super::super::movement::PointMovement>();
+        ai.movement_inform(&mut ctx, super::super::MotionType::Point, node);
+    }
+    ai.update_ai(&mut ctx, 3001);
+    assert_eq!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .expect("UINT32_MAX waypoint event is the pinned wildcard, not point zero")
+            .target,
+        Position { x, y, z }
+    );
+}
+
 fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {
     let conn = Connection::open_with_flags(
         crate::test_data::world_db_path(),

@@ -473,7 +473,7 @@ impl SmartAi {
                     .map(|escort| escort.path_id)
                     .or(self.path_event_id)
                     .unwrap_or(0);
-                if (event.event_params[0] == 0 || event.event_params[0] == spell)
+                if (event.event_params[0] == u32::MAX || event.event_params[0] == spell)
                     && (event.event_params[1] == 0 || event.event_params[1] == path_id)
                 {
                     self.process_action(ctx, index, invoker);
