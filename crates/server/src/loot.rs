@@ -60,6 +60,10 @@ pub(crate) struct CorpseLoot {
 #[derive(Component)]
 pub(crate) struct ItemLoot;
 
+/// A roll owns the corpse until every choice or timeout resolves.
+#[derive(Component)]
+pub(crate) struct PendingGroupLoot;
+
 pub(crate) fn open_item_loot(
     world: &mut World,
     player: Entity,
@@ -429,7 +433,11 @@ fn generate_corpse_loot(
                 senders.lootable(connection, corpse, true);
             }
         }
+        let pending = shared.has_pending_rolls();
         commands.entity(corpse).insert((loot, shared));
+        if pending {
+            commands.entity(corpse).insert(PendingGroupLoot);
+        }
     }
 }
 

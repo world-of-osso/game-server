@@ -57,6 +57,10 @@ impl CorpseGroupLoot {
     pub fn has_loot(&self) -> bool {
         self.0.iter().any(GroupPool::has_loot)
     }
+
+    pub fn has_pending_rolls(&self) -> bool {
+        self.0.iter().any(|pool| pool.pending > 0)
+    }
 }
 
 /// RNG is injected at the roll boundary, never provided by a client.
@@ -360,6 +364,7 @@ fn need_refusal(
 #[derive(SystemParam)]
 pub(super) struct RollDelivery<'w, 's> {
     store: LootStore<'w>,
+    commands: Commands<'w, 's>,
     corpses: Query<
         'w,
         's,
@@ -408,6 +413,9 @@ impl RollDelivery<'_, '_> {
                 loot.looters.entry(winner).or_default().push(Some(item));
             } else if roll.snapshot.winner.is_none() {
                 pool.slots.push(Some(item));
+            }
+            if !shared.has_pending_rolls() {
+                self.commands.entity(corpse).remove::<PendingGroupLoot>();
             }
             if loot.looters.is_empty() && !shared.has_loot() {
                 corpse_looted(&mut decay, &mut death);

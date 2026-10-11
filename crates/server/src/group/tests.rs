@@ -573,15 +573,50 @@ fn role_and_loot_method_show_in_roster() {
         notice_codes(&registry.set_role(2, "P1", GroupRoleSnapshot::Tank), 2),
         [GroupMessageCode::NotLeader]
     );
-    let loot = registry.set_loot_method(1, shared::loot::LootMode::RoundRobin);
+    let loot = registry.set_loot_method(1, shared::loot::LootMode::PersonalLoot);
 
-    assert_eq!(
-        notice_codes(&loot, 2),
-        [GroupMessageCode::SetLootRoundRobin]
-    );
+    assert_eq!(notice_codes(&loot, 2), [GroupMessageCode::SetLootPersonal]);
     let roster = registry.build_roster(1, &view).expect("roster");
     assert_eq!(roster.members[1].role, GroupRoleSnapshot::Healer);
-    assert_eq!(roster.loot_method, shared::loot::LootMode::RoundRobin);
+    assert_eq!(roster.loot_method, shared::loot::LootMode::PersonalLoot);
+}
+
+#[test]
+fn mainline_loot_method_and_quality_threshold_are_leader_owned() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 2);
+    assert_eq!(
+        notice_codes(
+            &registry.set_loot_method(2, shared::loot::LootMode::PersonalLoot),
+            2
+        ),
+        [GroupMessageCode::NotLeader]
+    );
+    assert_eq!(
+        notice_codes(&registry.set_loot_threshold(2, 4), 2),
+        [GroupMessageCode::NotLeader]
+    );
+    for mode in [
+        shared::loot::LootMode::FreeForAll,
+        shared::loot::LootMode::RoundRobin,
+        shared::loot::LootMode::NeedBeforeGreed,
+    ] {
+        assert_eq!(
+            notice_codes(&registry.set_loot_method(1, mode), 1),
+            [GroupMessageCode::LootMethodUnavailable]
+        );
+    }
+    registry.set_loot_method(1, shared::loot::LootMode::GroupLoot);
+    registry.set_loot_threshold(1, 4);
+    assert_eq!(
+        registry.loot_policy_of(2),
+        Some((shared::loot::LootMode::GroupLoot, 4))
+    );
+    registry.set_loot_threshold(1, 1);
+    assert_eq!(
+        registry.loot_policy_of(2),
+        Some((shared::loot::LootMode::GroupLoot, 4))
+    );
 }
 
 fn cancelled_invitees(effects: &[GroupEffect]) -> Vec<(CharacterId, String)> {
