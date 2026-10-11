@@ -46,7 +46,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub use unit_state::{Confused, Invisible, is_polymorphed};
+pub use unit_state::{Confused, is_polymorphed};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;

@@ -890,7 +890,9 @@ fn randolph_moloch_vanishes_below_71_percent_and_shadowsteps_behind_a_player() {
     )));
     assert!(h.has_aura(moloch, 55964));
     let world = h.app.world();
-    assert!(world.get::<crate::auras::Invisible>(moloch).is_some());
+    assert!(!crate::auras::invisibility::can_detect(
+        world, player, moloch
+    ));
     assert!(!world.get::<UnitFlags>(moloch).unwrap().is_attackable());
     assert!(
         world
@@ -919,7 +921,9 @@ fn randolph_moloch_vanishes_below_71_percent_and_shadowsteps_behind_a_player() {
     h.advance(0.5);
     assert!(!h.has_aura(moloch, 55964));
     let world = h.app.world();
-    assert!(world.get::<crate::auras::Invisible>(moloch).is_none());
+    assert!(crate::auras::invisibility::can_detect(
+        world, player, moloch
+    ));
     assert!(world.get::<UnitFlags>(moloch).unwrap().is_attackable());
     // A hit from 55% (below 59% before it) does not vanish him again; one from
     // 42% to 39% does.
