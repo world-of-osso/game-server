@@ -1,5 +1,7 @@
 # Game objects
 
+The gathering-nodes branch extends spawning with Retail type50 and authored pool/loot/skill/lifecycle metadata; [[gathering]] owns its implementation and incomplete native acceptance boundary.
+
 World game objects from AzerothCore `gameobject` / `gameobject_template`. The import keeps a template only when it has no model or its `displayId` is in the Retail `GameObjectDisplayInfo` table; the result is `content_gameobject*` (see [content import](content-import.md)).
 
 - **Spawning:** `game_objects::load_game_object_spawns` loads type 34 (`GAMEOBJECT_TYPE_GUILD_BANK`) type 19 (`GAMEOBJECT_TYPE_MAILBOX`, opens `NpcRole::Mailbox`) and type 23 (`GAMEOBJECT_TYPE_MEETINGSTONE`, casts its spell, see [[meeting-stones]]) of every map. Summoning portals (type 18) spawn at runtime in their caster's map copy. `spawn_continent_game_objects` (PostStartup) spawns maps 0 and 1; `spawn_map_game_objects` spawns a new dungeon copy's ([[zone-architecture]]).

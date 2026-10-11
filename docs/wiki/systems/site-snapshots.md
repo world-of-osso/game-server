@@ -18,6 +18,8 @@ Source backups must be clean: redb read-only opening refuses a crash-dirty datab
 
 ### Future ranking history
 
+Azure Vault's existing four authored creature/encounter/saved-ordinal bindings live in the shared `scripted_ai/encounter_compat.csv` registry after the master merge; retired bespoke dungeon modules are not restored. Both challenge and raid history still receive the same DONE lifecycle boundary.
+
 `mythic_completed_runs_v1` is JSON keyed by run ID and written in the same transaction as key settlement and existing challenge history. Capture players actually in that copy at completion, including class and active spec. Only completed challenges become ranking records; abandonment and legacy anonymous runs are excluded. Timer/duration come from the authoritative runtime; no rating formula is added. Active-season selection is currently absent, so season remains null.
 
 `raid_first_kills_v1` records first character/guild kills at `SetBossState(DONE)` and the existing unambiguous authored raid-creature death path. At-kill participant records preserve character and guild membership IDs/names; qualifying guild first kills use the approved 80% rule. Repeated kills, resets and later guild transfers cannot overwrite first timestamps. Lifetimes are explicitly post-deploy observations; existing reset locks remain a separate display, not a ranking backfill. [Guild rule, timestamp tie-break, and privacy requirements](../../specs/site-snapshots.md#lifetime-raid-first-kill-history).
