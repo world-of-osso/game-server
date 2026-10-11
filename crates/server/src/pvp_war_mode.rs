@@ -65,6 +65,15 @@ impl Areas<'_> {
         rest: &crate::rest::PlayerRestState,
         combat: &CombatStatus,
     ) -> Option<Context> {
+        // Instance identity is authoritative before any ADT/AreaTable load.
+        if map.instance_id != 0 {
+            return Some(Context {
+                resting: rest.is_resting(),
+                in_combat: combat.0,
+                in_instance: true,
+                can_enable_area: false,
+            });
+        }
         let area = self
             .ground
             .as_mut()?
@@ -198,6 +207,62 @@ fn sync_enlisted_aura(world: &mut World, player: Entity, spell: Option<u32>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn instance_transfer_removes_enlisted_even_before_terrain_is_available() {
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[282559, 269083], 2).unwrap();
+        let mut state = PlayerPvpState::default();
+        state.progress.war_mode_desired = true;
+        state.war_mode = Some(snapshot(
+            Context {
+                resting: true,
+                in_combat: false,
+                in_instance: false,
+                can_enable_area: true,
+            },
+            true,
+        ));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            state,
+            crate::rest::PlayerRestState::fixture(90, 0),
+            crate::maps::InMap::continent(0),
+        ));
+        sync_enlisted_aura(h.app.world_mut(), h.caster, Some(ENLISTED_INSIDE));
+        assert!(crate::auras::has_aura(
+            h.app.world(),
+            h.caster,
+            ENLISTED_INSIDE
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .insert(MessageSender::<PvpStateUpdate>::default());
+        h.app.add_systems(Update, sync_state);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::maps::InMap {
+                map_id: 489,
+                instance_id: 7,
+            });
+        h.app.update();
+        let state = h.app.world().get::<PlayerPvpState>(h.caster).unwrap();
+        assert!(
+            state.progress.war_mode_desired,
+            "instance entry does not erase durable preference"
+        );
+        assert_eq!(state.war_mode.as_ref().unwrap().enlisted_spell, None);
+        assert!(!crate::auras::has_aura(
+            h.app.world(),
+            h.caster,
+            ENLISTED_INSIDE
+        ));
+        assert!(!crate::auras::has_aura(
+            h.app.world(),
+            h.caster,
+            ENLISTED_OUTSIDE
+        ));
+    }
     #[test]
     fn source_rest_combat_instance_and_area_rules() {
         let capital = Context {
