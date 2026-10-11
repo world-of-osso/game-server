@@ -15,6 +15,8 @@ pub enum AuraKind {
     ProcTrigger,
     /// Consumed by incoming damage (`absorb_damage`).
     Absorb,
+    /// Redirects native school-mask damage to the aura caster.
+    DamageTransfer,
     /// Negates damage of its school mask.
     SchoolImmunity,
     /// Rejects matching spell/effect mechanics and removes matching auras.
@@ -176,6 +178,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         MOD_TAUNT => Taunt,
+        super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
