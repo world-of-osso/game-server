@@ -606,6 +606,7 @@ fn online(names: &[&str]) -> OnlineView {
                     level: 10,
                     portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                    raid_difficulty: crate::maps::RaidDifficulty::default(),
                 },
             )
         })

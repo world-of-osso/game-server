@@ -88,6 +88,19 @@ pub fn create_instance_script(name: &str) -> Option<InstanceScript> {
 /// `done_bosses`: they do not spawn in a copy created with them `DONE` (TrinityCore
 /// keeps them dead through their saved respawn time).
 pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses: u32) -> Vec<u32> {
+    if store
+        .map(map_id)
+        .is_some_and(|entry| entry.instance_type == crate::maps::store::InstanceType::Raid)
+    {
+        let mut entries: Vec<_> = store
+            .raid_creature_encounters
+            .iter()
+            .filter(|((map, _), bit)| *map == map_id && done_bosses & (1 << **bit) != 0)
+            .map(|((_, entry), _)| *entry)
+            .collect();
+        entries.sort_unstable();
+        return entries;
+    }
     store
         .instance_scripts
         .get(&map_id)
