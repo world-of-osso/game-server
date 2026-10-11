@@ -5,12 +5,13 @@ use shared::components::{ActiveSpec, Health};
 use super::{ActiveAuras, AuraInstance, aura_now, periodic};
 
 const SHADOW_WORD_MADNESS: u32 = 335467;
+const BARBED_SHOT: u32 = 217200;
 const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
 
 pub(super) fn prepare_application(world: &mut World, target: Entity, new: &mut AuraInstance) {
     match new.spell_id {
-        SHADOW_WORD_MADNESS => roll_remaining_damage(world, target, new),
+        SHADOW_WORD_MADNESS | BARBED_SHOT => roll_remaining_damage(world, target, new),
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         _ => {}
     }
@@ -34,7 +35,9 @@ fn remaining_ticks(next: f64, expiry: f64, period_ms: u32) -> u32 {
     (((expiry - next) / (f64::from(period_ms) / 1000.0) + 1e-6).floor() as u32) + 1
 }
 
-///335467: "all remaining damage is added to the new effect", not Pandemic.
+///335467/217200 explicitly roll unpaid damage, not Pandemic. Barbed Shot's
+///s2 defines the new five-tick budget even when preserved phase skips its
+///extra-initial tick on refresh.
 fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstance) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -47,8 +50,15 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
     let Some((old_expiry, new_expiry)) = old.expires_at.zip(new.expires_at) else {
         return;
     };
+    let authored_ticks = (new.spell_id == BARBED_SHOT).then(|| {
+        crate::spell_cast::scripts::script_effect_value(world, new.caster, BARBED_SHOT, 1)
+    });
     for fresh in &mut new.effects {
-        if fresh.aura_type != super::handlers::PERIODIC_LEECH {
+        let damaging = matches!(
+            fresh.aura_type,
+            super::handlers::PERIODIC_LEECH | super::handlers::PERIODIC_DAMAGE
+        );
+        if !damaging {
             continue;
         }
         let Some(prior) = old
@@ -61,7 +71,9 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
         let unpaid = remaining_ticks(prior.next_tick_at, old_expiry, prior.period_ms);
         let future = remaining_ticks(prior.next_tick_at, new_expiry, prior.period_ms);
         if future > 0 {
-            fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
+            let new_budget = fresh.amount * authored_ticks.unwrap_or(future as f32);
+            let old_budget = prior.amount * old.stack_multiplier() * unpaid as f32;
+            fresh.amount = (new_budget + old_budget) / future as f32;
         }
     }
 }
