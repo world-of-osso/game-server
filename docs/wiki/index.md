@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Toy-effects11 summon audit](systems/toys.md#toy-effects11-summon-classification-and-scenery-2026-10-10) — all43 runtime summon blockers classified; source-backed sweeper/trophy preparation,128→130 census, retained possession/vehicles/visibility/interaction and scale gaps.
+
 - [Toy-effects10 cosmetic auras](systems/toys.md#toy-effects10-cosmetic-target-and-growth-auras-2026-10-10) — source-bound refreshment/crystal/swarm auras, real target/trigger/lifetime fixtures; retained gameplay scripts and rendering limits.
 
 - [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10) — authentic15 banner item definitions and16 scenery templates; source-bound locations, wild faction and expiry, imported-copy census109→125, no shared DB write.
