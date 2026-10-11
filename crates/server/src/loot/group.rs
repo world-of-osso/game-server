@@ -110,19 +110,30 @@ impl GroupRolls {
         corpse: Entity,
         pool: usize,
         item: LootContent,
-        players: Vec<GroupLootPlayer>,
+        eligibility: Vec<(GroupLootPlayer, bool)>,
     ) -> GroupLootRoll {
         let LootContent::Item { item_id, count, .. } = item else {
             unreachable!("only items roll")
         };
         self.next_id += 1;
+        let preferred_transmog: Vec<_> = eligibility
+            .iter()
+            .filter(|(_, preferred)| *preferred)
+            .map(|(player, _)| player.character_id)
+            .collect();
+        let players: Vec<_> = eligibility.into_iter().map(|(player, _)| player).collect();
         let members: Vec<_> = players.iter().map(|player| player.character_id).collect();
         let need: Vec<_> = players
             .iter()
             .filter(|player| player.can_need)
             .map(|player| player.character_id)
             .collect();
-        let mut window = RollWindow::new(LootDrop { item_id, count }, &members, &need);
+        let mut window = RollWindow::new(
+            LootDrop { item_id, count },
+            &members,
+            &need,
+            &preferred_transmog,
+        );
         window.can_transmog = players
             .iter()
             .filter(|player| player.can_transmog)
@@ -247,8 +258,8 @@ impl GroupGeneration<'_, '_> {
                     LootContent::Item { quality, .. }
                         if mode == LootMode::GroupLoot && quality >= threshold =>
                     {
-                        let players = self.load_eligibility(&members, &content, source);
-                        let snapshot = self.rolls.start(corpse, pool_index, content, players);
+                        let eligibility = self.load_eligibility(&members, &content, source);
+                        let snapshot = self.rolls.start(corpse, pool_index, content, eligibility);
                         self.send(&snapshot);
                         pool.pending += 1;
                     }
@@ -275,7 +286,7 @@ impl GroupGeneration<'_, '_> {
         members: &[u64],
         item: &LootContent,
         source: &LootRolls,
-    ) -> Vec<GroupLootPlayer> {
+    ) -> Vec<(GroupLootPlayer, bool)> {
         let LootContent::Item { item_id, .. } = *item else {
             unreachable!("item roll")
         };
@@ -298,7 +309,7 @@ impl GroupGeneration<'_, '_> {
                     inventory.owned_count(shared::item_data::ItemDefinitionSource::Retail, item_id);
                 let max_count = goods.map_or(0, |goods| goods.max_count);
                 let professions = persistence::load_professions(db, character_id);
-                let need_reason = need_refusal(&NeedContext {
+                let context = NeedContext {
                     item_id,
                     template,
                     player,
@@ -307,7 +318,8 @@ impl GroupGeneration<'_, '_> {
                     known,
                     professions: &professions,
                     metadata: &templates.loot_need,
-                });
+                };
+                let need_reason = need_refusal(&context);
                 let account = self
                     .accounts
                     .iter()
@@ -319,14 +331,21 @@ impl GroupGeneration<'_, '_> {
                             .has(appearance)
                     })
                 });
-                GroupLootPlayer {
-                    character_id,
-                    name: player.name.clone(),
-                    can_need: need_reason.is_none(),
-                    need_reason,
-                    can_transmog,
-                    response: None,
-                }
+                // Warbands Transmog preference is class/usage eligibility, not
+                // item-specific Need restrictions (unique limit or greed-only).
+                let preferred_transmog =
+                    can_transmog && class_can_need(&context) && has_required_profession(&context);
+                (
+                    GroupLootPlayer {
+                        character_id,
+                        name: player.name.clone(),
+                        can_need: need_reason.is_none(),
+                        need_reason,
+                        can_transmog,
+                        response: None,
+                    },
+                    preferred_transmog,
+                )
             })
             .collect()
     }
@@ -370,12 +389,18 @@ fn need_refusal(context: &NeedContext) -> Option<String> {
     if !class_can_need(context) {
         return Some("Your class may not roll need on this item.".into());
     }
-    if let Some(&(skill, rank)) = context.metadata.required_skills.get(&context.item_id)
-        && context.professions.rank(skill) < rank.max(1)
-    {
+    if !has_required_profession(context) {
         return Some("You do not have the profession required to use this item.".into());
     }
     None
+}
+
+fn has_required_profession(context: &NeedContext) -> bool {
+    context
+        .metadata
+        .required_skills
+        .get(&context.item_id)
+        .is_none_or(|&(skill, rank)| context.professions.rank(skill) >= rank.max(1))
 }
 
 fn class_can_need(context: &NeedContext) -> bool {

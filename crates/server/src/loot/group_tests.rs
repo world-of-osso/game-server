@@ -335,6 +335,57 @@ fn completed_last_roll_removes_the_corpses_group_sparkles() {
 }
 
 #[test]
+fn transmog_prefers_appropriate_armor_class_over_higher_random_roll() {
+    const RAGECLAW_BOOTS: u32 = 15379;
+    let (mut h, other) = grouped();
+    for (looter, account_id) in [(h.looter, 1), (other, 2)] {
+        h.app
+            .world_mut()
+            .entity_mut(looter.connection)
+            .insert(crate::auth::Authenticated { account_id });
+    }
+    // Retail leather: Night Elf Druid preferred; Human Warrior can collect it.
+    {
+        let mut druid = h.app.world_mut().get_mut::<Player>(other.player).unwrap();
+        druid.class = 11;
+        druid.race = 4;
+    }
+    h.app
+        .world_mut()
+        .resource_mut::<LootTables>()
+        .creature
+        .get_mut(&KOBOLD_VERMIN)
+        .unwrap()
+        .entries[0]
+        .item = RAGECLAW_BOOTS;
+    let mut values = std::collections::VecDeque::from([99, 1]);
+    h.app
+        .world_mut()
+        .insert_resource(group::GroupRollRng(Box::new(move || {
+            values
+                .pop_front()
+                .expect("two authoritative transmog rolls")
+        })));
+    h.kill_kobold();
+    let roll = h.take::<GroupLootRoll>().remove(0);
+    assert!(roll.players.iter().all(|player| player.can_transmog));
+    for looter in [h.looter, other] {
+        h.send::<_, LootChannel>(
+            looter,
+            GroupLootChoice {
+                roll_id: roll.roll_id,
+                choice: LootRollChoice::Transmog,
+            },
+        );
+    }
+    assert_eq!(owned(&h, other.character_id, RAGECLAW_BOOTS), 1);
+    assert_eq!(owned(&h, h.looter.character_id, RAGECLAW_BOOTS), 0);
+    assert!(h.take::<GroupLootRoll>().iter().any(|roll| {
+        roll.complete && roll.delivered && roll.winner == Some(other.character_id)
+    }));
+}
+
+#[test]
 fn transmog_beats_higher_greed_and_completed_history_replays_to_new_connection() {
     const RAGECLAW_BOOTS: u32 = 15379;
     const BOOTS_APPEARANCE: u32 = 2478;
