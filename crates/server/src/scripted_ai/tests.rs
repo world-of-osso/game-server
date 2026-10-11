@@ -150,6 +150,7 @@ struct Inbox {
     ends: Vec<EncounterEnd>,
     engages: Vec<EncounterEngageUnit>,
     disengages: Vec<EncounterDisengageUnit>,
+    timeline: Vec<shared::protocol::EncounterTimelineEvent>,
     log: Vec<CombatLogEvent>,
 }
 
@@ -353,6 +354,12 @@ impl Harness {
                     .starts
                     .extend(drain::<EncounterStart>(world, *connection));
                 inbox.ends.extend(drain::<EncounterEnd>(world, *connection));
+                inbox
+                    .timeline
+                    .extend(drain::<shared::protocol::EncounterTimelineEvent>(
+                        world,
+                        *connection,
+                    ));
                 inbox
                     .engages
                     .extend(drain::<EncounterEngageUnit>(world, *connection));

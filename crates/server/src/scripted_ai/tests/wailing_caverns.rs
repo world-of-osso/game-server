@@ -119,12 +119,7 @@ fn cobrahn() -> (Harness, Entity) {
 }
 
 fn timeline(h: &mut Harness, player: usize) -> Vec<shared::protocol::EncounterTimelineEvent> {
-    h.app
-        .world_mut()
-        .get_mut::<MessageReceiver<shared::protocol::EncounterTimelineEvent>>(h.players[player].1)
-        .unwrap()
-        .receive()
-        .collect()
+    std::mem::take(&mut h.players[player].2.timeline)
 }
 
 #[test]
