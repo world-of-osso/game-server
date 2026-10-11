@@ -81,6 +81,8 @@ mod guardian;
 mod guardian_tests;
 mod hit;
 mod missiles;
+#[cfg(test)]
+mod portal_tests;
 pub mod powers;
 mod reflect;
 mod resources;
