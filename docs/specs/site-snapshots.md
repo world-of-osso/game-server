@@ -46,6 +46,10 @@ Saved-lock row: `{character_id,name,realm,raid:{id,name},difficulty_id,scope:"sa
 
 Guild credit requires at least 80% of kill participants in the same guild (`members*5 >= participants*4`: 4/5, 8/10, 16/20, 20/25). Label `guild_group_credit`. Source: Blizzard [Guild Advancement and You](https://worldofwarcraft.blizzard.com/en-gb/news/9999050/el-progreso-de-hermandad-y-tu), “at least 80% guild members”. Apply the expressly approved raid rule, not its five-player-dungeon 3/5 exception or historical guild-XP rewards. Count actual copy participants, not offline roster members.
 
+## Test catalog
+
+Source-bound tests require `SITE_DATA_WORLD_COPY` and `MYTHIC_PLUS_WORLD_COPY`. Both may point at canonical `/home/osso/Projects/world-of-osso/game-server/data/world.db`, opened read-only; it now contains the M+ catalog tables. Tests persist player state only in temporary redb files.
+
 ## Privacy and catalog preparation
 
 Operator supplies public-realm character ID allowlist minus explicit opt-out ID list; redb currently has no realm/privacy flag. Never infer public membership from account/name/map. Export current public characters only. M+ parties and guild kill records require every recorded participant to be public; omit mixed/private rows rather than leak composition. Character raid rows expose only that public character's credit, not private participants.

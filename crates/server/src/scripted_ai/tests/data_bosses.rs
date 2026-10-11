@@ -120,6 +120,10 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
     // Authentic local journal/display/map joins; neither has Rust registration.
     for (entry, map_id, bit, encounter) in [(6910, 70, 0, 547), (12118, 409, 0, 663)] {
         let (mut h, boss, map) = bound_boss(entry, map_id, bit);
+        let database_file = tempfile::NamedTempFile::new().unwrap();
+        h.app.insert_resource(crate::persistence::GameDatabase {
+            db: redb::Database::create(database_file.path()).unwrap(),
+        });
         h.engage(boss);
         h.advance(0.05);
         assert_eq!(
@@ -169,6 +173,25 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
             instance_script::done_boss_entries(h.app.world().resource::<MapStore>(), map_id, done),
             vec![entry]
         );
+        if map_id == 409 {
+            use redb::ReadableDatabase;
+            let txn = h
+                .app
+                .world()
+                .resource::<crate::persistence::GameDatabase>()
+                .db
+                .begin_read()
+                .unwrap();
+            let table = txn
+                .open_table(redb::TableDefinition::<&str, &[u8]>::new(
+                    "raid_first_kills_v1",
+                ))
+                .unwrap();
+            let row = table.get("character:2001:409:3:663").unwrap().unwrap();
+            let credit: serde_json::Value = serde_json::from_slice(row.value()).unwrap();
+            assert_eq!(credit["participants"][0]["character_id"], "2001");
+            assert_eq!(credit["participants"].as_array().unwrap().len(), 1);
+        }
     }
 }
 
