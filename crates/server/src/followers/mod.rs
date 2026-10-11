@@ -1,6 +1,15 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
+mod ai;
+mod catalog;
+mod party;
+mod spawning;
+
 use bevy::prelude::*;
 use shared::group::GroupRole;
+
+pub(crate) use ai::FollowerReach;
+pub(crate) use catalog::FollowerCatalog;
+pub(crate) use party::queue_player;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Profile {
@@ -23,14 +32,65 @@ pub(crate) struct Follower {
     pub profile: Profile,
 }
 
-pub(crate) fn select_party(
-    _profiles: &[Profile],
-    _role: GroupRole,
-) -> Result<Vec<Profile>, String> {
-    Ok(Vec::new())
+impl Follower {
+    /// Runtime-only companion identities occupy the high half of the group ID space;
+    /// they are not persisted characters and never enter auth/character storage.
+    pub(crate) fn member_id(entity: Entity) -> u64 {
+        entity.to_bits() | (1 << 63)
+    }
+
+    pub(crate) fn online(&self, entity: Entity, level: u8) -> crate::group::OnlineMember {
+        crate::group::OnlineMember {
+            entity: entity.to_bits(),
+            name: self.profile.name.clone(),
+            class: self.profile.class_id,
+            level,
+            portrait: Default::default(),
+            dungeon_difficulty: catalog::FOLLOWER_DIFFICULTY,
+        }
+    }
 }
 
-pub(crate) fn update_ai(_world: &mut World) {}
+pub(crate) fn select_party(profiles: &[Profile], role: GroupRole) -> Result<Vec<Profile>, String> {
+    let mut party = Vec::with_capacity(4);
+    for (required, count) in [
+        (GroupRole::Tank, 1),
+        (GroupRole::Healer, 1),
+        (GroupRole::Dps, 3),
+    ] {
+        let needed = count - usize::from(role == required);
+        let available: Vec<_> = profiles
+            .iter()
+            .filter(|profile| profile.role == required)
+            .take(needed)
+            .cloned()
+            .collect();
+        if available.len() != needed {
+            return Err(format!("Follower roster lacks {required:?} members"));
+        }
+        party.extend(available);
+    }
+    Ok(party)
+}
+
+pub(crate) fn update_ai(world: &mut World) {
+    ai::update(world);
+}
+
+pub(crate) struct FollowerPlugin;
+impl Plugin for FollowerPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<FollowerCatalog>()
+            .add_systems(Startup, catalog::load_startup)
+            .add_systems(Update, party::advance_runs)
+            .add_systems(
+                FixedUpdate,
+                update_ai
+                    .after(crate::creature_aggro::update_victim_system)
+                    .before(crate::creature_ai::chase_system),
+            );
+    }
+}
 
 #[cfg(test)]
 mod tests;
