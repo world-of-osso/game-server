@@ -96,6 +96,35 @@ fn dummy23_shadow_blades_native_storm_doubles_each_enemy_not_once() {
 }
 
 #[test]
+fn dummy23_shadow_blades_storm_caps_the_native_pool() {
+    let mut h = fixture();
+    spawn_npc(&mut h.app, 3.0);
+    blades(&mut h);
+    h.set_power(PowerType::ComboPoints, 4.0);
+    builder(&mut h, 197835);
+    assert_eq!(h.power(PowerType::ComboPoints), 5.0);
+}
+
+#[test]
+fn dummy23_storm_without_blades_retains_one_point_per_enemy() {
+    let mut h = fixture();
+    spawn_npc(&mut h.app, 3.0);
+    builder(&mut h, 197835);
+    assert_eq!(h.power(PowerType::ComboPoints), 2.0);
+}
+
+#[test]
+fn dummy23_shadow_blades_expiry_restores_scripted_storm() {
+    let mut h = fixture();
+    spawn_npc(&mut h.app, 3.0);
+    blades(&mut h);
+    h.advance(500);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 121471));
+    builder(&mut h, 197835);
+    assert_eq!(h.power(PowerType::ComboPoints), 2.0);
+}
+
+#[test]
 fn dummy23_shadow_blades_rejected_friendly_backstab_grants_nothing() {
     let mut h = fixture();
     blades(&mut h);

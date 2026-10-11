@@ -1,5 +1,12 @@
 # Class spell scripts
 
+## Twenty-third batch: Shadow Blades scripted combo builder
+
+- [x] Active121471 doubles197835's authored per-enemy combo grant using its native100-percent effect3. Each landed enemy grants two instead of one; ordinary pool caps apply. No active aura/expiry retains one; native Backstab modifiers remain unchanged and must not double twice.
+- [ ]121471's20-percent additional Shadow damage remains separate and underivable locally: no proc-event/child binding establishes damage basis, melee/spell eligibility or279043 dispatch. Native combo certification is not full Shadow Blades parity.
+
+Source: local Mainline12.1.0.69933 description “causing your combo point generating abilities to generate double combo points”;197835s2 supplies per-target points. Native121471 masks do not match197835's scripted effect1. [Batch23 census/proof](../spell-dummy23-coverage.md).
+
 ## Twenty-second batch: native Rewind non-raid healing
 
 - [x] Rewind363534s4 increases its existing native healing by200% when its caster is outside a raid; solo and party casters receive three times the native amount, raid casters retain it. Ordinary heal cap/overheal handling remains authoritative.
