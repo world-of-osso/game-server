@@ -10,7 +10,7 @@ The offline catalog importer validates destination independence and six DB2 layo
 
 `mythic_plus` reads the catalog at startup. Keystone metadata is redb-keyed by the actual item GUID; the normal inventory model supplies the bag item. An explicitly requested administrative grant is acquisition for the private fixture, not an invented dungeon drop rule. Reliable InstanceChannel requests validate authenticated current-character ownership, live Font bounds, same dungeon/copy and fresh Mythic difficulty. Start revalidates, converts the copy23→8 and depletes the stored key immediately, so abandonment/restart cannot duplicate an upgrade.
 
-Each copy holds one run. The pure lifecycle reads injected shared ServerClock time, counts each qualifying creature entity once at its authored weight, retains scenario-event weights, consumes encounter DONE from the existing instance framework and records real death transitions. Azure bosses use the existing spell-less BossAI lifecycle; no new combat spell numbers are authored. Only required bosses plus forces complete the run. Terminal key metadata and summary history settle in one redb transaction, idempotently by run ID. Final state stops accumulating time/kills/deaths.
+Each copy holds one run. The pure lifecycle reads injected shared ServerClock time, counts each qualifying creature entity once at its authored weight, retains scenario-event weights, consumes encounter DONE from the existing instance framework and records real death transitions. Azure bosses use the shared data-selected BossAI lifecycle. `encounter_compat.csv` preserves their four authored encounter IDs and saved ordinals when integrating the data-driven boss registry; no new combat spell numbers are authored. Only required bosses plus forces complete the run. Terminal key metadata and summary history settle in one redb transaction, idempotently by run ID. Final state stops accumulating time/kills/deaths.
 
 Unsourced numeric fields default disabled/0; their names and boundaries live only in the contract. Positive seasonal periods index explicitly supplied epoch/rotation rows; no active season is presumed. Current-character changes on a persistent connection invalidate a previously slotted character's activation authority.
 
@@ -29,7 +29,7 @@ Scenario-event92 weights are preserved/testable but producers are not connected.
 ## Sources
 
 - [Runtime adapter](../../../crates/server/src/mythic_plus.rs), [pure lifecycle](../../../crates/server/src/mythic_plus_runtime.rs), [catalog](../../../crates/server/src/mythic_plus_catalog.rs).
-- [Azure lifecycle](../../../crates/server/src/scripted_ai/azure_vault.rs), [encounter DONE hook](../../../crates/server/src/scripted_ai/instance_script.rs).
+- [Azure encounter identities](../../../crates/server/src/scripted_ai/encounter_compat.csv), [encounter DONE hook](../../../crates/server/src/scripted_ai/instance_script.rs).
 - [Source qualification](../../mythic-plus-data.md), [contract](../../specs/mythic-plus.md), [catalog importer](../../../scripts/import_mythic_plus.py), [item projection](../../../scripts/import_keystone_item.py).
 
 ## See Also
