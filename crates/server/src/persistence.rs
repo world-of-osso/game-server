@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 pub(crate) mod appearance_store;
 #[path = "persistence_banks.rs"]
 pub(crate) mod banks;
+#[path = "persistence_charters.rs"]
+pub(crate) mod charters;
 #[path = "persistence_equipment.rs"]
 pub(crate) mod equipment;
 #[path = "persistence_inventory.rs"]
@@ -24,6 +26,10 @@ pub(crate) mod quest_store;
 pub(crate) mod taxi_store;
 #[path = "persistence_toys.rs"]
 pub(crate) mod toy_store;
+
+#[cfg(test)]
+#[path = "persistence_charters_tests.rs"]
+mod charter_tests;
 
 pub use self::persistence_runtime::{ClientId, save_live_character};
 use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
@@ -309,6 +315,10 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(CHARACTER_NAMES);
     let _ = txn.open_table(CHARACTER_GUILDS);
     let _ = txn.open_table(PENDING_GUILD_INVITES);
+    txn.open_table(charters::STATE)
+        .expect("create charter state table");
+    txn.open_table(charters::CREATED_AT)
+        .expect("create actual guild date table");
     let _ = txn.open_table(PASSWORDS);
     let _ = txn.open_table(USERNAME_ACCOUNTS);
     let _ = txn.open_table(PENDING_REGISTRATIONS);
@@ -337,6 +347,7 @@ pub(crate) fn create_tables(db: &Database) {
     migrate_legacy_auctions(db);
     mail_store::migrate_legacy_mailboxes(db, crate::guild_bank::unix_now());
     banks::migrate_guild_ranks(db);
+    charters::initialize(db);
 }
 
 /// Version of a persisted layout, stored as `SERVER_SETTINGS` `key` (`u32` little-endian);

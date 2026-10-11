@@ -1,6 +1,157 @@
 use super::*;
 use shared::protocol::{AchievementCatalogPage, QueryAchievementCatalog};
 
+#[test]
+fn achievements_summary_counts_full_catalog_and_account_scope_not_loaded_pages() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.earned_ids.extend([633, 39958]);
+    // Authentic 0x100000 tracking copy must not add visible Summary completions.
+    state.earned_at.insert(633, 1_791_244_800);
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids.insert(4899);
+    account.earned_at.insert(4899, 1_791_158_400);
+    state.account = Some(Box::new(account));
+    let request = serde_json::from_value(serde_json::json!({"Summary": {"scope": "All"}}))
+        .expect("Summary is a supported catalog request");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    let summary = &page["Summary"];
+    assert_eq!(summary["points"], 20);
+    assert_eq!(summary["completed"], 2);
+    assert!(summary["total"].as_u64().unwrap() > 8);
+    assert_eq!(summary["recent"][0]["achievement_id"], 633);
+    assert_eq!(summary["recent"][1]["achievement_id"], 4899);
+    assert!(
+        summary["categories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| { row["category_id"] == 14808 && row["completed"] == 1 })
+    );
+    let request =
+        serde_json::from_value(serde_json::json!({"Summary": {"scope": "Account"}})).unwrap();
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert_eq!(page["Summary"]["completed"], 1);
+    assert_eq!(page["Summary"]["recent"][0]["achievement_id"], 4899);
+}
+
+#[test]
+fn achievementlinks_detail_uses_authoritative_state_and_rejects_other_faction() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.earned_ids.insert(633);
+    state.earned_at.insert(633, 1_791_244_800);
+    let request =
+        serde_json::from_value(serde_json::json!({"Achievement": {"achievement_id": 633}}))
+            .expect("single achievement requests are supported");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert_eq!(page["Achievement"]["achievement_id"], 633);
+    assert_eq!(page["Achievement"]["entry"]["earned"], true);
+    assert_eq!(page["Achievement"]["entry"]["earned_at"], 1_791_244_800i64);
+    let request =
+        serde_json::from_value(serde_json::json!({"Achievement": {"achievement_id": 4899}}))
+            .unwrap();
+    let page = serde_json::to_value(catalog.page(&state, request, 2)).unwrap();
+    assert!(page["Achievement"]["entry"].is_null());
+}
+
+#[test]
+fn achievements_catalog_queries_preserve_a_valid_multibyte_search_term() {
+    let catalog = catalog();
+    let text = "É".repeat(200);
+    let request = serde_json::from_value(
+        serde_json::json!({"Search":{"text":text,"scope":"All","after_id":0}}),
+    )
+    .unwrap();
+    let page =
+        serde_json::to_value(catalog.page(&PlayerAchievementState::default(), request, 1)).unwrap();
+    assert_eq!(page["Search"]["text"].as_str().unwrap(), text);
+}
+
+#[test]
+fn achievements_catalog_queries_do_not_browse_hidden_tracking_copies() {
+    let catalog = catalog();
+    let page = catalog.page(
+        &PlayerAchievementState::default(),
+        QueryAchievementCatalog::Category {
+            category_id: 14861,
+            after_id: 39957,
+        },
+        1,
+    );
+    let AchievementCatalogPage::Category { achievements, .. } = page else {
+        panic!("category response")
+    };
+    assert!(achievements.iter().all(|row| row.achievement_id != 39958));
+}
+
+#[test]
+fn achievements_alert_payload_has_the_authored_earned_icon() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(50), None, 1);
+    let toast = toasts
+        .iter()
+        .find(|row| row.achievement_id == 14782)
+        .expect("authentic Level 50 grant");
+    assert_eq!(serde_json::to_value(toast).unwrap()["icon_fdid"], 236566);
+}
+
+#[test]
+fn achievements_browse_search_full_catalog_and_statistics_raw_counters() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.criteria_progress.insert(3239, 7); // Authentic Keli'dan kill criterion.
+    let request = serde_json::from_value(
+        serde_json::json!({"Statistics": {"category_id":14822,"after_id":1067}}),
+    )
+    .expect("Statistics request");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert_eq!(
+        page["Statistics"]["achievements"][0]["achievement_id"],
+        1068
+    );
+    assert_eq!(page["Statistics"]["achievements"][0]["statistic_value"], 7);
+    let request = serde_json::from_value(
+        serde_json::json!({"Search": {"text":"stormwind stockade","scope":"All","after_id":0}}),
+    )
+    .expect("Search request");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert!(
+        page["Search"]["achievements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["achievement_id"] == 633)
+    );
+    let request = serde_json::from_value(
+        serde_json::json!({"Search": {"text":"level","scope":"Character","after_id":0}}),
+    )
+    .unwrap();
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    let after = page["Search"]["next_id"]
+        .as_u64()
+        .expect("more than one page") as u32;
+    let request = serde_json::from_value(
+        serde_json::json!({"Search": {"text":"level","scope":"Character","after_id":after}}),
+    )
+    .unwrap();
+    let next = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert!(
+        !next["Search"]["achievements"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        next["Search"]["achievements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["achievement_id"].as_u64().unwrap() > u64::from(after))
+    );
+}
+
 fn catalog() -> AchievementCatalog {
     let db = Connection::open(crate::test_data::world_db_path()).unwrap();
     load_achievement_catalog(&db).unwrap()

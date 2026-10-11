@@ -77,7 +77,7 @@ def import_creatures(conn, report):
 
 
 def import_instance_loot(conn, report):
-    """Bind resolved TDB difficulty loot and gold, without legacy/Wowhead substitutions."""
+    """Bind TDB difficulty loot/gold, retaining authored Wowhead loot where TDB has none."""
     loot_offset = retail.TDB_LOOT_OFFSET
     conn.execute(f"""UPDATE content_creature_template AS t
         SET lootid=CASE WHEN d.LootID=0 THEN 0 ELSE d.LootID+{loot_offset} END,
@@ -95,6 +95,32 @@ def import_instance_loot(conn, report):
             ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty
         WHERE s.entry IN ({ENTRIES}))""", report)
     retail.insert_tdb_loot(conn, "reference_loot_template", "1", report)
+    bind_authored_wowhead_loot(conn)
+
+
+def bind_authored_wowhead_loot(conn):
+    """Rebind existing source-backed rows; never invent drops for an empty TDB row."""
+    conn.execute(f"""CREATE TEMP TABLE instance_wowhead_loot AS
+        SELECT DISTINCT w.entry, s.difficulty,
+            CASE WHEN s.difficulty=b.difficulty THEN w.entry+{retail.WOWHEAD_LOOT_OFFSET}
+                 ELSE w.entry+{retail.WOWHEAD_LOOT_OFFSET}+s.difficulty*{retail.WOWHEAD_DIFFICULTY_STRIDE} END AS loot_id,
+            s.difficulty=b.difficulty AS base
+        FROM wowhead_creature_drop w
+        JOIN temp.spawn_map_difficulty s ON s.entry=w.entry AND s.difficulty=w.difficulty
+        JOIN (SELECT entry,min(difficulty) AS difficulty FROM temp.spawn_map_difficulty GROUP BY entry) b
+            ON b.entry=w.entry
+        WHERE w.entry IN ({ENTRIES})""")
+    # build_loot already imported these source-backed scrape rows. Population replaces
+    # templates, not loot rows; only their bindings need to be restored.
+    for table, difficulty_match in (
+        ("content_creature_template", "e.base"),
+        ("content_creature_template_difficulty", "e.difficulty=t.DifficultyID"),
+    ):
+        conn.execute(f"""UPDATE {table} AS t SET lootid=e.loot_id,mingold=0,maxgold=0
+            FROM temp.instance_wowhead_loot e
+            WHERE t.entry=e.entry AND {difficulty_match} AND t.lootid=0
+              AND EXISTS (SELECT 1 FROM content_creature_loot_template l WHERE l.Entry=e.loot_id)""")
+    conn.execute("DROP TABLE temp.instance_wowhead_loot")
 
 
 def import_creature_relationships(conn):

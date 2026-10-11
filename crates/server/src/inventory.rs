@@ -388,7 +388,16 @@ pub(crate) fn process_use_requests(world: &mut World) {
         })
         .collect();
     for (connection, character_id, player, request) in requests {
-        if let Err(error) = use_item(world, character_id, player, &request) {
+        let result =
+            crate::guild::charters::use_item(world, connection, character_id, request.location)
+                .and_then(|handled| {
+                    if handled {
+                        Ok(())
+                    } else {
+                        use_item(world, character_id, player, &request)
+                    }
+                });
+        if let Err(error) = result {
             if let Some(mut sender) = world.get_mut::<MessageSender<InventoryError>>(connection) {
                 sender.send::<InventoryChannel>(error);
             }
@@ -477,7 +486,7 @@ fn use_item(
     Ok(())
 }
 
-fn use_store(world: &World) -> Result<(&Database, &ItemTemplates), InventoryError> {
+pub(crate) fn use_store(world: &World) -> Result<(&Database, &ItemTemplates), InventoryError> {
     match (
         world.get_resource::<GameDatabase>(),
         world.get_resource::<ItemTemplates>(),
