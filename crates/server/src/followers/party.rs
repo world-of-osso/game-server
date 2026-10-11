@@ -45,10 +45,11 @@ fn begin_run(
         return Err("follower queue currently requires a solo player".into());
     }
     let catalog = world.resource::<FollowerCatalog>();
-    let dungeon =
-        catalog.dungeons.get(&dungeon_id).cloned().ok_or(
-            "follower dungeon lacks imported difficulty205 spawns or an authored entrance",
-        )?;
+    let dungeon = catalog
+        .dungeons
+        .get(&dungeon_id)
+        .cloned()
+        .ok_or("follower dungeon lacks imported Normal spawns or an authored entrance")?;
     let profiles = super::select_party(&catalog.profiles, role)?;
     let position = *world
         .get::<shared::components::Position>(player)

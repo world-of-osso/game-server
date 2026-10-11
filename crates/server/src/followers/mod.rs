@@ -73,6 +73,17 @@ pub(crate) fn select_party(profiles: &[Profile], role: GroupRole) -> Result<Vec<
     Ok(party)
 }
 
+/// Approved content bridge: follower copies use the same map's Normal population.
+/// Instance identity, creature difficulty, spell execution and loot remain difficulty205.
+/// Retire when local follower populations and entrances are complete.
+pub(crate) fn population_difficulty(difficulty: u32) -> u32 {
+    if difficulty == catalog::FOLLOWER_DIFFICULTY {
+        crate::maps::store::DIFFICULTY_NORMAL
+    } else {
+        difficulty
+    }
+}
+
 pub(crate) fn update_ai(world: &mut World) {
     ai::update(world);
 }

@@ -1,6 +1,6 @@
 # Retail follower data and approved spec bridge
 
-Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present, but dungeon entry and both-skin live completion remain data-blocked.
+Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Dungeon entry and both-skin live completion still require proof.
 
 ## Source identity
 
@@ -32,7 +32,7 @@ Role AI uses ordinary `creature_cast`, native cooldowns/costs/passives, threat/t
 
 The native Godot host now forwards existing LFG IPC requests on LfgChannel and retains authoritative state/refusals. Send acknowledgment does not mean server acceptance. Full pet/guardian rotation, interrupts/defensives, hazard avoidance, NPC portraits, relog recovery and full-instance completion are not established by these bounded proofs.
 
-## Actual dungeon data blocker
+## Admission data and approved Normal-population bridge
 
 Canonical instance population has now been promoted; it is no longer correct to describe all candidate maps as reference-only. Latest read-only audit is `game-engine/data/diagnostics/follower-ai2-2026-10-11/admission-data-audit.json`.
 
@@ -40,11 +40,11 @@ Ruby Life Pools2436/map2521 has306 runtime spawns, but304 are tagged1/2/8/23 and
 
 TrinityCore a352b1fa `ObjectGridLoader::LoadN` passes the map's selected difficulty into `GetGridObjectGuids`; ObjectMgr indexes `{mapid, spawnMode}` and inserts each spawn under its declared difficulties. Difficulty's template fallback does not widen population tags. No synthetic entrance or Normal→205 population remap was added.
 
-Local WorldSafeLocs1369425 extraction was attempted once; the current local CASC root has no such content/path. Record this source gap without CDN requests. Supplying an authenticated entrance for a205-populated map (or a separately approved population-authoring change) is necessary before live dungeon admission can be proved. No static posed capture substitutes for that proof.
+Local WorldSafeLocs1369425 extraction was attempted once; the current local CASC root has no such content/path. Record this source gap without CDN requests. User subsequently approved Normal population and Normal entrance reuse. Runtime now selects exact difficulty1 membership for creature/game-object populations in205 copies, without modifying source tags or trying an alternate population. Queue/instance identity and creature template/loot difficulty stay205. Ruby is chosen because304 Normal creature rows include Melidrussa Chillworn188252 and entrance100030 is authored. This workaround retires when local205 populations and authored entrances are complete. No static posed capture substitutes for live proof.
 
 ## Lead import instructions
 
-Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Canonical still lacks both follower tables. Existing instance population is separate from follower profile/reference import.
+Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Lead confirmed canonical import of11 profiles,27 LFG rows,9,586 source spell rows and11 content templates. Agent writes remain private. Existing instance population is separate from follower profile/reference import.
 
 From the server branch, wrap commands in engine `scripts/agent/agent-run follower-ai2`:
 
@@ -53,7 +53,7 @@ python3 scripts/follower_import.py --lfg-db2 <follower-ai diagnostics>/db2/13610
 python3 scripts/follower_profiles.py --world-db data/world.db --output <diagnostics>/follower-profiles.sql
 ```
 
-Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-2026-10-11/`. The lead backs up canonical world.db, inspects both files, then applies reference SQL and profile SQL. The latter reuses the existing Retail template converter and promotes only the eleven named templates/models/addons/equipment plus the explicit bridge profile table. Application alone cannot resolve the missing entrance/population pairing.
+Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-2026-10-11/`. The lead backs up canonical world.db, inspects both files, then applies reference SQL and profile SQL. The latter reuses the existing Retail template converter and promotes only the eleven named templates/models/addons/equipment plus the explicit bridge profile table. The approved runtime Normal-population bridge resolves admission without canonical spawn-tag changes.
 
 ## Proof ledger
 

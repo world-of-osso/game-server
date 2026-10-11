@@ -2,6 +2,8 @@
 
 Retail follower dungeons must group a solo player with four role-aware NPCs and complete an authored instance. User-approved workaround (2026-10-11): no authored NPC combat kits exist locally; followers use their labelled spec's real player spells through the existing executor. Spell coefficients, templates and displays remain authored. The bridge initializes native class/spec/level stats and keeps replicated health/mana consistent with those stats; it does not claim authenticated Retail NPC gear or stat-budget parity. This is a bridge, not an NPC-kit authenticity claim; retire it when sourced NPC kits become available. [Local data audit and lead-only import](../wiki/investigations/follower-data.md).
 
+Additional user-approved workaround (2026-10-11): follower difficulty205 runs reuse the same dungeon's Normal-difficulty creature/game-object population and authored Normal entrance. Queue, party and instance identity remain205; creatures retain205 template/loot selection. No synthetic coordinates, spawn-tag widening or automatic alternate population path. Retire this bridge when local205 populations and authored entrances are complete. Ruby Life Pools2436/map2521 is the live candidate:304 Normal creature rows, entrance100030 and first boss Melidrussa188252.
+
 ## What it must do
 
 ### Reference preparation
@@ -29,14 +31,14 @@ Retail follower dungeons must group a solo player with four role-aware NPCs and 
 ## Tests asserting this spec
 - `scripts/tests/test_follower_import.py` — source binary to SQLite round-trip, exact authentic spell rows, reapplication/preservation, invalid layout/source, read-only audit and database output rejection.
 - `scripts/tests/test_follower_profiles.py` — eleven verified profiles, source model preservation, repeated SQL application and database-overwrite refusal.
-- `crates/server/src/followers/{tests,catalog_tests}.rs` — role composition, real damage/heal/taunt/cost/aura initialization, missing-source refusal and exact205 admission-data gating.
+- `crates/server/src/followers/{tests,catalog_tests}.rs` — role composition, real damage/heal/taunt/cost/aura initialization, missing-source refusal and exact Normal population admission-data gating and205 creature/game-object copy spawning.
 - `crates/server/src/group/follower_tests.rs` — real loopback companion online roster and health changes.
 
 ## Known gaps (current cycle)
 - [ ] Authored NPC combat kits are absent. The approved player-spec bridge does not establish full player rotation, pet, interrupt, defensive or ground-avoidance parity.
 - [ ] Live instance entry/completion and full eleven-spec combat coverage remain unproved. NPC identity/role AI have bounded behavioral proof, not end-to-end acceptance.
-- [ ] Authenticated205 population/entrance pairing: canonical instance population is present, but current data has no usable pair. Ruby has an entrance but no205 spawns;205-populated modern maps lack entrances. No synthetic coordinates or Normal→205 population remap.
-- [ ] Lead applies prepared follower reference/profile SQL to canonical; agents applied only to the explicitly authorized private copy.
+- [x] User approved same-map Normal population/entrance reuse; no synthetic coordinates or mutation of authored spawn tags.
+- [x] Lead confirmed canonical follower reference/profile SQL application (11 profiles,27 LFG rows). Agent live development remains on a private copy.
 - [ ] Private live fighting proof and both-skin PNGs; no captures claimed.
 
 ## Out of scope
