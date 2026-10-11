@@ -9,6 +9,8 @@ use crate::item_stats::{ItemScaling, ItemStatAllocation};
 #[path = "item_templates/loot_need.rs"]
 mod loot_need;
 pub use loot_need::LootNeedMetadata;
+mod equip_limit;
+pub use equip_limit::EquipLimit;
 
 /// Item attributes inventory validation and item stats need.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -40,6 +42,8 @@ pub struct ItemTemplate {
     pub bag_family: u32,
     /// ItemSparse.Flags_0: ITEM_FLAG_UNIQUE_EQUIPPABLE (TrinityCore ItemTemplate.h).
     pub unique_equipped: bool,
+    /// ItemSparse.LimitCategory and its authored ItemLimitCategory.Quantity.
+    pub equip_limit: Option<EquipLimit>,
 }
 
 /// An item's on-use `ItemEffect`.
@@ -57,6 +61,8 @@ pub const BIND_ON_PICKUP: u8 = 1;
 pub const BIND_ON_EQUIP: u8 = 2;
 pub const BIND_QUEST: u8 = 4;
 
+/// TrinityCore a352b1fa ITEM_FLAG_UNIQUE_EQUIPPABLE.
+const ITEM_FLAG_UNIQUE_EQUIPPABLE: i64 = 0x0008_0000;
 const ITEM_CLASS_ARMOR: u8 = 4;
 const ITEM_SUBCLASS_COSMETIC: u8 = 5;
 const ITEM_CLASS_CONTAINER: u8 = 1;
@@ -164,7 +170,7 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
       AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1), \
      u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec, \
-     s.ContainerSlots, s.BagFamily, s.Flags_0 \
+     s.ContainerSlots, s.BagFamily, s.Flags_0, s.LimitCategory \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
      LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
       ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY CASE WHEN e.TriggerType = 6 THEN 0 ELSE 1 END, e.LegacySlotIndex, e.ID) AS slot \
@@ -229,7 +235,9 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         on_use: on_use_from_row(row)?,
         container_slots: row.get(APPEARANCE_COLUMN + 5)?,
         bag_family: row.get(APPEARANCE_COLUMN + 6)?,
-        unique_equipped: row.get::<_, i64>(APPEARANCE_COLUMN + 7)? & 0x0008_0000 != 0,
+        unique_equipped: row.get::<_, i64>(APPEARANCE_COLUMN + 7)? & ITEM_FLAG_UNIQUE_EQUIPPABLE
+            != 0,
+        equip_limit: equip_limit::limit_from_category(row.get(APPEARANCE_COLUMN + 8)?)?,
     };
     Ok((row.get(0)?, template))
 }

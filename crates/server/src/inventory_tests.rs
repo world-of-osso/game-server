@@ -263,7 +263,7 @@ fn add_nonvisual_templates(app: &mut App) {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
     let catalog = crate::item_templates::load_item_templates(&path).expect("Retail catalog");
     let mut templates = app.world_mut().resource_mut::<ItemTemplates>();
-    for id in [1116, 1319, 1490, 2820, 4112, 12344] {
+    for id in [1116, 1319, 1490, 2820, 4112, 12344, 35748, 35749] {
         templates
             .retail
             .insert(id, *catalog.retail.get(&id).expect("authentic item"));
@@ -448,6 +448,83 @@ fn nonvisual_equipment_unique_ring_rejects_second_without_mutation() {
         .view(),
         before
     );
+}
+
+#[test]
+fn nonvisual_equipment_distinct_alchemist_stones_share_db2_equip_limit() {
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 96, "Alchemist");
+    grant_bag_item(
+        &app,
+        client.character_id,
+        35748,
+        "Guardian's Alchemist Stone",
+    );
+    grant_bag_item(
+        &app,
+        client.character_id,
+        35749,
+        "Sorcerer's Alchemist Stone",
+    );
+    enter_world(&mut app, &client);
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: equipped_location(EquipmentSlot::Trinket1),
+        },
+    );
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let before = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap()
+    .view();
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(4),
+            to: equipped_location(EquipmentSlot::Trinket2),
+        },
+    );
+    assert_eq!(received::<InventoryError>(&mut app, &client).len(), 1);
+    assert_eq!(
+        load_model(
+            db(&app),
+            app.world().resource::<ItemTemplates>(),
+            client.character_id
+        )
+        .unwrap()
+        .view(),
+        before
+    );
+    // Replacing the first stone does not count the displaced slot.
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(4),
+            to: equipped_location(EquipmentSlot::Trinket1),
+        },
+    );
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let view = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap()
+    .view();
+    assert_eq!(
+        view[&equipped_location(EquipmentSlot::Trinket1)].item_id,
+        35749
+    );
+    assert_eq!(view[&bag(4)].item_id, 35748);
 }
 
 #[test]

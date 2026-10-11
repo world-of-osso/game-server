@@ -893,18 +893,52 @@ impl InventoryModel {
     /// The same GUID may move between paired slots without counting itself.
     fn validate_unique_equipped(&self, item: &InventoryItemData, slot: EquipmentSlot) -> OpResult {
         let template = self.template(item).expect("equippable item template");
-        if !template.unique_equipped {
-            return Ok(());
-        }
         let duplicate = self.equipped.iter().any(|(occupied_slot, equipped)| {
             *occupied_slot != slot
                 && equipped.item_guid != item.item_guid
                 && self.same_definition(item, equipped)
         });
-        if duplicate {
+        if template.unique_equipped && duplicate {
             return Err(error(
                 InventoryErrorReason::ItemUniqueEquippable,
                 format!("item {} is unique-equipped", item.item_id),
+            ));
+        }
+        self.validate_category_limit(item, slot)
+    }
+
+    /// Player::CanEquipUniqueItem also applies category quantities, regardless of mode.
+    fn validate_category_limit(&self, item: &InventoryItemData, slot: EquipmentSlot) -> OpResult {
+        let Some(limit) = self
+            .template(item)
+            .and_then(|template| template.equip_limit)
+        else {
+            return Ok(());
+        };
+        let source = self.definition_source(item.item_guid);
+        let occupied = self
+            .equipped
+            .iter()
+            .filter(|(occupied_slot, equipped)| {
+                **occupied_slot != slot && equipped.item_guid != item.item_guid
+            })
+            .filter(|(_, equipped)| {
+                self.definition_source(equipped.item_guid) == source
+                    && self
+                        .template(equipped)
+                        .and_then(|template| template.equip_limit)
+                        .is_some_and(|other| other.category == limit.category)
+            })
+            .count();
+        if occupied >= usize::from(limit.quantity) {
+            return Err(error(
+                InventoryErrorReason::ItemMaxLimitCategoryEquippedExceeded {
+                    quantity: limit.quantity,
+                },
+                format!(
+                    "ItemLimitCategory {} allows {} equipped items",
+                    limit.category, limit.quantity
+                ),
             ));
         }
         Ok(())

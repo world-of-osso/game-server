@@ -26,6 +26,7 @@ fn content_item_rows_load_inventory_attributes() {
             container_slots: 0,
             bag_family: 0,
             unique_equipped: false,
+            equip_limit: None,
         }
     );
     assert!(sword.allows(1, 1));
