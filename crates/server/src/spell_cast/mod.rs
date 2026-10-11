@@ -34,6 +34,8 @@ mod dummy15_boundary_tests;
 #[cfg(test)]
 mod dummy15_tests;
 #[cfg(test)]
+mod dummy16_tests;
+#[cfg(test)]
 mod dummy2_tests;
 #[cfg(test)]
 mod dummy3_tests;
@@ -429,6 +431,7 @@ fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
         SpellModOp::ChangeCastTime,
         base as f32,
     );
+    let modded = scripts::blast_cast_time(world, caster, spell, modded);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
@@ -1261,6 +1264,11 @@ pub(crate) fn applicable_costs(
         let amount = match SpellModOp::power_cost(cost.order_index) {
             Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
             None => amount_with(base),
+        };
+        let amount = if pool == CostPool::Power(PowerType::Mana) {
+            scripts::mana_cost(world, caster, spell, amount).max(0.0)
+        } else {
+            amount
         };
         // OptionalCost is additional raw spend, never an admission requirement.
         let optional = cost.optional_cost.max(0) as f32;

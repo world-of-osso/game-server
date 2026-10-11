@@ -6,6 +6,18 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Sixteenth-batch low-count rank and charge contracts
+
+- [x] Arcane Blast30451 uses pre-gain Arcane Charges with36032s1/s4/s5 for damage/cast time/mana cost; refusal preserves charges and never hits.
+- [x] Arcane Power12042's s2 mana discount requires343208; expiry removes the discount.
+- [x] Holy Light82326 with231642 casts named88852 once, including overhealing; absent rank gives no Holy Power.
+- [x] Holy Shock20473 and Crusader Strike35395 with196926 reduce only a running Holy Judgment275773 cooldown by their separate native millisecond fields; ready cooldowns remain ready.
+- [x] Holy Judgment275773 and Retribution Judgment20271 with315867 cast named220637 once on actual primary damage; no rank or immune hit gives no gain.
+- [x] Healing Wave77472 applies one native heal to its validated living ally; native selector45/zero chain targets never invents jumps or heals enemies. Existing friendly-cast self selection is unchanged.
+- [x] Riptide61295 with51564 grants native53390 uses up to its native stack cap; Healing Wave77472/Chain Heal1064 consume one use with the same20% cast reduction, not stacked magnitude.
+
+Bounded low-count batch only: offspec Crusader's Might cooldown variants, Judgment mark/talent/secondary effects, Arcane charge-aura visuals and full rotation parity remain uncertified. Guardian modules are excluded. Tests: `crates/server/src/spell_cast/dummy16_tests.rs`; [runtime](../wiki/systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers).
+
 ### First-batch defensive and hit bridges
 
 - [x] Shield Block 2565 casts 132404 on the caster, granting the catalog block aura for six seconds.
