@@ -73,6 +73,7 @@ impl Plugin for AchievementPlugin {
             (
                 send_initial_achievement_snapshot,
                 process_level_achievement_updates,
+                process_skill_achievement_updates,
                 dungeon::send_entry_progress,
                 send_requested_catalog_pages,
             )
@@ -134,6 +135,18 @@ fn process_level_achievement_updates(world: &mut World) {
         if let Some(connection) = connection_for_player(world, player) {
             send_updates(world, connection, snapshot, toasts);
         }
+    }
+}
+
+/// TC a352b1fa CriteriaHandler.cpp:601-604 reads GetBaseSkillValue;
+/// Changed includes newly loaded skill lines, so login restores historical ranks.
+fn process_skill_achievement_updates(world: &mut World) {
+    let updates: Vec<_> = world.query_filtered::<(Entity, &crate::profession::PlayerProfessions), Changed<crate::profession::PlayerProfessions>>()
+        .iter(world).flat_map(|(player, professions)| professions.lines.iter()
+            .filter(|line| line.rank != 0)
+            .map(move |line| (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)))).collect();
+    for (player, event) in updates {
+        record_criteria_event(world, player, event);
     }
 }
 

@@ -174,6 +174,77 @@ fn achievements2_successful_spell_cast_counts_once_and_rejected_trigger_does_not
     );
 }
 
+#[test]
+fn achievements2_skill_rank_uses_current_base_rank_not_maximum_or_increment() {
+    use shared::components::CharacterAppearance;
+    use shared::profession::ProfessionSkillLine;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let line = ProfessionSkillLine {
+        skill_line: 171,
+        rank: 299,
+        max_rank: 450,
+        step: 1,
+    };
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Skilled".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            PlayerAchievementState::default(),
+            crate::profession::PlayerProfessions {
+                lines: vec![line],
+                spells: vec![],
+            },
+        ))
+        .id();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5565),
+        Some(&299)
+    );
+    app.world_mut()
+        .get_mut::<crate::profession::PlayerProfessions>(player)
+        .unwrap()
+        .lines[0]
+        .rank = 250;
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5565),
+        Some(&250)
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5565),
+        Some(&250)
+    );
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5566)
+    );
+}
+
 #[path = "achievement_normal_lock_tests.rs"]
 mod normal_locks;
 
