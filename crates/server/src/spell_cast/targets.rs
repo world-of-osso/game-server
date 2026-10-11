@@ -52,6 +52,8 @@ enum Selector {
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
+    ///91: destination moved along caster facing by this slot's native radius.
+    DestRadius,
     /// Destination moved backward by this target slot's DB2 radius (79).
     DestBack,
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
@@ -100,6 +102,7 @@ fn selector(id: u32) -> Option<Selector> {
         18 | 22 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
         79 => Selector::DestBack,
+        91 => Selector::DestRadius,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
@@ -350,6 +353,14 @@ pub fn select_targets(
             }
             Selector::DestTargetBack => {
                 center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
+            }
+            Selector::DestRadius => {
+                let origin = center.unwrap_or(caster_pos);
+                center = Some(offset_destination_front(
+                    origin,
+                    orientation(world, caster),
+                    radius(effect, slot),
+                ));
             }
             Selector::DestBack => {
                 center = center.map(|point| {
@@ -733,6 +744,12 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
     ))
 }
 
+///TC a352b1fa Spell.cpp:1690-1736: target91's direction is NONE (caster facing),
+///and its distance is this slot's CalcRadius; no random angle or guessed offset.
+fn offset_destination_front(point: Vec3, facing: f32, distance: f32) -> Vec3 {
+    point + Vec3::new(distance * facing.cos(), 0.0, -distance * facing.sin())
+}
+
 /// TC SelectImplicitDestDestTargets: TARGET_DEST_DEST_BACK uses the destination's
 /// facing +pi and this slot's CalcRadius. Gnoll/Market/Expedition Tent uses2yd.
 fn offset_destination_back(point: Vec3, facing: f32, distance: f32) -> Vec3 {
@@ -771,6 +788,13 @@ pub fn effect_dest(
             Selector::ExistingDest => dest
                 .map(|dest: Dest| dest.position)
                 .or_else(|| position(world, caster)),
+            Selector::DestRadius => dest.map(|dest: Dest| {
+                offset_destination_front(
+                    dest.position,
+                    orientation(world, caster),
+                    radius(effect, slot),
+                )
+            }),
             Selector::DestBack => dest.map(|dest: Dest| {
                 offset_destination_back(dest.position, dest.orientation, radius(effect, slot))
             }),
