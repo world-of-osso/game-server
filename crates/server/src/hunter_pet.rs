@@ -1,4 +1,4 @@
-//! Controlled pets: hunter tame/call, warlock Summon Imp, persisted current pet,
+//! Controlled pets: hunter tame/call/revive, authored warlock demons, persisted current pet,
 //! shared spawn/follow/dismiss and demon death removal. TrinityCore a352b1fa:
 //! `spell_hun_tame_beast` (spell_hunter.cpp:1255-1321), `Spell::EffectTameCreature`,
 //! `EffectSummonPet`, `EffectDismissPet` (SpellEffects.cpp:2606-2728, 3586-3598), the
@@ -11,8 +11,11 @@
 //! Pet bar/AI: pet_control.rs. Not modelled: full pet base stats, stable slots beyond
 //! the five active ones, hunter pet death, and pets across map transfers.
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use rusqlite::{Connection, OpenFlags};
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
     Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers,
@@ -43,12 +46,16 @@ use crate::world_data::{CreatureTemplate, WorldData};
 const CLASS_HUNTER: u8 = 3;
 const CLASS_WARLOCK: u8 = 9;
 const SUMMON_IMP: u32 = 688;
+/// Local Retail SUMMON_PET spells; creature entries remain SpellEffect MiscValue data.
+const DEMON_SUMMONS: [u32; 7] = [SUMMON_IMP, 691, 697, 712, 30146, 365349, 366222];
 const IMP_FIREBOLT: u32 = 3110;
 /// Tame Beast, whose `spell_hun_tame_beast::CheckCast` is `can_tame`.
 const TAME_BEAST: u32 = 1515;
 pub const EFFECT_TAME_CREATURE: u32 = 55;
 pub const EFFECT_SUMMON_PET: u32 = 56;
 pub const EFFECT_DISMISS_PET: u32 = 102;
+/// Local Revive Pet982 effect109; TC a352b1fa EffectResurrectPet.
+pub const EFFECT_RESURRECT_PET: u32 = 109;
 /// `SPELL_AURA_ALLOW_TAME_PET_TYPE`: `Player::CanTameExoticPets`.
 const AURA_ALLOW_TAME_PET_TYPE: u32 = 146;
 /// `DEFAULT_PLAYER_COMBAT_REACH`: `GetClosePoint(..., owner->GetCombatReach())`.
@@ -58,13 +65,77 @@ pub struct HunterPetPlugin;
 
 impl Plugin for HunterPetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, load_pet_stables)
+        app.init_resource::<PetCatalog>()
+            .add_systems(Startup, load_pet_catalog)
+            .add_systems(Update, load_pet_stables)
+            .add_systems(
+                Update,
+                crate::pet_stable::process_pet_stable_requests
+                    .after(crate::npc_interaction::NpcInteractionsProcessed)
+                    .after(load_pet_stables),
+            )
+            .add_systems(
+                FixedUpdate,
+                persist_changed_pet_health.after(crate::combat::auto_attack_system),
+            )
             .add_systems(FixedUpdate, remove_ownerless_pets)
             .add_systems(
                 FixedUpdate,
                 remove_dead_demons.after(crate::combat::auto_attack_system),
             );
     }
+}
+
+/// Imported Retail family defaults and normal (non-override) hunter pet specs.
+#[derive(Resource, Default)]
+pub(crate) struct PetCatalog {
+    pub default_specializations: HashMap<u32, u32>,
+    pub families: HashMap<u32, (String, u32)>,
+    pub specializations: Vec<shared::protocol::PetSpecializationInfo>,
+}
+
+fn load_pet_catalog(mut commands: Commands) {
+    #[cfg(test)]
+    let path = crate::test_data::world_db_path();
+    #[cfg(not(test))]
+    let path = std::path::PathBuf::from(crate::spell_info::WORLD_DB_PATH);
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("Open world pet catalog");
+    commands.insert_resource(read_pet_catalog(&conn).expect("Load Retail pet family/spec catalog"));
+}
+
+pub(crate) fn read_pet_catalog(conn: &Connection) -> rusqlite::Result<PetCatalog> {
+    // TC a352b1fa ChrSpecializationFlag::PetOverrideSpec=0x20: separate class index.
+    let mut families = conn.prepare("SELECT f.ID, s.ID FROM creature_family f JOIN chr_specialization s ON s.ClassID=0 AND s.Flags & 32=0 AND s.PetTalentType=f.PetTalentType")?;
+    let default_specializations = families
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    let mut family_names = conn.prepare("SELECT ID, Name_lang, IconFileID FROM creature_family")?;
+    let families = family_names
+        .query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    let mut specs = conn.prepare("SELECT ID, Name_lang FROM chr_specialization WHERE ClassID=0 AND Flags & 32=0 ORDER BY OrderIndex")?;
+    let specializations = specs
+        .query_map([], |row| {
+            Ok(shared::protocol::PetSpecializationInfo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(PetCatalog {
+        default_specializations,
+        families,
+        specializations,
+    })
+}
+
+fn default_pet_specialization(world: &World, family: u32) -> Option<u32> {
+    world
+        .resource::<PetCatalog>()
+        .default_specializations
+        .get(&family)
+        .copied()
 }
 
 /// A hunter's `PetStable`, inserted with the first tamed pet or the stored stable at
@@ -76,7 +147,7 @@ pub struct PetStable {
     pub summoned: Option<Entity>,
 }
 
-/// A controlled pet's owner and storage slot. Warlock imps reuse slot 0 internally;
+/// A controlled pet's owner and storage slot. Warlock demons reuse slot 0 internally;
 /// it is not a hunter Call Pet slot exposed to the warlock.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HunterPet {
@@ -153,6 +224,7 @@ pub(crate) fn check_cast(
     for effect in &spell.effects {
         match effect.effect {
             EFFECT_SUMMON_PET => check_summon_pet(world, caster, spell, effect)?,
+            EFFECT_RESURRECT_PET => check_revive_pet(world, caster)?,
             EFFECT_DISMISS_PET if summoned_pet(world, caster).is_none() => {
                 return Err(CastFailure::Pet(PetCastFailure::NoPet));
             }
@@ -231,11 +303,11 @@ fn check_summon_pet(
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
     if effect.misc_values[0] != 0 {
-        if spell.id != SUMMON_IMP
+        if !DEMON_SUMMONS.contains(&spell.id)
             || world.get::<Player>(caster).map(|player| player.class) != Some(CLASS_WARLOCK)
         {
             return Err(CastFailure::Unsupported(
-                "Only Summon Imp is supported".into(),
+                "Unsupported controlled demon summon".into(),
             ));
         }
         let entry = effect.misc_values[0] as u32;
@@ -323,11 +395,13 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
         family: template.family,
         // The new pet's `CharmInfo` sets it Passive (`CharmInfo::CharmInfo`).
         react_state: REACT_PASSIVE,
+        health: None,
+        specialization: default_pet_specialization(world, template.family),
     })
 }
 
 /// `Player::GetOrInitPetStable`: attach this character's pet storage once.
-fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
+pub(crate) fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
     if world.get::<PetStable>(owner).is_none() {
         let character_id = character_id(world, owner)?;
         world.entity_mut(owner).insert(PetStable {
@@ -356,7 +430,7 @@ fn character_id(world: &mut World, player: Entity) -> Option<u64> {
 
 /// `Spell::EffectSummonPet` (TrinityCore a352b1fa, SpellEffects.cpp): MiscValue is
 /// the creature entry, or 0 for a hunter's slot. The same living pet is recalled;
-/// Summon Imp creates/loads the demon through the existing controlled-pet path.
+/// Authored demon summons create/load through the existing controlled-pet path.
 pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     let owner = ctx.caster;
     if world.get::<Player>(owner).is_none() {
@@ -388,7 +462,7 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
         return;
     }
     if entry != 0 {
-        summon_imp(world, owner, entry, at, facing);
+        summon_demon(world, owner, entry, at, facing);
         return;
     }
     let slot = effect_slot(effect);
@@ -401,12 +475,12 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
 }
 
 /// `Player::SummonPet` loads an existing record or creates a SUMMON_PET from its
-/// creature template at the owner's level, then saves it as current. Only the imp
-/// is admitted by CheckCast; no timed summons or other demon lifecycle is implied.
-fn summon_imp(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
-    let stored = create_or_reuse_imp_record(world, owner, entry);
+/// creature template at the owner's level, then saves it as current. CheckCast admits
+/// the locally sourced permanent demon spell IDs; timed guardians use their own path.
+fn summon_demon(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
+    let stored = create_or_reuse_demon_record(world, owner, entry);
     if init_pet_stable(world, owner).is_none() {
-        error!("Summon Imp owner {owner} has no in-world character");
+        error!("Demon summon owner {owner} has no in-world character");
         return;
     }
     if let Some(pet) = summoned_pet(world, owner) {
@@ -420,7 +494,7 @@ fn summon_imp(world: &mut World, owner: Entity, entry: u32, at: Position, facing
     put_pet_out(world, owner, 0, at, facing);
 }
 
-fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
+fn create_or_reuse_demon_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
     let level = world.get::<Level>(owner).expect("summoning player level").0;
     let existing = world
         .get::<PetStable>(owner)
@@ -429,6 +503,9 @@ fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> Store
     match existing {
         Some(mut stored) => {
             stored.level = level;
+            // Explicit summoning creates a living demon, unlike current-pet relog.
+            // Same living demon recall returns before this record path.
+            stored.health = None;
             stored
         }
         None => {
@@ -443,8 +520,96 @@ fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> Store
                 level,
                 family: template.family,
                 react_state: REACT_PASSIVE,
+                health: None,
+                specialization: None,
             }
         }
+    }
+}
+
+fn first_dead_active_slot(world: &World, owner: Entity) -> Option<u8> {
+    world
+        .get::<PetStable>(owner)?
+        .stored
+        .active
+        .iter()
+        .position(|pet| pet.as_ref().is_some_and(|pet| pet.health == Some(0.0)))
+        .map(|slot| slot as u8)
+}
+
+/// TC Spell.cpp RESURRECT_PET checks: reject a living summon, otherwise require
+/// a dead current pet or the first dead active record (not a stable-storage pet).
+fn check_revive_pet(world: &World, owner: Entity) -> Result<(), CastFailure> {
+    if world.get::<Player>(owner).map(|player| player.class) != Some(CLASS_HUNTER) {
+        return Err(CastFailure::InvalidTarget);
+    }
+    if let Some(pet) = summoned_pet(world, owner) {
+        if world
+            .get::<Health>(pet)
+            .expect("controlled pet health")
+            .current
+            > 0.0
+        {
+            return Err(CastFailure::Pet(PetCastFailure::Tame(
+                TameFailReason::AlreadyHaveSummon,
+            )));
+        }
+        return Ok(());
+    }
+    first_dead_active_slot(world, owner)
+        .map(|_| ())
+        .ok_or(CastFailure::InvalidTarget)
+}
+
+pub(crate) fn effect_revive_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    let owner = ctx.caster;
+    if check_revive_pet(world, owner).is_err() {
+        return;
+    }
+    let Some((at, facing)) = close_point(world, owner) else {
+        return;
+    };
+    if summoned_pet(world, owner).is_none() {
+        let slot = first_dead_active_slot(world, owner).expect("dead pet validated");
+        put_pet_out(world, owner, slot, at, facing);
+    }
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    let percentage =
+        crate::spell_cast::effects::modded_base_points(world, owner, ctx.spell, effect);
+    if percentage < 0.0 {
+        return;
+    }
+    restore_pet_life(world, pet, at, percentage);
+    persist_current_pet_health(world, owner);
+    crate::pet_control::send_pet_spells(world, owner, pet);
+}
+
+fn restore_pet_life(world: &mut World, pet: Entity, at: Position, percentage: f32) {
+    crate::combat::combat_stop(world, pet);
+    world
+        .entity_mut(pet)
+        .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+    let mut health = world.get_mut::<Health>(pet).expect("controlled pet health");
+    health.current = (health.max * percentage / 100.0).min(health.max);
+    *world
+        .get_mut::<Position>(pet)
+        .expect("controlled pet position") = at;
+    if let Some(mut charm) = world.get_mut::<crate::pet_control::PetCharm>(pet) {
+        charm.command_attack = false;
+        charm.follow_ordered = false;
+        charm.stay_at = (charm.command == shared::protocol::COMMAND_STAY).then_some(at);
+    }
+    crate::interest::set_hidden(world, pet, false);
+    crate::interest::mark_interest_position_changed(
+        world
+            .get_resource::<crate::interest::InterestDirtyQueue>()
+            .map(|queue| &*queue),
+        pet,
+    );
+    if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+        queue.mark(pet);
     }
 }
 
@@ -493,10 +658,11 @@ pub(crate) fn abandon_or_dismiss_pet(world: &mut World, pet: Entity) {
     remove_pet(world, pet);
 }
 
-fn remove_pet(world: &mut World, pet: Entity) {
+pub(crate) fn remove_pet(world: &mut World, pet: Entity) {
     let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
         return;
     };
+    persist_current_pet_health(world, owner);
     crate::combat::combat_stop(world, pet);
     world.entity_mut(pet).despawn();
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
@@ -592,11 +758,16 @@ fn spawn_pet(
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
     let power = if demon {
-        imp_spell_power(world)
+        demon_spell_power(world)
     } else {
         PowerType::Focus
     };
     let pools = PowerPools::from_table(world.resource::<PowerTypeTable>(), vec![power]);
+    let current_health = stored.health.unwrap_or(health).clamp(0.0, health);
+    stored.health = Some(current_health);
+    if !demon && stored.specialization.is_none() {
+        stored.specialization = default_pet_specialization(world, stored.family);
+    }
     let mut pet = world.spawn((
         (
             at,
@@ -610,7 +781,7 @@ fn spawn_pet(
                 name: stored.name.clone(),
             },
             Health {
-                current: health,
+                current: current_health,
                 max: health,
             },
             ModelDisplay {
@@ -647,9 +818,9 @@ fn spawn_pet(
     Some((pet.id(), stored))
 }
 
-/// Retail Firebolt 3110 consumes Energy (SpellPower.PowerType 3), not mana.
-/// Read its pool from DB2; PowerTypeTable supplies its full default/max and regen.
-fn imp_spell_power(world: &World) -> PowerType {
+/// The admitted local demon families15/16/17/23/29 all use SpellPower.PowerType3.
+/// Firebolt3110 supplies that shared Energy type; PowerTypeTable supplies max/regen.
+fn demon_spell_power(world: &World) -> PowerType {
     let firebolt = world
         .resource::<crate::spell_info::SpellStore>()
         .get(IMP_FIREBOLT)
@@ -675,7 +846,42 @@ pub(crate) fn pet_max_health(data: &WorldData, template: &CreatureTemplate, leve
     (base as f32 * template.health_modifier).ceil().max(1.0)
 }
 
-fn save_stable(world: &World, owner: Entity) {
+pub(crate) fn persist_current_pet_health(world: &mut World, owner: Entity) {
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    let Some(health) = world.get::<Health>(pet).map(|health| health.current) else {
+        return;
+    };
+    let slot = world
+        .get::<HunterPet>(pet)
+        .expect("owned controlled pet")
+        .slot;
+    let Some(mut stable) = world.get_mut::<PetStable>(owner) else {
+        return;
+    };
+    let Some(record) = stable.stored.active[usize::from(slot)].as_mut() else {
+        return;
+    };
+    if record.health == Some(health) {
+        return;
+    }
+    record.health = Some(health);
+    save_stable(world, owner);
+}
+
+fn persist_changed_pet_health(world: &mut World) {
+    let owners: Vec<_> = world
+        .query_filtered::<&HunterPet, Changed<Health>>()
+        .iter(world)
+        .map(|pet| pet.owner)
+        .collect();
+    for owner in owners {
+        persist_current_pet_health(world, owner);
+    }
+}
+
+pub(crate) fn save_stable(world: &World, owner: Entity) {
     let (Some(db), Some(stable)) = (
         world.get_resource::<GameDatabase>(),
         world.get::<PetStable>(owner),

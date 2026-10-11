@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Toy-effects12 non-summon cosmetics (2026-10-11)
+
+Non-summon runtime-item-eligible ranking starts with aura4=35, effect3=31, effect77=16, effect50=11 and aura56=8 (overlapping counts). Extend the existing shape-checked cosmetic audit, not a blanket dummy executor. Heartbreaker71909 has animation1684/3924 and heart attachment3014; Death's Door193333 has ghost-state model1249985; B.B.F. Fist408067 has animations398982/398986 and hand model978213; Abyss Caller430760 has seven authored water/ritual attachments plus animation kits. Source lifetimes are60000/1800000/86400000ms for the three auras; the horn has no aura duration, gameplay water or summoned actor. No timer is manufactured. All four have complete zero-payload dummy shapes, source visual chains, and no selected spell_script_names bindings in the actual TDB1210 archive.
+
+The Heartbreaker previously deferred in toy-effects10 is now source-audited against its complete animation/attachment chain. Procedural Frosh Hat, zero-entry transforms, missing Black Ice/ring visuals, regional/seasonal scripts, returning balls and interaction objects remain unavailable. Wayfinder's Compass requires Type2 GenericID110576/positioner1937 rendering; it is not an ordinary model attachment. [Coverage and exact gaps](../../toy-effects12-coverage.md). Native rendering is not certified by server-preflight/CPU tests.
+
 ## Toy-effects10 cosmetic target and growth auras (2026-10-10)
 
 Ranked prepared-copy runtime blockers: summon28=43, aura4=42, effect3=31. Missing summon templates do not establish interactions/control scripts. Three source-complete aura4 actions extend the unchanged complete zero-valued cosmetic predicate in `spell_cast/cosmetic.rs`; the root Aqir missile remains ordinary trigger32, not an audited dummy.

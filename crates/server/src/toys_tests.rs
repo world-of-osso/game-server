@@ -23,7 +23,7 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
             239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090, 381262,
             401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618, 128327,
-            196783, 318453, 318452, 243209, 362988, 302730,
+            196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
         ],
         8,
     )
@@ -1923,6 +1923,185 @@ fn toyfx9_prepared_census_preserves_interaction_blockers() {
             !toy["unavailable"].is_null(),
             "unproven interaction/scale: {toy}"
         );
+    }
+}
+
+#[test]
+fn toyfx12_helheim_spirit_applies_to_caster_and_expires_after_thirty_minutes() {
+    assert_toyfx12_aura(129149, 193333, 1_800_000, false);
+}
+
+#[test]
+fn toyfx12_heartbreaker_applies_to_friend_and_expires_after_sixty_seconds() {
+    assert_toyfx12_aura(50471, 71909, 60_000, true);
+}
+
+#[test]
+fn toyfx12_fist_bump_applies_to_selected_friend_and_expires_after_one_day() {
+    assert_toyfx12_aura(205045, 408067, 86_400_000, true);
+}
+
+fn assert_toyfx12_aura(item: u32, spell: u32, duration_ms: u32, on_friend: bool) {
+    use shared::components::{Health, UnitAuras};
+    let state = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&state.path().join("toys.redb"));
+    let friend = spawn_player(&mut h.app, 8, 3.0);
+    h.select(Some(friend));
+    h.advance(2);
+    let target = if on_friend { friend } else { h.caster };
+    let other = if on_friend { h.caster } else { friend };
+    let before = *h.app.world().get::<Health>(target).unwrap();
+    learn_effect_toy(&mut h, character, item);
+    assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+    h.advance(40);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == spell)
+        .unwrap();
+    assert_eq!(aura.duration_ms, duration_ms);
+    assert_eq!(aura.caster, h.caster);
+    let expires_at = aura.expires_at.unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == spell && aura.caster == Some(h.caster.to_bits()))
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(other)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == spell)
+    );
+    assert_eq!(*h.app.world().get::<Health>(target).unwrap(), before);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(target)
+            .is_none()
+    );
+    assert!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character)
+            .items
+            .is_empty()
+    );
+    // Advance the actual virtual clock, not an aura's expiry field. The next
+    // normal frame runs production expiry and replication with a bounded delta.
+    let until_near_expiry = expires_at - crate::auras::aura_now(h.app.world()) - 1.0;
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .advance_by(std::time::Duration::from_secs_f64(until_near_expiry));
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == spell)
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .advance_by(std::time::Duration::from_secs(2));
+    h.advance(2);
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == spell)
+    );
+}
+
+#[test]
+fn toyfx12_abyss_horn_casts_visual_without_creating_gameplay_water_or_actor() {
+    let state = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&state.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 211931);
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.caster)
+        .unwrap();
+    let health = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(activate(&mut h, 211931)[0].error, None);
+    h.advance(80);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 430760));
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Position>(h.caster)
+            .unwrap(),
+        position
+    );
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap(),
+        health
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 430760)
+    );
+    let world = h.app.world_mut();
+    assert_eq!(
+        world
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(world)
+            .count(),
+        0
+    );
+    assert_eq!(
+        world
+            .query::<&crate::game_objects::summoned::SummonedObject>()
+            .iter(world)
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn toyfx12_prepared_census_retains_underivable_non_summon_scripts() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX12_CENSUS_REPORT");
+    let toys = report["toys"].as_array().unwrap();
+    for item in [50471, 129149, 205045, 211931] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [1973, 133997, 134007, 48933, 88377, 199902, 210974, 249468] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(!toy["unavailable"].is_null(), "underived behavior: {toy}");
     }
 }
 
