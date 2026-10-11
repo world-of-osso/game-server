@@ -268,6 +268,7 @@ fn project(world: &World, owner: Entity) -> Option<(PvpTalentsSnapshot, Vec<(u32
                 required_level,
                 selected,
                 can_change,
+                unlocked: context.level >= required_level,
             })
         })
         .collect();
@@ -322,7 +323,14 @@ fn project(world: &World, owner: Entity) -> Option<(PvpTalentsSnapshot, Vec<(u32
     } else {
         Vec::new()
     };
-    Some((PvpTalentsSnapshot { slots, choices }, grants))
+    Some((
+        PvpTalentsSnapshot {
+            spec_id: context.spec,
+            slots,
+            choices,
+        },
+        grants,
+    ))
 }
 pub(super) fn sync_players(world: &mut World) {
     if !world.contains_resource::<Catalog>() {
