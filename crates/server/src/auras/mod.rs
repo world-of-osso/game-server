@@ -127,6 +127,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Authored spell_area autocast; cannot be canceled by the player.
+    SpellArea,
 }
 
 /// One aura application request: the aura effects of `spell_id` that hit
@@ -1684,7 +1686,10 @@ fn receive_cancel_aura(world: &mut World) {
             continue;
         }
         remove_auras(world, owner, RemoveReason::Cancelled, |aura| {
-            aura.spell_id == spell_id && !aura.harmful && !aura.passive
+            aura.spell_id == spell_id
+                && !aura.harmful
+                && !aura.passive
+                && aura.source != AuraSource::SpellArea
         });
     }
 }
