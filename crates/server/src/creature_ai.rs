@@ -217,13 +217,14 @@ fn wander_system(
             &mut WanderState,
             Option<&CreatureState>,
             Option<&InMap>,
+            Option<&crate::scripted_ai::movement::PointMovement>,
             Bearing,
         ),
         Roaming,
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, creature_state, map, bearing) in &mut query {
+    for (entity, mut pos, spawn, mut state, creature_state, map, point, bearing) in &mut query {
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
@@ -235,6 +236,9 @@ fn wander_system(
             }
             WanderPhase::Walking => tick_walk(*pos, &mut state, spawn, dt, &mut probe),
         };
+        if point.is_some() {
+            tracing::debug!(?entity, from = ?*pos, to = ?next_position, ?point, driver = "wander", "concurrent scripted movement");
+        }
         let speed = spawn.speed_walk * BASE_WALK_SPEED;
         let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk, speed);
         queues.apply(entity, &mut pos, bearing, stride);
@@ -1242,6 +1246,14 @@ fn leash_check_system(
 ) {
     for (entity, pos, spawn, state) in &query {
         if matches!(*state, CreatureState::Pursuing { .. }) && beyond_leash(pos, spawn) {
+            tracing::debug!(
+                ?entity,
+                ?pos,
+                ?spawn,
+                ?state,
+                driver = "spawn_leash",
+                "enter evade"
+            );
             commands.queue(move |world: &mut World| {
                 crate::creature_aggro::enter_evade_mode(world, entity);
             });
@@ -1286,6 +1298,7 @@ fn return_to_spawn_system(
         if *state != CreatureState::Returning {
             continue;
         }
+        tracing::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
         let home = Position {
             x: spawn.x,
