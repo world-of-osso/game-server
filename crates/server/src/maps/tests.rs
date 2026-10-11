@@ -391,6 +391,8 @@ impl Harness {
                     pair::<WorldServerInfo>(),
                     pair::<SetDungeonDifficulty>(),
                     pair::<DungeonDifficultySet>(),
+                    pair::<SetRaidDifficulty>(),
+                    pair::<RaidDifficultySet>(),
                 ),
             ))
             .id();
@@ -1605,5 +1607,62 @@ fn raid_entry_flexible_saved_player_can_join_equal_progress_but_not_unkilled_enc
     assert_eq!(
         locks.can_join(71, entries, 9, SUNDAY_NOON, 0),
         Some(TransferAbortReason::AlreadyCompletedEncounter)
+    );
+}
+
+#[test]
+fn raid_entry_only_leader_sets_raid_selections_over_the_real_message_receiver_outside_instances() {
+    let mut h = harness().unwrap();
+    let leader = h.spawn(1, InMap::continent(0), Vec3::ZERO);
+    let member = h.spawn(2, InMap::continent(0), Vec3::ZERO);
+    h.group(&[&leader, &member]);
+    let send = |h: &mut Harness, who: &Traveler, difficulty_id: u32, legacy: bool| {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<SetRaidDifficulty>>(who.connection)
+            .unwrap()
+            .send::<InstanceChannel>(SetRaidDifficulty {
+                difficulty_id,
+                legacy,
+            });
+        h.advance(3);
+    };
+    send(&mut h, &member, 15, false);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<GroupRegistry>()
+            .raid_difficulty_of(2)
+            .unwrap(),
+        RaidDifficulty::default()
+    );
+    send(&mut h, &leader, 15, false);
+    send(&mut h, &leader, 6, true);
+    for who in [&leader, &member] {
+        assert_eq!(
+            *h.app.world().get::<RaidDifficulty>(who.player).unwrap(),
+            RaidDifficulty {
+                primary: 15,
+                legacy: 6
+            }
+        );
+    }
+    let store = h.app.world().resource::<MapStore>().clone();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 409, entrant(1, None), at(0.0))
+        .unwrap()
+        .map;
+    h.app.world_mut().entity_mut(leader.player).insert(copy);
+    send(&mut h, &leader, 14, false);
+    send(&mut h, &leader, 3, true);
+    assert_eq!(
+        *h.app.world().get::<RaidDifficulty>(leader.player).unwrap(),
+        RaidDifficulty {
+            primary: 15,
+            legacy: 6
+        }
     );
 }
