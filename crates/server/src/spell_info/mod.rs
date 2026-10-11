@@ -294,6 +294,7 @@ pub struct EmpowerStage {
 /// Every spell in world.db, sorted by spell ID (binary-searched; a `HashMap`
 /// of 360-byte values costs ~40% more memory at this load factor).
 #[derive(Resource, Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub struct SpellStore {
     spells: Vec<SpellInfo>,
 }
