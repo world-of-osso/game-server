@@ -240,11 +240,12 @@ TRANSFORM_ENTRIES = "SELECT EffectMiscValue_0 FROM spell_effect WHERE EffectAura
 
 # Aura428 linked toys and audited stationary scenery need authentic templates
 # even without world spawns. TDB1210 incense, harmony totem, Artisan's Sign
-# and stationary banners have no click/script/control actions.
+# stationary banners, Pilfered Sweeper and Brewfest Chowdown Trophy have no
+# click/script/control bindings in the local TDB1210 archive.
 TOY_SCENERY_SUMMON_ENTRIES = (
     65298, 65387, 144025, 144026, 181826, 182459, 182461, 193182,
     201798, 208477, 214220, 220620, 233144, 233145, 233146, 233148,
-    233149, 233150,
+    233149, 233150, 121762, 183727,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
