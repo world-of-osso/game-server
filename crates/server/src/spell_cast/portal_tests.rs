@@ -7,6 +7,7 @@ use shared::protocol::{GameObjectInfo, InteractionChannel, UseGameObject};
 
 fn portal_fixture() -> Harness {
     let mut h = harness_with_plugins(Vec::new(), &[10059, 17334], 8, false, |app| {
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
         app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
     })
     .unwrap();
