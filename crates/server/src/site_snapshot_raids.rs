@@ -17,6 +17,7 @@ pub fn read_rankings(
     world: &Connection,
     public: &BTreeSet<u64>,
     as_of: i64,
+    realm: &str,
 ) -> Result<Rankings> {
     let table = match txn.open_table(FIRST_KILLS) {
         Ok(t) => t,
@@ -53,10 +54,16 @@ pub fn read_rankings(
     }
     let mut rankings = Rankings::default();
     for ((guild, id, map, difficulty), kills) in groups {
-        let row = query_progression(world, &id, guild, map, difficulty, &kills)?;
+        let mut row = query_progression(world, &id, guild, map, difficulty, &kills)?;
+        row["realm"] = json!(realm);
         if guild {
+            row["name"] = row["guild_name"].clone();
             rankings.guilds.push(row);
         } else {
+            let data = super::store::bytes(txn, "characters", id.parse()?)?
+                .ok_or_else(|| format!("ranked character {id} missing"))?;
+            row["name"] =
+                json!(crate::character_data::CharacterData::decode_compatible(&data)?.name);
             rankings.characters.push(row);
         }
     }
@@ -117,7 +124,7 @@ fn rank_progression(rows: &mut [Value], subject: &str) {
             r["raid"]["id"].as_u64(),
             r["difficulty_id"].as_u64(),
             std::cmp::Reverse(r["kills"].as_u64()),
-            r["progression_at"].as_i64(),
+            r["first_kill_at"].as_i64(),
             r[subject].as_str().and_then(|s| s.parse::<u64>().ok()),
         )
     });
