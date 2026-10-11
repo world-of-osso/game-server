@@ -6,6 +6,17 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Eighteenth-batch native leech and reapplication contracts
+
+- Health leech effect9 and periodic aura53 deal native SP/AP damage, then heal their caster using the native amplitude times effective damage. Immunity, absorption and overkill produce no copied healing; no second power/modifier/crit roll on the copy. Native tick phase and expiry remain authoritative.
+- Positive native paths: Vampiric Touch34914, Shadow Word: Madness335467 (direct and periodic), Drain Life234153, Blood Plague55078 and Phantom Singularity205179's primary aura53. Singularity's area Dummy is retained, not a guessed duplicate area pulse.
+- Madness's explicit reapplication rule adds unpaid same-owner periodic damage to the new effect. Resolve already-due ticks first; preserve tick phase and foreign ownership. No universal Pandemic threshold is implied.
+- Ignore Pain190456 includes its native tooltip's versatility factor in shield capacity and uses s2 as the per-hit absorb fraction; Protection73 accumulates remaining shields up to its s4 percent-health cap. Aura142 and other class/talent variants remain separate gaps.
+- Improved Conflagrate267115's Charges modifier grants an additional117828 use per successful ranked Conflagrate; native MaxAuraStacks supplies cap4. Magnitude stays30% per use.
+- Obliterate49020's local description variable608 selects dual-wield222024/66198 and1264082/1264083, or two-hand325461 and1264084, never all six. Zero/75 Dummy fields remain underived.
+
+Eight bounded root entries, not complete rotations. Sources: local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210 names. Karma redirect, Lifebloom threshold, guardians and retained marker/talent gaps are not inferred. Tests load real store rows. [Runtime](../wiki/systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication), [proof/census/all40](../spell-dummy18-coverage.md).
+
 ### Seventeenth-batch named resources and restorative hooks
 
 | Entry | Required bounded behaviour |
@@ -13,7 +24,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 |Shadow Bolt686|Completed root grants194192 once only in Demonology266; no grant in other/no active specs.|
 |Conflagrate17962|Actual root damage grants245330 once;196406 grants one117828 use. Native cap2 and successive eligible casts consume one use each at30%, not stacked60%.|
 |Soul Fire6353|Completed root grants281490 once; actual damage applies base157736 periodic aura or445474 when445465 is active, not both. Optional vulnerabilities/tick resources are excluded.|
-|Blood Boil50842|Each damage-hit enemy receives base55078 disease unless learned212744 selects the explicit replacement branch; allies/out-of-area excluded. Leech ticks and descendant markers remain gaps.|
+|Blood Boil50842|Each damage-hit enemy receives base55078 disease unless learned212744 selects the explicit replacement branch; allies/out-of-area excluded. Descendant markers remain gaps; batch18 adds native leech ticks.|
 |Marrowrend195182|Successful damage hit grants195182s3 stacks of named195181, up to its native cap10. Bone Shield melee depletion/haste/markers remain separate.|
 |Lifebloom33763|Natural expiry/dispel casts33778 onto the protected ally once; cancellation/death/replacement never bloom. One active target per owner; foreign owners remain independent. Near-expiration refresh threshold is underivable, not guessed.|
 |Regrowth8936|231032 adds its native40% probability to initial healing when any existing Regrowth affects the target, including foreign-owner HoTs. No rank/no HoT preserves base probability.|

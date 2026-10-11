@@ -43,6 +43,7 @@ use crate::stats::CharacterStats;
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
+pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
 pub const EFFECT_ENERGIZE: u32 = 30;
@@ -85,6 +86,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_SCHOOL_DAMAGE => school_damage,
+        EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_HEAL => heal,
         crate::death::resurrection::EFFECT_RESURRECT
         | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
@@ -426,7 +428,7 @@ fn with_variance(amount: f32, variance: f32) -> f32 {
 }
 
 /// 1 + the caster's versatility (players only).
-fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
+pub(crate) fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
     world
         .get::<CharacterStats>(caster)
         .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)
@@ -588,15 +590,53 @@ pub fn deal_damage(
     crit: bool,
     periodic: bool,
 ) {
+    deal_damage_and_report(world, ctx, target, amount, crit, periodic);
+}
+
+/// Leech copies effective damage, after mitigation/absorption and excluding overkill.
+/// Its DB2 amplitude is a multiplier, not a second spell-power or crit roll.
+pub(crate) fn deal_leech(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    multiplier: f32,
+    crit: bool,
+    periodic: bool,
+) {
+    let dealt = deal_damage_and_report(world, ctx, target, amount, crit, periodic);
+    if dealt > 0.0 {
+        let healing = (dealt * multiplier).max(0.0).round();
+        apply_resolved_heal(world, ctx, ctx.caster, healing, false, periodic);
+    }
+}
+
+fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let base = with_variance(
+        scaled_amount(world, ctx.caster, ctx.spell, effect),
+        effect.variance,
+    ) * ctx.chain_multiplier;
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    deal_leech(world, ctx, target, amount, effect.amplitude, crit, false);
+}
+
+fn deal_damage_and_report(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+) -> f32 {
     if !super::targets::is_alive(world, target) {
-        return;
+        return 0.0;
     }
     let school = ctx.spell.school_mask();
     if crate::auras::is_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;
         log_event(world, event);
-        return;
+        return 0.0;
     }
     let amount = super::scripts::damage_amount(ctx.spell.id)
         .map_or(amount, |modify| modify(world, ctx.caster, target, amount));
@@ -622,7 +662,7 @@ pub fn deal_damage(
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
     let duel = world.get::<crate::duel::DuelOpponent>(target).copied();
     let Some(mut health) = world.get_mut::<Health>(target) else {
-        return;
+        return 0.0;
     };
     let before = health.current;
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
@@ -673,6 +713,7 @@ pub fn deal_damage(
     if lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
     }
+    (amount - overkill).max(0.0)
 }
 
 /// Damage outside a spell's hit event: periodic ticks, and damage by a spell that is

@@ -55,7 +55,21 @@ pub(super) fn conflagrate(world: &mut World, caster: Entity, target: Entity, dep
     }
     spell_cast::cast_triggered(world, caster, CONFLAGRATE_POWER, Some(caster), depth + 1);
     if crate::auras::has_aura(world, caster, BACKDRAFT) {
-        spell_cast::cast_triggered(world, caster, BACKDRAFT_BUFF, Some(caster), depth + 1);
+        let buff = world
+            .resource::<SpellStore>()
+            .get(BACKDRAFT_BUFF)
+            .expect("Backdraft spell");
+        //267115s1 is a flat Charges modifier; s2 separately raises the stack cap.
+        let uses = crate::auras::spell_mods::modify(
+            world,
+            caster,
+            buff,
+            crate::auras::SpellModOp::Charges,
+            1.0,
+        ) as u32;
+        for _ in 0..uses {
+            spell_cast::cast_triggered(world, caster, BACKDRAFT_BUFF, Some(caster), depth + 1);
+        }
     }
 }
 
