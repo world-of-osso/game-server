@@ -21,7 +21,7 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
             398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
             203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
-            239560, 254513, 405634,
+            239560, 254513, 405634, 127771, 128180,
         ],
         8,
     )
@@ -1641,10 +1641,125 @@ fn toyfx7_drake_basket_preserves_aura_identity_and_cancellation() {
     );
 }
 
+fn import_toyfx8_world(directory: &std::path::Path) -> std::path::PathBuf {
+    let path = directory.join("world.sqlite");
+    std::fs::copy(crate::test_data::world_db_path(), &path).unwrap();
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts/add_toy_summon_templates.py");
+    let output = std::process::Command::new("python3")
+        .arg(script)
+        .arg("--db")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{:?}", output);
+    path
+}
+
+#[test]
+fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitFactionTemplate, UnitSummonedBy};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    for (item, spell, entry, displays, lifetime_frames) in [
+        (88381, 127771, 65298, vec![41007, 41008], 400),
+        (88584, 128180, 65387, vec![41838], 1200),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("{item}.redb")));
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        learn_effect_toy(&mut h, character, item);
+        let caster_position = *h.app.world().get::<Position>(h.caster).unwrap();
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(10);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let summons: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, _)| entity)
+            .collect();
+        assert_eq!(summons.len(), 1);
+        let summon = summons[0];
+        assert!(displays.contains(&world.get::<ModelDisplay>(summon).unwrap().display_id));
+        assert_eq!(
+            world.get::<UnitSummonedBy>(summon).unwrap().0,
+            h.caster.to_bits()
+        );
+        assert_eq!(world.get::<Position>(summon), Some(&caster_position));
+        assert_eq!(
+            world.get::<crate::maps::InMap>(summon),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert_eq!(
+            world.get::<UnitFactionTemplate>(summon),
+            world.get::<UnitFactionTemplate>(h.caster)
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(summon)
+                .is_none()
+        );
+        world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
+        h.advance(lifetime_frames - 30);
+        assert_eq!(
+            h.app.world().get::<Position>(summon),
+            Some(&caster_position)
+        );
+        h.advance(40);
+        assert!(
+            h.app.world().get_entity(summon).is_err(),
+            "authored duration must expire"
+        );
+    }
+}
+
+#[test]
+fn toyfx8_scenery_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX8_CENSUS_REPORT");
+    for item in [88381, 88584] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [88387, 88579, 193478, 198156, 219387] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(
+            !toy["unavailable"].is_null(),
+            "interaction toys must stay blocked: {toy}"
+        );
+    }
+}
+
 #[test]
 fn toys_effect_census() {
+    report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
+}
+
+fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_json::Value {
     use std::collections::{BTreeMap, BTreeSet};
-    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    let conn =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
     let catalog = toy_catalog::load(&conn).unwrap();
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
@@ -1652,9 +1767,7 @@ fn toys_effect_census() {
     world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
-    world.insert_resource(crate::world_data::load_world_data(
-        &crate::test_data::world_db_path(),
-    ));
+    world.insert_resource(crate::world_data::load_world_data(path));
     let has_summon_properties: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",
@@ -1716,8 +1829,9 @@ fn toys_effect_census() {
         "candidate-usable toys: {candidate_usable}/{}",
         catalog.0.len()
     );
-    if let Ok(path) = std::env::var("TOY_CENSUS_REPORT") {
+    if let Ok(path) = std::env::var(report_variable) {
         std::fs::write(path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
     }
     println!("toy types: {}", report["unsupported"]);
+    report
 }
