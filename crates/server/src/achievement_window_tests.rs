@@ -55,6 +55,61 @@ fn achievementlinks_detail_uses_authoritative_state_and_rejects_other_faction() 
     assert!(page["Achievement"]["entry"].is_null());
 }
 
+#[test]
+fn achievements_browse_search_full_catalog_and_statistics_raw_counters() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.criteria_progress.insert(3239, 7); // Authentic Keli'dan kill criterion.
+    let request = serde_json::from_value(
+        serde_json::json!({"Statistics": {"category_id":14822,"after_id":1067}}),
+    )
+    .expect("Statistics request");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert_eq!(
+        page["Statistics"]["achievements"][0]["achievement_id"],
+        1068
+    );
+    assert_eq!(page["Statistics"]["achievements"][0]["statistic_value"], 7);
+    let request = serde_json::from_value(
+        serde_json::json!({"Search": {"text":"stormwind stockade","scope":"All","after_id":0}}),
+    )
+    .expect("Search request");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert!(
+        page["Search"]["achievements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["achievement_id"] == 633)
+    );
+    let request = serde_json::from_value(
+        serde_json::json!({"Search": {"text":"level","scope":"Character","after_id":0}}),
+    )
+    .unwrap();
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    let after = page["Search"]["next_id"]
+        .as_u64()
+        .expect("more than one page") as u32;
+    let request = serde_json::from_value(
+        serde_json::json!({"Search": {"text":"level","scope":"Character","after_id":after}}),
+    )
+    .unwrap();
+    let next = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert!(
+        !next["Search"]["achievements"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        next["Search"]["achievements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["achievement_id"].as_u64().unwrap() > u64::from(after))
+    );
+}
+
 fn catalog() -> AchievementCatalog {
     let db = Connection::open(crate::test_data::world_db_path()).unwrap();
     load_achievement_catalog(&db).unwrap()
