@@ -5,6 +5,22 @@
 -- world content of maps 0 and 1 (creature and game object spawns and templates, quests,
 -- vendors, gossip, loot) that content_policy.py resolves into the content_* tables.
 
+-- TC SpellMgr::LoadSpellAreas: preserve authored quest status masks and flags.
+DROP TABLE IF EXISTS tdb_spell_area;
+CREATE TABLE tdb_spell_area (
+  spell INTEGER NOT NULL DEFAULT 0,
+  area INTEGER NOT NULL DEFAULT 0,
+  quest_start INTEGER NOT NULL DEFAULT 0,
+  quest_end INTEGER NOT NULL DEFAULT 0,
+  aura_spell INTEGER NOT NULL DEFAULT 0,
+  racemask INTEGER NOT NULL DEFAULT 0,
+  gender INTEGER NOT NULL DEFAULT 2,
+  flags INTEGER NOT NULL DEFAULT 3,
+  quest_start_status INTEGER NOT NULL DEFAULT 64,
+  quest_end_status INTEGER NOT NULL DEFAULT 11,
+  PRIMARY KEY (spell, area, quest_start, aura_spell, racemask, gender)
+);
+
 -- Authored fixed destinations, not a client DB2. Preserve all ordered points.
 DROP TABLE IF EXISTS tdb_spell_target_position;
 CREATE TABLE tdb_spell_target_position (
