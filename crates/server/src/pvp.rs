@@ -19,6 +19,8 @@ use crate::networking::PlayerLink;
 
 #[path = "pvp_support.rs"]
 mod pvp_support;
+#[path = "pvp_talents.rs"]
+pub(crate) mod pvp_talents;
 #[path = "pvp_war_mode.rs"]
 mod pvp_war_mode;
 
@@ -59,6 +61,8 @@ pub struct PlayerPvpProgress {
     pub brackets: Vec<PlayerPvpBracketState>,
     #[serde(default)]
     pub war_mode_desired: bool,
+    #[serde(default)]
+    pub pvp_talents: BTreeMap<u32, BTreeMap<u8, u32>>,
 }
 
 impl Default for PlayerPvpProgress {
@@ -70,6 +74,7 @@ impl Default for PlayerPvpProgress {
             conquest_max: CONQUEST_CAP,
             brackets: default_brackets(),
             war_mode_desired: false,
+            pvp_talents: BTreeMap::new(),
         }
     }
 }
@@ -86,6 +91,7 @@ pub struct PlayerPvpState {
     pub queue: Option<PlayerPvpQueue>,
     pub battleground: Option<shared::protocol::BattlegroundSnapshot>,
     pub war_mode: Option<shared::protocol::WarModeSnapshot>,
+    pub talents: Option<shared::protocol::PvpTalentsSnapshot>,
 }
 
 impl PlayerPvpState {
@@ -95,6 +101,7 @@ impl PlayerPvpState {
             queue: None,
             battleground: None,
             war_mode: None,
+            talents: None,
         }
     }
 }
@@ -206,6 +213,8 @@ impl Plugin for PvpPlugin {
         );
         app.add_systems(Update, process_rated_queue_requests);
         app.add_systems(Update, process_pvp_dequeue_requests);
+        app.add_systems(Update, pvp_talents::receive_requests);
+        app.add_systems(PostUpdate, pvp_talents::sync_players);
         app.add_systems(
             Update,
             (pvp_war_mode::receive_requests, pvp_war_mode::sync_state).chain(),

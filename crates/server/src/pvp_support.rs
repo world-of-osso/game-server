@@ -76,6 +76,7 @@ pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
         queue: state.queue.as_ref().map(build_queue_snapshot),
         battleground: state.battleground.clone(),
         war_mode: state.war_mode.clone(),
+        talents: state.talents.clone(),
     }
 }
 
