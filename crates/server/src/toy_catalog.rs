@@ -124,7 +124,8 @@ fn classify(
         if effect.effect == 0 {
             continue;
         }
-        let supported = supports_effect(world, effect);
+        let supported = supports_effect(world, effect)
+            || crate::spell_cast::cosmetic::is_visual_aura(spell, effect);
         if supported && crate::auras::is_aura_effect(effect) {
             supported_auras.insert(effect.aura);
         }

@@ -1,6 +1,6 @@
 # Warlock pets
 
-Summon Imp (688) uses the server's existing pet ownership, bar, movement and combat systems. Implementation: `crates/server/src/hunter_pet.rs`; [mechanics and references](../wiki/systems/warlock-pets.md).
+Locally authored permanent demon summons use the server's existing pet ownership, bar, movement and combat systems. Implementation: `crates/server/src/hunter_pet.rs`; [mechanics and references](../wiki/systems/warlock-pets.md).
 
 ## What it must do
 
@@ -10,9 +10,11 @@ Summon Imp (688) uses the server's existing pet ownership, bar, movement and com
 - [x] Attack produces Firebolt damage on the ordered target with TC's 15% owner spell-power contribution; Follow stops attacking and moves back to the owner.
 - [x] Recasting the same summon recalls the existing imp instead of duplicating it.
 - [x] PetAction command 3 dismisses the imp without requiring hunter spell 2641; dismissal and death clear the owner's bar and do not restore it at relog. The saved demon remains explicitly summonable. The same command abandons/deletes a hunter pet's saved slot (TC `PetHandler.cpp:217-238`).
-- [x] Explicitly summoning a dismissed imp after relog restores the saved record.
+- [x] Summon Imp688, Voidwalker697, Succubus712, Felhunter691, Felguard30146 and Sayaad366222 create the creature authored by their effect56. Incubus365349 is admitted only when its authored template/model exists; absent local content is an explicit refusal.
+- [x] Explicitly summoning a dismissed demon after relog restores its saved identity as a living demon. Current-pet relog preserves wounded health instead.
 - [x] A permanent current imp returns at login through persisted pet storage and restores its bar.
-- [ ] Existing owner/pet replication carries the imp without wire changes (live proof belongs to team-lead).
+- [x] Existing owner/pet replication carries the six supported authored demons' current/bar state in both client skins; server-confirmed native logout restores current Felguard and preserves its dismissal.
+- [x] Locally imported Fel Domination333889 accelerates the next Imp summon by90% and consumes its charge through existing spell modifiers.
 
 ## How it works
 
@@ -33,8 +35,9 @@ Summon Imp (688) uses the server's existing pet ownership, bar, movement and com
 
 ## Known gaps (current cycle)
 
-- [ ] Live client PetFrame/bar and wire-level replication proof remains with team-lead.
+- [ ] Full rendered demon bodies remain blocked by imported appearance/asset receipt coverage; native lifecycle/frame/bar evidence does not certify those bodies. Imp renders.
+- [ ] Incubus365349's authored template184600 is absent from active content; no substitute template is created.
 
 ## Out of scope
 
-Other demons (Voidwalker, Succubus, Felhunter, Felguard), timed guardians, generated demon names, imported pet_levelstats, base pet attributes/resistances and school-specific owner bonuses, saved health/mana and autocast toggles, map transfers and dead/mounted-owner temporary-unsummon rules. Existing hunter persistence restores full health/power; this task reuses it rather than changing its format.
+Timed guardians, generated demon names, imported pet_levelstats, base pet attributes/resistances and school-specific owner bonuses, saved mana and autocast toggles, map transfers and dead/mounted-owner temporary-unsummon rules. Character-scoped health persistence is defined by [combat pet lifecycle](pet-lifecycle.md).

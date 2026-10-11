@@ -1,6 +1,6 @@
 # Quests
 
-Requirements and gaps: [quests spec](../../specs/quests.md).
+Requirements and gaps: [quests spec](../../specs/quests.md). Exact [GO/spell census and proof](../../quest-objectives-coverage.md).
 
 ## Data
 
@@ -14,7 +14,8 @@ Pure functions over `QuestDb` + `QuestLogData` + `QuestPlayer{level, race, class
 
 - `can_take` = `CanTakeQuest` + log cap: already on / done (non-repeatable), class and race masks (`1 << (id-1)`), exclusive group (positive: no other member taken), previous quests (any positive one turned in, or any negative one in the log; a previous quest in a negative group needs the whole group turned in), next/prev chain, `MinLevel`/`MaxLevel`, 35 quests.
 - Markers (`GetQuestDialogStatus`): enders give Reward/Incomplete; starters give Available, LowLevelAvailable when the player is more than 4 levels above the quest (`LOW_LEVEL_HIDE_DIFF`), Unavailable when below `MinLevel` but within 7 (`HIGH_LEVEL_HIDE_DIFF`). The highest wins.
-- Progress: kill counts are stored per objective; item progress is the bag count, capped at the requirement.
+- Progress: creature and game-object event counts persist per matching objective kind/ID, capped at the requirement; item progress is the Retail-source bag count. Chest opening is not item credit.
+- Spell effects90/134 call the same counted Type0 objective path for the hit player (not the NPC/caster):90 personal,134 nearby same-map-copy group. These are monster-credit objectives, not a separate cast-spell Type; Retail Type5 means learn-spell. Existing Spray Water/SmartAI credit remains separate. Effect16 events,316/317 label credit, arbitrary scripted/Dummy credit and learn-spell objectives remain outside this proof.
 
 ## Runtime (`quest.rs`, `quest_requests.rs`)
 
@@ -25,8 +26,15 @@ Pure functions over `QuestDb` + `QuestLogData` + `QuestPlayer{level, race, class
 
 Marker delivery is query-driven rather than replicated because the marker depends on the viewer; the connection remembers queried NPCs so changes push without a new query.
 
+## Sources
+
+- [Quest contract](../../specs/quests.md).
+- `quest_rules::credit_objective`, `quest::event_credit`, `spell_cast/effects.rs`, `quest_objectives_tests.rs` and `quest_spell_tests.rs`.
+- TrinityCore a352b1fa `QuestDef.h`, `Player::KillCreditGO`, `EffectKillCreditPersonal` and `EffectKillCredit`.
+
 ## See Also
 
+- [[game-objects]] — GO use validation, authored locks and chest-loot lifetime
 - [[inventory]] — bag model, `free_bag_cells`, delta path
 - [[experience]] — quest and kill XP (turn-in queues `quest_xp`)
 - [[combat]] — NPC death (`DeathState`, `LastDamager`)

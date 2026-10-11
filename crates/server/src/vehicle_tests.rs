@@ -216,6 +216,7 @@ fn setup() -> (World, Entity, Entity, Entity) {
                 level: 1,
                 portrait: Default::default(),
                 dungeon_difficulty: 1,
+                raid_difficulty: crate::maps::RaidDifficulty::default(),
             },
         )
     })
@@ -339,6 +340,7 @@ fn vehicle_rejects_non_group_boarding_and_full_vehicle_without_state_changes() {
                 level: 1,
                 portrait: Default::default(),
                 dungeon_difficulty: 1,
+                raid_difficulty: crate::maps::RaidDifficulty::default(),
             },
         )
     })
