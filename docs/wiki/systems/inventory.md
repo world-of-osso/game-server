@@ -13,7 +13,7 @@ Item-use scaling and regression evidence: [[item-healing-scaling]].
 | `inventory_layouts` | `CharacterId` | `Vec<ItemPlacementData{item_guid, bag, slot}>` |
 | `item_instances` | item guid | `ItemInstanceData{soulbound}` |
 
-Instance state is keyed by guid, so it follows an item through trade, mail and auctions. Item rules (inventory type, `Stackable`, required level, class/race masks, bonding) come from source-qualified world.db catalogs in the `ItemTemplates` resource (`item_templates.rs`); details below. Equipped items stay in `character_equipment` (visual-slot keyed, see [[persistence]]). `persistence_inventory.rs` loads and saves all of these plus `CharacterData` in one transaction.
+Instance state is keyed by guid, so it follows an item through trade, mail and auctions. Item rules (inventory type, `Stackable`, required level, class/race masks, bonding) come from source-qualified world.db catalogs in the `ItemTemplates` resource (`item_templates.rs`); details below. Visual equipped items stay in `character_equipment` (visual-slot keyed, see [[persistence]]). `character_nonvisual_equipment` stores neck, paired fingers/trinkets and legacy relics as `(Retail inventory slot id, InventoryItemData)`; startup creates the additive table, so existing characters load an empty non-visual list without rewriting their visual or character ABI. Non-visual GUIDs participate in source/binding loading and the same atomic inventory transaction, snapshots/deltas and `EquippedItems` stat input. `persistence_inventory.rs` loads and saves all of these plus `CharacterData` in one transaction.
 
 ## Definition source
 

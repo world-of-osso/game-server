@@ -258,6 +258,180 @@ fn grant_bag_weapon(app: &App, character_id: u64) -> u64 {
     grant_bag_item(app, character_id, WORN_SHORTSWORD, "Worn Shortsword")
 }
 
+/// Real ItemSparse identities; the production loader supplies all flags and stats.
+fn add_nonvisual_templates(app: &mut App) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let catalog = crate::item_templates::load_item_templates(&path).expect("Retail catalog");
+    let mut templates = app.world_mut().resource_mut::<ItemTemplates>();
+    for id in [1116, 1319, 1490, 2820, 4112, 12344] {
+        templates
+            .retail
+            .insert(id, *catalog.retail.get(&id).expect("authentic item"));
+    }
+}
+
+fn equipped_location(slot: EquipmentSlot) -> ItemLocation {
+    ItemLocation::Equipment(slot)
+}
+
+#[test]
+fn nonvisual_equipment_ring_pair_snapshot_and_relog() {
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 91, "Ringwearer");
+    let first = grant_bag_item(&app, client.character_id, 1116, "Ring of Pure Silver");
+    let second = grant_bag_item(&app, client.character_id, 1319, "Ring of Iron Will");
+    enter_world(&mut app, &client);
+    for slot in [3, 4] {
+        request(&mut app, &client, EquipItem { from: bag(slot) });
+    }
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let model = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap();
+    let snapshot = model.equipment_snapshot();
+    assert_eq!(
+        snapshot
+            .items
+            .iter()
+            .map(|entry| (entry.slot, entry.item.item_guid))
+            .collect::<Vec<_>>(),
+        vec![
+            (EquipmentSlot::Finger1, first),
+            (EquipmentSlot::Finger2, second)
+        ]
+    );
+    assert_eq!(
+        app.world()
+            .entity(client.player)
+            .get::<EquippedItems>()
+            .unwrap()
+            .items
+            .len(),
+        2
+    );
+    app.world_mut()
+        .entity_mut(client.connection)
+        .remove::<InWorld>();
+    app.update();
+    let _ = received::<EquipmentSnapshot>(&mut app, &client);
+    enter_world(&mut app, &client);
+    assert_eq!(
+        received::<EquipmentSnapshot>(&mut app, &client),
+        vec![snapshot]
+    );
+}
+
+#[test]
+fn nonvisual_equipment_trinket_swap_and_unequip_preserve_guids() {
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 92, "Trinketer");
+    let first = grant_bag_item(&app, client.character_id, 1490, "Guardian Talisman");
+    let second = grant_bag_item(&app, client.character_id, 2820, "Nifty Stopwatch");
+    enter_world(&mut app, &client);
+    for (from, to) in [
+        (bag(3), equipped_location(EquipmentSlot::Trinket1)),
+        (bag(4), equipped_location(EquipmentSlot::Trinket2)),
+        (
+            equipped_location(EquipmentSlot::Trinket1),
+            equipped_location(EquipmentSlot::Trinket2),
+        ),
+    ] {
+        request(&mut app, &client, SwapItem { from, to });
+    }
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let model = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap();
+    let view = model.view();
+    assert_eq!(
+        view[&equipped_location(EquipmentSlot::Trinket1)].item_guid,
+        second
+    );
+    assert_eq!(
+        view[&equipped_location(EquipmentSlot::Trinket2)].item_guid,
+        first
+    );
+    request(
+        &mut app,
+        &client,
+        EquipItem {
+            from: equipped_location(EquipmentSlot::Trinket2),
+        },
+    );
+    let model = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap();
+    assert!(
+        !model
+            .view()
+            .contains_key(&equipped_location(EquipmentSlot::Trinket2))
+    );
+    assert!(
+        model
+            .inventory_snapshot()
+            .bags
+            .iter()
+            .flat_map(|bag| &bag.items)
+            .any(|entry| entry.item.item_guid == first)
+    );
+}
+
+#[test]
+fn nonvisual_equipment_unique_ring_rejects_second_without_mutation() {
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 93, "Uniquewearer");
+    grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
+    grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
+    enter_world(&mut app, &client);
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: equipped_location(EquipmentSlot::Finger1),
+        },
+    );
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let before = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap()
+    .view();
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(4),
+            to: equipped_location(EquipmentSlot::Finger2),
+        },
+    );
+    assert_eq!(received::<InventoryError>(&mut app, &client).len(), 1);
+    assert_eq!(
+        load_model(
+            db(&app),
+            app.world().resource::<ItemTemplates>(),
+            client.character_id
+        )
+        .unwrap()
+        .view(),
+        before
+    );
+}
+
 #[test]
 fn enter_world_sends_owner_snapshots_with_granted_items() {
     let mut app = setup_app(persistence::temp_database());
