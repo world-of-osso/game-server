@@ -6,6 +6,7 @@ mod batch11;
 mod batch12;
 mod batch13;
 mod batch14;
+mod batch15;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -22,9 +23,13 @@ pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
+pub(super) use batch15::heal_beacon;
+pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    batch11::effect_enabled(world, caster, spell, index) && batch13::effect_enabled(spell, index)
+    batch11::effect_enabled(world, caster, spell, index)
+        && batch13::effect_enabled(spell, index)
+        && batch15::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -97,6 +102,7 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
@@ -359,7 +365,11 @@ fn chain_heal_plan(
     let primary = explicit.expect("Chain Heal has a validated ally target");
     let jumps = spell.effects[0].chain_targets.saturating_sub(1) as usize;
     let radius = script_effect_value(world, caster, CHAIN_HEAL, 2);
-    let amplitude = 1.0 - script_effect_value(world, caster, CHAIN_HEAL, 1) / 100.0;
+    let amplitude = batch15::chain_falloff(
+        world,
+        caster,
+        script_effect_value(world, caster, CHAIN_HEAL, 1),
+    );
     let mut units = vec![primary];
     units.extend(chain_heal_jumps(world, caster, primary, radius, jumps));
     let chain_multipliers =
