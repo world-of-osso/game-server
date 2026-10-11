@@ -15,6 +15,24 @@ fn roll_action_chance(event: &SmartEvent) -> bool {
 }
 
 impl SmartAi {
+    pub(super) fn tick_summon_hook_cooldown(&mut self, index: usize, diff_ms: u32) -> bool {
+        let event = &self.events[index];
+        let hook = matches!(
+            event.event_type,
+            EVENT_SUMMONED_UNIT | EVENT_SUMMON_DESPAWNED
+        );
+        if !hook || !self.in_phase(event.phase_mask) {
+            return false;
+        }
+        let state = &mut self.states[index];
+        if state.timer_ms >= diff_ms {
+            state.timer_ms -= diff_ms;
+        } else {
+            state.active = true;
+        }
+        true
+    }
+
     pub(super) fn start_timed_list(
         &mut self,
         ctx: &Ctx,

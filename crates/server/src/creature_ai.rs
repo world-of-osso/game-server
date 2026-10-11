@@ -227,14 +227,13 @@ fn wander_system(
             &mut WanderState,
             Option<&CreatureState>,
             Option<&InMap>,
-            Option<&crate::scripted_ai::movement::PointMovement>,
             Bearing,
         ),
         Roaming,
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, creature_state, map, point, bearing) in &mut query {
+    for (entity, mut pos, spawn, mut state, creature_state, map, bearing) in &mut query {
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
@@ -246,9 +245,6 @@ fn wander_system(
             }
             WanderPhase::Walking => tick_walk(*pos, &mut state, spawn, dt, &mut probe),
         };
-        if point.is_some() {
-            bevy::log::debug!(?entity, from = ?*pos, to = ?next_position, ?point, driver = "wander", "concurrent scripted movement");
-        }
         let speed = spawn.speed_walk * BASE_WALK_SPEED;
         let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk, speed);
         queues.apply(entity, &mut pos, bearing, stride);

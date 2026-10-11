@@ -997,20 +997,10 @@ impl CreatureAi for SmartAi {
         self.update_follow(ctx, diff_ms);
         self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
-            let event = &self.events[index];
-            if matches!(
-                event.event_type,
-                EVENT_SUMMONED_UNIT | EVENT_SUMMON_DESPAWNED
-            ) && self.in_phase(event.phase_mask)
-            {
-                let state = &mut self.states[index];
-                if state.timer_ms >= diff_ms {
-                    state.timer_ms -= diff_ms;
-                } else {
-                    state.active = true;
-                }
+            if self.tick_summon_hook_cooldown(index, diff_ms) {
                 continue;
             }
+            let event = &self.events[index];
             if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
                 || !self.in_phase(event.phase_mask)
             {
