@@ -56,6 +56,10 @@ const EVENT_UPDATE_IC: u32 = 0;
 const EVENT_FOLLOW_COMPLETED: u32 = 65;
 const EVENT_AGGRO: u32 = 4;
 const EVENT_DEATH: u32 = 6;
+const EVENT_EVADE: u32 = 7;
+const EVENT_SUMMONED_UNIT: u32 = 17;
+const EVENT_SUMMON_DESPAWNED: u32 = 35;
+const EVENT_JUST_SUMMONED: u32 = 54;
 const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
@@ -218,6 +222,10 @@ fn supports_event(kind: u32) -> bool {
             | EVENT_AGGRO
             | EVENT_DEATH
             | EVENT_FOLLOW_COMPLETED
+            | EVENT_SUMMONED_UNIT
+            | EVENT_SUMMON_DESPAWNED
+            | EVENT_JUST_SUMMONED
+            | EVENT_EVADE
             | EVENT_SPELLHIT
             | EVENT_HAS_AURA
             | EVENT_RESET
@@ -457,12 +465,27 @@ impl SmartAi {
             return;
         }
         match event.event_type {
-            EVENT_LINK | EVENT_RESET | EVENT_AGGRO | EVENT_DEATH | EVENT_FOLLOW_COMPLETED => {
-                self.process_action(ctx, index, invoker)
-            }
+            EVENT_LINK
+            | EVENT_RESET
+            | EVENT_AGGRO
+            | EVENT_DEATH
+            | EVENT_FOLLOW_COMPLETED
+            | EVENT_JUST_SUMMONED
+            | EVENT_EVADE => self.process_action(ctx, index, invoker),
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_SUMMONED_UNIT | EVENT_SUMMON_DESPAWNED => {
+                if invoker
+                    .and_then(|unit| ctx.world.get::<shared::components::Npc>(unit))
+                    .is_some_and(|npc| {
+                        event.event_params[0] == 0 || event.event_params[0] == npc.template_id
+                    })
+                {
+                    self.recalc_timer(index, event.event_params[1], event.event_params[2]);
                     self.process_action(ctx, index, invoker);
                 }
             }
@@ -875,10 +898,22 @@ impl CreatureAi for SmartAi {
     }
 
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
-        self.process_events_for(ctx, 7, None, 0);
+        self.process_events_for(ctx, EVENT_EVADE, None, 0);
         if self.escort.is_none() {
             self.reset(ctx);
         }
+    }
+
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.process_events_for(ctx, EVENT_SUMMONED_UNIT, Some(summon), 0);
+    }
+
+    fn is_summoned_by(&mut self, ctx: &mut Ctx, summoner: Entity) {
+        self.process_events_for(ctx, EVENT_JUST_SUMMONED, Some(summoner), 0);
+    }
+
+    fn summoned_creature_despawn(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.process_events_for(ctx, EVENT_SUMMON_DESPAWNED, Some(summon), 0);
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, killer: Option<Entity>) {
