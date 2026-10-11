@@ -303,7 +303,11 @@ fn rank_settings(rank: &GuildRankData, index: usize) -> GuildRankSettings {
     }
 }
 
-fn snapshot(db: &redb::Database, character: u64, error: Option<GuildRankError>) -> GuildRanksState {
+pub(crate) fn snapshot(
+    db: &redb::Database,
+    character: u64,
+    error: Option<GuildRankError>,
+) -> GuildRanksState {
     let Some(membership) = persistence::load_character_guild(db, character) else {
         return GuildRanksState {
             ranks: Vec::new(),
