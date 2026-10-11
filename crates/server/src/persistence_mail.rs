@@ -16,6 +16,7 @@ pub(crate) const LEGACY_MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition
 pub enum MailSender {
     Player { character_id: u64, name: String },
     AuctionHouse,
+    CraftingOrder,
 }
 
 impl MailSender {
@@ -23,6 +24,7 @@ impl MailSender {
         match self {
             Self::Player { name, .. } => name,
             Self::AuctionHouse => "Auction House",
+            Self::CraftingOrder => "Crafting Order",
         }
     }
 }

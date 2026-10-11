@@ -915,6 +915,14 @@ fn startup_load_world_data(mut commands: Commands) {
     let professions = crate::profession::load_profession_data(&conn)
         .expect("Failed to load profession data; run scripts/import-azerothcore.sh");
     commands.insert_resource(professions);
+    let orders = crate::crafting_orders::load_catalog(&conn)
+        .expect("Failed to load CraftingOrder reference catalog");
+    if orders.0.is_empty() {
+        warn!(
+            "Crafting orders unavailable: run copy-only scripts/crafting_orders_import.py and select its world DB"
+        );
+    }
+    commands.insert_resource(orders);
     let loot = crate::loot::load_loot_tables(&conn)
         .expect("Failed to load content_creature_loot_template; run scripts/import-azerothcore.sh");
     info!("Loaded loot tables for {} creatures", loot.creature.len());
