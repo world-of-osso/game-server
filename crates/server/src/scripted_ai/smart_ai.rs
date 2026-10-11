@@ -399,6 +399,18 @@ impl CreatureAi for SmartAi {
         }
     }
 
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        if let Some(boss) = &mut self.boss {
+            boss.just_summoned(ctx, summon);
+        }
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        if let Some(boss) = &mut self.boss {
+            boss.summoned_creature_despawn(summon);
+        }
+    }
+
     fn spell_hit(&mut self, ctx: &mut Ctx, caster: Entity, spell_id: u32) {
         self.process_events_for(ctx, EVENT_SPELLHIT, Some(caster), spell_id);
     }

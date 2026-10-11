@@ -171,3 +171,21 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
         );
     }
 }
+
+#[test]
+fn data_selected_grim_batol_preserves_owned_summon_cleanup_on_evade() {
+    let (mut h, boss, _) = bound_boss(39625, 670, 0);
+    // Exercise the existing JustSummoned boundary; no new summon ability is authored.
+    let summon = h
+        .app
+        .world_mut()
+        .spawn(crate::zones::TempSummon { summoner: boss })
+        .id();
+    dispatch(h.app.world_mut(), boss, Hook::JustSummoned(summon));
+    h.engage(boss);
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    assert!(
+        h.app.world().get_entity(summon).is_err(),
+        "owned summon survived boss reset"
+    );
+}
