@@ -1535,7 +1535,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.
-fn execute_cast(
+pub(crate) fn execute_cast(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,

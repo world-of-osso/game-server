@@ -19,6 +19,7 @@
 
 mod locks;
 pub(crate) mod quest_object;
+pub(crate) mod spellcaster;
 pub(crate) mod summoned;
 
 use std::f32::consts::FRAC_PI_2;
