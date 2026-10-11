@@ -15,7 +15,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 - Improved Conflagrate267115's Charges modifier grants an additional117828 use per successful ranked Conflagrate; native MaxAuraStacks supplies cap4. Magnitude stays30% per use.
 - Obliterate49020's local description variable608 selects dual-wield222024/66198 and1264082/1264083, or two-hand325461 and1264084, never all six. Zero/75 Dummy fields remain underived.
 
-Eight bounded root entries, not complete rotations. Sources: local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210 names. Karma redirect, Lifebloom threshold, guardians and retained marker/talent gaps are not inferred. Tests load real store rows. [Runtime](../wiki/systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication).
+Eight bounded root entries, not complete rotations. Sources: local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210 names. Karma redirect, Lifebloom threshold, guardians and retained marker/talent gaps are not inferred. Tests load real store rows. [Runtime](../wiki/systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication), [proof/census/all40](../spell-dummy18-coverage.md).
 
 ### Seventeenth-batch named resources and restorative hooks
 
