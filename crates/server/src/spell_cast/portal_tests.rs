@@ -1,4 +1,4 @@
-//! Native DB2 12.1.0.69933 portal10059 and TDB176296 -> spell17334.
+//! Native DB2 12.1.0.69933 portal10059 and TDB176296 ->17334 ->121857.
 use super::test_harness::*;
 use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
@@ -6,7 +6,7 @@ use shared::components::Position;
 use shared::protocol::{GameObjectInfo, InteractionChannel, UseGameObject};
 
 fn portal_fixture() -> Harness {
-    let mut h = harness_with_plugins(Vec::new(), &[10059, 17334], 8, false, |app| {
+    let mut h = harness_with_plugins(Vec::new(), &[10059, 17334, 121857], 8, false, |app| {
         app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
         app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
     })
@@ -65,6 +65,6 @@ fn class_completeness_native_portal_owner_uses_authored_city_destination() {
     let destinations = super::teleport_positions::load_positions(&conn).unwrap();
     assert_eq!(
         *h.app.world().get::<Position>(h.caster).unwrap(),
-        destinations.0[&(17334, 0)].bevy_position()
+        destinations.0[&(121857, 0)].bevy_position()
     );
 }
