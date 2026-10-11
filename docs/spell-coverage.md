@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-11
 
-Matrix runtime **449bb8e**, base `origin/spell-dummy22` **ea91c10**. [Capabilities/source/census/proof](spell-dummy23-coverage.md). Census **157 roots/157 reviewed/0 underived**, versus157/129/28; all157 unresolved upper-bound roots retained. Zero underived is zero unreviewed, not zero missing mechanics. Scripted Shadow-Blades combo doubling and real Rune-Weapon owner parry implemented; targeted12/12 GREEN, warning-free. E3=111/119, aura4=63/71, aura226=18/19 unchanged. No broad suite/live/server/UDP5000.
+Matrix runtime **449bb8e**, base `origin/spell-dummy22` **ea91c10**. [Capabilities/source/census/proof](spell-dummy23-coverage.md). Census **157 roots/157 reviewed/0 underived**, versus157/129/28; all157 unresolved upper-bound roots retained. Zero underived is zero unreviewed, not zero missing mechanics. Scripted Shadow-Blades combo doubling and real Rune-Weapon owner parry implemented; targeted12/12 GREEN, warning-free; check/fmt exit0 at1674fb2 (Rust unchanged). E3=111/119, aura4=63/71, aura226=18/19 unchanged. No broad suite/live/server/UDP5000.
 
 Source: game-server runtime `449bb8e41f6cbe25da9b26f563a3d143b953f7d8`, read-only world.db and local Mainline12.1.0.69933 CSV. Shared-protocol44b2b0f pinned. Positive A proofs remain partial, not full ability parity.
 
