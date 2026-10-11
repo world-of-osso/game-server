@@ -845,3 +845,4 @@ Bounded local-data Wailing Caverns SmartAI lifecycle and aggro dialogue document
 ## 2026-10-11 — Scenarios
 
 Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reuse and stage snapshots. Native proof/fixture boundary lives in [shared system SSOT](../../../game-engine/docs/wiki/systems/scenarios.md); [server contract](../specs/scenarios.md).
+- 2026-10-11: data-selected boss lifecycle replaces per-dungeon registration; journal dungeon joins, inspectable compatibility ordinals,393-entry SmartAI census and private both-skin Skum proof documented in [[boss-scripts]].

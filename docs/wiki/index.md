@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic dungeon/raid registration, preserved saved ordinals, SmartAI gaps and private both-skin Skum proof.
+
 - [Raid entry and saved instances](systems/raid-entry.md) — native both-skin private proof, persistent difficulty/locks, Tuesday reset, source-derived credit and explicit data gaps.
 
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
@@ -21,6 +23,7 @@
 
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11) — observer detection, authored spell-area quest masks, both-skin Jaga loot/turn-in and post-reward hiding; Vin/Rendan data-route gaps explicit.
+- [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
 
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 

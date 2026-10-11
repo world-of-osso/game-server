@@ -15,7 +15,6 @@ use bevy::prelude::*;
 use shared::components::{Npc, Position};
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
-use super::instance_script::{BossInfo, EncounterState, InstanceScript};
 use super::{CreatureAi, Ctx, DamageTaken, EventMap, MotionType, ReactState};
 use crate::terrain_height::wow_to_bevy;
 
@@ -30,30 +29,6 @@ pub const DATA_HOGGER: u32 = 2;
 /// `SSCreatureIds` the scripts summon (the bosses' own ids are in the tests).
 pub const NPC_WARDEN_THELWATER: u32 = 46409;
 pub const NPC_MORTIMER_MOLOCH: u32 = 46482;
-
-/// `instance_the_stockade::encounters` (`DungeonEncounterData`), by boss id.
-const ENCOUNTERS: [u32; 3] = [1146, 1145, 1144];
-
-/// `instance_the_stockade_InstanceMapScript`: `SetBossNumber(EncounterCount)` and
-/// `LoadDungeonEncounterData(encounters)`.
-pub fn instance_script(name: &str) -> Option<InstanceScript> {
-    (name == INSTANCE_THE_STOCKADE).then(|| InstanceScript {
-        name: INSTANCE_THE_STOCKADE,
-        bosses: ENCOUNTERS
-            .iter()
-            .map(|&encounter_id| BossInfo {
-                state: EncounterState::NotStarted,
-                encounter_id,
-            })
-            .collect(),
-        // Defeat credit and saved-DONE spawn suppression use the scripts' boss ids.
-        boss_creatures: &[
-            (46383, DATA_RANDOLPH_MOLOCH),
-            (46264, DATA_LORD_OVERHEAT),
-            (46254, DATA_HOGGER),
-        ],
-    })
-}
 
 const CREATURE_SCRIPTS: [&str; 5] = [
     "boss_hogger",
