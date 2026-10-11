@@ -51,6 +51,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch20](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses) — Barbed Shot total/rollover/Focus and Stormkeeper two-use count;158 remaining Dummy roots/110 reviewed/48 underived, six exact source deferrals and [all40/proof/limits](../spell-dummy20-coverage.md).
+
 - [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
 
 - [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
