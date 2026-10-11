@@ -17,7 +17,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 |Marrowrend195182|Successful damage hit grants195182s3 stacks of named195181, up to its native cap10. Bone Shield melee depletion/haste/markers remain separate.|
 |Lifebloom33763|Natural expiry/dispel casts33778 onto the protected ally once; cancellation/death/replacement never bloom. One active target per owner; foreign owners remain independent. Near-expiration refresh threshold is underivable, not guessed.|
 |Regrowth8936|231032 adds its native40% probability to initial healing when any existing Regrowth affects the target, including foreign-owner HoTs. No rank/no HoT preserves base probability.|
-|Cenarion Ward102351|Actual damage consumes the ward's native charge and applies102352 from its owner onto its protected unit; heals/fully absorbed hits do not consume it. Native periodic lifetime remains active.|
+|Cenarion Ward102351|Actual damage consumes the ward's native charge and applies102352 from its owner onto its protected unit; heals/fully absorbed hits do not consume it. Native8000ms/2000ms + extra-initial attribute gives five heals; expiry stops them.|
 
 Sources only local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210. Tests load real child rows, never fabricated children. Eight roots, not complete rotations; guardian/Karma/Eye Beam/source gaps retained. [Proof/census/all40](../spell-dummy17-coverage.md); [runtime](../wiki/systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks).
 
