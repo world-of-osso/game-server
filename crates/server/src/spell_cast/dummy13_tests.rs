@@ -233,7 +233,13 @@ fn dummy13_bestial_wrath_strike_uses_own_pets_current_target() {
         !crate::auras::has_aura(h.app.world(), own, 19574),
         "owner modifier is not an authored pet buff binding"
     );
-    assert!(varied(176.0).contains(&(5000.0 - h.health(target))));
+    assert!(
+        varied(176.0).contains(&(5000.0 - h.health(target))),
+        "loss={}, owner={:?}, pet={:?}",
+        5000.0 - h.health(target),
+        h.app.world().get::<crate::stats::CharacterStats>(h.caster),
+        h.app.world().get::<crate::stats::CharacterStats>(own)
+    );
     assert_eq!(
         h.health(other),
         5000.0,
