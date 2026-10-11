@@ -54,6 +54,7 @@ fn erland() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
         processing_timed_list: false,
         escort: None,
         path_event_id: None,
+        follow: None,
     };
     ai.reset(&mut Ctx {
         world: &mut world,
@@ -627,6 +628,168 @@ fn smartai_coverage_wp_stop_completes_quest_then_hides_and_despawns() {
             .get::<crate::combat::DeathState>(creature)
             .is_some()
     );
+}
+
+#[test]
+fn smartai_coverage_summon_authentic_position_count_storage_and_expiry() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let expected = crate::world_data::load_expected_stats(&conn);
+    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    templates.retain(|entry, _| *entry == 28636);
+    crate::world_data::load_template_models(&conn, &mut templates);
+    world.insert_resource(crate::world_data::WorldData {
+        templates,
+        ..Default::default()
+    });
+    world
+        .entity_mut(creature)
+        .insert(crate::maps::InMap::continent(0));
+    let mut action = tdb_action(-98562, 0, 1);
+    // Authored Heb'Jin position/type/duration; exercise generic count/storage params.
+    action.action_params[4] = 2;
+    action.action_params[5] = 9;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, Some(player));
+    let summons: Vec<Entity> = ctx
+        .world
+        .query_filtered::<Entity, With<crate::zones::TempSummon>>()
+        .iter(ctx.world)
+        .collect();
+    assert_eq!(summons.len(), 2);
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(
+        action.target_position[0],
+        action.target_position[1],
+        action.target_position[2],
+    );
+    for &summon in &summons {
+        assert_eq!(
+            *ctx.world.get::<Position>(summon).unwrap(),
+            Position { x, y, z }
+        );
+        assert_eq!(ctx.world.get::<Npc>(summon).unwrap().template_id, 28636);
+    }
+    let mut flags = tdb_action(197800, 9, 2);
+    flags.target_type = TARGET_STORED;
+    flags.target_params[0] = 9;
+    flags.action_type = ACTION_SET_NPC_FLAG;
+    flags.action_params[0] = 8;
+    ai.execute_action(&mut ctx, &flags, None);
+    assert!(
+        summons
+            .iter()
+            .all(|&s| ctx.world.get::<NpcFlags>(s).unwrap().0 == 8)
+    );
+    lifetimes::tick_lifetimes(ctx.world, 299999);
+    assert!(summons.iter().all(|&s| ctx.world.get_entity(s).is_ok()));
+    lifetimes::tick_lifetimes(ctx.world, 1);
+    assert!(summons.iter().all(|&s| ctx.world.get_entity(s).is_err()));
+}
+
+#[test]
+fn smartai_coverage_follow_updates_relative_destination_and_cancels() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    world.entity_mut(player).insert((
+        Position {
+            x: 10.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    let mut action = tdb_action(-85822, 0, 1);
+    action.target_type = TARGET_ACTION_INVOKER;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, Some(player));
+    ai.update_ai(&mut ctx, 50);
+    let target = ctx
+        .world
+        .get::<super::super::movement::PointMovement>(creature)
+        .expect("FOLLOW must move toward the relative target")
+        .target;
+    let offset = 1.1 / 2.0_f32.sqrt();
+    assert!((target.x - (10.0 + offset)).abs() < 0.001);
+    assert!((target.z + offset).abs() < 0.001);
+    ctx.world.get_mut::<Position>(player).unwrap().x = 20.0;
+    ai.update_ai(&mut ctx, 50);
+    assert!(
+        (ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .unwrap()
+            .target
+            .x
+            - (20.0 + offset))
+            .abs()
+            < 0.001
+    );
+    ai.execute_action(&mut ctx, &action, None);
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
+    );
+}
+
+#[test]
+fn smartai_coverage_nearest_creature_filters_entry_map_alive_and_distance() {
+    let (_temp, mut world, mut ai, creature, _player) = erland();
+    world
+        .entity_mut(creature)
+        .insert(crate::maps::InMap::continent(0));
+    let mut candidates = Vec::new();
+    for (entry, x, map, health) in [
+        (1950, 5.0, 0, 100.0),
+        (1950, 10.0, 0, 100.0),
+        (1950, 1.0, 1, 100.0),
+        (1950, 2.0, 0, 0.0),
+        (1951, 1.0, 0, 100.0),
+    ] {
+        candidates.push(
+            world
+                .spawn((
+                    Npc {
+                        template_id: entry,
+                        name: "fixture".into(),
+                    },
+                    Position { x, y: 0.0, z: 0.0 },
+                    crate::maps::InMap::continent(map),
+                    shared::components::Health {
+                        current: health,
+                        max: 100.0,
+                    },
+                    NpcFlags(2),
+                ))
+                .id(),
+        );
+    }
+    let mut action = tdb_action(197803, 9, 3);
+    action.action_type = ACTION_REMOVE_NPC_FLAG;
+    action.action_params[0] = 2;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, None);
+    for (index, &candidate) in candidates.iter().enumerate() {
+        assert_eq!(
+            ctx.world.get::<NpcFlags>(candidate).unwrap().0,
+            if index == 0 { 0 } else { 2 }
+        );
+    }
 }
 
 fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {

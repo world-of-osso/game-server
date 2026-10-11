@@ -39,12 +39,19 @@ mod targets;
 #[path = "smart_lifetimes.rs"]
 pub(super) mod lifetimes;
 
+#[path = "smart_summons.rs"]
+mod summons;
+
+#[path = "smart_follow.rs"]
+mod follow;
+
 #[cfg(test)]
 #[path = "smart_escort_tests.rs"]
 mod escort_tests;
 
 // `SMART_EVENT` (SmartScriptMgr.h).
 const EVENT_UPDATE_IC: u32 = 0;
+const EVENT_FOLLOW_COMPLETED: u32 = 65;
 const EVENT_AGGRO: u32 = 4;
 const EVENT_DEATH: u32 = 6;
 const EVENT_SPELLHIT: u32 = 8;
@@ -64,6 +71,8 @@ const ACTION_SET_FACTION: u32 = 2;
 const ACTION_FAIL_QUEST: u32 = 6;
 const ACTION_COMPLETE_QUEST: u32 = 152;
 const ACTION_CAST: u32 = 11;
+const ACTION_SUMMON_CREATURE: u32 = 12;
+const ACTION_FOLLOW: u32 = 29;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_DIE: u32 = 37;
@@ -85,6 +94,8 @@ const TARGET_VICTIM: u32 = 2;
 const TARGET_ACTION_INVOKER: u32 = 7;
 const TARGET_STORED: u32 = 12;
 const TARGET_INVOKER_PARTY: u32 = 16;
+const TARGET_CLOSEST_CREATURE: u32 = 19;
+const TARGET_POSITION: u32 = 8;
 // `SMART_EVENT_FLAG_*`, `SMARTCAST_*`.
 const EVENT_FLAG_NOT_REPEATABLE: u32 = 0x001;
 const EVENT_FLAG_DONT_RESET: u32 = 0x100;
@@ -199,6 +210,7 @@ fn supports_event(kind: u32) -> bool {
         EVENT_UPDATE_IC
             | EVENT_AGGRO
             | EVENT_DEATH
+            | EVENT_FOLLOW_COMPLETED
             | EVENT_SPELLHIT
             | EVENT_HAS_AURA
             | EVENT_RESET
@@ -218,6 +230,8 @@ fn supports_action(kind: u32) -> bool {
         kind,
         ACTION_TALK
             | ACTION_CAST
+            | ACTION_SUMMON_CREATURE
+            | ACTION_FOLLOW
             | ACTION_SET_EVENT_PHASE
             | ACTION_CALL_KILLEDMONSTER
             | ACTION_DIE
@@ -241,7 +255,14 @@ fn supports_action(kind: u32) -> bool {
 fn supports_target(kind: u32) -> bool {
     matches!(
         kind,
-        TARGET_NONE | TARGET_SELF | TARGET_VICTIM | TARGET_ACTION_INVOKER | TARGET_STORED
+        TARGET_NONE
+            | TARGET_SELF
+            | TARGET_VICTIM
+            | TARGET_ACTION_INVOKER
+            | TARGET_STORED
+            | TARGET_INVOKER_PARTY
+            | TARGET_CLOSEST_CREATURE
+            | TARGET_POSITION
     )
 }
 
@@ -312,6 +333,7 @@ pub(crate) struct SmartAi {
     processing_timed_list: bool,
     escort: Option<paths::EscortPath>,
     path_event_id: Option<u32>,
+    follow: Option<follow::Follow>,
 }
 
 struct TimedList {
@@ -337,6 +359,7 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         processing_timed_list: false,
         escort: None,
         path_event_id: None,
+        follow: None,
     }))
 }
 
@@ -424,7 +447,7 @@ impl SmartAi {
             return;
         }
         match event.event_type {
-            EVENT_LINK | EVENT_RESET | EVENT_AGGRO | EVENT_DEATH => {
+            EVENT_LINK | EVENT_RESET | EVENT_AGGRO | EVENT_DEATH | EVENT_FOLLOW_COMPLETED => {
                 self.process_action(ctx, index, invoker)
             }
             EVENT_UPDATE_IC => {
@@ -514,6 +537,17 @@ impl SmartAi {
             TARGET_INVOKER_PARTY => {
                 invoker.map_or_else(Vec::new, |player| targets::party_targets(ctx.world, player))
             }
+            TARGET_CLOSEST_CREATURE => {
+                let [entry, distance, alive, ..] = event.target_params;
+                let radius = if distance == 0 {
+                    100.0
+                } else {
+                    distance as f32
+                };
+                targets::nearest_creature(ctx.world, ctx.me, entry, radius, alive)
+                    .into_iter()
+                    .collect()
+            }
             TARGET_STORED => self
                 .stored_targets
                 .get(&event.target_params[0])
@@ -522,7 +556,20 @@ impl SmartAi {
             _ => Vec::new(),
         };
         match event.action_type {
-            ACTION_TALK => ctx.talk(event.action_params[0] as u8),
+            ACTION_TALK => {
+                let speaker = targets
+                    .iter()
+                    .copied()
+                    .find(|&entity| ctx.world.get::<shared::components::Npc>(entity).is_some())
+                    .unwrap_or(ctx.me);
+                Ctx {
+                    world: ctx.world,
+                    me: speaker,
+                }
+                .talk(event.action_params[0] as u8);
+            }
+            ACTION_SUMMON_CREATURE => self.summon_action(ctx, event, &targets, invoker),
+            ACTION_FOLLOW => self.set_follow(ctx, event, &targets),
             ACTION_CAST => {
                 return Self::cast_targets(ctx, event, targets);
             }
@@ -870,6 +917,7 @@ impl CreatureAi for SmartAi {
             return;
         }
         self.update_path(ctx, diff_ms);
+        self.update_follow(ctx, diff_ms);
         self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
             let event = &self.events[index];
