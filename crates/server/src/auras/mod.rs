@@ -504,6 +504,7 @@ fn build_instance(
     let max_stacks =
         spell_mods::modify(world, caster, spell, SpellModOp::MaxAuraStacks, max_stacks);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
+    let charges = crate::spell_cast::scripts::proc_charges(world, caster, spell, charges);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
     let mut effects: Vec<AuraEffectState> = spell
         .effects
