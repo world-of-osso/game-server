@@ -18,6 +18,12 @@ python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/g
 
 The same command with an isolated output database verifies the actual 35-table export. It also records three absent initiative tables and 54 unreadable records. Static catalogs are not proof of playable neighborhoods, Housing Dashboard, decor acquisition, editor or visitor replication.
 
+## Housing map metadata
+
+Load authored Map.db2 types 7 (House) and 8 (Neighborhood), retaining map2735/2736/2783 names and WDT FDIDs. They are not dungeons and generic continent/dungeon admission remains refused until the housing service authorizes a particular neighborhood/owner/visitor copy. Loading map metadata is not hosting playable housing.
+
+No verified first-house exterior/interior grant source is available. Do not infer default grants from component membership, UnlockItemID=0 or the placeholder House row. Rank3 may use one bounded authentic vendor-item redemption path backed by world.db/TDB npc_vendor or an authored DB2 item effect (lead approval, 2026-10-11); never turn StartingQuantity into ownership without grant semantics.
+
 ## Behavioral proof
 
 Focused `scripts/tests/test_import_housing.py`: exact authored fireplace/plot data; unknown-field retention; no ownership/currency invention; idempotence; unrelated table preservation; wrong build/key and altered CSV/DB2 refusal; transactional rollback across tables.
