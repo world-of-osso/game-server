@@ -28,6 +28,7 @@ pub(crate) fn tick_lifetimes_system(world: &mut World) {
 }
 
 pub(super) fn tick_lifetimes(world: &mut World, diff_ms: u32) {
+    super::summons::tick_summons(world, diff_ms);
     let mut expired = Vec::new();
     for (entity, mut timer) in world.query::<(Entity, &mut TimedDespawn)>().iter_mut(world) {
         if timer.remaining_ms > diff_ms {
