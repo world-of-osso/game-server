@@ -187,7 +187,9 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
                     "raid_first_kills_v1",
                 ))
                 .unwrap();
-            let row = table.get("character:2001:409:3:663").unwrap().unwrap();
+            let difficulty = instances.copy_difficulty(map).unwrap().difficulty_id;
+            let key = format!("character:2001:409:{difficulty}:663");
+            let row = table.get(key.as_str()).unwrap().unwrap();
             let credit: serde_json::Value = serde_json::from_slice(row.value()).unwrap();
             assert_eq!(credit["participants"][0]["character_id"], "2001");
             assert_eq!(credit["participants"].as_array().unwrap().len(), 1);
