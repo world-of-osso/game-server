@@ -10,7 +10,11 @@ const NON_RAID_HEALING_PERCENT: u8 = 3;
 
 /// Applies to the existing native heal, not a substitute for Rewind's missing
 /// incoming-damage history. Group state is the caster's, not the recipient's.
-pub(super) fn healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+pub(in crate::spell_cast) fn healing_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> f32 {
     if spell.id != REWIND {
         return 1.0;
     }
