@@ -1953,8 +1953,9 @@ fn toyfx13_shell_applies_all_three_source_auras_and_movement_removes_them() {
     assert_eq!(activate(&mut h, 88417)[0].error, None);
     h.advance(80);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 128150));
+    // Native trigger64 children apply their auras without a separate SpellGo.
     for spell in [128150, 128151, 128152] {
-        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
         let aura = h
             .app
             .world()
