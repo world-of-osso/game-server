@@ -21,6 +21,14 @@ pub(crate) use catalog::{AchievementCatalog, CriteriaEvent, load_achievement_cat
 mod account_store;
 #[path = "dungeon_progress.rs"]
 mod dungeon;
+#[path = "scenario.rs"]
+mod scenario;
+pub(crate) use scenario::load_scenarios;
+#[cfg(test)]
+use scenario::{ScenarioDefinition, ScenarioRun, ScenarioStep};
+#[cfg(test)]
+#[path = "scenario_tests.rs"]
+mod scenario_tests;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerAchievementState {
@@ -68,6 +76,7 @@ pub struct AchievementPlugin;
 impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::maps::ServerClock>();
+        app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(
             Update,
             (
@@ -75,6 +84,7 @@ impl Plugin for AchievementPlugin {
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
                 dungeon::send_entry_progress,
+                scenario::send_entry_progress,
                 send_requested_catalog_pages,
             )
                 .chain(),
@@ -162,6 +172,7 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     let Some((connection, player)) = owner else {
         return;
     };
+    scenario::record(world, player, CriteriaEvent::CompleteQuest(quest));
     if let Some((snapshot, toasts)) =
         update_player_events(world, player, &[CriteriaEvent::CompleteQuest(quest)], None)
     {
@@ -180,6 +191,7 @@ pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32)
 }
 
 fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
+    scenario::record(world, player, event);
     if !world
         .get_resource::<AchievementCatalog>()
         .is_some_and(|catalog| catalog.tracks(event))
@@ -316,6 +328,9 @@ pub(crate) fn record_encounter_defeat(
     if let Some(creature) = creature {
         events.push(CriteriaEvent::KillCreature(creature));
     }
+    for &event in &events {
+        scenario::record_map(world, map, event);
+    }
     for player in crate::scripted_ai::instance_script::players_in_map(world, map) {
         let Some((snapshot, toasts)) =
             update_player_events(world, player, &events, complete.then_some(map.map_id))
@@ -348,6 +363,7 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity, killer:
     if scripted_boss {
         return;
     }
+    scenario::record(world, killer, CriteriaEvent::KillCreature(entry));
     let Some((snapshot, toasts)) =
         update_player_events(world, killer, &[CriteriaEvent::KillCreature(entry)], None)
     else {
