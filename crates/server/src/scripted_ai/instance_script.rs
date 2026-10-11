@@ -79,7 +79,9 @@ impl InstanceScript {
 
 /// The instance script `instance_template.script` names, fresh.
 pub fn create_instance_script(name: &str) -> Option<InstanceScript> {
-    super::the_stockade::instance_script(name).or_else(|| super::grim_batol::instance_script(name))
+    super::the_stockade::instance_script(name)
+        .or_else(|| super::grim_batol::instance_script(name))
+        .or_else(|| super::wailing_caverns::instance_script(name))
 }
 
 /// The boss creature entries of `map_id`'s instance script whose boss id is in
