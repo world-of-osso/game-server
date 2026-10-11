@@ -83,13 +83,21 @@ impl Catalog {
         )
     }
     fn validate(&self, context: SelectionContext, slot: u8, id: u32) -> Result<&Talent, String> {
+        if !context.alive || context.in_combat {
+            return Err("PvP talents cannot change while dead or in combat".into());
+        }
+        self.check_eligibility(context, slot, id)
+    }
+    fn check_eligibility(
+        &self,
+        context: SelectionContext,
+        slot: u8,
+        id: u32,
+    ) -> Result<&Talent, String> {
         if !(1..=3).contains(&slot) {
             return Err("Unknown Mainline PvP talent slot".into());
         }
         let talent = self.talents.get(&id).ok_or("Unknown PvP talent")?;
-        if !context.alive || context.in_combat {
-            return Err("PvP talents cannot change while dead or in combat".into());
-        }
         if talent.spec != context.spec {
             return Err("PvP talent belongs to another specialization".into());
         }
@@ -308,7 +316,7 @@ fn project(world: &World, owner: Entity) -> Option<(PvpTalentsSnapshot, Vec<(u32
         selected
             .into_iter()
             .flat_map(|s| s.iter())
-            .filter_map(|(&slot, &id)| catalog.validate(context, slot, id).ok())
+            .filter_map(|(&slot, &id)| catalog.check_eligibility(context, slot, id).ok())
             .map(|t| (t.spell, t.override_spell))
             .collect()
     } else {

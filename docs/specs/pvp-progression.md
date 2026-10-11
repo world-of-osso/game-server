@@ -23,3 +23,11 @@ Imports only `pvp_currency`, `pvp_talent`, `pvp_talent_category`, `pvp_talent_sl
 ## Gaps
 
 Honor cap15000 is authored. Conquest uses dynamic WorldState31270/AwardCondition146857, not guessed1800/weekly550. Honor/conquest per result and rating policy are not locally derived. PrestigeLevelInfo maps e.g. honor-level5 to achievement12893; no certified Mainline lifetime-XP curve was recovered. The available HonorLevel game table has old Prestige0..32 columns and is not assumed equivalent. Selected talent effects, authored buff application and live/both-skin UI proof remain required until implemented.
+
+## Runtime checkpoints
+
+War Mode follows local TC a352b1fa Player.cpp30965–31054: changes require rest/no combat, enabling requires a friendly zone with AreaFlags2::AllowWarModeToggle0x1000 in the area/ancestor chain. Both desired and active states are explicit; desired is durable in existing PvP storage. The actual aura path applies Enlisted282559 inside enable areas and269083 outside, and removes the opposite/disabled aura. TDB world states17042/17043 author baseline10%, not a faction bonus guessed from UI text. Private live/bonus-consumer proof remains required.
+
+PvP selection uses source spec, class-specific SlotUnlock and category masks. Mainline indices1–3 map to masks2/4/8 (20/30/40); legacy mask1/level10 is not a fourth native talent button. Selection refuses wrong spec/level/category, duplicate choices, death/combat, replacement outside rest and replacement while the old spell is cooling down. Source PlayerCondition IDs that cannot yet be evaluated stay explicitly unavailable, never guessed true. Per-spec selection persists in existing PvP records. Existing KnownSpells separates baseline ownership from transient PvP grants so deactivation cannot erase a class-owned spell; existing action-bar override handling is reused. Selection permissions and ongoing activation are distinct: entering combat must not forget a selected active talent.
+
+Operator prerequisite: `pvp_*` catalogs are required at normal world startup. Apply the explicit importer before starting a realm with this revision; test/runtime agents do not mutate canonical world.db. Catalog import is not a live progression claim.
