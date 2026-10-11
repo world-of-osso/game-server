@@ -100,6 +100,28 @@ class MythicPlusImportTest(unittest.TestCase):
                 (2250,),
             )
 
+    def test_sql_failure_rolls_back_every_table(self):
+        IMPORTER.import_catalog(self.copy, SOURCE)
+        with closing(sqlite3.connect(self.copy)) as conn, conn:
+            conn.execute(
+                "UPDATE map_challenge_mode SET CriteriaCount_0=99 WHERE ID=401"
+            )
+            conn.execute(
+                "CREATE TRIGGER deny_affix_replacement BEFORE DELETE ON keystone_affix BEGIN SELECT RAISE(ABORT, 'test copy is locked'); END"
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "test copy is locked"):
+            IMPORTER.import_catalog(self.copy, SOURCE)
+        with closing(sqlite3.connect(self.copy)) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT CriteriaCount_0 FROM map_challenge_mode WHERE ID=401"
+                ).fetchone(),
+                (99,),
+            )
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM keystone_affix").fetchone(), (50,)
+            )
+
     def test_refuses_linked_destination_and_canonical_database(self):
         link = Path(self.temp.name) / "link.sqlite"
         link.symlink_to(self.copy)

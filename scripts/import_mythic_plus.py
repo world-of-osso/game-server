@@ -188,12 +188,12 @@ def decode_table(source, fdid, definition):
 
 
 def validate_destination(destination):
-    if destination.is_symlink():
-        raise ValueError("destination must not be a symlink")
     if destination.resolve() == CANONICAL.resolve():
         raise ValueError(
             "refusing canonical world.db; create a separate SQLite backup copy"
         )
+    if destination.is_symlink():
+        raise ValueError("destination must not be a symlink")
     if not destination.is_file():
         raise ValueError("destination must be an existing SQLite backup copy")
     if destination.stat().st_nlink != 1:
