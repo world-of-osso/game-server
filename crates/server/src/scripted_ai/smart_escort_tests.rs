@@ -245,6 +245,26 @@ impl bevy::log::tracing::field::Visit for WarningFields {
 
 #[test]
 fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
+    const PROBE: &str = "SMARTAI_WARNING_PROBE";
+    if std::env::var_os(PROBE).is_none() {
+        // tracing callsite interest is process-global; isolate from other tests'
+        // subscribers so this proves startup logging rather than their cache races.
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "smartai_coverage_warns_once_per_unsupported_type_including_timed_lists",
+                "--nocapture",
+            ])
+            .env(PROBE, "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
     let (temp, _world, _ai, _creature, _player) = erland();
     let capture = WarningCapture::default();
     bevy::log::tracing::subscriber::with_default(capture.clone(), || {
