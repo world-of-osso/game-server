@@ -239,6 +239,11 @@ fn dummy16_riptide_grants_two_capped_tidal_uses_not_double_cast_speed() {
             .entity_mut(caster)
             .insert(super::SpellHistory::default());
         h.cast_and_deliver(root, Some(caster));
+        assert!(
+            h.inbox.failed.is_empty(),
+            "root{root}: {:?}",
+            h.inbox.failed
+        );
         let duration = h
             .app
             .world()
