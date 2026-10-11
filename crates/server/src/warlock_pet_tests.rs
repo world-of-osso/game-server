@@ -201,13 +201,18 @@ fn pet_lifecycle_warlock_authored_demons_summon_dismiss_and_reopen() {
             first.h.app.world().get::<Npc>(pet).unwrap().template_id,
             entry
         );
+        let max_health = first.h.app.world().get::<Health>(pet).unwrap().max;
+        // Some legacy demon templates have no class-level health row; preserve a
+        // legal wound within the real computed maximum, not an over-max fixture.
+        let wounded_health = 23.0_f32.min(max_health * 0.5);
+        println!("spell{spell} entry{entry}: max={max_health}, wound={wounded_health}");
         first
             .h
             .app
             .world_mut()
             .get_mut::<Health>(pet)
             .unwrap()
-            .current = 23.0;
+            .current = wounded_health;
         first.advance(3);
         drop(first);
         let mut reloaded = ImpHarness::login_with_spells(&path, 60, &[spell]);
@@ -218,7 +223,8 @@ fn pet_lifecycle_warlock_authored_demons_summon_dismiss_and_reopen() {
         );
         assert_eq!(
             reloaded.h.app.world().get::<Health>(pet).unwrap().current,
-            23.0
+            wounded_health,
+            "spell{spell}: wounded health changed across storage reopen"
         );
         reloaded.dismiss();
         assert!(reloaded.pet().is_none());
@@ -237,7 +243,11 @@ fn pet_lifecycle_warlock_authored_demons_summon_dismiss_and_reopen() {
             dismissed.h.app.world().get::<Npc>(pet).unwrap().template_id,
             entry
         );
-        assert!(dismissed.h.app.world().get::<Health>(pet).unwrap().current > 0.0);
+        let health = dismissed.h.app.world().get::<Health>(pet).unwrap();
+        assert_eq!(
+            health.current, health.max,
+            "explicit summon starts living/full"
+        );
     }
 }
 
