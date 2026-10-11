@@ -27,6 +27,9 @@ use super::{CreatureAi, Ctx};
 #[path = "smart_paths.rs"]
 mod paths;
 
+#[path = "smart_timed.rs"]
+mod timed;
+
 #[cfg(test)]
 #[path = "smart_escort_tests.rs"]
 mod escort_tests;
@@ -295,6 +298,7 @@ pub(crate) struct SmartAi {
     boss: Option<super::boss_ai::BossAi>,
     stored_targets: HashMap<u32, Vec<Entity>>,
     timed_list: Option<TimedList>,
+    processing_timed_list: bool,
     escort: Option<paths::EscortPath>,
 }
 
@@ -303,6 +307,7 @@ struct TimedList {
     index: usize,
     timer_ms: u32,
     invoker: Option<Entity>,
+    timer_type: u32,
 }
 
 /// The SmartAI of a creature of `entry`, if it has rows.
@@ -317,6 +322,7 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         boss: super::wailing_caverns::boss_ai(world, creature),
         stored_targets: HashMap::new(),
         timed_list: None,
+        processing_timed_list: false,
         escort: None,
     }))
 }
@@ -528,9 +534,7 @@ impl SmartAi {
             ACTION_STORE_TARGET_LIST => {
                 self.stored_targets.insert(event.action_params[0], targets);
             }
-            ACTION_CALL_TIMED_ACTION_LIST => {
-                self.start_timed_list(ctx, event.action_params[0], invoker)
-            }
+            ACTION_CALL_TIMED_ACTION_LIST => self.start_timed_list(ctx, event, invoker),
             ACTION_SET_FACTION => Self::set_faction(ctx, &targets, event.action_params[0]),
             ACTION_SET_NPC_FLAG | ACTION_ADD_NPC_FLAG | ACTION_REMOVE_NPC_FLAG => {
                 Self::change_npc_flags(ctx, &targets, event);
@@ -555,48 +559,6 @@ impl SmartAi {
             _ => {}
         }
         true
-    }
-
-    fn start_timed_list(&mut self, ctx: &Ctx, id: u32, invoker: Option<Entity>) {
-        let events = ctx.world.resource::<SmartScripts>().1.get(&id).cloned();
-        let Some(events) = events else {
-            warn!(id, "SmartAI timed action list is absent");
-            return;
-        };
-        let timer_ms = events.first().map_or(0, |row| row.event_params[0]);
-        self.timed_list = Some(TimedList {
-            events,
-            index: 0,
-            timer_ms,
-            invoker,
-        });
-    }
-
-    fn update_timed_list(&mut self, ctx: &mut Ctx, diff_ms: u32) {
-        let Some(mut list) = self.timed_list.take() else {
-            return;
-        };
-        if list.timer_ms > diff_ms {
-            list.timer_ms -= diff_ms;
-            self.timed_list = Some(list);
-            return;
-        }
-        while let Some(event) = list.events.get(list.index) {
-            if !self.execute_action(ctx, event, list.invoker) {
-                list.timer_ms = 1;
-                self.timed_list = Some(list);
-                return;
-            }
-            list.index += 1;
-            let Some(next) = list.events.get(list.index) else {
-                return;
-            };
-            list.timer_ms = next.event_params[0];
-            if list.timer_ms > 0 {
-                self.timed_list = Some(list);
-                return;
-            }
-        }
     }
 
     fn start_path(&mut self, ctx: &mut Ctx, event: &SmartEvent, invoker: Option<Entity>) {
