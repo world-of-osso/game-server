@@ -83,21 +83,21 @@ fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance)
         .find(|effect| effect.index == 0)
         .expect("Barbed Shot periodic damage");
     let new_budget = fresh.amount * count;
-    let prior = old.as_ref().and_then(|aura| {
-        let effect = aura
-            .effects
-            .iter()
-            .find(|effect| effect.index == fresh.index)?;
-        Some((effect, aura.expires_at?, aura.stack_multiplier()))
-    });
-    let (next, old_budget) = prior.map_or((fresh.next_tick_at, 0.0), |(effect, end, stacks)| {
-        let unpaid = remaining_ticks(effect.next_tick_at, end, effect.period_ms);
-        (effect.next_tick_at, effect.amount * stacks * unpaid as f32)
-    });
+    let (next, old_budget) = old
+        .as_ref()
+        .and_then(|aura| unpaid_barbed_damage(aura, fresh.index))
+        .unwrap_or((fresh.next_tick_at, 0.0));
     let future = remaining_ticks(next, expiry, fresh.period_ms);
     if future > 0 {
         fresh.amount = (new_budget + old_budget) / future as f32;
     }
+}
+
+fn unpaid_barbed_damage(aura: &AuraInstance, index: u8) -> Option<(f64, f32)> {
+    let effect = aura.effects.iter().find(|effect| effect.index == index)?;
+    let unpaid = remaining_ticks(effect.next_tick_at, aura.expires_at?, effect.period_ms);
+    let budget = effect.amount * aura.stack_multiplier() * unpaid as f32;
+    Some((effect.next_tick_at, budget))
 }
 
 ///190456 c3/s4: remaining shields accumulate to the native percent-health cap.
