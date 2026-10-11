@@ -143,6 +143,7 @@ mod tests {
                         level: u8::try_from(data.level).unwrap(),
                         portrait: Default::default(),
                         dungeon_difficulty: 1,
+                        raid_difficulty: Default::default(),
                     },
                 )
             })
