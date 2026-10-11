@@ -28,7 +28,7 @@ impl Plugin for ZonePlugin {
 }
 
 /// The hosted continents are created at startup with all their creatures.
-fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
+pub(crate) fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
     for map_id in crate::maps::HOSTED_CONTINENTS {
         let count = spawn_map_creatures(
             &mut commands,
@@ -101,6 +101,7 @@ pub(crate) fn spawn_map_creatures(
     let mut map_pools = MapPools {
         spawns: pool_spawns,
         entities: HashMap::new(),
+        gameobjects: HashMap::new(),
         difficulty_id: content.difficulty_id,
         replicate,
     };
@@ -1001,6 +1002,42 @@ mod tests {
     /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).
     fn spawn_test(mut commands: Commands, world_data: Res<WorldData>) {
         spawn_map_creatures(&mut commands, &world_data, MapContent::continent(0), false);
+    }
+
+    #[test]
+    fn follower_normal_population_spawns_normal_only_and_keeps_follower_difficulty() {
+        let mut normal = make_spawn(42, 10.0, 20.0, 30.0);
+        normal.map = 2521;
+        normal.spawn_difficulties = vec![1, 2, 23];
+        let mut mythic = make_spawn(43, 40.0, 50.0, 60.0);
+        mythic.map = 2521;
+        mythic.spawn_difficulties = vec![8, 23];
+        let data = make_world_data(
+            vec![make_template(42, 1.0, 5555), make_template(43, 1.0, 5555)],
+            vec![normal, mythic],
+        );
+        let mut world = World::new();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, &world);
+        let map = crate::maps::InMap {
+            map_id: 2521,
+            instance_id: 7,
+        };
+        let content = MapContent {
+            map,
+            difficulty_id: 205,
+            dead_bosses: Vec::new(),
+        };
+        assert_eq!(spawn_map_creatures(&mut commands, &data, content, false), 1);
+        queue.apply(&mut world);
+        let units: Vec<_> = world
+            .query::<(&Npc, &CreatureDifficulty, &crate::maps::InMap)>()
+            .iter(&world)
+            .collect();
+        assert_eq!(units.len(), 1);
+        assert_eq!(units[0].0.template_id, 42);
+        assert_eq!(units[0].1.0, 205);
+        assert_eq!(*units[0].2, map);
     }
 
     #[test]

@@ -45,6 +45,14 @@ pub(super) fn send_group_member_states(
     time: Res<Time>,
     registry: Res<GroupRegistry>,
     units: MemberUnits,
+    followers: Query<(
+        Entity,
+        &crate::followers::Follower,
+        &Health,
+        &Position,
+        Option<&UnitPowers>,
+        Option<&UnitAuras>,
+    )>,
     mut connections: Query<
         (Entity, &PlayerLink, &mut MessageSender<GroupMemberStates>),
         With<Authenticated>,
@@ -55,7 +63,29 @@ pub(super) fn send_group_member_states(
         return;
     }
     sent.since_last_send = 0.0;
-    let states = current_states(&units);
+    let mut states = current_states(&units);
+    states.extend(
+        followers
+            .iter()
+            .map(|(entity, follower, health, position, powers, auras)| {
+                (
+                    crate::followers::Follower::member_id(entity),
+                    GroupMemberState {
+                        name: follower.profile.name.clone(),
+                        health: health.current.max(0.0).round() as u32,
+                        max_health: health.max.max(0.0).round() as u32,
+                        power: powers.and_then(|power| power.entries.first().cloned()),
+                        death: if health.current > 0.0 {
+                            DeathState::Alive
+                        } else {
+                            DeathState::Dead
+                        },
+                        position: *position,
+                        debuffs: auras.map(visible_debuffs).unwrap_or_default(),
+                    },
+                )
+            }),
+    );
     let mut next_sent = HashMap::new();
     for (conn, link, mut sender) in &mut connections {
         let Ok((_, recipient, ..)) = units.get(link.0) else {

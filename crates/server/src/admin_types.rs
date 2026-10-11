@@ -125,6 +125,12 @@ pub enum AdminRequest {
         character_name: String,
         copper: u64,
     },
+    /// Issue an explicitly selected locally qualified keystone to bags.
+    GrantKeystone {
+        character_name: String,
+        challenge_id: u32,
+        level: u32,
+    },
     /// `count` of `item_id` into the character's bags.
     GrantItem {
         character_name: String,
