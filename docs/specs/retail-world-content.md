@@ -24,6 +24,7 @@ How it works: [content import](../wiki/systems/content-import.md).
 - [ ] Source coordinates, IDs, phase 0/169 without phase-use flags/groups/terrain swaps and authored difficulty 0 remain authentic. No phase progression is flattened.
 - [ ] Unrelated map spawns, overlays, shared templates and existing waypoint/pool dependencies survive; repeated promotion is idempotent. This mode does not run full policy regeneration or clear overlays.
 - [ ] Every locally loadable open-world map has a source/content/phase/difficulty/event/map-filter census; missing source rows remain explicit, not synthesized.
+- [ ] The31 promoted local-terrain expansion maps are hosted as shared continent maps, not dungeon copies: normal admission and startup NPC/object spawning use the same existing host list; other unsupported maps remain refused.
 
 Implementation: `scripts/world_population.py` reuses the [instance import functions](../wiki/systems/content-import.md#instance-population-2026-10-11). Process/copy proof: `scripts/tests/test_world_population.py`.
 

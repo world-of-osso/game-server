@@ -22,6 +22,31 @@ use crate::group::{GroupRegistry, OnlineMember, OnlineView};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::persistence::ClientId;
 
+#[test]
+fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
+    let store = map_store().expect("authentic map metadata");
+    let mut manager = InstanceManager::default();
+    let player = entrant(9820, None);
+    for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+        assert_eq!(
+            manager.player_cannot_enter(store, map_id, player, 80, SUNDAY_NOON),
+            None,
+            "open-world map {map_id} refused"
+        );
+        let resolved = manager
+            .create_map(store, map_id, player, at(0.0))
+            .expect("hosted open-world map");
+        assert_eq!(resolved.map, InMap::continent(map_id));
+        assert!(!resolved.created);
+    }
+    // An unselected development/unused map remains refused.
+    assert!(
+        manager
+            .player_cannot_enter(store, 13, player, 80, SUNDAY_NOON)
+            .is_some()
+    );
+}
+
 const STOCKADE: u32 = 34;
 /// `areatrigger_teleport` 101 "Stormwind Jail Entrance Target": its AreaTrigger box
 /// center in Stormwind City.
