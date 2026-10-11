@@ -151,7 +151,7 @@ fn load_skins(conn: &Connection, data: &mut GatheringData) -> rusqlite::Result<(
     for row in rows {
         let (entry, difficulty, loot, skill, rank) = row?;
         if let Some(ability) = data.abilities.iter().find(|ability| {
-            ability.effect == SKIN && ability.parent == SKINNING && ability.skill == skill
+            ability.effect == SKIN && ability.parent == SKINNING && ability.skill == SKINNING
         }) {
             data.skins.insert(
                 (entry, difficulty),

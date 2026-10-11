@@ -9,7 +9,7 @@ fn setup(skill: u32) -> (Harness, tempfile::TempDir) {
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
-    let mut h = harness_with_plugins(Vec::new(), &[], 2, false, |app| {
+    let mut h = harness_with_plugins(Vec::new(), &[265819, 265837, 8613], 2, false, |app| {
         app.add_plugins(GatheringPlugin);
         app.insert_resource(load_data(&conn).unwrap());
         app.insert_resource(crate::profession::load_profession_data(&conn).unwrap());
