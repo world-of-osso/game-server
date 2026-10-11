@@ -8,6 +8,22 @@ Shared browse messages remain distinct from flat search: `QueryAuctionBrowse` re
 
 `browse.rs` filters expired/zero-count offers and applies item, text, quality, level, session house and viewer class/usability eligibility before global aggregation. Price comparisons retain rational stack prices until copper ceiling at serialization; quantities cover all eligible listings. Distinct-item paging follows aggregation with ItemID/source tie-breaking. `handlers.rs` requires the auctioneer session and overrides the requested house. Flat `queries.rs` retains listing results and AuctionID tie-breaking, using a bounded heap for shallow prefixes and partial selection for deeper pages.
 
+## Unskipped 300k query gate (2026-10-10)
+
+At `5e858c83a2901e68dc607151d356e6d36e210a09` (origin/master), the reported failure does not reproduce. Four independent standalone runs per profile pass the existing unconditional 200 ms assertion. Default debug/test profile is unoptimized for server code; dependencies use opt-level 2. No threshold, profile override, production code or test changed. Existing corrections `7d0e4b7` (allocation-free ASCII name matching), `515a4af` and `1137452` (bounded shallow prefix heaps) are already merged.
+
+| Workload (50 returned / 300000 matched) | Debug range, four runs (ms) | Release range, four runs (ms) | Unskipped debug workspace (ms) |
+|---|---:|---:|---:|
+| Name ascending, page 0, empty text | 49.104–67.440 | 13.450–14.664 | 76.429 |
+| MinBid ascending, page 2000, empty text | 54.461–121.410 | 9.522–10.866 | 127.897 |
+| Buyout ascending, page 1, text `iRoN` | 53.897–76.390 | 16.261–17.385 | 75.271 |
+
+`agent-run ahperf cargo test --workspace -- --nocapture` exits 0 without skips: server 1918 passed/75 existing ignored; all other workspace targets and doc tests pass. `cargo test --workspace auction -- --nocapture` exits 0: server 94 passed/4 ignored, client 2 passed. Lead gates can remove the perf skip for this measured revision; these samples do not guarantee latency under arbitrary host contention or certify current grouped/network performance.
+
+Temporary phase timing (restored byte-for-byte before final state) finds in-memory work, not SQL or a missing database index. Shallow pages scan/filter current HashMap entries into 50/100 borrowed-entry heaps: debug 65.703/65.298 ms. Deep MinBid collects 300000 borrowed pointers (12.108 ms), then nth-partitions (114.224 ms). Final page ordering and 50-row serialization each cost <0.1 ms. Release phase samples: shallow scan+heap 27.629/29.869 ms; deep collection 3.475 ms and partition 24.334 ms. Phase runs had different host load than standalone samples; they are not an optimization comparison. No persistent query cache exists; mutation visibility and current grouped aggregation remain unchanged.
+
+Evidence: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/ah-query-perf-2026-10-10/`: `baseline-debug*.log`, `baseline-release*.log`, `baseline-auction.log`, `baseline-workspace.log`, `profile-debug.log`, `profile-release.log` and original/instrumented query source. Sources: [query implementation](../../../crates/server/src/auction_house/queries.rs), [existing latency test](../../../crates/server/src/auction_house_tests.rs), [profile configuration](../../../Cargo.toml), [contract](../../specs/auction-house.md#live-acceptance). This is verification of existing code, not a new performance fix or a manufactured before/after speedup.
+
 ## Injected expiry clock (2026-10-09)
 
 The sweep receives `Res<ServerClock>`; `AuctionHousePlugin` initializes it without overwriting an already pinned clock. Default time remains wall Unix time. The existing same-UID `clock-advance <seconds>` handler shifts that resource, now affecting auction expiry as well as instance locks; no new IPC command or process-global clock was added. After posting/bidding on an owned private server, advance beyond the longest desired listing duration, then allow the existing one-second sweep cadence to run. Never use the shared realm for this proof. Listing creation/browse and mail timestamps still use wall time.

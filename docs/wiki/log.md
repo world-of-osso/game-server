@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Unskipped 300k auction query gate](systems/auction-house.md#unskipped-300k-query-gate-2026-10-10): reported failure not reproduced at5e858c83; four standalone runs/profile, auction96 passed/4 ignored and full unskipped workspace exit0 (server1918 passed/75 ignored). Debug49.104–121.410ms, release9.522–17.385ms; full-gate slowest127.897ms. Temporary phase profiling restored exactly; existing allocation/heap corrections already merged. No new code fix, threshold exemption or grouped/network SLA claim.
+
 - 2026-10-10 — [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10): source-complete effect28/content group,15 real banner items and16 scenery templates; imported-copy census109→125, no removals or shared DB write. Source tuples match local archive; item/template/model preservation, CLI idempotency and missing-item/model atomic rollback tests. Native rendering, scaled banners and scripted/control/interaction groups remain outside this proof.
 
 - 2026-10-10 — [Class spell batch14](systems/spell-casting.md#fourteenth-batch-owned-hits-and-native-clocks): eight low-count local hit/pet/periodic paths;166→164 Dummy roots,93 reviewed/71 underived,118 native row equivalence and fixed40-spec table. Single spell_cast gate347/349; two missing-native-child fixture failures corrected and bounded14/14 passes. Primary-only Eye Beam/Wildfire, native11-hit versus variable10 discrepancy, guardian gaps and proof limits explicit in [coverage](../spell-dummy14-coverage.md).
