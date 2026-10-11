@@ -56,6 +56,10 @@ A real difficulty205 Juggernaut kill exposed two ownership omissions. Followers 
 
 Source loot remains separate: Melidrussa188252 has lootid0 in base and every imported difficulty, and neither source nor runtime creature loot table has entry188252. Owner attribution cannot create absent authored drops; no loot rows were invented. The native first-boss/loot/both-skin goal remains open.
 
+## Companion-group instance binding
+
+A private same-map reposition reproduced another admission lifecycle bug: the player enters a solo205 copy before the companions form a group. The new group had no recent-instance binding, so another same-map teleport allocated a second205 copy and left the NPCs behind. Group difficulty was already205; the missing state was the group's recent-instance pointer. `join_party` now binds the new group to the already-admitted copy after checking its owner. The active run stores the exact `InMap`, not just map ID, and ends/unsummons its companions if the owner enters a different copy of the same dungeon. Two behavioral regressions reproduce actual party formation→same-map teleport and cross-copy cleanup; no synthetic entrance or geometry change.
+
 ## Lead import instructions
 
 Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Lead confirmed canonical import of11 profiles,27 LFG rows,9,586 source spell rows and11 content templates. Agent writes remain private. Existing instance population is separate from follower profile/reference import.
