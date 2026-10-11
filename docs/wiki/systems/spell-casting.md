@@ -2,6 +2,12 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Thirteenth batch: authored hits, ranks and channel clocks
+
+[Contract](../../specs/spell-dummy-scripts.md#thirteenth-batch-locally-authored-hit-rank-and-channel-contracts), [capabilities/proof/all40](../../spell-dummy13-coverage.md). `scripts/batch13.rs` binds named Mortal Strike healing reduction, Rend bleed, paid-Rage Execute refund, Shadow Word: Death execute/Deathspeaker variant, native Rapid Fire tick children, persistent-pet Bestial Wrath, Aspect's initial primary Cobra and Haunt's death-only reset. The launch boundary passes actual paid costs to Execute after its native zero-speed child resolves; no damage interpolation assumption. Rapid Fire reuses the native aura clock, including EXTRA_INITIAL_PERIOD, rather than adding a script timer. Death reset receives the owned aura instance's caster and removal reason.
+
+Local guardian templates/bindings do not establish non-demon owner inheritance or complete wolf melee damage/AI. The1500ms template attack time alone is not a stat curve or movement contract. Those gaps remain unchanged. Batch13 tests/census integration are pending; consult the proof ledger before treating any path as verified.
+
 ## Twelfth batch: actor, resource and snapshot consumers
 
 [Contract](../../specs/spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers), [capability matrix/all40 table](../../spell-dummy12-coverage.md). Native51533 explicitly names228562: its two29264 wolves reuse the generic summon lifecycle and authentic archive58875/58867 bindings. Dummy remains counted for unimplemented immunity, buff/Maelstrom and elemental contracts; no guessed melee rotation. Native49206's pet-title3238 is a named temporary Gargoyle actor exception, not a blanket pet AI change. Its27829 archive binding51963 uses native cast timing and always critically strikes with1242147. Successful owner costs empower its211947 aura using49206s4 and PowerType DisplayModifier; failed/triggered/foreign casts do not. Non-demon stat inheritance and Army entry remain uncertified.

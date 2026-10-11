@@ -13,6 +13,18 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 - [x] Rampage 184367 spends its catalog cost, retains the catalog attack triggers, and applies Enrage 184362.
 - [x] Holy Shock 20473 casts 25912 at enemies or 25914 at allies (including self), using their catalog damage/heal formulas and retaining its one Holy Power gain.
 - [x] Barkskin 22812's periodic Dummy casts Brambles damage 213709 every catalog tick when Brambles 203953 is present, hits enemies only, and stops on aura removal.
+### Thirteenth-batch locally authored hit, rank and channel contracts
+
+- [ ] Mortal Strike12294 applies named115804 healing reduction; Rend772 applies named388539 bleed with native ticks and lifetime.
+- [ ] Execute163201 with316405 refunds s2 percent of actual raw Rage paid, including OptionalCost, only if its instant260798 target survives. Damage interpolation remains uncertified.
+- [ ] Shadow Word: Death32379 resolves its tooltip's s2 damage variant once; s3/s4 define strict execute threshold/bonus, extended by active364675s1/s2. Native backlash remains once; legacy s1 variant stays uncertified.
+- [ ] Rapid Fire257044's native333ms period/2000ms duration/initial-period attribute cast named257045 shots and263585 Focus gains; cancellation removes later ticks.
+- [ ] Bestial Wrath19574 buffs the actual persistent pet and casts named344572 at that pet's target, without replacing it with a guardian or owner selection. CC removal, charge grants and pet damage inheritance remain separate gaps.
+- [ ] Aspect of the Wild193530 fires a free named193455 at its primary on activation. Additional-target geometry and ongoing extra-target contract remain underived.
+- [ ] Haunt48181 resets its caster's running cooldown only when its owned mark is removed on target death, not cancellation/expiry.
+
+[Batch13 proof and all40 table](../spell-dummy13-coverage.md). Local guardian records provide wolf1500ms attack time and Gargoyle51963 binding, but no non-demon owner-stat curve or complete guardian melee damage contract. No guessed inheritance/melee added.
+
 ### Twelfth-batch actor/resource/snapshot consumers
 
 - [x] Feral Spirit51533 summons228562's native two29264 Spirit Wolves, using only imported guardian_spells bindings. Summon duration/owner cleanup use native lifecycle; wolf melee, movement immunity, buff/Maelstrom and elemental variants remain uncertified.
