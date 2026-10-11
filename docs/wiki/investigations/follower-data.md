@@ -42,6 +42,10 @@ TrinityCore a352b1fa `ObjectGridLoader::LoadN` passes the map's selected difficu
 
 Local WorldSafeLocs1369425 extraction was attempted once; the current local CASC root has no such content/path. Record this source gap without CDN requests. User subsequently approved Normal population and Normal entrance reuse. Runtime now selects exact difficulty1 membership for creature/game-object populations in205 copies, without modifying source tags or trying an alternate population. Queue/instance identity and creature template/loot difficulty stay205. Ruby is chosen because304 Normal creature rows include Melidrussa Chillworn188252 and entrance100030 is authored. This workaround retires when local205 populations and authored entrances are complete. No static posed capture substitutes for live proof.
 
+## First private live boundary (follower-ai3)
+
+Private5750 admission now creates the1T/1H/3D Ruby party. Newly promoted companion display113757 (Crenna) lacks a runtime eye receipt: her real Regrowth fails `LineOfSight`, as required by the existing fail-closed LOS contract. Source/template SQL alone therefore does not prepare a playable companion. Native Ruby displays likewise expose incomplete appearance coverage. Refresh authenticated eye/appearance receipts privately, never bypass LOS or substitute models. The ignored `crates/los/tests/follower_bake.rs` fixture bakes every pose for the actual Ruby population plus eleven follower templates and reloads the produced table through the runtime reader; its explicit paths keep writes out of canonical caches. Admission is live evidence, not boss/loot or both-skin certification.
+
 ## Lead import instructions
 
 Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Lead confirmed canonical import of11 profiles,27 LFG rows,9,586 source spell rows and11 content templates. Agent writes remain private. Existing instance population is separate from follower profile/reference import.
