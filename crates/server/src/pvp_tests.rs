@@ -62,6 +62,69 @@ fn arathi_multiple_players_finish_at_authored_resource_limit() {
 }
 
 #[test]
+fn matched_warsong_players_keep_an_invitation_until_their_response() {
+    let mut state = PvpServerState::default();
+    let template = shared::battleground::warsong_gulch();
+    let mut players = vec![PlayerPvpState::default(); 10];
+    for (index, player) in players.iter_mut().enumerate() {
+        queue_for_battleground(player, &mut state, index as u64 + 1, 90, template.id, 0).unwrap();
+    }
+    let match_id = form_battleground_invitation(&mut state, template.id).unwrap();
+    assert!(state.battleground_queue.is_empty());
+    let invitation = state
+        .battleground_matches
+        .get(&match_id)
+        .expect("matched roster retained");
+    assert_eq!(invitation.instance.team_a_players, vec![1, 3, 5, 7, 9]);
+    assert_eq!(invitation.instance.team_b_players, vec![2, 4, 6, 8, 10]);
+    assert!(invitation.accepted.is_empty());
+    assert_eq!(
+        invitation.instance.phase,
+        shared::battleground::BgPhase::Waiting
+    );
+}
+
+#[test]
+fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
+    use shared::battleground::{BgInstance, BgMatch};
+    let template = shared::battleground::warsong_gulch();
+    let matched = BgMatch {
+        bg_id: template.id,
+        team_a: vec![1, 3, 5, 7, 9],
+        team_b: vec![2, 4, 6, 8, 10],
+    };
+    let mut state = PvpServerState::default();
+    state.battleground_matches.insert(
+        17,
+        InvitedBattleground {
+            instance: BgInstance::from_match(&matched, &template),
+            accepted: BTreeSet::new(),
+        },
+    );
+    respond_to_battleground_invitation(&mut state, 17, 1, true).unwrap();
+    assert_eq!(
+        state.battleground_matches[&17].accepted,
+        BTreeSet::from([1])
+    );
+    assert!(respond_to_battleground_invitation(&mut state, 17, 1, true).is_err());
+    assert!(respond_to_battleground_invitation(&mut state, 18, 2, true).is_err());
+    assert!(respond_to_battleground_invitation(&mut state, 17, 11, true).is_err());
+    respond_to_battleground_invitation(&mut state, 17, 2, false).unwrap();
+    assert_eq!(
+        state.battleground_matches[&17].instance.team_b_players,
+        vec![4, 6, 8, 10]
+    );
+    assert_eq!(
+        state.battleground_matches[&17].instance.team_a_players,
+        matched.team_a
+    );
+    assert_eq!(
+        state.battleground_matches[&17].accepted,
+        BTreeSet::from([1])
+    );
+}
+
+#[test]
 fn queue_for_rated_bracket_blocks_double_queue() {
     let mut player_state = PlayerPvpState::default();
     let mut state = PvpServerState::default();
@@ -117,6 +180,7 @@ fn decide_winner_prefers_higher_rating_then_earlier_queue() {
 fn build_snapshot_reflects_queue_kind() {
     let state = PlayerPvpState {
         progress: PlayerPvpProgress::default(),
+        battleground: None,
         queue: Some(PlayerPvpQueue::RatedBracket {
             bracket: PvpBracketSnapshot::SoloShuffle,
         }),
