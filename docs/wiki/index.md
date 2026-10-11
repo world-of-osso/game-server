@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10) — authentic15 banner item definitions and16 scenery templates; source-bound locations, wild faction and expiry, imported-copy census109→125, no shared DB write.
+
 - [Class spell batch14](systems/spell-casting.md#fourteenth-batch-owned-hits-and-native-clocks) — eight local hit/pet/periodic consumers;164 remaining Dummy roots,93/71 reviewed/underived and [all40 proof table](../spell-dummy14-coverage.md); primary-only geometry/data discrepancies explicit.
 
 - [Class spell batch13](systems/spell-casting.md#thirteenth-batch-authored-hits-ranks-and-channel-clocks) — local hit/rank/channel contracts; [proof and all40 table](../spell-dummy13-coverage.md), guardian inheritance/melee gaps retained.
