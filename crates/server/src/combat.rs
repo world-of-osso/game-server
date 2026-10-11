@@ -417,7 +417,6 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static DuelOpponent>,
         TargetArmor<'static>,
         Option<&'static shared::components::UnitFlags>,
-        Has<crate::auras::Invisible>,
         CanAvoid<'static>,
         Option<&'static shared::components::PlayerStandState>,
     ),
@@ -958,7 +957,6 @@ fn try_swing(
         duel,
         armor,
         flags,
-        _invisible,
         mut avoidance,
         stand_state,
     )) = targets.get_mut(target_entity)

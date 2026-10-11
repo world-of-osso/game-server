@@ -8,6 +8,14 @@ use bevy::prelude::*;
 use rusqlite::Connection;
 use std::collections::HashMap;
 
+const AUTOCAST: u8 = 1;
+const AUTOREMOVE: u8 = 2;
+const IGNORE_QUEST_CHANGE: u8 = 4;
+const GENDER_ANY: u8 = 2;
+const QUEST_COMPLETE: u8 = 1;
+const QUEST_INCOMPLETE: u8 = 3;
+const QUEST_REWARDED: u8 = 6;
+
 #[derive(Debug, Clone)]
 struct Rule {
     area: u32,
@@ -65,60 +73,100 @@ impl Rule {
     }
 
     fn fits(&self, inputs: &Inputs, auras: &[u32]) -> bool {
-        let status_matches = |quest, mask| {
-            quest == 0 || mask & (1 << inputs.statuses.get(&quest).copied().unwrap_or(0)) != 0
-        };
         self.in_area(inputs)
-            && (self.gender == 2 || self.gender == inputs.gender)
-            && (self.race_mask == 0
-                || inputs
-                    .race
-                    .checked_sub(1)
-                    .and_then(|bit| 1u64.checked_shl(u32::from(bit)))
-                    .is_some_and(|bit| self.race_mask & bit != 0))
-            && status_matches(self.start, self.start_status)
-            && status_matches(self.end, self.end_status)
-            && (self.aura == 0
-                || if self.aura > 0 {
-                    auras.contains(&(self.aura as u32))
-                } else {
-                    !auras.contains(&self.aura.unsigned_abs())
-                })
+            && (self.gender == GENDER_ANY || self.gender == inputs.gender)
+            && race_matches(self.race_mask, inputs.race)
+            && status_matches(inputs, self.start, self.start_status)
+            && status_matches(inputs, self.end, self.end_status)
+            && aura_matches(self.aura, auras)
+    }
+}
+
+fn race_matches(mask: u64, race: u8) -> bool {
+    let race_bit = race
+        .checked_sub(1)
+        .and_then(|bit| 1u64.checked_shl(u32::from(bit)));
+    mask == 0 || race_bit.is_some_and(|bit| mask & bit != 0)
+}
+
+fn status_matches(inputs: &Inputs, quest: u32, mask: u32) -> bool {
+    let status = inputs.statuses.get(&quest).copied().unwrap_or(0);
+    quest == 0 || mask & (1 << status) != 0
+}
+
+fn aura_matches(required: i32, auras: &[u32]) -> bool {
+    match required.cmp(&0) {
+        std::cmp::Ordering::Equal => true,
+        std::cmp::Ordering::Greater => auras.contains(&(required as u32)),
+        std::cmp::Ordering::Less => !auras.contains(&required.unsigned_abs()),
     }
 }
 
 fn reconcile(world: &mut World, player: Entity, inputs: &Inputs) {
-    let area_changed = world
-        .get::<Inputs>(player)
-        .is_none_or(|old| old.area != inputs.area || old.zone != inputs.zone);
+    let previous = world.get::<Inputs>(player);
+    let quest_only_change = previous.is_some_and(|old| {
+        old.area == inputs.area && old.zone == inputs.zone && old.statuses != inputs.statuses
+    });
     let active: Vec<u32> = world
         .get::<ActiveAuras>(player)
         .map_or_else(Vec::new, |auras| auras.iter().map(|a| a.spell_id).collect());
-    let actions: Vec<_> = world
+    let changes: Vec<_> = world
         .resource::<SpellAreas>()
         .0
         .iter()
-        .map(|(&spell, rules)| {
-            let eligible: Vec<_> = rules
-                .iter()
-                .filter(|rule| rule.fits(inputs, &active))
-                .collect();
-            let apply = eligible
-                .iter()
-                .any(|rule| rule.flags & 1 != 0 && (area_changed || rule.flags & 4 == 0));
-            let remove = eligible.is_empty()
-                && rules
-                    .iter()
-                    .any(|rule| !rule.in_area(inputs) || rule.flags & 2 != 0);
-            (spell, apply, remove)
+        .filter_map(|(&spell, rules)| {
+            decide_change(spell, rules, inputs, &active, quest_only_change)
         })
         .collect();
-    for (spell_id, apply, remove) in actions {
-        if remove {
+    for change in changes {
+        apply_change(world, player, change);
+    }
+    if world.get::<Inputs>(player) != Some(inputs) {
+        world.entity_mut(player).insert(inputs.clone());
+    }
+}
+
+enum AuraChange {
+    Apply(u32),
+    Remove(u32),
+}
+
+fn decide_change(
+    spell: u32,
+    rules: &[Rule],
+    inputs: &Inputs,
+    active: &[u32],
+    quest_only_change: bool,
+) -> Option<AuraChange> {
+    let eligible: Vec<_> = rules
+        .iter()
+        .filter(|rule| rule.fits(inputs, active))
+        .collect();
+    let remove = eligible.is_empty()
+        && rules
+            .iter()
+            .any(|rule| !rule.in_area(inputs) || rule.flags & AUTOREMOVE != 0);
+    if remove && active.contains(&spell) {
+        return Some(AuraChange::Remove(spell));
+    }
+    let autocast = eligible.iter().any(|rule| {
+        rule.flags & AUTOCAST != 0 && (!quest_only_change || rule.flags & IGNORE_QUEST_CHANGE == 0)
+    });
+    if autocast && !active.contains(&spell) {
+        Some(AuraChange::Apply(spell))
+    } else {
+        None
+    }
+}
+
+fn apply_change(world: &mut World, player: Entity, change: AuraChange) {
+    match change {
+        AuraChange::Remove(spell_id) => {
             remove_auras(world, player, RemoveReason::Cancelled, |aura| {
                 aura.spell_id == spell_id
             });
-        } else if apply && !active.contains(&spell_id) {
+        }
+        AuraChange::Apply(spell_id) => {
             let spell = world
                 .resource::<SpellStore>()
                 .get(spell_id)
@@ -136,7 +184,6 @@ fn reconcile(world: &mut World, player: Entity, inputs: &Inputs) {
             );
         }
     }
-    world.entity_mut(player).insert(inputs.clone());
 }
 
 pub struct SpellAreaPlugin;
@@ -167,74 +214,78 @@ fn load_startup(mut commands: Commands) {
 
 fn sync(world: &mut World) {
     use crate::auth::InWorld;
-    use crate::maps::InMap;
     use crate::networking::PlayerLink;
-    use shared::components::{Player, Position};
     let connections: Vec<_> = world
         .query::<(&PlayerLink, &InWorld)>()
         .iter(world)
         .map(|(link, state)| (link.0, state.character_id))
         .collect();
     for (entity, character) in connections {
-        let Some((player, position, map)) = world
-            .query::<(&Player, Ref<Position>, &InMap)>()
-            .get(world, entity)
-            .ok()
-            .filter(|(_, position, _)| {
-                position.is_changed()
-                    || world.get::<Inputs>(entity).is_none()
-                    || world
-                        .resource::<crate::quest::QuestDirty>()
-                        .0
-                        .contains(&character)
-                    || world
-                        .entity(entity)
-                        .get_ref::<ActiveAuras>()
-                        .is_some_and(|auras| auras.is_changed())
-            })
-            .map(|(p, position, map)| (p.clone(), *position, *map))
-        else {
-            continue;
-        };
-        let area = world
-            .resource_mut::<crate::ground::GroundMap>()
-            .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))
-            .unwrap_or(0);
-        let zone = world
-            .resource::<crate::area_table::AreaTable>()
-            .zone_id(area, map.map_id)
-            .unwrap_or(0);
-        let database = &world.resource::<crate::persistence::GameDatabase>().db;
-        let log = crate::persistence::quest_store::load_quest_log(database, character);
-        let inventory = crate::persistence::load_inventory(database, character);
-        let quests = world.resource::<crate::quest_data::QuestDb>();
-        let mut statuses = HashMap::new();
-        for quest in &log.active {
-            let status =
-                if crate::quest_rules::is_complete_in_log(quests, &log, quest.quest_id, |item| {
-                    crate::quest_view::bag_count(database, &inventory, item)
-                }) {
-                    1
-                } else {
-                    3
-                };
-            statuses.insert(quest.quest_id, status);
+        if let Some(inputs) = load_changed_inputs(world, entity, character) {
+            reconcile(world, entity, &inputs);
         }
-        for quest in &log.rewarded {
-            statuses.insert(*quest, 6);
-        }
-        reconcile(
-            world,
-            entity,
-            &Inputs {
-                area,
-                zone,
-                race: player.race,
-                gender: player.appearance.sex,
-                statuses,
-            },
-        );
     }
+}
+
+fn inputs_changed(world: &World, entity: Entity, character: u64, moved: bool) -> bool {
+    moved
+        || world.get::<Inputs>(entity).is_none()
+        || world
+            .resource::<crate::quest::QuestDirty>()
+            .0
+            .contains(&character)
+        || world
+            .entity(entity)
+            .get_ref::<ActiveAuras>()
+            .is_some_and(|auras| auras.is_changed())
+}
+
+fn load_changed_inputs(world: &mut World, entity: Entity, character: u64) -> Option<Inputs> {
+    use shared::components::{Player, Position};
+    let mut players = world.query::<(&Player, Ref<Position>, &crate::maps::InMap)>();
+    let (player, position, map) = players.get(world, entity).ok()?;
+    if !inputs_changed(world, entity, character, position.is_changed()) {
+        return None;
+    }
+    let (race, gender, position, map) = (player.race, player.appearance.sex, *position, *map);
+    let area = world
+        .resource_mut::<crate::ground::GroundMap>()
+        .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))
+        .unwrap_or(0);
+    let zone = world
+        .resource::<crate::area_table::AreaTable>()
+        .zone_id(area, map.map_id)
+        .unwrap_or(0);
+    Some(Inputs {
+        area,
+        zone,
+        race,
+        gender,
+        statuses: load_quest_statuses(world, character),
+    })
+}
+
+fn load_quest_statuses(world: &World, character: u64) -> HashMap<u32, u8> {
+    let database = &world.resource::<crate::persistence::GameDatabase>().db;
+    let log = crate::persistence::quest_store::load_quest_log(database, character);
+    let inventory = crate::persistence::load_inventory(database, character);
+    let quests = world.resource::<crate::quest_data::QuestDb>();
+    let active = log.active.iter().map(|quest| {
+        let complete =
+            crate::quest_rules::is_complete_in_log(quests, &log, quest.quest_id, |item| {
+                crate::quest_view::bag_count(database, &inventory, item)
+            });
+        (
+            quest.quest_id,
+            if complete {
+                QUEST_COMPLETE
+            } else {
+                QUEST_INCOMPLETE
+            },
+        )
+    });
+    let rewarded = log.rewarded.iter().map(|quest| (*quest, QUEST_REWARDED));
+    active.chain(rewarded).collect()
 }
 
 #[cfg(test)]
