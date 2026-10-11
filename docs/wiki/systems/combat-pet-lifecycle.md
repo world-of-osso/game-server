@@ -1,6 +1,6 @@
 # Combat pet lifecycle
 
-Verified: 2026-10-11, pet-lifecycle server9c3e7d7/protocol203acd3. Requirements live in [pet lifecycle](../../specs/pet-lifecycle.md); this is bounded implementation/proof, not complete Retail parity.
+Verified: 2026-10-11, pet-lifecycle serverc4ba3ef/protocol203acd3; native runtime serverf771781/client16fdd7f18. Requirements live in [pet lifecycle](../../specs/pet-lifecycle.md); this is bounded implementation/proof, not complete Retail parity.
 
 ## Durable state
 
@@ -26,7 +26,15 @@ Mend136 already uses aura20's imported10% maximum-health tick every2s. A numeric
 
 Baseline632f3aea restored both wounded23 and dead0 pets at full378. At8358c09 all11 hunter tests pass, including reopened-redb wounded/dead health and health-change→queued logout→flush without a fixed tick. Earlier live audit confirms hunter tame/relog/dismiss/call and native Imp summon/relog/menu-dismiss, but only the baseline live binary was exercised.
 
-At5af60fe hunter15/15 pass without warnings: real NPC hello/gossip selection, stable→rename→spec→redb reopen→active→Call→abandon→reopen, active-slot ownership preservation, same-slot move and non-mutating refusals. Protocol203acd3 concrete operation/name/spec/dead-health wire roundtrip passes1/1. Revive source5150fd4 passes lethal-damage/clear-corpse/reopen, first-dead-active selection and living-pet refusal (18 hunter cases pass; the initially fractional Mend assertion was wrong). Focused Mend passes1/1 at9c3e7d7 after matching whole-HP/log contracts. Live stable UI, post-fix revive/Mend, Feed food-classification provenance, other demons and both-skin post-fix captures remain pending. No shared realm or world.db writes.
+At5af60fe hunter15/15 pass without warnings: real NPC hello/gossip selection, stable→rename→spec→redb reopen→active→Call→abandon→reopen, active-slot ownership preservation, same-slot move and non-mutating refusals. Protocol203acd3 concrete operation/name/spec/dead-health wire roundtrip passes1/1. Revive source5150fd4 passes lethal-damage/clear-corpse/reopen, first-dead-active selection and living-pet refusal (18 hunter cases pass; the initially fractional Mend assertion was wrong). Focused Mend passes1/1 at9c3e7d7 after matching whole-HP/log contracts. Atc4ba3ef, each authored Call Pet1–5 spell loads its own occupied active position (one real-data fixture covering all five); existing Fel Domination333889 cast-time modifier/next-summon charge also passes1/1. Demon persistence proof lives in [[warlock-pets]]. No shared realm or world.db writes.
+
+## Native hunter proof
+
+Private serverf771781/protocol203acd3/client16fdd7f18: real Erma gossip opens authoritative records in both skins. Native mouse controls store at slot6, rename Ash/Coal, choose Cunning79/Ferocity74, then move to active0. Rename initially reproduced unresolved StableRenameNineSlice; client16fdd7f18 registers the missing Plain metal style. Call883 and native PetFrame Dismiss restore/clear the current bar; connection-reopen captures retain both states.
+
+Real private admin damage3000 invokes the production damage path on the owned wolf. Modern rendered health fraction0.82857→0.92857 and Forever0.82895→0.92763 prove one Mend tick (pixel widths are quantized; server fixture proves exact whole HP). Lethal999999 produces a dead pet; native Log Out confirms CharacterSelect before reconnect. Death persists, Revive982 restores full health, then a second confirmed Log Out preserves revived health in both skins.
+
+Early diagnostic reconnect freed GameClient before the old netcode connection finished disconnecting; intermittent casts after overlapping login had no completion. This is not certified as product failure or success. Final fixtures use the actual user logout boundary, not an arbitrary disconnect delay. Feed food-classification provenance and absent/out-of-coverage demon content remain explicit data boundaries.
 
 ## Sources
 

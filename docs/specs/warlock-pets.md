@@ -13,7 +13,8 @@ Locally authored permanent demon summons use the server's existing pet ownership
 - [x] Summon Imp688, Voidwalker697, Succubus712, Felhunter691, Felguard30146 and Sayaad366222 create the creature authored by their effect56. Incubus365349 is admitted only when its authored template/model exists; absent local content is an explicit refusal.
 - [x] Explicitly summoning a dismissed demon after relog restores its saved identity as a living demon. Current-pet relog preserves wounded health instead.
 - [x] A permanent current imp returns at login through persisted pet storage and restores its bar.
-- [ ] Existing owner/pet replication carries the imp without wire changes (live proof belongs to team-lead).
+- [x] Existing owner/pet replication carries the six supported authored demons' current/bar state in both client skins; server-confirmed native logout restores current Felguard and preserves its dismissal.
+- [x] Locally imported Fel Domination333889 accelerates the next Imp summon by90% and consumes its charge through existing spell modifiers.
 
 ## How it works
 
@@ -34,7 +35,8 @@ Locally authored permanent demon summons use the server's existing pet ownership
 
 ## Known gaps (current cycle)
 
-- [ ] Live client PetFrame/bar and wire-level replication proof remains with team-lead.
+- [ ] Full rendered demon bodies remain blocked by imported appearance/asset receipt coverage; native lifecycle/frame/bar evidence does not certify those bodies. Imp renders.
+- [ ] Incubus365349's authored template184600 is absent from active content; no substitute template is created.
 
 ## Out of scope
 
