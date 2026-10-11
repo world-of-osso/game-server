@@ -10,7 +10,7 @@
 670,40484,1049,3
 # Canonical TDB Cobrahn3669 SmartAI death data0 + DungeonEncounter586
 43,3669,586,0
-# Local TDB instance_azure_vault + DB2 DungeonEncounter; existing M+ saved ordinals.
+# Local TDB instance_azure_vault + DB2 encounters; preserve Mythic+ saved ordinals
 2515,186644,2582,0
 2515,186739,2585,1
 2515,186737,2583,2

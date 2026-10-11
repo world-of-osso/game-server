@@ -406,6 +406,79 @@ fn send_to_players<M: lightyear::prelude::Message + Clone>(
     }
 }
 
+#[cfg(test)]
+mod mythic_tests {
+    use super::*;
+
+    #[test]
+    fn mythic_azure_encounter_lifecycle_preserves_saved_ordinals_and_copy_isolation() {
+        let mut world = World::new();
+        world.insert_resource(crate::maps::MapStore::default());
+        world.insert_resource(Time::<()>::default());
+        world.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        let map = InMap {
+            map_id: 2515,
+            instance_id: 1,
+        };
+        let other = InMap {
+            instance_id: 2,
+            ..map
+        };
+        let encounters = [
+            (186644, 2582),
+            (186739, 2585),
+            (186737, 2583),
+            (186738, 2584),
+        ];
+        for (boss, (entry, encounter)) in encounters.into_iter().enumerate() {
+            let boss = boss as u32;
+            assert_eq!(
+                get_boss_state(&mut world, map, boss),
+                Some(EncounterState::NotStarted)
+            );
+            assert!(set_boss_state(
+                &mut world,
+                map,
+                boss,
+                EncounterState::InProgress
+            ));
+            assert!(set_boss_state(
+                &mut world,
+                map,
+                boss,
+                EncounterState::NotStarted
+            ));
+            assert!(set_boss_state(&mut world, map, boss, EncounterState::Done));
+            assert!(!set_boss_state(
+                &mut world,
+                map,
+                boss,
+                EncounterState::InProgress
+            ));
+            assert_eq!(
+                get_boss_state(&mut world, other, boss),
+                Some(EncounterState::NotStarted)
+            );
+            let scripts = world.resource::<InstanceScripts>();
+            assert_eq!(
+                scripts.0[&map].bosses[boss as usize].encounter_id,
+                encounter
+            );
+            assert_eq!(
+                done_boss_entries(world.resource::<crate::maps::MapStore>(), 2515, 1 << boss),
+                vec![entry]
+            );
+        }
+        assert_eq!(
+            world.resource::<InstanceScripts>().0[&map].done_bosses(),
+            15
+        );
+    }
+}
+
 /// Unloaded copies take their instance scripts with them.
 pub(crate) fn unload_instance_scripts(world: &mut World, maps: &[InMap]) {
     if let Some(mut scripts) = world.get_resource_mut::<InstanceScripts>() {
