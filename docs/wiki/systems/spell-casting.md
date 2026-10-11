@@ -2,6 +2,14 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Seventeenth batch: named resources and restorative hooks
+
+[Contract](../../specs/spell-dummy-scripts.md#seventeenth-batch-named-resources-and-restorative-hooks), [proof/all40/census](../../spell-dummy17-coverage.md). `scripts/batch17.rs` binds Shadow Bolt's spec-gated194192 gain, Conflagrate's245330 fragments/196406-gated117828 uses, Soul Fire's281490 gain and conditional base157736/445474 periodic mark, Blood Boil's55078 base disease and Marrowrend's native195181 stack grant. Shadow Bolt checks actual ActiveSpec266, not an invented passive. Blood Boil's absent212744 record is represented only by the native description's learned-spell condition, not a synthesized store row.
+
+Lifebloom hooks bloom33778 on expiry/dispel and replace only other targets bearing the same owner's33763; replacement never blooms. The near-expiration refresh threshold remains underivable. Improved Regrowth231032 adds its native probability only when the target already has8936; any owner qualifies. Cenarion Ward102351's proc predicate requires actual damage before consuming its native charge; its hook casts102352 from the real aura owner onto the protected unit, not the event's attacker. Backdraft117828 joins53390's named stack-as-use handling, preserving30% per use instead of multiplying magnitude by stack count.
+
+Guardian/Karma/Eye Beam and retained markers/talents remain excluded. No new general leech/aura53 support is inferred from Blood Plague application. Current proof and source limits live in the linked coverage ledger.
+
 ## Sixteenth batch: low-count rank and charge consumers
 
 [Contract](../../specs/spell-dummy-scripts.md#sixteenth-batch-low-count-rank-and-charge-contracts), [capabilities/proof/all40](../../spell-dummy16-coverage.md). `scripts/batch16.rs` binds Holy Light's231642/88852 gain, Holy/Ret Judgment's315867/220637 gain, Crusader's Might196926's separate Holy Shock/Crusader Strike cooldown reductions and Riptide51564's named53390 grant. Rank fixtures pin KnownSpells separately from loaded child rows. Crusader's Might covers Holy Judgment275773 only; other Judgment variants and owned-mark/secondary/talent mechanics stay open.

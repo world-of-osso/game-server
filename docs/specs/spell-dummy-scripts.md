@@ -6,6 +6,21 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Seventeenth-batch named resources and restorative hooks
+
+| Entry | Required bounded behaviour |
+|---|---|
+|Shadow Bolt686|Completed root grants194192 once only in Demonology266; no grant in other/no active specs.|
+|Conflagrate17962|Actual root damage grants245330 once;196406 grants one117828 use. Native cap2 and successive eligible casts consume one use each at30%, not stacked60%.|
+|Soul Fire6353|Completed root grants281490 once; actual damage applies base157736 periodic aura or445474 when445465 is active, not both. Optional vulnerabilities/tick resources are excluded.|
+|Blood Boil50842|Each damage-hit enemy receives base55078 disease unless learned212744 selects the explicit replacement branch; allies/out-of-area excluded. Leech ticks and descendant markers remain gaps.|
+|Marrowrend195182|Successful damage hit grants195182s3 stacks of named195181, up to its native cap10. Bone Shield melee depletion/haste/markers remain separate.|
+|Lifebloom33763|Natural expiry/dispel casts33778 onto the protected ally once; cancellation/death/replacement never bloom. One active target per owner; foreign owners remain independent. Near-expiration refresh threshold is underivable, not guessed.|
+|Regrowth8936|231032 adds its native40% probability to initial healing when any existing Regrowth affects the target, including foreign-owner HoTs. No rank/no HoT preserves base probability.|
+|Cenarion Ward102351|Actual damage consumes the ward's native charge and applies102352 from its owner onto its protected unit; heals/fully absorbed hits do not consume it. Native periodic lifetime remains active.|
+
+Sources only local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210. Tests load real child rows, never fabricated children. Eight roots, not complete rotations; guardian/Karma/Eye Beam/source gaps retained. [Proof/census/all40](../spell-dummy17-coverage.md); [runtime](../wiki/systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks).
+
 ### Sixteenth-batch low-count rank and charge contracts
 
 - [x] Arcane Blast30451 uses pre-gain Arcane Charges with36032s1/s4/s5 for damage/cast time/mana cost; refusal preserves charges and never hits.

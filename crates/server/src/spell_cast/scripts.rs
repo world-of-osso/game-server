@@ -8,6 +8,7 @@ mod batch13;
 mod batch14;
 mod batch15;
 mod batch16;
+mod batch17;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -27,6 +28,9 @@ pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_ener
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
+pub(crate) use batch17::{
+    CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
+};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch11::effect_enabled(world, caster, spell, index)
@@ -104,6 +108,10 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch17::CONFLAGRATE, 0) => Some(batch17::conflagrate),
+        (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),
+        (batch17::BLOOD_BOIL, 0) => Some(batch17::apply_blood_plague),
+        (batch17::MARROWREND, 1) => Some(batch17::grant_bone_shield),
         (batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT, 0) => Some(batch16::energize_judgment),
         (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
@@ -180,6 +188,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
@@ -283,6 +292,8 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
+        batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
         batch16::HOLY_SHOCK | batch16::CRUSADER_STRIKE => Some(batch16::reduce_holy_judgment),
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),

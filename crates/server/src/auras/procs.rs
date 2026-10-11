@@ -294,6 +294,10 @@ fn proc_matches(
     event_spell: Option<&SpellInfo>,
     event: &AuraEvent,
 ) -> bool {
+    //102351's tooltip requires damage taken, not a heal or fully absorbed hit.
+    if aura.spell_id == crate::spell_cast::scripts::CENARION_WARD && event.damage <= 0.0 {
+        return false;
+    }
     let proc_mask = proc_mask(world, aura);
     if proc_mask[0] & mask[0] == 0 && proc_mask[1] & mask[1] == 0 {
         return false;
