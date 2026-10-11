@@ -1954,7 +1954,8 @@ fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_
         .insert_resource(crate::world_data::load_world_data(&path));
     h.app
         .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
-    let friend = spawn_player(&mut h.app, 8, 3.0);
+    let distance = if item == 175063 { 8.0 } else { 3.0 };
+    let friend = spawn_player(&mut h.app, 8, distance);
     let target = if item == 131812 { h.caster } else { friend };
     h.select(Some(friend));
     h.advance(2);
@@ -1965,6 +1966,21 @@ fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_
         .get::<shared::components::Health>(target)
         .unwrap();
     assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+    if item == 88587 {
+        assert!(
+            !h.inbox.go.iter().any(|go| go.spell_id == root),
+            "1000ms cast unfinished"
+        );
+    }
+    if item == 175063 {
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::UnitAuras>(target)
+                .is_some_and(|auras| auras.auras.iter().any(|aura| aura.spell_id == aura_spell)),
+            "eight-yard missile must not apply its aura immediately"
+        );
+    }
     h.advance(40); // Includes the Spirits' 1000ms cast and missile flight.
     assert!(
         h.inbox.failed.is_empty(),
