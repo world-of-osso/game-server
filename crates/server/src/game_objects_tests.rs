@@ -28,6 +28,8 @@ fn core_fragment_authored_normal_copy_replicates_only_to_its_observer() {
         .find(|spawn| spawn.info.entry == 179553 && spawn.map_id == 230)
         .unwrap();
     let position = game_object_bundle(core).0;
+    // Only the Core Fragment: map 230's gathering nodes need the full WorldData pool state.
+    let spawns = GameObjectSpawns(vec![core.clone()]);
     let copy = InMap {
         map_id: 230,
         instance_id: 1,
