@@ -51,7 +51,7 @@ Jaga's89302/type35/value100 is detected by100616/type35/value1000 in Valley of W
 |---|---|
 | Expired | `expires_at` passed (after that frame's ticks) |
 | Death | the unit's health reached 0: every non-passive aura without `ALLOW_AURA_WHILE_DEAD` is removed |
-| Cancelled | `CancelAura{spell_id}` from the owner: removes the owner's non-harmful, non-passive auras of that spell, unless the spell has `SPELL_ATTR0_NO_AURA_CANCEL` |
+| Cancelled | `CancelAura{spell_id}` from the owner: removes the owner's non-harmful, non-passive auras of that spell, unless the spell has `SPELL_ATTR0_NO_AURA_CANCEL` or its source is a spell-area autocast |
 | Dispelled | effect 38 DISPEL (below) |
 | Interrupted | aura interrupt flags (below) |
 | ChannelEnded | a channel completed or was cancelled: that caster's auras of the channel spell are removed from every unit |
