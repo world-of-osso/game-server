@@ -9,6 +9,7 @@ pub(crate) use cast::{
     begin_fulfill, cast_requirements, complete_effect, interrupt, is_order_cast,
 };
 pub(crate) use catalog::load_catalog;
+#[cfg(test)]
 pub(crate) use rules::{PlaceOrder, browse, cancel, claim, expire, place, release};
 pub(crate) use runtime::CraftingOrdersPlugin;
 pub(crate) use store::all;
