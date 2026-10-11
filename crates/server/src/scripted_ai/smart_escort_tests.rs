@@ -275,6 +275,12 @@ fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
         return;
     }
     let (temp, _world, _ai, _creature, _player) = erland();
+    let conn = Connection::open(temp.path().join("escort.sqlite")).unwrap();
+    conn.execute(
+        "UPDATE tdb_smart_scripts SET action_type=999,target_type=998 WHERE source_type=9",
+        [],
+    )
+    .unwrap();
     let capture = WarningCapture::default();
     bevy::log::tracing::subscriber::with_default(capture.clone(), || {
         load_smart_scripts(&temp.path().join("escort.sqlite")).unwrap();
@@ -283,15 +289,15 @@ fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
     assert_eq!(
         warnings
             .iter()
-            .filter(|line| line.contains("action type 41"))
+            .filter(|line| line.contains("action type 999"))
             .count(),
         1,
-        "unsupported DESPAWN must produce one actionable warning: {warnings:?}"
+        "unsupported action must produce one actionable warning: {warnings:?}"
     );
     assert_eq!(
         warnings
             .iter()
-            .filter(|line| line.contains("target type 19"))
+            .filter(|line| line.contains("target type 998"))
             .count(),
         1,
         "timed-list targets must be diagnosed: {warnings:?}"
@@ -543,6 +549,84 @@ fn smartai_coverage_party_targets_include_same_map_members_once() {
     assert_eq!(ctx.world.get::<NpcFlags>(members[0]).unwrap().0, 0);
     assert_eq!(ctx.world.get::<NpcFlags>(members[1]).unwrap().0, 0);
     assert_eq!(ctx.world.get::<NpcFlags>(members[2]).unwrap().0, 2);
+}
+
+#[test]
+fn smartai_coverage_force_despawn_uses_authored_delay_and_respawn_without_death_credit() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    world.entity_mut(creature).insert((
+        crate::combat::RespawnDelay(120.0),
+        crate::combat::CorpseDelay(60.0),
+    ));
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &tdb_action(197805, 9, 3), Some(player));
+    lifetimes::tick_lifetimes(ctx.world, 29999);
+    assert!(
+        ctx.world
+            .get::<crate::combat::DeathState>(creature)
+            .is_none()
+    );
+    lifetimes::tick_lifetimes(ctx.world, 1);
+    assert_eq!(
+        ctx.world
+            .get::<crate::combat::DeathState>(creature)
+            .expect("authored despawn must leave a spawn awaiting respawn")
+            .respawn_timer,
+        60.0
+    );
+}
+
+#[test]
+fn smartai_coverage_wp_stop_completes_quest_then_hides_and_despawns() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    install_quest_log(&temp, &mut world, player);
+    world.entity_mut(player).insert(Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    world.entity_mut(creature).insert((
+        crate::combat::RespawnDelay(120.0),
+        crate::combat::CorpseDelay(60.0),
+        lightyear::prelude::Replicate::to_clients(lightyear::prelude::NetworkTarget::All),
+    ));
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    start_quest_escort(&mut ctx, &mut ai, player);
+    let mut stop = tdb_action(197800, 9, 3);
+    stop.action_type = ACTION_WP_STOP;
+    stop.action_params = [10, 435, 0, 0, 0, 0, 0];
+    ai.execute_action(&mut ctx, &stop, Some(player));
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    assert_eq!(
+        crate::persistence::quest_store::load_quest_log(db, 1)
+            .active(435)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    lifetimes::tick_lifetimes(ctx.world, 10);
+    assert!(
+        ctx.world
+            .get::<lightyear::prelude::Replicate>(creature)
+            .is_none()
+    );
+    assert!(
+        ctx.world
+            .get::<crate::combat::DeathState>(creature)
+            .is_none()
+    );
+    lifetimes::tick_lifetimes(ctx.world, 5000);
+    assert!(
+        ctx.world
+            .get::<crate::combat::DeathState>(creature)
+            .is_some()
+    );
 }
 
 fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {

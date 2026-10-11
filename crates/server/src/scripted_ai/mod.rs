@@ -56,7 +56,10 @@ impl Plugin for ScriptedAiPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                movement::point_movement_system.before(crate::creature_ai::chase_system),
+                (
+                    smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
+                    movement::point_movement_system.before(crate::creature_ai::chase_system),
+                ),
             );
     }
 }

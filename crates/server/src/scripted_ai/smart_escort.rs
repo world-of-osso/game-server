@@ -108,6 +108,9 @@ impl SmartAi {
         self.path_event_id = Some(escort.path_id);
         self.process_events_for(ctx, EVENT_WAYPOINT_ENDED, None, last);
         self.path_event_id = None;
+        if escort.despawn_ms > 0 {
+            super::lifetimes::schedule_despawn(ctx.world, ctx.me, escort.despawn_ms, 0, true);
+        }
         if self.escort.is_none() && escort.repeat {
             escort.index = 0;
             escort.reached = false;
