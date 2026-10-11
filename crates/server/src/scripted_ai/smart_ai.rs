@@ -664,6 +664,14 @@ impl CreatureAi for SmartAi {
         }
     }
 
+    fn quest_accepted(&mut self, ctx: &mut Ctx, player: Entity, quest_id: u32) {
+        self.process_events_for(ctx, EVENT_ACCEPTED_QUEST, Some(player), quest_id);
+    }
+
+    fn quest_rewarded(&mut self, ctx: &mut Ctx, player: Entity, quest_id: u32) {
+        self.process_events_for(ctx, EVENT_REWARD_QUEST, Some(player), quest_id);
+    }
+
     fn spell_hit(&mut self, ctx: &mut Ctx, caster: Entity, spell_id: u32) {
         self.process_events_for(ctx, EVENT_SPELLHIT, Some(caster), spell_id);
     }

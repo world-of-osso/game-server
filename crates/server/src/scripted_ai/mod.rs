@@ -100,6 +100,14 @@ pub enum Hook {
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
     UpdateAi(u32),
+    QuestAccepted {
+        player: Entity,
+        quest_id: u32,
+    },
+    QuestRewarded {
+        player: Entity,
+        quest_id: u32,
+    },
     /// `SpellHit(caster, spellInfo)`.
     SpellHit {
         caster: Entity,
@@ -123,6 +131,8 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
+    fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
+    fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
     fn update_ai(&mut self, ctx: &mut Ctx, _diff_ms: u32) {
         ctx.update_victim();
@@ -314,6 +324,8 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
+        Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
+        Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
         Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
     }
 }
