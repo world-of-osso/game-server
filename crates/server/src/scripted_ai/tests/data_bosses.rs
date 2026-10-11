@@ -28,7 +28,23 @@ fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
     });
-    app.insert_resource(smart_ai::load_smart_scripts(&path).unwrap());
+    let scripts = smart_ai::load_smart_scripts(&path).unwrap();
+    let mut spell_ids = vec![133];
+    if let Some(rows) = scripts.0.get(&entry) {
+        spell_ids.extend(
+            rows.iter()
+                .filter(|row| row.action_type == 11)
+                .map(|row| row.action_params[0]),
+        );
+    }
+    let all = crate::spell_cast::test_harness::world_db().unwrap();
+    app.insert_resource(SpellStore::fixture(
+        spell_ids
+            .iter()
+            .map(|id| all.store.get(*id).unwrap().clone())
+            .collect(),
+    ));
+    app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
     let difficulty = if map_id == 409 { 3 } else { 1 };
@@ -114,6 +130,13 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
         assert_eq!(h.inbox(0).starts[0].encounter_id, encounter);
         assert_eq!(h.inbox(0).engages.len(), 1);
         assert!(h.inbox(1).starts.is_empty());
+        if entry == 6910 {
+            h.advance(3.2);
+            assert!(
+                h.casts(0, boss, 15801) > 0,
+                "authored Revelosh Lightning Bolt did not cast"
+            );
+        }
         crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
         h.advance(0.05);
         assert_eq!(h.inbox(0).ends.len(), 1);

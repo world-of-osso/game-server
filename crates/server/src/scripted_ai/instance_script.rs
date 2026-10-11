@@ -153,18 +153,7 @@ fn create_map_script(
         {
             continue;
         }
-        let Some(encounter) = store
-            .dungeon_encounters
-            .values()
-            .filter(|e| {
-                e.map_id == map_id
-                    && e.bit == bit
-                    && (difficulty == 0
-                        || e.difficulty_id <= 0
-                        || e.difficulty_id as u32 == difficulty)
-            })
-            .min_by_key(|e| e.id)
-        else {
+        let Some(encounter) = encounter_for_bit(store, map_id, difficulty, bit) else {
             continue;
         };
         let boss_id = if has_legacy {
@@ -176,19 +165,42 @@ fn create_map_script(
         } else {
             bit
         };
-        if boss_id >= 32 {
-            panic!("Encounter boss id {boss_id} exceeds saved mask on map {map_id}");
-        }
-        while script.bosses.len() <= boss_id as usize {
-            script.bosses.push(BossInfo {
-                state: EncounterState::NotStarted,
-                encounter_id: 0,
-            });
-        }
-        script.bosses[boss_id as usize].encounter_id = encounter.id;
-        script.boss_creatures.push((entry, boss_id));
+        append_bound_boss(&mut script, entry, boss_id, encounter.id);
     }
     (!script.boss_creatures.is_empty()).then_some(script)
+}
+
+fn encounter_for_bit(
+    store: &crate::maps::MapStore,
+    map_id: u32,
+    difficulty: u32,
+    bit: u32,
+) -> Option<&crate::maps::store::DungeonEncounter> {
+    store
+        .dungeon_encounters
+        .values()
+        .filter(|encounter| {
+            let matches_difficulty = difficulty == 0
+                || encounter.difficulty_id <= 0
+                || encounter.difficulty_id as u32 == difficulty;
+            encounter.map_id == map_id && encounter.bit == bit && matches_difficulty
+        })
+        .min_by_key(|encounter| encounter.id)
+}
+
+fn append_bound_boss(script: &mut InstanceScript, entry: u32, boss_id: u32, encounter_id: u32) {
+    assert!(
+        boss_id < 32,
+        "Encounter boss id exceeds saved mask: {boss_id}"
+    );
+    while script.bosses.len() <= boss_id as usize {
+        script.bosses.push(BossInfo {
+            state: EncounterState::NotStarted,
+            encounter_id: 0,
+        });
+    }
+    script.bosses[boss_id as usize].encounter_id = encounter_id;
+    script.boss_creatures.push((entry, boss_id));
 }
 
 /// A bound creature gets lifecycle even with no SmartAI rows or a C++ ScriptName.
