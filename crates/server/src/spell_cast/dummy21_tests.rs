@@ -34,6 +34,9 @@ fn berserk(h: &mut Harness) {
     h.advance(35);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(crate::auras::has_aura(h.app.world(), caster, 106951));
+    // The native1500ms timer has already paid one independent343216 point.
+    h.set_power(PowerType::ComboPoints, 0.0);
+    h.inbox.log.clear();
 }
 
 fn builder(h: &mut Harness, id: u32) {
@@ -108,6 +111,8 @@ fn dummy21_berserk_expiry_restores_ordinary_builder() {
     berserk(&mut h);
     h.advance(450);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 106951));
+    h.set_power(PowerType::ComboPoints, 0.0);
+    h.inbox.log.clear();
     builder(&mut h, 5221);
     assert_eq!(h.power(PowerType::ComboPoints), 1.0);
     assert_eq!(energize(&h, 5221), vec![(1, 0)]);
@@ -117,8 +122,7 @@ fn dummy21_berserk_expiry_restores_ordinary_builder() {
 fn dummy21_berserk_named_periodic_child_does_not_gain_builder_bonus() {
     let mut h = fixture();
     berserk(&mut h);
-    super::cast_triggered(h.app.world_mut(), h.caster, 343216, Some(h.caster), 1);
-    h.advance(4);
+    h.advance(35);
     assert_eq!(h.power(PowerType::ComboPoints), 1.0);
     assert_eq!(energize(&h, 343216), vec![(1, 0)]);
 }
