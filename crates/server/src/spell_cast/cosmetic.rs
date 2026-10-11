@@ -17,10 +17,13 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     203657, // Noble's Eternal Elementium Signet
     217708, // Gravil Goldbraid's Famous Sausage Hat
     231129, 231142, 231143, 231144,  // Falcosaur accessories
+    239560,  // Akazamzarak's Spare Hat (hat/rabbit visual models, not a summon)
+    254513,  // Barrier Generator (channeled shield visual, not an absorb)
     261981,  // Spitzy
     286277,  // Worn Cloak
     302273,  // Heart of a Champion
     383065,  // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
+    405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
     443689,  // Toxic Victory
