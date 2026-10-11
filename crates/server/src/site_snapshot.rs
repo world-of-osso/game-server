@@ -26,9 +26,9 @@ struct Options {
     as_of: i64,
 }
 impl Options {
-    fn parse(args: Vec<String>) -> Result<Self> {
-        if args.len() != 18 {
-            return Err("usage: game-server-site-export --redb COPY --world-db WORLD --public-characters IDS.json --opt-outs IDS.json --textures CACHE --output NEW_DIR --realm SLUG --realm-name NAME --as-of UNIX_SECONDS".into());
+    fn parse(args: Vec<String>, as_of: i64) -> Result<Self> {
+        if args.len() != 16 {
+            return Err("usage: game-server-site-export --redb COPY --world-db WORLD --public-characters IDS.json --opt-outs IDS.json --textures CACHE --output NEW_DIR --realm SLUG --realm-name NAME".into());
         }
         let mut fields = BTreeMap::new();
         for pair in args.chunks_exact(2) {
@@ -49,10 +49,6 @@ impl Options {
                 .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
         {
             return Err("realm must be a lowercase ASCII slug".into());
-        }
-        let as_of = get("--as-of")?.parse()?;
-        if as_of < 0 {
-            return Err("as-of must be nonnegative Unix seconds".into());
         }
         Ok(Self {
             redb: get("--redb")?.into(),
@@ -91,7 +87,11 @@ pub fn run(args: Vec<String>) -> Result<()> {
     if args.first().map(String::as_str) == Some("--fixture-allowlist") {
         return fixture_allowlist(&args);
     }
-    let options = Options::parse(args)?;
+    let elapsed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?;
+    run_at(args, i64::try_from(elapsed.as_secs())?)
+}
+fn run_at(args: Vec<String>, as_of: i64) -> Result<()> {
+    let options = Options::parse(args, as_of)?;
     if options.output.exists() {
         return Err(format!(
             "output {} already exists; publish a fresh snapshot",
@@ -172,8 +172,20 @@ struct CharacterIndex {
 }
 impl SnapshotReader<'_> {
     fn read_snapshot(mut self, selected: &BTreeSet<u64>) -> Result<Bundle> {
-        let lifetime = raids::read_rankings(self.txn, self.world, selected, self.options.as_of)?;
-        let mythic = mythic::read_rankings(self.txn, self.world, selected, self.options.as_of)?;
+        let lifetime = raids::read_rankings(
+            self.txn,
+            self.world,
+            selected,
+            self.options.as_of,
+            &self.options.realm,
+        )?;
+        let mythic = mythic::read_rankings(
+            self.txn,
+            self.world,
+            selected,
+            self.options.as_of,
+            &self.options.realm,
+        )?;
         let locks = store::locks(self.txn)?;
         let mut guilds = history_guilds(&lifetime.guilds)?;
         let mut summaries = Vec::new();
@@ -211,13 +223,17 @@ impl SnapshotReader<'_> {
         )?;
         let mut page = summary.clone();
         let mut gaps = vec![
-            "race_names_and_faction_catalog_unavailable".into(),
             "complete_effective_equipment_item_level_unavailable".into(),
             "character_render_unavailable".into(),
             "legacy_mythic_runs_not_attributable_or_backfilled".into(),
             "pre_deploy_raid_history_not_backfilled".into(),
         ];
-        page["equipped_items"] = self.read_equipment(id, &character, &mut gaps)?;
+        if summary["race"]["name"].is_null() || summary["faction"].is_null() {
+            gaps.push("race_names_and_faction_catalog_unavailable".into());
+        }
+        let (items, slots) = self.read_equipment(id, &character, &mut gaps)?;
+        page["equipped_items"] = items;
+        page["equipment_slots"] = slots;
         page["talents"] = self.read_talents(id, progression.as_ref())?;
         let (points, recent) = self.read_achievements(id, &mut gaps)?;
         page["achievement_points"] = points;
@@ -225,7 +241,16 @@ impl SnapshotReader<'_> {
         page["mythic_plus_best"] = json!(mythic::character_best(mythic, id));
         page["render_url"] = Value::Null;
         page["pvp"] = self.read_pvp(id)?;
-        let saved_progression = query_saved_progression(self.world, locks, id, self.options.as_of)?;
+        if !page["pvp"].is_null() {
+            gaps.push("pvp_dynamic_conquest_cap_unavailable".into());
+            gaps.push("pvp_rating_policy_not_source_qualified".into());
+        }
+        let mut saved_progression =
+            query_saved_progression(self.world, locks, id, self.options.as_of)?;
+        for row in &mut saved_progression {
+            row["name"] = json!(character.name);
+            row["realm"] = json!(self.options.realm);
+        }
         page["saved_lock_progression"] = json!(saved_progression);
         page["raid_progression"] = json!(
             lifetime
@@ -300,9 +325,25 @@ impl SnapshotReader<'_> {
         id: u64,
         character: &crate::character_data::CharacterData,
         gaps: &mut Vec<String>,
-    ) -> Result<Value> {
+    ) -> Result<(Value, Value)> {
         let owned: Vec<store::Equipped> =
             store::decode(self.txn, "character_equipment", id)?.unwrap_or_default();
+        let bags: Vec<store::EquippedBag> =
+            store::decode(self.txn, "character_bag_slots", id)?.unwrap_or_default();
+        let mut equipped: Vec<_> = owned
+            .into_iter()
+            .map(|entry| (format!("{:?}", entry.slot), entry.item))
+            .collect();
+        for bag in bags {
+            let slot = match bag.bag {
+                1..=4 => format!("Bag{}", bag.bag),
+                5 => "ReagentBag".into(),
+                _ => return Err(format!("invalid equipped bag slot {}", bag.bag).into()),
+            };
+            equipped.push((slot, bag.item));
+        }
+        gaps.push("neck_finger_trinket_ranged_storage_unavailable".into());
+        gaps.push("effective_item_level_modifiers_not_persisted".into());
         let source_table = match self
             .txn
             .open_table(TableDefinition::<u64, u8>::new("item_definition_sources"))
@@ -312,30 +353,31 @@ impl SnapshotReader<'_> {
             Err(e) => return Err(e.into()),
         };
         let mut items = Vec::new();
-        for equipped in owned {
+        for (slot, item) in equipped {
             let source = source_table
                 .as_ref()
-                .map(|t| t.get(equipped.item.item_guid))
+                .map(|t| t.get(item.item_guid))
                 .transpose()?
                 .flatten()
                 .map(|r| r.value())
                 .unwrap_or(0);
-            let (level, fdid) = catalog::item(self.world, equipped.item.item_id, source)?;
+            let (level, fdid) = catalog::item(self.world, item.item_id, source)?;
             let icon_url = catalog::icon(&mut self.bundle, &self.options.textures, fdid)?;
             if icon_url.is_none() {
-                gaps.push(format!("item_{}_icon_unavailable", equipped.item.item_id));
+                gaps.push(format!("item_{}_icon_unavailable", item.item_id));
             }
             let appearance = character
                 .equipment_appearance
                 .entries
                 .iter()
-                .find(|e| e.slot == equipped.slot);
+                .find(|e| format!("{:?}", e.slot) == slot);
             let transmog: Option<store::Transmog> =
-                store::decode(self.txn, "item_transmogs", equipped.item.item_guid)?;
-            items.push(json!({"slot":format!("{:?}",equipped.slot),"item_id":equipped.item.item_id,"definition_source":source,"name":equipped.item.name,"quality":equipped.item.quality,"item_level":level,"icon_fdid":fdid,"icon_url":icon_url,"appearance":{"display_info_id":appearance.and_then(|e|e.display_info_id),"hidden":appearance.is_some_and(|e|e.hidden)},"transmog":transmog.map(|t|json!({"appearance_id":t.source_id,"display_info_id":t.display_id,"hidden":t.hidden}))}));
+                store::decode(self.txn, "item_transmogs", item.item_guid)?;
+            items.push(json!({"slot":slot,"item_id":item.item_id,"definition_source":source,"name":item.name,"quality":item.quality,"item_level":level,"item_level_kind":"authored_base","effective_item_level":null,"icon_fdid":fdid,"icon_url":icon_url,"appearance":{"display_info_id":appearance.and_then(|e|e.display_info_id),"hidden":appearance.is_some_and(|e|e.hidden)},"transmog":transmog.map(|t|json!({"appearance_id":t.source_id,"display_info_id":t.display_id,"hidden":t.hidden}))}));
         }
         items.sort_by_key(|item| item["slot"].as_str().unwrap_or("").to_owned());
-        Ok(json!(items))
+        let slots = equipment_slot_states(&items);
+        Ok((json!(items), json!(slots)))
     }
     fn read_talents(&self, id: u64, progression: Option<&store::Progression>) -> Result<Value> {
         let Some(progression) = progression else {
@@ -366,8 +408,8 @@ impl SnapshotReader<'_> {
         let Some(saved) = store::json(self.txn, "pvp_states", id)? else {
             return Ok(Value::Null);
         };
-        let mut value = json!({});
-        for key in ["honor", "honor_max", "conquest", "conquest_max", "brackets"] {
+        let mut value = json!({"conquest_max":null});
+        for key in ["honor", "honor_max", "conquest", "brackets"] {
             value[key] = saved
                 .get(key)
                 .ok_or_else(|| format!("pvp state missing {key}"))?
@@ -392,6 +434,18 @@ impl SnapshotReader<'_> {
                     .ok_or_else(|| format!("pvp bracket missing {key}"))?
                     .clone();
             }
+            let wins = clean["season_wins"].as_u64().ok_or("invalid season wins")?;
+            let losses = clean["season_losses"]
+                .as_u64()
+                .ok_or("invalid season losses")?;
+            let games = wins
+                .checked_add(losses)
+                .ok_or("season game count overflow")?;
+            clean["games_played"] = json!(games);
+            clean["state"] = json!(if games == 0 { "unrated" } else { "rated" });
+            if games == 0 {
+                clean["rating"] = Value::Null;
+            }
             *bracket = clean;
         }
         Ok(value)
@@ -407,6 +461,16 @@ impl SnapshotReader<'_> {
         let mut recent = Vec::new();
         for id in earned {
             let id = id.as_u64().ok_or("achievement id must be integer")?;
+            let earned_at = saved["earned_at"]
+                .get(id.to_string())
+                .cloned()
+                .unwrap_or(Value::Null);
+            if earned_at
+                .as_i64()
+                .is_some_and(|timestamp| timestamp > self.options.as_of)
+            {
+                continue;
+            }
             let metadata: Option<(String, u32, u32)> = self
                 .world
                 .query_row(
@@ -421,10 +485,6 @@ impl SnapshotReader<'_> {
                 continue;
             };
             total = total.map(|sum| sum + u64::from(points));
-            let earned_at = saved["earned_at"]
-                .get(id.to_string())
-                .cloned()
-                .unwrap_or(Value::Null);
             recent.push(json!({"id":id,"name":name,"points":points,"earned_at":earned_at,"icon_fdid":fdid,"icon_url":catalog::icon(&mut self.bundle,&self.options.textures,Some(fdid).filter(|id|*id!=0))?}));
         }
         recent.sort_by_key(|e| {
@@ -436,6 +496,31 @@ impl SnapshotReader<'_> {
         recent.truncate(10);
         Ok((json!(total), json!(recent)))
     }
+}
+fn equipment_slot_states(items: &[Value]) -> Vec<Value> {
+    use shared::protocol::EquipmentSlot;
+    let paperdoll = EquipmentSlot::ALL.iter().map(|slot| format!("{slot:?}"));
+    let bags = ["Bag1", "Bag2", "Bag3", "Bag4", "ReagentBag"]
+        .into_iter()
+        .map(str::to_owned);
+    paperdoll
+        .chain(bags)
+        .map(|slot| {
+            let item = items.iter().find(|item| item["slot"] == slot);
+            let unsupported = matches!(
+                slot.as_str(),
+                "Neck" | "Finger1" | "Finger2" | "Trinket1" | "Trinket2" | "Ranged"
+            );
+            let state = if item.is_some() {
+                "equipped"
+            } else if unsupported {
+                "unavailable"
+            } else {
+                "empty"
+            };
+            json!({"slot":slot,"state":state,"item_id":item.map(|i|&i["item_id"])})
+        })
+        .collect()
 }
 fn history_guilds(progression: &[Value]) -> Result<BTreeMap<String, Value>> {
     let mut guilds = BTreeMap::new();
@@ -478,13 +563,17 @@ fn query_character_summary(
     let spec = progression
         .map(|p| catalog::label(world, "chr_specialization", "Name_lang", p.spec_id))
         .transpose()?;
-    let guild_value = guild.map(|g| json!({"id":g.guild_id.to_string(),"name":g.guild_name}));
+    let guild_value = guild.map_or_else(
+        || json!({"state":"none"}),
+        |g| json!({"state":"member","id":g.guild_id.to_string(),"name":g.guild_name}),
+    );
     let mut search = vec![character.name.to_lowercase()];
     if let Some(guild) = guild {
         search.push(guild.guild_name.to_lowercase());
     }
+    let (race, faction) = catalog::race(world, character.race)?;
     Ok(
-        json!({"id":id.to_string(),"name":character.name,"race":{"id":character.race,"name":null},"class":catalog::label(world,"chr_classes","Name_lang",u32::from(character.class))?,"spec":spec,"level":character.level,"faction":null,"guild":guild_value,"item_level":null,"search_keys":search,"url":format!("characters/{id}.json")}),
+        json!({"id":id.to_string(),"name":character.name,"race":race,"class":catalog::label(world,"chr_classes","Name_lang",u32::from(character.class))?,"spec":spec,"level":character.level,"faction":faction,"guild":guild_value,"item_level":null,"search_keys":search,"url":format!("characters/{id}.json")}),
     )
 }
 fn query_saved_progression(
@@ -512,6 +601,9 @@ fn query_saved_progression(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn run(args: Vec<String>) -> Result<()> {
+        super::run_at(args, 100)
+    }
     use crate::character_data::CharacterData;
     use redb::{Database, TableDefinition};
     use serde_json::Value;
@@ -568,8 +660,6 @@ mod tests {
             "test",
             "--realm-name",
             "Private Proof",
-            "--as-of",
-            "100",
             "--textures",
             root.join("textures").to_str().unwrap(),
             "--output",
@@ -615,6 +705,83 @@ mod tests {
         }
     }
     #[test]
+    fn site_snapshot_uses_actual_export_clock() {
+        let dir = tempfile::tempdir().unwrap();
+        seed(dir.path());
+        let before = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        super::run(arguments(dir.path(), "clock")).unwrap();
+        let after = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let index: Value =
+            serde_json::from_slice(&std::fs::read(dir.path().join("clock/index.json")).unwrap())
+                .unwrap();
+        let page: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("clock/characters/1.json")).unwrap(),
+        )
+        .unwrap();
+        let as_of = index["as_of"].as_u64().unwrap();
+        assert!(as_of >= before && as_of <= after);
+        assert_eq!(page["as_of"], index["as_of"]);
+    }
+    #[test]
+    fn site_snapshot_contract_slots_guild_race_pvp_and_future_achievements() {
+        let dir = tempfile::tempdir().unwrap();
+        seed(dir.path());
+        let world = rusqlite::Connection::open(dir.path().join("world.db")).unwrap();
+        world.execute_batch("CREATE TABLE chr_races(ID INTEGER,Name_lang TEXT,FactionID INTEGER); INSERT INTO chr_races VALUES(1,'Human',1); CREATE TABLE faction_template(ID INTEGER,FactionGroup INTEGER); INSERT INTO faction_template VALUES(1,3); INSERT INTO achievement VALUES(6,'Future Kill',10,0),(7,'Past Kill',20,0);").unwrap();
+        let db = Database::open(dir.path().join("private.redb")).unwrap();
+        let txn = db.begin_write().unwrap();
+        {
+            txn.open_table(TableDefinition::<u64, &[u8]>::new("achievements"))
+                .unwrap()
+                .insert(
+                    1,
+                    serde_json::to_vec(&json!({"earned_ids":[6,7],"earned_at":{"6":101,"7":99}}))
+                        .unwrap()
+                        .as_slice(),
+                )
+                .unwrap();
+            txn.open_table(TableDefinition::<u64,&[u8]>::new("pvp_states")).unwrap().insert(1,serde_json::to_vec(&json!({"honor":0,"honor_max":15000,"conquest":0,"conquest_max":1800,"brackets":[{"bracket":"2v2","rating":1500,"season_wins":0,"season_losses":0,"weekly_wins":0,"weekly_losses":0}]})).unwrap().as_slice()).unwrap();
+        }
+        txn.commit().unwrap();
+        drop(db);
+        run(arguments(dir.path(), "contract")).unwrap();
+        let page: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("contract/characters/1.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(page["guild"], json!({"state":"none"}));
+        assert_eq!(page["race"]["name"], "Human");
+        assert_eq!(page["faction"]["name"], "Alliance");
+        assert_eq!(page["equipment_slots"].as_array().unwrap().len(), 24);
+        assert_eq!(
+            page["equipment_slots"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| r["slot"] == "Neck")
+                .unwrap()["state"],
+            "unavailable"
+        );
+        assert!(page["pvp"]["conquest_max"].is_null());
+        assert!(page["pvp"]["brackets"][0]["rating"].is_null());
+        assert_eq!(page["pvp"]["brackets"][0]["games_played"], 0);
+        assert!(
+            page["gaps"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("pvp_dynamic_conquest_cap_unavailable"))
+        );
+        assert_eq!(page["achievement_points"], 20);
+        assert_eq!(page["recent_achievements"][0]["name"], "Past Kill");
+        assert_eq!(page["recent_achievements"].as_array().unwrap().len(), 1);
+    }
+    #[test]
     fn site_snapshot_raid_lifetime_timestamp_ranks_and_guild_privacy() {
         let dir = tempfile::tempdir().unwrap();
         seed(dir.path());
@@ -646,10 +813,10 @@ mod tests {
                     first_kill_at: time,
                     participants: participants
                         .into_iter()
-                        .map(|id| server::raid_history_store::Participant {
-                            character_id: id.to_owned(),
-                            guild_id: None,
-                            guild_name: None,
+                        .map(|member_id| server::raid_history_store::Participant {
+                            character_id: member_id.to_owned(),
+                            guild_id: (subject == "guild").then(|| id.to_owned()),
+                            guild_name: (subject == "guild").then(|| "Proof Guild".into()),
                         })
                         .collect(),
                     guild_group_credit: subject == "guild",
@@ -693,6 +860,8 @@ mod tests {
     fn site_snapshot_mythic_ranking_best_and_private_party_filter() {
         let dir = tempfile::tempdir().unwrap();
         seed(dir.path());
+        let world = rusqlite::Connection::open(dir.path().join("world.db")).unwrap();
+        world.execute_batch("ALTER TABLE chr_specialization ADD COLUMN Role INTEGER; INSERT INTO chr_specialization VALUES(73,'Protection',0); CREATE TABLE keystone_affix(ID INTEGER,Name_lang TEXT); INSERT INTO keystone_affix VALUES(9,'Tyrannical');").unwrap();
         let db = Database::open(dir.path().join("private.redb")).unwrap();
         let txn = db.begin_write().unwrap();
         {
@@ -704,6 +873,7 @@ mod tests {
                 (11, 12, 80, vec!["1"]),
                 (12, 13, 110, vec!["1"]),
                 (13, 20, 50, vec!["1", "2"]),
+                (14, 30, 40, vec!["1"]),
             ] {
                 let record = server::mythic_plus_history::CompletedRun {
                     id: id.to_string(),
@@ -717,14 +887,14 @@ mod tests {
                     timer_ms: 100,
                     time_lost_ms: 0,
                     in_time: elapsed <= 100,
-                    completed_at: 99,
+                    completed_at: if id == 14 { 101 } else { 99 },
                     party: party
                         .into_iter()
                         .map(|id| server::mythic_plus_history::Participant {
                             character_id: id.into(),
                             name: format!("Fb{id}"),
                             class_id: 1,
-                            spec_id: None,
+                            spec_id: Some(73),
                         })
                         .collect(),
                 };
@@ -752,6 +922,13 @@ mod tests {
         assert_eq!(ranks["runs"][0]["rank"], 1);
         assert_eq!(ranks["runs"][2]["in_time"], false);
         assert!(ranks["runs"][0]["season_id"].is_null());
+        assert_eq!(ranks["runs"][0]["party"][0]["realm"], "test");
+        assert_eq!(ranks["runs"][0]["party"][0]["class_name"], "Warrior");
+        assert_eq!(ranks["runs"][0]["party"][0]["spec_name"], "Protection");
+        assert_eq!(ranks["runs"][0]["party"][0]["role"], "tank");
+        assert_eq!(ranks["runs"][0]["affixes"][0]["name"], "Tyrannical");
+        assert_eq!(ranks["runs"][0]["dungeon"]["map_id"], 2515);
+        assert!(ranks["runs"][0].get("map_id").is_none());
         let page: Value = serde_json::from_slice(
             &std::fs::read(dir.path().join("ranks/characters/1.json")).unwrap(),
         )

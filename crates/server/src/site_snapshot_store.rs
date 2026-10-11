@@ -51,6 +51,11 @@ pub struct Equipped {
     pub item: Item,
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
+pub struct EquippedBag {
+    pub bag: u8,
+    pub item: Item,
+}
+#[derive(bitcode::Encode, bitcode::Decode)]
 pub struct Transmog {
     pub source_id: u32,
     pub display_id: u32,

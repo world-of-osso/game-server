@@ -14,6 +14,40 @@ pub fn label(db: &Connection, table: &str, column: &str, id: u32) -> Result<Valu
     Ok(json!({"id":id,"name":name}))
 }
 
+pub fn race(db: &Connection, id: u8) -> Result<(Value, Value)> {
+    let exists: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='chr_races')",
+        [],
+        |r| r.get(0),
+    )?;
+    if !exists {
+        return Ok((json!({"id":id,"name":null}), Value::Null));
+    }
+    let row: Option<(String, u32)> = db
+        .query_row(
+            "SELECT Name_lang,FactionID FROM chr_races WHERE ID=?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+    let Some((name, template)) = row else {
+        return Ok((json!({"id":id,"name":null}), Value::Null));
+    };
+    let group: Option<u32> = db
+        .query_row(
+            "SELECT FactionGroup FROM faction_template WHERE ID=?1",
+            [template],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let faction = match group.map(|group| group & 6) {
+        Some(2) => json!({"id":1,"name":"Alliance","template_id":template}),
+        Some(4) => json!({"id":2,"name":"Horde","template_id":template}),
+        Some(0) => json!({"id":0,"name":"Neutral","template_id":template}),
+        _ => Value::Null,
+    };
+    Ok((json!({"id":id,"name":name}), faction))
+}
 pub fn item(db: &Connection, id: u32, source: u8) -> Result<(Option<u32>, Option<u32>)> {
     let prefix = match source {
         0 => "",

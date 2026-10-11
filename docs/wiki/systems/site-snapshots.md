@@ -9,10 +9,10 @@ Offline exporter `game-server-site-export` produces the public JSON contract in 
 Build with `python3 scripts/build-host.py --bin game-server-site-export` through the normal native adapter. Agents wrap local commands with `agent-run`. Export a consistent closed/offline redb backup and matching read-only SQLite catalog into a **new** directory:
 
 ```text
-game-server-site-export --redb PRIVATE_BACKUP.redb --world-db WORLD.db --public-characters public-ids.json --opt-outs opted-out-ids.json --textures LOCAL_TEXTURE_CACHE --output NEW_SNAPSHOT_DIR --realm world-of-osso --realm-name "World of Osso" --as-of UNIX_SECONDS
+game-server-site-export --redb PRIVATE_BACKUP.redb --world-db WORLD.db --public-characters public-ids.json --opt-outs opted-out-ids.json --textures LOCAL_TEXTURE_CACHE --output NEW_SNAPSHOT_DIR --realm world-of-osso --realm-name "World of Osso"
 ```
 
-Both ID files are JSON arrays of decimal strings. `as_of` is supplied, never generated internally. A single redb read transaction and SQLite read transaction cover each snapshot. All reads, decodes and icon conversions complete before destination creation. An existing destination is rejected so privacy removals cannot leave stale character pages. File-write failure may leave an incomplete new directory; the publisher must publish only a successful complete export. Publishing/atomic directory switching is lead-owned, outside exporter scope.
+Both ID files are JSON arrays of decimal strings. `as_of` is read once from the actual export-start clock; only tests inject a deterministic clock. A single redb read transaction and SQLite read transaction cover each snapshot. All reads, decodes and icon conversions complete before destination creation. An existing destination is rejected so privacy removals cannot leave stale character pages. File-write failure may leave an incomplete new directory; the publisher must publish only a successful complete export. Publishing/atomic directory switching is lead-owned, outside exporter scope.
 
 Source backups must be clean: redb read-only opening refuses a crash-dirty database rather than repairing the source. The private-fixture utility explicitly recovers only an owned diagnostic **copy** under site-data diagnostics, then selects IDs owned by `fb_*` accounts. Those account names never enter the output. The regular exporter opens no auth/account tables.
 
@@ -24,7 +24,7 @@ Source backups must be clean: redb read-only opening refuses a crash-dirty datab
 
 ### Asset/data limitations
 
-Local BLP/PNG item and achievement icons become web-ready PNG files. Missing cache assets yield null URLs. No CDN access or cache mutation. Race labels/faction catalog, complete effective equipped item level, character renders and pre-deploy historical credit remain explicit contract gaps. Physical equipment, transmog GUID overrides, named talent loadouts, character achievement contributions and saved PvP state are read from their existing authoritative tables; private inventories and account aggregates are not emitted.
+Local BLP/PNG item and achievement icons become web-ready PNG files. Missing cache assets yield null URLs. No CDN access or cache mutation. The copy-only `prepare_site_catalog.py` projects cached product-isolated ChrRaces into the reference copy; FactionTemplate supplies faction labels. Neck/finger/trinket/ranged storage, complete effective equipped item level, character renders and pre-deploy historical credit remain explicit source gaps. Paperdoll/bag slots have explicit equipped/empty/unavailable state; zero-game PvP brackets are unrated and unsourced legacy conquest caps are discarded. Physical equipment, transmog GUID overrides, named talent loadouts, character achievement contributions and saved PvP state are read from their existing authoritative tables; private inventories and account aggregates are not emitted.
 
 ## Sources
 

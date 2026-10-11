@@ -10,6 +10,7 @@ pub fn read_rankings(
     world: &Connection,
     public: &BTreeSet<u64>,
     as_of: i64,
+    realm: &str,
 ) -> Result<Vec<Value>> {
     let table = match txn.open_table(COMPLETED_RUNS) {
         Ok(t) => t,
@@ -47,6 +48,11 @@ pub fn read_rankings(
         )
     });
     let mut ranks = BTreeMap::new();
+    let has_affixes: bool = world.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='keystone_affix')",
+        [],
+        |r| r.get(0),
+    )?;
     runs.into_iter().map(|run| {
         let rank=ranks.entry((run.season_id,run.challenge_id)).or_insert(0_u32); *rank+=1;
         let party=run.party.into_iter().map(|p| {
@@ -54,9 +60,16 @@ pub fn read_rankings(
                 Some(spec)=>world.query_row("SELECT Role FROM chr_specialization WHERE ID=?1",[spec],|r|r.get::<_,u32>(0)).optional()?,
                 None=>None,
             };
-            Ok(json!({"character_id":p.character_id,"name":p.name,"class_id":p.class_id,"spec_id":p.spec_id,"role":role}))
+            let role=match role { Some(0)=>Some("tank"),Some(1)=>Some("healer"),Some(2)=>Some("damage"),_=>None };
+            let class=super::catalog::label(world,"chr_classes","Name_lang",u32::from(p.class_id))?;
+            let spec=p.spec_id.map(|id|super::catalog::label(world,"chr_specialization","Name_lang",id)).transpose()?;
+            Ok(json!({"character_id":p.character_id,"name":p.name,"realm":realm,"class_id":p.class_id,"class_name":class["name"],"spec_id":p.spec_id,"spec_name":spec.map(|s|s["name"].clone()),"role":role}))
         }).collect::<Result<Vec<_>>>()?;
-        Ok(json!({"id":run.id,"season_id":run.season_id,"dungeon":{"id":run.challenge_id,"map_id":run.map_id,"name":run.name},"map_id":run.map_id,"level":run.level,"affixes":run.affixes,"elapsed_ms":run.elapsed_ms,"time_lost_ms":run.time_lost_ms,"timer_ms":run.timer_ms,"in_time":run.in_time,"completed_at":run.completed_at,"party":party,"rank":rank}))
+        let affixes=run.affixes.into_iter().map(|id| {
+            let name:Option<String>=if has_affixes { world.query_row("SELECT Name_lang FROM keystone_affix WHERE ID=?1",[id],|r|r.get(0)).optional()? } else { None };
+            Ok(json!({"id":id,"name":name}))
+        }).collect::<Result<Vec<_>>>()?;
+        Ok(json!({"id":run.id,"season_id":run.season_id,"dungeon":{"id":run.challenge_id,"map_id":run.map_id,"name":run.name},"level":run.level,"affixes":affixes,"elapsed_ms":run.elapsed_ms,"time_lost_ms":run.time_lost_ms,"timer_ms":run.timer_ms,"in_time":run.in_time,"completed_at":run.completed_at,"party":party,"rank":rank}))
     }).collect()
 }
 
