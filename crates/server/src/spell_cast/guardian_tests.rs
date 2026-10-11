@@ -248,3 +248,167 @@ fn guardians_sacrifice_splits_direct_damage_and_excludes_foreign_map() {
     assert_eq!(h.health(ally), 830.0);
     assert_eq!(h.health(h.caster), 970.0);
 }
+
+// Tests load the real prepared overlay, never a substituted Imp template.
+fn darkglare(h: &mut Harness) -> Entity {
+    static PREPARED: std::sync::OnceLock<tempfile::TempDir> = std::sync::OnceLock::new();
+    let directory = PREPARED.get_or_init(|| {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("prepared.sqlite");
+        std::fs::copy(&world_db().unwrap().powers_db, &path).unwrap();
+        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../scripts/add_guardian_templates.py");
+        let result = std::process::Command::new("python3")
+            .arg(script)
+            .arg("--db")
+            .arg(&path)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        directory
+    });
+    h.app.insert_resource(crate::world_data::load_world_data(
+        &directory.path().join("prepared.sqlite"),
+    ));
+    let source = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&source).unwrap());
+    // Archive has no Darkglare spell rows: the native root description is the binding.
+    h.app
+        .insert_resource(super::guardian::GuardianSpells::default());
+    let world = h.app.world_mut();
+    world
+        .get_mut::<shared::components::Position>(h.npc)
+        .unwrap()
+        .x = 20.0;
+    world
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .spell_power = 1000.0;
+    world
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(h.npc);
+    let spell = world_db().unwrap().store.get(205180).unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 28)
+        .unwrap();
+    let ctx = super::effects::EffectCtx {
+        caster: h.caster,
+        spell,
+        depth: 0,
+        dest: Some(super::targets::Dest {
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
+    };
+    super::summon::summon_creature(world, &ctx, effect);
+    world
+        .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
+        .single(world)
+        .unwrap()
+}
+
+fn darkglare_harness() -> Harness {
+    let mut beam = world_db().unwrap().store.get(205231).unwrap().clone();
+    // Pin only variance to exercise exact damage and power changes, not RNG.
+    beam.effects[0].variance = 0.0;
+    harness(vec![beam], &[205180], 9).unwrap()
+}
+
+#[test]
+fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
+    let mut h = darkglare_harness();
+    let actor = darkglare(&mut h);
+    h.advance(2);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .unwrap()
+            .spell_id,
+        205231
+    );
+    assert_eq!(h.health(h.npc), 5000.0);
+    h.advance(43);
+    assert_eq!(h.health(h.npc), 4269.0, "4.87044 * inherited150SP rounded");
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .spell_power = 2000.0;
+    h.advance(40);
+    assert_eq!(
+        h.health(h.npc),
+        2808.0,
+        "next beam reads changed owner SP, not a spawn snapshot"
+    );
+}
+
+#[test]
+fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
+    let mut h = darkglare_harness();
+    let actor = darkglare(&mut h);
+    let other = spawn_npc(&mut h.app, 25.0);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(other);
+    h.advance(45);
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert_eq!(h.health(other), 4269.0);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    h.advance(45); // A previously started beam may finish.
+    let before = h.health(other);
+    h.advance(50);
+    assert_eq!(h.health(other), before);
+    assert!(crate::hunter_pet::summoned_pet(h.app.world(), h.caster).is_none());
+    h.advance(300);
+    assert!(
+        h.app.world().get_entity(actor).is_err(),
+        "native20sec expiry"
+    );
+}
+
+#[test]
+fn guardians2_unbound_demon_is_not_an_imp_substitution() {
+    let mut h = harness(Vec::new(), &[111859, 3110], 9).unwrap();
+    let actor = imp(&mut h);
+    h.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<super::guardian::GuardianActor>();
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Npc>(actor)
+        .unwrap()
+        .template_id = 55659;
+    h.app
+        .world_mut()
+        .get_mut::<super::summon::SummonedCreature>(actor)
+        .unwrap()
+        .spell_id = 104317;
+    super::guardian::initialize(h.app.world_mut(), actor);
+    h.advance(45);
+    assert_eq!(
+        h.health(h.npc),
+        5000.0,
+        "Wild Imp has no proved Fel Firebolt binding"
+    );
+}
