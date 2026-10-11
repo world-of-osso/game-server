@@ -254,6 +254,28 @@ fn census_harness(class: u8) -> Harness {
 }
 
 #[test]
+fn class_completeness_probe_native_rewind_uses_ungrouped_player_state() {
+    let mut h = census_harness(13);
+    let spec = Spec {
+        id: 1468,
+        class: 13,
+        spells: Vec::new(),
+    };
+    let spell = Spell {
+        id: 363534,
+        passive: false,
+        origin: vec!["talent".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &spell);
+    assert_eq!(
+        receipt["failed"],
+        json!([]),
+        "native Rewind cast: {receipt}"
+    );
+    assert!(!receipt["go"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
     let mut h = census_harness(8);
     let spec = Spec {
