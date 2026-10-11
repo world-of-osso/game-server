@@ -142,6 +142,70 @@ fn set_position_down_onto_the_floor_deals_no_fall_damage() {
     assert_eq!(health, 100.0);
 }
 
+/// The old Tauren start (-2917, -257, 53) was below the extracted Kalimdor
+/// terrain (59.429), so a new character fell forever despite the tile being loaded.
+#[test]
+fn new_tauren_starts_on_real_mulgore_ground_and_stays_there() {
+    let db = persistence::temp_database();
+    let (id, _) = persistence::create_character(&db, 1, "Mulgore", 6, 1).unwrap();
+    let character = persistence::load_character(&db, id).unwrap();
+    assert_eq!(crate::maps::persistence::load_character_map(&db, id), 1);
+    assert_eq!(
+        (character.x, character.y, character.z),
+        (-2915.55, -257.347, 59.2693)
+    );
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(1, 782_779)]));
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(character.x, character.y, character.z);
+    assert_eq!(
+        ground.ground_at(1, Vec3::new(-2917.0, 53.0, 257.0)),
+        GroundProbe::Unsupported,
+        "underground terrain must not become a reachable floor",
+    );
+    let GroundProbe::Supported(floor) = ground.ground_at(1, Vec3::new(x, y, z)) else {
+        panic!("Tauren start at {y} has no reachable Mulgore ground");
+    };
+    assert!((floor - 59.2693).abs() < 0.1, "authored ground {floor}");
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins)
+        .add_message::<crate::death::PlayerDeathTransition>()
+        .insert_resource(ground);
+    app.update();
+    let player = app
+        .world_mut()
+        .spawn((
+            Position { x, y, z },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            VerticalVelocity::default(),
+            FallTracker::grounded(y),
+            crate::maps::InMap::continent(1),
+            Player {
+                name: character.name,
+                race: 6,
+                class: 1,
+                appearance: Default::default(),
+            },
+        ))
+        .id();
+    for _ in 0..200 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        app.world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+        let position = app.world().get::<Position>(player).unwrap();
+        assert!(
+            (position.y - floor).abs() < 0.1,
+            "player fell to {}",
+            position.y
+        );
+        assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+    }
+}
+
 /// `world/maps/stormwindjail/stormwindjail.wdt`: the Stockade, one global WMO (108631).
 const STOCKADE_WDT_FDID: u32 = 791_060;
 

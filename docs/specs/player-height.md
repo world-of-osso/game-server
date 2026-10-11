@@ -22,6 +22,13 @@ References:
 - [ ] The Godot client's pitched forward swim plus Ascend rises up to twice `SWIM_SPEED`; the server allows `SWIM_SPEED`, so such a climb reaches the server slower than the client shows it.
 - [ ] A client reporting `jumping` without end can bunny-hop: each landing allows a new jump arc.
 
+## New-character starts
+
+- [x] New characters use normal TDB1210 `playercreateinfo` map, position and orientation keyed by both race and class. Missing rows fail creation explicitly; no Human/default-coordinate fallback.
+- [x] Only documented unimplemented-intro overrides (Demon Hunter Mardum, Dracthyr, Kul Tiran, Earthen, Haranir) and user-approved Skyborne95/96 reconstruction remain. Imported NPE coordinates do not enable an Exile's Reach intro.
+- [x] Existing saved positions are retained, not reinterpreted or migrated to a race start.
+- [x] A new Tauren Warrior at authored map1(-2915.55,-257.347,59.2693) stays supported on real Mulgore terrain through server gravity. An underground admin teleport does not alter ground/step semantics.
+
 ## Tests
 
 - `crates/server/src/terrain_height_tests.rs` `swim_spot_liquid_is_the_surface_the_client_floats_under`, `water_surface_height_separate_from_terrain`.
