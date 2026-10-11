@@ -17,7 +17,6 @@ mod store;
 struct Options {
     redb: PathBuf,
     world: PathBuf,
-    public: PathBuf,
     opt_outs: PathBuf,
     textures: PathBuf,
     output: PathBuf,
@@ -27,8 +26,8 @@ struct Options {
 }
 impl Options {
     fn parse(args: Vec<String>, as_of: i64) -> Result<Self> {
-        if args.len() != 16 {
-            return Err("usage: game-server-site-export --redb COPY --world-db WORLD --public-characters IDS.json --opt-outs IDS.json --textures CACHE --output NEW_DIR --realm SLUG --realm-name NAME".into());
+        if args.len() != 14 {
+            return Err("usage: game-server-site-export --redb COPY --world-db WORLD --opt-outs IDS.json --textures CACHE --output NEW_DIR --realm SLUG --realm-name NAME; repair: --repair-copy SOURCE NEW_PRIVATE_COPY".into());
         }
         let mut fields = BTreeMap::new();
         for pair in args.chunks_exact(2) {
@@ -53,7 +52,6 @@ impl Options {
         Ok(Self {
             redb: get("--redb")?.into(),
             world: get("--world-db")?.into(),
-            public: get("--public-characters")?.into(),
             opt_outs: get("--opt-outs")?.into(),
             textures: get("--textures")?.into(),
             output: get("--output")?.into(),
@@ -84,8 +82,8 @@ fn add_json(bundle: &mut Bundle, path: String, value: Value) -> Result<()> {
     Ok(())
 }
 pub fn run(args: Vec<String>) -> Result<()> {
-    if args.first().map(String::as_str) == Some("--fixture-allowlist") {
-        return fixture_allowlist(&args);
+    if args.first().map(String::as_str) == Some("--repair-copy") {
+        return repair_private_copy(&args);
     }
     let elapsed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?;
     run_at(args, i64::try_from(elapsed.as_secs())?)
@@ -99,11 +97,17 @@ fn run_at(args: Vec<String>, as_of: i64) -> Result<()> {
         )
         .into());
     }
-    let public = ids(&options.public)?;
     let opted_out = ids(&options.opt_outs)?;
-    let selected: BTreeSet<_> = public.difference(&opted_out).copied().collect();
     let db = ReadOnlyDatabase::open(&options.redb)?;
     let txn = db.begin_read()?;
+    let characters = txn.open_table(TableDefinition::<u64, &[u8]>::new("characters"))?;
+    let mut selected = BTreeSet::new();
+    for row in characters.iter()? {
+        let (id, _) = row?;
+        if !opted_out.contains(&id.value()) {
+            selected.insert(id.value());
+        }
+    }
     let world = Connection::open_with_flags(&options.world, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     world.execute_batch("BEGIN")?;
     let bundle = SnapshotReader {
@@ -122,41 +126,24 @@ fn run_at(args: Vec<String>, as_of: i64) -> Result<()> {
     }
     Ok(())
 }
-fn fixture_allowlist(args: &[String]) -> Result<()> {
+fn repair_private_copy(args: &[String]) -> Result<()> {
     if args.len() != 3 {
-        return Err("usage: --fixture-allowlist PRIVATE_DIAGNOSTICS_REDB NEW_IDS_JSON".into());
-    }
-    let source = std::fs::canonicalize(&args[1])?;
-    let diagnostics = std::fs::canonicalize(
-        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/site-data-2026-10-11",
-    )?;
-    if !source.starts_with(diagnostics) {
         return Err(
-            "fixture allowlist requires an owned site-data diagnostic copy, never the source redb"
-                .into(),
+            "usage: --repair-copy SOURCE NEW_PRIVATE_COPY (source is never repaired)".into(),
         );
     }
-    // Explicit private-copy preparation: recover a crash-closed proof copy before read-only export.
-    let db = redb::Database::open(source)?;
-    let txn = db.begin_read()?;
-    let accounts = txn.open_table(TableDefinition::<&str, u64>::new("username_accounts"))?;
-    let mut selected = BTreeSet::new();
-    for row in accounts.iter()? {
-        let (name, id) = row?;
-        if name.value().starts_with("fb_") {
-            let characters: Vec<u64> =
-                store::decode(&txn, "account_characters", id.value())?.unwrap_or_default();
-            selected.extend(characters);
-        }
-    }
-    let bytes =
-        serde_json::to_vec_pretty(&selected.iter().map(u64::to_string).collect::<Vec<_>>())?;
-    use std::io::Write;
-    std::fs::OpenOptions::new()
+    let mut source = std::fs::File::open(&args[1])?;
+    // Exclusive creation rejects source aliases, symlinks and existing destinations.
+    let mut copy = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(&args[2])?
-        .write_all(&bytes)?;
+        .open(&args[2])?;
+    std::io::copy(&mut source, &mut copy)?;
+    copy.sync_all()?;
+    drop(copy);
+    // Writable recovery is explicit and only ever opens the newly created private copy.
+    drop(redb::Database::open(&args[2])?);
+    eprintln!("repaired private copy {} (source unchanged)", args[2]);
     Ok(())
 }
 struct SnapshotReader<'a> {
@@ -642,7 +629,6 @@ mod tests {
         txn.commit().unwrap();
         let world = rusqlite::Connection::open(root.join("world.db")).unwrap();
         world.execute_batch("CREATE TABLE chr_classes(ID INTEGER,Name_lang TEXT); INSERT INTO chr_classes VALUES(1,'Warrior'); CREATE TABLE chr_specialization(ID INTEGER,Name_lang TEXT); CREATE TABLE item_sparse(ID INTEGER,ItemLevel INTEGER); CREATE TABLE item(ID INTEGER,IconFileDataID INTEGER); CREATE TABLE achievement(ID INTEGER,Title_lang TEXT,Points INTEGER,IconFileID INTEGER); CREATE TABLE map(ID INTEGER,MapName_lang TEXT,InstanceType INTEGER); CREATE TABLE dungeon_encounter(ID INTEGER,Name_lang TEXT,MapID INTEGER,DifficultyID INTEGER,Bit INTEGER);").unwrap();
-        std::fs::write(root.join("public.json"), "[\"1\",\"2\"]").unwrap();
         std::fs::write(root.join("opt-outs.json"), "[\"2\"]").unwrap();
         std::fs::create_dir(root.join("textures")).unwrap();
     }
@@ -652,8 +638,6 @@ mod tests {
             root.join("private.redb").to_str().unwrap(),
             "--world-db",
             root.join("world.db").to_str().unwrap(),
-            "--public-characters",
-            root.join("public.json").to_str().unwrap(),
             "--opt-outs",
             root.join("opt-outs.json").to_str().unwrap(),
             "--realm",
@@ -670,7 +654,7 @@ mod tests {
         .collect()
     }
     #[test]
-    fn site_snapshot_public_allowlist_opt_out_and_determinism() {
+    fn site_snapshot_all_characters_minus_opt_out_and_determinism() {
         let dir = tempfile::tempdir().unwrap();
         seed(dir.path());
         let before = std::fs::read(dir.path().join("private.redb")).unwrap();
@@ -683,14 +667,15 @@ mod tests {
         let index: Value =
             serde_json::from_slice(&std::fs::read(dir.path().join("a/index.json")).unwrap())
                 .unwrap();
-        assert_eq!(index["characters"].as_array().unwrap().len(), 1);
+        assert_eq!(index["characters"].as_array().unwrap().len(), 2);
+        assert_eq!(index["characters"][1]["id"], "3");
         assert_eq!(index["characters"][0]["id"], "1");
         assert_eq!(
             index["characters"][0]["search_keys"],
             serde_json::json!(["fbalpha"])
         );
         assert!(!dir.path().join("a/characters/2.json").exists());
-        assert!(!dir.path().join("a/characters/3.json").exists());
+        assert!(dir.path().join("a/characters/3.json").exists());
         let bytes = std::fs::read(dir.path().join("a/characters/1.json")).unwrap();
         assert_eq!(
             bytes,
@@ -704,6 +689,72 @@ mod tests {
             assert!(page.get(forbidden).is_none());
         }
     }
+    #[test]
+    #[ignore = "subprocess fixture: exits without closing redb"]
+    fn site_snapshot_crash_writer() {
+        let path = std::env::var("SITE_SNAPSHOT_CRASH_REDB").unwrap();
+        let db = Database::create(path).unwrap();
+        let txn = db.begin_write().unwrap();
+        txn.open_table(CHARACTERS)
+            .unwrap()
+            .insert(1, character("CrashProof").encode_stored().as_slice())
+            .unwrap();
+        txn.commit().unwrap();
+        std::process::exit(0);
+    }
+
+    #[test]
+    fn site_snapshot_repairs_only_new_private_copy_after_process_crash() {
+        let dir = tempfile::tempdir().unwrap();
+        seed(dir.path());
+        let source = dir.path().join("crashed.redb");
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "site_snapshot::tests::site_snapshot_crash_writer",
+                "--ignored",
+            ])
+            .env("SITE_SNAPSHOT_CRASH_REDB", &source)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        assert!(ReadOnlyDatabase::open(&source).is_err());
+        let before = std::fs::read(&source).unwrap();
+        let copy = dir.path().join("repaired.redb");
+        let repair_args = vec![
+            "--repair-copy".into(),
+            source.to_str().unwrap().into(),
+            copy.to_str().unwrap().into(),
+        ];
+        super::run(repair_args.clone()).unwrap();
+        assert_eq!(before, std::fs::read(&source).unwrap());
+        assert!(super::run(repair_args).is_err());
+        assert!(
+            super::run(vec![
+                "--repair-copy".into(),
+                source.to_str().unwrap().into(),
+                source.to_str().unwrap().into()
+            ])
+            .is_err()
+        );
+        let db = ReadOnlyDatabase::open(&copy).unwrap();
+        assert!(
+            db.begin_read()
+                .unwrap()
+                .open_table(CHARACTERS)
+                .unwrap()
+                .get(1)
+                .unwrap()
+                .is_some()
+        );
+        drop(db);
+        let mut args = arguments(dir.path(), "recovered");
+        args[1] = copy.to_str().unwrap().into();
+        run(args).unwrap();
+        assert!(dir.path().join("recovered/characters/1.json").exists());
+        assert_eq!(before, std::fs::read(&source).unwrap());
+    }
+
     #[test]
     fn site_snapshot_uses_actual_export_clock() {
         let dir = tempfile::tempdir().unwrap();
@@ -785,7 +836,6 @@ mod tests {
     fn site_snapshot_raid_lifetime_timestamp_ranks_and_guild_privacy() {
         let dir = tempfile::tempdir().unwrap();
         seed(dir.path());
-        std::fs::write(dir.path().join("public.json"), "[\"1\",\"2\",\"3\"]").unwrap();
         let world = rusqlite::Connection::open(dir.path().join("world.db")).unwrap();
         world.execute_batch("INSERT INTO map VALUES(409,'Molten Core',2); INSERT INTO dungeon_encounter VALUES(663,'Lucifron',409,0,0),(664,'Magmadar',409,0,1);").unwrap();
         let db = Database::open(dir.path().join("private.redb")).unwrap();
@@ -938,18 +988,13 @@ mod tests {
         assert!(page["mythic_plus_best"][0].get("rating").is_none());
     }
     #[test]
-    fn site_snapshot_rejects_missing_public_character_and_existing_output() {
+    fn site_snapshot_rejects_invalid_opt_outs_and_existing_output() {
         let dir = tempfile::tempdir().unwrap();
         seed(dir.path());
-        std::fs::write(dir.path().join("public.json"), "[\"999\"]").unwrap();
-        assert!(
-            run(arguments(dir.path(), "a"))
-                .unwrap_err()
-                .to_string()
-                .contains("999")
-        );
+        std::fs::write(dir.path().join("opt-outs.json"), "[\"not-an-id\"]").unwrap();
+        assert!(run(arguments(dir.path(), "a")).is_err());
         assert!(!dir.path().join("a").exists());
-        std::fs::write(dir.path().join("public.json"), "[\"1\"]").unwrap();
+        std::fs::write(dir.path().join("opt-outs.json"), "[\"2\",\"999\"]").unwrap();
         run(arguments(dir.path(), "a")).unwrap();
         assert!(
             run(arguments(dir.path(), "a"))
