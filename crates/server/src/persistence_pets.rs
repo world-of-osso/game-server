@@ -7,7 +7,7 @@ use crate::tame::MAX_ACTIVE_PETS;
 pub(crate) const PET_STABLES: TableDefinition<u64, &[u8]> = TableDefinition::new("pet_stables");
 const PET_STABLES_V2: TableDefinition<u64, &[u8]> = TableDefinition::new("pet_stables_v2");
 /// Retail PetConstantsDocumentation.lua: MAX_STABLE_SLOTS (including secondary slot).
-pub const MAX_STABLED_PETS: usize = 200;
+pub const MAX_STABLED_PETS: usize = shared::protocol::PET_STABLE_SLOTS;
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct StoredPet {

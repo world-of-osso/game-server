@@ -473,7 +473,7 @@ fn process_close_requests(mut receivers: CloseReceivers, mut commands: Commands)
     }
 }
 
-fn close_invalid_interactions(
+pub(crate) fn close_invalid_interactions(
     connections: Query<(Entity, &PlayerLink, &ActiveInteraction)>,
     world: InteractionWorld,
     mut senders: InteractionSenders,
