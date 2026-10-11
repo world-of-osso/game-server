@@ -100,6 +100,8 @@ pub struct MapDifficulty {
     pub reset_interval: ResetInterval,
     pub max_players: u32,
     pub flags: u32,
+    /// Map.Flags_0 FlexibleRaidLocking; not a MapDifficulty flag.
+    pub flexible_locking: bool,
 }
 
 impl MapDifficulty {
@@ -113,10 +115,10 @@ impl MapDifficulty {
         self.flags & MAP_DIFFICULTY_FLAG_ENCOUNTER_LOCKS != 0
     }
 
-    /// `MapDb2Entries::IsInstanceIdBound` (no map is flex-locking among the hosted ones:
-    /// `MapFlags::FlexibleRaidLocking` is a raid flag).
+    /// `MapDb2Entries::IsInstanceIdBound`: flexible raid and loot-based encounter locks
+    /// resume individual progress rather than binding the player to one copy.
     pub fn is_instance_id_bound(&self) -> bool {
-        !self.is_using_encounter_locks()
+        !self.flexible_locking && !self.is_using_encounter_locks()
     }
 
     /// `MapDifficultyEntry::IsExtendable`.
@@ -556,8 +558,8 @@ fn map_from_row(row: &Row) -> rusqlite::Result<Option<MapEntry>> {
 
 fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<MapDifficulty>>> {
     let mut statement = conn.prepare(
-        "SELECT ID, MapID, DifficultyID, LockID, ResetInterval, MaxPlayers, Flags
-         FROM map_difficulty ORDER BY ID",
+        "SELECT d.ID, d.MapID, d.DifficultyID, d.LockID, d.ResetInterval, d.MaxPlayers, d.Flags, m.Flags_0
+         FROM map_difficulty d JOIN map m ON m.ID=d.MapID ORDER BY d.ID",
     )?;
     let mut difficulties: HashMap<u32, Vec<MapDifficulty>> = HashMap::new();
     let rows = statement.query_map([], |row| {
@@ -569,6 +571,7 @@ fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<Map
             reset_interval: ResetInterval::from_db2(row.get(4)?),
             max_players: row.get(5)?,
             flags: row.get(6)?,
+            flexible_locking: (row.get::<_, i64>(7)? as u32) & 0x8000 != 0,
         })
     })?;
     for row in rows {

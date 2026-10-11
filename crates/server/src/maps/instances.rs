@@ -459,6 +459,7 @@ impl InstanceManager {
                 &copy.difficulty,
                 map.instance_id,
                 unix,
+                copy.initial_data.completed_encounters,
             )
         {
             return Some(reason);
@@ -562,6 +563,11 @@ impl InstanceManager {
             let Some(at) = copy.expires_at else {
                 continue;
             };
+            let at = copy
+                .lock_owner
+                .and_then(|owner| self.locks.lock(owner, copy.difficulty.lock_key()))
+                .filter(|lock| lock.extended)
+                .map_or(at, |lock| lock.effective_expiry(&copy.difficulty, now.unix));
             if at > now.unix {
                 continue;
             }

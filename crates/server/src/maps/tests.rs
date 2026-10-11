@@ -1547,3 +1547,63 @@ fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
     );
     assert_eq!(entries, vec![12118]);
 }
+
+#[test]
+fn raid_entry_legacy_flexible_lock_uses_encounters_not_one_instance_id() {
+    let store = map_store().unwrap();
+    assert!(!store.map_difficulty(533, 3).unwrap().is_instance_id_bound());
+    assert!(
+        store
+            .map_difficulty(2522, 16)
+            .unwrap()
+            .is_instance_id_bound()
+    );
+}
+#[test]
+fn raid_entry_extended_copy_does_not_expire_at_its_original_weekly_reset() {
+    let store = map_store().unwrap();
+    let mut instances = InstanceManager::default();
+    let copy = instances
+        .create_map(store, 409, entrant(71, None), at(0.0))
+        .unwrap()
+        .map;
+    let player = World::new().spawn_empty().id();
+    instances.add_player(copy, player);
+    instances.update_instance_lock(copy, &[(player, 71)], 1, Some(0), SUNDAY_NOON);
+    let entries = store.map_difficulty(409, 9).unwrap();
+    let reset = locks::next_reset_time(entries.reset_interval, SUNDAY_NOON);
+    instances.locks.set_extended(71, entries, true, SUNDAY_NOON);
+    assert!(
+        instances
+            .expire_locked_copies(instances::Now {
+                elapsed: 100.0,
+                unix: reset
+            })
+            .is_empty()
+    );
+}
+
+#[test]
+fn raid_entry_flexible_saved_player_can_join_equal_progress_but_not_unkilled_encounters() {
+    let store = map_store().unwrap();
+    let entries = store.map_difficulty(533, 3).unwrap();
+    let mut locks = locks::InstanceLocks::default();
+    locks.create_for_new_instance(71, entries, 8, SUNDAY_NOON);
+    locks.update_for_player(
+        71,
+        entries,
+        &locks::LockUpdate {
+            instance_id: 8,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    assert_eq!(locks.can_join(71, entries, 9, SUNDAY_NOON, 1), None);
+    assert_eq!(locks.can_join(71, entries, 9, SUNDAY_NOON, 3), None);
+    assert_eq!(
+        locks.can_join(71, entries, 9, SUNDAY_NOON, 0),
+        Some(TransferAbortReason::AlreadyCompletedEncounter)
+    );
+}
