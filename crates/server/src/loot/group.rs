@@ -1,0 +1,510 @@
+//! Authoritative group rolls. Retail GroupLootFrame.lua/LootHistory.lua;
+//! TrinityCore a352b1fa Loot.cpp: LootRoll (timeout, all-pass, winner delivery).
+
+use std::collections::{BTreeMap, HashMap, VecDeque};
+
+use super::*;
+use crate::auth::Authenticated;
+use crate::group::GroupRegistry;
+use crate::persistence::ClientId;
+use rand::Rng;
+use shared::components::{Player, UnitLevel};
+use shared::loot::{LootDrop, LootMode, LootRollChoice, RollWindow};
+use shared::protocol::{GroupLootChoice, GroupLootHistoryRequest, GroupLootPlayer, GroupLootRoll};
+
+const HISTORY_LIMIT: usize = 50;
+pub(super) const SHARED_SLOT_BASE: u8 = 128;
+
+#[derive(Component, Default)]
+pub(super) struct CorpseGroupLoot(pub Vec<GroupPool>);
+
+pub(super) struct GroupPool {
+    pub members: Vec<u64>,
+    pub slots: Vec<Option<LootContent>>,
+    pub pending: usize,
+}
+
+impl GroupPool {
+    pub fn has_loot(&self) -> bool {
+        self.pending > 0 || self.slots.iter().any(Option::is_some)
+    }
+
+    pub fn remaining(&self) -> Vec<LootSlot> {
+        self.slots
+            .iter()
+            .enumerate()
+            .filter_map(|(index, content)| {
+                Some(LootSlot {
+                    slot: SHARED_SLOT_BASE + index as u8,
+                    content: content.clone()?,
+                })
+            })
+            .collect()
+    }
+}
+
+impl CorpseGroupLoot {
+    pub fn pool(&self, character: u64) -> Option<&GroupPool> {
+        self.0.iter().find(|pool| pool.members.contains(&character))
+    }
+
+    pub fn pool_mut(&mut self, character: u64) -> Option<&mut GroupPool> {
+        self.0
+            .iter_mut()
+            .find(|pool| pool.members.contains(&character))
+    }
+
+    pub fn has_loot(&self) -> bool {
+        self.0.iter().any(GroupPool::has_loot)
+    }
+}
+
+/// RNG is injected at the roll boundary, never provided by a client.
+#[derive(Resource)]
+pub(super) struct GroupRollRng(pub Box<dyn FnMut() -> u8 + Send + Sync>);
+
+impl Default for GroupRollRng {
+    fn default() -> Self {
+        Self(Box::new(|| rand::thread_rng().gen_range(1..=100)))
+    }
+}
+
+struct PendingRoll {
+    window: RollWindow,
+    snapshot: GroupLootRoll,
+    pool: usize,
+}
+
+#[derive(Resource, Default)]
+pub(super) struct GroupRolls {
+    active: BTreeMap<u64, PendingRoll>,
+    history: HashMap<u64, VecDeque<GroupLootRoll>>,
+    next_id: u64,
+}
+
+impl GroupRolls {
+    fn remember(&mut self, snapshot: &GroupLootRoll) {
+        for player in &snapshot.players {
+            let entries = self.history.entry(player.character_id).or_default();
+            if let Some(entry) = entries
+                .iter_mut()
+                .find(|entry| entry.roll_id == snapshot.roll_id)
+            {
+                *entry = snapshot.clone();
+            } else {
+                entries.push_back(snapshot.clone());
+            }
+            while entries.len() > HISTORY_LIMIT {
+                entries.pop_front();
+            }
+        }
+    }
+
+    fn start(
+        &mut self,
+        corpse: Entity,
+        pool: usize,
+        item: LootContent,
+        players: Vec<GroupLootPlayer>,
+    ) -> GroupLootRoll {
+        let LootContent::Item { item_id, count, .. } = item else {
+            unreachable!("only items roll")
+        };
+        self.next_id += 1;
+        let members: Vec<_> = players.iter().map(|player| player.character_id).collect();
+        let need: Vec<_> = players
+            .iter()
+            .filter(|player| player.can_need)
+            .map(|player| player.character_id)
+            .collect();
+        let mut window = RollWindow::new(LootDrop { item_id, count }, &members, &need);
+        window.can_transmog = players
+            .iter()
+            .filter(|player| player.can_transmog)
+            .map(|player| player.character_id)
+            .collect();
+        let snapshot = GroupLootRoll {
+            roll_id: self.next_id,
+            corpse: corpse.to_bits(),
+            item,
+            seconds_remaining: window.time_remaining,
+            players,
+            winner: None,
+            complete: false,
+            delivered: false,
+        };
+        self.remember(&snapshot);
+        self.active.insert(
+            snapshot.roll_id,
+            PendingRoll {
+                window,
+                snapshot: snapshot.clone(),
+                pool,
+            },
+        );
+        snapshot
+    }
+}
+
+type GroupPlayers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static ClientId,
+        &'static Player,
+        Option<&'static UnitLevel>,
+    ),
+>;
+
+#[derive(SystemParam)]
+pub(super) struct GroupGeneration<'w, 's> {
+    pub groups: Option<ResMut<'w, GroupRegistry>>,
+    rolls: ResMut<'w, GroupRolls>,
+    players: GroupPlayers<'w, 's>,
+    accounts: Query<'w, 's, (&'static InWorld, &'static Authenticated)>,
+    senders: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static InWorld,
+            &'static mut MessageSender<GroupLootRoll>,
+        ),
+    >,
+}
+
+impl GroupGeneration<'_, '_> {
+    pub fn distribute(
+        &mut self,
+        corpse: Entity,
+        entry: u32,
+        difficulty: u32,
+        rewarded: &[u64],
+        source: &LootRolls,
+    ) -> (CorpseLoot, CorpseGroupLoot) {
+        let mut personal = CorpseLoot::default();
+        let mut shared = CorpseGroupLoot::default();
+        let mut assigned = Vec::new();
+        for &character in rewarded {
+            if assigned.contains(&character) {
+                continue;
+            }
+            let members = self
+                .groups
+                .as_deref()
+                .map_or_else(Vec::new, |groups| groups.group_members(character));
+            let members: Vec<_> = members
+                .into_iter()
+                .filter(|member| rewarded.contains(member))
+                .collect();
+            if members.is_empty() {
+                let slots = source.roll(entry, difficulty, character, None);
+                if !slots.is_empty() {
+                    personal.looters.insert(character, slots);
+                }
+                assigned.push(character);
+                continue;
+            }
+            assigned.extend(&members);
+            let (mode, threshold) = self
+                .groups
+                .as_deref()
+                .and_then(|groups| groups.loot_policy_of(character))
+                .expect("group membership exists");
+            let common = source.roll(entry, difficulty, character, Some(false));
+            let pool_index = shared.0.len();
+            let mut pool = GroupPool {
+                members: members.clone(),
+                slots: Vec::new(),
+                pending: 0,
+            };
+            for &member in &members {
+                let kind = if mode == LootMode::PersonalLoot {
+                    None
+                } else {
+                    Some(true)
+                };
+                let items = source
+                    .roll(entry, difficulty, member, kind)
+                    .into_iter()
+                    .filter(|content| !matches!(content, Some(LootContent::Money { .. })))
+                    .collect();
+                personal.looters.insert(member, items);
+            }
+            let owner = self
+                .groups
+                .as_deref_mut()
+                .expect("group exists")
+                .next_loot_owner(character, &members);
+            for content in common.into_iter().flatten() {
+                match content {
+                    LootContent::Money { .. } => pool.slots.push(Some(content)),
+                    LootContent::Item { quality, .. }
+                        if mode == LootMode::GroupLoot && quality >= threshold =>
+                    {
+                        let players = self.eligibility(&members, &content, source);
+                        let snapshot = self.rolls.start(corpse, pool_index, content, players);
+                        self.send(&snapshot);
+                        pool.pending += 1;
+                    }
+                    LootContent::Item { .. } if mode == LootMode::GroupLoot => {
+                        personal
+                            .looters
+                            .get_mut(&owner)
+                            .expect("member entry exists")
+                            .push(Some(content));
+                    }
+                    _ => {}
+                }
+            }
+            shared.0.push(pool);
+        }
+        personal
+            .looters
+            .retain(|_, slots| slots.iter().any(Option::is_some));
+        (personal, shared)
+    }
+
+    fn eligibility(
+        &self,
+        members: &[u64],
+        item: &LootContent,
+        source: &LootRolls,
+    ) -> Vec<GroupLootPlayer> {
+        let LootContent::Item { item_id, .. } = *item else {
+            unreachable!("item roll")
+        };
+        let (db, templates) = source.store.get().expect("generation needs item store");
+        let template = templates
+            .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+            .expect("rolled template exists");
+        members
+            .iter()
+            .map(|&character_id| {
+                let (_, player, level) = self
+                    .players
+                    .iter()
+                    .find(|(id, _, _)| id.0 == character_id)
+                    .expect("rewarded online player");
+                let inventory = persistence::load_inventory(db, character_id);
+                let goods = source.store.catalog.goods.get(&item_id);
+                let owned: u32 = inventory
+                    .items
+                    .iter()
+                    .filter(|item| item.item_id == item_id)
+                    .map(|item| item.stack_count)
+                    .sum();
+                let max_count = goods.map_or(0, |goods| goods.max_count);
+                let need_reason = need_refusal(
+                    template,
+                    player,
+                    level.map_or(1, |level| level.0),
+                    owned,
+                    max_count,
+                );
+                let account = self
+                    .accounts
+                    .iter()
+                    .find(|(world, _)| world.character_id == character_id)
+                    .map(|(_, account)| account.account_id);
+                let can_transmog = template.appearance_id.is_some_and(|appearance| {
+                    account.is_some_and(|account| {
+                        !crate::persistence::appearance_store::load_account_appearances(db, account)
+                            .has(appearance)
+                    })
+                });
+                GroupLootPlayer {
+                    character_id,
+                    name: player.name.clone(),
+                    can_need: need_reason.is_none(),
+                    need_reason,
+                    can_transmog,
+                    response: None,
+                }
+            })
+            .collect()
+    }
+
+    fn send(&mut self, snapshot: &GroupLootRoll) {
+        for (_, world, mut sender) in &mut self.senders {
+            if snapshot
+                .players
+                .iter()
+                .any(|player| player.character_id == world.character_id)
+            {
+                sender.send::<LootChannel>(snapshot.clone());
+            }
+        }
+    }
+}
+
+fn need_refusal(
+    template: &crate::item_templates::ItemTemplate,
+    player: &Player,
+    level: u8,
+    owned: u32,
+    max_count: u32,
+) -> Option<String> {
+    if !template.allows(player.class, player.race) {
+        return Some("Your class may not roll need on this item.".into());
+    }
+    if max_count > 0 && owned >= max_count {
+        return Some("You already have the maximum amount of this item.".into());
+    }
+    if u16::from(level) < template.required_level {
+        return Some(format!("Requires level {}", template.required_level));
+    }
+    None
+}
+
+#[derive(SystemParam)]
+pub(super) struct RollDelivery<'w, 's> {
+    store: LootStore<'w>,
+    corpses: Query<
+        'w,
+        's,
+        (
+            &'static mut CorpseLoot,
+            &'static mut CorpseGroupLoot,
+            &'static mut Corpse,
+            &'static mut DeathState,
+        ),
+    >,
+    senders: Query<'w, 's, (&'static InWorld, &'static mut MessageSender<GroupLootRoll>)>,
+    failures: Query<'w, 's, (&'static InWorld, &'static mut MessageSender<LootFailed>)>,
+}
+
+impl RollDelivery<'_, '_> {
+    fn send(&mut self, snapshot: &GroupLootRoll) {
+        for (world, mut sender) in &mut self.senders {
+            if snapshot
+                .players
+                .iter()
+                .any(|player| player.character_id == world.character_id)
+            {
+                sender.send::<LootChannel>(snapshot.clone());
+            }
+        }
+    }
+
+    fn complete(&mut self, roll: &mut PendingRoll) {
+        roll.snapshot.complete = true;
+        roll.snapshot.seconds_remaining = 0.0;
+        roll.snapshot.winner = roll.window.resolve();
+        let item = roll.snapshot.item.clone();
+        let refused = roll.snapshot.winner.and_then(|winner| {
+            self.store
+                .take(winner, &item)
+                .err()
+                .map(|error| (winner, error))
+        });
+        roll.snapshot.delivered = roll.snapshot.winner.is_some() && refused.is_none();
+        let corpse = Entity::try_from_bits(roll.snapshot.corpse).expect("server entity bits");
+        if let Ok((mut loot, mut shared, mut decay, mut death)) = self.corpses.get_mut(corpse) {
+            let pool = &mut shared.0[roll.pool];
+            pool.pending -= 1;
+            if let Some((winner, _)) = refused {
+                loot.looters.entry(winner).or_default().push(Some(item));
+            } else if roll.snapshot.winner.is_none() {
+                pool.slots.push(Some(item));
+            }
+            if loot.looters.is_empty() && !shared.has_loot() {
+                corpse_looted(&mut decay, &mut death);
+            }
+        }
+        if let Some((winner, error)) = refused {
+            for (world, mut sender) in &mut self.failures {
+                if world.character_id == winner {
+                    sender.send::<LootChannel>(LootFailed {
+                        corpse: roll.snapshot.corpse,
+                        error,
+                    });
+                }
+            }
+        }
+        refresh_responses(roll);
+        self.send(&roll.snapshot);
+    }
+}
+
+fn refresh_responses(roll: &mut PendingRoll) {
+    roll.snapshot.seconds_remaining = roll.window.time_remaining.max(0.0);
+    for player in &mut roll.snapshot.players {
+        player.response = roll
+            .window
+            .responses
+            .iter()
+            .find(|entry| entry.player_id == player.character_id)
+            .copied();
+    }
+}
+
+pub(super) fn process_rolls(
+    mut requests: Query<(&InWorld, &mut MessageReceiver<GroupLootChoice>)>,
+    mut state: ResMut<GroupRolls>,
+    mut rng: ResMut<GroupRollRng>,
+    mut delivery: RollDelivery,
+    time: Res<Time>,
+) {
+    for (world, mut receiver) in &mut requests {
+        for request in receiver.receive() {
+            let Some(roll) = state.active.get_mut(&request.roll_id) else {
+                continue;
+            };
+            let value = if request.choice == LootRollChoice::Pass {
+                0
+            } else {
+                (rng.0)()
+            };
+            if roll
+                .window
+                .respond(world.character_id, request.choice, value)
+            {
+                refresh_responses(roll);
+                delivery.send(&roll.snapshot);
+            }
+        }
+    }
+    let mut completed = Vec::new();
+    for (&id, roll) in &mut state.active {
+        if roll.window.tick(time.delta_secs()) {
+            delivery.complete(roll);
+            completed.push(id);
+        }
+    }
+    let snapshots: Vec<_> = state
+        .active
+        .values()
+        .map(|roll| {
+            let mut snapshot = roll.snapshot.clone();
+            snapshot.seconds_remaining = roll.window.time_remaining.max(0.0);
+            snapshot
+        })
+        .collect();
+    for snapshot in snapshots {
+        state.remember(&snapshot);
+    }
+    for id in completed {
+        state.active.remove(&id);
+    }
+}
+
+pub(super) fn replay_history(
+    mut requests: Query<(
+        &InWorld,
+        &mut MessageReceiver<GroupLootHistoryRequest>,
+        &mut MessageSender<GroupLootRoll>,
+    )>,
+    rolls: Res<GroupRolls>,
+) {
+    for (world, mut receiver, mut sender) in &mut requests {
+        if receiver.receive().count() == 0 {
+            continue;
+        }
+        if let Some(entries) = rolls.history.get(&world.character_id) {
+            for entry in entries {
+                sender.send::<LootChannel>(entry.clone());
+            }
+        }
+    }
+}

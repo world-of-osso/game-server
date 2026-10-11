@@ -94,7 +94,7 @@ pub(crate) struct DroppedItem {
     pub item_id: u32,
     pub count: u32,
     group: u8,
-    needs_quest: bool,
+    pub(super) needs_quest: bool,
 }
 
 /// What one player's kill yields: items in slot order, then coins.
