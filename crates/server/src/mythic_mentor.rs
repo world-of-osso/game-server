@@ -149,6 +149,7 @@ mod tests {
             .collect();
         {
             let mut registry = h.app.world_mut().resource_mut::<GroupRegistry>();
+            registry.sync_presence(&online);
             registry.invite(owner, "Mentorpeer", &online);
             registry.respond_invite(peer, true);
         }
