@@ -197,6 +197,13 @@ pub(super) fn effect_enabled(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        53563,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::scripts::replace_beacon),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         SURVIVAL_INSTINCTS,
         AuraScript {
             on_apply: Some(apply_survival_instincts),

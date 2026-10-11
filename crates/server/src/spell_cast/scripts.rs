@@ -24,7 +24,7 @@ pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
 pub(super) use batch15::heal_beacon;
-pub(crate) use batch15::snapshot_combustion;
+pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch11::effect_enabled(world, caster, spell, index)

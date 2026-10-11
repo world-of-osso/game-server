@@ -82,6 +82,29 @@ pub(crate) fn snapshot_combustion(
     amount + crit * script_effect_value(world, caster, PYROMANIAC, 0) / 100.0
 }
 
+///53563 wraps a single ally; replacing this owner's mark preserves other owners.
+pub(crate) fn replace_beacon(world: &mut World, unit: Entity, aura: &crate::auras::AuraInstance) {
+    let previous: Vec<_> = world
+        .query::<(Entity, &ActiveAuras)>()
+        .iter(world)
+        .filter(|(target, _)| *target != unit)
+        .flat_map(|(target, auras)| {
+            auras
+                .iter()
+                .filter(|mark| mark.spell_id == BEACON && mark.caster == aura.caster)
+                .map(move |mark| (target, mark.instance_id))
+        })
+        .collect();
+    for (target, instance) in previous {
+        crate::auras::remove_instance(
+            world,
+            target,
+            instance,
+            crate::auras::RemoveReason::Cancelled,
+        );
+    }
+}
+
 fn same_group(world: &World, a: Entity, b: Entity) -> bool {
     let (Some(a), Some(b), Some(groups)) = (
         world.get::<crate::persistence::ClientId>(a),
