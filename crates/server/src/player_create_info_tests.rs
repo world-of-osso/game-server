@@ -390,6 +390,31 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
 /// template, so creation stores all of them.
 #[test]
 fn every_playable_pair_has_an_authored_start_loadout_and_creates() {
+    // External creation-catalog contract captured by noinstall-2026-10-10.
+    #[derive(serde::Deserialize)]
+    struct CatalogRace {
+        race: u8,
+        classes: Vec<u8>,
+    }
+    let catalog: Vec<CatalogRace> = serde_json::from_str(include_str!(
+        "../tests/fixtures/noinstall-creation-catalog.json"
+    ))
+    .unwrap();
+    let catalog_pairs: std::collections::HashSet<_> = catalog
+        .into_iter()
+        .flat_map(|race| {
+            race.classes
+                .into_iter()
+                .map(move |class| (race.race, class))
+        })
+        .collect();
+    assert_eq!(catalog_pairs.len(), 246);
+    let playable_pairs: std::collections::HashSet<_> =
+        crate::race_class::playable_pairs().collect();
+    assert!(
+        catalog_pairs.is_subset(&playable_pairs),
+        "every offered catalog pair must be creatable"
+    );
     let Some(kit) = OwnedKit::from_world_db() else {
         return;
     };
