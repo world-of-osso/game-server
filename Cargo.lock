@@ -6305,6 +6305,7 @@ dependencies = [
 [[package]]
 name = "shared"
 version = "0.1.0"
+source = "git+https://github.com/world-of-osso/shared-protocol.git?rev=d867b80#d867b80851c3016da3d6cab242dcb917061cb43c"
 dependencies = [
  "bevy",
  "bevy_replicon",
