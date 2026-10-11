@@ -276,7 +276,10 @@ fn equipped_location(slot: EquipmentSlot) -> ItemLocation {
 
 #[test]
 fn nonvisual_equipment_ring_pair_snapshot_and_relog() {
-    let mut app = setup_app(persistence::temp_database());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let database = Database::create(file.path()).unwrap();
+    persistence::create_tables(&database);
+    let mut app = setup_app(database);
     add_nonvisual_templates(&mut app);
     let client = spawn_client(&mut app, 91, "Ringwearer");
     let first = grant_bag_item(&app, client.character_id, 1116, "Ring of Pure Silver");
@@ -321,8 +324,21 @@ fn nonvisual_equipment_ring_pair_snapshot_and_relog() {
     enter_world(&mut app, &client);
     assert_eq!(
         received::<EquipmentSnapshot>(&mut app, &client),
-        vec![snapshot]
+        vec![snapshot.clone()]
     );
+    let character_id = client.character_id;
+    drop(app);
+    let database = Database::open(file.path()).unwrap();
+    persistence::create_tables(&database);
+    let mut reopened = setup_app(database);
+    add_nonvisual_templates(&mut reopened);
+    let model = load_model(
+        db(&reopened),
+        reopened.world().resource::<ItemTemplates>(),
+        character_id,
+    )
+    .unwrap();
+    assert_eq!(model.equipment_snapshot(), snapshot);
 }
 
 #[test]
@@ -419,7 +435,9 @@ fn nonvisual_equipment_unique_ring_rejects_second_without_mutation() {
             to: equipped_location(EquipmentSlot::Finger2),
         },
     );
-    assert_eq!(received::<InventoryError>(&mut app, &client).len(), 1);
+    let errors = received::<InventoryError>(&mut app, &client);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].reason, InventoryErrorReason::ItemUniqueEquippable);
     assert_eq!(
         load_model(
             db(&app),
@@ -429,6 +447,101 @@ fn nonvisual_equipment_unique_ring_rejects_second_without_mutation() {
         .unwrap()
         .view(),
         before
+    );
+}
+
+#[test]
+fn nonvisual_equipment_migration_preserves_old_character_and_visual_items() {
+    let database = persistence::temp_database();
+    let mut app = setup_app(database);
+    let client = spawn_client(&mut app, 94, "Oldwearer");
+    grant_bag_weapon(&app, client.character_id);
+    enter_world(&mut app, &client);
+    request(&mut app, &client, EquipItem { from: bag(3) });
+    let before =
+        persistence::inventory_store::load_inventory_record(db(&app), client.character_id).unwrap();
+    let transaction = db(&app).begin_write().unwrap();
+    transaction
+        .delete_table(persistence::inventory_store::NONVISUAL_EQUIPMENT)
+        .unwrap();
+    transaction.commit().unwrap();
+    persistence::create_tables(db(&app));
+    let after =
+        persistence::inventory_store::load_inventory_record(db(&app), client.character_id).unwrap();
+    assert_eq!(after, before);
+    assert_eq!(after.equipped.len(), 1);
+    assert!(after.nonvisual_equipped.is_empty());
+}
+
+#[test]
+fn nonvisual_equipment_neck_and_ring_apply_stats_and_existing_aura_modifiers() {
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::components::{CombatRatings, DerivedStats, Health, Level, UnitStats};
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 95, "Statwearer");
+    let path = crate::test_data::world_db_path();
+    app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    app.world_mut().entity_mut(client.player).insert((
+        Level(10),
+        UnitStats::default(),
+        CombatRatings::default(),
+        DerivedStats::default(),
+        Health {
+            current: 100.0,
+            max: 100.0,
+        },
+        crate::stats::StatModifiers {
+            primary_flat: UnitStats {
+                stamina: 10.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    ));
+    grant_bag_item(&app, client.character_id, 1116, "Ring of Pure Silver");
+    grant_bag_item(&app, client.character_id, 4112, "Choker of the High Shaman");
+    enter_world(&mut app, &client);
+    app.world_mut()
+        .run_system_once(crate::stats::update_character_stats)
+        .unwrap();
+    let before = *app.world().get::<UnitStats>(client.player).unwrap();
+    let health_before = app.world().get::<Health>(client.player).unwrap().max;
+    for from in [bag(3), bag(4)] {
+        request(&mut app, &client, EquipItem { from });
+    }
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    app.world_mut()
+        .run_system_once(crate::stats::update_character_stats)
+        .unwrap();
+    let after = *app.world().get::<UnitStats>(client.player).unwrap();
+    assert!(after.stamina > before.stamina);
+    assert!(after.intellect > before.intellect);
+    assert!(app.world().get::<Health>(client.player).unwrap().max > health_before);
+    request(
+        &mut app,
+        &client,
+        EquipItem {
+            from: equipped_location(EquipmentSlot::Finger1),
+        },
+    );
+    request(
+        &mut app,
+        &client,
+        EquipItem {
+            from: equipped_location(EquipmentSlot::Neck),
+        },
+    );
+    app.world_mut()
+        .run_system_once(crate::stats::update_character_stats)
+        .unwrap();
+    assert_eq!(
+        *app.world().get::<UnitStats>(client.player).unwrap(),
+        before
+    );
+    assert_eq!(
+        app.world().get::<Health>(client.player).unwrap().max,
+        health_before
     );
 }
 
