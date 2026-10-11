@@ -34,6 +34,81 @@ fn ghoststate_stationary_observer_changes_recheck_ghost_visibility() {
     );
 }
 
+#[test]
+fn typed_invisibility_detection_rechecks_stationary_and_new_observers() {
+    use crate::auras::{
+        AuraApplication, AuraSource, RemoveReason, apply_aura, aura_effect_mask, remove_auras,
+    };
+    let harness = crate::spell_cast::test_harness::harness_with_plugins(
+        Vec::new(),
+        &[89302, 82343, 100616, 82336],
+        1,
+        false,
+        |app| {
+            app.add_plugins(InterestPlugin);
+        },
+    )
+    .expect("world data");
+    let mut app = harness.app;
+    let first = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let player = app.world().get::<PlayerLink>(first).unwrap().0;
+    let jaga = spawn_interest_target(&mut app, pos(10.0, 0.0, 0.0));
+    let rendan = spawn_interest_target(&mut app, pos(15.0, 0.0, 0.0));
+    let apply = |app: &mut App, unit, spell_id| {
+        let mask = aura_effect_mask(
+            app.world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(spell_id)
+                .unwrap(),
+        );
+        apply_aura(
+            app.world_mut(),
+            &AuraApplication {
+                caster: unit,
+                target: unit,
+                spell_id,
+                effect_mask: mask,
+                source: AuraSource::Cast,
+            },
+        );
+    };
+    apply(&mut app, jaga, 89302); // type35, value100
+    apply(&mut app, rendan, 82343); // type12, value100
+    run_fixed_ticks(&mut app, 1);
+    let visible = |app: &App, unit, connection| {
+        app.world()
+            .get::<NetworkVisibility>(unit)
+            .unwrap()
+            .is_visible(connection)
+    };
+    assert!(!visible(&app, jaga, first) && !visible(&app, rendan, first));
+    apply(&mut app, player, 100616); // type35, value1000
+    run_fixed_ticks(&mut app, 1);
+    assert!(
+        visible(&app, jaga, first),
+        "eligible stationary observer detects Jaga"
+    );
+    assert!(
+        !visible(&app, rendan, first),
+        "wrong type does not detect Rendan"
+    );
+    let second = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    run_fixed_ticks(&mut app, 1);
+    assert!(!visible(&app, jaga, second));
+    apply(&mut app, player, 82336);
+    run_fixed_ticks(&mut app, 1);
+    assert!(visible(&app, rendan, first));
+    remove_auras(app.world_mut(), player, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 100616
+    });
+    run_fixed_ticks(&mut app, 1);
+    assert!(
+        !visible(&app, jaga, first),
+        "detector removal hides the target again"
+    );
+    assert!(visible(&app, rendan, first));
+}
+
 fn make_state_and_conn() -> (NetworkVisibility, Entity) {
     (NetworkVisibility::default(), Entity::from_bits(1))
 }
