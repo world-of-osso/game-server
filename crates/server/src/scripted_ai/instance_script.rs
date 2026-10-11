@@ -53,7 +53,7 @@ pub struct BossInfo {
 pub struct InstanceScript {
     pub name: &'static str,
     pub bosses: Vec<BossInfo>,
-    pub boss_creatures: &'static [(u32, u32)],
+    pub boss_creatures: Vec<(u32, u32)>,
 }
 
 impl InstanceScript {
@@ -88,23 +88,7 @@ pub fn create_instance_script(name: &str) -> Option<InstanceScript> {
 /// `done_bosses`: they do not spawn in a copy created with them `DONE` (TrinityCore
 /// keeps them dead through their saved respawn time).
 pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses: u32) -> Vec<u32> {
-    if store
-        .map(map_id)
-        .is_some_and(|entry| entry.instance_type == crate::maps::store::InstanceType::Raid)
-    {
-        let mut entries: Vec<_> = store
-            .raid_creature_encounters
-            .iter()
-            .filter(|((map, _), bit)| *map == map_id && done_bosses & (1 << **bit) != 0)
-            .map(|((_, entry), _)| *entry)
-            .collect();
-        entries.sort_unstable();
-        return entries;
-    }
-    store
-        .instance_scripts
-        .get(&map_id)
-        .and_then(|name| create_instance_script(name))
+    create_map_script(store, map_id, 0)
         .map(|script| {
             script
                 .boss_creatures
@@ -114,6 +98,95 @@ pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// Existing script ordinals remain stable; otherwise DB2 encounter bits are boss ids.
+/// Sparse bits keep the same saved-mask identity used by the raid-entry catalog.
+fn create_map_script(
+    store: &crate::maps::MapStore,
+    map_id: u32,
+    difficulty: u32,
+) -> Option<InstanceScript> {
+    let legacy = store
+        .instance_scripts
+        .get(&map_id)
+        .and_then(|name| create_instance_script(name));
+    let has_legacy = legacy.is_some();
+    let mut script = legacy.unwrap_or(InstanceScript {
+        name: "data_encounters",
+        bosses: Vec::new(),
+        boss_creatures: Vec::new(),
+    });
+    let mut bindings: Vec<_> = store
+        .raid_creature_encounters
+        .iter()
+        .filter(|((map, _), _)| *map == map_id)
+        .map(|((_, entry), bit)| (*entry, *bit))
+        .collect();
+    bindings.sort_unstable_by_key(|(entry, bit)| (*bit, *entry));
+    for (entry, bit) in bindings {
+        if script
+            .boss_creatures
+            .iter()
+            .any(|(known, _)| *known == entry)
+        {
+            continue;
+        }
+        let encounter = store
+            .dungeon_encounters
+            .values()
+            .filter(|e| {
+                e.map_id == map_id
+                    && e.bit == bit
+                    && (difficulty == 0
+                        || e.difficulty_id <= 0
+                        || e.difficulty_id as u32 == difficulty)
+            })
+            .min_by_key(|e| e.id)?;
+        let boss_id = if has_legacy {
+            script
+                .bosses
+                .iter()
+                .position(|boss| boss.encounter_id == encounter.id)
+                .unwrap_or(script.bosses.len()) as u32
+        } else {
+            bit
+        };
+        if boss_id >= 32 {
+            panic!("Encounter boss id {boss_id} exceeds saved mask on map {map_id}");
+        }
+        while script.bosses.len() <= boss_id as usize {
+            script.bosses.push(BossInfo {
+                state: EncounterState::NotStarted,
+                encounter_id: 0,
+            });
+        }
+        script.bosses[boss_id as usize].encounter_id = encounter.id;
+        script.boss_creatures.push((entry, boss_id));
+    }
+    (!script.boss_creatures.is_empty()).then_some(script)
+}
+
+/// A bound creature gets lifecycle even with no SmartAI rows or a C++ ScriptName.
+pub(super) fn bound_boss(world: &World, creature: Entity) -> Option<super::boss_ai::BossAi> {
+    let map = *world.get::<InMap>(creature)?;
+    if map.instance_id == 0 {
+        return None;
+    }
+    let entry = world.get::<shared::components::Npc>(creature)?.template_id;
+    let difficulty = world
+        .get_resource::<crate::maps::InstanceManager>()
+        .and_then(|instances| instances.copy_difficulty(map))
+        .map_or(0, |d| d.difficulty_id);
+    let script = create_map_script(
+        world.get_resource::<crate::maps::MapStore>()?,
+        map.map_id,
+        difficulty,
+    )?;
+    script
+        .boss_creatures
+        .iter()
+        .find_map(|(boss, id)| (*boss == entry).then(|| super::boss_ai::BossAi::new(*id)))
 }
 
 #[derive(Resource, Debug, Default)]
@@ -126,13 +199,13 @@ fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript>
         .0
         .contains_key(&map)
     {
-        let name = world
-            .get_resource::<crate::maps::MapStore>()
-            .and_then(|store| store.instance_scripts.get(&map.map_id))?;
-        let done_bosses = world
-            .get_resource::<crate::maps::InstanceManager>()
-            .map_or(0, |instances| instances.initial_done_bosses(map));
-        let script = create_instance_script(name)?.load(done_bosses);
+        let instances = world.get_resource::<crate::maps::InstanceManager>();
+        let done_bosses = instances.map_or(0, |instances| instances.initial_done_bosses(map));
+        let difficulty = instances
+            .and_then(|instances| instances.copy_difficulty(map))
+            .map_or(0, |difficulty| difficulty.difficulty_id);
+        let store = world.get_resource::<crate::maps::MapStore>()?;
+        let script = create_map_script(store, map.map_id, difficulty)?.load(done_bosses);
         world
             .resource_mut::<InstanceScripts>()
             .0

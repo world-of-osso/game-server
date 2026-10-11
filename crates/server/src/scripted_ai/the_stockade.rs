@@ -47,7 +47,7 @@ pub fn instance_script(name: &str) -> Option<InstanceScript> {
             })
             .collect(),
         // Defeat credit and saved-DONE spawn suppression use the scripts' boss ids.
-        boss_creatures: &[
+        boss_creatures: vec![
             (46383, DATA_RANDOLPH_MOLOCH),
             (46264, DATA_LORD_OVERHEAT),
             (46254, DATA_HOGGER),
