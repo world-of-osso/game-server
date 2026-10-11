@@ -37,7 +37,7 @@ All13 classes/all40 specs remain represented:630 book IDs/1551 memberships,302 c
 |48be611|First GREEN attempt blocked by module re-export visibility compilation; not behavioral proof.|
 |9f72f8d|Visibility corrected: `cargo test --locked -p server --bin game-server dummy22` **10/10 GREEN**, warning-free. Five Rewind cases and five native Mind Flay cases.|
 
-Final fmt/check pending. Lead cancelled the originally requested `spell_cast` gate; final proof uses targeted tests plus fmt/check only. No independent/full-server/live/full-rotation acceptance claimed.
+At integrated docs revision **bd6475e** (Rust unchanged from9f72f8d), `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` exit0, warning-free. Lead cancelled the originally requested `spell_cast` gate; **no broad suite run**. Later docs-only proof updates do not invalidate targeted10/10 or check/fmt. Changed-Rust readability audited manually; metrics executable unavailable. Main-thread proof only; no independent/full-server/live/full-rotation acceptance claimed.
 
 Verification uses the inherited immutable local shared-protocol44b2b0f with `--config patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy20-2026-10-11/shared-protocol"`; shared-protocol patch block remains intact. No master merge, deploy, live server or UDP5000.
 
