@@ -198,3 +198,47 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
         super::difficulty::send_raid_info(world, entity, character);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn raid_entry_separate_primary_legacy_selections_survive_database_reopen() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        {
+            let db = Database::create(file.path()).unwrap();
+            save(
+                &db,
+                71,
+                RaidDifficulty {
+                    primary: 15,
+                    legacy: 6,
+                },
+            );
+            save(
+                &db,
+                72,
+                RaidDifficulty {
+                    primary: 16,
+                    legacy: 3,
+                },
+            );
+        }
+        let db = Database::open(file.path()).unwrap();
+        assert_eq!(
+            load(&db, 71),
+            RaidDifficulty {
+                primary: 15,
+                legacy: 6
+            }
+        );
+        assert_eq!(
+            load(&db, 72),
+            RaidDifficulty {
+                primary: 16,
+                legacy: 3
+            }
+        );
+        assert_eq!(load(&db, 73), RaidDifficulty::default());
+    }
+}
