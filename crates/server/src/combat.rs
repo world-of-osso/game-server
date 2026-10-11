@@ -482,6 +482,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     sight: SwingSight<'w, 's>,
+    invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
@@ -510,6 +511,19 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             continue;
         };
         let target_entity = snapshot.auto_attack.victim;
+        let observer = params
+            .invisibility
+            .get(attacker_entity)
+            .cloned()
+            .unwrap_or_default();
+        let target = params
+            .invisibility
+            .get(target_entity)
+            .cloned()
+            .unwrap_or_default();
+        if !observer.detects(&target) {
+            continue;
+        }
         let attacker = Attacker {
             entity: attacker_entity,
             position: &snapshot.position,
@@ -944,15 +958,15 @@ fn try_swing(
         duel,
         armor,
         flags,
-        invisible,
+        _invisible,
         mut avoidance,
         stand_state,
     )) = targets.get_mut(target_entity)
     else {
         return None;
     };
-    // IsValidAttackTarget: an invisible or NON_ATTACKABLE_2 unit is not attacked.
-    let attackable = !invisible && flags.is_none_or(|flags| flags.is_attackable());
+    // Typed detection was checked for this attacker before the swing.
+    let attackable = flags.is_none_or(|flags| flags.is_attackable());
     if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
         return None;
     }

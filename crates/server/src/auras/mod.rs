@@ -17,6 +17,7 @@
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
+pub mod invisibility;
 pub(crate) mod linked_summon;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
@@ -27,6 +28,7 @@ pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
 mod unit_state;
+pub use invisibility::Invisibility;
 
 use std::collections::HashSet;
 
