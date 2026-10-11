@@ -17,6 +17,7 @@ pub(super) struct ScenarioDefinition {
     pub id: u32,
     pub name: String,
     pub kind: u32,
+    pub flags: u32,
     pub steps: Vec<ScenarioStep>,
 }
 
@@ -68,6 +69,7 @@ impl ScenarioRun {
             scenario_id: def.id,
             name: def.name.clone(),
             kind: def.kind,
+            flags: def.flags,
             step_id: step.map_or(0, |s| s.id),
             stage: self.step as u32 + 1,
             num_stages: def.steps.len() as u32,
@@ -90,16 +92,17 @@ pub(crate) fn load_scenarios(
     criteria: &AchievementCatalog,
 ) -> rusqlite::Result<ScenarioCatalog> {
     let mut catalog = ScenarioCatalog::default();
-    let mut query = conn.prepare("SELECT ID, Name_lang, Type FROM scenario ORDER BY ID")?;
+    let mut query = conn.prepare("SELECT ID, Name_lang, Type, Flags FROM scenario ORDER BY ID")?;
     let rows = query.query_map([], |r| {
         Ok((
             r.get::<_, u32>(0)?,
             r.get::<_, String>(1)?,
             r.get::<_, u32>(2)?,
+            r.get::<_, u32>(3)?,
         ))
     })?;
     for row in rows {
-        let (id, name, kind) = row?;
+        let (id, name, kind, flags) = row?;
         let steps = load_steps(conn, id)?;
         if !steps.is_empty()
             && steps
@@ -112,6 +115,7 @@ pub(crate) fn load_scenarios(
                     id,
                     name,
                     kind,
+                    flags,
                     steps,
                 },
             );

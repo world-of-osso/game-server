@@ -10,6 +10,7 @@ fn gnomeregan() -> ScenarioDefinition {
         id: 649,
         name: "Gnomeregan".into(),
         kind: 3,
+        flags: 10,
         steps: vec![ScenarioStep {
             id: 1176,
             title: "Gnomeregan".into(),
