@@ -106,7 +106,13 @@ pub fn run(args: Vec<String>) -> Result<()> {
     let txn = db.begin_read()?;
     let world = Connection::open_with_flags(&options.world, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     world.execute_batch("BEGIN")?;
-    let bundle = compose(&options, &txn, &world, &selected)?;
+    let bundle = SnapshotReader {
+        options: &options,
+        txn: &txn,
+        world: &world,
+        bundle: Bundle::new(),
+    }
+    .read_snapshot(&selected)?;
     // All reads/decodes/conversions finish before any destination mutation.
     std::fs::create_dir(&options.output)?;
     for (relative, bytes) in bundle {
@@ -153,31 +159,57 @@ fn fixture_allowlist(args: &[String]) -> Result<()> {
         .write_all(&bytes)?;
     Ok(())
 }
-fn compose(
-    options: &Options,
-    txn: &ReadTransaction,
-    world: &Connection,
-    selected: &BTreeSet<u64>,
-) -> Result<Bundle> {
-    let mut bundle = Bundle::new();
-    let mut summaries = Vec::new();
-    let mut guilds: BTreeMap<String, Value> = BTreeMap::new();
-    let mut saved_rankings = Vec::new();
-    let lifetime = raids::read_rankings(txn, world, selected, options.as_of)?;
-    for progression in &lifetime.guilds {
-        let id = progression["guild_id"]
-            .as_str()
-            .ok_or("guild history missing identity")?;
-        guilds.entry(id.to_owned()).or_insert_with(
-            || json!({"id":id,"name":progression["guild_name"],"roster":[],"raid_progression":[]}),
-        );
+struct SnapshotReader<'a> {
+    options: &'a Options,
+    txn: &'a ReadTransaction,
+    world: &'a Connection,
+    bundle: Bundle,
+}
+struct CharacterIndex {
+    summary: Value,
+    guild: Option<store::Guild>,
+    saved_progression: Vec<Value>,
+}
+impl SnapshotReader<'_> {
+    fn read_snapshot(mut self, selected: &BTreeSet<u64>) -> Result<Bundle> {
+        let lifetime = raids::read_rankings(self.txn, self.world, selected, self.options.as_of)?;
+        let mythic = mythic::read_rankings(self.txn, self.world, selected, self.options.as_of)?;
+        let locks = store::locks(self.txn)?;
+        let mut guilds = history_guilds(&lifetime.guilds)?;
+        let mut summaries = Vec::new();
+        let mut saved = Vec::new();
+        for &id in selected {
+            let character = self.read_character(id, &locks, &lifetime.characters, &mythic)?;
+            append_guild_roster(&mut guilds, character.guild, &character.summary)?;
+            summaries.push(character.summary);
+            saved.extend(character.saved_progression);
+        }
+        let guild_index = self.write_guilds(guilds, &lifetime.guilds)?;
+        self.write_rankings(lifetime, mythic, saved)?;
+        add_json(&mut self.bundle,"index.json".into(),self.options.document(json!({"realm_name":self.options.realm_name,"characters":summaries,"guilds":guild_index}),vec!["public_membership_and_opt_outs_operator_supplied".into()]))?;
+        Ok(self.bundle)
     }
-    let locks = store::locks(txn)?;
-    let mythic_rankings = mythic::read_rankings(txn, world, selected, options.as_of)?;
-    for &id in selected {
-        let data = store::bytes(txn, "characters", id)?
+    fn read_character(
+        &mut self,
+        id: u64,
+        locks: &store::Locks,
+        lifetime: &[Value],
+        mythic: &[Value],
+    ) -> Result<CharacterIndex> {
+        let data = store::bytes(self.txn, "characters", id)?
             .ok_or_else(|| format!("public character {id} missing"))?;
         let character = crate::character_data::CharacterData::decode_compatible(&data)?;
+        let guild = store::decode::<store::Guild>(self.txn, "character_guilds", id)?;
+        let progression =
+            store::decode::<store::Progression>(self.txn, "character_progression", id)?;
+        let summary = query_character_summary(
+            self.world,
+            id,
+            &character,
+            guild.as_ref(),
+            progression.as_ref(),
+        )?;
+        let mut page = summary.clone();
         let mut gaps = vec![
             "race_names_and_faction_catalog_unavailable".into(),
             "complete_effective_equipment_item_level_unavailable".into(),
@@ -185,263 +217,298 @@ fn compose(
             "legacy_mythic_runs_not_attributable_or_backfilled".into(),
             "pre_deploy_raid_history_not_backfilled".into(),
         ];
-        let guild: Option<store::Guild> = store::decode(txn, "character_guilds", id)?;
-        let guild_value = guild
-            .as_ref()
-            .map(|g| json!({"id":g.guild_id.to_string(),"name":g.guild_name}));
-        let progression: Option<store::Progression> =
-            store::decode(txn, "character_progression", id)?;
-        let spec = progression
-            .as_ref()
-            .map(|p| catalog::label(world, "chr_specialization", "Name_lang", p.spec_id))
-            .transpose()?;
-        let mut search = vec![character.name.to_lowercase()];
-        if let Some(g) = &guild {
-            search.push(g.guild_name.to_lowercase());
-        }
-        let summary = json!({"id":id.to_string(),"name":character.name,"race":{"id":character.race,"name":null},"class":catalog::label(world,"chr_classes","Name_lang",u32::from(character.class))?,"spec":spec,"level":character.level,"faction":null,"guild":guild_value,"item_level":null,"search_keys":search,"url":format!("characters/{id}.json")});
-        let mut page = summary.clone();
-        page["equipped_items"] =
-            equipment(options, txn, world, id, &character, &mut bundle, &mut gaps)?;
-        page["talents"] = talents(txn, id, progression.as_ref())?;
-        let (points, recent) = achievements(options, txn, world, id, &mut bundle, &mut gaps)?;
+        page["equipped_items"] = self.read_equipment(id, &character, &mut gaps)?;
+        page["talents"] = self.read_talents(id, progression.as_ref())?;
+        let (points, recent) = self.read_achievements(id, &mut gaps)?;
         page["achievement_points"] = points;
         page["recent_achievements"] = recent;
-        page["mythic_plus_best"] = json!(mythic::character_best(&mythic_rankings, id));
+        page["mythic_plus_best"] = json!(mythic::character_best(mythic, id));
         page["render_url"] = Value::Null;
-        page["pvp"] = pvp(txn, id)?;
-        let mut raid_progression = Vec::new();
-        if let Some(saved) = locks.locks.get(&id) {
-            for lock in saved
-                .values()
-                .filter(|lock| !lock.is_new && (lock.expiry > options.as_of || lock.extended))
-            {
-                if let Some(mut raid) = catalog::raid(world, lock)? {
-                    if raid["kills"].as_u64().unwrap_or(0) > 0 {
-                        raid["character_id"] = json!(id.to_string());
-                        saved_rankings.push(raid.clone());
-                    }
-                    raid_progression.push(raid);
-                }
-            }
-        }
-        raid_progression.sort_by_key(|r| (r["raid"]["id"].as_u64(), r["difficulty_id"].as_u64()));
-        page["saved_lock_progression"] = json!(raid_progression);
+        page["pvp"] = self.read_pvp(id)?;
+        let saved_progression = query_saved_progression(self.world, locks, id, self.options.as_of)?;
+        page["saved_lock_progression"] = json!(saved_progression);
         page["raid_progression"] = json!(
             lifetime
-                .characters
                 .iter()
                 .filter(|r| r["character_id"] == id.to_string())
                 .collect::<Vec<_>>()
         );
         add_json(
-            &mut bundle,
+            &mut self.bundle,
             format!("characters/{id}.json"),
-            options.document(page, gaps),
+            self.options.document(page, gaps),
         )?;
-        if let Some(g) = guild {
-            let entry=guilds.entry(g.guild_id.to_string()).or_insert_with(||json!({"id":g.guild_id.to_string(),"name":g.guild_name,"roster":[],"raid_progression":[]}));
-            entry["roster"]
-                .as_array_mut()
-                .ok_or("invalid guild roster")?
-                .push(summary.clone());
+        Ok(CharacterIndex {
+            summary,
+            guild,
+            saved_progression,
+        })
+    }
+    fn write_guilds(
+        &mut self,
+        guilds: BTreeMap<String, Value>,
+        progression: &[Value],
+    ) -> Result<Vec<Value>> {
+        let mut index = Vec::new();
+        for (id, mut guild) in guilds {
+            guild["raid_progression"] = json!(
+                progression
+                    .iter()
+                    .filter(|r| r["guild_id"] == id)
+                    .collect::<Vec<_>>()
+            );
+            index.push(json!({"id":id,"name":guild["name"],"url":format!("guilds/{id}.json")}));
+            add_json(
+                &mut self.bundle,
+                format!("guilds/{id}.json"),
+                self.options
+                    .document(guild, vec!["pre_deploy_raid_history_not_backfilled".into()]),
+            )?;
         }
-        summaries.push(summary);
+        Ok(index)
     }
-    let mut guild_index = Vec::new();
-    for (id, mut guild) in guilds {
-        guild["raid_progression"] = json!(
-            lifetime
-                .guilds
-                .iter()
-                .filter(|r| r["guild_id"] == id)
-                .collect::<Vec<_>>()
-        );
-        guild_index.push(json!({"id":id,"name":guild["name"],"url":format!("guilds/{id}.json")}));
+    fn write_rankings(
+        &mut self,
+        lifetime: raids::Rankings,
+        mythic: Vec<Value>,
+        mut saved: Vec<Value>,
+    ) -> Result<()> {
+        saved.retain(|r| r["kills"].as_u64().is_some_and(|n| n > 0));
+        saved.sort_by_key(|r| {
+            (
+                r["character_id"].as_str().map(str::to_owned),
+                r["raid"]["id"].as_u64(),
+                r["difficulty_id"].as_u64(),
+            )
+        });
+        add_json(&mut self.bundle,"rankings/raids.json".into(),self.options.document(json!({"policy":"kills_per_difficulty_then_first_kill","scope":"post_deploy_lifetime","characters":lifetime.characters,"guilds":lifetime.guilds,"saved_lock_characters":saved}),vec!["pre_deploy_raid_history_not_backfilled".into()]))?;
         add_json(
-            &mut bundle,
-            format!("guilds/{id}.json"),
-            options.document(guild, vec!["pre_deploy_raid_history_not_backfilled".into()]),
+            &mut self.bundle,
+            "rankings/mythic-plus.json".into(),
+            self.options.document(
+                json!({"policy":"highest_timed_key_then_clear_time","runs":mythic}),
+                vec![
+                    "legacy_mythic_runs_not_attributable_or_backfilled".into(),
+                    "active_mythic_season_unavailable".into(),
+                ],
+            ),
         )?;
+        Ok(())
     }
-    add_json(
-        &mut bundle,
-        "index.json".into(),
-        options.document(
-            json!({"realm_name":options.realm_name,"characters":summaries,"guilds":guild_index}),
-            vec!["public_membership_and_opt_outs_operator_supplied".into()],
-        ),
-    )?;
-    saved_rankings.sort_by_key(|r| {
-        (
-            r["character_id"].as_str().map(str::to_owned),
-            r["raid"]["id"].as_u64(),
-            r["difficulty_id"].as_u64(),
-        )
-    });
-    add_json(&mut bundle,"rankings/raids.json".into(),options.document(json!({"policy":"kills_per_difficulty_then_first_kill","scope":"post_deploy_lifetime","characters":lifetime.characters,"guilds":lifetime.guilds,"saved_lock_characters":saved_rankings}),vec!["pre_deploy_raid_history_not_backfilled".into()]))?;
-    add_json(
-        &mut bundle,
-        "rankings/mythic-plus.json".into(),
-        options.document(
-            json!({"policy":"highest_timed_key_then_clear_time","runs":mythic_rankings}),
-            vec![
-                "legacy_mythic_runs_not_attributable_or_backfilled".into(),
-                "active_mythic_season_unavailable".into(),
-            ],
-        ),
-    )?;
-    Ok(bundle)
-}
-fn equipment(
-    options: &Options,
-    txn: &ReadTransaction,
-    world: &Connection,
-    id: u64,
-    character: &crate::character_data::CharacterData,
-    bundle: &mut Bundle,
-    gaps: &mut Vec<String>,
-) -> Result<Value> {
-    let owned: Vec<store::Equipped> =
-        store::decode(txn, "character_equipment", id)?.unwrap_or_default();
-    let source_table =
-        match txn.open_table(TableDefinition::<u64, u8>::new("item_definition_sources")) {
+    fn read_equipment(
+        &mut self,
+        id: u64,
+        character: &crate::character_data::CharacterData,
+        gaps: &mut Vec<String>,
+    ) -> Result<Value> {
+        let owned: Vec<store::Equipped> =
+            store::decode(self.txn, "character_equipment", id)?.unwrap_or_default();
+        let source_table = match self
+            .txn
+            .open_table(TableDefinition::<u64, u8>::new("item_definition_sources"))
+        {
             Ok(t) => Some(t),
             Err(redb::TableError::TableDoesNotExist(_)) => None,
             Err(e) => return Err(e.into()),
         };
-    let mut items = Vec::new();
-    for equipped in owned {
-        let source = source_table
-            .as_ref()
-            .map(|t| t.get(equipped.item.item_guid))
-            .transpose()?
-            .flatten()
-            .map(|r| r.value())
-            .unwrap_or(0);
-        let (level, fdid) = catalog::item(world, equipped.item.item_id, source)?;
-        let icon_url = catalog::icon(bundle, &options.textures, fdid)?;
-        if icon_url.is_none() {
-            gaps.push(format!("item_{}_icon_unavailable", equipped.item.item_id));
+        let mut items = Vec::new();
+        for equipped in owned {
+            let source = source_table
+                .as_ref()
+                .map(|t| t.get(equipped.item.item_guid))
+                .transpose()?
+                .flatten()
+                .map(|r| r.value())
+                .unwrap_or(0);
+            let (level, fdid) = catalog::item(self.world, equipped.item.item_id, source)?;
+            let icon_url = catalog::icon(&mut self.bundle, &self.options.textures, fdid)?;
+            if icon_url.is_none() {
+                gaps.push(format!("item_{}_icon_unavailable", equipped.item.item_id));
+            }
+            let appearance = character
+                .equipment_appearance
+                .entries
+                .iter()
+                .find(|e| e.slot == equipped.slot);
+            let transmog: Option<store::Transmog> =
+                store::decode(self.txn, "item_transmogs", equipped.item.item_guid)?;
+            items.push(json!({"slot":format!("{:?}",equipped.slot),"item_id":equipped.item.item_id,"definition_source":source,"name":equipped.item.name,"quality":equipped.item.quality,"item_level":level,"icon_fdid":fdid,"icon_url":icon_url,"appearance":{"display_info_id":appearance.and_then(|e|e.display_info_id),"hidden":appearance.is_some_and(|e|e.hidden)},"transmog":transmog.map(|t|json!({"appearance_id":t.source_id,"display_info_id":t.display_id,"hidden":t.hidden}))}));
         }
-        let appearance = character
-            .equipment_appearance
-            .entries
-            .iter()
-            .find(|e| e.slot == equipped.slot);
-        let transmog: Option<store::Transmog> =
-            store::decode(txn, "item_transmogs", equipped.item.item_guid)?;
-        items.push(json!({"slot":format!("{:?}",equipped.slot),"item_id":equipped.item.item_id,"definition_source":source,"name":equipped.item.name,"quality":equipped.item.quality,"item_level":level,"icon_fdid":fdid,"icon_url":icon_url,"appearance":{"display_info_id":appearance.and_then(|e|e.display_info_id),"hidden":appearance.is_some_and(|e|e.hidden)},"transmog":transmog.map(|t|json!({"appearance_id":t.source_id,"display_info_id":t.display_id,"hidden":t.hidden}))}));
+        items.sort_by_key(|item| item["slot"].as_str().unwrap_or("").to_owned());
+        Ok(json!(items))
     }
-    items.sort_by_key(|item| item["slot"].as_str().unwrap_or("").to_owned());
-    Ok(json!(items))
-}
-fn talents(
-    txn: &ReadTransaction,
-    id: u64,
-    progression: Option<&store::Progression>,
-) -> Result<Value> {
-    let Some(progression) = progression else {
-        return Ok(Value::Null);
-    };
-    let Some(traits) = store::decode::<store::Traits>(txn, "character_trait_loadouts_v1", id)?
-    else {
-        return Ok(Value::Null);
-    };
-    let Some(spec) = traits
-        .specs
-        .into_iter()
-        .find(|s| s.spec_id == progression.spec_id)
-    else {
-        return Ok(Value::Null);
-    };
-    let mut loadouts =
-        vec![json!({"id":0,"name":null,"selected":spec.selected_id==0,"purchases":spec.default})];
-    loadouts.extend(spec.configs.into_iter().map(|c|json!({"id":c.id,"name":c.name,"selected":c.id==spec.selected_id,"purchases":c.purchases})));
-    loadouts.sort_by_key(|c| c["id"].as_u64());
-    Ok(json!({"spec_id":spec.spec_id,"selected_loadout_id":spec.selected_id,"loadouts":loadouts}))
-}
-fn pvp(txn: &ReadTransaction, id: u64) -> Result<Value> {
-    let Some(saved) = store::json(txn, "pvp_states", id)? else {
-        return Ok(Value::Null);
-    };
-    let mut value = json!({});
-    for key in ["honor", "honor_max", "conquest", "conquest_max", "brackets"] {
-        value[key] = saved
-            .get(key)
-            .ok_or_else(|| format!("pvp state missing {key}"))?
-            .clone();
+    fn read_talents(&self, id: u64, progression: Option<&store::Progression>) -> Result<Value> {
+        let Some(progression) = progression else {
+            return Ok(Value::Null);
+        };
+        let Some(traits) =
+            store::decode::<store::Traits>(self.txn, "character_trait_loadouts_v1", id)?
+        else {
+            return Ok(Value::Null);
+        };
+        let Some(spec) = traits
+            .specs
+            .into_iter()
+            .find(|s| s.spec_id == progression.spec_id)
+        else {
+            return Ok(Value::Null);
+        };
+        let mut loadouts = vec![
+            json!({"id":0,"name":null,"selected":spec.selected_id==0,"purchases":spec.default}),
+        ];
+        loadouts.extend(spec.configs.into_iter().map(|c|json!({"id":c.id,"name":c.name,"selected":c.id==spec.selected_id,"purchases":c.purchases})));
+        loadouts.sort_by_key(|c| c["id"].as_u64());
+        Ok(
+            json!({"spec_id":spec.spec_id,"selected_loadout_id":spec.selected_id,"loadouts":loadouts}),
+        )
     }
-    // Explicit field allowlist, including each bracket; never serialize future private fields.
-    let brackets = value["brackets"]
-        .as_array_mut()
-        .ok_or("pvp brackets must be an array")?;
-    for bracket in brackets {
-        let mut clean = json!({});
-        for key in [
-            "bracket",
-            "rating",
-            "season_wins",
-            "season_losses",
-            "weekly_wins",
-            "weekly_losses",
-        ] {
-            clean[key] = bracket
+    fn read_pvp(&self, id: u64) -> Result<Value> {
+        let Some(saved) = store::json(self.txn, "pvp_states", id)? else {
+            return Ok(Value::Null);
+        };
+        let mut value = json!({});
+        for key in ["honor", "honor_max", "conquest", "conquest_max", "brackets"] {
+            value[key] = saved
                 .get(key)
-                .ok_or_else(|| format!("pvp bracket missing {key}"))?
+                .ok_or_else(|| format!("pvp state missing {key}"))?
                 .clone();
         }
-        *bracket = clean;
+        // Explicit field allowlist, including each bracket; never serialize future private fields.
+        let brackets = value["brackets"]
+            .as_array_mut()
+            .ok_or("pvp brackets must be an array")?;
+        for bracket in brackets {
+            let mut clean = json!({});
+            for key in [
+                "bracket",
+                "rating",
+                "season_wins",
+                "season_losses",
+                "weekly_wins",
+                "weekly_losses",
+            ] {
+                clean[key] = bracket
+                    .get(key)
+                    .ok_or_else(|| format!("pvp bracket missing {key}"))?
+                    .clone();
+            }
+            *bracket = clean;
+        }
+        Ok(value)
     }
-    Ok(value)
+    fn read_achievements(&mut self, id: u64, gaps: &mut Vec<String>) -> Result<(Value, Value)> {
+        let Some(saved) = store::json(self.txn, "achievements", id)? else {
+            return Ok((Value::Null, json!([])));
+        };
+        let earned = saved["earned_ids"]
+            .as_array()
+            .ok_or("achievement earned_ids must be an array")?;
+        let mut total = Some(0_u64);
+        let mut recent = Vec::new();
+        for id in earned {
+            let id = id.as_u64().ok_or("achievement id must be integer")?;
+            let metadata: Option<(String, u32, u32)> = self
+                .world
+                .query_row(
+                    "SELECT Title_lang,Points,IconFileID FROM achievement WHERE ID=?1",
+                    [id],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+                .optional()?;
+            let Some((name, points, fdid)) = metadata else {
+                total = None;
+                gaps.push(format!("achievement_{id}_catalog_unavailable"));
+                continue;
+            };
+            total = total.map(|sum| sum + u64::from(points));
+            let earned_at = saved["earned_at"]
+                .get(id.to_string())
+                .cloned()
+                .unwrap_or(Value::Null);
+            recent.push(json!({"id":id,"name":name,"points":points,"earned_at":earned_at,"icon_fdid":fdid,"icon_url":catalog::icon(&mut self.bundle,&self.options.textures,Some(fdid).filter(|id|*id!=0))?}));
+        }
+        recent.sort_by_key(|e| {
+            (
+                std::cmp::Reverse(e["earned_at"].as_i64().unwrap_or(i64::MIN)),
+                e["id"].as_u64(),
+            )
+        });
+        recent.truncate(10);
+        Ok((json!(total), json!(recent)))
+    }
 }
-fn achievements(
-    options: &Options,
-    txn: &ReadTransaction,
+fn history_guilds(progression: &[Value]) -> Result<BTreeMap<String, Value>> {
+    let mut guilds = BTreeMap::new();
+    for row in progression {
+        let id = row["guild_id"]
+            .as_str()
+            .ok_or("guild history missing identity")?;
+        guilds.entry(id.to_owned()).or_insert_with(
+            || json!({"id":id,"name":row["guild_name"],"roster":[],"raid_progression":[]}),
+        );
+    }
+    Ok(guilds)
+}
+fn append_guild_roster(
+    guilds: &mut BTreeMap<String, Value>,
+    guild: Option<store::Guild>,
+    summary: &Value,
+) -> Result<()> {
+    let Some(guild) = guild else {
+        return Ok(());
+    };
+    let id = guild.guild_id.to_string();
+    let entry = guilds.entry(id.clone()).or_insert_with(
+        || json!({"id":id,"name":guild.guild_name,"roster":[],"raid_progression":[]}),
+    );
+    entry["name"] = json!(guild.guild_name);
+    entry["roster"]
+        .as_array_mut()
+        .ok_or("invalid guild roster")?
+        .push(summary.clone());
+    Ok(())
+}
+fn query_character_summary(
     world: &Connection,
     id: u64,
-    bundle: &mut Bundle,
-    gaps: &mut Vec<String>,
-) -> Result<(Value, Value)> {
-    let Some(saved) = store::json(txn, "achievements", id)? else {
-        return Ok((Value::Null, json!([])));
-    };
-    let earned = saved["earned_ids"]
-        .as_array()
-        .ok_or("achievement earned_ids must be an array")?;
-    let mut total = Some(0_u64);
-    let mut recent = Vec::new();
-    for id in earned {
-        let id = id.as_u64().ok_or("achievement id must be integer")?;
-        let metadata: Option<(String, u32, u32)> = world
-            .query_row(
-                "SELECT Title_lang,Points,IconFileID FROM achievement WHERE ID=?1",
-                [id],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )
-            .optional()?;
-        let Some((name, points, fdid)) = metadata else {
-            total = None;
-            gaps.push(format!("achievement_{id}_catalog_unavailable"));
-            continue;
-        };
-        total = total.map(|sum| sum + u64::from(points));
-        let earned_at = saved["earned_at"]
-            .get(id.to_string())
-            .cloned()
-            .unwrap_or(Value::Null);
-        recent.push(json!({"id":id,"name":name,"points":points,"earned_at":earned_at,"icon_fdid":fdid,"icon_url":catalog::icon(bundle,&options.textures,Some(fdid).filter(|id|*id!=0))?}));
+    character: &crate::character_data::CharacterData,
+    guild: Option<&store::Guild>,
+    progression: Option<&store::Progression>,
+) -> Result<Value> {
+    let spec = progression
+        .map(|p| catalog::label(world, "chr_specialization", "Name_lang", p.spec_id))
+        .transpose()?;
+    let guild_value = guild.map(|g| json!({"id":g.guild_id.to_string(),"name":g.guild_name}));
+    let mut search = vec![character.name.to_lowercase()];
+    if let Some(guild) = guild {
+        search.push(guild.guild_name.to_lowercase());
     }
-    recent.sort_by_key(|e| {
-        (
-            std::cmp::Reverse(e["earned_at"].as_i64().unwrap_or(i64::MIN)),
-            e["id"].as_u64(),
-        )
-    });
-    recent.truncate(10);
-    Ok((json!(total), json!(recent)))
+    Ok(
+        json!({"id":id.to_string(),"name":character.name,"race":{"id":character.race,"name":null},"class":catalog::label(world,"chr_classes","Name_lang",u32::from(character.class))?,"spec":spec,"level":character.level,"faction":null,"guild":guild_value,"item_level":null,"search_keys":search,"url":format!("characters/{id}.json")}),
+    )
 }
-
+fn query_saved_progression(
+    world: &Connection,
+    locks: &store::Locks,
+    id: u64,
+    as_of: i64,
+) -> Result<Vec<Value>> {
+    let Some(saved) = locks.locks.get(&id) else {
+        return Ok(Vec::new());
+    };
+    let mut progression = Vec::new();
+    for lock in saved
+        .values()
+        .filter(|lock| !lock.is_new && (lock.expiry > as_of || lock.extended))
+    {
+        if let Some(mut raid) = catalog::raid(world, lock)? {
+            raid["character_id"] = json!(id.to_string());
+            progression.push(raid);
+        }
+    }
+    progression.sort_by_key(|r| (r["raid"]["id"].as_u64(), r["difficulty_id"].as_u64()));
+    Ok(progression)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
