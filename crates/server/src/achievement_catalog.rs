@@ -20,7 +20,10 @@ const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
+    SkillRank(u32, u16),
     CompleteQuest(u32),
+    CastSpell(u32),
+    BeSpellTarget(u32),
     DefeatEncounter(u32),
 }
 
@@ -29,7 +32,10 @@ impl CriteriaEvent {
         match self {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
+            Self::SkillRank(_, _) => 7,
             Self::CompleteQuest(_) => 27,
+            Self::CastSpell(_) => 29,
+            Self::BeSpellTarget(_) => 28,
             Self::DefeatEncounter(_) => 165,
         }
     }
@@ -40,8 +46,11 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::SkillRank(asset, _) => asset == criteria.asset,
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
+            | Self::CastSpell(asset)
+            | Self::BeSpellTarget(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -117,6 +126,14 @@ pub(crate) struct TreeProgress {
 }
 
 impl AchievementCatalog {
+    pub(super) fn tracks(&self, event: CriteriaEvent) -> bool {
+        self.event_criteria
+            .get(&event.kind())
+            .into_iter()
+            .flatten()
+            .any(|id| event.matches(&self.criteria[id]))
+    }
+
     /// Apply one event and return newly earned toasts. Map achievements are granted
     /// only at the complete-run boundary, not on a partial dungeon's boss kill.
     pub fn update(
@@ -133,22 +150,25 @@ impl AchievementCatalog {
             let counter = state.criteria_progress.entry(id).or_default();
             *counter = match event {
                 CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+                CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
                 CriteriaEvent::CompleteQuest(_) => 1,
                 _ => counter.saturating_add(1),
             };
         }
-        self.grant_completed(state, completed_map, race)
+        self.grant_completed(state, completed_map, race, false)
     }
 
-    fn grant_completed(
+    pub(super) fn grant_completed(
         &self,
         state: &mut PlayerAchievementState,
         completed_map: Option<u32>,
         race: u8,
+        account_scope: bool,
     ) -> Vec<AchievementToastSnapshot> {
         let mut toasts = Vec::new();
         loop {
-            let completed = self.find_completed_definitions(state, completed_map, race);
+            let completed =
+                self.find_completed_definitions(state, completed_map, race, account_scope);
             if completed.is_empty() {
                 return toasts;
             }
@@ -168,11 +188,14 @@ impl AchievementCatalog {
         state: &PlayerAchievementState,
         completed_map: Option<u32>,
         race: u8,
+        account_scope: bool,
     ) -> Vec<&AchievementDef> {
         self.definitions
             .values()
             .filter(|definition| {
-                if state.earned_ids.contains(&definition.id) {
+                if self.window.has_account_flag(definition.id) != account_scope
+                    || state.earned_ids.contains(&definition.id)
+                {
                     return false;
                 }
                 if !self.faction_matches(definition.faction, race) {
@@ -195,6 +218,13 @@ impl AchievementCatalog {
                 .iter()
                 .filter(|id| !self.window.has_account_flag(**id))
                 .copied()
+                .chain(
+                    state
+                        .account
+                        .iter()
+                        .flat_map(|account| account.earned_ids.iter().copied())
+                        .filter(|id| self.window.has_account_flag(*id)),
+                )
                 .collect(),
             progress: self.progress_snapshot(state, race),
         }
@@ -208,7 +238,11 @@ impl AchievementCatalog {
         self.definitions
             .values()
             .filter(|definition| self.faction_matches(definition.faction, race))
+            .filter(|definition| {
+                !self.window.has_account_flag(definition.id) || state.account.is_some()
+            })
             .map(|definition| {
+                let state = self.definition_state(state, definition.id);
                 let progress = self.tree_progress(definition.root, state);
                 AchievementProgressSnapshot {
                     achievement_id: definition.id,
@@ -218,6 +252,53 @@ impl AchievementCatalog {
                 }
             })
             .collect()
+    }
+
+    pub(super) fn definition_state<'a>(
+        &self,
+        state: &'a PlayerAchievementState,
+        id: u32,
+    ) -> &'a PlayerAchievementState {
+        if self.window.has_account_flag(id) {
+            static EMPTY: std::sync::LazyLock<PlayerAchievementState> =
+                std::sync::LazyLock::new(PlayerAchievementState::default);
+            state.account.as_deref().unwrap_or(&EMPTY)
+        } else {
+            state
+        }
+    }
+
+    /// Account counters are rebuilt from durable per-character contributions.
+    /// Absolute facts (levels/quests/ranks/exploration/reputation) use max;
+    /// event counters (kills/casts/targets/encounters) add across characters.
+    pub(super) fn aggregate(
+        &self,
+        contributions: impl Iterator<Item = PlayerAchievementState>,
+    ) -> PlayerAchievementState {
+        let mut aggregate = PlayerAchievementState::default();
+        for contribution in contributions {
+            aggregate.earned_ids.extend(contribution.earned_ids);
+            for (id, date) in contribution.earned_at {
+                aggregate
+                    .earned_at
+                    .entry(id)
+                    .and_modify(|existing| *existing = (*existing).min(date))
+                    .or_insert(date);
+            }
+            for (id, value) in contribution.criteria_progress {
+                let counter = aggregate.criteria_progress.entry(id).or_default();
+                *counter = if self
+                    .criteria
+                    .get(&id)
+                    .is_some_and(|row| matches!(row.kind, 0 | 28 | 29 | 165))
+                {
+                    counter.saturating_add(value)
+                } else {
+                    (*counter).max(value)
+                };
+            }
+        }
+        aggregate
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
@@ -321,7 +402,12 @@ impl AchievementCatalog {
         if let Some(criteria) = self.criteria.get(&id)
             && criteria.kind == 8
         {
-            return state.earned_ids.contains(&criteria.asset).then_some(1);
+            return (state.earned_ids.contains(&criteria.asset)
+                || state.account.as_deref().is_some_and(|account| {
+                    self.window.has_account_flag(criteria.asset)
+                        && account.earned_ids.contains(&criteria.asset)
+                }))
+            .then_some(1);
         }
         state.criteria_progress.get(&id).copied()
     }
@@ -375,7 +461,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT ID, Type, Asset, ModifierTreeId, StartEvent, StartTimer, FailEvent, EligibilityWorldStateID FROM criteria")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -386,7 +472,14 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             Criteria {
                 kind,
                 asset: row.get::<_, i32>(2)? as u32,
-                supported: matches!(kind, 0 | 5 | 8 | 27 | 165)
+                // TDB1210 criteria_data:11118-11127 require holiday404;
+                // 5258 has data_type0 (no condition). No holiday inference.
+                supported: (matches!(kind, 0 | 5 | 8 | 27 | 165)
+                    || (kind == 7 && row.get::<_, bool>(9)?)
+                    || (kind == 28 && row.get::<_, bool>(8)?)
+                    || (kind == 29
+                        && row.get::<_, bool>(8)?
+                        && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
                     && conditional.iter().all(|value| *value == 0),
             },
         ))
@@ -419,10 +512,10 @@ fn load_trees(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::
 }
 
 fn load_definitions(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    // Account-wide and statistic achievements still require separate tracking.
-    const ACCOUNT_OR_COUNTER: u32 = 0x1 | ACHIEVEMENT_FLAG_ACCOUNT;
+    // Statistic definitions remain outside achievement grants.
+    const COUNTER: u32 = 0x1;
     let mut query = conn.prepare("SELECT ID, Title_lang, Points, CriteriaTree, Instance_ID, Faction FROM achievement WHERE CriteriaTree != 0 AND (Flags & ?1) = 0")?;
-    let rows = query.query_map([ACCOUNT_OR_COUNTER], |row| {
+    let rows = query.query_map([COUNTER], |row| {
         let map_id: i32 = row.get(4)?;
         Ok(AchievementDef {
             id: row.get(0)?,

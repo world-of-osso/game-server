@@ -195,8 +195,9 @@ impl AchievementCatalog {
         race: u8,
     ) -> AchievementCatalogEntry {
         let (criteria, next_criteria_id) = self.criteria_page(state, row.id, 0, race);
-        let character_scope = row.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0;
-        let earned = character_scope && state.earned_ids.contains(&row.id);
+        let has_scope = row.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0 || state.account.is_some();
+        let state = self.definition_state(state, row.id);
+        let earned = state.earned_ids.contains(&row.id);
         AchievementCatalogEntry {
             achievement_id: row.id,
             name: row.name.clone(),
@@ -207,7 +208,7 @@ impl AchievementCatalog {
             earned_at: earned
                 .then(|| state.earned_at.get(&row.id).copied())
                 .flatten(),
-            progress_supported: self.definitions.contains_key(&row.id),
+            progress_supported: has_scope && self.definitions.contains_key(&row.id),
             criteria,
             next_criteria_id,
         }
@@ -233,9 +234,9 @@ impl AchievementCatalog {
                 (
                     id,
                     self.criterion_line(
-                        state,
+                        self.definition_state(state, achievement_id),
                         id,
-                        definition.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0,
+                        definition.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0 || state.account.is_some(),
                     ),
                 )
             }),

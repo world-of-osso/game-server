@@ -137,12 +137,16 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
         .entity_mut(client.player)
         .insert(saved.clone());
     enter_world(&mut app, &client);
-    assert_eq!(
-        *app.world()
-            .get::<PlayerAchievementState>(client.player)
-            .unwrap(),
-        saved
+    let mut reloaded = app
+        .world()
+        .get::<PlayerAchievementState>(client.player)
+        .unwrap()
+        .clone();
+    assert!(
+        reloaded.account.take().is_some(),
+        "login reconstructs account presentation"
     );
+    assert_eq!(reloaded, saved);
     assert!(
         received::<AchievementStateUpdate>(&mut app, &client)
             .iter()

@@ -8,11 +8,12 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [x] Successful scripted deaths record encounter progress; duplicate DONE does not credit it.
 - [x] Persist scheduled instance boss/encounter masks with existing instance locks; normal-copy checkpoints survive restart without acquiring scheduled reset restrictions and clear on manual reset.
 - [x] Grant Stockade achievement 633 after all three encounters, using its real Hogger criterion; deliver existing toast and snapshot to that copy's players only.
-- [x] Evaluate unconditional kill-creature (0), reach-level (5), complete-quest (27), earned-achievement dependency (8), and defeat-dungeon-encounter (165) criteria from DB2.
+- [x] Evaluate unconditional kill-creature (0), reach-level (5), complete-quest (27), earned-achievement dependency (8), successful spell casts (29), current base skill ranks (7), spell-target hits (28), and defeat-dungeon-encounter (165) criteria from DB2.
 - [x] Credit quest completion only after successful reward persistence; incomplete/rejected turn-ins never credit. Repeat reward events remain boolean, not accumulated counts.
 - [x] Recover quest criteria from the character's persisted rewarded quest IDs on login; dependency criteria read persisted earned IDs and cascade newly earned meta-achievements to a fixed point. Reconnect sends snapshots without replaying earned toasts.
 - [x] Match Achievement.Faction (-1 both, 0 Horde, 1 Alliance) to the player's authored faction template; exclude opposing/neutral faction-only rows from grants, catalog/criteria pages and live progress.
-- [x] Exclude account-wide grants with Retail ACHIEVEMENT_FLAGS_ACCOUNT (0x20000), not SHOW_CRITERIA_MEMBERS (0x10000). Do not present character counters or historical character-local earned records as account progress; retain persisted history for the later account migration.
+- [x] Separate account-wide grants with Retail ACHIEVEMENT_FLAGS_ACCOUNT (0x20000), not SHOW_CRITERIA_MEMBERS (0x10000). Aggregate durable character contributions within the owning account; migrate historical progress without changing other character rows. Never persist account totals into character counters.
+- [x] Retain account earned IDs and earliest known dates across reconnect, restart and character deletion. Account criteria pages and snapshots use account aggregates; character rows use their own counters. Unrelated accounts remain isolated.
 - [x] Evaluate Single/All/Any and direct-child count operators, preserving numeric progress in redb.
 - [x] Grant Retail achievements at the previous 10/20/40/60/70/80 thresholds, using actual Retail IDs rather than placeholder 1–6; migrate persisted placeholders once.
 
@@ -58,5 +59,6 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 ## Out of scope
 
 - Client objective tracker / achievement window rendering; client stays read-only in phase 2.
-- ModifierTree, timed, world-state, account-wide, unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated. Account aggregation/persistence/migration is the next slice.
-- Additional criteria types beyond 0/5/8/27/165.
+- ModifierTree, timed, world-state and unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated.
+- Exploration43 stays disabled without an authored local WorldMapOverlay-to-area mapping. Reputation46 stays disabled while runtime standing values are incompatible with Retail signed standing; never compare shared63000 directly to Retail42000. Tests explicitly refuse grants627/944 even with historical counters present.
+- Additional criteria types beyond 0/5/7/8/27/28/29/165. Target hits credit each distinct recipient once after defense/missile filtering, including triggered spells, not the caster. Skill rows require an authored local SkillLine; loaded and changed nonzero ranks set numeric progress, never use maximum rank or increment it. Cast rows require a local spell and no DB2 conditions; TDB1210 holiday404 criteria11118–11127 remain disabled.

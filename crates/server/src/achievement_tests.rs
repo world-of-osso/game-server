@@ -1,6 +1,393 @@
 use super::*;
 use rusqlite::Connection;
 
+#[test]
+fn achievements2_account_quests_migrate_across_characters_without_changing_character_credit() {
+    use shared::components::CharacterAppearance;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (first, _) = persistence::create_character(&db, 17, "Firstalt", 1, 1).unwrap();
+    let (second, _) = persistence::create_character(&db, 17, "Secondalt", 1, 1).unwrap();
+    let (other, _) = persistence::create_character(&db, 18, "Otheralt", 1, 1).unwrap();
+    let mut query = conn.prepare("WITH RECURSIVE tree(ID) AS (SELECT CriteriaTree FROM achievement WHERE ID=4899 UNION SELECT t.ID FROM criteria_tree t JOIN tree ON t.Parent=tree.ID) SELECT DISTINCT c.Asset FROM tree JOIN criteria_tree t ON t.ID=tree.ID JOIN criteria c ON c.ID=t.CriteriaID WHERE c.Type=27 ORDER BY c.Asset").unwrap();
+    let quests: Vec<u32> = query
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(quests.len() > 2);
+    let mut contributions = [
+        PlayerAchievementState::default(),
+        PlayerAchievementState::default(),
+    ];
+    for (index, quest) in quests.into_iter().enumerate() {
+        catalog.update(
+            &mut contributions[index % 2],
+            CriteriaEvent::CompleteQuest(quest),
+            None,
+            1,
+        );
+    }
+    persistence::save_achievements(&db, first, &contributions[0]);
+    persistence::save_achievements(&db, second, &contributions[1]);
+    let mut world = World::new();
+    world.insert_resource(catalog);
+    world.insert_resource(GameDatabase { db });
+    world.init_resource::<crate::maps::ServerClock>();
+    let player = world
+        .spawn((
+            Player {
+                name: "Firstalt".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            contributions[0].clone(),
+        ))
+        .id();
+    let connection = world
+        .spawn((
+            Authenticated { account_id: 17 },
+            PlayerLink(player),
+            InWorld {
+                character_id: first,
+            },
+        ))
+        .id();
+    let (snapshot, toasts) =
+        update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(1)], None).unwrap();
+    assert!(
+        snapshot.earned_ids.contains(&4899),
+        "account quests must combine both characters"
+    );
+    assert_eq!(
+        toasts
+            .iter()
+            .filter(|toast| toast.achievement_id == 4899)
+            .count(),
+        1
+    );
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .earned_ids
+            .contains(&4899)
+    );
+    let saved = persistence::load_achievements(&world.resource::<GameDatabase>().db, second);
+    assert_eq!(saved, contributions[1]);
+    assert!(
+        update_player_events(&mut world, player, &[], None)
+            .unwrap()
+            .1
+            .is_empty()
+    );
+    world.entity_mut(connection).insert((
+        Authenticated { account_id: 18 },
+        InWorld {
+            character_id: other,
+        },
+    ));
+    world
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    assert!(
+        !update_player_events(&mut world, player, &[], None)
+            .unwrap()
+            .0
+            .earned_ids
+            .contains(&4899)
+    );
+    drop(world);
+    let db = redb::Database::open(file.path()).unwrap();
+    let mut world = World::new();
+    world.insert_resource(load_achievement_catalog(&conn).unwrap());
+    world.insert_resource(GameDatabase { db });
+    world.init_resource::<crate::maps::ServerClock>();
+    let player = world
+        .spawn((
+            Player {
+                name: "Secondalt".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            contributions[1].clone(),
+        ))
+        .id();
+    world.spawn((
+        Authenticated { account_id: 17 },
+        PlayerLink(player),
+        InWorld {
+            character_id: second,
+        },
+    ));
+    let (snapshot, toasts) = update_player_events(&mut world, player, &[], None).unwrap();
+    assert!(snapshot.earned_ids.contains(&4899));
+    assert!(toasts.is_empty());
+}
+
+#[test]
+fn achievements2_successful_spell_cast_counts_once_and_rejected_trigger_does_not() {
+    let mut h = crate::spell_cast::test_harness::harness_with(vec![], &[43779], 1, false).unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .init_resource::<crate::maps::ServerClock>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 43779, None, u8::MAX);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&1832)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 43779, None, 0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&1832),
+        Some(&1)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 43779, None, 0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&1832),
+        Some(&2)
+    );
+}
+
+#[test]
+fn achievements2_skill_rank_uses_current_base_rank_not_maximum_or_increment() {
+    use shared::components::CharacterAppearance;
+    use shared::profession::ProfessionSkillLine;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let line = ProfessionSkillLine {
+        skill_line: 171,
+        rank: 299,
+        max_rank: 450,
+        step: 1,
+    };
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Skilled".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            PlayerAchievementState::default(),
+            crate::profession::PlayerProfessions {
+                lines: vec![line],
+                spells: vec![],
+            },
+        ))
+        .id();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5565),
+        Some(&299)
+    );
+    app.world_mut()
+        .get_mut::<crate::profession::PlayerProfessions>(player)
+        .unwrap()
+        .lines[0]
+        .rank = 250;
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5565),
+        Some(&250)
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5565),
+        Some(&250)
+    );
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5566)
+    );
+}
+
+#[test]
+fn achievements2_spell_targets_credit_recipient_not_caster_and_count_once_per_hit() {
+    let mut h =
+        crate::spell_cast::test_harness::harness_with(vec![], &[24733, 24732], 1, false).unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .init_resource::<crate::maps::ServerClock>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    let recipient = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(recipient)
+        .insert(PlayerAchievementState::default());
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24733, Some(recipient), u8::MAX);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(recipient)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&3209)
+    );
+    for expected in [1, 2] {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24733, Some(recipient), 0);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(recipient)
+                .unwrap()
+                .criteria_progress
+                .get(&3209),
+            Some(&expected)
+        );
+    }
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&3209)
+    );
+}
+
+#[test]
+fn achievements2_account_migration_keeps_dates_and_distinct_counter_semantics_after_deletion() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (first, _) = persistence::create_character(&db, 17, "Counterone", 1, 1).unwrap();
+    let (second, _) = persistence::create_character(&db, 17, "Countertwo", 1, 1).unwrap();
+    let mut a = PlayerAchievementState::default();
+    a.criteria_progress
+        .extend([(1832, 2), (5565, 100), (38400, 1)]);
+    a.earned_ids.insert(4899);
+    a.earned_at.insert(4899, 123);
+    let mut b = PlayerAchievementState::default();
+    b.criteria_progress
+        .extend([(1832, 3), (5565, 200), (38400, 1)]);
+    b.earned_ids.insert(4899);
+    b.earned_at.insert(4899, 100);
+    persistence::save_achievements(&db, second, &b);
+    let (aggregate, toasts) = account_store::save_account_progress(
+        &db,
+        &a,
+        &catalog,
+        account_store::AccountUpdate {
+            account: 17,
+            character: first,
+            completed_map: None,
+            race: 1,
+            now: 999,
+        },
+    );
+    assert_eq!(aggregate.criteria_progress[&1832], 5);
+    assert_eq!(aggregate.criteria_progress[&5565], 200);
+    assert_eq!(aggregate.criteria_progress[&38400], 1);
+    assert_eq!(aggregate.earned_at[&4899], 100);
+    assert!(!toasts.iter().any(|toast| toast.achievement_id == 4899));
+    assert_eq!(persistence::load_achievements(&db, first), a);
+    assert_eq!(persistence::load_achievements(&db, second), b);
+    persistence::delete_character(&db, 17, second).unwrap();
+    drop(db);
+    let db = redb::Database::open(file.path()).unwrap();
+    let (aggregate, _) = account_store::save_account_progress(
+        &db,
+        &a,
+        &catalog,
+        account_store::AccountUpdate {
+            account: 17,
+            character: first,
+            completed_map: None,
+            race: 1,
+            now: 1000,
+        },
+    );
+    assert_eq!(aggregate.criteria_progress[&1832], 5);
+    assert_eq!(aggregate.earned_at[&4899], 100);
+}
+
+#[test]
+fn achievements2_exploration_without_overlay_mapping_never_fabricates_area_credit() {
+    assert_unsupported_achievement(627, 502, 1);
+}
+
+#[test]
+fn achievements2_reputation_without_retail_standing_never_fabricates_exalted_credit() {
+    assert_unsupported_achievement(944, 2011, 63_000);
+}
+
+fn assert_unsupported_achievement(id: u32, criterion: u32, counter: u64) {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    state.criteria_progress.insert(criterion, counter);
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    assert!(!state.earned_ids.contains(&id));
+    let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Criteria {
+            achievement_id: id,
+            after_id: 0,
+        },
+        1,
+    ) else {
+        panic!("criteria page")
+    };
+    let row = criteria
+        .iter()
+        .find(|row| row.criteria_id == criterion)
+        .unwrap();
+    assert!(!row.progress_supported);
+    assert!(!row.completed);
+}
+
 #[path = "achievement_normal_lock_tests.rs"]
 mod normal_locks;
 
