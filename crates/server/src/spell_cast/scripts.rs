@@ -263,7 +263,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
-        batch13::BESTIAL_WRATH => Some(batch13::buff_and_strike_pet),
+        batch13::BESTIAL_WRATH => Some(batch13::strike_with_owned_pet),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),

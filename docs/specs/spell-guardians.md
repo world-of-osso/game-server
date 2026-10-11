@@ -36,7 +36,7 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 
 ## Known gaps (current cycle)
 - [ ] Wild Imp55659, Dreadstalker98035, Darkglare103673, Tyrant135002/250289 and other named guardian rotations require authentic creature-to-spell/cadence/budget data. See coverage receipts; no guessed six-bolt/energy policy.
-- [ ] Non-demon guardian power inheritance, movement/AI priorities, untimed-repeat cadence and talent modifiers remain uncertified. Simultaneous split reservations with recipient absorbs and floor-limit ordering lack complete Retail proof.
+- [ ] Non-demon guardian power inheritance, movement/AI priorities, untimed-repeat cadence and talent modifiers remain uncertified. [Batch13 source recheck](../spell-dummy13-coverage.md#capabilities--limits) preserves this gap: wolf1500ms template timing does not establish its damage curve. Simultaneous split reservations with recipient absorbs and floor-limit ordering lack complete Retail proof.
 - [ ] Root111859 Dummy0 cleanse bridge remains unbound; effect28 fixture is not whole-root execution proof.
 - [ ] Blade Flurry secondary geometry, Atonement soft-cap curve, Touch of Karma and Spirit Link scripts remain underived.
 
