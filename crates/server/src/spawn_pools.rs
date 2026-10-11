@@ -603,7 +603,9 @@ pub(crate) fn respawn_gameobject(
         .gameobject_pool(spawn.guid)
         .is_none()
     {
-        crate::gathering::spawn_node(world, spawn, map);
+        if let Err(gap) = crate::gathering::spawn_node(world, spawn, map) {
+            warn!("{gap}");
+        }
         return;
     }
     let mut map_pools = world
@@ -644,8 +646,12 @@ fn apply_pool_changes(
         .cloned()
         .collect::<Vec<_>>();
     for spawn in nodes {
-        let entity = crate::gathering::spawn_node(world, &spawn, map);
-        map_pools.gameobjects.insert(spawn.guid, entity);
+        match crate::gathering::spawn_node(world, &spawn, map) {
+            Ok(entity) => {
+                map_pools.gameobjects.insert(spawn.guid, entity);
+            }
+            Err(gap) => warn!("{gap}"),
+        }
     }
     for guid in &changes.despawned {
         if let Some(entity) = map_pools.entities.remove(guid) {
