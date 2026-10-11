@@ -1,6 +1,7 @@
 """Approved spec-spell bridge, authentic roster/template/display round trip."""
 
-import importlib.util
+from contextlib import closing
+from importlib import import_module
 import sqlite3
 import sys
 import tempfile
@@ -10,25 +11,19 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 WORLD = Path("/home/osso/Projects/world-of-osso/game-server/data/world.db")
+prepare_profiles = import_module("follower_profiles").prepare_profiles
 
 
 class FollowerProfileTests(unittest.TestCase):
     def test_roster_and_authored_displays_survive_reapplication(self):
-        spec = importlib.util.spec_from_file_location(
-            "follower_profiles", SCRIPTS / "follower_profiles.py"
-        )
-        self.assertTrue(
-            spec.origin and Path(spec.origin).exists(),
-            "approved follower profile importer missing",
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as folder:
             sql = Path(folder) / "profiles.sql"
-            module.prepare_profiles(WORLD, sql)
+            prepare_profiles(WORLD, sql)
             with (
-                sqlite3.connect(WORLD.as_uri() + "?mode=ro", uri=True) as source,
-                sqlite3.connect(":memory:") as db,
+                closing(
+                    sqlite3.connect(WORLD.as_uri() + "?mode=ro", uri=True)
+                ) as source,
+                closing(sqlite3.connect(":memory:")) as db,
             ):
                 tables = [
                     "content_creature_template",
@@ -96,17 +91,8 @@ class FollowerProfileTests(unittest.TestCase):
                     )
 
     def test_refuses_to_overwrite_database(self):
-        spec = importlib.util.spec_from_file_location(
-            "follower_profiles", SCRIPTS / "follower_profiles.py"
-        )
-        self.assertTrue(
-            spec.origin and Path(spec.origin).exists(),
-            "approved follower profile importer missing",
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         with self.assertRaisesRegex(ValueError, "database"):
-            module.prepare_profiles(WORLD, WORLD)
+            prepare_profiles(WORLD, WORLD)
 
 
 if __name__ == "__main__":
