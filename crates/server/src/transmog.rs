@@ -237,7 +237,7 @@ impl Plugin for TransmogPlugin {
     }
 }
 
-fn collect_requests<M: Message>(world: &mut World) -> Vec<(Entity, M)> {
+fn collect_requests<M: lightyear::prelude::Message>(world: &mut World) -> Vec<(Entity, M)> {
     let mut query = world.query::<(Entity, &mut MessageReceiver<M>)>();
     query
         .iter_mut(world)
