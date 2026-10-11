@@ -41,6 +41,10 @@ path = "src/main.rs"
 name = "game-server-admin"
 path = "src/bin/admin.rs"
 
+[[bin]]
+name = "game-server-site-export"
+path = "src/bin/site_export.rs"
+
 [dev-dependencies]
 # Exercise pre-world replication and auth traffic against a real local client.
 lightyear = { version = "0.28", features = ["client"] }
