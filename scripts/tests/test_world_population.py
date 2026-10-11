@@ -33,6 +33,22 @@ class WorldPopulationTest(unittest.TestCase):
                 # A preexisting unrelated authored pool must survive the shared builder.
                 db.execute("INSERT INTO content_pool_template VALUES (987654321,1,'private overlay')")
                 db.execute("INSERT INTO content_pool_members VALUES (2,987654321,987654321,0,'private overlay')")
+                # An unrelated authored placement on the same promoted map is not
+                # owned by the TDB GUID namespace and must survive with its addon.
+                row = list(db.execute("SELECT * FROM content_creature WHERE map=0 LIMIT 1").fetchone())
+                columns = [r[1] for r in db.execute("PRAGMA table_info(content_creature)")]
+                row[columns.index("guid")] = 987654320
+                row[columns.index("map")] = 2444
+                db.execute(f"INSERT INTO content_creature VALUES ({','.join('?' for _ in row)})", row)
+                overlay = tuple(row)
+                object_row = list(db.execute("SELECT * FROM content_gameobject WHERE map=0 LIMIT 1").fetchone())
+                object_columns = [r[1] for r in db.execute("PRAGMA table_info(content_gameobject)")]
+                object_row[object_columns.index("guid")] = 987654319
+                object_row[object_columns.index("map")] = 2444
+                db.execute(f"INSERT INTO content_gameobject VALUES ({','.join('?' for _ in object_row)})", object_row)
+                addon = list(db.execute("SELECT * FROM content_creature_addon LIMIT 1").fetchone())
+                addon[0] = 987654320
+                db.execute(f"INSERT INTO content_creature_addon VALUES ({','.join('?' for _ in addon)})", addon)
                 db.commit()
                 before = {t: db.execute(f"SELECT * FROM {t} WHERE map<>2444 ORDER BY guid").fetchall()
                           for t in ("content_creature", "content_gameobject")}
@@ -43,8 +59,11 @@ class WorldPopulationTest(unittest.TestCase):
             result = self.run_import(path, report)
             self.assertEqual(0, result.returncode, result.stderr)
             with closing(sqlite3.connect(path)) as db:
-                actual = db.execute("SELECT guid,id1,map,zoneId,areaId,position_x,position_y,position_z,orientation FROM content_creature WHERE map=2444").fetchall()
+                actual = db.execute("SELECT guid,id1,map,zoneId,areaId,position_x,position_y,position_z,orientation FROM content_creature WHERE map=2444 AND guid<>987654320").fetchall()
                 self.assertEqual(sorted(expected), sorted(actual))
+                self.assertEqual(overlay, db.execute("SELECT * FROM content_creature WHERE guid=987654320").fetchone())
+                self.assertEqual(tuple(addon), db.execute("SELECT * FROM content_creature_addon WHERE guid=987654320").fetchone())
+                self.assertEqual(tuple(object_row), db.execute("SELECT * FROM content_gameobject WHERE guid=987654319").fetchone())
                 for table, rows in before.items():
                     self.assertEqual(rows, db.execute(f"SELECT * FROM {table} WHERE map<>2444 ORDER BY guid").fetchall())
                 self.assertEqual(templates, db.execute(f"SELECT * FROM content_creature_template WHERE entry IN ({protected_entries}) ORDER BY entry").fetchall())
