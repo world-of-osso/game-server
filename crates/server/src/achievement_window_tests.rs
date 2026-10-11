@@ -56,6 +56,18 @@ fn achievementlinks_detail_uses_authoritative_state_and_rejects_other_faction() 
 }
 
 #[test]
+fn achievements_alert_payload_has_the_authored_earned_icon() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(50), None, 1);
+    let toast = toasts
+        .iter()
+        .find(|row| row.achievement_id == 14782)
+        .expect("authentic Level 50 grant");
+    assert_eq!(serde_json::to_value(toast).unwrap()["icon_fdid"], 236566);
+}
+
+#[test]
 fn achievements_browse_search_full_catalog_and_statistics_raw_counters() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();

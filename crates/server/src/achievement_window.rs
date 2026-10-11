@@ -29,6 +29,10 @@ pub(super) struct WindowData {
 }
 
 impl WindowData {
+    pub(super) fn icon_fdid(&self, id: u32) -> u32 {
+        self.definitions[&id].icon
+    }
+
     pub(super) fn has_account_flag(&self, id: u32) -> bool {
         self.definitions
             .get(&id)
