@@ -245,6 +245,55 @@ fn achievements2_skill_rank_uses_current_base_rank_not_maximum_or_increment() {
     );
 }
 
+#[test]
+fn achievements2_spell_targets_credit_recipient_not_caster_and_count_once_per_hit() {
+    let mut h = crate::spell_cast::test_harness::harness_with(vec![], &[24737], 1, false).unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .init_resource::<crate::maps::ServerClock>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    let recipient = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(recipient)
+        .insert(PlayerAchievementState::default());
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24737, Some(recipient), u8::MAX);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(recipient)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&3210)
+    );
+    for expected in [1, 2] {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 24737, Some(recipient), 0);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(recipient)
+                .unwrap()
+                .criteria_progress
+                .get(&3210),
+            Some(&expected)
+        );
+    }
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&3210)
+    );
+}
+
 #[path = "achievement_normal_lock_tests.rs"]
 mod normal_locks;
 

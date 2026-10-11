@@ -23,6 +23,7 @@ pub(crate) enum CriteriaEvent {
     SkillRank(u32, u16),
     CompleteQuest(u32),
     CastSpell(u32),
+    BeSpellTarget(u32),
     DefeatEncounter(u32),
 }
 
@@ -34,6 +35,7 @@ impl CriteriaEvent {
             Self::SkillRank(_, _) => 7,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
+            Self::BeSpellTarget(_) => 28,
             Self::DefeatEncounter(_) => 165,
         }
     }
@@ -48,6 +50,7 @@ impl CriteriaEvent {
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
+            | Self::BeSpellTarget(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -470,6 +473,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: (matches!(kind, 0 | 5 | 8 | 27 | 165)
                     || (kind == 7 && row.get::<_, bool>(9)?)
+                    || (kind == 28 && row.get::<_, bool>(8)?)
                     || (kind == 29
                         && row.get::<_, bool>(8)?
                         && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
