@@ -138,6 +138,15 @@ impl AchievementCatalog {
         race: u8,
     ) -> AchievementCatalogPage {
         match request {
+            QueryAchievementCatalog::Statistics {
+                category_id,
+                after_id,
+            } => self.statistics_page(state, category_id, after_id, race),
+            QueryAchievementCatalog::Search {
+                text,
+                scope,
+                after_id,
+            } => self.search_page(state, &text, scope, after_id, race),
             QueryAchievementCatalog::Summary { scope } => {
                 AchievementCatalogPage::Summary(self.summary(state, race, scope))
             }
@@ -318,6 +327,100 @@ impl AchievementCatalog {
         }
     }
 
+    /// Retail AchievementUI.lua:2235: raw quantities, never target-clamped progress.
+    fn statistics_page(
+        &self,
+        state: &PlayerAchievementState,
+        category_id: u32,
+        after_id: u32,
+        race: u8,
+    ) -> AchievementCatalogPage {
+        let rows = self.window.definitions.values().filter(|row| {
+            row.id > after_id
+                && row.category == category_id
+                && row.flags & 1 != 0
+                && row.flags & (2 | 0x4000 | 0x100000) == 0
+                && self.faction_matches(row.faction, race)
+        });
+        let (rows, next_id) = paginate(
+            rows.map(|row| (row.id, self.window_entry(state, row, race))),
+            ACHIEVEMENT_PAGE_SIZE,
+        );
+        AchievementCatalogPage::Statistics {
+            category_id,
+            achievements: rows,
+            next_id,
+        }
+    }
+
+    /// Retail AchievementUI.lua:3447-3460,3632-3648: full catalog, including statistics.
+    fn search_page(
+        &self,
+        state: &PlayerAchievementState,
+        text: &str,
+        scope: AchievementScope,
+        after_id: u32,
+        race: u8,
+    ) -> AchievementCatalogPage {
+        let text = bound_text(text.trim(), ACHIEVEMENT_NAME_MAX_BYTES);
+        let needle = text.to_lowercase();
+        let rows = self.window.definitions.values().filter(|row| {
+            !needle.is_empty()
+                && row.id > after_id
+                && row.flags & (2 | 0x4000 | 0x100000) == 0
+                && matches_scope(row.flags, scope)
+                && self.faction_matches(row.faction, race)
+                && (row.name.to_lowercase().contains(&needle)
+                    || row.description.to_lowercase().contains(&needle))
+        });
+        let (achievements, next_id) = paginate(
+            rows.map(|row| (row.id, self.window_entry(state, row, race))),
+            ACHIEVEMENT_PAGE_SIZE,
+        );
+        AchievementCatalogPage::Search {
+            text,
+            scope,
+            achievements,
+            next_id,
+        }
+    }
+
+    fn statistic_value(
+        &self,
+        state: &PlayerAchievementState,
+        row: &WindowDefinition,
+    ) -> Option<u64> {
+        if row.flags & 1 == 0
+            || (row.flags & ACHIEVEMENT_FLAG_ACCOUNT != 0 && state.account.is_none())
+            || !self.supports_tree(row.root, &mut BTreeSet::new())
+        {
+            return None;
+        }
+        let state = self.definition_state(state, row.id);
+        self.raw_statistic_counter(row.root, state)
+    }
+
+    fn raw_statistic_counter(&self, id: u32, state: &PlayerAchievementState) -> Option<u64> {
+        match self.trees[&id].operator {
+            TreeOperator::Single => Some(
+                self.criterion_counter(self.trees[&id].criteria_id, state)
+                    .unwrap_or(0),
+            ),
+            TreeOperator::SumChildren => Some(self.sum_counters(id, state, false)),
+            TreeOperator::SumChildrenWeight => Some(self.sum_counters(id, state, true)),
+            TreeOperator::MaxChild => Some(self.max_counter(id, state)),
+            TreeOperator::All => {
+                let children = self.children.get(&id)?;
+                if children.len() == 1 {
+                    self.raw_statistic_counter(children[0], state)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
     fn window_entry(
         &self,
         state: &PlayerAchievementState,
@@ -326,6 +429,7 @@ impl AchievementCatalog {
     ) -> AchievementCatalogEntry {
         let (criteria, next_criteria_id) = self.criteria_page(state, row.id, 0, race);
         let has_scope = row.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0 || state.account.is_some();
+        let statistic_value = self.statistic_value(state, row);
         let state = self.definition_state(state, row.id);
         let earned = state.earned_ids.contains(&row.id);
         AchievementCatalogEntry {
@@ -335,6 +439,7 @@ impl AchievementCatalog {
             points: row.points,
             icon_fdid: row.icon,
             flags: row.flags,
+            statistic_value,
             earned,
             earned_at: earned
                 .then(|| state.earned_at.get(&row.id).copied())
