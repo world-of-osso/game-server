@@ -8,9 +8,9 @@ Ranked prepared-copy runtime blockers: summon28=43, aura4=42, effect3=31. Missin
 
 |Item / root|Audited aura|Source lifetime / target|Local visual evidence|
 |---|---|---|---|
-|Iron Belly Spirits88587/128327|128327|60000ms / friendly21|visual27023, cast kit23617 and impact9579, animation829 and sound101465; no resource restoration|
-|Darkshard Fragment131812/196783|196783|15000ms / caster1|visual51069, crystal model1249984 via kit61005/positioner36; cast392109 via61004|
-|Aqir Egg Cluster175063/318453|318452|5000ms / target25|authored missile32 triggers318452/visual94332; kit123945 models1249925,1733424,165723 plus sound147889; no creature spawning/damage|
+|Iron Belly Spirits88587/128327|128327|1000ms cast;60000ms aura / friendly21|visual27023, cast kit23617 and impact9579, animation829 and sound101465; no resource restoration|
+|Darkshard Fragment131812/196783|196783|5000ms / caster1|visual51069, crystal model1249984 via kit61005/positioner36; cast392109 via61004|
+|Aqir Egg Cluster175063/318453|318452|15000ms / target25|authored missile32 triggers318452/visual94332; kit123945 models1249925,1733424,165723 plus sound147889; no creature spawning/damage|
 
 Local Retail12.1.0.69933 DB2 rows and the actual TDB1210 archive have no selected spell_script_names binding. Descriptions and full visual chains, not absence of bindings alone, establish these cosmetics. Heartbreaker/emote actions, procedural Frosh Hat, Wormhole menus, Gokk'lok's Shell/nonzero dummy, scouting maps and scaled Flame's Radiance stay blocked. No new importer/content changes: prepare toy-effects9 templates on a disposable copy with its existing importer. Behavioral tests exercise real bag learning, UseToy, target-vs-caster routing, missile-triggered aura, unchanged health/model, source lifetimes and retained refusals. Native rendering/audio/positioners are not certified by server proof.
 

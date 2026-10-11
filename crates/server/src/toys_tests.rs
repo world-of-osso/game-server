@@ -1932,13 +1932,13 @@ fn toyfx10_iron_belly_spirits_affects_friend_for_sixty_seconds() {
 }
 
 #[test]
-fn toyfx10_darkshard_fragment_affects_caster_for_fifteen_seconds() {
-    assert_toyfx10_cosmetic_aura(131812, 196783, 196783, 300);
+fn toyfx10_darkshard_fragment_affects_caster_for_five_seconds() {
+    assert_toyfx10_cosmetic_aura(131812, 196783, 196783, 100);
 }
 
 #[test]
-fn toyfx10_aqir_egg_missile_triggers_five_second_target_aura() {
-    assert_toyfx10_cosmetic_aura(175063, 318453, 318452, 100);
+fn toyfx10_aqir_egg_missile_triggers_fifteen_second_target_aura() {
+    assert_toyfx10_cosmetic_aura(175063, 318453, 318452, 300);
 }
 
 fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_frames: usize) {
@@ -1965,7 +1965,7 @@ fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_
         .get::<shared::components::Health>(target)
         .unwrap();
     assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
-    h.advance(20); // Includes the authored Aqir missile flight.
+    h.advance(40); // Includes the Spirits' 1000ms cast and missile flight.
     assert!(
         h.inbox.failed.is_empty(),
         "item {item}: {:?}",
@@ -2010,7 +2010,7 @@ fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_
             .items
             .is_empty()
     );
-    h.advance(lifetime_frames - 40);
+    h.advance(lifetime_frames - 60);
     assert!(
         h.app
             .world()
@@ -2021,7 +2021,7 @@ fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_
             .any(|aura| aura.spell_id == aura_spell),
         "item {item} still active"
     );
-    h.advance(40);
+    h.advance(80);
     assert!(
         !h.app
             .world()
