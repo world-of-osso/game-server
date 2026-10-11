@@ -1,6 +1,6 @@
 # Quests
 
-Requirements and gaps: [quests spec](../../specs/quests.md).
+Requirements and gaps: [quests spec](../../specs/quests.md). Exact [GO/spell census and proof](../../quest-objectives-coverage.md).
 
 ## Data
 
