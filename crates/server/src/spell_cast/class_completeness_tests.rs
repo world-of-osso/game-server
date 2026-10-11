@@ -291,6 +291,28 @@ fn class_completeness_native80_rune_generation_caps_at_native_max() {
 }
 
 #[test]
+fn class_completeness_native80_rune_immune_target_spends_neither_runes_nor_runic_gain() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[49184, 137005], 6, 251);
+    h.set_power(PowerType::RunicPower, 0.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.npc,
+            target: h.npc,
+            spell_id: 45438,
+            effect_mask: 1 << 2,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(49184, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert_eq!(h.power(PowerType::Runes), 6.0);
+    assert_eq!(h.power(PowerType::RunicPower), 0.0);
+}
+
+#[test]
 fn class_completeness_native80_rune_rejection_never_grants_runic_power() {
     use shared::components::PowerType;
     let mut h = native80_fixture(&[49184, 137005], 6, 251);
