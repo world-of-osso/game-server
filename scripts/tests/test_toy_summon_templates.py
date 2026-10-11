@@ -1,4 +1,5 @@
 """Exercise the real TDB1210-to-runtime import on a disposable database copy."""
+from contextlib import closing
 import shutil
 import sqlite3
 import subprocess
@@ -15,7 +16,7 @@ class ToySceneryImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "world.sqlite"
             shutil.copyfile(ROOT / "data/world.db", path)
-            with sqlite3.connect(path) as conn:
+            with closing(sqlite3.connect(path)) as conn, conn:
                 before = set(conn.execute("SELECT entry FROM content_creature_template"))
                 source_models = conn.execute("""SELECT CreatureID, Idx, CreatureDisplayID,
                     DisplayScale, Probability, VerifiedBuild FROM tdb_creature_template_model
@@ -23,7 +24,7 @@ class ToySceneryImportTests(unittest.TestCase):
             for _ in range(2):  # Rerunning the actual CLI must not duplicate rows.
                 subprocess.run(["python3", str(ROOT / "scripts/add_toy_summon_templates.py"),
                                 "--db", str(path)], check=True, capture_output=True, text=True)
-            with sqlite3.connect(path) as conn:
+            with closing(sqlite3.connect(path)) as conn, conn:
                 after = set(conn.execute("SELECT entry FROM content_creature_template"))
                 self.assertEqual(after - before, {(entry,) for entry in ENTRIES} - before)
                 actual_models = conn.execute("""SELECT * FROM content_creature_template_model
@@ -40,7 +41,7 @@ class ToySceneryImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "world.sqlite"
             shutil.copyfile(ROOT / "data/world.db", path)
-            with sqlite3.connect(path) as conn:
+            with closing(sqlite3.connect(path)) as conn, conn:
                 conn.execute("DELETE FROM content_creature_template WHERE entry IN (?, ?)", ENTRIES)
                 conn.execute("DELETE FROM content_creature_template_model WHERE CreatureID IN (?, ?)", ENTRIES)
                 conn.execute("DELETE FROM tdb_creature_template_model WHERE CreatureID = 65387")
@@ -48,7 +49,7 @@ class ToySceneryImportTests(unittest.TestCase):
                                      "--db", str(path)], capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("missing authentic TDB templates/models: [65387]", result.stderr)
-            with sqlite3.connect(path) as conn:
+            with closing(sqlite3.connect(path)) as conn, conn:
                 self.assertEqual(conn.execute("""SELECT count(*) FROM content_creature_template
                     WHERE entry IN (?, ?)""", ENTRIES).fetchone()[0], 0)
                 self.assertEqual(conn.execute("""SELECT count(*) FROM content_creature_template_model
