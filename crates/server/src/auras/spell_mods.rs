@@ -149,7 +149,13 @@ pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, 
     };
     let (flat, mult) =
         matching(auras, spell, op).fold((0.0, 1.0), |(flat, mult), (aura, effect)| {
-            let amount = effect.amount * aura.stack_multiplier();
+            //53390's stacks are uses of the same20% reduction, not magnitude.
+            let stacks = if aura.spell_id == 53390 {
+                1.0
+            } else {
+                aura.stack_multiplier()
+            };
+            let amount = effect.amount * stacks;
             if is_pct(effect.aura_type) {
                 (flat, mult * (1.0 + amount / 100.0))
             } else {
@@ -178,6 +184,26 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .map(|aura| aura.instance_id)
         .collect();
     for id in used {
+        if consume_tidal_stack(world, caster, id) {
+            continue;
+        }
         super::spend_charge(world, caster, id);
     }
+}
+
+///53390 grants two accumulated next-spell uses with a native one-charge field.
+///Keep that charge while another stack remains; final use follows normal removal.
+fn consume_tidal_stack(world: &mut World, caster: Entity, instance: u32) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
+        return false;
+    };
+    let Some(aura) = auras.get_mut(instance) else {
+        return false;
+    };
+    if aura.spell_id != 53390 || aura.stacks <= 1 {
+        return false;
+    }
+    aura.stacks -= 1;
+    super::auras_changed(world, caster);
+    true
 }
