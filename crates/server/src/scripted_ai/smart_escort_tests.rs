@@ -642,8 +642,20 @@ fn smartai_coverage_summon_authentic_position_count_storage_and_expiry() {
     let mut templates = crate::world_data::load_templates(&conn, &expected);
     templates.retain(|entry, _| *entry == 28636);
     crate::world_data::load_template_models(&conn, &mut templates);
+    let mut query = conn.prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats WHERE class=1").unwrap();
+    let class_level_base_hp = query
+        .query_map([], |row| {
+            Ok((
+                (row.get(0)?, row.get(1)?),
+                [row.get(2)?, row.get(3)?, row.get(4)?],
+            ))
+        })
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
     world.insert_resource(crate::world_data::WorldData {
         templates,
+        class_level_base_hp,
         ..Default::default()
     });
     world
