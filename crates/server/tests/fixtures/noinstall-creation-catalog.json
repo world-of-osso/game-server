@@ -1,0 +1,434 @@
+[
+  {
+    "race": 1,
+    "name": "Human",
+    "classes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 3,
+    "name": "Dwarf",
+    "classes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      10
+    ]
+  },
+  {
+    "race": 4,
+    "name": "Night Elf",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      10,
+      11,
+      12
+    ]
+  },
+  {
+    "race": 7,
+    "name": "Gnome",
+    "classes": [
+      1,
+      4,
+      6,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 11,
+    "name": "Draenei",
+    "classes": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  },
+  {
+    "race": 22,
+    "name": "Worgen",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 29,
+    "name": "Void Elf",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      12
+    ]
+  },
+  {
+    "race": 30,
+    "name": "Lightforged Draenei",
+    "classes": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      8,
+      10
+    ]
+  },
+  {
+    "race": 34,
+    "name": "Dark Iron Dwarf",
+    "classes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 37,
+    "name": "Mechagnome",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 32,
+    "name": "Kul Tiran",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 85,
+    "name": "Earthen",
+    "classes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 86,
+    "name": "Haranir",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 52,
+    "name": "Dracthyr",
+    "classes": [
+      13,
+      1,
+      3,
+      4,
+      5,
+      8,
+      9
+    ]
+  },
+  {
+    "race": 2,
+    "name": "Orc",
+    "classes": [
+      1,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 5,
+    "name": "Undead",
+    "classes": [
+      1,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 6,
+    "name": "Tauren",
+    "classes": [
+      1,
+      3,
+      6,
+      7,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 8,
+    "name": "Troll",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  },
+  {
+    "race": 10,
+    "name": "Blood Elf",
+    "classes": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      12
+    ]
+  },
+  {
+    "race": 9,
+    "name": "Goblin",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 27,
+    "name": "Nightborne",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 28,
+    "name": "Highmountain Tauren",
+    "classes": [
+      1,
+      3,
+      5,
+      6,
+      7,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 31,
+    "name": "Zandalari Troll",
+    "classes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 35,
+    "name": "Vulpera",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 36,
+    "name": "Mag'har Orc",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  },
+  {
+    "race": 84,
+    "name": "Earthen",
+    "classes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "race": 91,
+    "name": "Haranir",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  {
+    "race": 70,
+    "name": "Dracthyr",
+    "classes": [
+      13,
+      1,
+      3,
+      4,
+      5,
+      8,
+      9
+    ]
+  },
+  {
+    "race": 95,
+    "name": "High Order Skyborne",
+    "classes": [
+      8,
+      1,
+      3,
+      4,
+      11
+    ]
+  },
+  {
+    "race": 96,
+    "name": "Windshaper Skyborne",
+    "classes": [
+      7,
+      1,
+      3,
+      4,
+      11
+    ]
+  },
+  {
+    "race": 25,
+    "name": "Pandaren",
+    "classes": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      8,
+      10
+    ]
+  }
+]
