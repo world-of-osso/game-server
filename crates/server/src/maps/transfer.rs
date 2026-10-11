@@ -133,7 +133,7 @@ fn facing_rotation(orientation: f32) -> Rotation {
     }
 }
 
-fn current_location(world: &World, player: Entity, map_id: u32) -> WorldLocation {
+pub(crate) fn current_location(world: &World, player: Entity, map_id: u32) -> WorldLocation {
     let position = *world
         .get::<Position>(player)
         .expect("player has a Position");

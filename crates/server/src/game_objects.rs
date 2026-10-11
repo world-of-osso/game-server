@@ -44,7 +44,8 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6) ORDER BY g.guid";
+     WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6) \
+     OR (g.map = ?7 AND t.type = ?8 AND t.entry IN (?9, ?10)) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -131,13 +132,17 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
 pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObjectSpawns> {
     let mut statement = conn.prepare(SPAWN_QUERY)?;
     let rows = statement.query_map(
-        [
+        rusqlite::params![
             GAMEOBJECT_TYPE_GUILD_BANK,
             GAMEOBJECT_TYPE_MAILBOX,
             GAMEOBJECT_TYPE_MEETINGSTONE,
             GAMEOBJECT_TYPE_GENERIC,
             GAMEOBJECT_TYPE_SPELL_FOCUS,
             GAMEOBJECT_TYPE_CHAIR,
+            shared::battleground::warsong_gulch().map_id,
+            shared::protocol::GAMEOBJECT_TYPE_BATTLEGROUND_FLAG,
+            shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
+            shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
         ],
         spawn_from_row,
     )?;
