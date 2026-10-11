@@ -134,10 +134,14 @@ fn repair_private_copy(args: &[String]) -> Result<()> {
     }
     let mut source = std::fs::File::open(&args[1])?;
     // Exclusive creation rejects source aliases, symlinks and existing destinations.
-    let mut copy = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&args[2])?;
+    let mut destination = std::fs::OpenOptions::new();
+    destination.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        destination.mode(0o600);
+    }
+    let mut copy = destination.open(&args[2])?;
     std::io::copy(&mut source, &mut copy)?;
     copy.sync_all()?;
     drop(copy);
@@ -688,6 +692,12 @@ mod tests {
         for forbidden in ["account_id", "email", "password", "x", "y", "z"] {
             assert!(page.get(forbidden).is_none());
         }
+        std::fs::write(dir.path().join("opt-outs.json"), "[]").unwrap();
+        run(arguments(dir.path(), "all")).unwrap();
+        let all: Value =
+            serde_json::from_slice(&std::fs::read(dir.path().join("all/index.json")).unwrap())
+                .unwrap();
+        assert_eq!(all["characters"].as_array().unwrap().len(), 3);
     }
     #[test]
     #[ignore = "subprocess fixture: exits without closing redb"]
@@ -727,6 +737,14 @@ mod tests {
             copy.to_str().unwrap().into(),
         ];
         super::run(repair_args.clone()).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&copy).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
         assert_eq!(before, std::fs::read(&source).unwrap());
         assert!(super::run(repair_args).is_err());
         assert!(
