@@ -178,3 +178,58 @@ fn class_completeness_native_charge_haste_retimes_inflight_recovery() {
         faster
     );
 }
+
+fn cooldown_fixture(passive: bool, haste: f32) -> Harness {
+    let mut ids = vec![12294, 23881, 57755, 117313, 184362, 115804];
+    if passive {
+        ids.push(137047); // Native Warrior: cooldown haste mask, not every spell.
+    }
+    let mut h = harness(Vec::new(), &ids, 1).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = haste;
+    h.advance(2);
+    h.set_power(shared::components::PowerType::Rage, 1000.0);
+    h
+}
+
+fn cast_cooldown_button(h: &mut Harness, spell_id: u32) -> u32 {
+    h.inbox.cooldowns.clear();
+    h.cast_and_deliver(spell_id, Some(h.npc));
+    h.advance(2);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.inbox
+        .cooldowns
+        .iter()
+        .find(|update| update.spell_id == spell_id)
+        .unwrap()
+        .cooldown_ms
+}
+
+#[test]
+fn class_completeness_native_cooldown_haste_scales_spell_and_category_timers() {
+    for id in [12294, 23881] {
+        let mut base = cooldown_fixture(false, 100.0);
+        let normal = cast_cooldown_button(&mut base, id);
+        let mut h = cooldown_fixture(true, 100.0);
+        assert_eq!(cast_cooldown_button(&mut h, id), normal / 2);
+    }
+}
+
+#[test]
+fn class_completeness_native_cooldown_haste_respects_mask_and_zero_haste() {
+    let mut base = cooldown_fixture(false, 100.0);
+    let mut h = cooldown_fixture(true, 100.0);
+    assert_eq!(
+        cast_cooldown_button(&mut h, 57755),
+        cast_cooldown_button(&mut base, 57755)
+    );
+    let mut zero = cooldown_fixture(true, 0.0);
+    let mut absent = cooldown_fixture(false, 0.0);
+    assert_eq!(
+        cast_cooldown_button(&mut zero, 12294),
+        cast_cooldown_button(&mut absent, 12294)
+    );
+}
