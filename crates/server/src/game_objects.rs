@@ -42,7 +42,7 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6) ORDER BY g.guid";
+     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 50) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -194,6 +194,14 @@ pub(crate) fn spawn_map_game_objects(
     });
     let mut count = 0;
     for spawn in spawns {
+        if spawn.info.go_type == shared::protocol::GAMEOBJECT_TYPE_GATHERING_NODE {
+            let spawn = spawn.clone();
+            commands.queue(move |world: &mut World| {
+                crate::gathering::spawn_selected_node(world, spawn, map)
+            });
+            count += 1;
+            continue;
+        }
         let mut object = commands.spawn((
             game_object_bundle(spawn),
             map,
@@ -213,7 +221,11 @@ pub struct GameObjectPlugin;
 impl Plugin for GameObjectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameObjectSpawns>()
-            .add_systems(PostStartup, spawn_continent_game_objects);
+            .add_plugins(crate::gathering::GatheringPlugin)
+            .add_systems(
+                PostStartup,
+                spawn_continent_game_objects.after(crate::zones::spawn_continent_creatures),
+            );
     }
 }
 

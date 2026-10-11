@@ -9,6 +9,12 @@ Retail Mainline governs Mining, Herbalism and Skinning. Forever changes art only
 - Depletion and respawn follow authored node metadata and spawn pools.
 - Acceptance requires behavioral tests and inspected Modern + Forever PNG proof of tracking, herb/ore gathering, skinning a kill and skill progression.
 
+## Server/client boundary
+
+`GatherableResource.parent_skill` identifies a node or fully looted corpse for native tracking and interaction. `UseGameObject` requests gathering for those replicated resources; the server selects an authored gathering spell for a learned skill, then uses the normal cast/interrupt pipeline. Resource loot uses the existing personal loot window and reference/group roller. Authored per-player claims, depletion delay and pool respawn prevent repeat collection of one node. Profession progression reuses changed-state persistence/snapshots.
+
+Current source implementation is not yet runtime acceptance. Missing PlayerCondition mappings and nonpositive respawn timers are explicit gaps; they are not replaced with invented behavior.
+
 ## Source import prerequisite — not runtime acceptance
 
 `gathering_metadata.py` imports local Lock FDID1343608/layoutDA418152 alternatives and TDB1210 skinning loot using existing decoders/remappers. It also repairs Retail type50 loot namespace mapping. The lead applies it; agents never modify world.db.
