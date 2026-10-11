@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-11
 
-Matrix: batch19 production `173955c`, inheriting batch18. [Capabilities/all40/source/proof](spell-dummy19-coverage.md). Census **160 roots,104 reviewed/56 underived**, versus163/103/60 before. Flurry/Havoc/Ardent Defender close their consumed Dummy fields only; other non-Dummy and talent semantics remain separate. E3=113/121, aura4=64/72, aura226=18/19. Native targeted14/14; final feature/master integration gate pending. No full spell/spec/live parity claim; Karma/Pandemic/Singularity/guardian/unknown-marker limits retained.
+Matrix: batch19 production `173955c`, inheriting batch18. [Capabilities/all40/source/proof](spell-dummy19-coverage.md). Census **160 roots,104 reviewed/56 underived**, versus163/103/60 before. Flurry/Havoc/Ardent Defender close their consumed Dummy fields only; other non-Dummy and talent semantics remain separate. E3=113/121, aura4=64/72, aura226=18/19. Native targeted14/14; feature/master integrationf5d60ca's requested single spell_cast418/418 and fmt/check pass, warning-free. Later edits docs/proof only. No full spell/spec/live parity claim; Karma/Pandemic/Singularity/guardian/unknown-marker limits retained.
 
 ## Scope and classification
 

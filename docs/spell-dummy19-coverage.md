@@ -33,7 +33,7 @@ Prior Karma redirect/Pandemic/Lifebloom near-expiry/Singularity area/unknown mar
 |c9b356d|Boundaries **12/14**: Rain of Fire area-owned single-selected child incorrectly copied (genuine RED); expiry fixture stopped at12.5sec, not native15sec.|
 |173955c|Area child exclusion and native-duration fixture: **14/14 GREEN**, compiler warning-free.|
 
-Final required feature/master merge and single spell_cast integration gate pending; no final completion claim yet. Parent owns independent integration acceptance. Durable evidence: `game-engine/data/diagnostics/spell-dummy19-2026-10-11/` — exact source snapshots, source equivalence/metadata receipts, census/all40 generators/results and RED/GREEN logs.
+Feature/master integrationf5d60ca: `git merge origin/master` completed (already up to date atf1b303a). Requested `cargo test -p server --bin game-server spell_cast` ran **ONCE:418/418**, including all14 batch19 functions, compiler warning-free. `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` pass atf5d60ca. Later edits docs/proof only, no invalidation. Manual changed-Rust readability audit; metrics executable unavailable. No full-crate/random-melee/live/full-rotation or independent verifier claim. Parent owns independent integration acceptance. Durable evidence: `game-engine/data/diagnostics/spell-dummy19-2026-10-11/` — exact source snapshots, source equivalence/metadata receipts, census/all40 generators/results and RED/GREEN logs.
 
 ## All40-spec preference table
 
