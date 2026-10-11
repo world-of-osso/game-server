@@ -63,6 +63,9 @@ pub fn supported_property(property: u32) -> bool {
             | 97
             | 149
             | 254
+            | 117
+            | 129
+            | 168
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -158,7 +161,8 @@ fn validate_ability_graph(
         if (turn.kind == 0 && (turn.event != 255 || turn.order == 0))
             || (turn.kind == 1
                 && !matches!(turn.event, 0 | 5 | 6 | 7 | 8 | 10 | 11)
-                && !(ability == 383 && turn.event == 2))
+                && !(ability == 383 && turn.event == 2)
+                && !(matches!(ability, 738 | 1859) && turn.event == 9))
             || turn.kind > 1
         {
             return Err(format!(
@@ -246,6 +250,26 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
     }
     let supported = match effect.property {
         22 => true, // Points fields supply tooltip variables, not an HP operation.
+        // Mind Games offers the wearer its own detriment, not an enemy attack.
+        117 => {
+            catalog.turns[&effect.turn].ability == 2390
+                && (1..=3).contains(&p[0])
+                && p[1] >= 0
+                && p[2..].iter().all(|v| *v == 0)
+        }
+        129 => {
+            matches!(catalog.turns[&effect.turn].ability, 738 | 1859)
+                && catalog.turns[&effect.turn].event == 9
+                && p[0] >= 0
+                && p[1..].iter().all(|v| *v == 0)
+        }
+        168 => {
+            matches!(catalog.turns[&effect.turn].ability, 522 | 1858)
+                && matches!(effect.aura, 738 | 1859)
+                && p[0] == 0
+                && p[2] > 0
+                && p[3..].iter().all(|v| *v == 0)
+        }
         // Only the two described three-enemy Stench graphs establish these selectors.
         159 => {
             p.iter().all(|v| *v == 0) && matches!(catalog.turns[&effect.turn].ability, 527 | 1010)
