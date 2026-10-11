@@ -78,6 +78,9 @@ const SURVIVAL_INSTINCTS: u32 = 61336;
 const SURVIVAL_INSTINCTS_BUFF: u32 = 50322;
 const BREATH_OF_FIRE_BURN: u32 = 123725;
 const LASHING_FLAMES: u32 = 334168;
+const RAKE_BLEED: u32 = 155722;
+const UNSTABLE_AFFLICTION: u32 = 30108;
+const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
 
 ///60103/334046/334168 explicitly limit this vulnerability to Flame Shock.
 ///Other271 masks do not establish a universal filter:208086's description
@@ -130,6 +133,47 @@ pub(super) fn absorb_amount(
         .get::<shared::components::Health>(caster)
         .expect("Tranquility caster health");
     Some(health.max * percent / 100.0)
+}
+
+///1822's stealth bonus also applies to its named155722 bleed, frozen on apply.
+///Do not re-read stealth at each tick or modify arbitrary periodic auras.
+pub(super) fn snapshot_periodic_amount(
+    world: &World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    effect: &crate::spell_info::SpellEffect,
+    amount: f32,
+) -> f32 {
+    if spell.id == RAKE_BLEED && effect.index == 0 {
+        crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
+    } else {
+        amount
+    }
+}
+
+///30108s3 grants one owner-specific vulnerability, not one multiplier per stack.
+pub(super) fn unstable_affliction_multiplier(
+    world: &World,
+    attacker: Entity,
+    target: Entity,
+) -> f32 {
+    let owned = world
+        .get::<super::ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == UNSTABLE_AFFLICTION_BLEED && aura.caster == attacker)
+        });
+    if owned {
+        1.0 + crate::spell_cast::scripts::script_effect_value(
+            world,
+            attacker,
+            UNSTABLE_AFFLICTION,
+            2,
+        ) / 100.0
+    } else {
+        1.0
+    }
 }
 
 /// Tranquility's channel owns its aura lifetime, not its shield capacity.
