@@ -11,6 +11,7 @@ fn setup(skill: u32) -> (Harness, tempfile::TempDir) {
             .unwrap();
     let mut h = harness_with_plugins(Vec::new(), &[], 2, false, |app| {
         app.add_plugins(GatheringPlugin);
+        app.insert_resource(load_data(&conn).unwrap());
         app.insert_resource(crate::profession::load_profession_data(&conn).unwrap());
         app.insert_resource(crate::loot::load_loot_tables(&conn).unwrap());
         app.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
