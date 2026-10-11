@@ -5,11 +5,58 @@ use rusqlite::Connection;
 mod normal_locks;
 
 #[test]
+fn achievements_faction_specific_quests_grant_only_the_matching_player() {
+    use shared::components::{CharacterAppearance, Player};
+    for (race, expected) in [(1, true), (2, false), (24, false)] {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let mut world = World::new();
+        world.insert_resource(load_achievement_catalog(&conn).unwrap());
+        world.init_resource::<crate::maps::ServerClock>();
+        let player = world
+            .spawn((
+                Player {
+                    name: "FactionQuestor".into(),
+                    race,
+                    class: 1,
+                    appearance: CharacterAppearance::default(),
+                },
+                PlayerAchievementState::default(),
+            ))
+            .id();
+        world.spawn((
+            Authenticated { account_id: 1 },
+            PlayerLink(player),
+            InWorld { character_id: 42 },
+        ));
+        let mut query = conn.prepare("WITH RECURSIVE tree(ID) AS (SELECT CriteriaTree FROM achievement WHERE ID=4899 UNION SELECT t.ID FROM criteria_tree t JOIN tree ON t.Parent=tree.ID) SELECT DISTINCT c.Asset FROM tree JOIN criteria_tree t ON t.ID=tree.ID JOIN criteria c ON c.ID=t.CriteriaID WHERE c.Type=27").unwrap();
+        let quests: Vec<u32> = query
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert!(!quests.is_empty());
+        for quest in quests {
+            record_quest_reward(&mut world, 42, quest);
+        }
+        let state = world.get::<PlayerAchievementState>(player).unwrap();
+        assert_eq!(
+            state.earned_ids.contains(&39958),
+            expected,
+            "Loch Modan character credit for race {race}"
+        );
+        assert!(
+            !state.earned_ids.contains(&4899),
+            "account achievement cannot grant in character scope"
+        );
+    }
+}
+
+#[test]
 fn dungeonach_retail_level_ids_replace_placeholders() {
     let db = Connection::open(crate::test_data::world_db_path()).unwrap();
     let catalog = load_achievement_catalog(&db).unwrap();
     let mut state = PlayerAchievementState::default();
-    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(20), None);
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(20), None, 1);
     assert!(
         state.earned_ids.contains(&6),
         "Retail Level 10 is achievement 6"
