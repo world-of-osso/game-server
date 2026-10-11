@@ -44,6 +44,7 @@ fn erland() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
         boss: None,
         stored_targets: HashMap::new(),
         timed_list: None,
+        processing_timed_list: false,
         escort: None,
     };
     ai.reset(&mut Ctx {
@@ -286,6 +287,58 @@ fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
             .count(),
         1,
         "timed-list targets must be diagnosed: {warnings:?}"
+    );
+}
+
+#[test]
+fn smartai_coverage_ooc_timed_list_waits_through_combat() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    world.entity_mut(creature).insert((
+        shared::components::Health {
+            current: 100.0,
+            max: 100.0,
+        },
+        crate::creature_ai::CreatureState::Pursuing {
+            target: player.to_bits(),
+        },
+    ));
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.quest_accepted(&mut ctx, player, 435);
+    ai.update_ai(&mut ctx, 1000);
+    assert_eq!(ctx.world.get::<NpcFlags>(creature).unwrap().0, 2);
+    ctx.world
+        .entity_mut(creature)
+        .insert(crate::creature_ai::CreatureState::Idle);
+    ai.update_ai(&mut ctx, 50);
+    assert_eq!(ctx.world.get::<NpcFlags>(creature).unwrap().0, 0);
+}
+
+#[test]
+fn smartai_coverage_nested_timed_list_does_not_start_after_outer_finishes() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut nested = tdb_action(1978, 0, 1);
+    nested.event_params = [0; 5];
+    world
+        .resource_mut::<SmartScripts>()
+        .1
+        .insert(900001, Arc::new(vec![nested.clone()]));
+    let mut outer = nested;
+    outer.action_params[0] = 900001;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &outer, Some(player));
+    ai.update_ai(&mut ctx, 50);
+    ai.update_ai(&mut ctx, 50);
+    assert_eq!(ctx.world.get::<NpcFlags>(creature).unwrap().0, 2);
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
     );
 }
 
