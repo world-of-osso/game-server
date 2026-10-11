@@ -1305,9 +1305,9 @@ pub(crate) fn applicable_costs(
                 .map(|health| (health.current, health.max)),
             CostPool::Power(power) => powers::power_value(world, caster, power),
         };
-        let percent = cost.power_cost_pct.max(0.0) / 100.0;
-        let amount_with = |max: f32| cost.mana_cost.max(0) as f32 + percent * max;
-        if amount_with(0.0) <= 0.0 && percent <= 0.0 {
+        let percent = cost.power_cost_pct / 100.0;
+        let amount_with = |max: f32| cost.mana_cost as f32 + percent * max;
+        if amount_with(0.0) == 0.0 && percent == 0.0 {
             continue;
         }
         let missing = match pool {
@@ -1317,21 +1317,25 @@ pub(crate) fn applicable_costs(
         let (current, max) = value.ok_or(missing.clone())?;
         // Only a percentage cost reads the base; creatures have no CharacterStats.
         let base = match pool {
-            CostPool::Power(PowerType::Mana) if percent > 0.0 => world
+            CostPool::Power(PowerType::Mana) if percent != 0.0 => world
                 .get::<CharacterStats>(caster)
                 .map(|stats| stats.base_mana)
                 .ok_or(missing.clone())?,
             _ => max,
         };
-        let amount = match SpellModOp::power_cost(cost.order_index) {
-            Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
-            None => amount_with(base),
+        let initial = amount_with(base);
+        let modified = match SpellModOp::power_cost(cost.order_index) {
+            Some(op) => modify(world, caster, spell, op, initial),
+            None => initial,
         };
-        let amount = if pool == CostPool::Power(PowerType::Mana) {
-            scripts::mana_cost(world, caster, spell, amount).max(0.0)
+        let modified = if pool == CostPool::Power(PowerType::Mana) {
+            scripts::mana_cost(world, caster, spell, modified)
         } else {
-            amount
+            modified
         };
+        // TC CalcPowerCost retains native negative generation, but modifiers
+        // cannot turn an originally positive cost into a grant or vice versa.
+        let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
         let optional = cost.optional_cost.max(0) as f32;
         let optional = if optional > 0.0 {
@@ -1346,6 +1350,14 @@ pub(crate) fn applicable_costs(
         costs.push((pool, amount, current));
     }
     Ok(costs)
+}
+
+fn preserve_cost_sign(initial: f32, modified: f32) -> f32 {
+    if (initial < 0.0) == (modified < 0.0) {
+        modified
+    } else {
+        0.0
+    }
 }
 
 fn start_cast(
@@ -1518,6 +1530,12 @@ fn execute_cast(
     let prepared = resources::snapshot(world, caster, spell, &costs);
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
+    let discounted_player =
+        world.get::<Player>(caster).is_some() && attributes(spell, 1) & DISCOUNT_POWER_ON_MISS != 0;
+    let primary_missed =
+        explicit.is_some_and(|target| !plan.iter().any(|effect| effect.units.contains(&target)));
+    let costs = discount_missed_rune_costs(costs, discounted_player && primary_missed);
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
     spend_costs(world, caster, &costs);
@@ -1562,6 +1580,18 @@ fn execute_cast(
         crate::combat::attack_stop(world, caster);
     }
     Ok(())
+}
+
+/// TC TakePower/TakeRunePower: discounted primary misses neither consume
+/// runes nor grant resources from negative costs. Admission still checks all costs.
+fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<(CostPool, f32)> {
+    if !missed {
+        return costs;
+    }
+    costs
+        .into_iter()
+        .filter(|(pool, amount)| *amount >= 0.0 && *pool != CostPool::Power(PowerType::Runes))
+        .collect()
 }
 
 /// One handled effect's unit targets and destination.
@@ -2031,7 +2061,7 @@ fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
             }
             CostPool::Health => {
                 if let Some(mut health) = world.get_mut::<Health>(caster) {
-                    health.current = (health.current - amount).max(1.0);
+                    health.current = (health.current - amount).clamp(1.0, health.max);
                 }
             }
         }
