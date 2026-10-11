@@ -211,6 +211,52 @@ pub(crate) fn killed_monster_credit(world: &mut World, player: Entity, entry: u3
     world.resource_mut::<QuestDirty>().0.insert(character_id);
 }
 
+/// SmartAI `FailQuest` / `AreaExploredOrEventHappens`: persist the script result.
+/// Completion only changes authored exploration/event objectives, never item/kill counts.
+pub(crate) fn persist_scripted_quest_result(
+    world: &mut World,
+    player: Entity,
+    quest_id: u32,
+    failed: bool,
+) {
+    let Some(character) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let (Some(database), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut log = load_quest_log(&database.db, character);
+    let Some(active) = log
+        .active
+        .iter_mut()
+        .find(|active| active.quest_id == quest_id)
+    else {
+        return;
+    };
+    let changed = if failed {
+        let changed = !active.failed;
+        active.failed = true;
+        changed
+    } else {
+        if active.failed {
+            return;
+        }
+        // QuestDef.h a352b1fa COMPLETION_EVENT | COMPLETION_AREA_TRIGGER.
+        const COMPLETION_FLAGS: u32 = 0x2 | 0x4;
+        let Some(quest) = quests.quests.get(&quest_id) else {
+            return;
+        };
+        quest.flags & COMPLETION_FLAGS != 0 && credit_area_trigger(quests, &mut log, &[quest_id])
+    };
+    if changed {
+        save_quest_log(&database.db, character, &log);
+        world.resource_mut::<QuestDirty>().0.insert(character);
+    }
+}
+
 /// The quest area triggers the player stands in on its current map.
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct QuestTriggerPresence {

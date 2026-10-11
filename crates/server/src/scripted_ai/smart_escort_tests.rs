@@ -121,3 +121,73 @@ fn smartai_coverage_erland_waypoint_two_pauses_then_resumes() {
         3
     );
 }
+
+fn install_quest_log(temp: &tempfile::TempDir, world: &mut World, player: Entity) {
+    use crate::persistence::quest_store::{ActiveQuestData, QuestLogData, save_quest_log};
+    let db = redb::Database::create(temp.path().join("quest.redb")).unwrap();
+    crate::persistence::create_tables(&db);
+    let quests = crate::quest_data::test_quest_db().unwrap().clone();
+    assert!(quests.quests[&435].objectives.iter().any(|objective| objective.kind == crate::quest_data::ObjectiveKind::ExplorationOrEvent));
+    save_quest_log(
+        &db,
+        1,
+        &QuestLogData {
+            active: vec![ActiveQuestData {
+                quest_id: 435,
+                counts: vec![0; quests.quests[&435].objectives.len()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    );
+    world.insert_resource(crate::persistence::GameDatabase { db });
+    world.insert_resource(quests);
+    world.insert_resource(crate::quest::QuestDirty::default());
+    world
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(1));
+}
+
+#[test]
+fn smartai_coverage_erland_death_fails_the_stored_players_quest() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    install_quest_log(&temp, &mut world, player);
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.quest_accepted(&mut ctx, player, 435);
+    ai.update_ai(&mut ctx, 50);
+    ai.just_died(&mut ctx, None);
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    assert!(
+        crate::persistence::quest_store::load_quest_log(db, 1)
+            .active(435)
+            .unwrap()
+            .failed
+    );
+}
+
+#[test]
+fn smartai_coverage_erland_node_fourteen_credits_only_the_event_objective() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    install_quest_log(&temp, &mut world, player);
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.quest_accepted(&mut ctx, player, 435);
+    ai.update_ai(&mut ctx, 50);
+    // Deliver the real movement boundary, honoring every authored pause.
+    for node_id in 1..=14 {
+        ctx.world
+            .entity_mut(creature)
+            .remove::<super::super::movement::PointMovement>();
+        ai.movement_inform(&mut ctx, super::super::MotionType::Point, node_id);
+        ai.update_ai(&mut ctx, 1000);
+    }
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    let log = crate::persistence::quest_store::load_quest_log(db, 1);
+    assert_eq!(log.active(435).unwrap().counts, vec![1]);
+    assert!(!log.active(435).unwrap().failed);
+}

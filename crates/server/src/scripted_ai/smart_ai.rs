@@ -34,6 +34,7 @@ mod escort_tests;
 // `SMART_EVENT` (SmartScriptMgr.h).
 const EVENT_UPDATE_IC: u32 = 0;
 const EVENT_AGGRO: u32 = 4;
+const EVENT_DEATH: u32 = 6;
 const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
@@ -47,6 +48,8 @@ const EVENT_WAYPOINT_STOPPED: u32 = 57;
 const EVENT_WAYPOINT_ENDED: u32 = 58;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
+const ACTION_FAIL_QUEST: u32 = 6;
+const ACTION_COMPLETE_QUEST: u32 = 152;
 const ACTION_CAST: u32 = 11;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
@@ -339,7 +342,9 @@ impl SmartAi {
             return;
         }
         match event.event_type {
-            EVENT_LINK | EVENT_RESET | EVENT_AGGRO => self.process_action(ctx, index, invoker),
+            EVENT_LINK | EVENT_RESET | EVENT_AGGRO | EVENT_DEATH => {
+                self.process_action(ctx, index, invoker)
+            }
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
@@ -432,6 +437,16 @@ impl SmartAi {
                 return Self::cast_targets(ctx, event, targets);
             }
             ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
+            ACTION_FAIL_QUEST | ACTION_COMPLETE_QUEST => {
+                for target in targets {
+                    crate::quest::persist_scripted_quest_result(
+                        ctx.world,
+                        target,
+                        event.action_params[0],
+                        event.action_type == ACTION_FAIL_QUEST,
+                    );
+                }
+            }
             ACTION_CALL_KILLEDMONSTER => {
                 let entry = event.action_params[0];
                 if matches!(event.target_type, TARGET_NONE | TARGET_SELF) {
@@ -636,10 +651,11 @@ impl CreatureAi for SmartAi {
         self.process_events_for(ctx, EVENT_AGGRO, Some(who), 0);
     }
 
-    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+    fn just_died(&mut self, ctx: &mut Ctx, killer: Option<Entity>) {
         if let Some(boss) = &mut self.boss {
             boss.just_died(ctx);
         }
+        self.process_events_for(ctx, EVENT_DEATH, killer, 0);
     }
 
     fn movement_inform(&mut self, ctx: &mut Ctx, kind: super::MotionType, node_id: u32) {
