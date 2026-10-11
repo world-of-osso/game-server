@@ -208,6 +208,65 @@ pub(crate) fn killed_monster_credit(world: &mut World, player: Entity, entry: u3
     world.resource_mut::<QuestDirty>().0.insert(character_id);
 }
 
+/// `GameObject::Use` goober credit is shared at the object's group reward distance.
+pub(crate) fn game_object_credit(world: &mut World, player: Entity, object: Entity, entry: u32) {
+    event_credit(
+        world,
+        player,
+        object,
+        crate::quest_data::ObjectiveKind::GameObject,
+        entry,
+        true,
+    );
+}
+
+/// Spell/script event credit; personal events do not award nearby party members.
+pub(crate) fn event_credit(
+    world: &mut World,
+    player: Entity,
+    source: Entity,
+    kind: crate::quest_data::ObjectiveKind,
+    entry: u32,
+    share: bool,
+) {
+    let Some(character) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let recipients = if share {
+        let (Some(map), Some(position)) = (
+            world.get::<crate::maps::InMap>(source).copied(),
+            world.get::<Position>(source).cloned(),
+        ) else {
+            return;
+        };
+        let mut state = bevy::ecs::system::SystemState::<RewardPlayers>::new(world);
+        let players = state.get(world).expect("reward player query");
+        rewarded_characters(
+            &[character],
+            (&map, &position),
+            &players,
+            world.get_resource::<GroupRegistry>(),
+        )
+    } else {
+        vec![character]
+    };
+    let (Some(db), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut changed = Vec::new();
+    for character in recipients {
+        let mut log = load_quest_log(&db.db, character);
+        if crate::quest_rules::credit_objective(quests, &mut log, kind, entry) {
+            save_quest_log(&db.db, character, &log);
+            changed.push(character);
+        }
+    }
+    world.resource_mut::<QuestDirty>().0.extend(changed);
+}
+
 /// The quest area triggers the player stands in on its current map.
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct QuestTriggerPresence {

@@ -15,6 +15,7 @@
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
+pub(crate) mod quest_object;
 pub(crate) mod summoned;
 
 use std::f32::consts::FRAC_PI_2;
@@ -38,11 +39,11 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties, t.Data0, t.Data1 \
+     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, t.Data10, g.spawntimesecs, t.Data8 \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6) ORDER BY g.guid";
+     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -58,6 +59,7 @@ pub struct GameObjectSpawn {
     pub spawn_difficulties: Vec<u32>,
     /// A `GAMEOBJECT_TYPE_CHAIR`'s seats.
     pub chair: Option<crate::chair::Chair>,
+    pub quest_object: Option<quest_object::QuestObject>,
 }
 
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
@@ -113,6 +115,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
                 Ok(crate::chair::Chair::new(row.get(18)?, row.get(19)?))
             })
             .transpose()?,
+        quest_object: quest_object::QuestObject::from_row(row)?,
         spawn_difficulties: row
             .get::<_, String>(17)?
             .split(',')
@@ -200,6 +203,9 @@ pub(crate) fn spawn_map_game_objects(
             Replicate::to_clients(NetworkTarget::All),
             NetworkVisibility::default(),
         ));
+        if let Some(quest_object) = &spawn.quest_object {
+            object.insert(quest_object.clone());
+        }
         if let Some(chair) = &spawn.chair {
             object.insert(chair.clone());
         }
