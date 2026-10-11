@@ -30,6 +30,7 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [ ] Serve full faction-eligible non-statistic, non-guild catalog counts and earned points, independent of client-loaded pages; distinguish All, account-flag and character-flag scopes.
 - [ ] Include category totals with descendant contributions and the newest three earned rows, known dates before unknown dates. Preserve authoritative account aggregates and character isolation.
 - [ ] Expose authentic Achievement.Flags with every row for native account/character and Statistics presentation.
+- [ ] Resolve individual achievement IDs to authoritative own-character/account state for chat/toast navigation; reject opposing-faction rows without inventing completion data.
 
 ## How it works
 

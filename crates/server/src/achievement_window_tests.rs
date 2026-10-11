@@ -35,6 +35,26 @@ fn achievements_summary_counts_full_catalog_and_account_scope_not_loaded_pages()
     assert_eq!(page["Summary"]["recent"][0]["achievement_id"], 4899);
 }
 
+#[test]
+fn achievementlinks_detail_uses_authoritative_state_and_rejects_other_faction() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.earned_ids.insert(633);
+    state.earned_at.insert(633, 1_791_244_800);
+    let request =
+        serde_json::from_value(serde_json::json!({"Achievement": {"achievement_id": 633}}))
+            .expect("single achievement requests are supported");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert_eq!(page["Achievement"]["achievement_id"], 633);
+    assert_eq!(page["Achievement"]["entry"]["earned"], true);
+    assert_eq!(page["Achievement"]["entry"]["earned_at"], 1_791_244_800i64);
+    let request =
+        serde_json::from_value(serde_json::json!({"Achievement": {"achievement_id": 4899}}))
+            .unwrap();
+    let page = serde_json::to_value(catalog.page(&state, request, 2)).unwrap();
+    assert!(page["Achievement"]["entry"].is_null());
+}
+
 fn catalog() -> AchievementCatalog {
     let db = Connection::open(crate::test_data::world_db_path()).unwrap();
     load_achievement_catalog(&db).unwrap()
