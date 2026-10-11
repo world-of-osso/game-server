@@ -7,6 +7,8 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type Bundle = BTreeMap<String, Vec<u8>>;
 #[path = "site_snapshot_catalog.rs"]
 mod catalog;
+#[path = "site_snapshot_mythic.rs"]
+mod mythic;
 #[path = "site_snapshot_store.rs"]
 mod store;
 
@@ -117,12 +119,17 @@ fn fixture_allowlist(args: &[String]) -> Result<()> {
         return Err("usage: --fixture-allowlist PRIVATE_DIAGNOSTICS_REDB NEW_IDS_JSON".into());
     }
     let source = std::fs::canonicalize(&args[1])?;
-    let diagnostics =
-        std::fs::canonicalize("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics")?;
+    let diagnostics = std::fs::canonicalize(
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/site-data-2026-10-11",
+    )?;
     if !source.starts_with(diagnostics) {
-        return Err("fixture source must be a private diagnostics redb".into());
+        return Err(
+            "fixture allowlist requires an owned site-data diagnostic copy, never the source redb"
+                .into(),
+        );
     }
-    let db = ReadOnlyDatabase::open(source)?;
+    // Explicit private-copy preparation: recover a crash-closed proof copy before read-only export.
+    let db = redb::Database::open(source)?;
     let txn = db.begin_read()?;
     let accounts = txn.open_table(TableDefinition::<&str, u64>::new("username_accounts"))?;
     let mut selected = BTreeSet::new();
@@ -155,6 +162,7 @@ fn compose(
     let mut guilds: BTreeMap<String, Value> = BTreeMap::new();
     let mut rankings = Vec::new();
     let locks = store::locks(txn)?;
+    let mythic_rankings = mythic::read_rankings(txn, world, selected, options.as_of)?;
     for &id in selected {
         let data = store::bytes(txn, "characters", id)?
             .ok_or_else(|| format!("public character {id} missing"))?;
@@ -163,7 +171,7 @@ fn compose(
             "race_names_and_faction_catalog_unavailable".into(),
             "complete_effective_equipment_item_level_unavailable".into(),
             "character_render_unavailable".into(),
-            "mythic_history_has_no_participant_attribution".into(),
+            "legacy_mythic_runs_not_attributable_or_backfilled".into(),
             "raid_first_kill_and_lifetime_history_unavailable".into(),
         ];
         let guild: Option<store::Guild> = store::decode(txn, "character_guilds", id)?;
@@ -188,7 +196,7 @@ fn compose(
         let (points, recent) = achievements(options, txn, world, id, &mut bundle, &mut gaps)?;
         page["achievement_points"] = points;
         page["recent_achievements"] = recent;
-        page["mythic_plus_best"] = json!([]);
+        page["mythic_plus_best"] = json!(mythic::character_best(&mythic_rankings, id));
         page["render_url"] = Value::Null;
         page["pvp"] = pvp(txn, id)?;
         let mut raid_progression = Vec::new();
@@ -241,31 +249,18 @@ fn compose(
         ),
     )?;
     add_json(&mut bundle,"rankings/raids.json".into(),options.document(json!({"policy":"kills_per_difficulty_then_first_kill","scope":"saved_lock","characters":rankings,"guilds":[]}),vec!["raid_first_kill_and_lifetime_history_unavailable".into(),"guild_at_kill_attribution_unavailable".into()]))?;
-    validate_mythic_history(txn)?;
     add_json(
         &mut bundle,
         "rankings/mythic-plus.json".into(),
         options.document(
-            json!({"policy":"highest_timed_key_then_clear_time","runs":[]}),
+            json!({"policy":"highest_timed_key_then_clear_time","runs":mythic_rankings}),
             vec![
-                "mythic_history_has_no_participant_attribution".into(),
-                "mythic_history_has_no_season_or_completion_timestamp".into(),
+                "legacy_mythic_runs_not_attributable_or_backfilled".into(),
+                "active_mythic_season_unavailable".into(),
             ],
         ),
     )?;
     Ok(bundle)
-}
-fn validate_mythic_history(txn: &ReadTransaction) -> Result<()> {
-    let table = match txn.open_table(TableDefinition::<u64, &[u8]>::new("mythic_run_history")) {
-        Ok(t) => t,
-        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(()),
-        Err(e) => return Err(e.into()),
-    };
-    for row in table.iter()? {
-        let (_, bytes) = row?;
-        let _: shared::protocol::ChallengeRun = bitcode::decode(bytes.value())?;
-    }
-    Ok(())
 }
 fn rank_raids(rows: &mut [Value]) {
     rows.sort_by_key(|r| {
@@ -540,6 +535,77 @@ mod tests {
         for forbidden in ["account_id", "email", "password", "x", "y", "z"] {
             assert!(page.get(forbidden).is_none());
         }
+    }
+    #[test]
+    fn site_snapshot_mythic_ranking_best_and_private_party_filter() {
+        let dir = tempfile::tempdir().unwrap();
+        seed(dir.path());
+        let db = Database::open(dir.path().join("private.redb")).unwrap();
+        let txn = db.begin_write().unwrap();
+        {
+            let mut table = txn
+                .open_table(server::mythic_plus_history::COMPLETED_RUNS)
+                .unwrap();
+            for (id, level, elapsed, party) in [
+                (10, 12, 90, vec!["1"]),
+                (11, 12, 80, vec!["1"]),
+                (12, 13, 110, vec!["1"]),
+                (13, 20, 50, vec!["1", "2"]),
+            ] {
+                let record = server::mythic_plus_history::CompletedRun {
+                    id: id.to_string(),
+                    season_id: None,
+                    challenge_id: 401,
+                    map_id: 2515,
+                    name: "The Azure Vault".into(),
+                    level,
+                    affixes: vec![9],
+                    elapsed_ms: elapsed,
+                    timer_ms: 100,
+                    time_lost_ms: 0,
+                    in_time: elapsed <= 100,
+                    completed_at: 99,
+                    party: party
+                        .into_iter()
+                        .map(|id| server::mythic_plus_history::Participant {
+                            character_id: id.into(),
+                            name: format!("Fb{id}"),
+                            class_id: 1,
+                            spec_id: None,
+                        })
+                        .collect(),
+                };
+                table
+                    .insert(id, serde_json::to_vec(&record).unwrap().as_slice())
+                    .unwrap();
+            }
+        }
+        txn.commit().unwrap();
+        drop(db);
+        run(arguments(dir.path(), "ranks")).unwrap();
+        let ranks: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("ranks/rankings/mythic-plus.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            ranks["runs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| r["id"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec!["11", "10", "12"]
+        );
+        assert_eq!(ranks["runs"][0]["rank"], 1);
+        assert_eq!(ranks["runs"][2]["in_time"], false);
+        assert!(ranks["runs"][0]["season_id"].is_null());
+        let page: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("ranks/characters/1.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(page["mythic_plus_best"].as_array().unwrap().len(), 1);
+        assert_eq!(page["mythic_plus_best"][0]["id"], "11");
+        assert!(page["mythic_plus_best"][0].get("rating").is_none());
     }
     #[test]
     fn site_snapshot_rejects_missing_public_character_and_existing_output() {
