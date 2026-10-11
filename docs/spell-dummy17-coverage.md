@@ -37,7 +37,7 @@ Karma redirect, guardian inheritance/stamina/melee, Eye Beam11-vs-tooltip10/unce
 |76c4591|Root-specific landed-hit predicates and native initial+four clock: **13/13 GREEN**, compiler warning-free. No suppressed unsupported leech claim.|
 |5f8ee8e|Added actual HostClient completion/cancellation fixture: **1/1 GREEN**, compiler warning-free; previous13 production proofs remain valid.|
 
-Final integration gate pending before publication. Manual changed-Rust readability audit: named short helpers, shared stacked-use path, no warning suppressions; metric executable unavailable. No broad/full-crate/live/independent acceptance claim; parent owns integration acceptance.
+Feature/master mergeec9b5cc integrates origin/master0c73965's unrelated achievement/quest changes; class/aura Rust scope is byte-equivalent to5f8ee8e. Requested `cargo test -p server --bin game-server spell_cast` ran **ONCE:389/389**, including all14 batch17 functions, compiler warning-free. `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` pass at the same revision. Later changes are docs/proof only. Manual changed-Rust readability audit: named short helpers, shared stacked-use path, no warning suppressions; metric executable unavailable. No full-crate/live/full-rotation/independent acceptance claim; parent owns integration acceptance.
 
 Durable evidence: `game-engine/data/diagnostics/spell-dummy17-2026-10-11/` — frozen sources, source/equivalence receipts, reproducible census/table generators, RED/GREEN/completion logs and proof ledger.
 
