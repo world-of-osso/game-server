@@ -102,7 +102,6 @@ impl Plugin for BankPlugin {
                 Update,
                 (
                     send_bank_contents,
-                    send_changed_character_banks,
                     process_deposits,
                     process_withdrawals,
                     process_tab_purchases,
@@ -111,6 +110,10 @@ impl Plugin for BankPlugin {
                     process_tab_settings,
                 )
                     .chain(),
+            )
+            .add_systems(
+                PostUpdate,
+                send_changed_character_banks.before(MessageSystems::Send),
             );
     }
 }
