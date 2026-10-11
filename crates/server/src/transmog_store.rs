@@ -1,5 +1,5 @@
 //! Per-instance appearance modifiers, separate from existing item/character ABIs.
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
 use shared::components::{EquipmentVisualSlot, EquippedAppearanceEntry};
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::TransmogChoice;
