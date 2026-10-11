@@ -33,6 +33,7 @@ fn spawn_quest_group_member(app: &mut App, client: &Client) -> (u64, Entity) {
         level: 80,
         portrait: Default::default(),
         dungeon_difficulty: 1,
+        raid_difficulty: Default::default(),
     };
     let online = OnlineView::from([
         (client.character_id, profile(client.player, "Questor")),
