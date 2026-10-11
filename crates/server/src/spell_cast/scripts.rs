@@ -3,6 +3,7 @@
 
 mod batch10;
 mod batch11;
+mod batch12;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -13,6 +14,7 @@ mod batch9;
 
 pub(super) use batch9::{cast_effect, update_ground_pulses};
 pub(super) use batch11::effect_enabled;
+pub(super) use batch12::empower_gargoyles;
 
 use bevy::prelude::*;
 
@@ -84,6 +86,8 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch12::FERAL_SPIRIT, 0) => Some(batch12::summon_wolves),
+        (batch12::BUTCHERY, 0) => Some(batch12::butchery_bleed),
         (batch11::VOID_VOLLEY, 0) => Some(batch11::volley),
         (batch11::VOIDFORM, 0) => Some(batch11::initial_volley),
         (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
@@ -168,10 +172,15 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
             )
         }
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
+        batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
         FIRE_BLAST | batch5::CHAOS_BOLT => Some(100.0),
         batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
         _ => None,
     }
+}
+
+pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) -> f32 {
+    batch7::rake_initial_damage(world, caster, caster, amount)
 }
 
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
@@ -245,6 +254,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
@@ -300,6 +310,7 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        batch12::SHIELD_RIGHTEOUS => Some((Relation::Ally, batch12::shield_plan)),
         batch11::VOID_VOLLEY => Some((Relation::Enemy, batch11::volley_plan)),
         batch8::SANCTIFY => Some((Relation::Ally, batch8::sanctify_plan)),
         batch8::PROVOKE_SINGLE => Some((Relation::Enemy, batch8::provoke_plan)),
@@ -520,7 +531,7 @@ fn cobra_shot(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     reduce_cooldown(world, caster, KILL_COMMAND, f64::from(seconds));
 }
 
-pub(super) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
+pub(crate) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)

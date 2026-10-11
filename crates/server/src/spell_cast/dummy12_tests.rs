@@ -82,7 +82,7 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
 fn dummy12_gargoyle_native_attack_crit_and_successful_owner_spend() {
     let mut h = harness(
         Vec::new(),
-        &[49206, 51963, 61777, 1242147, 211947, 47541, 47632],
+        &[49206, 51963, 61777, 1242147, 211947, 47541, 47632, 77575],
         6,
     )
     .unwrap();

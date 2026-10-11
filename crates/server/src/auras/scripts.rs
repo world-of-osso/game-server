@@ -132,6 +132,42 @@ pub(super) fn absorb_amount(
     Some(health.max * percent / 100.0)
 }
 
+///1822's stealth bonus also applies to its named155722 bleed, frozen on apply.
+///Do not re-read stealth at each tick or modify arbitrary periodic auras.
+pub(super) fn snapshot_periodic_amount(
+    world: &World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    effect: &crate::spell_info::SpellEffect,
+    amount: f32,
+) -> f32 {
+    if spell.id == 155722 && effect.index == 0 {
+        crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
+    } else {
+        amount
+    }
+}
+
+///30108s3 grants one owner-specific vulnerability, not one multiplier per stack.
+pub(super) fn unstable_affliction_multiplier(
+    world: &World,
+    attacker: Entity,
+    target: Entity,
+) -> f32 {
+    let owned = world
+        .get::<super::ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == 233490 && aura.caster == attacker)
+        });
+    if owned {
+        1.0 + crate::spell_cast::scripts::script_effect_value(world, attacker, 30108, 2) / 100.0
+    } else {
+        1.0
+    }
+}
+
 /// Tranquility's channel owns its aura lifetime, not its shield capacity.
 /// Removing the whole aura on depletion would also stop its healing ticks.
 pub(super) fn absorb_ends_aura(spell_id: u32) -> bool {
