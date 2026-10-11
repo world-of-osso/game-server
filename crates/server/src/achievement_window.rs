@@ -16,6 +16,8 @@ struct WindowDefinition {
     points: u32,
     icon: u32,
     root: u32,
+    faction: i32,
+    flags: u32,
 }
 
 #[derive(Debug, Default)]
@@ -23,6 +25,14 @@ pub(super) struct WindowData {
     categories: BTreeMap<u32, AchievementCategoryEntry>,
     definitions: BTreeMap<u32, WindowDefinition>,
     tree_labels: HashMap<u32, (String, i32)>,
+}
+
+impl WindowData {
+    pub(super) fn has_account_flag(&self, id: u32) -> bool {
+        self.definitions
+            .get(&id)
+            .is_some_and(|row| row.flags & ACHIEVEMENT_FLAG_ACCOUNT != 0)
+    }
 }
 
 pub(super) fn load_window_data(conn: &Connection) -> rusqlite::Result<WindowData> {
@@ -52,7 +62,7 @@ fn load_categories(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, Achievem
 }
 
 fn load_window_definitions(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, WindowDefinition>> {
-    let mut query = conn.prepare("SELECT ID, Category, Title_lang, Description_lang, Points, IconFileID, CriteriaTree FROM achievement")?;
+    let mut query = conn.prepare("SELECT ID, Category, Title_lang, Description_lang, Points, IconFileID, CriteriaTree, Faction, Flags FROM achievement")?;
     let rows = query.query_map([], |row| {
         let id = row.get(0)?;
         Ok((
@@ -68,6 +78,8 @@ fn load_window_definitions(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, 
                 points: row.get(4)?,
                 icon: row.get(5)?,
                 root: row.get(6)?,
+                faction: row.get(7)?,
+                flags: row.get(8)?,
             },
         ))
     })?;
@@ -113,18 +125,19 @@ impl AchievementCatalog {
         &self,
         state: &PlayerAchievementState,
         request: QueryAchievementCatalog,
+        race: u8,
     ) -> AchievementCatalogPage {
         match request {
             QueryAchievementCatalog::Categories { after_id } => self.categories_page(after_id),
             QueryAchievementCatalog::Category {
                 category_id,
                 after_id,
-            } => self.category_page(state, category_id, after_id),
+            } => self.category_page(state, category_id, after_id, race),
             QueryAchievementCatalog::Criteria {
                 achievement_id,
                 after_id,
             } => {
-                let (criteria, next_id) = self.criteria_page(state, achievement_id, after_id);
+                let (criteria, next_id) = self.criteria_page(state, achievement_id, after_id, race);
                 AchievementCatalogPage::Criteria {
                     achievement_id,
                     criteria,
@@ -155,16 +168,18 @@ impl AchievementCatalog {
         state: &PlayerAchievementState,
         category_id: u32,
         after_id: u32,
+        race: u8,
     ) -> AchievementCatalogPage {
         let rows = self
             .window
             .definitions
             .values()
-            .filter(|row| row.category == category_id && row.id > after_id);
+            .filter(|row| row.category == category_id && row.id > after_id)
+            .filter(|row| self.faction_matches(row.faction, race));
         let (definitions, next_id) = paginate(rows.map(|row| (row.id, row)), ACHIEVEMENT_PAGE_SIZE);
         let achievements = definitions
             .into_iter()
-            .map(|row| self.window_entry(state, row))
+            .map(|row| self.window_entry(state, row, race))
             .collect();
         AchievementCatalogPage::Category {
             category_id,
@@ -177,16 +192,21 @@ impl AchievementCatalog {
         &self,
         state: &PlayerAchievementState,
         row: &WindowDefinition,
+        race: u8,
     ) -> AchievementCatalogEntry {
-        let (criteria, next_criteria_id) = self.criteria_page(state, row.id, 0);
+        let (criteria, next_criteria_id) = self.criteria_page(state, row.id, 0, race);
+        let character_scope = row.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0;
+        let earned = character_scope && state.earned_ids.contains(&row.id);
         AchievementCatalogEntry {
             achievement_id: row.id,
             name: row.name.clone(),
             description: row.description.clone(),
             points: row.points,
             icon_fdid: row.icon,
-            earned: state.earned_ids.contains(&row.id),
-            earned_at: state.earned_at.get(&row.id).copied(),
+            earned,
+            earned_at: earned
+                .then(|| state.earned_at.get(&row.id).copied())
+                .flatten(),
             progress_supported: self.definitions.contains_key(&row.id),
             criteria,
             next_criteria_id,
@@ -198,14 +218,27 @@ impl AchievementCatalog {
         state: &PlayerAchievementState,
         achievement_id: u32,
         after_id: u32,
+        race: u8,
     ) -> (Vec<AchievementCriterionLine>, Option<u32>) {
         let Some(definition) = self.window.definitions.get(&achievement_id) else {
             return (Vec::new(), None);
         };
+        if !self.faction_matches(definition.faction, race) {
+            return (Vec::new(), None);
+        }
         let ids = self.criterion_tree_ids(definition.root);
         let rows = ids.into_iter().filter(|id| *id > after_id);
         paginate(
-            rows.map(|id| (id, self.criterion_line(state, id))),
+            rows.map(|id| {
+                (
+                    id,
+                    self.criterion_line(
+                        state,
+                        id,
+                        definition.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0,
+                    ),
+                )
+            }),
             ACHIEVEMENT_CRITERIA_PAGE_SIZE,
         )
     }
@@ -230,13 +263,21 @@ impl AchievementCatalog {
         criteria
     }
 
-    fn criterion_line(&self, state: &PlayerAchievementState, id: u32) -> AchievementCriterionLine {
+    fn criterion_line(
+        &self,
+        state: &PlayerAchievementState,
+        id: u32,
+        character_scope: bool,
+    ) -> AchievementCriterionLine {
         let tree = &self.trees[&id];
-        let counter = state.criteria_progress.get(&tree.criteria_id).copied();
-        let supported = self
-            .criteria
-            .get(&tree.criteria_id)
-            .is_some_and(|criteria| criteria.supported)
+        let counter = character_scope
+            .then(|| self.criterion_counter(tree.criteria_id, state))
+            .flatten();
+        let supported = character_scope
+            && self
+                .criteria
+                .get(&tree.criteria_id)
+                .is_some_and(|criteria| criteria.supported)
             && matches!(tree.operator, TreeOperator::Single);
         let (description, order_index) = &self.window.tree_labels[&id];
         AchievementCriterionLine {

@@ -199,7 +199,7 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
         .app
         .world()
         .resource::<AchievementCatalog>()
-        .snapshot(state);
+        .snapshot(state, 1);
     let progress = snapshot
         .progress
         .iter()
