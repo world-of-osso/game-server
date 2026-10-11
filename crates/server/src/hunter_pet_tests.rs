@@ -705,13 +705,18 @@ fn pet_lifecycle_mend_heals_owned_pet_by_authored_periodic_percentage() {
     let max_health = h.app.world().get::<Health>(pet).unwrap().max;
     h.app.world_mut().get_mut::<Health>(pet).unwrap().current = 50.0;
     h.cast_and_deliver(MEND_PET, None);
-    h.advance(41);
+    h.advance(45);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    // Local SpellEffect136: aura20, 10% of max health every2s.
-    assert!(
-        (h.app.world().get::<Health>(pet).unwrap().current - (50.0 + max_health * 0.1)).abs()
-            < 0.001
+    // Local SpellEffect136: aura20, 10% of max health every2s, whole-HP healing.
+    let healed = (max_health * 0.1).round();
+    assert_eq!(
+        h.app.world().get::<Health>(pet).unwrap().current,
+        50.0 + healed
     );
+    assert!(h.inbox.log.iter().any(|event| event.spell_id == MEND_PET
+        && event.target == pet.to_bits()
+        && event.periodic
+        && event.amount == healed as i32));
 }
 
 #[test]
