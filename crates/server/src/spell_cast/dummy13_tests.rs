@@ -217,7 +217,7 @@ fn dummy13_aspect_wild_fires_free_primary_cobra_without_later_focus_spend() {
     h.select(Some(target));
     h.advance(4);
     h.set_power(PowerType::Focus, 100.0);
-    execute(&mut h, 193530, None);
+    execute(&mut h, 193530, Some(target));
     let focus = h.power(PowerType::Focus);
     h.advance(8);
     let shots = damage(&h, 193455, target);
