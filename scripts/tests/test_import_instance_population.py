@@ -4,6 +4,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -20,7 +21,7 @@ class InstancePopulationTest(unittest.TestCase):
 
     def test_always_visible_authored_font_rows_are_base_phase_eligible(self):
         import import_instance_population as importer
-        with sqlite3.connect(":memory:") as conn:
+        with closing(sqlite3.connect(":memory:")) as conn:
             conn.execute("CREATE TABLE spawn (guid INTEGER, PhaseId INTEGER, PhaseGroup INTEGER, terrainSwapMap INTEGER, phaseUseFlags INTEGER)")
             # TDB1210 Font of Power rows: maps 2515/2521, always-visible flag 1.
             conn.executemany("INSERT INTO spawn VALUES (?,0,0,-1,1)", [(9000002,), (9000008,)])
@@ -47,16 +48,16 @@ class InstancePopulationTest(unittest.TestCase):
         source = Path(os.environ["DUNGEON_POPULATION_SOURCE"])
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "instances.sqlite"
-            with sqlite3.connect(f"file:{source}?mode=ro", uri=True) as original:
-                with sqlite3.connect(destination) as copy:
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as original:
+                with closing(sqlite3.connect(destination)) as copy:
                     original.backup(copy)
-            with sqlite3.connect(destination) as conn:
+            with closing(sqlite3.connect(destination)) as conn:
                 outside = "map NOT IN (SELECT map FROM tdb_instance_template)"
                 before = conn.execute(f"SELECT * FROM content_creature WHERE {outside} ORDER BY guid").fetchall()
                 before_objects = conn.execute(f"SELECT * FROM content_gameobject WHERE {outside} ORDER BY guid").fetchall()
                 before_loot = conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 ORDER BY entry").fetchall()
             importer.import_database(destination)
-            with sqlite3.connect(destination) as conn:
+            with closing(sqlite3.connect(destination)) as conn:
                 self.assertEqual(before, conn.execute(f"SELECT * FROM content_creature WHERE {outside} ORDER BY guid").fetchall())
                 self.assertEqual(before_objects, conn.execute(f"SELECT * FROM content_gameobject WHERE {outside} ORDER BY guid").fetchall())
                 self.assertEqual(before_loot, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 ORDER BY entry").fetchall())
@@ -73,13 +74,13 @@ class InstancePopulationTest(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT id,modelid FROM tdb_creature WHERE guid=?", (guid-20000000,)).fetchone(), (entry, display))
                 # Idempotence includes addon/formation primary keys, not just spawn counts.
             importer.import_database(destination)
-            with sqlite3.connect(destination) as conn:
+            with closing(sqlite3.connect(destination)) as conn:
                 self.assertEqual(421, conn.execute("SELECT count(*) FROM content_creature WHERE map=36").fetchone()[0])
                 before_failed_import = conn.execute("SELECT * FROM content_creature WHERE map=36 ORDER BY guid").fetchall()
                 conn.execute("DROP TABLE tdb_creature_template_model")
             with self.assertRaises(sqlite3.OperationalError):
                 importer.import_database(destination)
-            with sqlite3.connect(destination) as conn:
+            with closing(sqlite3.connect(destination)) as conn:
                 self.assertEqual(before_failed_import, conn.execute("SELECT * FROM content_creature WHERE map=36 ORDER BY guid").fetchall())
 
 

@@ -8,6 +8,7 @@ synthetic rows, encounter scripts, raid admission or phase progression is added.
 import argparse
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import retail_content as retail
@@ -173,10 +174,11 @@ def import_database(path):
     if not path.is_file() or path.is_symlink() or path.stat().st_nlink != 1:
         raise ValueError("destination must be an existing, unlinked database copy")
     report = ImportReport()
-    with sqlite3.connect(path) as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        apply_population(conn, report)
-        counts = population_counts(conn)
+    with closing(sqlite3.connect(path)) as conn:
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            apply_population(conn, report)
+            counts = population_counts(conn)
     return {"maps": counts, "drops": report.drops}
 
 
