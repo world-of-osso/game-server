@@ -1474,3 +1474,74 @@ fn raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later() {
     locks.set_extended(71, entries, false, reset);
     assert!(locks.find_active_lock(71, entries, reset).is_none());
 }
+
+#[test]
+fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
+    let path = std::env::var("RAID_WORLD_DB").expect("prepared read-only raid copy");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let store = store::load_map_store(&conn).unwrap();
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(ServerClock {
+        fixed_unix: Some(SUNDAY_NOON),
+        offset_secs: 0,
+    });
+    let mut instances = InstanceManager::default();
+    let copy = instances
+        .create_map(&store, 409, entrant(71, Some(7)), at(0.0))
+        .unwrap()
+        .map;
+    let other = instances
+        .create_map(&store, 409, entrant(73, Some(8)), at(0.0))
+        .unwrap()
+        .map;
+    let mut players = Vec::new();
+    for (id, map) in [(71, copy), (72, copy), (73, other)] {
+        let player = world
+            .spawn((
+                Player {
+                    name: format!("Raider{id}"),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                ClientId(id),
+                map,
+            ))
+            .id();
+        instances.add_player(map, player);
+        players.push(player);
+    }
+    world.insert_resource(store);
+    world.insert_resource(instances);
+    let lucifron = world
+        .spawn((
+            shared::components::Npc {
+                template_id: 12118,
+                name: "Lucifron".into(),
+            },
+            copy,
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    crate::combat::mark_npc_dead_world(&mut world, lucifron);
+    let instances = world.resource::<InstanceManager>();
+    for id in [71, 72] {
+        let lock = instances
+            .locks
+            .lock(id, (409, 0))
+            .expect("boss death permanently saved both present raiders");
+        assert_eq!(lock.data.completed_encounters, 1);
+        assert_eq!(lock.instance_id, copy.instance_id);
+    }
+    assert!(instances.locks.lock(73, (409, 0)).is_none());
+    let entries = crate::scripted_ai::instance_script::done_boss_entries(
+        world.resource::<MapStore>(),
+        409,
+        1,
+    );
+    assert_eq!(entries, vec![12118]);
+}
