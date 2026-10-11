@@ -72,6 +72,8 @@ enum Selector {
     /// Units in the cone ahead of the caster meeting the effect's conditions
     /// (`TARGET_CHECK_ENTRY`).
     ConeEntry,
+    ///24: hostile cone along the caster's facing, using native ConeDegrees.
+    ConeEnemy,
     ///104: hostile cone aimed from the caster toward the selected destination.
     ConeToDest,
     ///134: hostile line aimed toward the destination, to the effect radius.
@@ -107,6 +109,7 @@ fn selector(id: u32) -> Option<Selector> {
         29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
         77 => Selector::ChannelTarget,
+        24 => Selector::ConeEnemy,
         60 => Selector::ConeEntry,
         104 => Selector::ConeToDest,
         134 => Selector::LineToDest,
@@ -362,12 +365,16 @@ pub fn select_targets(
                     max_targets,
                 ));
             }
-            Selector::ConeToDest | Selector::LineToDest => {
+            Selector::ConeEnemy | Selector::ConeToDest | Selector::LineToDest => {
                 selected_any = true;
-                let destination = spell
-                    .cast_destination
-                    .map(Vec3::from_array)
-                    .or_else(|| explicit.and_then(|unit| position(world, unit)));
+                let destination = if selector == Selector::ConeEnemy {
+                    None
+                } else {
+                    spell
+                        .cast_destination
+                        .map(Vec3::from_array)
+                        .or_else(|| explicit.and_then(|unit| position(world, unit)))
+                };
                 units.extend(directed_units(
                     world,
                     caster,
@@ -412,7 +419,8 @@ pub fn select_targets(
     Ok(units)
 }
 
-///104/134 select hostile units along the caster-to-destination direction.
+///24 uses caster facing; 104/134 use the caster-to-destination direction.
+///TC a352b1fa Spell.cpp:1273-1324 selects 24 with native ConeAngle/CalcRadius.
 ///The line uses catalog Width, not a radial explosion or a target-only hit.
 ///Unit-center geometry; combat-reach boundary expansion is not modelled.
 fn directed_units(
@@ -743,6 +751,7 @@ pub fn selects_area(effect: &SpellEffect) -> bool {
             Some(
                 Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
+                    | Selector::ConeEnemy
                     | Selector::ConeToDest
                     | Selector::LineToDest
             )
