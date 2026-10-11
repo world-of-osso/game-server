@@ -21,6 +21,46 @@ fn queue_for_battleground_sets_queue_state() {
     ));
 }
 
+/// Map.csv (12.1.0.69933), map 529: "Earn 1500 resources".
+/// Exercises multiple players through the server queue and shared end condition;
+/// it does not claim transport, invitations, or an instantiated map are wired.
+#[test]
+fn arathi_multiple_players_finish_at_authored_resource_limit() {
+    use shared::battleground::{BgInstance, BgOutcome, BgPhase, BgTeam, arathi_basin};
+
+    let template = arathi_basin();
+    let mut state = PvpServerState::default();
+    let player_count = u64::from(template.min_players_per_team) * 2;
+    let mut players = vec![PlayerPvpState::default(); player_count as usize];
+    for (index, player) in players.iter_mut().enumerate() {
+        let character_id = index as u64 + 1;
+        queue_for_battleground(player, &mut state, character_id, 30, template.id, 0)
+            .expect("eligible player queues");
+    }
+
+    let matched = state.battleground_queue.try_match(template.id).unwrap();
+    let mut participants: Vec<_> = matched
+        .team_a
+        .iter()
+        .chain(&matched.team_b)
+        .copied()
+        .collect();
+    participants.sort_unstable();
+    assert_eq!(participants, (1..=player_count).collect::<Vec<_>>());
+    assert!(state.battleground_queue.is_empty());
+
+    let mut instance = BgInstance::from_match(&matched, &template);
+    assert!(instance.start());
+    instance.add_score(BgTeam::A, 1490, &template);
+    assert_eq!(instance.phase, BgPhase::InProgress);
+    instance.add_score(BgTeam::A, 10, &template);
+    assert_eq!(instance.phase, BgPhase::Ended);
+    assert_eq!(instance.outcome, Some(BgOutcome::Winner(BgTeam::A)));
+    instance.add_score(BgTeam::B, 1500, &template);
+    assert_eq!(instance.score_b.score, 0);
+    assert_eq!(instance.outcome, Some(BgOutcome::Winner(BgTeam::A)));
+}
+
 #[test]
 fn queue_for_rated_bracket_blocks_double_queue() {
     let mut player_state = PlayerPvpState::default();
