@@ -1397,16 +1397,11 @@ fn raid_entry_legacy_raid_copy_and_weekly_bind_resume() {
     assert_eq!(instances.copy_difficulty(copy).unwrap().difficulty_id, 9);
     let entries = *store.map_difficulty(409, 9).unwrap();
     assert_eq!(entries.reset_interval, store::ResetInterval::Weekly);
-    instances.locks.update_for_player(
-        71,
-        &entries,
-        &locks::LockUpdate {
-            instance_id: copy.instance_id,
-            done_bosses: 1,
-            instance_completed_encounters: 1,
-            completed_encounter_bit: Some(0),
-        },
-        SUNDAY_NOON,
+    let player = World::new().spawn_empty().id();
+    instances.add_player(copy, player);
+    assert_eq!(
+        instances.update_instance_lock(copy, &[(player, 71)], 1, Some(0), SUNDAY_NOON),
+        vec![player]
     );
     let saved = instances.locks.saved();
     let mut reloaded = InstanceManager::with_locks(locks::InstanceLocks::from_saved(saved));
@@ -1416,4 +1411,66 @@ fn raid_entry_legacy_raid_copy_and_weekly_bind_resume() {
         .map;
     assert_eq!(resumed.instance_id, copy.instance_id);
     assert_eq!(reloaded.initial_done_bosses(resumed), 1);
+}
+
+#[test]
+fn raid_entry_current_requires_raid_but_legacy_allows_solo_and_resolves_separate_selections() {
+    let store = map_store().unwrap();
+    let instances = InstanceManager::default();
+    let mut player = entrant(71, Some(7));
+    assert_eq!(
+        instances.player_cannot_enter(store, 2939, player, 90, SUNDAY_NOON),
+        Some(TransferAbortReason::NeedGroup)
+    );
+    player.raid_group = true;
+    // Actual pinned map condition, not a made-up map/level.
+    assert_eq!(
+        instances.player_cannot_enter(store, 2939, player, 90, SUNDAY_NOON),
+        None
+    );
+    let mut instances = instances;
+    player.raid_difficulty.primary = 15;
+    player.raid_difficulty.legacy = 4;
+    let modern = instances
+        .create_map(store, 2522, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(modern).unwrap().difficulty_id, 15);
+    let legacy = instances
+        .create_map(store, 533, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(legacy).unwrap().difficulty_id, 4);
+    let dungeon = instances
+        .create_map(store, 34, player, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(dungeon).unwrap().difficulty_id, 1);
+}
+
+#[test]
+fn raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later() {
+    let store = map_store().unwrap();
+    let entries = store.map_difficulty(409, 9).unwrap();
+    let reset = locks::next_reset_time(entries.reset_interval, SUNDAY_NOON);
+    let mut locks = locks::InstanceLocks::default();
+    locks.create_for_new_instance(71, entries, 8, SUNDAY_NOON);
+    locks.update_for_player(
+        71,
+        entries,
+        &locks::LockUpdate {
+            instance_id: 8,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    assert!(locks.find_active_lock(71, entries, reset - 1).is_some());
+    assert!(locks.find_active_lock(71, entries, reset).is_none());
+    locks.set_extended(71, entries, true, reset);
+    let lock = locks.find_active_lock(71, entries, reset).unwrap();
+    assert_eq!(lock.effective_expiry(entries, reset), reset + 604800);
+    locks.set_extended(71, entries, false, reset);
+    assert!(locks.find_active_lock(71, entries, reset).is_none());
 }

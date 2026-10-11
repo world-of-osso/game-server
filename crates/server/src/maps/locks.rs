@@ -73,7 +73,7 @@ pub struct InstanceLock {
 
 impl InstanceLock {
     pub fn is_expired(&self, now: i64) -> bool {
-        self.expiry < now
+        self.expiry <= now
     }
 
     /// `InstanceLock::GetEffectiveExpiryTime`.
