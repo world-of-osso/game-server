@@ -22,6 +22,7 @@ pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod periodic;
 pub mod procs;
+mod refresh;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -724,6 +725,7 @@ pub(crate) fn apply_aura_with_spell(
     if instance.effects.is_empty() {
         return;
     }
+    refresh::prepare_application(world, target, &mut instance);
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
     mechanic_immunity::remove_matching(world, target, &instance);
@@ -1187,6 +1189,7 @@ pub(crate) fn consume_absorbs(
         return result;
     };
     for aura in &mut auras.auras {
+        let fraction = refresh::absorb_fraction(aura);
         for effect in aura.effects.iter_mut().filter(|effect| {
             effect.aura_type == handlers::SCHOOL_ABSORB
                 && effect.misc_values[0] as u32 & school != 0
@@ -1195,7 +1198,7 @@ pub(crate) fn consume_absorbs(
             if result.remaining <= 0.0 {
                 break;
             }
-            let soaked = result.remaining.min(effect.absorb_remaining);
+            let soaked = (result.remaining * fraction).min(effect.absorb_remaining);
             effect.absorb_remaining -= soaked;
             result.remaining -= soaked;
             result.contributions.push((aura.caster, soaked));

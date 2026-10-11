@@ -6,6 +6,7 @@ use crate::spell_info::SpellInfo;
 use bevy::prelude::*;
 
 const FROST_STRIKE: u32 = 49143;
+const OBLITERATE: u32 = 49020;
 pub(super) const RISING_SUN_DAMAGE: u32 = 185099;
 const RISING_SUN_RANK: u32 = 128595;
 const MORTAL_WOUNDS: u32 = 115804;
@@ -23,13 +24,16 @@ pub(in crate::spell_cast) fn effect_enabled(
     spell: u32,
     index: u8,
 ) -> bool {
-    if spell != FROST_STRIKE || !(1..=3).contains(&index) {
+    let weapon_branch = (spell == FROST_STRIKE && (1..=3).contains(&index))
+        || (spell == OBLITERATE && matches!(index, 1..=3 | 6..=8));
+    if !weapon_branch {
         return true;
     }
     let dual = world
         .get::<crate::stats::CharacterStats>(caster)
         .is_some_and(|stats| stats.off_hand.is_some());
-    if index == 3 { !dual } else { dual }
+    //49020 variable608 names both physical and frost counterparts per weapon branch.
+    if matches!(index, 3 | 8) { !dual } else { dual }
 }
 
 ///128595 explicitly grants Mortal Wounds to the Rising Sun Kick primary.
