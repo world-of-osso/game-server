@@ -83,7 +83,11 @@ pub(crate) struct PetCatalog {
 }
 
 fn load_pet_catalog(mut commands: Commands) {
-    let conn = Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY)
+    #[cfg(test)]
+    let path = crate::test_data::world_db_path();
+    #[cfg(not(test))]
+    let path = std::path::PathBuf::from(crate::spell_info::WORLD_DB_PATH);
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("Open world pet catalog");
     commands.insert_resource(read_pet_catalog(&conn).expect("Load Retail pet family/spec catalog"));
 }
