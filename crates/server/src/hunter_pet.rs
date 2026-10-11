@@ -67,7 +67,7 @@ impl Plugin for HunterPetPlugin {
             .add_systems(
                 Update,
                 crate::pet_stable::process_pet_stable_requests
-                    .after(crate::npc_interaction::close_invalid_interactions)
+                    .after(crate::npc_interaction::NpcInteractionsProcessed)
                     .after(load_pet_stables),
             )
             .add_systems(

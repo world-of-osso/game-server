@@ -68,6 +68,9 @@ pub struct ActiveInteraction {
 #[path = "auction_house_tests/regressions.rs"]
 mod ahserver_regressions;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct NpcInteractionsProcessed;
+
 pub struct NpcInteractionPlugin;
 
 impl Plugin for NpcInteractionPlugin {
@@ -82,7 +85,8 @@ impl Plugin for NpcInteractionPlugin {
                 process_close_requests,
                 close_invalid_interactions,
             )
-                .chain(),
+                .chain()
+                .in_set(NpcInteractionsProcessed),
         );
     }
 }
@@ -473,7 +477,7 @@ fn process_close_requests(mut receivers: CloseReceivers, mut commands: Commands)
     }
 }
 
-pub(crate) fn close_invalid_interactions(
+fn close_invalid_interactions(
     connections: Query<(Entity, &PlayerLink, &ActiveInteraction)>,
     world: InteractionWorld,
     mut senders: InteractionSenders,
