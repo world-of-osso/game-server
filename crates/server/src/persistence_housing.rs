@@ -76,7 +76,7 @@ pub(crate) fn create_tables(txn: &WriteTransaction) {
     }
 }
 
-fn read_state<'a>(table: &impl ReadableTable<u8, &'a [u8]>) -> Result<State, String> {
+fn read_state(table: &impl ReadableTable<u8, &'static [u8]>) -> Result<State, String> {
     let row = table
         .get(STATE_ROW)
         .map_err(|error| error.to_string())?
