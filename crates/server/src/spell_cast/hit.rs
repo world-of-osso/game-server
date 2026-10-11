@@ -86,7 +86,7 @@ fn roll_defense(
     // Object::SpellHitResult/Unit::IsImmunedToSpell checks school immunity
     // before spending resources, not only when damage is finally applied.
     let school_immune = attributes(spell, 0) & ATTR0_NO_IMMUNITIES == 0
-        && crate::auras::immune_to_school(world, unit, spell.school_mask());
+        && crate::auras::immune_to_school(world.get::<ActiveAuras>(unit), spell.school_mask());
     if school_immune || mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
         return Some(MissKind::Immune);
     }
