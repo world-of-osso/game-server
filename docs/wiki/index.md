@@ -49,6 +49,7 @@ External resources, tooling, data sources, development workflow.
 
 - [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
 
+- [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10) — authentic15 banner item definitions and16 scenery templates; source-bound locations, wild faction and expiry, imported-copy census109→125, no shared DB write.
 - [Class spell batch15](systems/spell-casting.md#fifteenth-batch-native-health-weapon-ranks-and-delayed-hits) — eight local health/weapon/rank/heal-copy/delayed-hit contracts;163 remaining Dummy roots,98/65 reviewed/underived, [all40 table](../spell-dummy15-coverage.md). Karma redirect/guardian/Eye Beam gaps retained.
 
 - [Class spell batch14](systems/spell-casting.md#fourteenth-batch-owned-hits-and-native-clocks) — eight local hit/pet/periodic consumers;164 remaining Dummy roots,93/71 reviewed/underived and [all40 proof table](../spell-dummy14-coverage.md); primary-only geometry/data discrepancies explicit.
@@ -89,7 +90,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch4](systems/spell-casting.md#fourth-batch-local-retail-rows) — ten bounded paths/eight ranked candidates;17 new native proofs, Dummy roots177→176.
 
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
-- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench and bounded Leech Life; fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
+- [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [104-ID coverage](../pet-battle-effect-coverage.md) separates row references/admission from Retail proof.
 
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 

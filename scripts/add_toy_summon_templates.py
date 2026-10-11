@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add authentic TDB templates/models/addons used by linked/scenery summon toys.
+"""Add authentic TDB scenery templates/models/addons and Retail banner items.
 
 Run on a copy: python3 scripts/add_toy_summon_templates.py --db data/world.db.new
 Uses the same Retail conversion as content_policy.py; never synthesizes rows.
@@ -8,7 +8,23 @@ import argparse
 import sqlite3
 from pathlib import Path
 
+import content_policy
 import retail_content
+
+
+def add_banner_items(conn):
+    ids = retail_content.TOY_BANNER_ITEM_IDS
+    params = ', '.join('?' for _ in ids)
+    present = {item for (item,) in conn.execute(f"""SELECT s.ID FROM item_sparse s
+        JOIN item i ON i.ID = s.ID WHERE s.ID IN ({params})""", ids)}
+    missing = sorted(set(ids) - present)
+    if missing:
+        raise ValueError(f"scenery toys missing authentic Retail items: {missing}")
+    conn.execute(f"""INSERT INTO content_item
+        SELECT {content_policy.ITEM_COLUMNS}, NULL AS SourceEntry
+        FROM item_sparse s JOIN item i ON i.ID = s.ID
+        WHERE s.ID IN ({params}) AND NOT EXISTS
+            (SELECT 1 FROM content_item c WHERE c.ID = s.ID)""", ids)
 
 
 def add_toy_summon_templates(conn):
@@ -31,6 +47,7 @@ def add_toy_summon_templates(conn):
                    WHERE t.entry = ?""", (entry,)).fetchone()]
     if missing:
         raise ValueError(f"scenery toys missing authentic TDB templates/models: {missing}")
+    add_banner_items(conn)
     return added
 
 
