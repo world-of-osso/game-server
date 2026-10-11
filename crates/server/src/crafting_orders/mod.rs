@@ -1,6 +1,8 @@
 //! Fixed-output orders: authored catalog, durable escrow and the normal craft pipeline.
 mod cast;
 mod catalog;
+#[cfg(test)]
+mod mail_compat_tests;
 mod rules;
 mod runtime;
 mod store;

@@ -8,6 +8,7 @@ pub(crate) struct Recipe {
     pub skill_line: u32,
     pub item_id: u32,
     pub count: u32,
+    pub name: String,
 }
 
 #[derive(Resource, Default)]
@@ -28,10 +29,11 @@ pub(crate) fn load_catalog(conn: &Connection) -> Result<OrderCatalog, String> {
     let mut query = conn
         .prepare(
             "SELECT a.Spell, a.SkillLine, e.EffectItemType,
-                MAX(1, CAST(ROUND(e.EffectBasePointsF) AS INTEGER))
+                MAX(1, CAST(ROUND(e.EffectBasePointsF) AS INTEGER)), n.Name_lang
          FROM crafting_order o
          JOIN skill_line_ability a ON a.ID=o.SkillLineAbilityID
          JOIN spell_effect e ON e.SpellID=a.Spell
+         JOIN spell_name n ON n.ID=a.Spell
          WHERE e.Effect=24 AND e.DifficultyID=0 AND e.EffectItemType>0",
         )
         .map_err(|e| e.to_string())?;
@@ -42,6 +44,7 @@ pub(crate) fn load_catalog(conn: &Connection) -> Result<OrderCatalog, String> {
                 skill_line: row.get(1)?,
                 item_id: row.get(2)?,
                 count: row.get(3)?,
+                name: row.get(4)?,
             })
         })
         .map_err(|e| e.to_string())?;

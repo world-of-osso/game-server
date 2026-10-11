@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
+
 - 2026-10-11 — [Follower spec bridge](investigations/follower-data.md): user-approved player-spell workaround, eleven sourced profiles/authentic templates, ordinary executor/passives/costs and aura458324, companion identity/presence/health and native LFG transport. Role/catalog7/7, party loopback1/1, profile SQL2/2 and native2/2 bounded proofs; server check/fmt pass. Canonical population is now present, but exact205-tagged maps have no authored entrance and Ruby's entrance has no205 population. Full TDB/location audit retained; no invented remap, canonical writes, private5750 combat or PNG claim.
 
 - 2026-10-11 — [Retail follower data](investigations/follower-data.md): pinned local CASC 27 difficulty205 entries, Ruby map2521/306 reference spawns; 37 Expedition Escort candidates have no TDB combat spell/SmartAI assignment. Prepared reference SQL and read-only audit; no canonical DB application, combat AI, queue, class-kit or both-skin fighting claim.

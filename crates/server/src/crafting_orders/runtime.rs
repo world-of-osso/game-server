@@ -176,26 +176,8 @@ pub(crate) fn send_result(world: &mut World, player: Entity, result: Result<Stri
         error: result.err(),
     };
     if let Some(view) = world.get::<View>(player).copied() {
-        let rows = rules::browse(
-            world,
-            player,
-            view.skill,
-            code(view.kind),
-            view.mine,
-            crate::mail::unix_now(),
-        );
-        match rows {
-            Ok(orders) => {
-                reply.snapshot = Some(CraftingOrdersSnapshot {
-                    skill_line: view.skill,
-                    kind: view.kind,
-                    mine: view.mine,
-                    orders: orders
-                        .iter()
-                        .map(|order| snapshot(world, player, order))
-                        .collect(),
-                })
-            }
+        match load_view_snapshot(world, player, view) {
+            Ok(snapshot) => reply.snapshot = Some(snapshot),
             Err(error) => reply.error = Some(error),
         }
     }
@@ -209,14 +191,81 @@ pub(crate) fn send_result(world: &mut World, player: Entity, result: Result<Stri
     }
 }
 
-fn snapshot(world: &World, player: Entity, order: &Order) -> CraftingOrderSnapshot {
+fn load_view_snapshot(
+    world: &World,
+    player: Entity,
+    view: View,
+) -> Result<CraftingOrdersSnapshot, String> {
+    let orders = rules::browse(
+        world,
+        player,
+        view.skill,
+        code(view.kind),
+        view.mine,
+        crate::mail::unix_now(),
+    )?;
+    let orders = orders
+        .iter()
+        .map(|order| snapshot(world, player, order))
+        .collect::<Result<Vec<_>, _>>()?;
+    let data = world.resource::<crate::profession::ProfessionData>();
+    let mut recipes: Vec<_> = world
+        .resource::<super::catalog::OrderCatalog>()
+        .0
+        .values()
+        .filter(|recipe| recipe.skill_line == view.skill)
+        .map(|recipe| shared::protocol::CraftingOrderRecipeSnapshot {
+            spell_id: recipe.spell_id,
+            skill_line: recipe.skill_line,
+            item_id: recipe.item_id,
+            count: recipe.count,
+            name: recipe.name.clone(),
+            reagents: data
+                .reagents(recipe.spell_id)
+                .iter()
+                .map(|&(item_id, quantity)| CraftingOrderReagent {
+                    item_id,
+                    quantity,
+                    supplied: 0,
+                })
+                .collect(),
+        })
+        .collect();
+    recipes.sort_by_key(|recipe| recipe.spell_id);
+    Ok(CraftingOrdersSnapshot {
+        skill_line: view.skill,
+        kind: view.kind,
+        mine: view.mine,
+        recipes,
+        orders,
+    })
+}
+
+fn snapshot(world: &World, player: Entity, order: &Order) -> Result<CraftingOrderSnapshot, String> {
     let db = &world.resource::<GameDatabase>().db;
     let name = |id| {
-        persistence::load_character(db, id).map_or_else(|| format!("Character {id}"), |c| c.name)
+        persistence::load_character(db, id)
+            .map(|c| c.name)
+            .ok_or_else(|| format!("order character {id} is missing"))
     };
-    let viewer = rules::character(world, player).expect("order viewer character");
+    let viewer = rules::character(world, player)?;
     let can_craft = rules::check_crafter(world, player, order, crate::mail::unix_now()).is_ok();
-    CraftingOrderSnapshot {
+    let assigned = can_craft && order.status == 1 && order.crafter == Some(viewer);
+    let can_fulfill = if assigned {
+        let model = crate::inventory::load_model(
+            db,
+            world.resource::<crate::item_templates::ItemTemplates>(),
+            viewer,
+        )
+        .map_err(|error| format!("load order crafter inventory: {error:?}"))?;
+        order.reagents.iter().all(|&(item, required, supplied)| {
+            model.bag_count(shared::item_data::ItemDefinitionSource::Retail, item)
+                >= required - supplied
+        })
+    } else {
+        false
+    };
+    Ok(CraftingOrderSnapshot {
         id: order.id,
         spell_id: order.spell_id,
         item_id: order.item_id,
@@ -227,9 +276,9 @@ fn snapshot(world: &World, player: Entity, order: &Order) -> CraftingOrderSnapsh
             2 => CraftingOrderKind::Personal,
             _ => unreachable!("stored order kind"),
         },
-        customer: name(order.customer),
-        recipient: order.recipient.map(name),
-        crafter: order.crafter.map(name),
+        customer: name(order.customer)?,
+        recipient: order.recipient.map(name).transpose()?,
+        crafter: order.crafter.map(name).transpose()?,
         commission: order.commission,
         reagents: order
             .reagents
@@ -250,7 +299,10 @@ fn snapshot(world: &World, player: Entity, order: &Order) -> CraftingOrderSnapsh
             _ => unreachable!("stored order status"),
         },
         can_claim: can_craft && order.status == 0,
-        can_fulfill: can_craft && order.status == 1 && order.crafter == Some(viewer),
+        can_fulfill,
         can_cancel: order.status == 0 && order.customer == viewer,
-    }
+        can_release: order.status == 1
+            && order.crafter == Some(viewer)
+            && !super::is_order_cast(world, player, order.spell_id),
+    })
 }

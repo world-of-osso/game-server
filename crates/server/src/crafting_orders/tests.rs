@@ -5,9 +5,22 @@ const RECIPE: u32 = 28208;
 const OUTPUT: u32 = 22658;
 
 fn order_harness() -> Harness {
+    order_harness_in(None)
+}
+
+fn order_harness_in(path: Option<&std::path::Path>) -> Harness {
     let mut h = harness(80).unwrap();
+    if let Some(path) = path {
+        h.app.world_mut().remove_resource::<GameDatabase>();
+        let db = redb::Database::create(path).unwrap();
+        persistence::create_tables(&db);
+        let (id, _) = persistence::create_character(&db, 1, "Crafter", 1, 1).unwrap();
+        h.character_id = id;
+        h.app.world_mut().get_mut::<ClientId>(h.player).unwrap().0 = id;
+        h.app.insert_resource(GameDatabase { db });
+    }
     h.conn.execute_batch("CREATE TEMP TABLE crafting_order (ID INTEGER PRIMARY KEY, SkillLineAbilityID INTEGER, CraftingOrderHouseID INTEGER, Field_10_0_2_46479_002 INTEGER)").unwrap();
-    let csv = std::fs::read_to_string("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/crafting-orders-srv-2026-10-11/CraftingOrder.csv").unwrap();
+    let csv = include_str!("CraftingOrder.csv");
     for line in csv.lines().skip(1) {
         let row: Vec<u32> = line.split(',').map(|v| v.parse().unwrap()).collect();
         h.conn
@@ -17,8 +30,9 @@ fn order_harness() -> Harness {
             )
             .unwrap();
     }
-    h.app
-        .insert_resource(orders::load_catalog(&h.conn).unwrap());
+    let catalog = orders::load_catalog(&h.conn).unwrap();
+    assert_eq!(catalog.0.len(), 89);
+    h.app.insert_resource(catalog);
     let spells = world_db().unwrap();
     h.app.insert_resource(SpellStore::fixture(vec![
         spells.store.get(RECIPE).unwrap().clone(),
@@ -109,13 +123,28 @@ fn crafter(h: &mut Harness, name: &str) -> (Entity, u64) {
 }
 
 #[test]
-fn crafting_orders_public_claim_fulfil_uses_cast_and_delivers_mail() {
+fn crafting_orders_all_types_claim_fulfil_uses_cast_and_delivers_mail() {
+    for kind in [0, 1, 2] {
+        complete_order(kind);
+    }
+}
+
+fn complete_order(kind: u8) {
     let mut h = order_harness();
     let now = crate::mail::unix_now();
     let (worker, worker_id) = crafter(&mut h, "Worker");
-    let id = orders::place(h.app.world_mut(), h.player, request(0), now).unwrap();
+    let mut req = request(kind);
+    if kind == 1 {
+        let db = &h.app.world().resource::<GameDatabase>().db;
+        persistence::set_character_guild_by_id(db, h.character_id, 7, "Guild").unwrap();
+        persistence::set_character_guild_by_id(db, worker_id, 7, "Guild").unwrap();
+    }
+    if kind == 2 {
+        req.recipient = Some("Worker".into());
+    }
+    let id = orders::place(h.app.world_mut(), h.player, req, now).unwrap();
     assert_eq!(
-        orders::browse(h.app.world(), worker, 197, 0, false, now)
+        orders::browse(h.app.world(), worker, 197, kind, false, now)
             .unwrap()
             .len(),
         1
@@ -218,14 +247,11 @@ fn crafting_orders_cancel_and_expiry_refund_exact_escrow_once() {
         let mails = persistence::mail_store::load_mailbox(db, h.character_id);
         assert_eq!(mails.len(), 1);
         assert_eq!(mails[0].money, 1000);
-        assert_eq!(
-            mails[0]
-                .items
-                .iter()
-                .map(|v| v.item.clone())
-                .collect::<Vec<_>>(),
-            before.items
-        );
+        let mut refunded: Vec<_> = mails[0].items.iter().map(|v| v.item.clone()).collect();
+        let mut supplied = before.items;
+        refunded.sort_by_key(|item| item.item_guid);
+        supplied.sort_by_key(|item| item.item_guid);
+        assert_eq!(refunded, supplied);
         assert_eq!(orders::all(db).unwrap()[0].status, 3);
     }
 }
@@ -276,5 +302,139 @@ fn crafting_orders_interrupted_cast_preserves_order_escrow() {
     assert_eq!(
         persistence::mail_store::load_mailbox(db, h.character_id)[0].money,
         1000
+    );
+}
+
+#[test]
+fn crafting_orders_partial_customer_reagents_charge_crafter_only_on_completion() {
+    let mut h = order_harness();
+    let now = crate::mail::unix_now();
+    let (worker, worker_id) = crafter(&mut h, "Worker");
+    let mut req = request(0);
+    req.supplied[0].2 = 2;
+    let id = orders::place(h.app.world_mut(), h.player, req, now).unwrap();
+    orders::claim(h.app.world_mut(), worker, id, now).unwrap();
+    assert!(orders::begin_fulfill(h.app.world_mut(), worker, id, now).is_err());
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    crate::inventory::grant_item(
+        db,
+        h.app.world().resource::<ItemTemplates>(),
+        h.app.world().resource::<crate::merchant::VendorCatalog>(),
+        worker_id,
+        (22682, 3),
+    )
+    .unwrap();
+    orders::begin_fulfill(h.app.world_mut(), worker, id, now).unwrap();
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_inventory(db, worker_id).items[0].stack_count,
+        3
+    );
+    h.advance(400);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert!(persistence::load_inventory(db, worker_id).items.is_empty());
+    let customer = persistence::load_inventory(db, h.character_id);
+    assert_eq!(customer.items.len(), 1);
+    assert_eq!(customer.items[0].stack_count, 3);
+    assert_eq!(
+        persistence::mail_store::load_mailbox(db, worker_id)[0].money,
+        1000
+    );
+}
+
+#[test]
+fn crafting_orders_claim_and_escrow_survive_database_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("orders.redb");
+    let mut h = order_harness_in(Some(&path));
+    let now = crate::mail::unix_now();
+    let (worker, worker_id) = crafter(&mut h, "Worker");
+    let id = orders::place(h.app.world_mut(), h.player, request(0), now).unwrap();
+    orders::claim(h.app.world_mut(), worker, id, now).unwrap();
+    h.app.world_mut().remove_resource::<GameDatabase>();
+    let db = redb::Database::open(&path).unwrap();
+    persistence::create_tables(&db);
+    assert_eq!(orders::all(&db).unwrap()[0].status, 1);
+    h.app.insert_resource(GameDatabase { db });
+    orders::begin_fulfill(h.app.world_mut(), worker, id, now).unwrap();
+    h.advance(400);
+    h.app.world_mut().remove_resource::<GameDatabase>();
+    let db = redb::Database::open(&path).unwrap();
+    persistence::create_tables(&db);
+    assert_eq!(orders::all(&db).unwrap()[0].status, 2);
+    assert_eq!(
+        persistence::mail_store::load_mailbox(&db, worker_id)[0].money,
+        1000
+    );
+    assert_eq!(
+        persistence::mail_store::load_mailbox(&db, h.character_id)[0].items[0]
+            .item
+            .item_id,
+        OUTPUT
+    );
+}
+
+#[test]
+fn crafting_orders_wire_customer_query_place_and_cancel() {
+    use shared::protocol::{
+        CraftingOrderKind as Kind, CraftingOrderReagent, CraftingOrderRequest as Request,
+        CraftingOrderStateUpdate as Reply,
+    };
+    let mut h = order_harness();
+    orders::CraftingOrdersPlugin.build(&mut h.app);
+    add_inbox::<Reply>(&mut h.app);
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert((pair::<Request>(), pair::<Reply>()));
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(h.player)
+        .unwrap()
+        .spells
+        .clear();
+    h.send::<Request, ProfessionChannel>(Request::Query {
+        skill_line: 197,
+        kind: Kind::Public,
+        mine: true,
+    });
+    let reply = h.take::<Reply>().pop().unwrap();
+    assert!(reply.error.is_none());
+    let snapshot = reply.snapshot.unwrap();
+    let recipe = snapshot
+        .recipes
+        .iter()
+        .find(|recipe| recipe.spell_id == RECIPE)
+        .unwrap();
+    assert_eq!(recipe.item_id, OUTPUT);
+    let reagents = recipe
+        .reagents
+        .iter()
+        .map(|reagent| CraftingOrderReagent {
+            item_id: reagent.item_id,
+            quantity: reagent.quantity,
+            supplied: reagent.quantity,
+        })
+        .collect();
+    h.send::<Request, ProfessionChannel>(Request::Place {
+        spell_id: RECIPE,
+        kind: Kind::Public,
+        recipient: None,
+        commission: 1000,
+        reagents,
+        duration_hours: 12,
+        note: "Wire order".into(),
+    });
+    let reply = h.take::<Reply>().pop().unwrap();
+    assert!(reply.error.is_none(), "{:?}", reply.error);
+    let order = reply.snapshot.unwrap().orders.pop().unwrap();
+    assert!(order.can_cancel);
+    assert!(!order.can_claim);
+    h.send::<Request, ProfessionChannel>(Request::Cancel { order_id: order.id });
+    let reply = h.take::<Reply>().pop().unwrap();
+    assert!(reply.error.is_none());
+    assert_eq!(
+        reply.snapshot.unwrap().orders[0].status,
+        shared::protocol::CraftingOrderStatus::Cancelled
     );
 }
