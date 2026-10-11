@@ -10,6 +10,9 @@ mod batch15;
 mod batch16;
 mod batch17;
 mod batch19;
+mod batch20;
+mod batch21;
+mod batch22;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -20,6 +23,7 @@ mod batch9;
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
+pub(crate) use batch20::proc_charges;
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
 }
@@ -33,6 +37,8 @@ pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
 };
+pub(super) use batch21::berserk_combo_bonus;
+pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch19::effect_enabled(world, caster, spell, index)
@@ -298,6 +304,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch20::BARBED_SHOT => Some(batch20::grant_barbed_focus),
         batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
         batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),

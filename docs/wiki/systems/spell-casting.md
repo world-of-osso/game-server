@@ -1,6 +1,32 @@
 # Spell Casting
 
+## Twenty-second batch: native Rewind non-raid healing
+
+Rewind363534's native effect0 already scales each periodic heal by0.4 SP. SpellMisc's EXTRA_INITIAL_PERIOD,4sec duration and1000ms period yield five ticks, matching local description variable775's minimum. Its previously skipped s4=200 is now consumed by a named healing multiplier: GroupRegistry's caster membership distinguishes raids from parties/solo, without changing recipient selection, native amount, clock, rounding or overflow. This does not implement s2/s3's historical-damage component. [Contract](../../specs/spell-dummy-scripts.md#twenty-second-batch-native-rewind-non-raid-healing), [sources/proof/census](../../spell-dummy22-coverage.md).
+
+Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulfill the s4=6 total-count field. Behavioral tests certify cadence, wire cancellation, cap/overflow and rejected friendly casts. No additional six-point grant, registration-only no-op or production Mind Flay change.
+
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
+
+## Twenty-third batch: authored combo builders and Rune Weapon parry
+
+[Contract](../../specs/spell-dummy-scripts.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry), [source/census/proof](../../spell-dummy23-coverage.md). `scripts/batch5.rs::shuriken_storm` applies active121471's native100-percent effect3 to197835's scripted per-enemy combo grant. Native Backstab energize already matches121471's modifier masks; the scripted Storm effect does not. This named correction does not double native builders twice or invent a Shadow-damage copy.
+
+`summon.rs::spawn_summon` grants81256 only after authentic49028/27893 Rune Weapon creation. Native aura47 supplies30-percent owner parry; both durations are8sec. `despawn_summon` removes that owner's81256 on early actor removal. Missing real template spawns nothing/grants nothing; existing root admission remains unchanged. Mirrored attacks and49028 Dummy markers remain unbound.
+
+All28 previously unreviewed roots now carry exact reasons:157/129/28→157/157/0, with all157 unresolved upper-bound roots retained. Zero underived means no unreviewed roots, not full gameplay closure. Thirty deferred roots re-read; known empower/radius/count data does not create missing movement/actor/history/selector algorithms. Targeted12/12 GREEN at449bb8e; no broad suite/live parity claim.
+
+## Twenty-first batch: native combo builders
+
+[Contract](../../specs/spell-dummy-scripts.md#twenty-first-batch-native-combo-builders), [source/proof/census](../../spell-dummy21-coverage.md). `effects.rs::energize` admits positive self-directed combo grants from depth0 native casts. `scripts/batch21.rs::berserk_combo_bonus` reads the active106951 index1 amount only for matching spell families; combined grant flows through ordinary pool clamping and overflow logging. Thrash's caster effect grants once, independent of its area target count. Native343216's1500ms periodic point remains independent and receives no extra builder point.
+
+Completed-root Shred/Rake/Thrash, cap/overflow, expiry, actual periodic clock, unrelated family and rejected-friendly cast prove this numeric contract.405189 over-cap recovery and script-only grants remain uncertified. Seven other reviewed roots retain exact source-field or runtime-prerequisite deferrals, including known Spiritbloom30yd range and both known empower stage tables; these are not absent-data claims.
+
+## Twentieth batch: authored totals and next-spell uses
+
+[Contract](../../specs/spell-dummy-scripts.md#twentieth-batch-authored-totals-and-next-spell-uses), [source/proof/census](../../spell-dummy20-coverage.md). `scripts/batch20.rs` starts Barbed Shot's named246152 Focus aura once after completed root casting. `auras/refresh.rs` implements217200s2's authored five-amount damage total over the unchanged native twelve-second clock (seven initial/regular ticks). Equal distribution is inferred from the conflicting local total and clock, not independently observed Retail per-tick damage. Reapplication adds same-owner unpaid damage to that fresh total and divides across the preserved phase's future ticks, without repeating an extra-initial tick. Due ticks are paid before snapshot; foreign owners remain independent.
+
+Stormkeeper's aura construction initializes charges from191634s5 before ordinary charge modifiers. Existing family-matched spell modifiers consume one use per completed cast; refresh rebuilds the authored count rather than resetting to the options row's single charge. No separate universal proc or overload algorithm is added. Unknown markers, soft-cap curves, massive-damage thresholds and unrelated guardian/rotation mechanics remain uncertified.
 
 ## Nineteenth batch: counts, healing totals and owned damage
 

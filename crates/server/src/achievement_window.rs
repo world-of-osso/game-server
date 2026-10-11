@@ -3,9 +3,14 @@ use super::*;
 use shared::protocol::{
     ACHIEVEMENT_CATEGORY_PAGE_SIZE, ACHIEVEMENT_CRITERIA_PAGE_SIZE,
     ACHIEVEMENT_DESCRIPTION_MAX_BYTES, ACHIEVEMENT_NAME_MAX_BYTES, ACHIEVEMENT_PAGE_SIZE,
-    AchievementCatalogEntry, AchievementCatalogPage, AchievementCategoryEntry,
-    AchievementCriterionLine, QueryAchievementCatalog,
+    ACHIEVEMENT_SEARCH_MAX_CHARS, AchievementCatalogEntry, AchievementCatalogPage,
+    AchievementCategoryEntry, AchievementCategoryTotals, AchievementCriterionLine,
+    AchievementScope, AchievementSummary, QueryAchievementCatalog,
 };
+
+// TrinityCore a352b1fa DBCEnums.h:73-93: hidden, guild and hidden tracking copies.
+const NON_PLAYER_UI_FLAGS: u32 = 0x2 | 0x4000 | 0x100000;
+const STATISTIC_FLAG: u32 = 0x1;
 
 #[derive(Debug)]
 struct WindowDefinition {
@@ -28,6 +33,10 @@ pub(super) struct WindowData {
 }
 
 impl WindowData {
+    pub(super) fn icon_fdid(&self, id: u32) -> u32 {
+        self.definitions[&id].icon
+    }
+
     pub(super) fn has_account_flag(&self, id: u32) -> bool {
         self.definitions
             .get(&id)
@@ -100,6 +109,15 @@ fn load_tree_labels(conn: &Connection) -> rusqlite::Result<HashMap<u32, (String,
     rows.collect()
 }
 
+fn matches_scope(flags: u32, scope: AchievementScope) -> bool {
+    let account = flags & ACHIEVEMENT_FLAG_ACCOUNT != 0;
+    match scope {
+        AchievementScope::All => true,
+        AchievementScope::Account => account,
+        AchievementScope::Character => !account,
+    }
+}
+
 /// A UTF-8 prefix, bounded in bytes rather than characters.
 pub(crate) fn bound_text(text: &str, max_bytes: usize) -> String {
     let mut end = text.len().min(max_bytes);
@@ -128,7 +146,31 @@ impl AchievementCatalog {
         race: u8,
     ) -> AchievementCatalogPage {
         match request {
+            QueryAchievementCatalog::Statistics {
+                category_id,
+                after_id,
+            } => self.statistics_page(state, category_id, after_id, race),
+            QueryAchievementCatalog::Search {
+                text,
+                scope,
+                after_id,
+            } => self.search_page(state, &text, scope, after_id, race),
+            QueryAchievementCatalog::Summary { scope } => {
+                AchievementCatalogPage::Summary(self.summary(state, race, scope))
+            }
             QueryAchievementCatalog::Categories { after_id } => self.categories_page(after_id),
+            QueryAchievementCatalog::Achievement { achievement_id } => {
+                let entry = self
+                    .window
+                    .definitions
+                    .get(&achievement_id)
+                    .filter(|row| self.faction_matches(row.faction, race))
+                    .map(|row| self.window_entry(state, row, race));
+                AchievementCatalogPage::Achievement {
+                    achievement_id,
+                    entry,
+                }
+            }
             QueryAchievementCatalog::Category {
                 category_id,
                 after_id,
@@ -144,6 +186,109 @@ impl AchievementCatalog {
                     next_id,
                 }
             }
+        }
+    }
+
+    /// Retail AchievementUI.lua:2334-2348,2508-2512: full counts and three latest earned rows.
+    fn summary(
+        &self,
+        state: &PlayerAchievementState,
+        race: u8,
+        scope: AchievementScope,
+    ) -> AchievementSummary {
+        let eligible: Vec<_> = self
+            .window
+            .definitions
+            .values()
+            .filter(|row| {
+                row.flags & (NON_PLAYER_UI_FLAGS | STATISTIC_FLAG) == 0
+                    && self.faction_matches(row.faction, race)
+                    && matches_scope(row.flags, scope)
+            })
+            .collect();
+        let mut summary = self.count_summary_rows(state, &eligible, scope);
+        summary.recent = self.latest_earned_rows(state, &eligible, race);
+        summary
+    }
+
+    fn count_summary_rows(
+        &self,
+        state: &PlayerAchievementState,
+        rows: &[&WindowDefinition],
+        scope: AchievementScope,
+    ) -> AchievementSummary {
+        let mut summary = AchievementSummary {
+            scope,
+            points: 0,
+            total: rows.len() as u32,
+            completed: 0,
+            categories: Vec::new(),
+            recent: Vec::new(),
+        };
+        let mut categories = BTreeMap::new();
+        for row in rows {
+            let completed = self
+                .definition_state(state, row.id)
+                .earned_ids
+                .contains(&row.id);
+            summary.completed += u32::from(completed);
+            if completed {
+                summary.points += row.points;
+            }
+            self.accumulate_category_totals(&mut categories, row.category, completed);
+        }
+        summary.categories = categories.into_values().collect();
+        summary
+    }
+
+    fn latest_earned_rows(
+        &self,
+        state: &PlayerAchievementState,
+        rows: &[&WindowDefinition],
+        race: u8,
+    ) -> Vec<AchievementCatalogEntry> {
+        let mut earned: Vec<_> = rows
+            .iter()
+            .copied()
+            .filter(|row| {
+                self.definition_state(state, row.id)
+                    .earned_ids
+                    .contains(&row.id)
+            })
+            .collect();
+        earned.sort_by_key(|row| {
+            let date = self
+                .definition_state(state, row.id)
+                .earned_at
+                .get(&row.id)
+                .copied();
+            (std::cmp::Reverse(date), row.id)
+        });
+        earned
+            .into_iter()
+            .take(3)
+            .map(|row| self.window_entry(state, row, race))
+            .collect()
+    }
+
+    fn accumulate_category_totals(
+        &self,
+        totals: &mut BTreeMap<u32, AchievementCategoryTotals>,
+        category: u32,
+        completed: bool,
+    ) {
+        let Some(row) = self.window.categories.get(&category) else {
+            return;
+        };
+        let counts = totals.entry(category).or_insert(AchievementCategoryTotals {
+            category_id: category,
+            total: 0,
+            completed: 0,
+        });
+        counts.total += 1;
+        counts.completed += u32::from(completed);
+        if row.parent_id >= 0 {
+            self.accumulate_category_totals(totals, row.parent_id as u32, completed);
         }
     }
 
@@ -175,6 +320,7 @@ impl AchievementCatalog {
             .definitions
             .values()
             .filter(|row| row.category == category_id && row.id > after_id)
+            .filter(|row| row.flags & (NON_PLAYER_UI_FLAGS | STATISTIC_FLAG) == 0)
             .filter(|row| self.faction_matches(row.faction, race));
         let (definitions, next_id) = paginate(rows.map(|row| (row.id, row)), ACHIEVEMENT_PAGE_SIZE);
         let achievements = definitions
@@ -188,6 +334,104 @@ impl AchievementCatalog {
         }
     }
 
+    /// Retail AchievementUI.lua:2235: raw quantities, never target-clamped progress.
+    fn statistics_page(
+        &self,
+        state: &PlayerAchievementState,
+        category_id: u32,
+        after_id: u32,
+        race: u8,
+    ) -> AchievementCatalogPage {
+        let rows = self.window.definitions.values().filter(|row| {
+            row.id > after_id
+                && row.category == category_id
+                && row.flags & STATISTIC_FLAG != 0
+                && row.flags & NON_PLAYER_UI_FLAGS == 0
+                && self.faction_matches(row.faction, race)
+        });
+        let (rows, next_id) = paginate(
+            rows.map(|row| (row.id, self.window_entry(state, row, race))),
+            ACHIEVEMENT_PAGE_SIZE,
+        );
+        AchievementCatalogPage::Statistics {
+            category_id,
+            achievements: rows,
+            next_id,
+        }
+    }
+
+    /// Retail AchievementUI.lua:3447-3460,3632-3648: full catalog, including statistics.
+    fn search_page(
+        &self,
+        state: &PlayerAchievementState,
+        text: &str,
+        scope: AchievementScope,
+        after_id: u32,
+        race: u8,
+    ) -> AchievementCatalogPage {
+        let text: String = text
+            .trim()
+            .chars()
+            .take(ACHIEVEMENT_SEARCH_MAX_CHARS)
+            .collect();
+        let needle = text.to_lowercase();
+        let rows = self.window.definitions.values().filter(|row| {
+            !needle.is_empty()
+                && row.id > after_id
+                && row.flags & NON_PLAYER_UI_FLAGS == 0
+                && matches_scope(row.flags, scope)
+                && self.faction_matches(row.faction, race)
+                && (row.name.to_lowercase().contains(&needle)
+                    || row.description.to_lowercase().contains(&needle))
+        });
+        let (achievements, next_id) = paginate(
+            rows.map(|row| (row.id, self.window_entry(state, row, race))),
+            ACHIEVEMENT_PAGE_SIZE,
+        );
+        AchievementCatalogPage::Search {
+            text,
+            scope,
+            achievements,
+            next_id,
+        }
+    }
+
+    fn statistic_value(
+        &self,
+        state: &PlayerAchievementState,
+        row: &WindowDefinition,
+    ) -> Option<u64> {
+        if row.flags & 1 == 0
+            || (row.flags & ACHIEVEMENT_FLAG_ACCOUNT != 0 && state.account.is_none())
+            || !self.supports_tree(row.root, &mut BTreeSet::new())
+        {
+            return None;
+        }
+        let state = self.definition_state(state, row.id);
+        self.raw_statistic_counter(row.root, state)
+    }
+
+    fn raw_statistic_counter(&self, id: u32, state: &PlayerAchievementState) -> Option<u64> {
+        match self.trees[&id].operator {
+            TreeOperator::Single => Some(
+                self.criterion_counter(self.trees[&id].criteria_id, state)
+                    .unwrap_or(0),
+            ),
+            TreeOperator::SumChildren => Some(self.sum_counters(id, state, false)),
+            TreeOperator::SumChildrenWeight => Some(self.sum_counters(id, state, true)),
+            TreeOperator::MaxChild => Some(self.max_counter(id, state)),
+            TreeOperator::All => {
+                let children = self.children.get(&id)?;
+                if children.len() == 1 {
+                    self.raw_statistic_counter(children[0], state)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
     fn window_entry(
         &self,
         state: &PlayerAchievementState,
@@ -196,6 +440,7 @@ impl AchievementCatalog {
     ) -> AchievementCatalogEntry {
         let (criteria, next_criteria_id) = self.criteria_page(state, row.id, 0, race);
         let has_scope = row.flags & ACHIEVEMENT_FLAG_ACCOUNT == 0 || state.account.is_some();
+        let statistic_value = self.statistic_value(state, row);
         let state = self.definition_state(state, row.id);
         let earned = state.earned_ids.contains(&row.id);
         AchievementCatalogEntry {
@@ -204,6 +449,8 @@ impl AchievementCatalog {
             description: row.description.clone(),
             points: row.points,
             icon_fdid: row.icon,
+            flags: row.flags,
+            statistic_value,
             earned,
             earned_at: earned
                 .then(|| state.earned_at.get(&row.id).copied())

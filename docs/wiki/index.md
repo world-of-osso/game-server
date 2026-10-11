@@ -1,5 +1,9 @@
 # Wiki Index
 
+- [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry) — authored scripted Shadow-Blades combo doubling, real Rune-Weapon owner parry, all28 exact reviews and30 deferred revisits; [157/157/0 census/proof/limits](../spell-dummy23-coverage.md). Zero underived is no unreviewed roots, not zero missing mechanics.
+
+- [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
+
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
 - [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
@@ -60,9 +64,14 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
+
+- [Class spell batch20](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses) — Barbed Shot total/rollover/Focus and Stormkeeper two-use count;158 remaining Dummy roots/110 reviewed/48 underived, six exact source deferrals and [all40/proof/limits](../spell-dummy20-coverage.md).
+
 - [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
 
 - [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
+- [Quest GO/spell objectives](systems/game-objects.md#quest-objects-2026-10-11) — authored locks, goober use, chest quest-item loot and personal/group spell-credit events; real-data turn-in tests and retained Retail gaps.
 
 - [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
 - [Toy-effects12 non-summon cosmetics](systems/toys.md#toy-effects12-non-summon-cosmetics-2026-10-11) — ranked dummy handlers; source-bound sob, ghost, fist and water art; [coverage](../toy-effects12-coverage.md), retained underivable scripts/rendering.
