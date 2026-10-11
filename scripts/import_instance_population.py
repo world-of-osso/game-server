@@ -35,15 +35,15 @@ class ImportReport:
         self.drops.append(dict(table=table, key=key, value=value, reason=reason))
 
 
-def select_instance_spawns(conn):
+def select_instance_spawns(conn, *, map_list=MAPS, base_phase=BASE_PHASE):
     conn.execute("CREATE TEMP TABLE retail_map AS SELECT MapID AS map_id, DifficultyID AS difficulty "
-                 f"FROM map_difficulty WHERE MapID IN ({MAPS})")
+                 f"FROM map_difficulty WHERE MapID IN ({map_list})")
     conn.execute("CREATE TEMP TABLE old_instance_guid AS SELECT guid FROM content_creature "
-                 f"WHERE map IN ({MAPS})")
+                 f"WHERE map IN ({map_list})")
     for table in ("creature", "gameobject"):
         alias = ", s.id AS id1" if table == "creature" else ""
         conn.execute(f"CREATE TEMP TABLE instance_{table} AS SELECT s.*{alias} "
-                     f"FROM tdb_{table} s WHERE map IN ({MAPS}) AND {BASE_PHASE} AND {retail.SPAWNS_ON_MAP}")
+                     f"FROM tdb_{table} s WHERE map IN ({map_list}) AND {base_phase} AND {retail.SPAWNS_ON_MAP}")
     conn.execute("CREATE TEMP TABLE retail_spawn AS SELECT guid AS tdb_guid, guid+? AS guid "
                  "FROM temp.instance_creature", (OFFSET,))
     conn.execute("CREATE TEMP TABLE retail_gameobject AS SELECT guid AS tdb_guid,id "
@@ -52,8 +52,8 @@ def select_instance_spawns(conn):
                  "(SELECT guid FROM tdb_game_event_gameobject WHERE eventEntry<0)")
 
 
-def import_creatures(conn, report):
-    retail.create_difficulty_table(conn, map_list=MAPS, base_phase=BASE_PHASE)
+def import_creatures(conn, report, *, map_list=MAPS, base_phase=BASE_PHASE):
+    retail.create_difficulty_table(conn, map_list=map_list, base_phase=base_phase)
     prefer_existing_base_difficulties(conn)
     conn.create_function("health_expansion", 1, retail.health_expansion, deterministic=True)
     conn.execute(f"DELETE FROM content_creature_template WHERE entry IN ({ENTRIES})")
@@ -73,7 +73,7 @@ def import_creatures(conn, report):
                  f"FROM tdb_creature_template_addon WHERE entry IN ({ENTRIES})")
     conn.execute("INSERT INTO content_creature_equip_template SELECT CreatureID,ID,ItemID1,AppearanceModID1,"
                  f"ItemID2,AppearanceModID2,ItemID3,AppearanceModID3 FROM tdb_creature_equip_template WHERE CreatureID IN ({ENTRIES})")
-    conn.execute(f"DELETE FROM content_creature WHERE map IN ({MAPS})")
+    conn.execute(f"DELETE FROM content_creature WHERE map IN ({map_list})")
     conn.execute(f"""INSERT INTO content_creature (guid,id1,map,zoneId,areaId,equipment_id,position_x,position_y,
         position_z,orientation,spawntimesecs,wander_distance,currentwaypoint,MovementType,unit_flags,ScriptName,
         VerifiedBuild,modelid,spawnDifficulties)
@@ -171,9 +171,9 @@ def import_creature_relationships(conn):
                  f"WHERE path_id<>0 AND entry IN ({ENTRIES})")
 
 
-def import_gameobjects(conn, report):
+def import_gameobjects(conn, report, *, map_list=MAPS, rebuild_pools=True):
     retail.build_gameobject_templates(conn, report, retain_missing_displays=True)
-    conn.execute(f"DELETE FROM content_gameobject WHERE map IN ({MAPS})")
+    conn.execute(f"DELETE FROM content_gameobject WHERE map IN ({map_list})")
     conn.execute(f"""INSERT INTO content_gameobject (guid,id,map,zoneId,areaId,position_x,position_y,position_z,
         orientation,rotation0,rotation1,rotation2,rotation3,spawntimesecs,animprogress,state,ScriptName,VerifiedBuild,spawnDifficulties)
         SELECT g.guid+{OFFSET},g.id,g.map,g.zoneId,g.areaId,g.position_x,g.position_y,g.position_z,g.orientation,
@@ -181,7 +181,8 @@ def import_gameobjects(conn, report):
         {retail.SPAWN_DIFFICULTIES} FROM tdb_gameobject g JOIN temp.retail_gameobject r ON r.tdb_guid=g.guid
         WHERE g.id IN (SELECT entry FROM content_gameobject_template)""")
     # Rebuild source-backed pools to translate the newly available spawn GUIDs too.
-    retail.build_pools(conn, report)
+    if rebuild_pools:
+        retail.build_pools(conn, report)
 
 
 def population_counts(conn):
@@ -217,22 +218,27 @@ def population_counts(conn):
     return rows
 
 
-def apply_population(conn, report):
-    """Apply inside the caller's transaction, also used by full content regeneration."""
+def apply_population(conn, report, *, map_list=MAPS, base_phase=BASE_PHASE, rebuild_pools=True):
+    """Apply inside the caller's transaction, also used by scoped world promotion."""
     for name in ("retail_map", "retail_spawn", "retail_gameobject", "spawn_map_difficulty", "spawn_row", "tdb_difficulty", "instance_base_difficulty"):
         conn.execute(f"DROP TABLE IF EXISTS temp.{name}")
-    select_instance_spawns(conn)
-    import_creatures(conn, report)
+    select_instance_spawns(conn, map_list=map_list, base_phase=base_phase)
+    import_creatures(conn, report, map_list=map_list, base_phase=base_phase)
     import_creature_relationships(conn)
-    import_gameobjects(conn, report)
+    import_gameobjects(conn, report, map_list=map_list, rebuild_pools=rebuild_pools)
 
 
-def import_database(path):
+def validate_copy(path):
     path = Path(path)
     if path.name == "world.db" or path.resolve().name == "world.db":
         raise ValueError("refusing destination named world.db; use a copy")
     if not path.is_file() or path.is_symlink() or path.stat().st_nlink != 1:
         raise ValueError("destination must be an existing, unlinked database copy")
+    return path
+
+
+def import_database(path):
+    path = validate_copy(path)
     report = ImportReport()
     with closing(sqlite3.connect(path)) as conn:
         with conn:

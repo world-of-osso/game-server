@@ -18,6 +18,16 @@ Where it's built:
 
 How it works: [content import](../wiki/systems/content-import.md).
 
+## Open-world population (2026-10-11)
+
+- [x] `content_policy.py --mode world-promote --maps <IDs>` promotes only explicit open-world maps on an existing private database copy; refuses canonical-name, linked and instance destinations/maps.
+- [x] Source coordinates, IDs, phase 0/169 without phase-use flags/groups/terrain swaps and authored difficulty 0 remain authentic. No phase progression is flattened.
+- [x] Unrelated map spawns, shared templates, authored creature/gameobject placements on the promoted map and their addons, and existing pool dependencies survive; repeated promotion is idempotent. This mode does not run full policy regeneration or clear overlays.
+- [ ] Every locally loadable open-world map has a source/content/phase/difficulty/event/map-filter census; missing source rows remain explicit, not synthesized.
+- [ ] The31 promoted local-terrain expansion maps are hosted as shared continent maps, not dungeon copies: normal admission and startup NPC/object spawning use the same existing host list; other unsupported maps remain refused.
+
+Implementation: `scripts/world_population.py` reuses the [instance import functions](../wiki/systems/content-import.md#instance-population-2026-10-11). Process/copy proof: `scripts/tests/test_world_population.py`; admission/private-copy ECS tests in `maps/tests.rs` and `zones.rs`. [Census and observed both-skin Boralus proof](../world-population-counts.md) distinguish imported rows, living actors, source-empty maps and client appearance gaps.
+
 ## Instance population (2026-10-11)
 
 Maps from local `Map.db2` with `InstanceType` dungeon/raid (1/2) and `MapDifficulty.db2` rows, union all canonical TDB `instance_template` maps, take authentic TDB creature/gameobject spawns, templates, models, addons, formations, equipment and paths through the copy-only [instance importer](../wiki/systems/content-import.md#instance-population-2026-10-11). The historical four-map importer below remains the world/quest/vendor policy; instance population runs after it during regeneration.
