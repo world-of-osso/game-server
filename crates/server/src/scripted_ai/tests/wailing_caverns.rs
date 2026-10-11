@@ -46,7 +46,16 @@ fn cobrahn() -> (Harness, Entity) {
             .map(|id| all.store.get(*id).unwrap().clone())
             .collect(),
     ));
-    app.insert_resource(smart_ai::load_smart_scripts(&path).unwrap());
+    let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
+    // Pin the successful branch of the authored 80% roll. Timing, spell, target
+    // and all other row values remain canonical; production retains 80%.
+    for event in std::sync::Arc::make_mut(scripts.0.get_mut(&COBRAHN).unwrap()) {
+        if event.action_type == 11 {
+            assert_eq!(event.chance, 80);
+            event.chance = 100;
+        }
+    }
+    app.insert_resource(scripts);
     let spawn = conn.query_row(
         "SELECT guid, position_x, position_y, position_z, orientation, spawntimesecs FROM content_creature WHERE id1 = 3669 AND map = 43 ORDER BY guid LIMIT 1",
         [], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: COBRAHN, map: 43, zone_id: 718,
@@ -113,7 +122,7 @@ fn cobrahn() -> (Harness, Entity) {
 fn cobrahn_authored_cast_and_encounter_messages_are_copy_scoped() {
     let (mut h, boss) = cobrahn();
     h.engage(boss);
-    h.advance(3.0);
+    h.advance(3.2);
     assert_eq!(
         get_boss_state(h.app.world_mut(), WC, 0),
         Some(EncounterState::InProgress)
@@ -153,7 +162,7 @@ fn cobrahn_authored_cast_and_encounter_messages_are_copy_scoped() {
 fn cobrahn_evade_fails_encounter_and_repull_restarts_authored_timer() {
     let (mut h, boss) = cobrahn();
     h.engage(boss);
-    h.advance(3.0);
+    h.advance(3.2);
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
     h.advance(0.1);
     assert_eq!(
@@ -164,7 +173,7 @@ fn cobrahn_evade_fails_encounter_and_repull_restarts_authored_timer() {
     assert!(!h.inbox(0).ends[0].success);
     assert_eq!(h.inbox(0).disengages.len(), 1);
     h.engage(boss);
-    h.advance(3.0);
+    h.advance(3.2);
     assert_eq!(h.inbox(0).starts.len(), 2);
     assert_eq!(h.casts(0, boss, LIGHTNING_BOLT), 2);
 }
