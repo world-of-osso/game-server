@@ -59,7 +59,7 @@ class SqlStatements:
 def read_profiles(db):
     rows = []
     for values in PROFILES:
-        entry, identity, class_id, spec_id, role, *spells, melee = values
+        entry, identity, class_id, spec_id, role, *spells, _melee = values
         npc = db.execute(
             "SELECT name FROM tdb_creature_template WHERE entry=? AND subname=?",
             (entry, "Expedition Escort"),

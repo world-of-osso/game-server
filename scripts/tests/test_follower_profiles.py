@@ -1,11 +1,11 @@
 """Approved spec-spell bridge, authentic roster/template/display round trip."""
 
-from contextlib import closing
-from importlib import import_module
 import sqlite3
 import sys
 import tempfile
 import unittest
+from contextlib import closing
+from importlib import import_module
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
