@@ -21,6 +21,8 @@
 
 Content catalog for the game-server wiki.
 
+- [Combat pet lifecycle](systems/combat-pet-lifecycle.md) — versioned stable migration and health/spec durability; reopened wounded/dead and immediate logout proof, remaining lifecycle/UI gates explicit.
+
 [Appearance acquisition](investigations/appearance-acquisition.md) — Retail Warbands disposal/quest rules, atomic collection receipts, real-item acquisition/reopen proofs and missing-path limits.
 
 [Group roster portrait transport](../group-roster-portraits.md) — cached head appearance, cross-zone/offline lifecycle, behavioral fixtures and deferred native-client hookup.
