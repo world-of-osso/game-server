@@ -1491,8 +1491,10 @@ fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
         .create_map(&store, 409, entrant(71, Some(7)), at(0.0))
         .unwrap()
         .map;
+    let mut outsider = entrant(73, Some(8));
+    outsider.leader = 73;
     let other = instances
-        .create_map(&store, 409, entrant(73, Some(8)), at(0.0))
+        .create_map(&store, 409, outsider, at(0.0))
         .unwrap()
         .map;
     let mut players = Vec::new();
