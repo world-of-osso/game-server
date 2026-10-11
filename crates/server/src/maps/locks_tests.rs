@@ -29,6 +29,7 @@ fn heroic() -> MapDifficulty {
         reset_interval: ResetInterval::Daily,
         max_players: 5,
         flags: 0,
+        flexible_locking: false,
     }
 }
 
@@ -41,6 +42,7 @@ fn mythic() -> MapDifficulty {
         reset_interval: ResetInterval::Weekly,
         max_players: 5,
         flags: 0x42,
+        flexible_locking: false,
     }
 }
 
@@ -53,6 +55,7 @@ fn normal() -> MapDifficulty {
         reset_interval: ResetInterval::Anytime,
         max_players: 5,
         flags: 0,
+        flexible_locking: false,
     }
 }
 
@@ -115,7 +118,7 @@ fn a_new_heroic_copy_locks_its_owner_only_temporarily_until_a_boss_dies() {
             .raid_info(1, |_| Some(heroic()), SUNDAY_NOON)
             .is_empty()
     );
-    assert_eq!(locks.can_join(1, &heroic(), 9, SUNDAY_NOON), None);
+    assert_eq!(locks.can_join(1, &heroic(), 9, SUNDAY_NOON, 0), None);
     assert_eq!(locks.initialization_data(1, &heroic(), SUNDAY_NOON), None);
 }
 
@@ -134,10 +137,10 @@ fn a_heroic_boss_kill_saves_the_player_to_that_copy_until_the_daily_reset() {
     assert_eq!(lock.instance_id, 5);
     assert_eq!(lock.data.completed_encounters, 1 << UMBRISS_BIT);
     assert_eq!(
-        locks.can_join(1, &heroic(), 9, SUNDAY_NOON),
+        locks.can_join(1, &heroic(), 9, SUNDAY_NOON, 0),
         Some(TransferAbortReason::LockedToDifferentInstance)
     );
-    assert_eq!(locks.can_join(1, &heroic(), 5, SUNDAY_NOON), None);
+    assert_eq!(locks.can_join(1, &heroic(), 5, SUNDAY_NOON, 0), None);
     // A recreated copy 5 resumes with Umbriss done.
     assert_eq!(
         locks.initialization_data(1, &heroic(), SUNDAY_NOON),
@@ -161,7 +164,7 @@ fn a_heroic_boss_kill_saves_the_player_to_that_copy_until_the_daily_reset() {
 
     // After the reset the lock is expired: listed, no longer binding.
     let after = SUNDAY_RESET + 1;
-    assert_eq!(locks.can_join(1, &heroic(), 9, after), None);
+    assert_eq!(locks.can_join(1, &heroic(), 9, after, 0), None);
     assert!(locks.find_active_lock(1, &heroic(), after).is_none());
     let info = locks.raid_info(1, |_| Some(heroic()), after);
     assert_eq!((info[0].locked, info[0].time_remaining_secs), (false, 0));
@@ -222,7 +225,7 @@ fn mythic_encounter_locks_record_kills_without_binding_to_a_copy() {
     assert!(locks.update_for_player(1, &mythic(), &umbriss_kill(5), SUNDAY_NOON));
     let lock = locks.lock(1, (GRIM_BATOL, 251)).expect("mythic lock");
     assert_eq!(lock.expiry, TUESDAY_RESET);
-    assert_eq!(locks.can_join(1, &mythic(), 9, SUNDAY_NOON), None);
+    assert_eq!(locks.can_join(1, &mythic(), 9, SUNDAY_NOON, 0), None);
     // Heroic (LockID 0) is a separate lock.
     assert!(locks.lock(1, (GRIM_BATOL, 0)).is_none());
 }

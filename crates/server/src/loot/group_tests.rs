@@ -20,6 +20,7 @@ fn grouped() -> (Harness, Looter) {
                     level: 1,
                     portrait: Default::default(),
                     dungeon_difficulty: 1,
+                    raid_difficulty: Default::default(),
                 },
             )
         })

@@ -42,6 +42,21 @@ pub struct InstanceEntrant {
     pub leader: u64,
     /// `Group::GetDifficultyID` / `Player::GetDifficultyID` for dungeons.
     pub difficulty_id: u32,
+    pub raid_difficulty: super::RaidDifficulty,
+    pub raid_group: bool,
+}
+
+impl Default for InstanceEntrant {
+    fn default() -> Self {
+        Self {
+            character_id: 0,
+            group: None,
+            leader: 0,
+            difficulty_id: 1,
+            raid_difficulty: super::RaidDifficulty::default(),
+            raid_group: false,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -151,7 +166,21 @@ impl InstanceManager {
         map_id: u32,
         entrant: InstanceEntrant,
     ) -> Option<&'a MapDifficulty> {
-        store.downscaled_map_difficulty(map_id, entrant.difficulty_id)
+        let requested = if store.map(map_id)?.instance_type == InstanceType::Raid {
+            let default = store.default_map_difficulty(map_id)?;
+            if store
+                .difficulty_entries
+                .get(&default.difficulty_id)?
+                .is_legacy()
+            {
+                entrant.raid_difficulty.legacy
+            } else {
+                entrant.raid_difficulty.primary
+            }
+        } else {
+            entrant.difficulty_id
+        };
+        store.downscaled_map_difficulty(map_id, requested)
     }
 
     /// `Group::GetRecentInstanceOwner`, or the player outside a group.
@@ -252,7 +281,12 @@ impl InstanceManager {
             .map(map_id)
             .ok_or(TransferAbortReason::MapNotAllowed)?;
         match entry.instance_type {
-            InstanceType::Party => self.create_dungeon(store, map_id, entrant, now),
+            InstanceType::Raid if entry.expansion_id >= 11 && !entrant.raid_group => {
+                Err(TransferAbortReason::NeedGroup)
+            }
+            InstanceType::Party | InstanceType::Raid => {
+                self.create_dungeon(store, map_id, entrant, now)
+            }
             InstanceType::Battleground => self
                 .battleground_by_character
                 .get(&entrant.character_id)
@@ -297,6 +331,8 @@ impl InstanceManager {
             leader: owner,
             group: None,
             difficulty_id: 0,
+            raid_difficulty: Default::default(),
+            raid_group: false,
         };
         let map = InMap {
             map_id,
@@ -514,6 +550,7 @@ impl InstanceManager {
                 &copy.difficulty,
                 map.instance_id,
                 unix,
+                copy.initial_data.completed_encounters,
             )
         {
             return Some(reason);
@@ -528,7 +565,7 @@ impl InstanceManager {
     /// the map must offer a difficulty the entrant's downscales to, a player at `level`
     /// must meet its level conditions (`Player::Satisfy`), and the copy the entrant is
     /// bound to must admit it. World maps other than the hosted continents,
-    /// raids, battlegrounds and scenarios are not hosted.
+    /// battlegrounds and scenarios are not hosted. Current-expansion raids require a raid group.
     pub fn player_cannot_enter(
         &self,
         store: &MapStore,
@@ -544,7 +581,10 @@ impl InstanceManager {
             return Some(TransferAbortReason::MapNotAllowed);
         };
         match entry.instance_type {
-            InstanceType::Party => {
+            InstanceType::Raid if entry.expansion_id >= 11 && !entrant.raid_group => {
+                Some(TransferAbortReason::NeedGroup)
+            }
+            InstanceType::Party | InstanceType::Raid => {
                 let Some(difficulty) = Self::entry_difficulty(store, map_id, entrant) else {
                     return Some(TransferAbortReason::Difficulty(entrant.difficulty_id));
                 };
@@ -627,7 +667,12 @@ impl InstanceManager {
             let Some(at) = copy.expires_at else {
                 continue;
             };
-            if at >= now.unix {
+            let at = copy
+                .lock_owner
+                .and_then(|owner| self.locks.lock(owner, copy.difficulty.lock_key()))
+                .filter(|lock| lock.extended)
+                .map_or(at, |lock| lock.effective_expiry(&copy.difficulty, now.unix));
+            if at > now.unix {
                 continue;
             }
             copy.expires_at = Some(next_reset_time(copy.difficulty.reset_interval, now.unix));
