@@ -216,6 +216,20 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        crate::spell_cast::scripts::RAPID_FIRE,
+        AuraScript {
+            on_periodic: Some(crate::spell_cast::scripts::rapid_fire_tick),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::HAUNT,
+        AuraScript {
+            on_remove: Some(crate::spell_cast::scripts::haunt_removed),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         ASPECT_OF_THE_TURTLE,
         AuraScript {
             on_apply: Some(apply_turtle_pacify),

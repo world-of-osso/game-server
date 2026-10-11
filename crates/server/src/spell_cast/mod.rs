@@ -1475,6 +1475,7 @@ fn execute_cast(
         },
     );
     missiles::launch(world, caster, spell, plan, 0);
+    scripts::refund_execute(world, caster, spell, explicit, &costs);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
