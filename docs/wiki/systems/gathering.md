@@ -1,6 +1,6 @@
 # Gathering
 
-Verified: 2026-10-11, gathering-nodes branch; not merged or live-accepted. The [contract](../../specs/gathering.md) owns requirements and lead-owned import instructions. Existing profession, cast, loot and spawn-pool systems carry this loop; no parallel crafting subsystem.
+Verified: 2026-10-11, gathering-nodes branch; native Classic baseline proved, not merged into master. The [contract](../../specs/gathering.md) owns requirements and lead-owned import instructions. Existing profession, cast, loot and spawn-pool systems carry this loop; no parallel crafting subsystem.
 
 ## Representation and wiring
 
@@ -22,9 +22,9 @@ Native `forever-skin-a23` reproduced a dead, correctly targeted wolf refusing Sk
 | Missing skill, movement interruption, pending loot, repeat collection | Behavioral tests |
 | Authored depletion/respawn position and pool selection/limits | Virtual-time and authored-pool behavioral tests |
 | Skill persists after redb close/reopen | Real persistence boundary test |
-| Both-skin native tracking/gathering/kill/skill-up PNGs | Missing; two bounded live attempts did not reach acceptance |
+| Both-skin native tracking/gathering/kill/skill-up PNGs | [Integrated native proof ledger](../../../../game-engine/docs/wiki/systems/gathering.md#inspected-native-baseline), six passing real-realm cases |
 
-Ten gathering tests passed at code revision fcf9eea; importer two tests passed. Logs are in canonical engine `data/diagnostics/gathering-nodes-2026-10-11/`. Lead imported1996 lock records/3149 mapped skin rows and repaired60 GO50 loot namespaces. Eight skin item gaps (25699/52977 absent from ItemSparse) remain. Node176116/176142/176143 lack local gather abilities; PlayerCondition handling, nonpositive respawn timers and native acceptance remain explicit limits. Independent verifier was unavailable (Claude OAuth expired); not a completed gate.
+The original ten gathering tests passed at fcf9eea; after integration, twelve gathering tests and six game-object tests pass (one pre-existing imported-copy test remains ignored). Both checks/format and native baseline proof are recorded in the linked engine ledger. Importer two tests passed. Logs are in canonical engine `data/diagnostics/gathering-nodes-2026-10-11/`. Lead imported1996 lock records/3149 mapped skin rows and repaired60 GO50 loot namespaces. Eight skin item gaps (25699/52977 absent from ItemSparse) remain. Node176116/176142/176143 lack local gather abilities; PlayerCondition handling and nonpositive respawn timers remain explicit limits. Independent verification remains parent-owned; the earlier Claude OAuth failure is historical, not a passing gate.
 
 ## Sources
 
