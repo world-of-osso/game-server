@@ -13,6 +13,42 @@ const CHARGE: u32 = 100;
 const FISTS_OF_FURY_DAMAGE: u32 = 117418;
 
 #[test]
+fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul() {
+    let mut h = harness(Vec::new(), &[46585], 6).unwrap();
+    let data = world_db().unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+    let conn = rusqlite::Connection::open_with_flags(
+        &data.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    let spell = data.store.get(46585).unwrap().clone();
+    let expected_distance = super::targets::radius(&spell.effects[0], 1);
+    let destination =
+        super::targets::effect_dest(h.app.world(), h.caster, None, &spell.effects[0], None)
+            .expect("native destination radius");
+    assert_eq!(destination.position, Vec3::new(expected_distance, 0.0, 0.0));
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native Raise Dead");
+    let caster = h.caster;
+    let world = h.app.world_mut();
+    let summons: Vec<_> = world
+        .query::<(
+            &shared::components::Npc,
+            &shared::components::UnitSummonedBy,
+            &shared::components::Position,
+        )>()
+        .iter(world)
+        .filter(|(npc, _, _)| npc.template_id == 26125)
+        .collect();
+    assert_eq!(summons.len(), 1);
+    assert_eq!(summons[0].1.0, caster.to_bits());
+    assert_eq!(summons[0].2.x, expected_distance);
+}
+
+#[test]
 fn class_completeness_native_mass_resurrection_offers_to_group_corpse_not_ghost_position() {
     use crate::group::{GroupRegistry, OnlineMember, OnlineView};
     use crate::persistence::ClientId;
