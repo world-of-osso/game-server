@@ -121,8 +121,10 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     let db = test_db();
     let character_id = 55;
     let mut wallet = shared::currency::CurrencyWallet::default();
-    wallet.add(1, 420, currency_by_id(1).unwrap()).unwrap();
-    wallet.add(2, 80, currency_by_id(2).unwrap()).unwrap();
+    wallet
+        .add(1792, 420, currency_by_id(1792).unwrap())
+        .unwrap();
+    wallet.add(1602, 80, currency_by_id(1602).unwrap()).unwrap();
     persistence::save_currencies(&db.db, character_id, &wallet);
 
     let pvp = crate::pvp::PlayerPvpProgress {
@@ -134,8 +136,8 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
 
     let state = load_selected_character_state(&db, character_id, 1);
 
-    assert_eq!(state.currencies.get(1), 420);
-    assert_eq!(state.currencies.get(2), 80);
+    assert_eq!(state.currencies.get(1792), 420);
+    assert_eq!(state.currencies.get(1602), 80);
     assert_eq!(state.pvp.progress.honor, 420);
     assert_eq!(state.pvp.progress.conquest, 80);
 }
