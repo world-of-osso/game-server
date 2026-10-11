@@ -901,6 +901,7 @@ fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedul
         world: &mut world,
         me: creature,
     };
+    ai.reset(&mut ctx);
     ai.quest_accepted(&mut ctx, player, 863);
     ai.update_ai(&mut ctx, 50);
     ai.update_ai(&mut ctx, 6001);
