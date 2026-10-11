@@ -120,14 +120,17 @@ pub(super) fn absorb_amount(
     spell: &crate::spell_info::SpellInfo,
     effect: &crate::spell_info::SpellEffect,
 ) -> Option<f32> {
-    if spell.id != 740 || effect.index != 4 {
-        return None;
-    }
+    let percent_index = match (spell.id, effect.index) {
+        (740, 4) => 5,
+        //122470s3: shield capacity is50% max health. Redirect s4 remains separate.
+        (122470, 1) => 2,
+        _ => return None,
+    };
     let percent = spell
         .effects
         .iter()
-        .find(|e| e.index == 5)
-        .expect("Tranquility shield percentage")
+        .find(|e| e.index == percent_index)
+        .expect("named shield percentage")
         .base_points;
     let health = world
         .get::<shared::components::Health>(caster)
@@ -147,7 +150,7 @@ pub(super) fn snapshot_periodic_amount(
     if spell.id == RAKE_BLEED && effect.index == 0 {
         crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
     } else {
-        amount
+        crate::spell_cast::scripts::snapshot_combustion(world, caster, spell, effect.index, amount)
     }
 }
 
@@ -193,6 +196,13 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        53563,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::scripts::replace_beacon),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         SURVIVAL_INSTINCTS,
         AuraScript {

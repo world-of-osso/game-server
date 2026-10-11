@@ -33,6 +33,22 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         match effect.property {
             22 | 116 | 157 | 158 | 159 | 177 => Ok(true),
+            117 => {
+                let lock = &mut self.battle.pet_mut(caster).lockouts[(p[0] - 1) as usize];
+                *lock = (*lock).max(p[1] as u32);
+                Ok(true)
+            }
+            129 => {
+                let used = self.used_ability.expect("admitted ability-use callback");
+                let pet = self.battle.pet_mut(caster);
+                for (index, ability) in pet.abilities.iter().enumerate() {
+                    if *ability == used {
+                        pet.lockouts[index] = pet.lockouts[index].max(p[0] as u32);
+                    }
+                }
+                Ok(true)
+            }
+            168 => self.add_aura_effect(caster, target, effect),
             68 => self.percent_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
