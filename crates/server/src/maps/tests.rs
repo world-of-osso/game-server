@@ -58,34 +58,46 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
         OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let target = Connection::open_in_memory().unwrap();
-    target.execute_batch("CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT);
-        CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER);
+    // The spawn loader reads the authored locks beside its database file, so the fixture
+    // database lives in a temp directory next to a copy of the canonical locks.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(
+        crate::test_data::world_db_path().with_file_name("game_object_locks.json"),
+        dir.path().join("game_object_locks.json"),
+    )
+    .expect("game_object_locks.json beside world.db; run scripts/import_game_object_locks.py");
+    let target = Connection::open(dir.path().join("world.db")).unwrap();
+    target.execute_batch("CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
+        CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
         CREATE TABLE game_object_display_info (ID INTEGER,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
     let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
-        t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5
+        t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
+        g.spawntimesecs,t.Data3,t.Data5,t.Data6
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
         JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=2106 AND g.id IN (227740,227741) ORDER BY g.guid").unwrap();
     let mut rows = query.query([]).unwrap();
     while let Some(row) = rows.next().unwrap() {
         let values: Vec<rusqlite::types::Value> =
-            (0..20).map(|index| row.get(index).unwrap()).collect();
+            (0..24).map(|index| row.get(index).unwrap()).collect();
+        let mut spawn = values[..8].to_vec();
+        spawn.push(values[20].clone());
         target
             .execute(
-                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?)",
-                rusqlite::params_from_iter(&values[..8]),
+                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?,?)",
+                rusqlite::params_from_iter(&spawn),
             )
             .unwrap();
         let mut template = vec![values[1].clone()];
         template.extend_from_slice(&values[8..14]);
+        template.extend_from_slice(&values[21..24]);
         target
             .execute(
-                "INSERT INTO content_gameobject_template VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&template),
             )
             .unwrap();
         let mut display = vec![values[9].clone()];
-        display.extend_from_slice(&values[14..]);
+        display.extend_from_slice(&values[14..20]);
         target
             .execute(
                 "INSERT INTO game_object_display_info VALUES (?,?,?,?,?,?,?)",
