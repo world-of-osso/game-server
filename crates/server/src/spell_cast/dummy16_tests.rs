@@ -211,6 +211,38 @@ fn dummy16_arcane_blast_charge_cast_time_and_unaffordable_cast_boundary() {
     assert_eq!(h.power(PowerType::ArcaneCharges), 4.0);
     assert_eq!(h.health(h.npc), 5000.0);
 }
+#[test]
+fn dummy16_healing_wave_heals_only_native_primary_and_rejects_enemy() {
+    let mut h = fixture(&[77472], &[77472], 7);
+    let ally = spawn_player(&mut h.app, 7, 3.0);
+    let other = spawn_player(&mut h.app, 7, 4.0);
+    for unit in [ally, other] {
+        h.app
+            .world_mut()
+            .entity_mut(unit)
+            .insert(shared::components::Health {
+                current: 100.0,
+                max: 5000.0,
+            });
+    }
+    h.cast_and_deliver(77472, Some(ally));
+    h.advance(45);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(varied(1501.0).contains(&(h.health(ally) - 100.0)));
+    assert_eq!(h.health(other), 100.0);
+    assert_eq!(h.health(h.npc), 5000.0);
+    let mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
+    h.cast_and_deliver(77472, Some(h.npc));
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_none()
+    );
+    assert_eq!(h.app.world().get::<Mana>(h.caster).unwrap().current, mana);
+}
+
 fn tidal_stacks(h: &Harness) -> u8 {
     h.app
         .world()

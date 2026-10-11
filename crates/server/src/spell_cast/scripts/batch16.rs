@@ -11,6 +11,7 @@ pub(super) const CRUSADER_STRIKE: u32 = 35395;
 pub(super) const RET_JUDGMENT: u32 = 20271;
 pub(super) const HOLY_JUDGMENT: u32 = 275773;
 pub(super) const RIPTIDE: u32 = 61295;
+pub(super) const HEALING_WAVE: u32 = 77472;
 const HOLY_LIGHT_RANK: u32 = 231642;
 const HOLY_LIGHT_POWER: u32 = 88852;
 const JUDGMENT_RANK: u32 = 315867;
@@ -58,6 +59,22 @@ pub(super) fn reduce_holy_judgment(world: &mut World, caster: Entity, spell: &Sp
             f64::from(-milliseconds) / 1000.0,
         );
     }
+}
+
+///77472's native45 selector has zero chain targets. Resolve only its validated
+///primary ally through the normal heal handler, not a generic chain selector.
+pub(super) fn healing_wave_plan(
+    _world: &mut World,
+    _caster: Entity,
+    _spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> spell_cast::TargetPlan {
+    vec![spell_cast::PlannedEffect {
+        index: 0,
+        units: vec![explicit.expect("Healing Wave requires a validated ally")],
+        dest: None,
+        chain_multipliers: Vec::new(),
+    }]
 }
 
 ///51564s1 grants53390; native CumulativeAura supplies the cap, not a guessed

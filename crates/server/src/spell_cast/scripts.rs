@@ -343,6 +343,7 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        batch16::HEALING_WAVE => Some((Relation::Ally, batch16::healing_wave_plan)),
         batch12::SHIELD_RIGHTEOUS => Some((Relation::Ally, batch12::shield_plan)),
         batch11::VOID_VOLLEY => Some((Relation::Enemy, batch11::volley_plan)),
         batch8::SANCTIFY => Some((Relation::Ally, batch8::sanctify_plan)),
