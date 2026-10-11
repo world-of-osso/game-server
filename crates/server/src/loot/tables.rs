@@ -83,6 +83,8 @@ pub(crate) struct LootTables {
     pub creature: HashMap<u32, LootTemplate>,
     pub reference: HashMap<u32, LootTemplate>,
     pub disenchant: HashMap<u32, LootTemplate>,
+    pub gameobject: HashMap<u32, LootTemplate>,
+    pub skinning: HashMap<u32, LootTemplate>,
     /// By creature template entry.
     pub money: HashMap<u32, CreatureLoot>,
     /// By (entry, dungeon difficulty): `content_creature_template_difficulty` loot.
@@ -124,6 +126,28 @@ fn roll_chance(chance: f32, rng: &mut impl Rng) -> bool {
 }
 
 impl LootTables {
+    /// Gathering shares authored reference/group/chance/count rolling with corpse loot.
+    pub fn roll_gathering(
+        &self,
+        entry: u32,
+        skinning: bool,
+        items: &ItemTemplates,
+        rng: &mut impl Rng,
+    ) -> RolledLoot {
+        let templates = if skinning {
+            &self.skinning
+        } else {
+            &self.gameobject
+        };
+        let template = &templates[&entry];
+        let mut drops = Vec::new();
+        self.process(template, items, &|_| false, rng, &mut drops);
+        RolledLoot {
+            items: drops,
+            copper: 0,
+        }
+    }
+
     /// Whether this entry can yield an item present in the active Retail catalog.
     pub fn disenchant_has_materials(&self, entry: u32, items: &ItemTemplates) -> bool {
         self.disenchant.get(&entry).is_some_and(|template| {
@@ -423,6 +447,8 @@ pub(crate) fn load_loot_tables(conn: &Connection) -> rusqlite::Result<LootTables
         creature: load_templates(conn, "content_creature_loot_template")?,
         reference: load_templates(conn, "content_reference_loot_template")?,
         disenchant: HashMap::new(),
+        gameobject: load_templates(conn, "content_gameobject_loot_template")?,
+        skinning: load_templates(conn, "content_skinning_loot_template")?,
         money: load_money(conn)?,
         difficulty_money: load_difficulty_money(conn)?,
     })
