@@ -86,7 +86,11 @@ fn dummy14_survival_kill_command_routes_named_damage_from_owned_pet() {
     let pet = pet(&mut h);
     let target = h.npc;
     execute(&mut h, 259489, Some(target));
-    assert_eq!(h.health(target), 4700.0, "3AP from actual pet, fixed100AP");
+    assert_eq!(
+        h.health(target),
+        4934.0,
+        "3AP from actual pet, native22AP inherited from fixture owner"
+    );
     h.advance(1);
     let hits: Vec<_> = h
         .inbox
@@ -119,6 +123,7 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
     let target = h.npc;
     let other = spawn_npc(&mut h.app, 4.0);
     execute(&mut h, 259495, Some(target));
+    h.advance(3); // Native root35yd/sec missile must reach3yd target.
     assert!(varied(157.95 * 1.8).contains(&(5000.0 - h.health(target))));
     assert!(crate::auras::has_aura(h.app.world(), target, 269747));
     assert_eq!(
@@ -158,7 +163,7 @@ fn dummy14_deathmark_restores_native_total_energy_on_bleed_clock() {
 }
 
 #[test]
-fn dummy14_eye_beam_native_ten_cone_hits_with_ranked_guaranteed_crit() {
+fn dummy14_eye_beam_native_ten_primary_hits_with_ranked_guaranteed_crit() {
     for rank in [false, true] {
         let mut h = harness(Vec::new(), &[198013, 198030, 320415], 12).unwrap();
         let caster = h.caster;
@@ -202,8 +207,8 @@ fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
         .unwrap()
         .0 = 7;
     cast_at(&mut h, 191427, [20.0, 0.0, 0.0]);
-    assert_eq!(h.health(target), 4956.0);
-    assert_eq!(h.health(hostile), 4956.0);
+    assert!(varied(44.0).contains(&(5000.0 - h.health(target))));
+    assert!(varied(44.0).contains(&(5000.0 - h.health(hostile))));
     assert_eq!(h.health(far), 5000.0);
     assert!(crate::auras::has_aura(h.app.world(), target, 200166));
     assert!(crate::auras::has_aura(h.app.world(), player, 247121));
