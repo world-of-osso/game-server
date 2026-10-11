@@ -114,6 +114,32 @@ fn quest_objectives_real_tear_item_cast_credits_shining_through_the_dark() {
 }
 
 #[test]
+fn quest_objectives_unmatched_spell_credit_does_not_require_quest_update_delivery() {
+    let mut app = spell_credit_app();
+    let client = spawn_client(&mut app, 80);
+    app.world_mut().entity_mut(client.player).insert(Health {
+        current: 100.0,
+        max: 100.0,
+    });
+    enter_world(&mut app, &client);
+    // A spell/catalog consumer without quest-update delivery still resolves the hit.
+    // No matching accepted quest means no progress persistence or delivery is needed.
+    app.world_mut().remove_resource::<QuestDirty>();
+    crate::spell_cast::cast_triggered(
+        app.world_mut(),
+        client.player,
+        94940,
+        Some(client.player),
+        0,
+    );
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active
+            .is_empty()
+    );
+}
+
+#[test]
 fn quest_objectives_personal_spell_credit_completes_eye_spy_without_a_kill() {
     let mut app = spell_credit_app();
     let client = spawn_client(&mut app, 80);
