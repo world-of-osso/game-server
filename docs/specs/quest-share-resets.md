@@ -1,0 +1,9 @@
+# Quest sharing, resets and timed quests
+
+- Only a party member with an active, authored sharable quest can push it. Recipients explicitly accept or decline a server-issued offer. Revalidate source quest, party membership, live state and existing level/class/race/prerequisite/log-capacity rules on acceptance. Duplicate responses cannot grant twice. Cross-faction groups cannot share.
+- Daily/weekly flags and QuestInfo remain authored content. Reward history persists per character with Unix completion timestamps. Re-availability occurs at the local instance schedule: daily 15:00 UTC, weekly Tuesday 15:00 UTC (maps/locks.rs). This is existing local policy, not a universal Retail region claim. Reset preserves prerequisite history and active quests.
+- TimeAllowed seconds come from content_quest_template (TDB/legacy normalized table; local addon contains no duration column). Timer begins on acceptance, survives disconnect/restart, is inherited on sharing and fails at deadline including already-complete quests. Failed quests cannot reward; abandonment permits retry. Only one unfinished timed quest at a time.
+- Migrate legacy quest_logs to quest_logs_v2 transactionally; retain objectives/watch/reward history. Unknown legacy reward times use migration time once (next reset releases periodic quests). Legacy timed progress without a recoverable start time fails rather than receiving fresh time.
+- Existing ServerClock/clock-advance admin command supplies injected reset/expiry proof. Behavioral tests cover reset boundary, migration, real-party message acceptance and expiry/relog.
+
+References: local Retail StaticPopup_Game/GameDialogDefs.lua QUEST_ACCEPT; GlobalStrings.csv ERR_QUEST_PUSH_*; TrinityCore a352b1fa QuestHandler.cpp HandlePushQuestToParty (local diagnostics/questmerchlive3-2026-10-09); local maps/locks.rs reset constants.
