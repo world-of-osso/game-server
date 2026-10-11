@@ -377,6 +377,7 @@ type UseReceivers<'w, 's> = Query<
 
 fn process_game_object_uses(
     mut receivers: UseReceivers,
+    gatherables: Query<&shared::protocol::GatherableResource>,
     world: InteractionWorld,
     mut senders: InteractionSenders,
     mut commands: Commands,
@@ -384,6 +385,15 @@ fn process_game_object_uses(
     for (connection, link, current, mut receiver) in &mut receivers {
         let mut current = current.map(|interaction| interaction.npc);
         for request in receiver.receive() {
+            if let Some(target) = Entity::try_from_bits(request.object)
+                && gatherables.contains(target)
+            {
+                let player = link.0;
+                commands.queue(move |world: &mut World| {
+                    crate::gathering::use_resource(world, player, target)
+                });
+                continue;
+            }
             let result = Entity::try_from_bits(request.object)
                 .ok_or(InteractionError::InvalidTarget)
                 .and_then(|object| Ok((object, world.usable_object(link.0, object)?)));

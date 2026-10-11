@@ -28,6 +28,8 @@ fn core_fragment_authored_normal_copy_replicates_only_to_its_observer() {
         .find(|spawn| spawn.info.entry == 179553 && spawn.map_id == 230)
         .unwrap();
     let position = game_object_bundle(core).0;
+    // Only the Core Fragment: map 230's gathering nodes need the full WorldData pool state.
+    let spawns = GameObjectSpawns(vec![core.clone()]);
     let copy = InMap {
         map_id: 230,
         instance_id: 1,
@@ -105,6 +107,21 @@ fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
     // Retail GameObjectDisplayInfo 7607 GeoBox.
     assert!((vault.bounds.min.y - -1.9534).abs() < 1e-3);
     assert!((vault.bounds.max.z - 5.8225).abs() < 1e-3);
+}
+
+#[test]
+fn gathering_nodes_load_authored_herb_and_ore_models() {
+    let spawns = spawns().unwrap();
+    for (entry, name, display) in [(1617, "Silverleaf", 270), (1731, "Copper Vein", 310)] {
+        let node = spawns
+            .0
+            .iter()
+            .find(|spawn| spawn.info.entry == entry && spawn.map_id == 0)
+            .expect("Retail herb and ore nodes must load with authored positions");
+        assert_eq!(node.info.name, name);
+        assert_eq!(node.info.display_id, display);
+        assert_eq!(node.info.go_type, 50);
+    }
 }
 
 #[test]
