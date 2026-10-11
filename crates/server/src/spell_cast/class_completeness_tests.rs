@@ -30,7 +30,7 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
     let destination =
         super::targets::effect_dest(h.app.world(), h.caster, None, &spell.effects[0], None)
             .expect("native destination radius");
-    assert_eq!(destination.position, Vec3::new(expected_distance, 0.0, 0.0));
+    assert!((destination.position.length() - expected_distance).abs() < 0.001);
     super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native Raise Dead");
     let caster = h.caster;
     let world = h.app.world_mut();
@@ -45,7 +45,30 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
         .collect();
     assert_eq!(summons.len(), 1);
     assert_eq!(summons[0].1.0, caster.to_bits());
-    assert_eq!(summons[0].2.x, expected_distance);
+    let point = summons[0].2;
+    assert!((Vec3::new(point.x, point.y, point.z).length() - expected_distance).abs() < 0.001);
+}
+
+#[test]
+fn class_completeness_native_destination_radius_uses_random_direction_not_fixed_front() {
+    let h = harness(Vec::new(), &[46585], 6).unwrap();
+    let spell = world_db().unwrap().store.get(46585).unwrap();
+    let effect = &spell.effects[0];
+    let native_radius = super::targets::radius(effect, 1);
+    let points: Vec<_> = (0..32)
+        .map(|_| {
+            super::targets::effect_dest(h.app.world(), h.caster, None, effect, None)
+                .unwrap()
+                .position
+        })
+        .collect();
+    for point in &points {
+        assert!((point.length() - native_radius).abs() < 0.001);
+    }
+    assert!(
+        points.iter().any(|point| point.distance(points[0]) > 0.1),
+        "native target91 uses random direction"
+    );
 }
 
 #[test]
