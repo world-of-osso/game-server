@@ -500,6 +500,28 @@ fn quest_objectives_chest_loot_is_not_credit_until_the_quest_item_enters_bags() 
     add_message_pair::<LootClosed>(&mut app, client.connection);
     add_message_pair::<LootFailed>(&mut app, client.connection);
     add_message_pair::<CorpseLootable>(&mut app, client.connection);
+    // Chest Data8 is quest highlighting metadata, not the goober active-quest gate.
+    // Crate of Candles1586 names quest24985, which this character has not accepted.
+    let crate_of_candles = real_object(&mut app, 1586);
+    request(
+        &mut app,
+        &client,
+        UseGameObject {
+            object: crate_of_candles.to_bits(),
+        },
+    );
+    assert_eq!(
+        received::<LootResponse>(&mut app, &client).len(),
+        1,
+        "a chest must not borrow the goober quest gate"
+    );
+    request(
+        &mut app,
+        &client,
+        LootRelease {
+            corpse: crate_of_candles.to_bits(),
+        },
+    );
     mark_rewarded(&app, &client, 11019);
     let giver = spawn_npc(&mut app, 23141, 0.0);
     accept(&mut app, &client, giver, 11049); // The Great Netherwing Egg Hunt

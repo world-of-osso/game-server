@@ -43,7 +43,7 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, t.Data10, g.spawntimesecs, t.Data8 \
+     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \

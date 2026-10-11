@@ -25,7 +25,7 @@ fn object_cooldown(row: &Row, kind: u8) -> rusqlite::Result<f64> {
     if !consumable {
         return Ok((row.get::<_, f64>(20)? / 1000.0).max(row.get::<_, f64>(22)?));
     }
-    let respawn = row.get::<_, i32>(24)?;
+    let respawn = row.get::<_, i32>(23)?;
     // Negative spawn timers require explicit scripted respawn (TC GameObject::LoadFromDB).
     Ok(if respawn < 0 {
         f64::INFINITY
@@ -44,7 +44,8 @@ impl QuestObject {
             quest: if kind == GAMEOBJECT_TYPE_GOOBER {
                 row.get::<_, i32>(19)? as u32
             } else {
-                row.get::<_, i32>(25)? as u32
+                // Chest questID is highlighting/tracking metadata, not a use gate.
+                0
             },
             loot: if kind == GAMEOBJECT_TYPE_CHEST {
                 row.get(19)?
