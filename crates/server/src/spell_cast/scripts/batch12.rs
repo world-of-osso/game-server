@@ -114,6 +114,15 @@ pub(super) fn shield_plan(
     spell: &SpellInfo,
     _explicit: Option<Entity>,
 ) -> spell_cast::TargetPlan {
+    vec![PlannedEffect {
+        index: 0,
+        units: shield_cone_units(world, caster, spell),
+        dest: None,
+        chain_multipliers: Vec::new(),
+    }]
+}
+
+fn shield_cone_units(world: &mut World, caster: Entity, spell: &SpellInfo) -> Vec<Entity> {
     let origin = targets::position(world, caster).expect("shield caster position");
     let facing = targets::orientation(world, caster);
     let forward = Vec3::new(facing.cos(), 0.0, -facing.sin());
@@ -134,16 +143,15 @@ pub(super) fn shield_plan(
     );
     units.retain(|&unit| {
         let offset = targets::position(world, unit).expect("cone unit position") - origin;
-        let along = offset.dot(forward);
-        let across = (offset.x * forward.z - offset.z * forward.x).abs();
-        across.atan2(along) <= half_arc
+        within_shield_arc(offset, forward, half_arc)
     });
-    vec![PlannedEffect {
-        index: 0,
-        units,
-        dest: None,
-        chain_multipliers: Vec::new(),
-    }]
+    units
+}
+
+fn within_shield_arc(offset: Vec3, forward: Vec3, half_arc: f32) -> bool {
+    let along = offset.dot(forward);
+    let across = (offset.x * forward.z - offset.z * forward.x).abs();
+    across.atan2(along) <= half_arc
 }
 
 ///53600 explicitly names132403s1/d. Apply once, including empty cones.
