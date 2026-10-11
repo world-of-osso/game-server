@@ -20,6 +20,9 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 ## Tests asserting this spec
 
+- [GO/spell objective census and proof](../quest-objectives-coverage.md) — exact per-Type before/after routes, data limits and real-quest evidence.
+- `crates/server/src/quest_objectives_tests.rs` — GO use and held-key validation, next-frame chest loot retention, actual item acquisition/cast and personal/group spell credit through rewards.
+
 - `crates/server/src/quest_tests.rs` — real rows through the message path: The Fargodeep Mine (62) and The Jasperlode Mine (76) stay incomplete until the player enters trigger 88 / 87 (not a ghost, not the other mine's trigger); A Threat Within (783) Willem → McBride persisted with Kobold Camp Cleanup (7) offered next; 7 blocked until 783 turned in; 7 progresses on Kobold Vermin kills and pays 25 copper; Brotherhood of Thieves (18) counts bag bandanas, rejects a missing choice, grants Militia Hammer; abandon; untrack persists across re-entry; out-of-range giver.
 - `crates/server/src/quest_rules_tests.rs` — markers, prerequisites, kill credit, trivial level, race mask, log cap, `quest-complete` objective fill.
 - `crates/server/src/admin_ipc.rs` tests — `quest-complete` persists the filled counts and marks the log dirty.
@@ -27,10 +30,15 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 ## Known gaps (current cycle)
 
-- [ ] Game object objectives never progress (game object templates/spawns are not imported).
+- [x] Type 2 game-object objectives receive matching goober-use credit after life, map-copy, model-box reach, quest and reuse-time checks. Nearby party members share credit. Consumable objects cannot be repeatedly used before their authored respawn timer.
+- [x] Chest loot uses authored content game-object loot tables and the existing inventory path; opening alone does not complete an item objective.
+- [x] Local authored Lock.db2 alternatives gate GO use: Retail-source held keys and zero-skill ordinary interaction locks. Missing lock definitions fail explicitly; unsupported skill/spell-key alternatives do not award credit. Required runtime input and exporter: [game objects](../wiki/systems/game-objects.md#quest-objects-2026-10-11).
+- [ ] Profession/spell-key opening, condition, event, GO spell and animation/despawn semantics remain unimplemented; these paths are not full Retail GO parity.
 - [ ] Event quests (escorts, scripted events: `QUEST_FLAGS_COMPLETION_EVENT` with no trigger) cannot complete: no script sets the event.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
-- [ ] Spell-credit objectives (Extinguishing Hope 26391's Vineyard Fires from Milly's Extinguisher) never progress; admin `quest-complete <character> <quest_id>` (TrinityCore `.quest complete`) fills a logged quest's kill/object objectives for tests.
+- [x] Authored spell effects 90 and 134 advance Type 0 monster-credit objectives for the hit player, without requiring a creature death. Effect90 is personal; effect134 shares with nearby same-map-copy party members. Unrelated objectives and completed counts do not advance. Retail defines no cast-spell objective Type: Type5 means learn-spell.
+- [x] Extinguishing Hope26391 retains its existing item-use → Spray Water → SmartAI spell-hit → monster credit path (`quest_spell_tests.rs`).
+- [ ] Effect16 quest-completion events, effect316/317 label credit, arbitrary dummy/scripted spell credit and Type5 learn-spell objectives are not covered by this slice.
 - [ ] Daily/weekly quests have no reset; they are one-time. Timed quests, `RequiredFactionId`/reputation, skill requirements, reward spells, reputation rewards and `ItemDrop` quest-item drops are not applied.
 - [ ] Creature `KillCredit1/2` entries do not give credit; kill credit ignores tap rules and dead group members.
 - [ ] `zone` in `QuestEntrySnapshot` is empty (no area names server-side); clients resolve `sort_id`. POI `world_map_area_id` is a Wrath `WorldMapArea` id, not a Retail `UiMap` id.

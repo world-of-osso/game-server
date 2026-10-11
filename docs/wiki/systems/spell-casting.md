@@ -1,6 +1,56 @@
 # Spell Casting
 
+## Twenty-second batch: native Rewind non-raid healing
+
+Rewind363534's native effect0 already scales each periodic heal by0.4 SP. SpellMisc's EXTRA_INITIAL_PERIOD,4sec duration and1000ms period yield five ticks, matching local description variable775's minimum. Its previously skipped s4=200 is now consumed by a named healing multiplier: GroupRegistry's caster membership distinguishes raids from parties/solo, without changing recipient selection, native amount, clock, rounding or overflow. This does not implement s2/s3's historical-damage component. [Contract](../../specs/spell-dummy-scripts.md#twenty-second-batch-native-rewind-non-raid-healing), [sources/proof/census](../../spell-dummy22-coverage.md).
+
+Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulfill the s4=6 total-count field. Behavioral tests certify cadence, wire cancellation, cap/overflow and rejected friendly casts. No additional six-point grant, registration-only no-op or production Mind Flay change.
+
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
+
+## Twenty-third batch: authored combo builders and Rune Weapon parry
+
+[Contract](../../specs/spell-dummy-scripts.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry), [source/census/proof](../../spell-dummy23-coverage.md). `scripts/batch5.rs::shuriken_storm` applies active121471's native100-percent effect3 to197835's scripted per-enemy combo grant. Native Backstab energize already matches121471's modifier masks; the scripted Storm effect does not. This named correction does not double native builders twice or invent a Shadow-damage copy.
+
+`summon.rs::spawn_summon` grants81256 only after authentic49028/27893 Rune Weapon creation. Native aura47 supplies30-percent owner parry; both durations are8sec. `despawn_summon` removes that owner's81256 on early actor removal. Missing real template spawns nothing/grants nothing; existing root admission remains unchanged. Mirrored attacks and49028 Dummy markers remain unbound.
+
+All28 previously unreviewed roots now carry exact reasons:157/129/28→157/157/0, with all157 unresolved upper-bound roots retained. Zero underived means no unreviewed roots, not full gameplay closure. Thirty deferred roots re-read; known empower/radius/count data does not create missing movement/actor/history/selector algorithms. Targeted12/12 GREEN at449bb8e; no broad suite/live parity claim.
+
+## Twenty-first batch: native combo builders
+
+[Contract](../../specs/spell-dummy-scripts.md#twenty-first-batch-native-combo-builders), [source/proof/census](../../spell-dummy21-coverage.md). `effects.rs::energize` admits positive self-directed combo grants from depth0 native casts. `scripts/batch21.rs::berserk_combo_bonus` reads the active106951 index1 amount only for matching spell families; combined grant flows through ordinary pool clamping and overflow logging. Thrash's caster effect grants once, independent of its area target count. Native343216's1500ms periodic point remains independent and receives no extra builder point.
+
+Completed-root Shred/Rake/Thrash, cap/overflow, expiry, actual periodic clock, unrelated family and rejected-friendly cast prove this numeric contract.405189 over-cap recovery and script-only grants remain uncertified. Seven other reviewed roots retain exact source-field or runtime-prerequisite deferrals, including known Spiritbloom30yd range and both known empower stage tables; these are not absent-data claims.
+
+## Twentieth batch: authored totals and next-spell uses
+
+[Contract](../../specs/spell-dummy-scripts.md#twentieth-batch-authored-totals-and-next-spell-uses), [source/proof/census](../../spell-dummy20-coverage.md). `scripts/batch20.rs` starts Barbed Shot's named246152 Focus aura once after completed root casting. `auras/refresh.rs` implements217200s2's authored five-amount damage total over the unchanged native twelve-second clock (seven initial/regular ticks). Equal distribution is inferred from the conflicting local total and clock, not independently observed Retail per-tick damage. Reapplication adds same-owner unpaid damage to that fresh total and divides across the preserved phase's future ticks, without repeating an extra-initial tick. Due ticks are paid before snapshot; foreign owners remain independent.
+
+Stormkeeper's aura construction initializes charges from191634s5 before ordinary charge modifiers. Existing family-matched spell modifiers consume one use per completed cast; refresh rebuilds the authored count rather than resetting to the options row's single charge. No separate universal proc or overload algorithm is added. Unknown markers, soft-cap curves, massive-damage thresholds and unrelated guardian/rotation mechanics remain uncertified.
+
+## Nineteenth batch: counts, healing totals and owned damage
+
+[Contract](../../specs/spell-dummy-scripts.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [source/census/all40](../../spell-dummy19-coverage.md). `scripts/batch19.rs` consumes Flurry's explicit count, Mutilate variable394 and Dispersion variable872. Dispersion preserves native extra-initial ticks; its description's total is distributed across native ticks with ordinary rounding, including Intangibility and existing Altered Form duration modifiers. This distribution is a local total/clock derivation, not independently observed Retail tick amounts.
+
+Dispel passes the actual dispeller to the named34914→87204 response. Havoc's native single-target mark replaces only this owner's other mark. Direct single-target family-matched spell damage can echo its effective amount at s1 percent; the copied branch skips source modifiers/crit and recursion, but retains destination defenses. Rain of Fire's explicitly area-owned42223 child is excluded even though its per-enemy selector is6. Specialized child selectors/range/destination-mitigation live parity remain gaps.
+
+Ardent Defender's native index1 field is reserved synchronously before deferred melee aura removal, preventing double rescue. Spell/direct/redirect paths share `apply_attack_damage`; normal melee uses the same reservation function inside its borrowed-health query. Environmental damage remains separate. Tests prove fatal-hit restoration/one-shot depletion and the deferred reservation boundary, not random melee outcomes or live timing. Aura316/118/137 behavior remains uncertified; this is only a Dummy-field closure.
+
+## Eighteenth batch: native leech and reapplication
+
+[Contract](../../specs/spell-dummy-scripts.md#eighteenth-batch-native-leech-and-reapplication-contracts), [proof/census/all40](../../spell-dummy18-coverage.md). Effect9 and aura53 share damage resolution with ordinary attacks; the resolver returns damage less overkill after immunity, absorbs, routing and scaling. Leech copies that amount through normal living-health clamping/logging, without another power, multiplier or crit roll. Periodic leech snapshots native SP/AP amounts, reads the original effect's amplitude and preserves existing tick scheduling.
+
+`auras/refresh.rs` implements only named local rules:335467 redistributes unpaid same-owner damage over the refreshed phase's future ticks, paying due ticks before snapshot;190456 includes its explicit versatility capacity factor, spends s2 percent of each incoming hit and Protection73 accumulates remaining shields to s4 percent of maximum health. No generic Pandemic threshold or Karma redirect is invented. Conflagrate's existing grant now reads the native Charges31 modifier;267115 separately raises its117828 stack cap. Obliterate reuses the weapon-branch selector with local variable608's physical and frost child pairs.
+
+Native leech paths cover34914/335467/234153/55078 and only205179's primary aura53. Singularity's area226, Ignore Pain142, Vampiric Touch markers/dispel retaliation, talent/guardian/Karma and Lifebloom near-expiry rules remain outside this implementation. Native14/14 at edfa536 includes completed roots and actual Drain Life channel/cancellation. Frozen census164/100/64→163/103/60 closes only Ignore Pain's two consumed Dummy fields; aura142 remains. E3=114/122, aura4=66/74, aura226=18/19. All40 prior script sets/counts reproduced; generic leech is not relabelled a named script. Generic registry admission is not full ability parity. Feature/master merge83c5fb3 includes account-achievement changes from632f3ae; single requested spell_cast404/404 and fmt/check pass, compiler warning-free. Later updates are docs/proof only.
+
+## Seventeenth batch: named resources and restorative hooks
+
+[Contract](../../specs/spell-dummy-scripts.md#seventeenth-batch-named-resources-and-restorative-hooks), [proof/all40/census](../../spell-dummy17-coverage.md). `scripts/batch17.rs` binds Shadow Bolt's spec-gated194192 gain, Conflagrate's245330 fragments/196406-gated117828 uses, Soul Fire's281490 gain and conditional base157736/445474 periodic mark, Blood Boil's55078 base disease and Marrowrend's native195181 stack grant. Shadow Bolt checks actual ActiveSpec266, not an invented passive. Blood Boil's absent212744 record is represented only by the native description's learned-spell condition, not a synthesized store row.
+
+Lifebloom hooks bloom33778 on expiry/dispel and replace only other targets bearing the same owner's33763; replacement never blooms. The near-expiration refresh threshold remains underivable. Improved Regrowth231032 adds its native probability only when the target already has8936; any owner qualifies. Cenarion Ward102351's proc predicate requires actual damage before consuming its native charge; its hook casts102352 from the real aura owner onto the protected unit, not the event's attacker. Backdraft117828 joins53390's named stack-as-use handling, preserving30% per use instead of multiplying magnitude by stack count.
+
+Guardian/Karma/Eye Beam and retained markers/talents remain excluded. Batch17 did not infer general leech from disease application; batch18 adds aura53 explicitly. Current proof and source limits live in the linked coverage ledger.
 
 ## Sixteenth batch: low-count rank and charge consumers
 

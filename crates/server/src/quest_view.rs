@@ -100,7 +100,14 @@ fn quest_entry(
         quest_id: quest.id,
         title: quest.title.clone(),
         zone: String::new(),
-        completed: objectives_done(quest, &counts),
+        completed: !active.failed && objectives_done(quest, &counts),
+        expires_at: active.expires_at,
+        timer_sampled_at: active.expires_at.map(|_| {
+            quests
+                .now
+                .unwrap_or_else(crate::persistence::quest_store::unix_now)
+        }),
+        failed: active.failed,
         repeatability: quest.repeatability(),
         objectives: objective_snapshots(quest, &counts),
         level: quest.level,

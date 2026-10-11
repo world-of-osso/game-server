@@ -64,8 +64,8 @@ impl MapContent {
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CreatureDifficulty(pub u32);
 
-/// Spawn every creature of the copy's map spawned at its difficulty (none outside
-/// `NPC_APPEARANCE_MAPS`), with the template of that difficulty, except the bosses
+/// Spawn every creature of the copy's map spawned at its difficulty,
+/// with the template of that difficulty, except the bosses
 /// kept dead. When `replicate` is true, adds `Replicate` (requires lightyear plugins).
 /// Tests pass `false` to avoid that dependency.
 pub(crate) fn spawn_map_creatures(
@@ -75,9 +75,6 @@ pub(crate) fn spawn_map_creatures(
     replicate: bool,
 ) -> u32 {
     let map = content.map;
-    if !crate::maps::NPC_APPEARANCE_MAPS.contains(&map.map_id) {
-        return 0;
-    }
     let Some(indices) = world_data.spawns_by_map.get(&(map.map_id as u16)) else {
         return 0;
     };
@@ -231,7 +228,9 @@ pub(crate) fn spawn_creature(
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
             UnitFlags(spawn.unit_flags.unwrap_or(template.unit_flags)),
-            NpcFlags::from_azerothcore(template.npc_flags),
+            // The merged content view includes Retail-only services such as
+            // Transmogrifier; an AzerothCore mask would discard their flags.
+            NpcFlags(u64::from(template.npc_flags)),
             shared::components::CreatureMotion::Still,
             // Set by the movement systems while it moves (`creature_ai::Bearing`).
             shared::components::MovementSpeed(0.0),
@@ -1002,6 +1001,88 @@ mod tests {
     /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).
     fn spawn_test(mut commands: Commands, world_data: Res<WorldData>) {
         spawn_map_creatures(&mut commands, &world_data, MapContent::continent(0), false);
+    }
+
+    #[test]
+    fn dungeon_population_spawns_outside_the_old_appearance_allowlist() {
+        for map_id in [36, 43, 389, 643] {
+            let mut spawn = make_spawn(42, 10.0, 20.0, 30.0);
+            spawn.map = map_id;
+            spawn.spawn_difficulties = vec![1];
+            let data = make_world_data(vec![make_template(42, 1.0, 5555)], vec![spawn]);
+            let mut world = World::new();
+            let mut queue = bevy::ecs::world::CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, &world);
+            let content = MapContent {
+                map: crate::maps::InMap {
+                    map_id: u32::from(map_id),
+                    instance_id: 1,
+                },
+                difficulty_id: 1,
+                dead_bosses: Vec::new(),
+            };
+            assert_eq!(spawn_map_creatures(&mut commands, &data, content, false), 1);
+            queue.apply(&mut world);
+            assert_eq!(world.query::<&Npc>().iter(&world).count(), 1);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires DUNGEON_POPULATION_DB pointing to an imported database copy"]
+    fn dungeon_population_real_copy_loads_all_maps_and_spawns_three_dungeons() {
+        let path = std::env::var("DUNGEON_POPULATION_DB").expect("imported copy path");
+        let data = crate::world_data::load_world_data(std::path::Path::new(&path));
+        let conn = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let mut statement = conn
+            .prepare("SELECT map FROM tdb_instance_template ORDER BY map")
+            .unwrap();
+        let maps = statement.query_map([], |row| row.get::<_, u16>(0)).unwrap();
+        for map in maps {
+            let map = map.unwrap();
+            let expected: usize = conn.query_row(
+                "SELECT count(*) FROM content_creature c WHERE map=?1 AND
+                 (NOT EXISTS (SELECT 1 FROM content_game_event_creature e WHERE e.guid=c.guid)
+                  OR EXISTS (SELECT 1 FROM content_game_event_creature e WHERE e.guid=c.guid AND e.eventEntry<0))",
+                [map], |row| row.get(0),
+            ).unwrap();
+            assert_eq!(
+                data.spawns_by_map.get(&map).map_or(0, Vec::len),
+                expected,
+                "map {map}"
+            );
+        }
+        for map_id in [36, 43, 389] {
+            let mut world = World::new();
+            let mut queue = bevy::ecs::world::CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, &world);
+            let content = MapContent {
+                map: crate::maps::InMap {
+                    map_id,
+                    instance_id: 1,
+                },
+                difficulty_id: 1,
+                dead_bosses: Vec::new(),
+            };
+            let expected = data.spawns_by_map[&(map_id as u16)]
+                .iter()
+                .filter(|&&i| data.spawns[i].spawns_at(1))
+                .count();
+            let count = spawn_map_creatures(&mut commands, &data, content, false);
+            assert_eq!(count as usize, expected, "map {map_id}");
+            queue.apply(&mut world);
+            let npcs = world.query::<(&Npc, &Health, &ModelDisplay)>();
+            let mut npcs = npcs;
+            assert_eq!(npcs.iter(&world).count(), expected);
+            assert!(
+                npcs.iter(&world)
+                    .all(|(_, health, display)| health.current > 0.0 && display.display_id > 0)
+            );
+            println!("map {map_id}: {count} living NPC entities at Normal difficulty");
+        }
     }
 
     fn run_spawn_system(wd: WorldData) -> App {

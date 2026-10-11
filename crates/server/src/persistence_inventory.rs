@@ -75,6 +75,7 @@ pub struct InventoryRecord {
     /// Runtime-only collection receipt; not part of the stored inventory ABI.
     pub appearance_account: Option<u64>,
     pub appearance_grants: Vec<u32>,
+    pub(crate) transmogs: HashMap<u64, crate::transmog_store::ItemTransmog>,
 }
 
 pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<InventoryRecord> {
@@ -120,6 +121,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
     let durability_table = txn
         .open_table(ITEM_DURABILITIES)
         .expect("open item durability");
+    let transmogs = crate::transmog_store::load_item_transmogs(db, guids.iter().copied());
     let item_durability = guids
         .into_iter()
         .filter_map(|guid| {
@@ -141,6 +143,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         definition_sources,
         appearance_account: super::find_account_id_for_character(db, character_id),
         appearance_grants: Vec::new(),
+        transmogs,
     })
 }
 
@@ -252,6 +255,11 @@ pub(crate) fn write_inventory_record(
             record.appearance_grants.iter().copied(),
         );
     }
+    crate::transmog_store::write_item_transmogs(
+        txn,
+        record.definition_sources.keys().copied(),
+        &record.transmogs,
+    );
     let rows: [(TableDefinition<u64, &[u8]>, Vec<u8>); 5] = [
         (INVENTORIES, bitcode::encode(&record.inventory)),
         (INVENTORY_LAYOUTS, bitcode::encode(&record.placements)),
@@ -287,4 +295,6 @@ pub(crate) fn write_inventory_record(
             .insert(*guid, bitcode::encode(data).as_slice())
             .expect("write item instance");
     }
+    drop(instances);
+    super::charters::prune_destroyed_in(txn, character_id, record);
 }

@@ -8,6 +8,11 @@ mod batch13;
 mod batch14;
 mod batch15;
 mod batch16;
+mod batch17;
+mod batch19;
+mod batch20;
+mod batch21;
+mod batch22;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -17,6 +22,8 @@ mod batch8;
 mod batch9;
 
 pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
+pub(crate) use batch20::proc_charges;
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
 }
@@ -27,9 +34,15 @@ pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_ener
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
+pub(crate) use batch17::{
+    CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
+};
+pub(super) use batch21::berserk_combo_bonus;
+pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    batch11::effect_enabled(world, caster, spell, index)
+    batch19::effect_enabled(world, caster, spell, index)
+        && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
 }
@@ -104,6 +117,10 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch17::CONFLAGRATE, 0) => Some(batch17::conflagrate),
+        (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),
+        (batch17::BLOOD_BOIL, 0) => Some(batch17::apply_blood_plague),
+        (batch17::MARROWREND, 1) => Some(batch17::grant_bone_shield),
         (batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT, 0) => Some(batch16::energize_judgment),
         (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
@@ -180,6 +197,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
@@ -214,6 +232,9 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
+    if let Some(hook) = batch19::damage_amount(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
         batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
@@ -283,6 +304,9 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch20::BARBED_SHOT => Some(batch20::grant_barbed_focus),
+        batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
+        batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
         batch16::HOLY_SHOCK | batch16::CRUSADER_STRIKE => Some(batch16::reduce_holy_judgment),
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),

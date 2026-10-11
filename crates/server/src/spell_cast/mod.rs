@@ -36,6 +36,22 @@ mod dummy15_tests;
 #[cfg(test)]
 mod dummy16_tests;
 #[cfg(test)]
+mod dummy17_tests;
+#[cfg(test)]
+mod dummy18_tests;
+#[cfg(test)]
+mod dummy19_boundary_tests;
+#[cfg(test)]
+mod dummy19_tests;
+#[cfg(test)]
+mod dummy20_tests;
+#[cfg(test)]
+mod dummy21_tests;
+#[cfg(test)]
+mod dummy22_tests;
+#[cfg(test)]
+mod dummy23_tests;
+#[cfg(test)]
 mod dummy2_tests;
 #[cfg(test)]
 mod dummy3_tests;
@@ -1457,6 +1473,7 @@ fn execute_cast(
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
+    crate::achievement::record_spell_cast(world, caster, spell.id);
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
@@ -1645,6 +1662,10 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    // Distinct hit units after missile/defense filtering, before effect dispatch.
+    for unit in hit_units(plan) {
+        crate::achievement::record_spell_target(world, unit, spell.id);
+    }
     for effect in &spell.effects {
         if !selects_targets(spell, effect) {
             effects::log_unhandled(world, spell.id, effect.effect);
@@ -1948,7 +1969,10 @@ pub(super) fn cast_triggered_with_item_level(
     spell.cast_item_level = item_level;
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, &spell, explicit, true) {
-        Ok(plan) => missiles::launch(world, caster, &spell, plan, depth),
+        Ok(plan) => {
+            crate::achievement::record_spell_cast(world, caster, spell.id);
+            missiles::launch(world, caster, &spell, plan, depth);
+        }
         Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
     }
 }

@@ -61,6 +61,174 @@ fn item_templates() -> ItemTemplates {
         .clone()
 }
 
+#[test]
+fn quest_share_accept_replay_and_party_change_use_real_message_path() {
+    use shared::protocol::{
+        PushQuestToParty, QuestPushReason, QuestPushResponse, QuestPushResult, QuestShareOffer,
+    };
+    let mut app = setup_app().expect("authentic quest data");
+    let a = spawn_named_client(&mut app, 10, "ShareA");
+    let b = spawn_named_client(&mut app, 10, "ShareB");
+    enter_world(&mut app, &a);
+    enter_world(&mut app, &b);
+    let online: crate::group::OnlineView = [(a.character_id, "ShareA"), (b.character_id, "ShareB")]
+        .into_iter()
+        .map(|(id, name)| {
+            (
+                id,
+                crate::group::OnlineMember {
+                    entity: 0,
+                    name: name.into(),
+                    class: 1,
+                    level: 10,
+                    portrait: Default::default(),
+                    dungeon_difficulty: 1,
+                },
+            )
+        })
+        .collect();
+    let mut groups = crate::group::GroupRegistry::default();
+    groups.invite(a.character_id, "ShareB", &online);
+    groups.respond_invite(b.character_id, true);
+    app.insert_resource(groups);
+    let giver = spawn_npc(&mut app, MARSHAL_DUGHAN, 0.0);
+    accept(&mut app, &a, giver, THE_FARGODEEP_MINE);
+    assert!(received::<QuestFailed>(&mut app, &a).is_empty());
+    request(
+        &mut app,
+        &a,
+        PushQuestToParty {
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    let offers = received::<QuestShareOffer>(&mut app, &b);
+    assert_eq!(offers.len(), 1);
+    assert!(
+        load_quest_log(db(&app), b.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .is_none()
+    );
+    let answer = QuestPushResponse {
+        offer_id: offers[0].offer_id,
+        accepted: true,
+    };
+    request(&mut app, &b, answer.clone());
+    assert!(
+        load_quest_log(db(&app), b.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .is_some()
+    );
+    assert!(
+        received::<QuestPushResult>(&mut app, &a)
+            .iter()
+            .any(|r| r.reason == QuestPushReason::Accepted)
+    );
+    request(&mut app, &b, answer);
+    assert_eq!(load_quest_log(db(&app), b.character_id).active.len(), 1);
+    request(
+        &mut app,
+        &a,
+        PushQuestToParty {
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    assert_eq!(
+        received::<QuestPushResult>(&mut app, &a)[0].reason,
+        QuestPushReason::OnQuest
+    );
+    let rejection = received::<QuestPushResult>(&mut app, &b);
+    assert_eq!(rejection[0].reason, QuestPushReason::OnQuest);
+    assert!(rejection[0].recipient);
+    assert_eq!(rejection[0].player_name, "ShareA");
+    assert_eq!(rejection[0].quest_title, "The Fargodeep Mine");
+    request(
+        &mut app,
+        &b,
+        AbandonQuest {
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    request(
+        &mut app,
+        &a,
+        PushQuestToParty {
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    let offer = received::<QuestShareOffer>(&mut app, &b).remove(0);
+    app.world_mut()
+        .resource_mut::<crate::group::GroupRegistry>()
+        .leave(b.character_id);
+    request(
+        &mut app,
+        &b,
+        QuestPushResponse {
+            offer_id: offer.offer_id,
+            accepted: true,
+        },
+    );
+    assert!(
+        load_quest_log(db(&app), b.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .is_none()
+    );
+    assert!(
+        received::<QuestPushResult>(&mut app, &a)
+            .iter()
+            .any(|result| result.reason == QuestPushReason::NotAllowed)
+    );
+}
+
+#[test]
+fn quest_timed_expiry_persists_and_cannot_reward_after_relog() {
+    let mut app = setup_app().expect("authentic quest data");
+    app.insert_resource(crate::maps::difficulty::ServerClock {
+        fixed_unix: Some(1000),
+        ..Default::default()
+    });
+    let client = spawn_client(&mut app, 30);
+    // Authored quest 212 TimeAllowed=1800. Start-time persistence, not fabricated content.
+    let mut log = load_quest_log(db(&app), client.character_id);
+    log.active
+        .push(crate::persistence::quest_store::ActiveQuestData {
+            quest_id: 212,
+            counts: vec![0],
+            expires_at: Some(2800),
+            failed: false,
+        });
+    log.watched.push(212);
+    save_quest_log(db(&app), client.character_id, &log);
+    let snapshot = enter_world(&mut app, &client);
+    assert_eq!(snapshot.entries[0].expires_at, Some(2800));
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(2799);
+    app.update();
+    assert!(
+        !load_quest_log(db(&app), client.character_id)
+            .active(212)
+            .unwrap()
+            .failed
+    );
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(2800);
+    app.update();
+    let saved = load_quest_log(db(&app), client.character_id);
+    assert!(saved.active(212).unwrap().failed);
+    assert!(!crate::quest_rules::is_complete_in_log(
+        app.world().resource::<QuestDb>(),
+        &saved,
+        212,
+        |_| 999
+    ));
+    app.world_mut()
+        .entity_mut(client.connection)
+        .remove::<InWorld>();
+    app.update();
+    assert!(enter_world(&mut app, &client).entries[0].failed);
+}
+
 fn setup_app() -> Option<App> {
     setup_app_with(|_| {})
 }
@@ -137,12 +305,16 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
         .entity_mut(client.player)
         .insert(saved.clone());
     enter_world(&mut app, &client);
-    assert_eq!(
-        *app.world()
-            .get::<PlayerAchievementState>(client.player)
-            .unwrap(),
-        saved
+    let mut reloaded = app
+        .world()
+        .get::<PlayerAchievementState>(client.player)
+        .unwrap()
+        .clone();
+    assert!(
+        reloaded.account.take().is_some(),
+        "login reconstructs account presentation"
     );
+    assert_eq!(reloaded, saved);
     assert!(
         received::<AchievementStateUpdate>(&mut app, &client)
             .iter()
@@ -198,6 +370,10 @@ macro_rules! for_quest_messages {
         $apply::<AbandonQuest>($($arg),*);
         $apply::<SetQuestWatched>($($arg),*);
         $apply::<QuestFailed>($($arg),*);
+        $apply::<shared::protocol::PushQuestToParty>($($arg),*);
+        $apply::<shared::protocol::QuestPushResponse>($($arg),*);
+        $apply::<shared::protocol::QuestShareOffer>($($arg),*);
+        $apply::<shared::protocol::QuestPushResult>($($arg),*);
         $apply::<InventorySnapshot>($($arg),*);
         $apply::<EquipmentSnapshot>($($arg),*);
         $apply::<InventoryDelta>($($arg),*);
@@ -246,15 +422,19 @@ fn origin() -> Position {
 }
 
 fn spawn_client(app: &mut App, level: u8) -> Client {
+    spawn_named_client(app, level, "Questor")
+}
+
+fn spawn_named_client(app: &mut App, level: u8, name: &str) -> Client {
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) =
-        persistence::create_character(db, 1, "Questor", 1, 1).expect("create character");
+        persistence::create_character(db, 1, name, 1, 1).expect("create character");
     let player = app
         .world_mut()
         .spawn((
             crate::maps::InMap::continent(0),
             Player {
-                name: "Questor".into(),
+                name: name.into(),
                 race: 1,
                 class: 1,
                 appearance: CharacterAppearance::default(),
@@ -1055,6 +1235,9 @@ fn a_gray_forest_wolf_kill_counts_as_a_prowler() {
 #[path = "quest_spell_tests.rs"]
 mod spell;
 
+#[path = "quest_objectives_tests.rs"]
+mod objectives;
+
 #[test]
 fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
     use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
@@ -1161,6 +1344,7 @@ fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
             .push(crate::persistence::quest_store::ActiveQuestData {
                 quest_id: RIVERPAW_GNOLL_BOUNTY,
                 counts: vec![0],
+                ..Default::default()
             });
         save_quest_log(db(&app), client.character_id, &log);
         request(

@@ -1,5 +1,18 @@
 # Wiki Index
 
+- [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry) — authored scripted Shadow-Blades combo doubling, real Rune-Weapon owner parry, all28 exact reviews and30 deferred revisits; [157/157/0 census/proof/limits](../spell-dummy23-coverage.md). Zero underived is no unreviewed roots, not zero missing mechanics.
+
+- [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
+
+- [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
+- [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
+- [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+- [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+
+- [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
+
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 
 - [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
@@ -18,6 +31,8 @@
 
 
 Content catalog for the game-server wiki.
+
+- [Combat pet lifecycle](systems/combat-pet-lifecycle.md) — V2 stable migration, health/name/spec durability, authenticated stable mutations, Revive/Mend and Call1–5; both-skin native logout proof and food/render boundaries.
 
 [Appearance acquisition](investigations/appearance-acquisition.md) — Retail Warbands disposal/quest rules, atomic collection receipts, real-item acquisition/reopen proofs and missing-path limits.
 
@@ -49,7 +64,18 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
+
+- [Class spell batch20](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses) — Barbed Shot total/rollover/Focus and Stormkeeper two-use count;158 remaining Dummy roots/110 reviewed/48 underived, six exact source deferrals and [all40/proof/limits](../spell-dummy20-coverage.md).
+
+- [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
+
+- [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
+- [Quest GO/spell objectives](systems/game-objects.md#quest-objects-2026-10-11) — authored locks, goober use, chest quest-item loot and personal/group spell-credit events; real-data turn-in tests and retained Retail gaps.
+
 - [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
+- [Toy-effects12 non-summon cosmetics](systems/toys.md#toy-effects12-non-summon-cosmetics-2026-10-11) — ranked dummy handlers; source-bound sob, ghost, fist and water art; [coverage](../toy-effects12-coverage.md), retained underivable scripts/rendering.
+
 - [Toy-effects11 summon audit](systems/toys.md#toy-effects11-summon-classification-and-scenery-2026-10-10) — all43 runtime summon blockers classified; source-backed sweeper/trophy preparation,128→130 census, retained possession/vehicles/visibility/interaction and scale gaps.
 
 - [Toy-effects10 cosmetic auras](systems/toys.md#toy-effects10-cosmetic-target-and-growth-auras-2026-10-10) — source-bound refreshment/crystal/swarm auras, real target/trigger/lifetime fixtures; retained gameplay scripts and rendering limits.
@@ -112,7 +138,7 @@ Server gameplay systems.
 | [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour; Northshire native-vs-effective pool audit and starter regressions |
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, player-managed guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
-| [[warlock-pets]] | Level-3 Imp lifecycle/AI; Retail command-dismiss investigation removes artificial 2641 fixture grant, RED blocked by build-helper API drift |
+| [[warlock-pets]] | Authored permanent demon lifecycle, reopened wounded/dismissed state and Fel Domination proof; both-skin native bars/logout, body-data boundaries explicit |
 | [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal; pinned override/form/capability/restriction rows distinguish Skyward Ascent from source-blocked Lift Off 374763 |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |
@@ -139,7 +165,7 @@ Server gameplay systems.
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
-| [[dungeon-achievements]] | Local CASC categories/criteria, bounded achievement pages/dates, ordered copy objective snapshots and Stockade grants; client hookup |
+| [[dungeon-achievements]] | Account aggregation/migration, local cast/skill/target criteria, bounded pages/dates, ordered dungeon objectives and Stockade grants |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
 | [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
 | [[toys]] | Local Toy.db2 catalog, atomic account learning/favourites, account broadcasts and authoritative UseToy cooldowns; explicit effect/data gaps |
