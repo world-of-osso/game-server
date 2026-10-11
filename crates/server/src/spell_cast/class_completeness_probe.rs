@@ -250,8 +250,12 @@ fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
     };
     let receipt = record_case(&mut h, &spec, &spell);
     assert_eq!(receipt["failed"], json!([]), "native city cast: {receipt}");
-    let destinations =
-        super::teleport_positions::load_positions(&world_db().unwrap().powers_db).unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let destinations = super::teleport_positions::load_positions(&conn).unwrap();
     assert_eq!(
         *h.app.world().get::<Position>(h.caster).unwrap(),
         destinations.0[&(3567, 0)].bevy_position()
