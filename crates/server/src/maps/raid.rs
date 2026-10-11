@@ -1,0 +1,152 @@
+//! Retail raid selections (TC a352b1fa MiscHandler::HandleSetRaidDifficultyOpcode).
+//! Lock creation, boss credit, persistence and extension stay in the existing instance manager.
+use super::difficulty::{drain, now, send_to_player};
+use super::store::InstanceType;
+use super::{InMap, InstanceManager, MapStore};
+use crate::group::GroupRegistry;
+use crate::persistence::{ClientId, GameDatabase};
+use bevy::prelude::*;
+use redb::{Database, ReadableDatabase, TableDefinition};
+use shared::components::Player;
+use shared::protocol::{RaidDifficultySet, SetRaidDifficulty};
+
+const SAVED_RAID_DIFFICULTY: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_raid_difficulty");
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, bitcode::Encode, bitcode::Decode)]
+pub struct RaidDifficulty {
+    pub primary: u32,
+    pub legacy: u32,
+}
+impl Default for RaidDifficulty {
+    fn default() -> Self {
+        Self {
+            primary: 14,
+            legacy: 3,
+        }
+    }
+}
+
+pub(crate) fn load(db: &Database, character: u64) -> RaidDifficulty {
+    let txn = db.begin_read().expect("read raid difficulty");
+    let Ok(table) = txn.open_table(SAVED_RAID_DIFFICULTY) else {
+        return RaidDifficulty::default();
+    };
+    table
+        .get(character)
+        .expect("read character raid difficulty")
+        .map_or_else(RaidDifficulty::default, |v| {
+            bitcode::decode(v.value()).expect("decode raid difficulty")
+        })
+}
+
+fn save(db: &Database, character: u64, difficulty: RaidDifficulty) {
+    let txn = db.begin_write().expect("write raid difficulty");
+    {
+        txn.open_table(SAVED_RAID_DIFFICULTY)
+            .expect("open raid difficulty")
+            .insert(character, bitcode::encode(&difficulty).as_slice())
+            .expect("save raid difficulty");
+    }
+    txn.commit().expect("commit raid difficulty");
+}
+
+#[derive(Resource, Default)]
+pub(crate) struct RaidChanges(pub Vec<(u64, RaidDifficulty)>);
+
+pub(crate) fn apply_changes(world: &mut World) {
+    let changes = std::mem::take(&mut world.resource_mut::<RaidChanges>().0);
+    for (character, selection) in changes {
+        apply(world, character, selection);
+    }
+}
+
+pub(crate) fn receive(world: &mut World) {
+    for (player, character, request) in drain::<SetRaidDifficulty>(world) {
+        set(world, player, character, request);
+    }
+}
+
+pub(crate) fn set(world: &mut World, player: Entity, character: u64, request: SetRaidDifficulty) {
+    let store = world.resource::<MapStore>();
+    let Some(entry) = store.difficulty_entries.get(&request.difficulty_id) else {
+        return;
+    };
+    if entry.instance_type != InstanceType::Raid
+        || !entry.can_select()
+        || entry.is_legacy() != request.legacy
+    {
+        return;
+    }
+    if world
+        .get::<InMap>(player)
+        .is_some_and(|m| store.map(m.map_id).is_some_and(|e| e.is_dungeon()))
+    {
+        return;
+    }
+    let mut selection = world
+        .get::<RaidDifficulty>(player)
+        .copied()
+        .unwrap_or_default();
+    if request.legacy {
+        selection.legacy = request.difficulty_id;
+    } else {
+        selection.primary = request.difficulty_id;
+    }
+    let members = if world
+        .get_resource::<GroupRegistry>()
+        .is_some_and(|g| g.group_id_of(character).is_some())
+    {
+        let Some(members) = world
+            .resource_mut::<GroupRegistry>()
+            .set_raid_difficulty(character, selection)
+        else {
+            return;
+        };
+        members
+    } else {
+        vec![character]
+    };
+    if members.is_empty() {
+        return;
+    }
+    let entrant = super::transfer::entrant_of(world, player);
+    let now = now(world);
+    world
+        .resource_mut::<InstanceManager>()
+        .reset_instances(entrant, true, now);
+    for member in members {
+        apply(world, member, selection);
+    }
+}
+
+pub(crate) fn apply(world: &mut World, character: u64, selection: RaidDifficulty) {
+    if let Some(db) = world.get_resource::<GameDatabase>() {
+        save(&db.db, character, selection);
+    }
+    let player = world
+        .query::<(Entity, &ClientId)>()
+        .iter(world)
+        .find_map(|(e, id)| (id.0 == character).then_some(e));
+    if let Some(player) = player {
+        world.entity_mut(player).insert(selection);
+    }
+}
+
+pub(crate) fn send(world: &mut World) {
+    let changes: Vec<_> = world
+        .query_filtered::<(Entity, &RaidDifficulty), (With<Player>, Changed<RaidDifficulty>)>()
+        .iter(world)
+        .map(|(e, d)| (e, *d))
+        .collect();
+    for (player, d) in changes {
+        send_to_player(
+            world,
+            player,
+            RaidDifficultySet {
+                difficulty_id: d.primary,
+                legacy_difficulty_id: d.legacy,
+            },
+        );
+    }
+}

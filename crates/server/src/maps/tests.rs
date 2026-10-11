@@ -118,6 +118,7 @@ fn entrant(character_id: u64, group: Option<u64>) -> InstanceEntrant {
         group,
         leader: if group.is_some() { 1 } else { character_id },
         difficulty_id: store::DIFFICULTY_NORMAL,
+        ..Default::default()
     }
 }
 
@@ -218,11 +219,11 @@ fn an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh() {
 }
 
 #[test]
-fn raids_and_world_maps_without_npc_data_are_not_hosted() {
+fn world_maps_without_npc_data_are_not_hosted() {
     let Some(store) = map_store() else { return };
     let instances = InstanceManager::default();
-    // Outland (530); Molten Core (409), a raid.
-    for map_id in [530, 409] {
+    // Outland (530) is not hosted.
+    for map_id in [530] {
         assert_eq!(
             instances.player_cannot_enter(store, map_id, entrant(1, None), 80, SUNDAY_NOON),
             Some(TransferAbortReason::MapNotAllowed),
@@ -467,6 +468,7 @@ impl Harness {
                         level: 20,
                         portrait: Default::default(),
                         dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                        raid_difficulty: crate::maps::RaidDifficulty::default(),
                     },
                 )
             })
@@ -1376,4 +1378,42 @@ fn only_a_group_leader_sets_the_groups_difficulty_for_every_member() {
             .difficulty_id,
         23
     );
+}
+
+#[test]
+fn raid_entry_legacy_raid_copy_and_weekly_bind_resume() {
+    let store = map_store().expect("canonical map data");
+    let mut instances = InstanceManager::default();
+    let mut raider = entrant(71, None);
+    raider.difficulty_id = 9; // Difficulty.db2: Molten Core 40 Player.
+    assert_eq!(
+        instances.player_cannot_enter(store, 409, raider, 80, SUNDAY_NOON),
+        None
+    );
+    let copy = instances
+        .create_map(store, 409, raider, at(0.0))
+        .unwrap()
+        .map;
+    assert_eq!(instances.copy_difficulty(copy).unwrap().difficulty_id, 9);
+    let entries = *store.map_difficulty(409, 9).unwrap();
+    assert_eq!(entries.reset_interval, store::ResetInterval::Weekly);
+    instances.locks.update_for_player(
+        71,
+        &entries,
+        &locks::LockUpdate {
+            instance_id: copy.instance_id,
+            done_bosses: 1,
+            instance_completed_encounters: 1,
+            completed_encounter_bit: Some(0),
+        },
+        SUNDAY_NOON,
+    );
+    let saved = instances.locks.saved();
+    let mut reloaded = InstanceManager::with_locks(locks::InstanceLocks::from_saved(saved));
+    let resumed = reloaded
+        .create_map(store, 409, raider, at(1.0))
+        .unwrap()
+        .map;
+    assert_eq!(resumed.instance_id, copy.instance_id);
+    assert_eq!(reloaded.initial_done_bosses(resumed), 1);
 }

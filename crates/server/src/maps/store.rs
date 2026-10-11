@@ -52,6 +52,7 @@ pub struct MapEntry {
     pub corpse: (f32, f32),
     pub max_players: u32,
     pub wdt_file_data_id: u32,
+    pub expansion_id: u32,
 }
 
 impl MapEntry {
@@ -193,6 +194,10 @@ pub struct DifficultyEntry {
 }
 
 impl DifficultyEntry {
+    pub fn is_legacy(&self) -> bool {
+        self.flags & 0x20 != 0
+    }
+
     pub fn can_select(&self) -> bool {
         self.flags & DIFFICULTY_FLAG_CAN_SELECT != 0
     }
@@ -369,7 +374,7 @@ impl MapStore {
     }
 
     /// `DB2Manager::GetDefaultMapDifficulty` (DB2Stores.cpp:2734-2765).
-    fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
+    pub(crate) fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
         let rows = self.difficulties.get(&map_id)?;
         let known = || {
             rows.iter()
@@ -462,6 +467,7 @@ impl MapStore {
             corpse: (0.0, 0.0),
             max_players: 0,
             wdt_file_data_id,
+            expansion_id: 0,
         };
         Self {
             maps: HashMap::from([
@@ -492,7 +498,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
 fn load_maps(conn: &Connection) -> rusqlite::Result<HashMap<u32, MapEntry>> {
     let mut statement = conn.prepare(
         "SELECT ID, Directory, MapName_lang, InstanceType, AreaTableID, ParentMapID,
-                CorpseMapID, Corpse_0, Corpse_1, MaxPlayers, WdtFileDataID FROM map",
+                CorpseMapID, Corpse_0, Corpse_1, MaxPlayers, WdtFileDataID, ExpansionID FROM map",
     )?;
     let rows = statement.query_map([], map_from_row)?;
     let mut maps = HashMap::new();
@@ -522,6 +528,7 @@ fn map_from_row(row: &Row) -> rusqlite::Result<Option<MapEntry>> {
         corpse: (row.get::<_, f64>(7)? as f32, row.get::<_, f64>(8)? as f32),
         max_players: row.get(9)?,
         wdt_file_data_id: row.get(10)?,
+        expansion_id: row.get(11)?,
     }))
 }
 
