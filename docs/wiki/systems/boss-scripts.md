@@ -30,9 +30,9 @@ Impact (world.db, verified 2026-10-05): 26,854 UPDATE_IC rows / 9,796 distinct e
 
 ## Wailing Caverns — Lord Cobrahn (2026-10-11)
 
-`wailing_caverns.rs` identifies only Cobrahn3669 as instance data0 / encounter586. Local `tdb_smart_scripts` death row0 sets data0→DONE3; `dungeon_encounter` names the same creature on map43/Normal1. `SmartAi` retains the authored spell timers and adds optional `BossAi` lifecycle; the existing hook boundary emits encounter/frame messages and death credit, with no separate spell schedule or new persistence model. AGGRO4 runs TALK1 using existing CreatureText selection.
+`encounter_compat.csv` preserves Cobrahn3669 as saved boss ordinal0 / encounter586 (previously registered in `wailing_caverns.rs`, now removed). Local `tdb_smart_scripts` death row0 sets data0→DONE3; `dungeon_encounter` names the same creature on map43/Normal1. `SmartAi` retains the authored spell timers and adds optional `BossAi` lifecycle; the existing hook boundary emits encounter/frame messages and death credit, with no separate spell schedule or new persistence model. AGGRO4 runs TALK1 using existing CreatureText selection.
 
-Sources: read-only canonical world.db `tdb_smart_scripts`3669, `content_creature_text`3669, `dungeon_encounter`586; [contract](../../specs/boss-scripts.md); real-data `scripted_ai/tests/wailing_caverns.rs`. Full escort/doors/other bosses and unsupported script actions remain separate gaps. [Native proof and blockers](../../specs/boss-scripts.md#cobrahn-native-proof--2026-10-11) records both-skin entry/pull/death/credit, absent actor4213 and a reproduced population-copy loot-binding loss. Population gate/importer is a separate dependency, not duplicated here.
+Sources: read-only canonical world.db `tdb_smart_scripts`3669, `content_creature_text`3669, `dungeon_encounter`586; [contract](../../specs/boss-scripts.md); real-data `scripted_ai/tests/wailing_caverns.rs`. Full escort/doors and unsupported script actions remain separate gaps; authentic single-actor bosses now receive the data-selected lifecycle below. [Native proof and blockers](../../specs/boss-scripts.md#cobrahn-native-proof--2026-10-11) records both-skin entry/pull/death/credit, absent actor4213 and a reproduced population-copy loot-binding loss. Population gate/importer is a separate dependency, not duplicated here.
 
 ## Pitfalls found
 
@@ -43,3 +43,15 @@ Sources: read-only canonical world.db `tdb_smart_scripts`3669, `content_creature
 ## Related
 
 [[creature-aggro]], [[creature-ai]], [[spell-casting]], [[auras]], [[zone-architecture]], [[dungeon-achievements]]
+
+## Data-selected encounters — 2026-10-11
+
+`insert_script_name` selects existing Stockade creature scripts first, otherwise SmartAI when rows or a bound boss exist. `instance_script::bound_boss` derives lifecycle from the instance copy and the imported `(map, creature) → encounter bit` catalog, even for a template with an unported C++ ScriptName and no rows. Empty event lists deliberately retain melee only. The old Grim Batol/Cobrahn AI registration modules are removed.
+
+`create_map_script` constructs owned boss/creature arrays from data. `encounter_compat.csv` preserves the eight authored legacy bindings and saved ordinals (TrinityCore a352b1fa Stockade/Grim Batol; canonical Cobrahn SmartAI death data0/DungeonEncounter586); new bindings append deterministically on those maps. Other maps use DB2 bits directly, including sparse bits, preserving raid-entry save identities. `BossAi` hooks send messages and update existing lock/achievement paths; DONE spawn suppression uses the same registry.
+
+`scripts/raid_encounters.py` now derives dungeon joins too. The private prepared source produces390 journal bindings (284 dungeon +106 raid); compatibility adds three previously implemented authentic bosses absent from that journal join, giving393 registered entries. Strict SmartAI row census:9 full,40 partial,344 without cast rows; all106 source-bound raid bosses lack SmartAI cast rows. Thirty-three bindings lack prepared runtime templates and remain population gaps. Full is row support only, never complete mechanical or numeric parity. Existing Stockade authored Rust abilities remain unchanged despite no SmartAI cast rows.
+
+Native Skum3674/encounter589 on private UDP5830: Modern/Forever entry, boss-frame pull/target, authored6254 casts, controlled death/frame clearing and existing tracker credit; Modern also shows evade. Inspected nine PNGs: `/syncthing/AgentShared/2026-10-11/boss-encounters/`. Receipts/census: `/home/osso/.worktrees/logs/boss-encounters/`; per-boss gaps and proof ledger: `/home/osso/.worktrees/handoff-boss-encounters.md`. Initial Modern repull was attempted before home return and is not accepted as live repull proof; targeted fixture proves actual home-return/repull. Display4203 lacks imported appearance; no actor/render or ordinary-combat parity claim. No canonical DB publication or realm5000 access.
+
+Sources: [contract](../../specs/boss-scripts.md), [registry](../../../crates/server/src/scripted_ai/instance_script.rs), [compatibility data](../../../crates/server/src/scripted_ai/encounter_compat.csv), [authentic importer](../../../scripts/raid_encounters.py), [raid-entry source provenance](raid-entry.md).
