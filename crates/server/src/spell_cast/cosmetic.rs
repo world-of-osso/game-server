@@ -7,6 +7,7 @@ use crate::spell_info::SpellInfo;
 /// action. Both the audit AND current DB2 shape must agree; metadata drift blocks.
 const VISUAL_ONLY_SPELLS: &[u32] = &[
     45416, 45418,  // Dancing Insoles, Fire Festival Batons
+    128327, // Iron Belly Spirits (friendly-target mug/refreshment visual)
     128328, // Ken-Ken's Mask (friendly-target attachment)
     131317, 131318, // Alliance / Horde fireworks
     148538, // Blackflame Daggers
@@ -14,6 +15,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     176457, // Fruit Basket
     176594, // Touch of the Naaru
     185712, // Seafarer's Slidewhistle
+    196783, // Darkshard Fragment (crystal growth attachments)
     203657, // Noble's Eternal Elementium Signet
     217708, // Gravil Goldbraid's Famous Sausage Hat
     231129, 231142, 231143, 231144,  // Falcosaur accessories
@@ -22,6 +24,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     261981,  // Spitzy
     286277,  // Worn Cloak
     302273,  // Heart of a Champion
+    318452,  // Aqir Egg Cluster's missile-triggered swarm attachments
     383065,  // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)

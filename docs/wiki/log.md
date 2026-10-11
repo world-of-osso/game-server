@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-10 — [Toy-effects10 cosmetic auras](systems/toys.md#toy-effects10-cosmetic-target-and-growth-auras-2026-10-10): Iron Belly Spirits, Darkshard Fragment and Aqir Egg Cluster source-zero aura audit; real bag/use/target/trigger/lifetime RED4, prepared baseline125. Native presentation and scripted/control/interaction groups remain outside this proof; final gates pending.
+
 - 2026-10-10 — [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10): source-complete effect28/content group,15 real banner items and16 scenery templates; imported-copy census109→125, no removals or shared DB write. Source tuples match local archive; item/template/model preservation, CLI idempotency and missing-item/model atomic rollback tests. Native rendering, scaled banners and scripted/control/interaction groups remain outside this proof.
 
 - 2026-10-10 — [Class spell batch14](systems/spell-casting.md#fourteenth-batch-owned-hits-and-native-clocks): eight low-count local hit/pet/periodic paths;166→164 Dummy roots,93 reviewed/71 underived,118 native row equivalence and fixed40-spec table. Single spell_cast gate347/349; two missing-native-child fixture failures corrected and bounded14/14 passes. Primary-only Eye Beam/Wildfire, native11-hit versus variable10 discrepancy, guardian gaps and proof limits explicit in [coverage](../spell-dummy14-coverage.md).

@@ -22,7 +22,8 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
             203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
             239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090, 381262,
-            401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
+            401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618, 128327,
+            196783, 318453, 318452,
         ],
         8,
     )
@@ -1922,6 +1923,130 @@ fn toyfx9_prepared_census_preserves_interaction_blockers() {
             !toy["unavailable"].is_null(),
             "unproven interaction/scale: {toy}"
         );
+    }
+}
+
+#[test]
+fn toyfx10_iron_belly_spirits_affects_friend_for_sixty_seconds() {
+    assert_toyfx10_cosmetic_aura(88587, 128327, 128327, 1200);
+}
+
+#[test]
+fn toyfx10_darkshard_fragment_affects_caster_for_fifteen_seconds() {
+    assert_toyfx10_cosmetic_aura(131812, 196783, 196783, 300);
+}
+
+#[test]
+fn toyfx10_aqir_egg_missile_triggers_five_second_target_aura() {
+    assert_toyfx10_cosmetic_aura(175063, 318453, 318452, 100);
+}
+
+fn assert_toyfx10_cosmetic_aura(item: u32, root: u32, aura_spell: u32, lifetime_frames: usize) {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let state = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&state.path().join("toys.redb"));
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    let friend = spawn_player(&mut h.app, 8, 3.0);
+    let target = if item == 131812 { h.caster } else { friend };
+    h.select(Some(friend));
+    h.advance(2);
+    learn_effect_toy(&mut h, character, item);
+    let before = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(target)
+        .unwrap();
+    assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+    h.advance(20); // Includes the authored Aqir missile flight.
+    assert!(
+        h.inbox.failed.is_empty(),
+        "item {item}: {:?}",
+        h.inbox.failed
+    );
+    assert!(
+        h.inbox.go.iter().any(|go| go.spell_id == root),
+        "item {item}"
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(target)
+        .unwrap()
+        .auras
+        .iter()
+        .find(|aura| aura.spell_id == aura_spell)
+        .unwrap();
+    assert_eq!(aura.caster, Some(h.caster.to_bits()));
+    let other = if target == h.caster { friend } else { h.caster };
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(other)
+            .is_some_and(|auras| auras.auras.iter().any(|aura| aura.spell_id == aura_spell))
+    );
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap(),
+        before
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(target)
+            .is_none()
+    );
+    assert!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character)
+            .items
+            .is_empty()
+    );
+    h.advance(lifetime_frames - 40);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == aura_spell),
+        "item {item} still active"
+    );
+    h.advance(40);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == aura_spell),
+        "item {item} expiry"
+    );
+}
+
+#[test]
+fn toyfx10_prepared_census_retains_script_and_interaction_refusals() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX10_CENSUS_REPORT");
+    let toys = report["toys"].as_array().unwrap();
+    for item in [88587, 131812, 175063] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [48933, 88387, 88417, 95567, 138873, 198156, 219387, 238852] {
+        let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+        assert!(!toy["unavailable"].is_null(), "unproved action: {toy}");
     }
 }
 
