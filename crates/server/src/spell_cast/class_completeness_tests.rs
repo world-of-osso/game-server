@@ -308,6 +308,7 @@ fn class_completeness_native80_rune_immune_target_spends_neither_runes_nor_runic
     h.cast_and_deliver(49184, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(h.health(h.npc), 5000.0);
+    assert!(!crate::auras::has_aura(h.app.world(), h.npc, 55095));
     assert_eq!(h.power(PowerType::Runes), 6.0);
     assert_eq!(h.power(PowerType::RunicPower), 0.0);
 }
