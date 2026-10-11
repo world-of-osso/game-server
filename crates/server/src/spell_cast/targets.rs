@@ -743,7 +743,7 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
 ///TC a352b1fa SpellInfo.cpp:128/339 and Spell.cpp:1690-1736:
 ///target91 uses TARGET_DIR_RANDOM and this slot's authored CalcRadius.
 fn random_destination(point: Vec3, distance: f32) -> Vec3 {
-    let angle = rand::random_range(0.0..std::f32::consts::TAU);
+    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
