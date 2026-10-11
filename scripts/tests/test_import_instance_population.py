@@ -18,6 +18,15 @@ class InstancePopulationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "world.db"):
                 importer.import_database(path)
 
+    def test_always_visible_authored_font_rows_are_base_phase_eligible(self):
+        import import_instance_population as importer
+        with sqlite3.connect(":memory:") as conn:
+            conn.execute("CREATE TABLE spawn (guid INTEGER, PhaseId INTEGER, PhaseGroup INTEGER, terrainSwapMap INTEGER, phaseUseFlags INTEGER)")
+            # TDB1210 Font of Power rows: maps 2515/2521, always-visible flag 1.
+            conn.executemany("INSERT INTO spawn VALUES (?,0,0,-1,1)", [(9000002,), (9000008,)])
+            actual = conn.execute(f"SELECT guid FROM spawn WHERE {importer.BASE_PHASE} ORDER BY guid").fetchall()
+            self.assertEqual([(9000002,), (9000008,)], actual)
+
     def test_linked_destinations_are_refused_without_writing(self):
         import import_instance_population as importer
         with tempfile.TemporaryDirectory() as directory:

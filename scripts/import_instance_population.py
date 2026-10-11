@@ -15,7 +15,9 @@ import retail_content as retail
 OFFSET = retail.RETAIL_GUID_OFFSET
 MAPS = "SELECT map FROM tdb_instance_template"
 ENTRIES = "SELECT DISTINCT id1 FROM temp.instance_creature"
-BASE_PHASE = "PhaseId IN (0,169) AND PhaseGroup=0 AND terrainSwapMap=-1 AND phaseUseFlags=0"
+# TrinityCore a352b1fa PhasingHandler::InitDbPhaseShift: ALWAYS_VISIBLE ignores phases.
+BASE_PHASE = "terrainSwapMap=-1 AND (phaseUseFlags=1 OR " \
+    "(phaseUseFlags=0 AND PhaseId IN (0,169) AND PhaseGroup=0))"
 
 
 class ImportReport:
@@ -44,7 +46,7 @@ def select_instance_spawns(conn):
 
 
 def import_creatures(conn, report):
-    retail.create_difficulty_table(conn, map_list=MAPS)
+    retail.create_difficulty_table(conn, map_list=MAPS, base_phase=BASE_PHASE)
     conn.create_function("health_expansion", 1, retail.health_expansion, deterministic=True)
     conn.execute(f"CREATE TEMP TABLE kept_instance_loot AS SELECT entry,lootid,mingold,maxgold "
                  f"FROM content_creature_template WHERE entry IN ({ENTRIES}) AND lootid>={OFFSET}")
