@@ -20,4 +20,8 @@ Running charge clocks preserve completed progress when the recovery rate changes
 
 Native spell-class masks decide which spell and category cooldowns use haste regen; unrelated spells remain unchanged. Source: TrinityCore a352b1fa `SpellHistory.cpp:425–429` (both cooldowns multiplied by `ModHasteRegen`). Warrior137047/Mortal Strike12294 and Bloodthirst23881 exercise spell6000ms and category4500ms timers at100% haste. Heroic Throw57755 and zero-haste are controls. GCD is still the separate aura417 contract; no new guessed cooldown amount.
 
+## Native-row runtime probe
+
+Opt-in `class_completeness_level80_probe` consumes the expanded membership manifest. Each case gets fresh level80 caster/target entities, native class/spec passives, full native resource pools and a granted root spell, through HostClient `SpellCastIntent` (passives use native KnownSpells sync). It records cast success/rejection, actual warning tuples, combat logs and raw pool snapshots. Target range comes from the native row; observation is cast-time plus10seconds. This is a controlled base-build probe, not a talent-purchase/persistence, full-duration/channel, normal-equipment, guardian-template or complete-rotation certification. Optional mutually exclusive talents are not enabled together. Numeric coefficients/costs are never changed by the probe; generous fixture health/AP/mana only isolate cast admission/effect dispatch.
+
 No world.db writes, no master merge, no live realm or UDP5000 use.

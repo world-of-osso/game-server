@@ -15,6 +15,8 @@
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod class_completeness_probe;
+#[cfg(test)]
 mod class_completeness_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
