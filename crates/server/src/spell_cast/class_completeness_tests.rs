@@ -10,6 +10,67 @@ const FROSTBOLT: u32 = 116;
 const PALADIN_PASSIVE: u32 = 137026;
 const CRUSADER_STRIKE: u32 = 35395;
 const CHARGE: u32 = 100;
+const FISTS_OF_FURY_DAMAGE: u32 = 117418;
+
+#[test]
+fn class_completeness_native_enemy_cone_hits_front_not_allies_back_or_far() {
+    let mut h = harness(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
+    let back = spawn_npc(&mut h.app, -4.0);
+    let far = spawn_npc(&mut h.app, 30.0);
+    let side = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(side)
+        .unwrap()
+        .z = 4.0;
+    let ally = spawn_player(&mut h.app, 10, 3.0);
+    let spell = world_db()
+        .unwrap()
+        .store
+        .get(FISTS_OF_FURY_DAMAGE)
+        .unwrap()
+        .clone();
+    let before = [h.npc, back, far, side, ally].map(|unit| h.health(unit));
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native caster-facing enemy cone must be supported");
+    h.advance(3);
+    assert!(
+        h.health(h.npc) < before[0],
+        "front hostile takes native AP damage"
+    );
+    for (unit, initial) in [back, far, side, ally].into_iter().zip(&before[1..]) {
+        assert_eq!(h.health(unit), *initial, "excluded unit {unit:?}");
+    }
+}
+
+#[test]
+fn class_completeness_native_enemy_cone_follows_caster_facing_and_target_cap() {
+    let mut h = harness(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
+    let back = spawn_npc(&mut h.app, -4.0);
+    let farther_back = spawn_npc(&mut h.app, -5.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Rotation(std::f32::consts::PI));
+    let spell = world_db()
+        .unwrap()
+        .store
+        .get(FISTS_OF_FURY_DAMAGE)
+        .unwrap()
+        .clone();
+    let targets = super::targets::select_targets(
+        h.app.world_mut(),
+        h.caster,
+        Some(h.npc),
+        &spell,
+        &spell.effects[0],
+        1,
+        false,
+    )
+    .expect("native cone target selection");
+    assert_eq!(targets, vec![back]);
+    assert!(!targets.contains(&farther_back));
+}
 
 fn fixture() -> Harness {
     let data = world_db().expect("real world.db");
