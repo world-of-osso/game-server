@@ -4,9 +4,11 @@ use std::collections::HashSet;
 use std::io::Write;
 
 use bevy::prelude::*;
+use lightyear::prelude::MessageSender;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use shared::components::{ActiveSpec, Health, Level, Mana, Player, Position};
+use shared::protocol::{CombatChannel, SpellCastIntent};
 
 use super::test_harness::*;
 use crate::class_progression::KnownSpells;
@@ -104,12 +106,36 @@ fn resources(h: &Harness) -> Value {
     json!({"pools": powers, "mana": mana.current})
 }
 
-fn cast_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
-    let relation = super::targets::explicit_requirement(super::handled_effects(spell));
+fn choose_case_target(h: &mut Harness, spell: &crate::spell_info::SpellInfo) -> (Entity, bool) {
+    let resurrects = spell
+        .effects
+        .iter()
+        .any(|effect| matches!(effect.effect, 18 | 172));
+    let relation = super::scripts::target_plan(spell.id)
+        .map(|(relation, _)| relation)
+        .or_else(|| super::targets::explicit_requirement(super::handled_effects(spell)))
+        .or_else(|| resurrects.then_some(super::targets::Relation::Ally));
     let hostile = relation == Some(super::targets::Relation::Enemy)
         || (relation == Some(super::targets::Relation::Any)
             && (spell.id == 361469 || spell.effects.iter().any(|effect| effect.effect == 2)));
-    let target = if hostile { h.npc } else { h.caster };
+    let target = if resurrects {
+        let ally = spawn_player(&mut h.app, 1, 3.0);
+        h.app.world_mut().get_mut::<Health>(ally).unwrap().current = 0.0;
+        ally
+    } else if hostile {
+        h.npc
+    } else {
+        h.caster
+    };
+    (target, hostile)
+}
+
+fn send_case_cast(
+    h: &mut Harness,
+    spell: &crate::spell_info::SpellInfo,
+    target: Entity,
+    hostile: bool,
+) {
     let (min, max) = super::targets::spell_range(spell, hostile);
     let distance = (min + 0.5).max(3.0).min(max.max(3.0));
     h.app.world_mut().entity_mut(h.npc).insert(Position {
@@ -117,7 +143,35 @@ fn cast_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
         y: 0.0,
         z: 0.0,
     });
-    h.cast_and_deliver(spell.id, Some(target));
+    if super::attributes(spell, 0) & super::SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0 {
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::CombatStatus(false));
+    }
+    let destination = spell
+        .target_restrictions
+        .as_ref()
+        .filter(|restriction| restriction.targets & 0x40 != 0)
+        .map(|_| [distance, 0.0, 0.0]); // Native TARGET_FLAG_DEST_LOCATION.
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SpellCastIntent>>(h.connection)
+        .unwrap()
+        .send::<CombatChannel>(SpellCastIntent {
+            spell_id: Some(spell.id),
+            spell: String::new(),
+            target_entity: Some(target.to_bits()),
+            target_item_guid: None,
+            witness: None,
+            destination,
+        });
+}
+
+fn cast_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
+    let (target, hostile) = choose_case_target(h, spell);
+    send_case_cast(h, spell, target, hostile);
+    h.advance(3);
     let cast_ms = spell
         .misc
         .as_ref()
@@ -187,6 +241,8 @@ fn class_completeness_level80_probe() {
         // Script-consumed rows are not necessarily linked by EffectTriggerSpell.
         // Use the complete native store, just as production does.
         h.app.insert_resource(data.store.clone());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&data.powers_db));
         let retained: HashSet<_> = h
             .app
             .world_mut()
