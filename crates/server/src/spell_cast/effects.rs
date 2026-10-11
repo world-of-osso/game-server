@@ -907,7 +907,14 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         return;
     };
     let amount = modded_base_points(world, ctx.caster, ctx.spell, effect);
-    energize_unit(world, ctx, target, power, amount, false);
+    let is_combo_builder = power == PowerType::ComboPoints && amount > 0.0;
+    let is_owned_cast = target == ctx.caster && ctx.depth == 0;
+    let bonus = if is_combo_builder && is_owned_cast {
+        super::scripts::berserk_combo_bonus(world, ctx.caster, ctx.spell)
+    } else {
+        0.0
+    };
+    energize_unit(world, ctx, target, power, amount + bonus, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.

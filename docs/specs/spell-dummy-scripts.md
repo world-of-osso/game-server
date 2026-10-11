@@ -6,6 +6,13 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Twenty-first-batch native combo builders
+
+- [x] Active Berserk106951 adds its authored s2 amount to positive native self-directed ENERGIZE combo-point effects of untriggered same-family casts. Shred, Rake and Thrash gain one additional point; Thrash grants once per cast, not once per enemy. Native pool caps and overflow logging apply to the combined grant.
+- [x] The independent343216 periodic point, other spell families, rejected casts and casts after expiry receive no builder bonus. Existing periodic timing and over-cap/finisher behavior are not changed.
+
+Source: local Mainline12.1.0.69933 description “Combo point generating abilities generate $s2 additional combo $lpoint:points;.” and aura4 index1 Base1. Tests: `spell_cast/dummy21_tests.rs`. This consumes the numeric Dummy field only; full Berserk/rotation parity, script-only resource grants and405189 over-cap storage remain uncertified. Seven other reviewed roots retain exact source boundaries in [batch21 coverage](../spell-dummy21-coverage.md).
+
 ### Twentieth-batch authored totals and next-spell uses
 
 - [x] Barbed Shot217200 distributes its authored s2-tick damage total over its unchanged native initial/regular schedule. Local s2=5 versus native seven ticks is reconciled by equal distribution, an inference from total and clock, not independently observed Retail tick amounts. Same-owner reapplication adds unpaid damage to the new total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; rejected casts do not grant it.
