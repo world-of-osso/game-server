@@ -405,6 +405,7 @@ impl SmartAi {
                     self.timeline_dirty = true;
                     if self.boss.is_some()
                         && let Some(map) = ctx.map()
+                        && super::instance_script::is_active_boss(ctx.world, map, ctx.me)
                     {
                         super::instance_script::send_to_players(
                             ctx.world,
