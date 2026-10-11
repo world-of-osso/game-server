@@ -47,6 +47,8 @@ pub struct InstanceEntrant {
 #[derive(Debug)]
 struct InstanceCopy {
     difficulty: MapDifficulty,
+    /// Admission is the match roster, independent of dungeon group/lock ownership.
+    battleground: bool,
     max_players: u32,
     /// `InstanceMap::GetOwningGroup`: the group that created it.
     owning_group: Option<GroupId>,
@@ -69,6 +71,7 @@ struct InstanceCopy {
 pub struct InstanceManager {
     next_instance_id: u32,
     copies: HashMap<InMap, InstanceCopy>,
+    battleground_by_character: HashMap<u64, InMap>,
     recent_by_character: HashMap<(u64, u32), u32>,
     /// `Group::m_recentInstances`: map → (instance owner, instance id).
     recent_by_group: HashMap<(GroupId, u32), (u64, u32)>,
@@ -84,6 +87,7 @@ impl Default for InstanceManager {
         Self {
             next_instance_id: 1,
             copies: HashMap::new(),
+            battleground_by_character: HashMap::new(),
             recent_by_character: HashMap::new(),
             recent_by_group: HashMap::new(),
             locks: InstanceLocks::default(),
@@ -249,8 +253,87 @@ impl InstanceManager {
             .ok_or(TransferAbortReason::MapNotAllowed)?;
         match entry.instance_type {
             InstanceType::Party => self.create_dungeon(store, map_id, entrant, now),
+            InstanceType::Battleground => self
+                .battleground_by_character
+                .get(&entrant.character_id)
+                .copied()
+                .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
+                .map(|map| ResolvedMap {
+                    map,
+                    created: false,
+                })
+                .ok_or(TransferAbortReason::MapNotAllowed),
             _ => Err(TransferAbortReason::MapNotAllowed),
         }
+    }
+
+    /// Create one match-owned map using its authored difficulty0 and team capacity.
+    /// No dungeon locks, group binding or invented reservation-expiry timer.
+    pub fn create_battleground_map(
+        &mut self,
+        store: &MapStore,
+        map_id: u32,
+        participants: &[u64],
+        capacity: u32,
+        now: Now,
+    ) -> Result<InMap, TransferAbortReason> {
+        if store
+            .map(map_id)
+            .is_none_or(|entry| entry.instance_type != InstanceType::Battleground)
+            || participants.is_empty()
+            || participants.len() > capacity as usize
+            || participants
+                .iter()
+                .any(|id| self.battleground_by_character.contains_key(id))
+        {
+            return Err(TransferAbortReason::MapNotAllowed);
+        }
+        let difficulty = store
+            .map_difficulty(map_id, 0)
+            .ok_or(TransferAbortReason::Difficulty(0))?;
+        let owner = participants[0];
+        let entrant = InstanceEntrant {
+            character_id: owner,
+            leader: owner,
+            group: None,
+            difficulty_id: 0,
+        };
+        let map = InMap {
+            map_id,
+            instance_id: self.generate_instance_id(),
+        };
+        self.insert_copy(store, map, difficulty, entrant, owner, now);
+        let copy = self.copies.get_mut(&map).expect("created copy");
+        copy.battleground = true;
+        copy.max_players = capacity;
+        copy.unload_at = None;
+        for character_id in participants {
+            self.battleground_by_character.insert(*character_id, map);
+        }
+        Ok(map)
+    }
+
+    pub fn unassign_battleground_player(&mut self, map: InMap, character_id: u64) {
+        if self.battleground_by_character.get(&character_id) == Some(&map) {
+            self.battleground_by_character.remove(&character_id);
+        }
+    }
+
+    /// Explicit match close, not a fabricated battleground idle timer.
+    pub fn close_battleground_map(&mut self, map: InMap) -> bool {
+        let empty_match = self
+            .copies
+            .get(&map)
+            .is_some_and(|copy| copy.battleground && copy.players.is_empty());
+        let unassigned = self
+            .battleground_by_character
+            .values()
+            .all(|reserved| *reserved != map);
+        if empty_match && unassigned {
+            self.copies.remove(&map);
+            return true;
+        }
+        false
     }
 
     fn create_dungeon(
@@ -365,6 +448,7 @@ impl InstanceManager {
             map,
             InstanceCopy {
                 difficulty: *entries,
+                battleground: false,
                 max_players,
                 owning_group: entrant.group,
                 lock_owner: entries.has_reset_schedule().then_some(owner),
@@ -416,6 +500,11 @@ impl InstanceManager {
         unix: i64,
     ) -> Option<TransferAbortReason> {
         let copy = self.copies.get(&map)?;
+        if copy.battleground
+            && self.battleground_by_character.get(&entrant.character_id) != Some(&map)
+        {
+            return Some(TransferAbortReason::MapNotAllowed);
+        }
         if copy.players.len() as u32 >= copy.max_players {
             return Some(TransferAbortReason::MaxPlayers);
         }
@@ -465,6 +554,14 @@ impl InstanceManager {
                 self.find_instance(store, map_id, entrant, unix)
                     .and_then(|map| self.cannot_enter(map, entrant, unix))
             }
+            InstanceType::Battleground => {
+                match self.battleground_by_character.get(&entrant.character_id) {
+                    Some(&map) if map.map_id == map_id && self.copies.contains_key(&map) => {
+                        self.cannot_enter(map, entrant, unix)
+                    }
+                    _ => Some(TransferAbortReason::MapNotAllowed),
+                }
+            }
             _ => Some(TransferAbortReason::MapNotAllowed),
         }
     }
@@ -485,6 +582,9 @@ impl InstanceManager {
             && copy.players.remove(&player)
             && copy.players.is_empty()
         {
+            if copy.battleground {
+                return;
+            }
             let expired = copy
                 .lock_owner
                 .and_then(|owner| locks.lock(owner, copy.difficulty.lock_key()))
@@ -509,6 +609,8 @@ impl InstanceManager {
             .collect();
         for map in &expired {
             self.copies.remove(map);
+            self.battleground_by_character
+                .retain(|_, reserved| reserved != map);
             if self.normal_locks.remove(&map.instance_id).is_some() {
                 self.locks_dirty = true;
             }
