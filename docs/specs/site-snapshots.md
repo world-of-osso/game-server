@@ -25,6 +25,14 @@ Operator must explicitly supply public-realm character ID allowlist, minus opt-o
 Observed source gaps: legacy Mythic+ runs cannot be backfilled; raid locks lack first-kill times/lifetime/guild-at-kill attribution. Race names/faction catalog absent from local world.db. Character render optional and currently absent. Item level means authored base item level (effective bonus/scaling absent); overall equipped average withheld if actual complete equipment is unavailable. Gaps remain explicit, not invented fixtures.
 
 
+## Lifetime raid first-kill history
+
+Future raid kills persist in `raid_first_kills_v1` at scripted `SetBossState(DONE)` and the existing authored single-creature raid death boundary. Store character participants, map, difficulty, encounter, timestamp and guild ID/name resolved at kill time. Each character/guild/raid/difficulty/encounter keeps its first persisted kill permanently; reset locks never backfill lifetime rows.
+
+Guild credit requires at least 80% of kill participants in the same guild (`members * 5 >= participants * 4`: 4/5, 8/10, 16/20, 20/25). Label records `guild_group_credit`. Source: Blizzard, [Guild Advancement and You](https://worldofwarcraft.blizzard.com/en-gb/news/9999050/el-progreso-de-hermandad-y-tu), which states raid bosses need a group comprising “at least 80% guild members”. This exporter applies the explicitly approved raid rule, not the source's 3/5 five-player-dungeon exception or legacy guild-XP rewards. Participants are players present in the actual instance copy, not offline roster members.
+
+Lifetime `raid_progression` is separate from `saved_lock_progression`. Rank within raid/difficulty by unique authored encounter kills descending, then `progression_at` (latest included encounter first-kill timestamp) ascending: earlier achievement of the same progress wins. `first_kill_at` is the earliest included timestamp. Stable final tie-break is decimal subject ID numerically ascending. Totals use unique authored encounter bits applicable to that difficulty. Export current public characters only; guild credit rows require all recorded participants to be public. This is post-deploy observed lifetime history, not a claim of pre-deploy lifetime completeness.
+
 ## Attributable Mythic+ completion history
 
 Future completions use `mythic_completed_runs_v1`, committed atomically with key settlement. Party identity/class/spec are captured from players in the dungeon copy at completion. Only complete public parties are exported. Abandoned runs and legacy anonymous history never rank. Stored elapsed time includes configured death penalties; timer is the authored runtime timer. `season_id` remains null because historical MythicPlusSeason rows do not select an active season. Ranking records additionally include map_id, affixes and time_lost_ms. Icons are decoded from existing local BLP/PNG caches into PNG, never fetched remotely.
