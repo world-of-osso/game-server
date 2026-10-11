@@ -1252,11 +1252,24 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
 /// (`enter_evade_mode`: threat cleared, combat stopped, health restored,
 /// Returning).
 fn leash_check_system(
-    query: Query<(Entity, &Position, &SpawnPoint, &CreatureState), ActiveUncontrolled>,
+    query: Query<
+        (
+            Entity,
+            &Position,
+            &SpawnPoint,
+            &CreatureState,
+            Option<&crate::scripted_ai::movement::ScriptedPath>,
+        ),
+        ActiveUncontrolled,
+    >,
     mut commands: Commands,
 ) {
-    for (entity, pos, spawn, state) in &query {
-        if matches!(*state, CreatureState::Pursuing { .. }) && beyond_leash(pos, spawn) {
+    for (entity, pos, spawn, state, escort) in &query {
+        let beyond_home = match escort {
+            Some(escort) => (pos.x - escort.home.x).hypot(pos.z - escort.home.z) > LEASH_DISTANCE,
+            None => beyond_leash(pos, spawn),
+        };
+        if matches!(*state, CreatureState::Pursuing { .. }) && beyond_home {
             bevy::log::debug!(
                 ?entity,
                 ?pos,
@@ -1297,25 +1310,41 @@ fn return_to_spawn_system(
             Bearing,
             Option<&mut shared::components::Health>,
             Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
+            Option<&crate::scripted_ai::movement::ScriptedPath>,
         ),
         Without<GridDormant>,
     >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, mana, addon_auras, pose, map, bearing, health, regen) in
-        &mut query
+    for (
+        entity,
+        mut pos,
+        spawn,
+        mut state,
+        mana,
+        addon_auras,
+        pose,
+        map,
+        bearing,
+        health,
+        regen,
+        escort,
+    ) in &mut query
     {
         if *state != CreatureState::Returning {
             continue;
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let home = Position {
-            x: spawn.x,
-            y: spawn.y,
-            z: spawn.z,
-        };
+        let home = escort.map_or(
+            Position {
+                x: spawn.x,
+                y: spawn.y,
+                z: spawn.z,
+            },
+            |escort| escort.home,
+        );
         let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,

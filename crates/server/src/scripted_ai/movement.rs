@@ -20,7 +20,16 @@ pub struct Walking;
 
 /// An escort owns idle movement even while its point generator is paused.
 #[derive(Component, Debug, Clone, Copy)]
-pub(crate) struct ScriptedPath;
+pub(crate) struct ScriptedPath {
+    pub home: Position,
+}
+
+pub(crate) fn retain_path_home(world: &mut World, creature: Entity) {
+    let Some(home) = world.get::<Position>(creature).copied() else {
+        return;
+    };
+    world.entity_mut(creature).insert(ScriptedPath { home });
+}
 
 /// A running `PointMovementGenerator`.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
@@ -59,7 +68,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
         &PointMovement,
         &SpawnPoint,
         Option<&crate::creature_ai::CreatureState>,
-        Has<ScriptedPath>,
+        Option<&mut ScriptedPath>,
         Has<Walking>,
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
@@ -71,14 +80,14 @@ pub(crate) fn point_movement_system(world: &mut World) {
         movement,
         spawn,
         state,
-        escort_active,
+        escort,
         walking,
         rotation,
         motion,
         replicated_speed,
     ) in movers.iter_mut(world)
     {
-        if escort_active && state.is_some_and(|state| !state.is_idle()) {
+        if escort.is_some() && state.is_some_and(|state| !state.is_idle()) {
             bevy::log::debug!(
                 ?entity,
                 ?state,
@@ -99,6 +108,9 @@ pub(crate) fn point_movement_system(world: &mut World) {
         if *position != next {
             *position = next;
             moved.push(entity);
+        }
+        if let Some(mut escort) = escort {
+            escort.home = next;
         }
         if reached {
             arrived.push((entity, movement.id));

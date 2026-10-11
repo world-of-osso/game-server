@@ -119,9 +119,7 @@ impl SmartAi {
             escort.pause_ms = None;
             escort.node_delay_ms = None;
             self.escort = Some(escort);
-            ctx.world
-                .entity_mut(ctx.me)
-                .insert(super::super::movement::ScriptedPath);
+            super::super::movement::retain_path_home(ctx.world, ctx.me);
             self.move_to_waypoint(ctx);
         }
     }
