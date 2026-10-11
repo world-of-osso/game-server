@@ -9,7 +9,8 @@
 //! 0 = every phase) and not a spent `NOT_REPEATABLE` one; its action then runs, and its
 //! `link` event right after with the same invoker.
 //!
-//! Modelled: events RESET, HAS_AURA, SPELLHIT, LINK; actions CAST, SET_EVENT_PHASE,
+//! Modelled: events UPDATE_IC, AGGRO, RESET, HAS_AURA, SPELLHIT, LINK; actions TALK,
+//! CAST, SET_EVENT_PHASE,
 //! CALL_KILLEDMONSTER, DIE; targets NONE, SELF, ACTION_INVOKER. Other event types never
 //! run and other actions or targets do nothing (counted when loaded).
 
@@ -25,11 +26,13 @@ use super::{CreatureAi, Ctx};
 
 // `SMART_EVENT` (SmartScriptMgr.h).
 const EVENT_UPDATE_IC: u32 = 0;
+const EVENT_AGGRO: u32 = 4;
 const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
 const EVENT_LINK: u32 = 61;
 // `SMART_ACTION`.
+const ACTION_TALK: u32 = 1;
 const ACTION_CAST: u32 = 11;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
@@ -117,10 +120,19 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
         .filter(|event| {
             !matches!(
                 event.event_type,
-                EVENT_UPDATE_IC | EVENT_SPELLHIT | EVENT_HAS_AURA | EVENT_RESET | EVENT_LINK
+                EVENT_UPDATE_IC
+                    | EVENT_AGGRO
+                    | EVENT_SPELLHIT
+                    | EVENT_HAS_AURA
+                    | EVENT_RESET
+                    | EVENT_LINK
             ) || !matches!(
                 event.action_type,
-                ACTION_CAST | ACTION_SET_EVENT_PHASE | ACTION_CALL_KILLEDMONSTER | ACTION_DIE
+                ACTION_TALK
+                    | ACTION_CAST
+                    | ACTION_SET_EVENT_PHASE
+                    | ACTION_CALL_KILLEDMONSTER
+                    | ACTION_DIE
             )
         })
         .count();
@@ -170,16 +182,19 @@ pub(crate) struct SmartAi {
     events: Arc<Vec<SmartEvent>>,
     states: Vec<EventState>,
     phase: u32,
+    boss: Option<super::boss_ai::BossAi>,
 }
 
 /// The SmartAI of a creature of `entry`, if it has rows.
-pub(crate) fn creature_ai(world: &World, entry: u32) -> Option<Box<dyn CreatureAi>> {
+pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn CreatureAi>> {
+    let entry = world.get::<shared::components::Npc>(creature)?.template_id;
     let events = world.get_resource::<SmartScripts>()?.0.get(&entry)?.clone();
     let states = vec![EventState::default(); events.len()];
     Some(Box::new(SmartAi {
         events,
         states,
         phase: 0,
+        boss: super::wailing_caverns::boss_ai(world, creature),
     }))
 }
 
@@ -267,7 +282,7 @@ impl SmartAi {
             return;
         }
         match event.event_type {
-            EVENT_LINK | EVENT_RESET => self.process_action(ctx, index, invoker),
+            EVENT_LINK | EVENT_RESET | EVENT_AGGRO => self.process_action(ctx, index, invoker),
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
@@ -313,6 +328,7 @@ impl SmartAi {
             _ => Vec::new(),
         };
         match event.action_type {
+            ACTION_TALK => ctx.talk(event.action_params[0] as u8),
             ACTION_CAST => {
                 if !Self::cast_targets(ctx, &event, targets) {
                     // `SmartScript::RetryLater`: retry next tick, retaining the chance roll.
@@ -351,12 +367,28 @@ impl SmartAi {
 impl CreatureAi for SmartAi {
     /// `SmartScript::OnReset` (SmartScript.cpp:196-215).
     fn reset(&mut self, ctx: &mut Ctx) {
+        if let Some(boss) = &mut self.boss {
+            boss.reset(ctx);
+        }
         for index in 0..self.events.len() {
             if self.events[index].flags & EVENT_FLAG_DONT_RESET == 0 {
                 self.init_timer(index);
             }
         }
         self.process_events_for(ctx, EVENT_RESET, None, 0);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, who: Entity) {
+        if let Some(boss) = &mut self.boss {
+            boss.just_engaged_with(ctx);
+        }
+        self.process_events_for(ctx, EVENT_AGGRO, Some(who), 0);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        if let Some(boss) = &mut self.boss {
+            boss.just_died(ctx);
+        }
     }
 
     fn spell_hit(&mut self, ctx: &mut Ctx, caster: Entity, spell_id: u32) {
