@@ -5,6 +5,8 @@ use std::collections::HashMap;
 
 use rusqlite::Connection;
 
+const CLASS_DEMON_HUNTER: u8 = 12;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct StartLocation {
     pub map_id: u32,
@@ -68,24 +70,29 @@ pub(crate) fn load_starts(conn: &Connection) -> rusqlite::Result<HashMap<(u8, u8
         ))
     })?;
     let authored = rows.collect::<rusqlite::Result<HashMap<_, _>>>()?;
-    let mut starts = HashMap::new();
-    for (race, class) in crate::race_class::playable_pairs() {
-        let location = if let Some(approved) = approved_start(race) {
-            Some(approved)
-        } else {
-            let source = authored.get(&(race, class)).copied();
-            // WORKAROUND: Mardum 1481 is not implemented. Keep the DH at the
-            // race's authentic Warrior start; retire when Mardum is implemented.
-            match source {
-                Some(start) if class == 12 && start.map_id == 1481 => {
-                    authored.get(&(race, 1)).copied()
-                }
-                other => other,
-            }
-        };
-        if let Some(location) = location {
-            starts.insert((race, class), location);
-        }
+    Ok(crate::race_class::playable_pairs()
+        .filter_map(|pair| resolve_start(&authored, pair).map(|location| (pair, location)))
+        .collect())
+}
+
+fn resolve_start(
+    authored: &HashMap<(u8, u8), StartLocation>,
+    (race, class): (u8, u8),
+) -> Option<StartLocation> {
+    if let Some(approved) = approved_start(race) {
+        return Some(approved);
     }
-    Ok(starts)
+    // WORKAROUND: Mardum 1481 is not implemented. Every offered DH pair,
+    // including pairs absent from TDB's DH rows, uses its race's authentic
+    // lowest-ID non-DH class start. Retire when Mardum is implemented.
+    if class == CLASS_DEMON_HUNTER {
+        return authored
+            .iter()
+            .filter(|((source_race, source_class), _)| {
+                *source_race == race && *source_class != CLASS_DEMON_HUNTER
+            })
+            .min_by_key(|((_, source_class), _)| *source_class)
+            .map(|(_, location)| *location);
+    }
+    authored.get(&(race, class)).copied()
 }
