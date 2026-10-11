@@ -1,6 +1,6 @@
 # Toy-effects13 — nonzero and linked cosmetic dummy auras
 
-Verified: 2026-10-11. Base `47c35c4` (origin/toy-effects12). Server-preflight coverage baseline **134/1,166**; final census/proof below. Native tint, shell placement and procedural material rendering are **not certified**.
+Verified: 2026-10-11. Base `47c35c4` (origin/toy-effects12). Read-only server-preflight coverage **134→136/1,166 (+2, no removals)**; final census/proof below. Native tint, shell placement and procedural material rendering are **not certified**.
 
 ## Ranked remaining handlers
 
@@ -8,7 +8,7 @@ Read-only local runtime census, eligible item definitions/conditions, excluding 
 
 |Handler|Blocked toys before|Decision|
 |---|---:|---|
-|aura4 dummy|31|Highest-yield source-closed subset first: nonzero cosmetic aura and mixed native-trigger cosmetic chain below. Remaining scripts are not blanket admitted.|
+|aura4 dummy|31→29|Highest-yield source-closed subset first: nonzero cosmetic aura and mixed native-trigger cosmetic chain below. Remaining scripts are not blanket admitted.|
 |effect3 dummy|30|No newly source-closed destination, corpse, skinning, persistent-map or appearance-selection action.|
 |effect77 script|16|No sourced dice probabilities/sides, weather choices, return-ball decisions or context destinations.|
 |effect50 transmitted object|11|Existing handler; specialized interactions/missing templates, not an absent universal spawner.|
@@ -35,11 +35,14 @@ Sources: local Retail12.1.0.69933 DB2 CSVs, local community-listfile, read-only 
 - **133998 Rainbow Generator:**203534 art does not specify the promised holiday-dependent cooldown reduction.
 - **199902 compass /138873 Frosh:** retain unsourced positioner/GenericID and procedural-effect consumers; attachment replication is not proof of orientation or full appearance.
 
-All other remaining toy identities retain their exact runtime reason in the final census. All11 refused summon-control category identity sets must match the baseline; no control changes authorized.
+All1030 remaining toy identities retain their exact runtime reason in `remaining-refusals.json`. Every baseline summon-control refusal identity set is unchanged (`control-preservation.json`:12 census keys, covering the11 refused types requested). No control handler or creature-summon changes.
 
 ## Proof ledger
 
 All Cargo runs use `agent-run toy-effects13`. Shared protocol source is a frozen local archive of **44b2b0f**, selected with Cargo `--config` path patches for shared and lightyear_netcode. Current shared checkout `b452322` cannot compile this base server: inherited quest snapshot initialization lacks `expires_at`, `failed`, `timer_sampled_at`. No unrelated quest fix or shared checkout mutation. Current-protocol integration remains blocked by that existing drift.
 
 - RED: base plus new tests, frozen protocol44b2b0f: **4/4 failed** on actual UseToy/preflight `unsupported toy spell: aura4`; read-only baseline census134. `red.log`, `red-census.json`.
-- GREEN and final format/check/census: pending at this document's initial implementation commit.
+- First GREEN run at `e963958`:4/5 passed; test incorrectly expected SpellGo for internal trigger64 children. Native children applied all three auras correctly. Test-only correction `80058c6` asserts root SpellGo and each child's actual replicated aura, rather than adding broadcast behavior. `green-initial.log`.
+- Final `80058c6`: **5/5 passed**,81.92s: actual physical-item learning/UseToy, friendly-vs-caster ownership, source lifetimes/near-expiry/removal, movement cancellation of all three shell auras, unchanged health/position/model and no summoned objects/creatures. Changed paint amount and unhandled shell sibling refuse before cast/cooldown. `green.log`.
+- Same runtime revision: **cargo fmt --all --check EXIT0**, **cargo check --locked -p server EXIT0**, no warnings, with the frozen protocol source described above. `format-check.log`, `cargo-check.log`. Manual changed-Rust readability audit: no findings (`readability.txt`).
+- Full read-only1166-toy census: **134→136**, exactly88377/88417 added, zero removals; all12 baseline control-refusal keys and their identity sets unchanged. `red-census.json`, `after.json`, `delta.json`, `control-preservation.json`. No broad suite rerun or world.db preparation/write. Native rendering and current-protocol quest compatibility remain outside this proof.
