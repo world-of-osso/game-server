@@ -89,6 +89,8 @@ pub(crate) struct QuestTemplate {
     pub sort_id: i32,
     pub suggested_group: u8,
     pub flags: u32,
+    /// Authored TimeAllowed seconds (content_quest_template).
+    pub time_allowed: u32,
     /// TrinityCore `FlagsEx` (tdb_quest_template); 0 for quests TrinityCore lacks.
     pub flags_ex: u32,
     /// The `QuestInfo` DB2 row of `QuestInfoID`: `Type` (`QuestTagType`) and
@@ -159,8 +161,7 @@ impl QuestTemplate {
         }
     }
 
-    /// Can be taken again after turn-in. Daily/weekly quests have no reset
-    /// tracking yet, so they count as one-time.
+    /// Normal repeatables can be taken immediately; daily/weekly use reward timestamps.
     pub fn is_repeatable(&self) -> bool {
         self.special_flags & QUEST_SPECIAL_FLAGS_REPEATABLE != 0
             && self.repeatability() == QuestRepeatability::Normal
@@ -178,6 +179,8 @@ pub(crate) struct QuestItemInfo {
 
 #[derive(Resource, Debug, Default, Clone)]
 pub(crate) struct QuestDb {
+    /// Runtime evaluation clock, refreshed before quest requests and markers.
+    pub now: Option<i64>,
     pub quests: HashMap<u32, QuestTemplate>,
     /// Creature entry -> quests it starts.
     pub starters: HashMap<u32, Vec<u32>>,
@@ -326,6 +329,7 @@ fn quest_from_row(
         sort_id: int(row, "QuestSortID")? as i32,
         suggested_group: int(row, "SuggestedGroupNum")?.clamp(0, 255) as u8,
         flags: int(row, "Flags")? as u32,
+        time_allowed: int(row, "TimeAllowed")? as u32,
         flags_ex: int(row, "FlagsEx")? as u32,
         quest_info_type: int(row, "QuestInfoType")?.clamp(0, 255) as u8,
         quest_info_modifiers: int(row, "QuestInfoModifiers")? as u32,
