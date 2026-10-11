@@ -188,7 +188,8 @@ fn sync(world: &mut World) {
                         .0
                         .contains(&character)
                     || world
-                        .get_ref::<ActiveAuras>(entity)
+                        .entity(entity)
+                        .get_ref::<ActiveAuras>()
                         .is_some_and(|auras| auras.is_changed())
             })
             .map(|(p, position, map)| (p.clone(), *position, *map))
