@@ -87,11 +87,9 @@ fn pet_battle_effects3_lock_does_not_abort_committed_deep_breath() {
         .unwrap();
     assert_eq!(b.teams[1].pets[0].lockouts, [5, 0, 0]);
     assert_eq!(b.teams[1].pets[0].continuation, Some((169, 2)));
-    let (b, _) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
-    assert_eq!(b.teams[1].pets[0].lockouts, [4, 0, 0]);
     let (b, events) = b.step(&c, [Action::Pass; 2], &mut Fixed(500000)).unwrap();
-    assert_eq!(b.teams[1].pets[0].lockouts, [3, 0, 0]);
-    assert_eq!(damage(&events).len(), 1);
+    assert_eq!(b.teams[1].pets[0].lockouts, [4, 0, 0]);
+    assert_eq!(damage(&events), vec![300]);
     assert_eq!(b.teams[1].pets[0].continuation, None);
     assert!(
         b.step(&c, [Action::Pass, Action::Ability(169)], &mut NoDraw)
