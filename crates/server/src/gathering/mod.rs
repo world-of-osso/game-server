@@ -126,20 +126,17 @@ pub(crate) fn spawn_selected_node(
 }
 
 fn sync_skinning_corpses(world: &mut World) {
-    let mut query = world
-        .query_filtered::<(Entity, &Npc, &InMap, Option<&crate::loot::CorpseLoot>), (
-            With<crate::combat::Corpse>,
-            Without<Skinned>,
-            Without<GatherableResource>,
-        )>();
+    let mut query = world.query_filtered::<(Entity, &Npc, &InMap, &crate::loot::CorpseLoot), (
+        With<crate::combat::Corpse>,
+        Without<Skinned>,
+        Without<GatherableResource>,
+    )>();
     let corpses = query
         .iter(world)
         .filter(|(_, _, _, loot)| {
-            loot.is_none_or(|loot| {
-                loot.looters
-                    .values()
-                    .all(|slots| slots.iter().all(Option::is_none))
-            })
+            loot.looters
+                .values()
+                .all(|slots| slots.iter().all(Option::is_none))
         })
         .map(|(entity, npc, map, _)| (entity, npc.template_id, *map))
         .collect::<Vec<_>>();

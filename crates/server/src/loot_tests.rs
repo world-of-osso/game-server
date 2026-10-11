@@ -490,8 +490,9 @@ fn a_corpse_nobody_gets_loot_from_decays_in_half_the_time() {
     let kobold = h.kill_kobold();
 
     assert!(h.take::<CorpseLootable>().is_empty());
-    assert!(h.app.world().get::<CorpseLoot>(kobold).is_none());
     assert_eq!(h.corpse(kobold), Corpse { remaining: 30.0 });
+    h.open(kobold, false);
+    assert_eq!(h.failures(), vec![LootError::NoPermission]);
 }
 
 #[test]

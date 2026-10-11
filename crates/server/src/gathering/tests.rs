@@ -403,3 +403,66 @@ fn gathering_authored_pool_selection_and_repick_respect_member_limits() {
     );
     assert!(count(&selected) <= limit);
 }
+
+#[test]
+fn gathering_skin_marker_waits_for_completed_normal_loot_roll() {
+    for has_drop in [true, false] {
+        let (mut h, _directory) = setup(2564);
+        let character_id = h
+            .app
+            .world()
+            .get::<crate::persistence::ClientId>(h.caster)
+            .unwrap()
+            .0;
+        h.app.world_mut().entity_mut(h.npc).insert((
+            Npc {
+                template_id: 525,
+                name: "Mangy Wolf".into(),
+            },
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            crate::combat::Corpse { remaining: 60.0 },
+        ));
+        // Production ordering: death is visible before the deferred normal loot roll.
+        h.advance(1);
+        assert!(
+            h.app.world().get::<GatherableResource>(h.npc).is_none(),
+            "unrolled corpse must not advertise Skinning"
+        );
+        let looters = if has_drop {
+            std::collections::HashMap::from([(
+                character_id,
+                vec![Some(LootContent::Money { copper: 1 })],
+            )])
+        } else {
+            std::collections::HashMap::new()
+        };
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert(crate::loot::CorpseLoot { looters });
+        h.advance(1);
+        if has_drop {
+            assert!(
+                h.app.world().get::<GatherableResource>(h.npc).is_none(),
+                "normal corpse loot precedes Skinning"
+            );
+            h.app
+                .world_mut()
+                .get_mut::<crate::loot::CorpseLoot>(h.npc)
+                .unwrap()
+                .looters
+                .get_mut(&character_id)
+                .unwrap()[0] = None;
+            h.advance(1);
+        }
+        assert_eq!(
+            h.app.world().get::<GatherableResource>(h.npc),
+            Some(&GatherableResource {
+                parent_skill: data::SKINNING
+            })
+        );
+    }
+}

@@ -816,3 +816,7 @@ Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hoo
 ## 2026-10-11 — Gathering branch (acceptance incomplete)
 
 [Gathering](systems/gathering.md): local Lock/TDB skin metadata import, GO50 namespace repair, cast/loot/progression, authored pools/depletion/respawn and reopen persistence. Ten behavioral tests; both-skin native acceptance and independent gate remain open. Lead applied world import; agents did not write world.db.
+
+## 2026-10-11 — gathering corpse loot readiness
+
+- [Gathering](systems/gathering.md#corpse-loot-readiness): native corpse-before-loot ordering reproduced; completed empty normal rolls now remain distinguishable from unrolled corpses. Targeted regression and both-skin native recheck owned by gathering-live.
