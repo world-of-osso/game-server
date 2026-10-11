@@ -172,6 +172,29 @@ pub fn set_character_guild_by_id(
     Ok(())
 }
 
+/// Remove membership and guild-local rank/note/invite in one durable transaction.
+/// Daily bank usage remains, so leaving/rejoining cannot reset today's allowance.
+pub fn remove_character_guild(db: &Database, character_id: u64) {
+    let txn = db.begin_write().expect("begin guild member removal");
+    txn.open_table(CHARACTER_GUILDS)
+        .expect("open memberships")
+        .remove(character_id)
+        .expect("remove membership");
+    txn.open_table(crate::persistence::banks::GUILD_MEMBER_RANKS)
+        .expect("open ranks")
+        .remove(character_id)
+        .expect("remove rank");
+    txn.open_table(GUILD_MEMBER_NOTES)
+        .expect("open notes")
+        .remove(character_id)
+        .expect("remove note");
+    txn.open_table(PENDING_GUILD_INVITES)
+        .expect("open invites")
+        .remove(character_id)
+        .expect("remove invite");
+    txn.commit().expect("commit guild member removal");
+}
+
 pub fn set_pending_guild_invite(
     db: &Database,
     character_id: u64,
