@@ -1,6 +1,10 @@
 //! TrinityCore a352b1fa SmartAI::EndPath and waypoint table arrival delays.
 use super::*;
 
+fn distance_between(from: shared::components::Position, to: shared::components::Position) -> f32 {
+    Vec3::new(from.x - to.x, from.y - to.y, from.z - to.z).length()
+}
+
 fn eligible_for_escort_credit(ctx: &Ctx, player: Entity) -> bool {
     let same_map =
         ctx.world.get::<crate::maps::InMap>(ctx.me) == ctx.world.get::<crate::maps::InMap>(player);
@@ -15,7 +19,7 @@ fn eligible_for_escort_credit(ctx: &Ctx, player: Entity) -> bool {
                 .get::<shared::components::Position>(player)
                 .copied(),
         )
-        .is_some_and(|(me, target)| me.distance(target) <= 100.0);
+        .is_some_and(|(me, target)| distance_between(me, target) <= 100.0);
     same_map && alive && near
 }
 
@@ -59,7 +63,7 @@ impl SmartAi {
                             .get::<shared::components::Position>(player)
                             .copied(),
                     )
-                    .is_some_and(|(me, target)| me.distance(target) <= range)
+                    .is_some_and(|(me, target)| distance_between(me, target) <= range)
         });
         if in_range {
             return false;

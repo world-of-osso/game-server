@@ -28,6 +28,14 @@ Impact (world.db, verified 2026-10-05): 26,854 UPDATE_IC rows / 9,796 distinct e
 - [TC a352b1fa SmartAI.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/AI/SmartScripts/SmartAI.cpp#L782-L815): SetCombatMove; UpdateAI (281–299) refreshes victim first; AttackStart (572–591) respects combat-movement permission.
 - `crates/server/src/scripted_ai/tests/smart_combat.rs` — real database behavioral regression.
 
+## SmartAI escort coverage (2026-10-11)
+
+Quest accept/reward hooks execute source-9 lists and waypoint paths. Timed lists honor OOC/IC/unconditional gates, initial min/max delay, chance and override policy; TC explicitly forbids replacing the currently executing list from itself (SmartScript.cpp:4296–4327). Waypoint tables supply orientation and node delays; repeated paths restart at node one. Generic escort death/distance failure no longer depends on an explicit DEATH script row. Party targets use current group members in the invoker's map, not just the invoker.
+
+Private-copy [SmartAI overlay instructions](../../specs/smartai-escort.md) reconcile legacy ScriptName selection without replacing stats/spawns. Remaining: summon/follow/force-despawn action vocabulary, waypoint-stop/end despawn timers, action152 tracking completion, nearest targets and both-skin full quest live proof. No full escort parity claim.
+
+Sources: `crates/server/src/scripted_ai/smart_{ai,timed,paths,escort,targets,lifetimes}.rs`; real-row and table fixtures in `smart_escort_tests.rs`; pinned TC SmartAI.cpp:185–259,549–554,912–950 and archived SmartScript.cpp in engine `data/diagnostics/smartai-coverage-2026-10-11/`.
+
 ## Wailing Caverns — Lord Cobrahn (2026-10-11)
 
 `wailing_caverns.rs` identifies only Cobrahn3669 as instance data0 / encounter586. Local `tdb_smart_scripts` death row0 sets data0→DONE3; `dungeon_encounter` names the same creature on map43/Normal1. `SmartAi` retains the authored spell timers and adds optional `BossAi` lifecycle; the existing hook boundary emits encounter/frame messages and death credit, with no separate spell schedule or new persistence model. AGGRO4 runs TALK1 using existing CreatureText selection.
