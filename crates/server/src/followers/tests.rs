@@ -197,6 +197,29 @@ fn follower_initialization_applies_authored_aura_and_native_class_level_stats() 
 }
 
 #[test]
+fn follower_missing_spell_metadata_never_substitutes_melee_combat() {
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[], 8).unwrap();
+    let unit = spawn_follower(&mut h, profile(209059, GroupRole::Dps, u32::MAX, 0));
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(h.npc);
+    let before = h.health(h.npc);
+    for _ in 0..60 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert_eq!(h.health(h.npc), before);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .is_some()
+    );
+}
+
+#[test]
 fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[62124], 2).unwrap();
     let mut kit = profile(209057, GroupRole::Tank, 0, 0);
