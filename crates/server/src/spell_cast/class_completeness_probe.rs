@@ -28,7 +28,6 @@ struct Spell {
     id: u32,
     passive: bool,
     origin: Vec<String>,
-    closure: Vec<u32>,
 }
 
 fn source_passives(spec: &Spec) -> Vec<u32> {
@@ -184,17 +183,10 @@ fn class_completeness_level80_probe() {
     let data = world_db().unwrap();
     let mut records = 0;
     for spec in &manifest.specs {
-        let ids: HashSet<_> = spec
-            .spells
-            .iter()
-            .flat_map(|spell| &spell.closure)
-            .copied()
-            .collect();
-        let spells = ids
-            .into_iter()
-            .filter_map(|id| data.store.get(id).cloned())
-            .collect();
-        let mut h = harness(spells, &[], spec.class).unwrap();
+        let mut h = harness(Vec::new(), &[], spec.class).unwrap();
+        // Script-consumed rows are not necessarily linked by EffectTriggerSpell.
+        // Use the complete native store, just as production does.
+        h.app.insert_resource(data.store.clone());
         let retained: HashSet<_> = h
             .app
             .world_mut()
