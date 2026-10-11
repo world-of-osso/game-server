@@ -53,11 +53,21 @@ def fixture_database():
         ).fetchall()
         if actual != expected_retail[table]:
             raise ValueError(f"fixture regeneration changed Retail {table}")
+    # Runtime Need metadata uses this projection of canonical world.db ChrClasses.
+    # Only classes present in the fixture loadouts are needed.
+    db.execute("DROP TABLE chr_classes")
+    db.execute("CREATE TABLE chr_classes (ID INTEGER PRIMARY KEY, ArmorTypeMask INTEGER NOT NULL)")
+    db.executemany(
+        "INSERT INTO chr_classes VALUES (?, ?)",
+        [(1, 113), (3, 41), (4, 37), (7, 2665), (8, 35), (11, 2341)],
+    )
     retained = (
         set(retail)
         | {
             "content_item",
             "content_npc_vendor",
+            "chr_classes",
+            "spell_equipped_items",
             "db2_row_source",
             "spell_name",
             "spell_effect",
