@@ -33,6 +33,7 @@ use crate::world_data::{CreatureSpawn, WorldData};
 /// `SSCreatureIds` of the bosses.
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
+mod data_bosses;
 mod dungeonach;
 mod smart_combat;
 mod wailing_caverns;
@@ -208,6 +209,7 @@ fn stockade_app(data: &'static Data) -> App {
             group: None,
             leader: character_id,
             difficulty_id: crate::maps::store::DIFFICULTY_NORMAL,
+            ..Default::default()
         };
         let now = crate::maps::instances::Now {
             elapsed: 0.0,
@@ -891,7 +893,9 @@ fn randolph_moloch_vanishes_below_71_percent_and_shadowsteps_behind_a_player() {
     )));
     assert!(h.has_aura(moloch, 55964));
     let world = h.app.world();
-    assert!(world.get::<crate::auras::Invisible>(moloch).is_some());
+    assert!(!crate::auras::invisibility::can_detect(
+        world, player, moloch
+    ));
     assert!(!world.get::<UnitFlags>(moloch).unwrap().is_attackable());
     assert!(
         world
@@ -920,7 +924,9 @@ fn randolph_moloch_vanishes_below_71_percent_and_shadowsteps_behind_a_player() {
     h.advance(0.5);
     assert!(!h.has_aura(moloch, 55964));
     let world = h.app.world();
-    assert!(world.get::<crate::auras::Invisible>(moloch).is_none());
+    assert!(crate::auras::invisibility::can_detect(
+        world, player, moloch
+    ));
     assert!(world.get::<UnitFlags>(moloch).unwrap().is_attackable());
     // A hit from 55% (below 59% before it) does not vanish him again; one from
     // 42% to 39% does.

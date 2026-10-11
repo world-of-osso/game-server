@@ -58,7 +58,7 @@ pub(crate) fn teleport_to(
     let Some(&current) = world.get::<InMap>(player) else {
         return false;
     };
-    if current.map_id == destination.map_id {
+    if current.map_id == destination.map_id && remains_in_current_copy(world, player, current) {
         near_teleport(world, player, &destination, options);
         return true;
     }
@@ -90,6 +90,22 @@ pub(crate) fn teleport_to(
     let origin = current_location(world, player, current.map_id);
     begin_transfer(world, player, destination, options, origin);
     true
+}
+
+/// A shared map ID is not a shared instance: follower admission can change the
+/// selected difficulty while the character is already in a Normal copy.
+fn remains_in_current_copy(world: &World, player: Entity, current: InMap) -> bool {
+    if current.instance_id == 0 {
+        return true;
+    }
+    let entrant = entrant_of(world, player);
+    let unix = super::difficulty::now(world).unix;
+    world.resource::<InstanceManager>().find_instance(
+        world.resource::<MapStore>(),
+        current.map_id,
+        entrant,
+        unix,
+    ) == Some(current)
 }
 
 fn near_teleport(
@@ -386,6 +402,10 @@ pub(crate) fn entrant_of(world: &World, player: Entity) -> InstanceEntrant {
         world.get_resource::<GroupRegistry>(),
         character_id,
         own_difficulty,
+        world
+            .get::<super::RaidDifficulty>(player)
+            .copied()
+            .unwrap_or_default(),
     )
 }
 
@@ -394,6 +414,7 @@ pub(crate) fn entrant_for(
     groups: Option<&GroupRegistry>,
     character_id: u64,
     own_difficulty: u32,
+    own_raid_difficulty: super::RaidDifficulty,
 ) -> InstanceEntrant {
     let group = groups.and_then(|groups| groups.group_id_of(character_id));
     InstanceEntrant {
@@ -405,6 +426,10 @@ pub(crate) fn entrant_for(
         difficulty_id: groups
             .and_then(|groups| groups.dungeon_difficulty_of(character_id))
             .unwrap_or(own_difficulty),
+        raid_difficulty: groups
+            .and_then(|g| g.raid_difficulty_of(character_id))
+            .unwrap_or(own_raid_difficulty),
+        raid_group: groups.is_some_and(|g| g.is_raid_of(character_id)),
     }
 }
 

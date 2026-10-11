@@ -219,6 +219,7 @@ fn party(members: &[(u64, &str, Entity)]) -> GroupRegistry {
                     level: 20,
                     portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                    raid_difficulty: crate::maps::RaidDifficulty::default(),
                 },
             )
         })

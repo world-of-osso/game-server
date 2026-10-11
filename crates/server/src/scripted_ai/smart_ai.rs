@@ -365,13 +365,21 @@ struct TimedList {
 /// The SmartAI of a creature of `entry`, if it has rows.
 pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn CreatureAi>> {
     let entry = world.get::<shared::components::Npc>(creature)?.template_id;
-    let events = world.get_resource::<SmartScripts>()?.0.get(&entry)?.clone();
+    let boss = super::instance_script::bound_boss(world, creature);
+    let rows = world
+        .get_resource::<SmartScripts>()
+        .and_then(|scripts| scripts.0.get(&entry));
+    if rows.is_none() && boss.is_none() {
+        return None;
+    }
+    // A bound boss without authored rows intentionally has lifecycle and melee only.
+    let events = rows.cloned().unwrap_or_default();
     let states = vec![EventState::default(); events.len()];
     Some(Box::new(SmartAi {
         events,
         states,
         phase: 0,
-        boss: super::wailing_caverns::boss_ai(world, creature),
+        boss,
         stored_targets: HashMap::new(),
         timed_list: None,
         processing_timed_list: false,
@@ -960,6 +968,18 @@ impl CreatureAi for SmartAi {
 
     fn quest_rewarded(&mut self, ctx: &mut Ctx, player: Entity, quest_id: u32) {
         self.process_events_for(ctx, EVENT_REWARD_QUEST, Some(player), quest_id);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        if let Some(boss) = &mut self.boss {
+            boss.just_summoned(ctx, summon);
+        }
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        if let Some(boss) = &mut self.boss {
+            boss.summoned_creature_despawn(summon);
+        }
     }
 
     fn spell_hit(&mut self, ctx: &mut Ctx, caster: Entity, spell_id: u32) {

@@ -324,10 +324,12 @@ fn handle_select(
     }
     let saved_map = crate::maps::persistence::load_character_map(&db.db, character_id);
     let dungeon_difficulty = crate::maps::difficulty::load_dungeon_difficulty(&db.db, character_id);
+    let raid_difficulty = crate::maps::raid::load(&db.db, character_id);
     let Some(place) = maps.resolve(
         commands,
         character_id,
         dungeon_difficulty.0,
+        raid_difficulty,
         saved_map,
         persisted_player_position(&data),
     ) else {
@@ -357,7 +359,9 @@ fn handle_select(
         guild.as_ref(),
         build_player_init_state(state),
     );
-    commands.entity(player_entity).insert(dungeon_difficulty);
+    commands
+        .entity(player_entity)
+        .insert((dungeon_difficulty, raid_difficulty));
     if let Some(bind) = crate::spell_cast::homebind::load_bind(&db.db, character_id) {
         // The creation homebind preserves source-authored facing without changing
         // CharacterData's persisted ABI or repositioning an existing character.
@@ -604,6 +608,7 @@ fn insert_player_spawn_components(
     commands.entity(entity).insert((
         crate::networking::FallTracker::grounded(by),
         crate::mirror_timers::MirrorTimers::default(),
+        shared::components::CombatStatus(false),
     ));
     crate::durability::insert_equipped_durability(commands, entity, data);
     insert_player_init_state(commands, entity, init)
