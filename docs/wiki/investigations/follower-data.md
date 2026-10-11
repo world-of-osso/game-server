@@ -50,6 +50,12 @@ Private authenticated data refresh now supplies142 displays/1,420 pose rows thro
 
 A second run reproduced wrong difficulty on a character saved inside Normal Ruby: `teleport_to` compared only map IDs, so the205 queue used a near teleport and stayed in copy1/difficulty1. Same-map near teleport now requires the destination's resolved instance to equal the current copy. A loopback transfer/WorldPortAck regression reproduces Normal→205 on the same authored entrance and asserts distinct copy IDs plus actual205 difficulty. This is a deliberate extension of the near-teleport rule for follower admission, not a change to source population tags.
 
+## Combat ownership and reward boundary
+
+A real difficulty205 Juggernaut kill exposed two ownership omissions. Followers copied the owner's faction but lacked `UNIT_FLAG_PLAYER_CONTROLLED`, so Ruby faction16 could not retaliate against them under the existing PvC relation rules. They also lacked `ClientId` (correctly: not persisted characters), and `CreatureTap::record_damage` only recognized direct player attackers, leaving companion-only kills untapped. Initialization now marks controlled ownership; damage attribution resolves `Follower.owner` to the authenticated character before the existing subgroup reward logic. Ordinary unrelated NPCs still grant no player credit. Targeted tests exercise actual lethal Fireball/tap replication and Ruby's real faction16 retaliation boundary.
+
+Source loot remains separate: Melidrussa188252 has lootid0 in base and every imported difficulty, and neither source nor runtime creature loot table has entry188252. Owner attribution cannot create absent authored drops; no loot rows were invented. The native first-boss/loot/both-skin goal remains open.
+
 ## Lead import instructions
 
 Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Lead confirmed canonical import of11 profiles,27 LFG rows,9,586 source spell rows and11 content templates. Agent writes remain private. Existing instance population is separate from follower profile/reference import.
