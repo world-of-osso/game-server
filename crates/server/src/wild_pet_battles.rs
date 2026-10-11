@@ -422,11 +422,11 @@ impl Encounter {
                                 catalog.turns.abilities[&id].family as u8
                             },
                             cooldown,
-                            // Nonzero ability-lockdown effects remain gated in the turn engine.
-                            lockout: 0,
+                            lockout: pet.lockouts[index],
                             usable: id != 0
                                 && !action_locked
                                 && cooldown == 0
+                                && pet.lockouts[index] == 0
                                 && validate_ability(&catalog.turns, id).is_ok(),
                         }
                     });
