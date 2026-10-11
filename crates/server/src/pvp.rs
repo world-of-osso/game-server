@@ -29,6 +29,10 @@ mod pvp_entry;
 mod pvp_invites;
 use pvp_invites::process_battleground_invitation_responses;
 
+#[path = "pvp_leave.rs"]
+mod pvp_leave;
+use pvp_leave::process_battleground_leave_requests;
+
 const DEFAULT_RATING: u32 = 1500;
 const HONOR_CAP: u32 = 15_000;
 const CONQUEST_CAP: u32 = 1_800;
@@ -218,6 +222,10 @@ impl Plugin for PvpPlugin {
         app.add_systems(
             Update,
             process_battleground_invitation_responses.after(process_battleground_queue_requests),
+        );
+        app.add_systems(
+            Update,
+            process_battleground_leave_requests.after(process_battleground_invitation_responses),
         );
         app.add_systems(Update, process_rated_queue_requests);
         app.add_systems(Update, process_pvp_dequeue_requests);
