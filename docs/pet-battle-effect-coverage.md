@@ -1,17 +1,25 @@
 # Pet battle effect-property coverage
 
-Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; Rust revision `607671d1bd52c174b573b83fa033362643072eef` (origin/master merged into petbattle-effects2).
+Verified 2026-10-10; authenticated local-CASC build12.1.0.69933; production revisions `1b02589`/`f7ea28f`, final test correction `a0e04b0` (origin/master615fb90 merged into petbattle-effects3; already up to date).
 
 ## Coverage by rows — do not conflate these metrics
 
 | Metric | Before | After |
 |---|---:|---:|
-| Handler IDs / referenced IDs |40/104|55/104|
-| Rows referencing handler IDs |2605/2829 (92.08%)|2672/2829 (94.45%)|
-| Rows in recursively admitted ability graphs |1568/2829 (55.43%)|1727/2829 (61.05%)|
-| Admitted ability records (including empty/passive records) |913/1404|987/1404|
+| Handler IDs / referenced IDs |55/104|58/104|
+| Rows referencing handler IDs |2672/2829 (94.45%)|2683/2829 (94.84%)|
+| Rows in recursively admitted ability graphs |1727/2829 (61.05%)|1746/2829 (61.72%)|
+| Admitted ability records (including empty/passive records) |987/1404|992/1404|
 
-**The90% executable-row goal and completion of the original partial handlers are NOT met.** This continuation adds159 admitted rows and74 ability records.945 rows referencing implemented IDs still belong to rejected graphs;157 rows use49 unsupported IDs. The90% target needs820 more admitted rows. Static admission is not all-row behavioral or Retail proof. Wild inventory:83/99 candidate abilities from spawned wild species on hosted maps0/1/2991 now admit; this is not live spawn/level/loadout utilization.
+**The90% executable-row goal and completion of the original partial handlers are NOT met.** This continuation adds19 admitted rows and5 ability records, with no removed admission.937 rows referencing implemented IDs still belong to rejected graphs;146 rows use46 unsupported IDs. The90% target needs801 more admitted rows. Static admission is not all-row behavioral or Retail proof. Wild inventory stays83/99 candidates on hosted maps0/1/2991; no wild gain. Current default catalog PvP ability reach617/797→618/797; all default/alternate choices663/871→664/871. Newly executable Nevermore522 is default for species3008/3054 and a candidate for six species. This is not acquisition, journal ownership, live utilization or alternate-loadout selection proof.
+
+## petbattle-effects3 bounded lockdown
+
+- **117:** real Mind Games2390 choosing pet's own one-based slots1/2, LockDuration9; surrounding removal rows clear wearer-owned Mind Games auras. The174 reference is not a stun application. Full Addius replacement/restoration encounter remains uncertified.
+- **129/168:** Nevermore522/738 and Spell Gulp1858/1859 apply a two-round enemy-pet aura, consume the wearer's next real ability use through event9, lock that used ability for5 rounds and remove their own aura49. Pass/swap does not consume the callback; committed multi-turn ability continues. Persistent Disruptive Spores2213 remains rejected because its ownership/triggering context is not established.
+- Slot clocks tick for active/bench pets beside ordinary cooldowns; snapshot now sends actual lockout and disables that slot. Duration values come directly from DB2; the existing round-start clock convention is tested, not certified as exact Retail event/expiry timing. `Action::Ability` selects an ID, not a slot: local default species1352 repeats123 and2480 repeats1737, so independent duplicate-slot selection/lock parity is not certified or redesigned.
+
+Ranking first blockers: OverrideIndex reaches5 wild/13 default PvP/17 alternate-candidate roots; event1 reaches3/28/31; event2 reaches3/16/18. Lockdown reaches0 wild/1 default PvP root. Ranking is catalog dependency reach, not a guarantee one handler admits every graph. Highest-impact candidates remained gated rather than guessing numbers, hit/crit/variance reuse, callback recursion/causal order or level/max-health composition.
 
 ## Original12 Partial handlers — exact changes and remaining gaps
 
@@ -41,13 +49,13 @@ Continuation:24/222 gain active-plus-bench routes,50 gains Cyclone/Stench,23/31 
 |24|945|571|Partial: zero OverrideIndex; grounded active/bench routes; other targets rejected|Bite110; Sunlight404; Tidal Wave419; Arcane Explosion299|
 |26|244|155|Dispatch; special-stat/proc graphs and unexplained Accuracy0 gated|Burrow159; Metabolic Boost194; Bend Time1905|
 |50|194|105|Dispatch: state guards, stacks/refresh, Cyclone object and Stench per-pet routing|Curse218; Moth Balls507; Cyclone190; Stench527|
-|49|138|55|Dispatch: chance/default0, unused Param1; callback graphs gated|Burrow159; Failsafe723; Bend Time1904|
+|49|138|66|Dispatch: chance/default0, unused Param1; bounded wearer event9 removal; generic callbacks gated|Burrow159; Failsafe723; Bend Time1904; Nevermore738/Spell Gulp1859|
 |23|115|93|Dispatch: source power/dealt modifier, recipient cap/taken modifier|Healing Wave123; Tranquility254/255; Leech Life383|
 |222|90|82|Dispatch: explicit variance, weather family modifiers, central Magic cap|Burn113; Burrow159; Cyclone189/190|
 |31|86|71|Dispatch: absolute state, Critter direct-CC immunity; unknown state semantics gated|Deep Breath169; GM Stun292|
 |54|77|55|Dispatch: chain guard, duration/max stacks; reactive proc graphs gated|Poison Fang152; Aquatic passive; Creeping Fungus743|
 |158|69|57|Dispatch: stop remaining effects after failed chain|Death Coil121 miss/hit|
-|22|61|40|Dispatch: all Points fields are tooltip metadata, no HP operation|Healthy577 (isolated dummy); Curse218|
+|22|61|42|Dispatch: all Points fields are tooltip metadata, no HP operation|Healthy577 (isolated dummy); Curse218; Nevermore738/Spell Gulp1859|
 |116|57|46|Dispatch: priority evaluated before order; equal priorities use speed/RNG|Quick Attack563; Belly Slide529|
 |52|44|36|Dispatch: control immunity including Arcane Winds; action-aware expiry|Time Stop600; Grasp249|
 |28|29|23|Dispatch: cancellable/self aura; shared Decoy charges; other objects gated|Decoy334/333 swap/refresh|
@@ -85,7 +93,7 @@ Continuation:24/222 gain active-plus-bench routes,50 gains Cyclone/Stench,23/31 
 |76|7|7|Dispatch: persistent charge; second use fires and consumes charge|Wind-Up459|
 |96|7|7|Dispatch: required-state guarantees accuracy; targetability still checked|Nocturnal Strike517|
 |100|6|6|Dispatch: living other allies and family filters;533/922/1956 only|Rebuild533, nonzero active slot|
-|168|6|0|No; explicit rejection|—|
+|168|6|2|Partial: negative next-ability aura for522/1858 only; other routing gated|Nevermore522; Spell Gulp1858 hit/miss/wait/swap|
 |170|6|6|Dispatch: weather-gated additional damage|Solar Beam753 Sunlight state61|
 |226|6|6|Dispatch: bonus points for target state|Deep Burn1407|
 |25|5|0|No; explicit rejection|—|
@@ -101,12 +109,12 @@ Continuation:24/222 gain active-plus-bench routes,50 gains Cyclone/Stench,23/31 
 |385|4|4|Dispatch: slower/last-strike conditional attack|Tail Sweep122 slower|
 |66|3|3|Dispatch: double below25%, not at25%|Predatory Strike518|
 |128|3|0|No; explicit rejection|—|
-|129|3|0|No; explicit rejection|—|
+|129|3|2|Partial: wearer next-used ability lockdown for738/1859; persistent2213 gated|Nevermore522; Spell Gulp1858; committed Deep Breath169|
 |230|3|0|No; explicit rejection|—|
 |248|3|0|No; explicit rejection|—|
 |370|3|0|No; explicit rejection|—|
 |77|2|0|No; explicit rejection|—|
-|117|2|0|No; explicit rejection|—|
+|117|2|2|Dispatch: Mind Games2390 self one-based slots1/2 lockdown; no invented stun|Mind Games2390,9-round slot clock/bench/snapshot|
 |123|2|0|No; explicit rejection|—|
 |124|2|0|No; explicit rejection|—|
 |138|2|0|No; explicit rejection|—|
@@ -147,9 +155,9 @@ Continuation:24/222 gain active-plus-bench routes,50 gains Cyclone/Stench,23/31 
 
 - **Target/override representation:** property24 OverrideIndex has103 nonzero rows, but labels/descriptions do not establish variance/critical/hit reuse. Broad team/bench descriptions without a implemented route are rejected; Sunlight404, Tidal Wave419 and16 additional described three-row attacks have active/other-enemy routes. Arbitrary team graphs remain rejected. Heal Back Line70/GM Heal295/GM Revive714 and unknown135 kill routing are rejected rather than selecting the caster repeatedly.
 - **State/special stat semantics:** state161 referenced by85 is absent from BattlePetState; no invented category. State2 maxHealthBonus is per-level, but Pet has no level field. Clone/type-override/boss state graphs remain gated. Sunny Day403 has state99=50 and65=25: max cap15000 and heal225 from Healing Wave30*6*1.25 are tested; no healing effect is invented on weather application. Current-HP transition/rounding has no captured Retail proof.
-- **Reactive and conditional aura semantics:** proc events1..4/9/12 remain rejected except Leech Life383's own post-hit healing event2; current data does not determine generic callback ordering/recursion, hit ownership and aura expiry interaction.179 (13 rows) needs retaliation ownership;229 (13 rows) needs conditional type-state polarity/refresh semantics. These are the two largest unsupported IDs. Complex chain values in632/1962 and special immunity/reverse/passive options in135 remain unproven.
+- **Reactive and conditional aura semantics:** proc events1..4/9/12 remain rejected except Leech Life383's own post-hit healing event2 and wearer-owned Nevermore738/Spell Gulp1859 event9; current data does not determine generic callback ordering/recursion, hit ownership and aura expiry interaction.179 (13 rows) needs retaliation ownership;229 (13 rows) needs conditional type-state polarity/refresh semantics. These are the two largest unsupported IDs. Complex chain values in632/1962 and special immunity/reverse/passive options in135 remain unproven.
 - **Weather/terrain and cooldown boundaries:** Darkness, Moonlight, Sunlight, Arcane Winds and Scorched Earth have real-ID CPU cases. Flat-modifier weather (Sandstorm454) is rejected until the tooltip AttackBonus power owner is established; no attacker/source substitution. Cleansing Rain duration changes, Lightning proc damage and objects other than Decoy/Cyclone are not certified.246 modification1 in Forbidden Hourglass1932 is not inferable from its terse description, so only0 clearing executes.
-- **Numerical/runtime boundary:** inherited weak multiplier.67, family passive/crit constants and rounding are not newly invented, but exact current Retail game-table/observed timing remains absent. No live Retail comparison or independent verifier PASS; Claude OAuth expired before verification ran.49 unsupported IDs are listed in the matrix; not every omitted rare handler is intrinsically unknowable. Life Exchange277 averaging/rounding and generic159/194 selectors remain undetermined.
+- **Numerical/runtime boundary:** inherited weak multiplier.67, family passive/crit constants and rounding are not newly invented, but exact current Retail game-table/observed timing remains absent. No live Retail comparison or independent verifier PASS; Claude OAuth expired before verification ran.46 unsupported IDs are listed in the matrix; not every omitted rare handler is intrinsically unknowable. Life Exchange277 averaging/rounding and generic159/194 selectors remain undetermined.
 
 ## Data citations / derivation
 
@@ -165,7 +173,13 @@ Cases are in `crates/server/src/pet_battle/{property_tests,effects2_tests}.rs`; 
 
 No local TrinityCore pet-battle effect interpreter was found in known reference locations. Diagnostic `PetBattleAbilityEffect.cpp`/`PetBattle.cpp` files are **LegionCore9222216**, not TrinityCore or current Retail authority; their explicit unknown/no-op removal and kill handlers were not adopted. Retained TrinityCorea352b1fa stat provenance and local Retail SharedPetBattleTemplates formula provenance live in the [engine wiki](wiki/systems/pet-battle-engine.md#numeric-provenance), not a claim that TrinityCore implements these new properties.
 
-## Proof / reproduction
+## petbattle-effects3 proof / reproduction
+
+All native Cargo commands from leased game-server-s3 via `/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run pbfx3`; no build-lock. The requested post-master `cargo test --locked -p server pet_battle -- --nocapture` ran once at34114e0:77/78 library tests passed; a new fixture incorrectly expected Deep Breath169 damage on a third turn. Authentic DB2 and the existing Deep Breath test show two turns. Test-only correctiona0e04b0 passes the focused6/6 effect tests; the previously unexecuted main-binary pet_battle scope passes16/16 including wild/PvP/HUD. No repeated broad command or fresh94/94 single-run claim. All72 prior engine cases and six current new cases have passing evidence on unchanged production; the failure was fixture ordering, not a changed runtime rule.
+
+New semantics reproduce missing168/117 failures before implementation and snapshot0-versus9 RED; current six deterministic engine tests and real snapshot9 GREEN prove wearer/source ownership, pass/swap/miss, bench ticking, clock expiry, committed continuation and rejected ambiguities before RNG. Census1746/992 at34114e0 remains valid after test-onlya0e04b0. Evidence: `game-engine/data/diagnostics/pbfx3-20261010/{coverage.json,before-after.json,ranking.json,wild-after.json,local-effect-evidence.json,retail-lua-source.json,tdb-search.json}` and RED/GREEN/final logs. Read-only local-CASC CSV hashes retained. TDB1210 SQL scan finds breed/species/ability tables but no effect/turn/state interpreter tables; no C++ was used and this is not exhaustive evidence certification. Format/check/readability results are recorded in the final handoff and verification receipt; no independent verifier or live Retail claim.
+
+## Prior petbattle-effects2 proof / reproduction
 
 From the leased slot, no dependency override/CSV environment needed:
 

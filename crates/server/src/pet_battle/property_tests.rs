@@ -36,6 +36,7 @@ fn pet_battle_50_moth_balls_state_gate_before_accuracy() {
         rng: &mut rng,
         events: Vec::new(),
         healing_target: None,
+        used_ability: None,
     };
     let caster = PetRef { team: 0, slot: 0 };
     let target = PetRef { team: 1, slot: 0 };
@@ -73,6 +74,7 @@ fn pet_battle_31_critter_rejects_direct_stun_state() {
         rng: &mut rng,
         events: Vec::new(),
         healing_target: None,
+        used_ability: None,
     };
     let effect = c
         .ability_turns(292)
@@ -190,6 +192,7 @@ fn pet_battle_111_49_failsafe_revives_twenty_percent() {
         rng: &mut rng,
         events: Vec::new(),
         healing_target: None,
+        used_ability: None,
     };
     assert!(validate_ability(&c, 723).is_ok());
     rt.cast_turn(
@@ -219,6 +222,7 @@ fn pet_battle_373_reconstruction_changes_three_ability_slots() {
         rng: &mut rng,
         events: Vec::new(),
         healing_target: None,
+        used_ability: None,
     };
     rt.cast_turn(
         PetRef { team: 0, slot: 0 },
@@ -688,6 +692,7 @@ fn pet_battle_22_dummy_points_are_tooltip_metadata() {
         rng: &mut rng,
         events: Vec::new(),
         healing_target: None,
+        used_ability: None,
     };
     rt.cast_turn(
         PetRef { team: 0, slot: 0 },

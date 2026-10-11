@@ -380,6 +380,35 @@ fn petbattle_effect_hud_turn_lock_disables_abilities_without_guessed_lockdown() 
 }
 
 #[test]
+fn petbattle_effect_hud_reports_real_mind_games_slot_lockdowns() {
+    let catalog = catalog();
+    let journal = journal();
+    let mut encounter = Encounter::start(&catalog, &journal, 378, 1, 99, 100).unwrap();
+    encounter.battle.teams[0].pets[0].abilities = [110, 123, 2390];
+    encounter.battle = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2390), Action::Pass],
+            &mut Fixed(500000),
+        )
+        .unwrap()
+        .0;
+    let snapshot = encounter.snapshot(&catalog, &journal);
+    let abilities = &snapshot.teams[0][0].abilities;
+    assert_eq!(abilities[0].id, 110);
+    assert_eq!(abilities[1].id, 123);
+    for ability in &abilities[..2] {
+        assert_eq!(ability.lockout, 9);
+        assert_eq!(ability.cooldown, 0);
+        assert!(!ability.usable);
+    }
+    assert_eq!(abilities[2].lockout, 0);
+    assert!(abilities[2].usable);
+    assert!(snapshot.teams[1][0].abilities[0].usable);
+}
+
+#[test]
 fn petbattle_effect_hud_routes_weather_and_team_hazard_separately_across_swap() {
     let catalog = catalog();
     let journal = journal();
