@@ -5,9 +5,12 @@
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 
 use super::InventoryItemData;
+#[path = "persistence_mail_sender_migration.rs"]
+mod sender_migration;
+pub(crate) use sender_migration::migrate_sender_mailboxes;
 
 /// Mailbox table: character_id -> bitcode `Vec<MailData>`.
-pub(crate) const MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("character_mail");
+pub(crate) const MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("character_mail_v2");
 /// Auction-only mailboxes (`Vec<LegacyAuctionMail>`, `u32` money); moved into
 /// `MAILBOXES` as Auction House mail and dropped at startup.
 pub(crate) const LEGACY_MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("mailboxes");

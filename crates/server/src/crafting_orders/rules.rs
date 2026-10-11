@@ -59,46 +59,15 @@ pub(crate) fn place(
     if request.commission > crate::gold::MAX_MONEY {
         return Err("commission exceeds money cap".into());
     }
-    let guild = match request.kind {
-        1 => Some(
-            persistence::load_character_guild(db, customer)
-                .ok_or("guild order requires guild membership")?
-                .guild_id,
-        ),
-        0 | 2 => None,
-        _ => return Err("unknown order type".into()),
-    };
-    let recipient = match (request.kind, request.recipient.as_deref()) {
-        (2, Some(name)) => Some(
-            persistence::find_character_id_by_name_ignore_case(db, name)
-                .ok_or("personal recipient not found")?,
-        ),
-        (2, None) => return Err("personal order requires named crafter".into()),
-        (_, None) => None,
-        _ => return Err("recipient only applies to personal orders".into()),
-    };
-    if recipient == Some(customer) {
-        return Err("cannot place a personal order to yourself".into());
-    }
+    let (guild, recipient) =
+        load_destination(db, customer, request.kind, request.recipient.as_deref())?;
     let requirements = world
         .resource::<ProfessionData>()
         .reagents(request.spell_id);
-    let mut contributions = request.supplied;
-    contributions.sort_by_key(|row| row.0);
-    let mut expected = requirements.to_vec();
-    expected.sort_unstable();
-    if contributions.len() != expected.len()
-        || contributions.iter().zip(&expected).any(
-            |(&(item, quantity, supplied), &(required_item, required_count))| {
-                item != required_item || quantity != required_count || supplied > quantity
-            },
-        )
-    {
-        return Err("reagents must match exact authored recipe requirements".into());
-    }
+    let contributions = validate_contributions(requirements, request.supplied)?;
+    let before = persistence::load_inventory(db, customer);
     let mut model = crate::inventory::load_model(db, templates, customer)
         .map_err(|e| format!("inventory: {e:?}"))?;
-    let before = persistence::load_inventory(db, customer);
     let gold = model
         .gold()
         .checked_sub(request.commission)
@@ -137,6 +106,55 @@ pub(crate) fn place(
         .resource_mut::<crate::gold::GoldUpdateQueue>()
         .record(customer, gold);
     Ok(order.id)
+}
+
+fn load_destination(
+    db: &Database,
+    customer: u64,
+    kind: u8,
+    recipient: Option<&str>,
+) -> Result<(Option<u32>, Option<u64>), String> {
+    let guild = match kind {
+        1 => Some(
+            persistence::load_character_guild(db, customer)
+                .ok_or("guild order requires guild membership")?
+                .guild_id,
+        ),
+        0 | 2 => None,
+        _ => return Err("unknown order type".into()),
+    };
+    let recipient = match (kind, recipient) {
+        (2, Some(name)) => Some(
+            persistence::find_character_id_by_name_ignore_case(db, name)
+                .ok_or("personal recipient not found")?,
+        ),
+        (2, None) => return Err("personal order requires named crafter".into()),
+        (_, None) => None,
+        _ => return Err("recipient only applies to personal orders".into()),
+    };
+    if recipient == Some(customer) {
+        return Err("cannot place a personal order to yourself".into());
+    }
+    Ok((guild, recipient))
+}
+
+fn validate_contributions(
+    requirements: &[(u32, u32)],
+    mut contributions: Vec<(u32, u32, u32)>,
+) -> Result<Vec<(u32, u32, u32)>, String> {
+    contributions.sort_by_key(|row| row.0);
+    let mut expected = requirements.to_vec();
+    expected.sort_unstable();
+    if contributions.len() != expected.len()
+        || contributions.iter().zip(&expected).any(
+            |(&(item, quantity, supplied), &(required_item, required_count))| {
+                item != required_item || quantity != required_count || supplied > quantity
+            },
+        )
+    {
+        return Err("reagents must match exact authored recipe requirements".into());
+    }
+    Ok(contributions)
 }
 
 pub(crate) fn take_reagent(

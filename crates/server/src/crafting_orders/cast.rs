@@ -113,9 +113,9 @@ fn complete(
     }
     let output = crate::profession::new_order_item(world, player, item_id, count)?;
     let templates = world.resource::<crate::item_templates::ItemTemplates>();
+    let inventory = persistence::load_inventory(db, crafter);
     let mut model = crate::inventory::load_model(db, templates, crafter)
         .map_err(|e| format!("inventory: {e:?}"))?;
-    let inventory = persistence::load_inventory(db, crafter);
     for &(item, required, supplied) in &before.reagents {
         rules::take_reagent(db, &mut model, item, required - supplied)?;
     }

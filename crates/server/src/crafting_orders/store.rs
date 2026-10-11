@@ -24,10 +24,15 @@ pub(crate) fn all(db: &Database) -> Result<Vec<Order>, String> {
 }
 
 pub(crate) fn load(db: &Database, id: u64) -> Result<Order, String> {
-    all(db)?
-        .into_iter()
-        .find(|order| order.id == id)
-        .ok_or_else(|| "order not found".into())
+    let txn = db.begin_read().map_err(|e| e.to_string())?;
+    let table = txn
+        .open_table(ORDERS)
+        .map_err(|e| format!("load order {id}: {e}"))?;
+    let row = table
+        .get(id)
+        .map_err(|e| e.to_string())?
+        .ok_or("order not found")?;
+    bitcode::decode(row.value()).map_err(|e| format!("decode order {id}: {e}"))
 }
 
 /// Order, inventories and mail commit together. Stale reads never publish changes.

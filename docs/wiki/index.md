@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
+
 - [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.
