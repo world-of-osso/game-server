@@ -276,3 +276,17 @@ fn rated_pairing_never_manufactures_a_result_or_currency() {
         );
     }
 }
+
+#[test]
+fn new_pvp_progress_does_not_invent_rated_or_season_cap_numbers() {
+    let state = PlayerPvpState::default();
+    let snapshot = build_pvp_snapshot(&state);
+    assert!(
+        snapshot
+            .brackets
+            .iter()
+            .all(|bracket| bracket.rating.is_none())
+    );
+    assert!(snapshot.conquest_max.is_none());
+    assert_eq!(snapshot.honor_max, 15000);
+}
