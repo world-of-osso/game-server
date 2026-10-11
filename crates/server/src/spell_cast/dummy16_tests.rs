@@ -150,8 +150,8 @@ fn dummy16_arcane_power_mana_discount_requires_native_rank() {
         let target = h.npc;
         execute(&mut h, 133, Some(target));
         let spent = before - h.app.world().get::<Mana>(h.caster).unwrap().current;
-        //133's native2% base-mana cost;12042s2=-30% gated by343208.
-        assert_eq!(spent, if ranked { 140.0 } else { 200.0 });
+        //133's native1% base-mana cost;12042s2=-30% gated by343208.
+        assert_eq!(spent, if ranked { 70.0 } else { 100.0 });
     }
 }
 #[test]
@@ -245,7 +245,7 @@ fn dummy16_riptide_grants_two_capped_tidal_uses_not_double_cast_speed() {
             .get::<shared::casting::CastState>(caster)
             .unwrap()
             .duration;
-        assert!((duration - 2.5 * 0.8).abs() < 0.001);
+        assert!((duration - 2.0 * 0.8).abs() < 0.001);
         h.advance(50);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert_eq!(tidal_stacks(&h), remaining);
