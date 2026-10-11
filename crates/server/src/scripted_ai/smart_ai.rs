@@ -24,6 +24,13 @@ use rusqlite::{Connection, OpenFlags};
 
 use super::{CreatureAi, Ctx};
 
+#[path = "smart_paths.rs"]
+mod paths;
+
+#[cfg(test)]
+#[path = "smart_escort_tests.rs"]
+mod escort_tests;
+
 // `SMART_EVENT` (SmartScriptMgr.h).
 const EVENT_UPDATE_IC: u32 = 0;
 const EVENT_AGGRO: u32 = 4;
@@ -66,19 +73,27 @@ pub(crate) struct SmartEvent {
     pub action_type: u32,
     pub action_params: [u32; 7],
     pub target_type: u32,
+    pub target_params: [u32; 4],
+    pub target_position: [f32; 4],
 }
 
 /// Creature entry -> its SmartAI rows, by id.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct SmartScripts(pub HashMap<u32, Arc<Vec<SmartEvent>>>);
+pub(crate) struct SmartScripts(
+    pub HashMap<u32, Arc<Vec<SmartEvent>>>,
+    HashMap<u32, Arc<Vec<SmartEvent>>>,
+    HashMap<u32, Arc<paths::WaypointPath>>,
+);
 
 const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.event_phase_mask, \
      s.event_chance, s.event_flags, s.event_param1, s.event_param2, s.event_param3, s.event_param4, \
      s.event_param5, s.action_type, s.action_param1, s.action_param2, s.action_param3, \
-     s.action_param4, s.action_param5, s.action_param6, s.action_param7, s.target_type \
-     FROM tdb_smart_scripts s \
-     JOIN content_creature_template t ON t.entry = s.entryorguid AND t.AIName = 'SmartAI' \
-     WHERE s.source_type = 0 AND s.entryorguid > 0 ORDER BY s.entryorguid, s.id";
+     s.action_param4, s.action_param5, s.action_param6, s.action_param7, s.target_type, \
+     s.source_type, s.target_param1, s.target_param2, s.target_param3, s.target_param4, \
+     s.target_x, s.target_y, s.target_z, s.target_o FROM tdb_smart_scripts s \
+     WHERE s.source_type = 9 OR (s.source_type = 0 AND s.entryorguid > 0 AND EXISTS \
+     (SELECT 1 FROM content_creature_template t WHERE t.entry=s.entryorguid AND t.AIName='SmartAI')) \
+     ORDER BY s.entryorguid, s.id";
 
 pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
@@ -87,6 +102,7 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
         let int = |index: usize| row.get::<_, u32>(index);
         Ok((
             int(0)?,
+            int(21)?,
             SmartEvent {
                 id: int(1)?,
                 link: int(2)?,
@@ -106,13 +122,21 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
                     int(19)?,
                 ],
                 target_type: int(20)?,
+                target_params: [int(22)?, int(23)?, int(24)?, int(25)?],
+                target_position: [row.get(26)?, row.get(27)?, row.get(28)?, row.get(29)?],
             },
         ))
     })?;
     let mut scripts: HashMap<u32, Vec<SmartEvent>> = HashMap::new();
+    let mut lists: HashMap<u32, Vec<SmartEvent>> = HashMap::new();
     for row in rows {
-        let (entry, event) = row?;
-        scripts.entry(entry).or_default().push(event);
+        let (entry, source, event) = row?;
+        let destination = if source == 9 {
+            &mut lists
+        } else {
+            &mut scripts
+        };
+        destination.entry(entry).or_default().push(event);
     }
     let rows: Vec<&SmartEvent> = scripts.values().flatten().collect();
     let unmodelled = rows
@@ -147,6 +171,11 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
             .into_iter()
             .map(|(entry, events)| (entry, Arc::new(events)))
             .collect(),
+        lists
+            .into_iter()
+            .map(|(entry, events)| (entry, Arc::new(events)))
+            .collect(),
+        paths::load_waypoint_paths(&conn)?,
     ))
 }
 
@@ -183,6 +212,16 @@ pub(crate) struct SmartAi {
     states: Vec<EventState>,
     phase: u32,
     boss: Option<super::boss_ai::BossAi>,
+    stored_targets: HashMap<u32, Vec<Entity>>,
+    timed_list: Option<TimedList>,
+    escort: Option<paths::EscortPath>,
+}
+
+struct TimedList {
+    events: Arc<Vec<SmartEvent>>,
+    index: usize,
+    timer_ms: u32,
+    invoker: Option<Entity>,
 }
 
 /// The SmartAI of a creature of `entry`, if it has rows.
@@ -195,6 +234,9 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         states,
         phase: 0,
         boss: super::wailing_caverns::boss_ai(world, creature),
+        stored_targets: HashMap::new(),
+        timed_list: None,
+        escort: None,
     }))
 }
 
@@ -289,6 +331,12 @@ impl SmartAi {
                     self.process_action(ctx, index, invoker);
                 }
             }
+            19 | 20 => {
+                if event.event_params[0] == 0 || event.event_params[0] == spell {
+                    self.recalc_timer(index, event.event_params[1], event.event_params[2]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
             EVENT_SPELLHIT => {
                 let [hit_spell, _school, cooldown_min, cooldown_max, _] = event.event_params;
                 if hit_spell == 0 || hit_spell == spell {
@@ -321,22 +369,40 @@ impl SmartAi {
             return;
         }
         self.states[index].ignore_chance_roll = false;
+        if !self.execute_action(ctx, &event, invoker) {
+            self.recalc_timer(index, 1, 1);
+            self.states[index].run_once = false;
+            self.states[index].ignore_chance_roll = true;
+            return;
+        }
+        if event.link != 0 && event.link != event.id {
+            if let Some(linked) = self.events.iter().position(|e| e.id == event.link) {
+                self.process_event(ctx, linked, invoker, 0);
+            }
+        }
+    }
+
+    fn execute_action(
+        &mut self,
+        ctx: &mut Ctx,
+        event: &SmartEvent,
+        invoker: Option<Entity>,
+    ) -> bool {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
-            TARGET_ACTION_INVOKER => invoker.into_iter().collect(),
+            TARGET_ACTION_INVOKER | 16 => invoker.into_iter().collect(),
+            12 => self
+                .stored_targets
+                .get(&event.target_params[0])
+                .cloned()
+                .unwrap_or_default(),
             _ => Vec::new(),
         };
         match event.action_type {
             ACTION_TALK => ctx.talk(event.action_params[0] as u8),
             ACTION_CAST => {
-                if !Self::cast_targets(ctx, &event, targets) {
-                    // `SmartScript::RetryLater`: retry next tick, retaining the chance roll.
-                    self.recalc_timer(index, 1, 1);
-                    self.states[index].run_once = false;
-                    self.states[index].ignore_chance_roll = true;
-                    return;
-                }
+                return Self::cast_targets(ctx, event, targets);
             }
             ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
             ACTION_CALL_KILLEDMONSTER => {
@@ -354,13 +420,104 @@ impl SmartAi {
                     ctx.kill_self();
                 }
             }
+            64 => {
+                self.stored_targets.insert(event.action_params[0], targets);
+            }
+            80 => self.start_timed_list(ctx, event.action_params[0], invoker),
+            83 => {
+                for target in targets {
+                    if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(target)
+                    {
+                        flags.0 &= !u64::from(event.action_params[0]);
+                    }
+                }
+            }
+            53 => self.start_path(ctx, event, invoker),
             _ => {}
         }
-        if event.link != 0 && event.link != event.id {
-            if let Some(linked) = self.events.iter().position(|e| e.id == event.link) {
-                self.process_event(ctx, linked, invoker, 0);
+        true
+    }
+
+    fn start_timed_list(&mut self, ctx: &Ctx, id: u32, invoker: Option<Entity>) {
+        let events = ctx.world.resource::<SmartScripts>().1.get(&id).cloned();
+        let Some(events) = events else {
+            warn!(id, "SmartAI timed action list is absent");
+            return;
+        };
+        let timer_ms = events.first().map_or(0, |row| row.event_params[0]);
+        self.timed_list = Some(TimedList {
+            events,
+            index: 0,
+            timer_ms,
+            invoker,
+        });
+    }
+
+    fn update_timed_list(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        let Some(mut list) = self.timed_list.take() else {
+            return;
+        };
+        if list.timer_ms > diff_ms {
+            list.timer_ms -= diff_ms;
+            self.timed_list = Some(list);
+            return;
+        }
+        while let Some(event) = list.events.get(list.index) {
+            if !self.execute_action(ctx, event, list.invoker) {
+                list.timer_ms = 1;
+                self.timed_list = Some(list);
+                return;
+            }
+            list.index += 1;
+            let Some(next) = list.events.get(list.index) else {
+                return;
+            };
+            list.timer_ms = next.event_params[0];
+            if list.timer_ms > 0 {
+                self.timed_list = Some(list);
+                return;
             }
         }
+    }
+
+    fn start_path(&mut self, ctx: &mut Ctx, event: &SmartEvent, invoker: Option<Entity>) {
+        let path_id = event.action_params[1];
+        let path = ctx
+            .world
+            .resource::<SmartScripts>()
+            .2
+            .get(&path_id)
+            .cloned();
+        let Some(path) = path else {
+            warn!(path_id, "SmartAI waypoint path is absent");
+            return;
+        };
+        self.escort = Some(paths::EscortPath {
+            path_id,
+            path,
+            index: 0,
+        });
+        self.move_to_waypoint(ctx);
+        if invoker.is_some_and(|entity| {
+            ctx.world
+                .get::<shared::components::Player>(entity)
+                .is_some()
+        }) {
+            if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(ctx.me) {
+                flags.0 = 0;
+            }
+        }
+    }
+
+    fn move_to_waypoint(&self, ctx: &mut Ctx) {
+        let Some(escort) = &self.escort else {
+            return;
+        };
+        let Some(node) = escort.path.nodes.get(escort.index) else {
+            return;
+        };
+        ctx.set_walk(ctx.me, escort.path.walk);
+        ctx.move_point(ctx.me, node.id, node.position);
     }
 }
 
@@ -399,6 +556,7 @@ impl CreatureAi for SmartAi {
     /// events (SmartScript.cpp:3777-3850), after refreshing the victim.
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         ctx.update_victim();
+        self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
             let event = &self.events[index];
             if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
