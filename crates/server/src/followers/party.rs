@@ -215,6 +215,10 @@ fn join_party(
             world.get::<shared::components::EquipmentAppearance>(owner),
         ),
         dungeon_difficulty: FOLLOWER_DIFFICULTY,
+        raid_difficulty: world
+            .get::<crate::maps::RaidDifficulty>(owner)
+            .copied()
+            .unwrap_or_default(),
     };
     let mut online = OnlineView::from([(id, online_player)]);
     let companion_roles: Vec<_> = members
@@ -355,6 +359,8 @@ mod copy_tests {
                     group: None,
                     leader: 30,
                     difficulty_id: 205,
+                    raid_difficulty: Default::default(),
+                    raid_group: false,
                 },
                 crate::maps::instances::Now {
                     elapsed: 0.0,
@@ -388,6 +394,10 @@ mod copy_tests {
                 },
                 copy,
                 DungeonDifficulty(205),
+                crate::maps::RaidDifficulty {
+                    primary: 15,
+                    legacy: 4,
+                },
             ))
             .id();
         let members = profiles
@@ -441,6 +451,15 @@ mod copy_tests {
                 .resource::<GroupRegistry>()
                 .dungeon_difficulty_of(30),
             Some(205)
+        );
+        assert_eq!(
+            app.world()
+                .resource::<GroupRegistry>()
+                .raid_difficulty_of(30),
+            Some(crate::maps::RaidDifficulty {
+                primary: 15,
+                legacy: 4,
+            })
         );
         assert!(teleport_to(
             app.world_mut(),

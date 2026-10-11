@@ -47,6 +47,7 @@ impl Follower {
             level,
             portrait: Default::default(),
             dungeon_difficulty: catalog::FOLLOWER_DIFFICULTY,
+            raid_difficulty: Default::default(),
         }
     }
 }

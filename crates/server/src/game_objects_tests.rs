@@ -155,6 +155,7 @@ fn follower_normal_population_spawns_normal_gameobjects_in_205_copy() {
         },
         spawn_difficulties: vec![1, 2, 23],
         chair: None,
+        quest_object: None,
     };
     let mut mythic = normal.clone();
     mythic.guid = 2;
