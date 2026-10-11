@@ -62,6 +62,9 @@ pub(super) fn conflagrate(world: &mut World, caster: Entity, target: Entity, dep
 ///6353's445465 condition selects the named Immolate/Wither periodic child.
 ///Only base periodic effect0 is established here, not optional vulnerabilities.
 pub(super) fn apply_soul_fire_dot(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    if !landed_damage(world, caster, target, SOUL_FIRE) {
+        return;
+    }
     let spell_id = if crate::auras::has_aura(world, caster, WITHER_TALENT) {
         WITHER_DOT
     } else {
@@ -73,6 +76,9 @@ pub(super) fn apply_soul_fire_dot(world: &mut World, caster: Entity, target: Ent
 ///50842 names55078 unless learned212744 selects the replacement branch.
 ///The referenced rank has no local store row: do not synthesize a passive aura.
 pub(super) fn apply_blood_plague(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    if !landed_damage(world, caster, target, BLOOD_BOIL) {
+        return;
+    }
     let replaced = world
         .get::<crate::class_progression::KnownSpells>(caster)
         .is_some_and(|known| known.contains(BLOOD_BOIL_REPLACEMENT));
@@ -82,11 +88,27 @@ pub(super) fn apply_blood_plague(world: &mut World, caster: Entity, target: Enti
 }
 
 ///195182s3 grants charges to explicitly named195181; normal stacking caps them.
-pub(super) fn grant_bone_shield(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+pub(super) fn grant_bone_shield(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    if !landed_damage(world, caster, target, MARROWREND) {
+        return;
+    }
     let charges = script_effect_value(world, caster, MARROWREND, 2) as u32;
     for _ in 0..charges {
         apply_named_aura(world, caster, caster, BONE_SHIELD, u32::MAX);
     }
+}
+
+///The production hit ledger includes fully absorbed hits but excludes immunity.
+fn landed_damage(world: &World, caster: Entity, target: Entity, spell_id: u32) -> bool {
+    world
+        .resource::<spell_cast::ResolvingHits>()
+        .0
+        .last()
+        .is_some_and(|frame| {
+            frame.caster == caster
+                && frame.spell_id == spell_id
+                && frame.damage.iter().any(|(unit, _)| *unit == target)
+        })
 }
 
 fn apply_named_aura(world: &mut World, caster: Entity, target: Entity, spell_id: u32, mask: u32) {
