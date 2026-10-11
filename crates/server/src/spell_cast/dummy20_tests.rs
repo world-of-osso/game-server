@@ -56,21 +56,24 @@ fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_five_tick_total() {
     h.advance(45);
     let paid = damage(&h, 217200);
     assert_eq!(paid.len(), 2, "extra initial and first regular native tick");
-    let base = paid[0];
-    assert_eq!(paid[1], base);
+    assert_eq!(
+        paid,
+        vec![61, 61],
+        "85.7 AP snapshot * five authored ticks / seven native ticks, rounded"
+    );
     h.inbox.log.clear();
     apply(&mut h, caster, npc, 217200);
-    h.advance(170);
+    h.advance(250);
     let rolled = damage(&h, 217200);
     assert_eq!(
         rolled.len(),
-        4,
-        "native refresh preserves regular tick phase"
+        6,
+        "native twelve-second refresh preserves regular tick phase"
     );
     assert_eq!(
         rolled.iter().sum::<i32>(),
-        base * 8,
-        "new five-tick budget plus three unpaid old ticks"
+        732,
+        "fresh 428.5 budget plus five unpaid 61.2143 ticks, six rounded future payments"
     );
 }
 #[test]

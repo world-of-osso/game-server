@@ -8,7 +8,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ### Twentieth-batch authored totals and next-spell uses
 
-- [ ] Barbed Shot217200 preserves its native initial/regular tick schedule. Same-owner reapplication adds unpaid damage to the new s2-tick total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; cancellation before completion does not grant it.
+- [ ] Barbed Shot217200 distributes its authored s2-tick damage total over its unchanged native initial/regular schedule. Local s2=5 versus native seven ticks is reconciled by equal distribution, an inference from total and clock, not independently observed Retail tick amounts. Same-owner reapplication adds unpaid damage to the new total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; cancellation before completion does not grant it.
 - [ ] Stormkeeper191634 grants its s5 empowered-spell uses instead of the single options-row charge. Each matching completed Lightning Bolt/Chain Lightning consumes one use; unrelated spells do not. Native modifiers remain authoritative. Elemental Overload targeting/variants remain uncertified.
 
 Tests: `spell_cast/dummy20_tests.rs`. Local Mainline12.1.0.69933 and TDB1210 only; [coverage](../spell-dummy20-coverage.md), [runtime](../wiki/systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses). Audited but unidentified Dummy fields are retained, not no-op closures.
