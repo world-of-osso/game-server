@@ -31,7 +31,7 @@ fn initialize(
     let faction = *world
         .get::<UnitFactionTemplate>(owner)
         .ok_or("follower owner has no faction")?;
-    let (stats, pools) = class_stats(world, &profile, level)?;
+    let (stats, pools, passives) = class_stats(world, &profile, level)?;
     let mana = Mana {
         current: stats.base_mana,
         max: stats.base_mana,
@@ -50,6 +50,7 @@ fn initialize(
             UnitSummonedBy(owner.to_bits()),
             crate::creature_ai::FollowOwner::new(owner),
         ));
+    crate::auras::sync_passives(world, unit, crate::auras::AuraSource::KnownSpell, &passives);
     crate::spell_cast::creature_cast(world, unit, 458324, Some(unit), true)
         .map_err(|error| format!("authored Follower aura failed: {error:?}"))?;
     if form != 0 {
@@ -59,11 +60,11 @@ fn initialize(
     Ok(())
 }
 
-fn class_stats(
+pub(super) fn class_stats(
     world: &World,
     profile: &Profile,
     level: u8,
-) -> Result<(crate::stats::CharacterStats, PowerPools), String> {
+) -> Result<(crate::stats::CharacterStats, PowerPools, Vec<u32>), String> {
     let classes = world.resource::<crate::spell_info::ClassSpells>();
     let class = classes
         .classes
@@ -95,5 +96,11 @@ fn class_stats(
         table,
         table.class_powers(class.class_id, &class.power_types),
     );
-    Ok((stats, pools))
+    let passives = spec
+        .spells
+        .iter()
+        .filter(|spell| spell.passive && spell.required_level <= u32::from(level))
+        .map(|spell| spell.spell_id)
+        .collect();
+    Ok((stats, pools, passives))
 }

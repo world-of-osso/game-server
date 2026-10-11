@@ -101,8 +101,29 @@ fn damage_follower_casts_real_fireball_and_stops_after_enemy_death() {
 
 #[test]
 fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
-    let mut h = crate::spell_cast::test_harness::harness(vec![], &[585, 2061], 5).unwrap();
-    let healer = spawn_follower(&mut h, profile(215011, GroupRole::Healer, 585, 2061));
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[585, 2061, 137031], 5).unwrap();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
+    let mut holy = profile(215011, GroupRole::Healer, 585, 2061);
+    holy.class_id = 5;
+    holy.spec_id = 257;
+    let (_, _, passives) = super::spawning::class_stats(h.app.world(), &holy, 10).unwrap();
+    assert!(
+        passives.contains(&137031),
+        "Holy Priest's authored passive activates Flash Heal's native cost"
+    );
+    let healer = spawn_follower(&mut h, holy);
+    crate::auras::sync_passives(
+        h.app.world_mut(),
+        healer,
+        crate::auras::AuraSource::KnownSpell,
+        &passives,
+    );
     let injured = spawn_follower(&mut h, profile(209059, GroupRole::Dps, 0, 0));
     h.app
         .world_mut()
