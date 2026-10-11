@@ -313,6 +313,46 @@ fn class_completeness_native80_rune_immune_target_spends_neither_runes_nor_runic
     assert_eq!(h.power(PowerType::RunicPower), 0.0);
 }
 
+fn apply_native_immunity(h: &mut Harness, id: u32) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.npc,
+            target: h.npc,
+            spell_id: id,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+}
+
+#[test]
+fn class_completeness_native80_shadowfrost_partial_immunity_still_generates_runic() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[343294, 137005], 6, 252);
+    h.set_power(PowerType::RunicPower, 0.0);
+    apply_native_immunity(&mut h, 7940); // Authored Frost16, not Shadow32.
+    h.cast_and_deliver(343294, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::Runes), 5.0);
+    assert_eq!(h.power(PowerType::RunicPower), 100.0);
+    assert!(h.health(h.npc) < 5000.0);
+}
+
+#[test]
+fn class_completeness_native80_shadowfrost_combined_immunity_prevents_rune_costs() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[343294, 137005], 6, 252);
+    h.set_power(PowerType::RunicPower, 0.0);
+    apply_native_immunity(&mut h, 7940);
+    apply_native_immunity(&mut h, 7743); // Separate native Shadow32 makes full48.
+    h.cast_and_deliver(343294, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::Runes), 6.0);
+    assert_eq!(h.power(PowerType::RunicPower), 0.0);
+    assert_eq!(h.health(h.npc), 5000.0);
+}
+
 #[test]
 fn class_completeness_native80_rune_rejection_never_grants_runic_power() {
     use shared::components::PowerType;
