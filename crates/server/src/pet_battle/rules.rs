@@ -94,7 +94,8 @@ pub(super) fn damages_enemy_team(ability: u32) -> bool {
 }
 
 /// Recursive admission: every turn and referenced aura must be executable before RNG draws.
-/// Reactive events remain excluded except Leech Life383's own post-hit healing turn.
+/// Reactive events remain excluded except bounded Leech Life383 healing and
+/// Nevermore738/Spell Gulp1859 wearer-owned ability-use callbacks.
 pub fn validate_ability(catalog: &Catalog, ability: u32) -> Result<(), String> {
     validate_ability_graph(catalog, ability, &mut BTreeSet::new())
 }
