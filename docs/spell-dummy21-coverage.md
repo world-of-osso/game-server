@@ -36,7 +36,7 @@ Prior Death Strike history, Karma, Pandemic, Lifebloom near-expiry, Singularity 
 |4e394a0|First GREEN attempt blocked by helper visibility compilation; not behavioral proof.|
 |1aef6ea|Visibility corrected; targeted `cargo test --locked -p server --bin game-server dummy21`:8/8 GREEN, warning-free.|
 
-Final requested `spell_cast` gate, fmt/check and independent artifact verification are pending. Do not infer full-server/live/full-rotation acceptance from targeted tests.
+Final integrated docs revision **ea6a007** (code unchanged from **1aef6ea**): requested `cargo test --locked -p server --bin game-server spell_cast` ran **ONCE,435/435**, including all eight batch21 tests; exit0, compiler warning-free. `cargo fmt --all --check` and `cargo check --locked -p server --bin game-server` exit0, warning-free. Later edits are docs/proof only and do not invalidate those commands. Changed-Rust readability audited manually; metrics executable unavailable. Main-thread command/artifact checks only; no independent verifier or full-server/live/full-rotation acceptance claimed.
 
 All Cargo verification pins the previous batch's immutable local shared-protocol44b2b0f with `--config patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy20-2026-10-11/shared-protocol"`. Pool quest-wire drift is not silently integrated or fixed here.
 
