@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import nine pinned Retail profession reference tables into an explicit staging DB.
+"""Import pinned Retail profession reference tables into an explicit staging DB.
 
 The column names describe the DBD layout, not an inferred operation evaluator.
 Unknown DBD semantics remain unknown; importing curves does not specify their inputs.
@@ -13,7 +13,7 @@ from pathlib import Path
 import sqlite3
 
 import db2_casc
-from crafting_data import BUILD, Table, validate_rows
+from crafting_data import BUILD, Table, decode_csv, validate_rows
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,12 @@ TABLES = (
     SourceTable(Table('crafting_order', '4529122.db2', 0x05F8699D, 2047,
         '1667dd0855db6d5c7790a452e7bf0114bdc577b531e1e419e933247d8766b0ce'), 2047,
         columns('ID SkillLineAbilityID CraftingOrderHouseID Field_10_0_2_46479_002')),
+    SourceTable(Table('currency_types', 'CurrencyTypes.csv', None, 1523,
+        'e29a73b88b0da1e9846ff453411d5d8a274986f64ab3223bc80bc12e68c9f61a'), 1523,
+        (('ID', 'INTEGER'), ('Name_lang', 'TEXT'), ('Description_lang', 'TEXT'),
+         ('InventoryIconFileID', 'INTEGER'), ('MaxQty', 'INTEGER'),
+         ('MaxEarnablePerWeek', 'INTEGER'), ('AwardConditionID', 'INTEGER'),
+         ('MaxQtyWorldStateID', 'INTEGER'), ('Flags_0', 'INTEGER'), ('Flags_1', 'INTEGER'))),
 )
 
 
@@ -69,6 +75,9 @@ def decode_source(table, path):
     digest = hashlib.sha256(raw).hexdigest()
     if digest != pin.sha256:
         raise ValueError(f'{path}: SHA-256 {digest}, expected {pin.sha256}')
+    if pin.layout is None:
+        rows = decode_csv(pin, raw, table.columns)
+        return validate_rows(pin, rows, table.columns)
     header = db2_casc.read_header(raw)
     if header['layout_hash'] != pin.layout or header['record_count'] != table.record_count:
         raise ValueError(f'{path}: incompatible layout or record count')
@@ -89,8 +98,9 @@ def load_sources(source_dir):
         pin = table.pin
         loaded[pin.name] = decode_source(table, Path(source_dir) / pin.filename)
         report.append({'table': pin.name, 'source': pin.filename, 'build': BUILD,
-            'layout': f'{pin.layout:08X}', 'records': table.record_count,
-            'rows': len(loaded[pin.name]), 'sha256': pin.sha256, 'source_kind': 'local-casc'})
+            'layout': f'{pin.layout:08X}' if pin.layout is not None else [name for name, _ in table.columns],
+            'records': table.record_count, 'rows': len(loaded[pin.name]), 'sha256': pin.sha256,
+            'source_kind': 'local-casc' if pin.layout is not None else 'local-casc-export'})
     return loaded, report
 
 
