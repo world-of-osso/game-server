@@ -12,6 +12,7 @@ mod batch17;
 mod batch19;
 mod batch20;
 mod batch21;
+mod batch22;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -37,6 +38,7 @@ pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
 };
 pub(super) use batch21::berserk_combo_bonus;
+pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch19::effect_enabled(world, caster, spell, index)

@@ -1,5 +1,13 @@
 # Class spell scripts
 
+## Twenty-second batch: native Rewind non-raid healing
+
+- [x] Rewind363534s4 increases its existing native healing by200% when its caster is outside a raid; solo and party casters receive three times the native amount, raid casters retain it. Ordinary heal cap/overheal handling remains authoritative.
+- [x] Mind Flay15407s4 is the authored six-tick count, not an extra resource grant: native4500ms/750ms pays six300-raw Insanity ticks. Cancellation stops target damage and self resource; cap/overflow and friendly rejection remain native.
+- [ ] Rewind's five-second incoming-damage history, historical30% amount/distribution and376210 rank remain unimplemented. Native0.4 SP per tick is an existing minimum, not a replacement for the historical component. Neither spell's full talent/haste/rotation parity is claimed.
+
+Sources and exact deferred-root reasons: [batch22](../spell-dummy22-coverage.md). Mainline12.1.0.69933 local data only; no generic Dummy no-op or guessed history.
+
 Spell-specific behaviours beyond generic Retail effects live in `crates/server/src/spell_cast/scripts.rs` and `crates/server/src/auras/scripts.rs`. Generic dispatch alone is not gameplay coverage. See [spell casting](../wiki/systems/spell-casting.md).
 
 Generic guardian actors and native damage transfer have a separate [contract](spell-guardians.md) and [all40-spec/source boundary inventory](../spell-guardians-coverage.md). They do not imply closure of unknown summon Dummy roots.
