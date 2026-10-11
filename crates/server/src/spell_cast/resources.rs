@@ -12,6 +12,7 @@ const BLACK_POWDER: u32 = 319175;
 const DISPATCH: u32 = 2098;
 const EVISCERATE: u32 = 196819;
 const ARCANE_BARRAGE: u32 = 44425;
+const ARCANE_BLAST: u32 = 30451;
 const ARCANE_CHARGE: u32 = 36032;
 
 pub(super) fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
@@ -75,6 +76,7 @@ pub(super) fn snapshot(
         // Native descriptions explicitly multiply m1 by combo points spent.
         ENVENOM | BLACK_POWDER | DISPATCH | EVISCERATE => combo,
         ARCANE_BARRAGE => barrage_multiplier(world, caster),
+        ARCANE_BLAST => super::scripts::blast_multiplier(world, caster, 0),
         _ => return spell,
     };
     scale_effect(&mut spell, 0, multiplier);

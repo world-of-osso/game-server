@@ -2,6 +2,14 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Sixteenth batch: low-count rank and charge consumers
+
+[Contract](../../specs/spell-dummy-scripts.md#sixteenth-batch-low-count-rank-and-charge-contracts). `scripts/batch16.rs` binds Holy Light's231642/88852 gain, Holy/Ret Judgment's315867/220637 gain, Crusader's Might196926's separate Holy Shock/Crusader Strike cooldown reductions and Riptide51564's named53390 grant. Rank fixtures pin KnownSpells separately from loaded child rows. Crusader's Might covers Holy Judgment275773 only; other Judgment variants and owned-mark/secondary/talent mechanics stay open.
+
+Arcane Blast's successful-launch resource clone freezes36032s1 damage from pre-gain charges. Cast time and mana admission/payment separately read36032s4/s5. Arcane Power's343208 gate applies12042s2 to mana only; no generic aura72 implementation is claimed. Tidal Waves stacks represent future uses, so53390 modifiers retain their per-use magnitude and completed matching casts consume one accumulated stack before removing the final native charge. No guardian module changes.
+
+Targeted RED recorded; GREEN/final census proof pending. Detailed capability/all40 ledger will supersede this pending status.
+
 ## Fifteenth batch: native health, weapon ranks and delayed hits
 
 [Contract](../../specs/spell-dummy-scripts.md#fifteenth-batch-named-health-weapon-rank-and-delayed-hit-contracts), [capabilities/proof/all40](../../spell-dummy15-coverage.md). Eight local consumers: Vampiric Blood's30% max health, Frost Strike variable609's mutually exclusive weapon children, ranked Rising Sun Kick wounds, Karma's50%-max-health shield, Combustion/Pyromaniac's crit snapshot, High Tide's jump-loss removal, Beacon's owned effective direct group-heal copy and delayed Sigil hit/bleed. Existing High Tide charged modifiers already consume once per completed cast; triggered casts are not valid charge-spending fixtures. No generic Dummy/no-op or guessed actor/redirect action.

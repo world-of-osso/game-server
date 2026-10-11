@@ -7,6 +7,7 @@ mod batch12;
 mod batch13;
 mod batch14;
 mod batch15;
+mod batch16;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -25,6 +26,7 @@ pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on
 pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
+pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch11::effect_enabled(world, caster, spell, index)
@@ -102,6 +104,7 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT, 0) => Some(batch16::energize_judgment),
         (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
@@ -280,6 +283,9 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
+        batch16::HOLY_SHOCK | batch16::CRUSADER_STRIKE => Some(batch16::reduce_holy_judgment),
+        batch16::RIPTIDE => Some(batch16::grant_tidal_waves),
         batch13::BESTIAL_WRATH => Some(batch13::strike_with_owned_pet),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
