@@ -1412,7 +1412,10 @@ pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
 /// A dead summon goes with its corpse (`TempSummon::Update`: `DEAD` → `UnSummon`).
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
-    mut corpses: Query<(Entity, &mut Corpse, Has<crate::zones::TempSummon>)>,
+    mut corpses: Query<
+        (Entity, &mut Corpse, Has<crate::zones::TempSummon>),
+        Without<crate::loot::PendingGroupLoot>,
+    >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
@@ -1565,7 +1568,10 @@ pub(crate) fn respawn_system(
             Has<crate::spawn_pools::PooledSpawn>,
             Option<&crate::vignettes::CreatureVignette>,
         ),
-        Without<crate::zones::TempSummon>,
+        (
+            Without<crate::zones::TempSummon>,
+            Without<crate::loot::PendingGroupLoot>,
+        ),
     >,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,

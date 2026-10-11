@@ -16,7 +16,7 @@ use shared::protocol::{
     GroupInvitePrompt, GroupPortraitAppearance, GroupRosterSnapshot, GroupUninviteIntent,
     LeaveGroup, MinimapPing, MinimapPingRequest, PromoteGroupLeader, RaidTargetIcons,
     ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupAssistant, SetGroupLootMethod,
-    SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
+    SetGroupLootThreshold, SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -59,6 +59,7 @@ struct GroupCommandReceivers<'w, 's> {
     roles: Receivers<'w, 's, SetGroupRole>,
     assistants: Receivers<'w, 's, SetGroupAssistant>,
     loot: Receivers<'w, 's, SetGroupLootMethod>,
+    loot_threshold: Receivers<'w, 's, SetGroupLootThreshold>,
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
     countdowns: Receivers<'w, 's, GroupCountdownRequest>,
@@ -217,6 +218,9 @@ fn apply_commands(
     }
     for (from, msg) in drain(&mut rx.loot, players) {
         effects.extend(registry.set_loot_method(from, msg.method));
+    }
+    for (from, msg) in drain(&mut rx.loot_threshold, players) {
+        effects.extend(registry.set_loot_threshold(from, msg.quality));
     }
     for (from, _) in drain(&mut rx.ready_starts, players) {
         effects.extend(registry.start_ready_check(from, online));
@@ -388,6 +392,7 @@ fn empty_roster() -> GroupRosterSnapshot {
         total_count: 0,
         members: Vec::new(),
         loot_method: shared::loot::LootMode::PersonalLoot,
+        loot_threshold: 2,
     }
 }
 
