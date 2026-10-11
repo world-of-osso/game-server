@@ -97,7 +97,7 @@ fn class_completeness_native_mass_resurrection_offers_to_group_corpse_not_ghost_
     let percent = spell
         .effects
         .iter()
-        .find(|effect| effect.effect == 18)
+        .find(|effect| crate::death::resurrection::is_resurrection(effect))
         .unwrap()
         .base_points;
     assert_eq!(
