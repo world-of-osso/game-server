@@ -154,4 +154,4 @@ fn vector(fields: &Fields, name: &str) -> Result<[f32; 3], String> {
 
 #[cfg(test)]
 #[path = "housing_catalog_tests.rs"]
-mod tests;
+pub(crate) mod tests;

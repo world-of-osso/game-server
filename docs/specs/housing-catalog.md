@@ -38,7 +38,9 @@ A bounded redemption candidate is authenticated by vendor252312/item245259/decor
 
 Only an owner inside that house edits. Place consumes stored quantity, remove restores it, move/rotate preserve quantity, nonfinite transforms are refused. Account ownership/storage/layouts survive database reopen. Visitors require explicit owner HouseAccessAnyone configuration, receive the same saved layout, cannot edit and never receive the owner's private account storage. Unset access remains unknown and grants no visitor permission.
 
-These are persistence/domain contracts, not proof of live neighborhood admission, cornerstone interaction, models, native editor or networking integration.
+The runtime service binds requests to authenticated account/character/player links. Neighborhood entry reserves the authored copy before the existing transfer handshake. Purchase additionally requires authoritative presence in that neighborhood and within the server's 5-unit gameobject interaction distance of its cornerstone; nonfinite positions cannot satisfy proximity. Accepted payment updates persisted gold and the live replication queue. Plot lists overlay durable ownership without exposing account IDs. Missing first-house grant data explicitly refuses house entry instead of creating substitute geometry.
+
+Native controls, playable terrain, component placement, item collection integration, relog admission, editor networking and visitor convergence still require end-to-end proof. Persistence/domain tests alone do not certify them.
 
 ## Behavioral proof
 
