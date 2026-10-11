@@ -16,7 +16,8 @@ through global record offsets and the virtual concatenation of all section strin
 blocks. Zero-filled encrypted sections are reported and skipped; explicit selected
 IDs must all resolve from readable records. Declared inline uint32 arrays are
 supported. Sparse + Index (flags 0x5) supports inline strings and schema-declared
-numeric arrays/types; other sparse variants fail explicitly.
+numeric arrays/types; other sparse variants fail explicitly. Non-sparse inline arrays
+use their declared count and metadata element width (8, 16 or 32 bits).
 Tables with localized strings are read from their enUS copy (casc_locale.py).
 """
 
@@ -234,12 +235,13 @@ def decode(
                 fields[index] = read_global_string(string_blocks, string_offset)
             for index, count in inline_arrays.items():
                 bit_offset, bit_size, _, compression, *_ = infos[index]
-                if compression != COMPRESSION_NONE or bit_size != count * 32:
+                width, remainder = divmod(bit_size, count)
+                if compression != COMPRESSION_NONE or remainder or width not in (8, 16, 32):
                     raise ValueError(
-                        f"field {index}: expected inline array of {count} uint32 values"
+                        f"field {index}: expected inline array of {count} 8/16/32-bit values"
                     )
                 fields[index] = tuple(
-                    (bits >> (bit_offset + slot * 32)) & 0xFFFFFFFF
+                    (bits >> (bit_offset + slot * width)) & ((1 << width) - 1)
                     for slot in range(count)
                 )
             for index, info in enumerate(infos):

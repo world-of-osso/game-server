@@ -112,6 +112,21 @@ pub(crate) fn set_hidden(world: &mut World, entity: Entity, hidden: bool) {
     }
 }
 
+pub(crate) fn set_invisibility(
+    world: &mut World,
+    entity: Entity,
+    state: crate::auras::Invisibility,
+) {
+    let Some(mut index) = world.get_resource_mut::<InterestIndex>() else {
+        return;
+    };
+    index.invisibility.insert(entity, state);
+    index.dirty_targets.insert(entity);
+    if let Some(&connection) = index.connection_by_player.get(&entity) {
+        index.dirty_observers.insert(connection);
+    }
+}
+
 pub(crate) fn mark_interest_position_changed(queue: Option<&InterestDirtyQueue>, entity: Entity) {
     if let Some(queue) = queue {
         queue.mark(entity);
@@ -146,7 +161,8 @@ struct InterestIndex {
     connection_by_player: EntityHashMap<Entity>,
     dirty_targets: EntityHashSet,
     dirty_observers: EntityHashSet,
-    /// Targets no player sees (invisible units, `auras::unit_state`).
+    invisibility: EntityHashMap<crate::auras::Invisibility>,
+    /// Targets no player sees (decayed corpses).
     hidden: EntityHashSet,
     life_states: EntityHashMap<DeathState>,
 }
@@ -173,6 +189,12 @@ impl InterestIndex {
         observer.sees(entity, position, map)
             && (entity == observer.player
                 || (!self.hidden.contains(&entity)
+                    && self
+                        .invisibility
+                        .get(&observer.player)
+                        .cloned()
+                        .unwrap_or_default()
+                        .detects(&self.invisibility.get(&entity).cloned().unwrap_or_default())
                     && self.ghost_visible_to(observer.player, entity)))
     }
 
@@ -197,6 +219,7 @@ impl InterestIndex {
 
     fn remove_target(&mut self, entity: Entity) {
         self.life_states.remove(&entity);
+        self.invisibility.remove(&entity);
         if let Some(bucket) = self.target_buckets.remove(&entity) {
             let remove_bucket = self.buckets.get_mut(&bucket).is_some_and(|entities| {
                 entities.remove(&entity);
@@ -525,6 +548,8 @@ fn update_target_visibility(
     let target_state = index.life_states.get(&entity).copied().unwrap_or_default();
     let hidden = index.hidden.contains(&entity);
     let life_states = &index.life_states;
+    let invisibility = &index.invisibility;
+    let target_invisibility = invisibility.get(&entity).cloned().unwrap_or_default();
     for (&connection, observer) in index.observers.iter_mut() {
         let observer_state = life_states
             .get(&observer.player)
@@ -532,7 +557,14 @@ fn update_target_visibility(
             .unwrap_or_default();
         let visible_in_death_phase = ghost_visible(observer_state, target_state, false);
         let should_be_visible = observer.sees(entity, &position, map)
-            && (entity == observer.player || (!hidden && visible_in_death_phase));
+            && (entity == observer.player
+                || (!hidden
+                    && visible_in_death_phase
+                    && invisibility
+                        .get(&observer.player)
+                        .cloned()
+                        .unwrap_or_default()
+                        .detects(&target_invisibility)));
         apply_target_visibility_transition(
             &mut state,
             observer,

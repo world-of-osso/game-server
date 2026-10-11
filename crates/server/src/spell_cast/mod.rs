@@ -14,6 +14,10 @@
 
 pub mod area_aura;
 pub mod area_trigger;
+#[cfg(test)]
+mod class_completeness_probe;
+#[cfg(test)]
+mod class_completeness_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
 mod disenchant;
@@ -166,6 +170,7 @@ impl Plugin for SpellCastPlugin {
                     powers::update_max_powers,
                     powers::regenerate_powers,
                     runes::regenerate_runes,
+                    sync_charge_recovery,
                     advance_casts.after(crate::networking::process_player_inputs),
                     missiles::resolve_due_hits,
                     start_queued_casts,
@@ -233,7 +238,7 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    fn to_contract(&self) -> (CastFailReason, Option<String>) {
+    pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
         use CastFailReason as R;
         match self {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
@@ -330,7 +335,7 @@ impl SpellHistory {
         }
     }
 
-    fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub(crate) fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         self.spell_ready_at
             .get(&spell.id)
@@ -376,8 +381,14 @@ impl SpellHistory {
                 next_ready_at: 0.0,
             });
         state.max = max;
-        state.recharge_secs = f64::from(recharge_ms) / 1000.0;
         state.refresh(now);
+        let recharge_secs = f64::from(recharge_ms) / 1000.0;
+        if state.used > 0 && state.recharge_secs != recharge_secs {
+            // TC UpdateChargeRecoveryRate preserves completed progress, not elapsed time.
+            let ratio = recharge_secs / state.recharge_secs;
+            state.next_ready_at = now + (state.next_ready_at - now) * ratio;
+        }
+        state.recharge_secs = recharge_secs;
         Some(state)
     }
 }
@@ -385,6 +396,41 @@ impl SpellHistory {
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
     crate::auras::charge_mods(world, caster, category)
+}
+
+/// Running charge clocks follow haste/aura changes even without another cast.
+fn sync_charge_recovery(world: &mut World) {
+    let pending: Vec<(Entity, u32)> = world
+        .query::<(Entity, &SpellHistory)>()
+        .iter(world)
+        .flat_map(|(unit, history)| {
+            history
+                .charges
+                .values()
+                .filter(|state| state.used > 0)
+                .map(move |state| (unit, state.spell_id))
+        })
+        .collect();
+    for (unit, spell_id) in pending {
+        refresh_charge_recovery(world, unit, spell_id);
+    }
+}
+
+fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(spell_id)
+        .expect("pending charge spell must remain in the catalog")
+        .clone();
+    let category = spell.categories.as_ref().unwrap().charge_category;
+    let mods = charge_mods(world, unit, &spell);
+    let now = now(world);
+    let mut history = world.get_mut::<SpellHistory>(unit).unwrap();
+    let before = history.charges[&category];
+    let after = *history.charges_mut(&spell, now, mods).unwrap();
+    if before.used != after.used || before.recharge_secs != after.recharge_secs {
+        send_charges(world, unit, &after, now);
+    }
 }
 
 fn gcd_category(spell: &SpellInfo) -> u32 {
@@ -528,9 +574,14 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
         .flatten()
         .filter_map(Entity::try_from_bits)
     {
-        let player = world
-            .get::<crate::hunter_pet::HunterPet>(unit)
-            .map_or(unit, |pet| pet.owner);
+        let player = world.get::<crate::followers::Follower>(unit).map_or_else(
+            || {
+                world
+                    .get::<crate::hunter_pet::HunterPet>(unit)
+                    .map_or(unit, |pet| pet.owner)
+            },
+            |follower| follower.owner,
+        );
         if !players.contains(&player) {
             players.push(player);
         }
@@ -1148,6 +1199,11 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    if crate::gathering::is_gathering(spell) {
+        let target = explicit.ok_or(CastFailure::NoTarget)?;
+        crate::gathering::check_target(world, caster, spell, target)?;
+        return Ok(Some(target));
+    }
     let resurrects = spell
         .effects
         .iter()
@@ -1259,9 +1315,9 @@ pub(crate) fn applicable_costs(
                 .map(|health| (health.current, health.max)),
             CostPool::Power(power) => powers::power_value(world, caster, power),
         };
-        let percent = cost.power_cost_pct.max(0.0) / 100.0;
-        let amount_with = |max: f32| cost.mana_cost.max(0) as f32 + percent * max;
-        if amount_with(0.0) <= 0.0 && percent <= 0.0 {
+        let percent = cost.power_cost_pct / 100.0;
+        let amount_with = |max: f32| cost.mana_cost as f32 + percent * max;
+        if amount_with(0.0) == 0.0 && percent == 0.0 {
             continue;
         }
         let missing = match pool {
@@ -1271,21 +1327,25 @@ pub(crate) fn applicable_costs(
         let (current, max) = value.ok_or(missing.clone())?;
         // Only a percentage cost reads the base; creatures have no CharacterStats.
         let base = match pool {
-            CostPool::Power(PowerType::Mana) if percent > 0.0 => world
+            CostPool::Power(PowerType::Mana) if percent != 0.0 => world
                 .get::<CharacterStats>(caster)
                 .map(|stats| stats.base_mana)
                 .ok_or(missing.clone())?,
             _ => max,
         };
-        let amount = match SpellModOp::power_cost(cost.order_index) {
-            Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
-            None => amount_with(base),
+        let initial = amount_with(base);
+        let modified = match SpellModOp::power_cost(cost.order_index) {
+            Some(op) => modify(world, caster, spell, op, initial),
+            None => initial,
         };
-        let amount = if pool == CostPool::Power(PowerType::Mana) {
-            scripts::mana_cost(world, caster, spell, amount).max(0.0)
+        let modified = if pool == CostPool::Power(PowerType::Mana) {
+            scripts::mana_cost(world, caster, spell, modified)
         } else {
-            amount
+            modified
         };
+        // TC CalcPowerCost retains native negative generation, but modifiers
+        // cannot turn an originally positive cost into a grant or vice versa.
+        let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
         let optional = cost.optional_cost.max(0) as f32;
         let optional = if optional > 0.0 {
@@ -1300,6 +1360,14 @@ pub(crate) fn applicable_costs(
         costs.push((pool, amount, current));
     }
     Ok(costs)
+}
+
+fn preserve_cost_sign(initial: f32, modified: f32) -> f32 {
+    if (initial < 0.0) == (modified < 0.0) {
+        modified
+    } else {
+        0.0
+    }
 }
 
 fn start_cast(
@@ -1407,6 +1475,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // with a `CharmInfo`).
     if world.get::<Npc>(caster).is_some()
         && world.get::<crate::pet_control::PetCharm>(caster).is_none()
+        && world.get::<crate::followers::Follower>(caster).is_none()
     {
         return;
     }
@@ -1472,6 +1541,12 @@ fn execute_cast(
     let prepared = resources::snapshot(world, caster, spell, &costs);
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
+    const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
+    let discounted_player =
+        world.get::<Player>(caster).is_some() && attributes(spell, 1) & DISCOUNT_POWER_ON_MISS != 0;
+    let primary_missed =
+        explicit.is_some_and(|target| !plan.iter().any(|effect| effect.units.contains(&target)));
+    let costs = discount_missed_rune_costs(costs, discounted_player && primary_missed);
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
     spend_costs(world, caster, &costs);
@@ -1516,6 +1591,18 @@ fn execute_cast(
         crate::combat::attack_stop(world, caster);
     }
     Ok(())
+}
+
+/// TC TakePower/TakeRunePower: discounted primary misses neither consume
+/// runes nor grant resources from negative costs. Admission still checks all costs.
+fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<(CostPool, f32)> {
+    if !missed {
+        return costs;
+    }
+    costs
+        .into_iter()
+        .filter(|(pool, amount)| *amount >= 0.0 && *pool != CostPool::Power(PowerType::Runes))
+        .collect()
 }
 
 /// One handled effect's unit targets and destination.
@@ -1576,6 +1663,21 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    if crate::gathering::is_gathering(spell) {
+        let target = explicit.ok_or(CastFailure::NoTarget)?;
+        return Ok(spell
+            .effects
+            .iter()
+            .enumerate()
+            .filter(|(_, effect)| matches!(effect.effect, 33 | 95))
+            .map(|(index, _)| PlannedEffect {
+                index,
+                units: vec![target],
+                dest: None,
+                chain_multipliers: Vec::new(),
+            })
+            .collect());
+    }
     if let Some((_, select)) = scripts::target_plan(spell.id) {
         let mut plan = select(world, caster, spell, explicit);
         hit::remove_defended_targets(world, caster, spell, &mut plan);
@@ -1985,12 +2087,29 @@ fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
             }
             CostPool::Health => {
                 if let Some(mut health) = world.get_mut::<Health>(caster) {
-                    health.current = (health.current - amount).max(1.0);
+                    health.current = (health.current - amount).clamp(1.0, health.max);
                 }
             }
         }
     }
     mark_dirty(world, caster);
+}
+
+/// TC StartCooldown multiplies both spell and category cooldowns by ModHasteRegen.
+fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, duration: f32) -> f32 {
+    if !spell_mods::has_aura_type_affecting(
+        world,
+        caster,
+        crate::auras::handlers::MOD_COOLDOWN_BY_HASTE_REGEN,
+        spell,
+    ) {
+        return duration;
+    }
+    let haste = world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    // Native Duration(int64(...)) truncates fractional milliseconds.
+    (duration / haste.max(0.01)).trunc()
 }
 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
@@ -2003,7 +2122,8 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         if base == 0 {
             return 0;
         }
-        modify(world, caster, spell, SpellModOp::Cooldown, base as f32)
+        let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
+        haste_regen_cooldown_ms(world, caster, spell, modified)
             .max(0.0)
             .round() as u32
     };

@@ -38,9 +38,11 @@ mod equipment_admin_types;
 mod experience;
 mod faction;
 mod faction_reaction;
+mod followers;
 mod frame_stats;
 mod friends;
 mod game_objects;
+mod gathering;
 mod gold;
 mod grid_activity;
 mod ground;
@@ -66,6 +68,7 @@ mod melee;
 mod merchant;
 mod messaging;
 mod mirror_timers;
+mod mythic_plus;
 mod navigation;
 mod networking;
 mod npc_interaction;
@@ -94,6 +97,7 @@ mod scripted_ai;
 mod sheet_visibility;
 mod skyriding;
 mod spawn_pools;
+mod spell_area;
 mod spell_cast;
 mod spell_info;
 mod spell_scaling_data;
@@ -186,6 +190,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)
+        .add_plugins(followers::FollowerPlugin)
         .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(trade::TradePlugin)
@@ -198,6 +203,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(transmog::TransmogPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)
+        .add_plugins(spell_area::SpellAreaPlugin)
         .add_plugins(experience::ExperiencePlugin);
 }
 
@@ -230,6 +236,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
+        .add_plugins(mythic_plus::MythicPlusPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(creature_aggro::CreatureAggroPlugin)

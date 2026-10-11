@@ -59,6 +59,8 @@ pub const MOD_THREAT: u32 = 10;
 pub const MOD_TAUNT: u32 = 11;
 pub const MOD_STUN: u32 = 12;
 pub const MOD_INVISIBILITY: u32 = 18;
+pub const MOD_INVISIBILITY_DETECT: u32 = 19;
+pub const DETECT_VISIBLE_WHILE_INVISIBLE: u32 = 335;
 pub const OBS_MOD_HEALTH: u32 = 20;
 pub const OBS_MOD_POWER: u32 = 21;
 pub const PERIODIC_TRIGGER_SPELL: u32 = 23;
@@ -144,6 +146,8 @@ pub const SCREEN_EFFECT: u32 = 260;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
 pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
+/// TC a352b1fa Unit::SpellDamageBonusTaken: owner + SpellLabel match.
+pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
@@ -160,9 +164,13 @@ pub const MOD_MANA_REGEN_PCT: u32 = 379;
 pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
 pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
+/// TC a352b1fa SpellHistory::GetChargeRecoveryTime: category-scoped ModHasteRegen.
+pub const CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN: u32 = 457;
 pub const MOD_ROOT_2: u32 = 455;
 /// SPELL_AURA_MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN (SpellAuraDefines.h:504, TrinityCore a352b1fa).
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
+/// TC a352b1fa SpellHistory::StartCooldown: spell-mask-scoped haste regen.
+pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED_SUMMON: u32 = 428;
@@ -236,6 +244,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | MOD_INVISIBILITY_DETECT
+        | DETECT_VISIBLE_WHILE_INVISIBLE
         | MOD_SCALE
         | FEATHER_FALL
         | MOD_UNATTACKABLE
@@ -249,14 +259,18 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_PCT_MODIFIER
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
-        | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN => SpellMod,
+        | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
+        | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
-        MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
-        MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
+        MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
+        MOD_MAX_CHARGES
+        | CHARGE_RECOVERY_MOD
+        | CHARGE_RECOVERY_MULTIPLIER
+        | CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
         MOD_ATTACKER_MELEE_HIT_CHANCE
         | MOD_ATTACKER_RANGED_HIT_CHANCE

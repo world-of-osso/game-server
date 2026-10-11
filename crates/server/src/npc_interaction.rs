@@ -234,6 +234,7 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
+            shared::protocol::GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE => ObjectUse::Challenge,
             _ if info.is_battleground_flag() => ObjectUse::BattlegroundFlag,
             crate::game_objects::GAMEOBJECT_TYPE_CHEST
             | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
@@ -282,6 +283,8 @@ enum ObjectUse {
     Spell,
     /// Seats the user (`chair::sit`).
     Chair,
+    /// Retail GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE.
+    Challenge,
     BattlegroundFlag,
 }
 
@@ -374,6 +377,7 @@ type UseReceivers<'w, 's> = Query<
 
 fn process_game_object_uses(
     mut receivers: UseReceivers,
+    gatherables: Query<&shared::protocol::GatherableResource>,
     world: InteractionWorld,
     mut senders: InteractionSenders,
     mut commands: Commands,
@@ -381,6 +385,15 @@ fn process_game_object_uses(
     for (connection, link, current, mut receiver) in &mut receivers {
         let mut current = current.map(|interaction| interaction.npc);
         for request in receiver.receive() {
+            if let Some(target) = Entity::try_from_bits(request.object)
+                && gatherables.contains(target)
+            {
+                let player = link.0;
+                commands.queue(move |world: &mut World| {
+                    crate::gathering::use_resource(world, player, target)
+                });
+                continue;
+            }
             let result = Entity::try_from_bits(request.object)
                 .ok_or(InteractionError::InvalidTarget)
                 .and_then(|object| Ok((object, world.usable_object(link.0, object)?)));
@@ -413,6 +426,12 @@ fn process_game_object_uses(
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::chair::sit(world, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::Challenge)) => {
+                    commands.queue(move |world: &mut World| {
+                        crate::mythic_plus::open_font(world, connection, object)
                     });
                     continue;
                 }

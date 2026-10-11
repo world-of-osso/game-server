@@ -743,6 +743,7 @@ pub(crate) fn chase_system(
         bearing,
         combat_move_disabled,
         cannot_reach,
+        follower_reach,
     ) in &mut units.p0()
     {
         let CreatureState::Pursuing { target } = *state else {
@@ -761,6 +762,7 @@ pub(crate) fn chase_system(
             continue; // target despawned or invalid
         };
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
+        let reach = follower_reach.map_or(CHASE_REACH, |reach| reach.0);
         let mut next_position = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
@@ -770,10 +772,10 @@ pub(crate) fn chase_system(
                     from: *pos,
                     to: *target_pos,
                     distance: run_speed * dt,
-                    reach: CHASE_REACH,
+                    reach,
                 },
             ) {
-                Step::Unbaked => chase_step(*pos, target_pos, run_speed * dt),
+                Step::Unbaked => chase_step(*pos, target_pos, run_speed * dt, reach),
                 Step::Moved { position, .. } => position,
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
@@ -787,7 +789,7 @@ pub(crate) fn chase_system(
                     continue;
                 }
             },
-            _ => chase_step(*pos, target_pos, run_speed * dt),
+            _ => chase_step(*pos, target_pos, run_speed * dt, reach),
         };
         if cannot_reach.is_some() {
             commands.entity(entity).remove::<CannotReachTarget>();
@@ -819,6 +821,7 @@ type Chaser = (
     Bearing,
     Option<&'static crate::scripted_ai::smart_ai::CombatMovementDisabled>,
     Option<&'static CannotReachTarget>,
+    Option<&'static crate::followers::FollowerReach>,
 );
 
 /// `Creature::Update`: no-path evade after five seconds, never on raid maps.
@@ -888,9 +891,9 @@ fn victim_positions(
 
 /// Move up to `step` across the ground toward the point `CHASE_REACH` short of `target`;
 /// the height is the caller's (the floor there).
-fn chase_step(position: Position, target: &Position, step: f32) -> Position {
+fn chase_step(position: Position, target: &Position, step: f32, reach: f32) -> Position {
     let gap = (target.x - position.x).hypot(target.z - position.z);
-    let travel = (gap - CHASE_REACH).clamp(0.0, step);
+    let travel = (gap - reach).clamp(0.0, step);
     if travel <= 0.0 {
         return position;
     }
@@ -1105,7 +1108,7 @@ fn pet_motion_system(
                 let Some(target) = victim_positions.get(&victim) else {
                     continue;
                 };
-                let next = chase_step(here, target, run_speed * dt);
+                let next = chase_step(here, target, run_speed * dt, CHASE_REACH);
                 let face = (next == here)
                     .then(|| facing_along(target.x - here.x, target.z - here.z))
                     .flatten();
@@ -1237,7 +1240,10 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
 /// (`enter_evade_mode`: threat cleared, combat stopped, health restored,
 /// Returning).
 fn leash_check_system(
-    query: Query<(Entity, &Position, &SpawnPoint, &CreatureState), ActiveUncontrolled>,
+    query: Query<
+        (Entity, &Position, &SpawnPoint, &CreatureState),
+        (ActiveUncontrolled, Without<crate::followers::Follower>),
+    >,
     mut commands: Commands,
 ) {
     for (entity, pos, spawn, state) in &query {

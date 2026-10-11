@@ -17,6 +17,7 @@ fn dungeonach_normal_stockade_checkpoint_reopens_and_manual_reset_clears_it() {
         group: None,
         leader: 42,
         difficulty_id: 1,
+        ..Default::default()
     };
     let now = Now {
         elapsed: 0.0,
