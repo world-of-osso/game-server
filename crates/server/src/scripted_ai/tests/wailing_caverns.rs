@@ -118,6 +118,44 @@ fn cobrahn() -> (Harness, Entity) {
     (h, boss)
 }
 
+fn assert_authored_cobrahn_loot(path: &std::path::Path) {
+    use rand::SeedableRng;
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let tables = crate::loot::load_loot_tables(&conn).unwrap();
+    let items = crate::item_templates::load_item_templates(path).unwrap();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(3669);
+    let loot = tables.roll_creature(COBRAHN, 1, &items, |_| false, &mut rng);
+    // TDB Normal LootID3669: GoldMin87 / GoldMax168; group1 totals100%.
+    assert!(
+        (87..=168).contains(&loot.copper),
+        "authored money absent: {loot:?}"
+    );
+    let boss_items: Vec<_> = loot
+        .items
+        .iter()
+        .filter(|item| [6460, 6465, 10410].contains(&item.item_id))
+        .collect();
+    assert_eq!(boss_items.len(), 1, "authored group1 boss item: {loot:?}");
+    assert_eq!(boss_items[0].count, 1);
+    assert!(
+        !loot.items.iter().any(|item| item.item_id == 9738),
+        "quest-only Gem of Cobrahn is not unrestricted loot"
+    );
+}
+
+#[test]
+fn cobrahn_canonical_normal_loot_has_authored_item_and_money() {
+    assert_authored_cobrahn_loot(&world_db_path());
+}
+
+#[test]
+#[ignore = "requires explicit read-only population copy; acceptance gate for its loot bindings"]
+fn cobrahn_population_copy_normal_loot_has_authored_item_and_money() {
+    let path = std::env::var_os("DUNGEON_ENCOUNTER_POPULATION_DB")
+        .expect("set DUNGEON_ENCOUNTER_POPULATION_DB to the prepared copy");
+    assert_authored_cobrahn_loot(std::path::Path::new(&path));
+}
+
 #[test]
 fn cobrahn_authored_cast_and_encounter_messages_are_copy_scoped() {
     let (mut h, boss) = cobrahn();
