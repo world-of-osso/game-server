@@ -199,6 +199,15 @@ impl bevy::log::tracing::Subscriber for WarningCapture {
     fn enabled(&self, _: &bevy::log::tracing::Metadata<'_>) -> bool {
         true
     }
+    fn register_callsite(
+        &self,
+        _: &'static bevy::log::tracing::Metadata<'static>,
+    ) -> bevy::log::tracing::subscriber::Interest {
+        bevy::log::tracing::subscriber::Interest::always()
+    }
+    fn max_level_hint(&self) -> Option<bevy::log::tracing::level_filters::LevelFilter> {
+        Some(bevy::log::tracing::level_filters::LevelFilter::TRACE)
+    }
     fn new_span(
         &self,
         _: &bevy::log::tracing::span::Attributes<'_>,
@@ -245,10 +254,10 @@ fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
     assert_eq!(
         warnings
             .iter()
-            .filter(|line| line.contains("action type 59"))
+            .filter(|line| line.contains("action type 41"))
             .count(),
         1,
-        "duplicate unsupported SET_RUN rows must produce one actionable warning: {warnings:?}"
+        "unsupported DESPAWN must produce one actionable warning: {warnings:?}"
     );
     assert_eq!(
         warnings
@@ -257,5 +266,113 @@ fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
             .count(),
         1,
         "timed-list targets must be diagnosed: {warnings:?}"
+    );
+}
+
+fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    conn.query_row(
+        "SELECT * FROM tdb_smart_scripts WHERE entryorguid=?1 AND source_type=?2 AND id=?3",
+        (entry, source, id),
+        |row| {
+            Ok(SmartEvent {
+                id: row.get("id")?,
+                link: row.get("link")?,
+                event_type: row.get("event_type")?,
+                phase_mask: row.get("event_phase_mask")?,
+                chance: row.get("event_chance")?,
+                flags: row.get("event_flags")?,
+                event_params: std::array::from_fn(|i| {
+                    row.get(format!("event_param{}", i + 1).as_str()).unwrap()
+                }),
+                action_type: row.get("action_type")?,
+                action_params: std::array::from_fn(|i| {
+                    row.get(format!("action_param{}", i + 1).as_str()).unwrap()
+                }),
+                target_type: row.get("target_type")?,
+                target_params: std::array::from_fn(|i| {
+                    row.get(format!("target_param{}", i + 1).as_str()).unwrap()
+                }),
+                target_position: [
+                    row.get("target_x")?,
+                    row.get("target_y")?,
+                    row.get("target_z")?,
+                    row.get("target_o")?,
+                ],
+            })
+        },
+    )
+    .unwrap()
+}
+
+#[test]
+fn smartai_coverage_authored_faction_and_npc_flags_change_observable_state() {
+    let (_temp, mut world, mut ai, creature, _player) = erland();
+    world
+        .entity_mut(creature)
+        .insert(shared::components::UnitFactionTemplate(35));
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &tdb_action(775, 0, 2), None);
+    assert_eq!(
+        ctx.world
+            .get::<shared::components::UnitFactionTemplate>(creature)
+            .unwrap()
+            .0,
+        46
+    );
+    ai.execute_action(&mut ctx, &tdb_action(4963, 0, 1), None);
+    assert_eq!(ctx.world.get::<NpcFlags>(creature).unwrap().0, 1);
+    ai.execute_action(&mut ctx, &tdb_action(2610, 0, 2), None);
+    assert_eq!(ctx.world.get::<NpcFlags>(creature).unwrap().0, 3);
+}
+
+#[test]
+fn smartai_coverage_wp_stop_cancels_movement() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.quest_accepted(&mut ctx, player, 435);
+    ai.update_ai(&mut ctx, 50);
+    ai.execute_action(&mut ctx, &tdb_action(14323, 0, 9), None);
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
+    );
+    ai.update_ai(&mut ctx, 1000);
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
+    );
+}
+
+#[test]
+fn smartai_coverage_erland_set_run_survives_the_next_leg() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.quest_accepted(&mut ctx, player, 435);
+    ai.update_ai(&mut ctx, 50);
+    ai.execute_action(&mut ctx, &tdb_action(197802, 9, 3), None);
+    ctx.world
+        .entity_mut(creature)
+        .remove::<super::super::movement::PointMovement>();
+    ai.movement_inform(&mut ctx, super::super::MotionType::Point, 1);
+    assert!(
+        ctx.world
+            .get::<super::super::movement::Walking>(creature)
+            .is_none()
     );
 }
