@@ -22,7 +22,7 @@ fn load_party_snapshot(world: &World, character: u64) -> PartyKeystoneSnapshot {
     let members = members
         .into_iter()
         .map(|id| {
-            let data = persistence::load_character(db, id).expect("group member character exists");
+            let (name, class) = load_member_identity(db, registry, id);
             let key = definition.and_then(|definition| {
                 owned_keys(db, id)
                     .into_iter()
@@ -36,14 +36,26 @@ fn load_party_snapshot(world: &World, character: u64) -> PartyKeystoneSnapshot {
             });
             PartyKeystoneMember {
                 character_id: id,
-                name: data.name,
-                class: data.class,
+                name,
+                class,
                 is_leader: leader == Some(id),
                 key,
             }
         })
         .collect();
     PartyKeystoneSnapshot { members }
+}
+
+fn load_member_identity(db: &redb::Database, registry: &GroupRegistry, id: u64) -> (String, u8) {
+    if registry.group_id_of(id).is_some() {
+        let (name, class) = registry
+            .member_identity(id)
+            .expect("group membership has a roster identity");
+        return (name.to_owned(), class);
+    }
+    let data =
+        persistence::load_character(db, id).expect("solo recipient is a persisted character");
+    (data.name, data.class)
 }
 
 pub(super) fn send_changed_party_keys(world: &mut World) {
@@ -107,6 +119,82 @@ mod tests {
                 affixes: vec![],
             },
         );
+    }
+
+    #[test]
+    fn mythic_mentor_runtime_companions_have_no_key() {
+        use shared::group::GroupRole;
+        let mut h = crate::bank_test_harness::harness().unwrap();
+        let owner = h.character_id;
+        let data = persistence::load_character(h.db(), owner).unwrap();
+        let mut online = OnlineView::from([(
+            owner,
+            OnlineMember {
+                entity: h.player.to_bits(),
+                name: data.name,
+                class: data.class,
+                level: 1,
+                portrait: Default::default(),
+                dungeon_difficulty: 205,
+                raid_difficulty: Default::default(),
+            },
+        )]);
+        let profiles = [
+            ("Captain Garrick", 2, GroupRole::Tank),
+            ("Crenna Earth-Daughter", 11, GroupRole::Healer),
+            ("Meredy Huntswell", 8, GroupRole::Dps),
+            ("Shuja Grimaxe", 7, GroupRole::Dps),
+        ];
+        let companions: Vec<_> = profiles
+            .iter()
+            .map(|(name, class, role)| {
+                let entity = h.app.world_mut().spawn_empty().id();
+                let id = crate::followers::Follower::member_id(entity);
+                online.insert(
+                    id,
+                    OnlineMember {
+                        entity: entity.to_bits(),
+                        name: (*name).into(),
+                        class: *class,
+                        level: 80,
+                        portrait: Default::default(),
+                        dungeon_difficulty: 205,
+                        raid_difficulty: Default::default(),
+                    },
+                );
+                (id, *role)
+            })
+            .collect();
+        let txn = h.db().begin_write().unwrap();
+        txn.open_table(KEYS).unwrap();
+        txn.commit().unwrap();
+        h.app.init_resource::<GroupRegistry>();
+        let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").unwrap();
+        let conn =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        h.app.insert_resource(Challenges {
+            definition: load_azure(&conn).unwrap(),
+            ..Default::default()
+        });
+        put_key(&h, owner, 4242, 8);
+        h.app
+            .world_mut()
+            .resource_mut::<GroupRegistry>()
+            .create_companion_party(owner, GroupRole::Dps, &companions, &online)
+            .unwrap();
+        let snapshot = load_party_snapshot(h.app.world(), owner);
+        assert_eq!(snapshot.members.len(), 5);
+        assert_eq!(snapshot.members[0].character_id, owner);
+        assert!(snapshot.members[0].is_leader);
+        assert_eq!(snapshot.members[0].key.as_ref().unwrap().level, 8);
+        for (row, (name, class, _)) in snapshot.members[1..].iter().zip(profiles) {
+            assert_eq!((row.name.as_str(), row.class), (name, class));
+            assert!(
+                row.key.is_none(),
+                "Runtime companions do not own persistent bag keys"
+            );
+        }
     }
 
     #[test]

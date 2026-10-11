@@ -32,7 +32,7 @@ Scenario-event92 weights are preserved/testable but producers are not connected.
 
 ## Party key sharing
 
-The built-in [Mythic Mentor contract](../../specs/mythic-mentor.md) owns party summary visibility and bag authority. Producer: [mythic_mentor.rs](../../../crates/server/src/mythic_mentor.rs). Final native/private proof and screenshots are [client-owned](../../../../game-engine/docs/wiki/systems/mythic-mentor.md); server6a07a86d's targeted persisted-bag/roster/recipient/raid test passes. No addon messaging or peer bag GUID disclosure.
+The built-in [Mythic Mentor contract](../../specs/mythic-mentor.md) owns party summary visibility and bag authority. Producer: [mythic_mentor.rs](../../../crates/server/src/mythic_mentor.rs). Final native/private proof and screenshots are [client-owned](../../../../game-engine/docs/wiki/systems/mythic-mentor.md); server6a07a86d's targeted persisted-bag/roster/recipient/raid test passes. No addon messaging or peer bag GUID disclosure. Follower-party integration reads grouped names/classes from the registry's roster identity, not character storage: companions use runtime-only IDs and have no bag keys. A real companion-party regression reproduced the old character lookup panic, then verifies five rows with all four NPCs having no key.
 
 ## See Also
 
