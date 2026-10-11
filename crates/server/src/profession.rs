@@ -14,7 +14,9 @@
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
 mod data;
+mod gathering;
 mod trainer;
+pub(crate) use gathering::GatherProgress;
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -210,6 +212,30 @@ impl Learner<'_> {
         let rank = (line.rank + ability.num_skill_ups.max(1)).min(line.max_rank);
         profs.set_line(ProfessionSkillLine { rank, ..line });
         self.learn_rewarded_spells(profs, line.skill_line, rank);
+        Some(rank)
+    }
+
+    /// Gathering raises the authored expansion line, never a fabricated recipe rank.
+    pub(crate) fn gather_skill_up(
+        &self,
+        profs: &mut PlayerProfessions,
+        progress: GatherProgress,
+        roll: u32,
+    ) -> Option<u16> {
+        let line = *profs.line(progress.skill)?;
+        if line.rank == 0
+            || line.rank >= line.max_rank
+            || roll > progress.chance_permille(line.rank)
+        {
+            return None;
+        }
+        let parent = self.data.skill_line(progress.skill)?.parent;
+        if !matches!(parent, 182 | 186 | 393) {
+            return None;
+        }
+        let rank = (line.rank + 1).min(line.max_rank);
+        profs.set_line(ProfessionSkillLine { rank, ..line });
+        self.learn_rewarded_spells(profs, progress.skill, rank);
         Some(rank)
     }
 
@@ -605,7 +631,7 @@ fn continue_craft_queues(world: &mut World) {
 }
 
 /// Persist changed professions and send the owner its `ProfessionSnapshot`.
-fn save_and_send_professions(
+pub(crate) fn save_and_send_professions(
     changed: Query<(Entity, &ClientId, &PlayerProfessions), Changed<PlayerProfessions>>,
     mut connections: Query<(&PlayerLink, &mut MessageSender<ProfessionSnapshot>)>,
     db: Option<Res<GameDatabase>>,

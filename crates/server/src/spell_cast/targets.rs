@@ -118,9 +118,10 @@ fn selector(id: u32) -> Option<Selector> {
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
         let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
+        let gathering_target = id == 23 && effect.effect == 33;
         let unsupported_back =
             id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
-        unsupported_back || (selector(id).is_none() && !item_target)
+        unsupported_back || (selector(id).is_none() && !item_target && !gathering_target)
     })
 }
 
