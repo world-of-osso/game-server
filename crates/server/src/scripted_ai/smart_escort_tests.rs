@@ -863,8 +863,7 @@ fn smartai_coverage_tracking_completion_auto_rewards_without_accept_and_is_idemp
     );
 }
 
-#[test]
-fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedule() {
+fn wizzle_movement_app() -> (App, Entity, Entity, Position, Position) {
     use crate::creature_ai::{
         CreatureAiPlugin, CreatureState, SpawnPoint, WanderPhase, WanderState,
     };
@@ -879,6 +878,10 @@ fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedul
     };
     world.entity_mut(creature).insert((
         origin,
+        shared::components::Health {
+            current: 417.0,
+            max: 417.0,
+        },
         CreatureState::Idle,
         SpawnPoint {
             x: origin.x,
@@ -951,6 +954,35 @@ fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedul
             .chain()
             .before(crate::creature_ai::chase_system),
     );
+    (app, creature, player, origin, destination)
+}
+
+#[test]
+fn smartai_coverage_wizzle_combat_pauses_path_while_chase_owns_fixed_movement() {
+    let (mut app, creature, player, origin, _) = wizzle_movement_app();
+    app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 20.0,
+        ..origin
+    });
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: player.to_bits(),
+        });
+    app.update();
+    app.update();
+    let actual = *app.world().get::<Position>(creature).unwrap();
+    let expected = Vec3::new(origin.x + 0.35, origin.y, origin.z);
+    let error = Vec3::new(actual.x, actual.y, actual.z).distance(expected);
+    assert!(
+        error < 0.001,
+        "combat chase alone owns this tick; path must suspend: actual={actual:?}, expected={expected:?}, error={error}"
+    );
+}
+
+#[test]
+fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedule() {
+    let (mut app, creature, _, origin, destination) = wizzle_movement_app();
     app.update();
     app.update();
     let actual = *app.world().get::<Position>(creature).unwrap();

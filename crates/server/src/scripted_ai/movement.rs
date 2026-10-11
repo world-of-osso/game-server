@@ -58,13 +58,23 @@ pub(crate) fn point_movement_system(world: &mut World) {
         &mut Position,
         &PointMovement,
         &SpawnPoint,
+        Option<&crate::creature_ai::CreatureState>,
         Has<Walking>,
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
         Option<&mut MovementSpeed>,
     ), Without<DeathState>>();
-    for (entity, mut position, movement, spawn, walking, rotation, motion, replicated_speed) in
-        movers.iter_mut(world)
+    for (
+        entity,
+        mut position,
+        movement,
+        spawn,
+        state,
+        walking,
+        rotation,
+        motion,
+        replicated_speed,
+    ) in movers.iter_mut(world)
     {
         let (speed, gait) = if walking {
             (spawn.speed_walk * BASE_WALK_SPEED, CreatureMotion::Walk)
@@ -72,7 +82,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
             (spawn.speed_run * BASE_RUN_SPEED, CreatureMotion::Run)
         };
         let (next, reached) = step_toward(*position, movement.target, speed * dt);
-        bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, reached, driver = "point", "scripted movement");
+        bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, ?state, reached, driver = "point", "scripted movement");
         let facing = crate::creature_ai::facing_along(next.x - position.x, next.z - position.z);
         if *position != next {
             *position = next;
