@@ -11,7 +11,7 @@ Eight bounded contracts from local Mainline12.1.0.69933 DB2, read-only world.db 
 |163201 Execute|316405-gated10% refund of actual paid raw Rage including OptionalCost; surviving/kill/rank, partial availability, refusal and triggered-cast boundaries.|Damage interpolation/admission/talent variants.|
 |32379 Shadow Word: Death|Tooltip s2 damage once, native strict20% threshold/150% bonus; active364675 raises threshold30 points and bonus100 points; one native backlash.|Legacy s1/rank variants.|
 |257044 Rapid Fire|Native333ms/2000ms/EXTRA_INITIAL_PERIOD yields seven257045 shots and263585 Focus gains; cancellation stops shots and gains.|40-valued periodic mirror/Dummy2 and other talents.|
-|19574 Bestial Wrath|Named344572 from the actual persistent pet at its own target; owner selection/foreign pet/no selection/no invented repeat boundaries.|Pet buff binding, CC removal, charge ranks, periodic12 and native pet inheritance. Fixture deliberately uses non-Npc attacker/zero crit to isolate routing without RNG.|
+|19574 Bestial Wrath|Named344572 from the actual persistent pet at its own target; owner selection/foreign pet/no selection boundaries.|Pet buff binding, CC removal, charge ranks, periodic12 and native pet inheritance. Fixture deliberately uses non-Npc attacker/zero crit to isolate routing without RNG.|
 |193530 Aspect of Wild|Initial free193455 at primary, no Focus payment; native Cobra level damage curve retained.|Additional-target geometry/count and ongoing cleave.|
 |48181 Haunt|Owned mark's death resets caster cooldown; actual expiry/cancellation and foreign-owner timers preserved.|Optional periodic talent and complete vulnerability/rotation parity. Outside the fixed core/book probes: no census/script-count inflation.|
 
@@ -27,7 +27,7 @@ Frozen0ac5c4d baseline exactly reproduces168 roots,88 reviewed/80 underived. Aft
 
 83f3f70: initial nine fixtures RED0/9. Seven failures identify missing/wrong behavior; Aspect initially lacked an explicit enemy and Bestial initially asserted an unbound pet buff (not valid final-contract REDs). ada5136 corrects that fixture; focused RED0/1 observes no Cobra.4584772 targeted GREEN9/9.2476ec8 adds partial paid-resource, refusal/trigger, persistent-pet ownership and actual Haunt death/expiry boundary fixtures: GREEN12/12, warning-free. A later source audit rejected applying owner19574 a108 to the pet: multiple reverse-description a79 candidates (186254/1285912) lack an explicit binding. Unsupported buff removed; only the named344572 strike retained. The initial pet-aura assertion is not final strike RED proof. No RNG-dependent exact damage expectations; variance bounds/zero crit/non-Npc hit source used.
 
-Final master integration and single requested spell_cast gate pending. Parent owns independent integration acceptance; no full-crate/live/rotation claim.
+3f637a3/0fa4079 Bestial focused failures exposed the fixture's pre-cast real pet melee swing, not incorrect AP inheritance. The assertion now isolates immediate cast health loss instead of including earlier melee; post-cast ordinary pet melee is not suppressed. Final Bestial proof and master integration/single requested spell_cast gate pending. Parent owns independent integration acceptance; no full-crate/live/rotation claim.
 
 Durable evidence: `game-engine/data/diagnostics/spell-dummy13-2026-10-10/` (frozen before/after sources, source receipts/equivalence, census/all40 generators and proof logs).
 

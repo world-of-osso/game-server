@@ -228,26 +228,22 @@ fn dummy13_bestial_wrath_strike_uses_own_pets_current_target() {
     let other = spawn_npc(&mut h.app, 4.0);
     h.select(Some(other));
     h.advance(4);
+    let before = h.health(target); // Existing pet melee may already have swung.
     execute(&mut h, 19574, None);
     assert!(
         !crate::auras::has_aura(h.app.world(), own, 19574),
         "owner modifier is not an authored pet buff binding"
     );
-    assert!(
-        varied(176.0).contains(&(5000.0 - h.health(target))),
-        "loss={}, owner={:?}, pet={:?}",
-        5000.0 - h.health(target),
-        h.app.world().get::<crate::stats::CharacterStats>(h.caster),
-        h.app.world().get::<crate::stats::CharacterStats>(own)
+    assert_eq!(
+        before - h.health(target),
+        176.0,
+        "native8AP * inherited22AP; isolate instant strike from prior pet melee"
     );
     assert_eq!(
         h.health(other),
         5000.0,
         "owner selection is not pet selection"
     );
-    let after = h.health(target);
-    h.advance(400);
-    assert_eq!(h.health(target), after, "no invented repeated attack clock");
 }
 
 #[test]
