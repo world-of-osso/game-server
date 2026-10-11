@@ -190,7 +190,7 @@ fn cloth_need_uses_retail_class_armor_mask_not_required_equip_level() {
         .get_mut(&KOBOLD_VERMIN)
         .unwrap()
         .entries[0]
-        .item = 3985; // Monogrammed Sash: real Uncommon cloth
+        .item = 983; // Red Linen Sash: Retail Uncommon cloth (3985 is now class 15 misc)
     h.app
         .world_mut()
         .get_mut::<Player>(other.player)
