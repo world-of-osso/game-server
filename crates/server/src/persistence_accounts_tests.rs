@@ -410,13 +410,17 @@ fn character_creation_assigns_starting_position_per_race() {
 
     // Human (race 1) starts at Northshire
     let (cid_human, data_human) = create_character(&db, account_id, "HumanHero", 1, 1).unwrap();
-    assert!((data_human.x - (-8949.0)).abs() < 1.0, "human x");
-    assert!((data_human.y - (-132.0)).abs() < 1.0, "human y");
+    assert_eq!(
+        (data_human.x, data_human.y, data_human.z),
+        (-8914.57, -133.909, 80.5378)
+    );
 
     // Orc (race 2) starts at Valley of Trials — different from Human
     let (_, data_orc) = create_character(&db, account_id, "OrcWarrior", 2, 1).unwrap();
-    assert!((data_orc.x - (-618.0)).abs() < 1.0, "orc x");
-    assert!((data_orc.y - (-4251.0)).abs() < 1.0, "orc y");
+    assert_eq!(
+        (data_orc.x, data_orc.y, data_orc.z),
+        (-618.518, -4251.67, 38.718)
+    );
     assert!(
         (data_orc.x - data_human.x).abs() > 100.0,
         "different start zones"
@@ -424,7 +428,10 @@ fn character_creation_assigns_starting_position_per_race() {
 
     // Night Elf (race 4) starts at Shadowglen
     let (_, data_nelf) = create_character(&db, account_id, "ElfDruid", 4, 1).unwrap();
-    assert!((data_nelf.x - 10311.0).abs() < 1.0, "night elf x");
+    assert_eq!(
+        (data_nelf.x, data_nelf.y, data_nelf.z),
+        (10311.3, 831.463, 1326.57)
+    );
 
     // Persisted position matches
     let loaded = load_character(&db, cid_human).unwrap();
@@ -562,11 +569,11 @@ fn new_class_characters_start_at_their_level_and_location() {
     let (account_id, _) = register_account(&db, "fb_newclass", "fbtest").unwrap();
 
     let (monk, data) = create_character(&db, account_id, "Monkling", 1, 10).unwrap();
-    assert_eq!((data.level, data.x, data.y), (1, -8949.0, -132.0));
+    assert_eq!((data.level, data.x, data.y), (1, -8914.57, -133.909));
     assert_eq!(load_character_map(&db, monk), 0);
 
     let (dh, data) = create_character(&db, account_id, "Illidariel", 4, 12).unwrap();
-    assert_eq!((data.level, data.x, data.y), (8, 10311.0, 832.0));
+    assert_eq!((data.level, data.x, data.y), (8, 10311.3, 831.463));
     assert_eq!(load_character_map(&db, dh), 1, "Shadowglen is on Kalimdor");
 
     let (evoker, data) = create_character(&db, account_id, "Scalecommand", 52, 13).unwrap();
