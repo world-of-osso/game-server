@@ -9,8 +9,8 @@ Interpret TDB `smart_scripts` rather than hand-written quest scripts. Semantics 
 - [x] Support WP_STOP, waypoint paused/resumed/stopped/ended events and quest accept/reward hooks.
 - [ ] Support summon, follow, faction/NPC flag changes, quest completion, despawn and escort failure on death/distance.
 - [x] Report unsupported action/event/target types once per type, including timed lists.
-- [ ] Broaden support by script-row and quest-linked impact rankings.
-- [ ] Prove a complete private UDP 5780 escort with both client skins and inspected PNGs.
+- [x] Broaden support by script-row and quest-linked impact rankings (orientation66/emote17 and summon hooks; [census](../smartai-census.md)).
+- [x] Prove a complete private UDP 5780 legacy escort with both client skins and inspected PNGs; exact authentic source-fixture boundary in [census](../smartai-census.md#live-proof-boundary).
 
 ## How it works
 
@@ -33,7 +33,8 @@ SET_ORIENTATION66 (1,210 rows/740 quest-linked) and SET_EMOTE_STATE17 (788/376) 
 ## Known gaps (current cycle)
 
 - [x] Canonical content Erland selects an unported C++ ScriptName; TDB selects SmartAI. Prepare authentic template overlay on a database copy, plus importer instructions; never alter canonical data.
-- [ ] Full escort and live proof remain incomplete.
+- [x] Full quest863 GUI flow is proved for the authentic legacy private fixture in both skins.
+- [ ] Mixed Retail-scaling/legacy-escort source reconciliation remains unproved; never turn that data drift into invented actor stats or parser behavior.
 
 ## Out of scope
 
