@@ -681,6 +681,7 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForBattleground>(),
             pair::<RespondToBattlegroundInvite>(),
+            pair::<LeaveBattleground>(),
             pair::<PvpStateUpdate>(),
         ));
         h.app
@@ -759,6 +760,46 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
             .resource::<InstanceManager>()
             .lock_copies_in_use()
             .is_empty()
+    );
+    for who in &players {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in &players {
+        assert_eq!(h.map_of(who), None, "return waits for WorldPortAck");
+        let returns = h.new_worlds(who);
+        assert_eq!(returns.len(), 1);
+        assert_eq!(returns[0].map_id, 0);
+        assert!(close(
+            wow(&Position {
+                x: returns[0].position[0],
+                y: returns[0].position[1],
+                z: returns[0].position[2]
+            }),
+            origin
+        ));
+        h.ack(who);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(h.position(who), origin));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+    assert!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .copy_difficulty(shared_map)
+            .is_none()
     );
 }
 
