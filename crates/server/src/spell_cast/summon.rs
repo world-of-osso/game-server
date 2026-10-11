@@ -26,6 +26,8 @@ const TITLE_MINION: u32 = 3;
 const TITLE_COMPANION: u32 = 5;
 const TITLE_RUNEBLADE: u32 = 6;
 const IMMUNE_TO_PC_AND_NPC: u32 = 0x100 | 0x200;
+const DANCING_RUNE_WEAPON: u32 = 49028;
+const RUNE_WEAPON_PARRY: u32 = 81256;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SummonProperties {
@@ -279,7 +281,14 @@ fn spawn_summon(
         ),
     ));
     let actor = entity.id();
-    entity.world_scope(|world| super::guardian::initialize(world, actor));
+    entity.world_scope(|world| {
+        super::guardian::initialize(world, actor);
+        //49028's description explicitly grants81256 while its weapon is active.
+        //Attach to actual spawn, not AfterCast: missing templates spawn nothing.
+        if ctx.spell.id == DANCING_RUNE_WEAPON {
+            super::cast_triggered(world, owner, RUNE_WEAPON_PARRY, Some(owner), ctx.depth + 1);
+        }
+    });
     if properties.control == CONTROL_ALLY || properties.control == CONTROL_PET {
         entity.insert(UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED));
     }
@@ -319,6 +328,17 @@ pub(super) fn expire_summons(world: &mut World) {
 }
 
 pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
+    if let Some(summon) = world.get::<SummonedCreature>(entity) {
+        if summon.spell_id == DANCING_RUNE_WEAPON {
+            let owner = summon.owner;
+            crate::auras::remove_auras(
+                world,
+                owner,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == RUNE_WEAPON_PARRY && aura.caster == owner,
+            );
+        }
+    }
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         debug!(
             "Despawn summon {entity}: spell {}, properties {}",
