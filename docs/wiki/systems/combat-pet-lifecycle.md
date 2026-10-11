@@ -1,6 +1,6 @@
 # Combat pet lifecycle
 
-Verified: 2026-10-11, pet-lifecycle server5af60fe/protocol203acd3. Requirements live in [pet lifecycle](../../specs/pet-lifecycle.md); this is bounded implementation/proof, not complete Retail parity.
+Verified: 2026-10-11, pet-lifecycle server9c3e7d7/protocol203acd3. Requirements live in [pet lifecycle](../../specs/pet-lifecycle.md); this is bounded implementation/proof, not complete Retail parity.
 
 ## Durable state
 
@@ -16,11 +16,17 @@ Swap preserves the summoned entity when moving among unlocked active positions; 
 
 The real Erma menu9821 includes StableMaster option0 plus separate battle-pet healing options. Tests route the authored combat-pet option instead of assuming a single-entry gossip menu. HostClient replies are collected in First before Lightyear's Last clear.
 
+## Revive and Mend
+
+Local Revive982 effect109 is a once-per-cast handler. Its cast check rejects a living current pet; without one it requires the first dead active record, not a stabled record. Completion recalls/spawns that dead pet near the owner, clears corpse/death/combat state, restores the authored percentage of maximum health, resends its bar and persists the health. This matches pinned TC EffectResurrectPet/CheckCast rather than inventing a last-used-slot rule.
+
+Mend136 already uses aura20's imported10% maximum-health tick every2s. A numerical fixture now proves whole-HP healing and the owner's periodic combat-log event; no Mend implementation change was needed.
+
 ## Proof and remaining scope
 
 Baseline632f3aea restored both wounded23 and dead0 pets at full378. At8358c09 all11 hunter tests pass, including reopened-redb wounded/dead health and health-change→queued logout→flush without a fixed tick. Earlier live audit confirms hunter tame/relog/dismiss/call and native Imp summon/relog/menu-dismiss, but only the baseline live binary was exercised.
 
-At5af60fe hunter15/15 pass without warnings: real NPC hello/gossip selection, stable→rename→spec→redb reopen→active→Call→abandon→reopen, active-slot ownership preservation, same-slot move and non-mutating refusals. Protocol203acd3 concrete operation/name/spec/dead-health wire roundtrip passes1/1. Current live stable UI/operations, corpse revive, numerical Mend/Feed, other demons and both-skin post-fix captures remain pending. No shared realm or world.db writes.
+At5af60fe hunter15/15 pass without warnings: real NPC hello/gossip selection, stable→rename→spec→redb reopen→active→Call→abandon→reopen, active-slot ownership preservation, same-slot move and non-mutating refusals. Protocol203acd3 concrete operation/name/spec/dead-health wire roundtrip passes1/1. Revive source5150fd4 passes lethal-damage/clear-corpse/reopen, first-dead-active selection and living-pet refusal (18 hunter cases pass; the initially fractional Mend assertion was wrong). Focused Mend passes1/1 at9c3e7d7 after matching whole-HP/log contracts. Live stable UI, post-fix revive/Mend, Feed food-classification provenance, other demons and both-skin post-fix captures remain pending. No shared realm or world.db writes.
 
 ## Sources
 
