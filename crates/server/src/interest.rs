@@ -548,6 +548,8 @@ fn update_target_visibility(
     let target_state = index.life_states.get(&entity).copied().unwrap_or_default();
     let hidden = index.hidden.contains(&entity);
     let life_states = &index.life_states;
+    let invisibility = &index.invisibility;
+    let target_invisibility = invisibility.get(&entity).cloned().unwrap_or_default();
     for (&connection, observer) in index.observers.iter_mut() {
         let observer_state = life_states
             .get(&observer.player)
@@ -555,7 +557,14 @@ fn update_target_visibility(
             .unwrap_or_default();
         let visible_in_death_phase = ghost_visible(observer_state, target_state, false);
         let should_be_visible = observer.sees(entity, &position, map)
-            && (entity == observer.player || (!hidden && visible_in_death_phase));
+            && (entity == observer.player
+                || (!hidden
+                    && visible_in_death_phase
+                    && invisibility
+                        .get(&observer.player)
+                        .cloned()
+                        .unwrap_or_default()
+                        .detects(&target_invisibility)));
         apply_target_visibility_transition(
             &mut state,
             observer,
