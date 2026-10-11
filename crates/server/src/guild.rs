@@ -96,11 +96,13 @@ impl GuildProfileTextRequest for SetGuildInfo {
     }
 }
 
+#[path = "guild_invites.rs"]
+mod guild_invites;
 #[path = "guild_ranks.rs"]
 mod guild_ranks;
 #[cfg(test)]
 use guild_ranks::apply_rank_request;
-pub(crate) use guild_ranks::character_has_right;
+pub(crate) use guild_ranks::{character_has_right, snapshot as guild_rank_snapshot};
 
 pub struct GuildPlugin;
 
@@ -110,6 +112,8 @@ impl Plugin for GuildPlugin {
             .add_systems(
                 Update,
                 (
+                    guild_invites::send_pending_invites,
+                    guild_invites::decline_invites,
                     send_initial_guild_state,
                     process_query_requests,
                     process_profile_text_updates,
