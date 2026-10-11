@@ -93,7 +93,7 @@ pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses
         .unwrap_or_default()
 }
 
-/// Authored compatibility data preserves the eight existing saved boss ordinals.
+/// Authored compatibility data preserves the existing saved boss ordinals, including Azure.
 /// It is part of the registry, not a retry/fallback when imported bindings are missing.
 fn compatibility_catalog(map_id: u32) -> InstanceScript {
     let mut script = InstanceScript {
@@ -312,6 +312,7 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
             update_instance_lock(world, map, encounter_id, difficulty_id);
             crate::achievement::record_encounter_defeat(world, map, encounter_id, difficulty_id);
             crate::mythic_plus::record_boss(world, map, encounter_id);
+            crate::raid_history::record_first_kill(world, map, encounter_id, difficulty_id);
         }
         EncounterState::NotStarted if previous == EncounterState::InProgress => send_to_players(
             world,

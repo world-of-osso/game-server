@@ -222,7 +222,7 @@ struct LegacyCharacterDataV4 {
 }
 
 impl CharacterData {
-    pub(crate) fn encode_stored(&self) -> Vec<u8> {
+    pub fn encode_stored(&self) -> Vec<u8> {
         bitcode::encode(&StoredCharacterData::from(self))
     }
 

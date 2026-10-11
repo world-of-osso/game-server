@@ -1,0 +1,59 @@
+# Static armory JSON contract v1
+
+Offline exporter; no new public listener. Read redb, SQLite and local icon caches, never account/private fields or source writes. Publish only the successful snapshot directory, never its diagnostic parent or private redb. Publishing is operator-owned.
+
+## Files and common envelope
+
+`index.json`, `characters/<id>.json`, `guilds/<id>.json`, `rankings/mythic-plus.json`, `rankings/raids.json`, `icons/<FDID>.png`.
+
+Every JSON document has `schema_version:1`, `realm` (ASCII slug), `as_of` (actual export-start Unix seconds), `gaps` (string array). One clock value applies to every file. Known achievement/run/kill timestamps after `as_of` are excluded, including achievement point totals. Missing historical achievement timestamps remain null, not invented dates. Output content/order is deterministic for identical sources and the same export clock; tests inject the clock internally, the CLI cannot override it. Times are Unix seconds except elapsed/timer/death-loss values, which are milliseconds. IDs identifying characters, guilds and runs are decimal strings (JS u64 safety); DB2/item/map/spec/achievement IDs remain integers. URLs are relative to snapshot root. Null means unavailable, not zero.
+
+## Index, character and guild
+
+`index.json`: `realm_name`, `characters` (summaries), `guilds:[{id,name,url}]`.
+
+Character summary: `{id,name,race:{id,name|null},class:{id,name|null},spec:null|{id,name|null},level,faction:null|{id,name,template_id},guild,item_level:null,search_keys:[lowercased name,lowercased guild name if present],url}`. Faction IDs: 0 Neutral, 1 Alliance, 2 Horde. `guild:{state:"none"}` means definitively no saved membership; membership is `{state:"member",id,name}`. Search keys are literal strings, not fuzzy scores. Character average equipped item level is null until complete effective equipment is observable.
+
+Character page adds:
+
+- `equipped_items:[{slot,item_id,definition_source,name,quality,item_level|null,item_level_kind:"authored_base",effective_item_level:null,icon_fdid|null,icon_url|null,appearance:{display_info_id|null,hidden},transmog:null|{appearance_id,display_info_id,hidden}}]`. `definition_source` tags: 0 Retail, 1 Forever build70205. Catalogs never substitute one product's same numeric item ID for the other. Appearance is the saved displayed appearance; transmog is the GUID-bound source override. `item_level` is the actual authored ItemSparse base, not an inferred level-80 scale. Bonus/upgrade/effective item-level modifiers are not persisted: effective level and average stay null with `effective_item_level_modifiers_not_persisted` and `complete_effective_equipment_item_level_unavailable`. Existing private proof characters can have base-ilvl1 starter gear after administrative character-level boosts; do not display that as their effective average.
+- `equipment_slots:[{slot,state:"equipped"|"empty"|"unavailable",item_id:null|integer}]` includes all 24 slots in canonical order: Head, Neck, Shoulder, Shirt, Chest, Waist, Legs, Feet, Wrist, Hands, Finger1, Finger2, Trinket1, Trinket2, Back, MainHand, OffHand, Ranged, Tabard, Bag1, Bag2, Bag3, Bag4, ReagentBag. Known equipped bags are included in `equipped_items`. Currently neck/finger/trinket/ranged ownership storage is absent; missing rows for those slots mean unavailable, never unequipped. Gap: `neck_finger_trinket_ranged_storage_unavailable`. An independent inventory change owns closing this source gap.
+- `talents:null|{spec_id,selected_loadout_id,loadouts:[{id,name|null,selected,purchases:[{node_id,entry_id,ranks}]}]}`, `achievement_points:null|integer`, `recent_achievements:[{id,name,points,earned_at:null|seconds,icon_fdid,icon_url|null}]` (latest ten, character contributions only; no account aggregates).
+- `mythic_plus_best` (one observed best per dungeon/season), `raid_progression` (post-deploy lifetime), `saved_lock_progression` (separate current locks), `render_url:null` (optional image gap).
+- `pvp:null|{honor,honor_max,conquest,conquest_max:null,brackets:[{bracket,state:"unrated"|"rated",rating:null|integer,games_played,season_wins,season_losses,weekly_wins,weekly_losses}]}`. Zero season games are unrated: never expose the legacy 1500 default as earned rating. Persisted played ratings are observed server values, not a claim of sourced Retail rating policy. Conquest cap requires WorldState31270; discard legacy 1800 and emit `pvp_dynamic_conquest_cap_unavailable`. Policy gap: `pvp_rating_policy_not_source_qualified`. No unsupported PvP leaderboard is fabricated.
+
+`guilds/<id>.json`: `{id,name,roster:[character summaries],raid_progression:[guild lifetime rows]}` plus envelope. Real current membership builds the roster; historical guild credit builds progression. MOTD/info/officer notes are never exported. Historical public guilds can have an empty current public roster. No character/guild data is fabricated to fill fixture sections.
+
+## Mythic+ rankings
+
+`rankings/mythic-plus.json`: `policy:"highest_timed_key_then_clear_time"`, `runs:[{id,season_id:null|integer,dungeon:{id,map_id,name},level,affixes:[{id,name|null}],elapsed_ms,time_lost_ms,timer_ms,in_time,completed_at,party:[{character_id,name,realm,class_id,class_name|null,spec_id|null,spec_name|null,role:null|"tank"|"healer"|"damage"}],rank}]` plus envelope.
+
+`dungeon.id` is MapChallengeMode ID; `dungeon.map_id` is world MapID. There is no duplicate top-level map_id. `elapsed_ms` includes authoritative configured death penalties; `time_lost_ms` is that penalty portion, not additional time to add again. Timer is authored at completion; `in_time = elapsed_ms <= timer_ms`. Affix names come from DB2 KeystoneAffix in world.db; IDs do not imply a current active rotation. Class/spec names and roles come from ChrClasses/ChrSpecialization. Character IDs resolve within the same realm index.
+
+Order within season/dungeon: timed first, level descending, elapsed ascending, numeric run ID ascending; rank is ordinal within that group. UI level filter is exact, not a score. Character best uses the same ordering; if no timed run exists, show best completed level/time explicitly overtime. No Retail M+ rating formula or score. Season is null when no server authority selects a current season; historical MythicPlusSeason records alone do not establish activation.
+
+`mythic_completed_runs_v1` captures participants present in the dungeon copy, class/spec at completion and completion timestamp, map/challenge, original level/affixes, duration/authored timer/in-time. Commit atomically with key settlement. Only completed runs after deployment rank. Abandoned and old anonymous runs are excluded, never backfilled.
+
+## Raid rankings and locks
+
+`rankings/raids.json`: `policy:"kills_per_difficulty_then_first_kill"`, `scope:"post_deploy_lifetime"`, `characters:[lifetime rows]`, `guilds:[lifetime rows]`, `saved_lock_characters:[unranked saved-lock rows]` plus envelope.
+
+Lifetime row: `{character_id|guild_id,name,realm,raid:{id,name},difficulty_id,scope:"post_deploy_lifetime",kills,total,encounters:[{id,name,killed,first_kill_at:null|seconds}],first_kill_at,progression_at,rank}`. Guild rows additionally contain `guild_name` and `guild_group_credit:true`. Totals count unique authored DungeonEncounter bits applicable to the raid/difficulty. Sort within raid/difficulty by kills descending, `first_kill_at` ascending, numeric subject ID ascending. Aggregate `first_kill_at` is the earliest included encounter first kill; `progression_at` is the latest (informational, not the tie-break).
+
+Saved-lock row: `{character_id,name,realm,raid:{id,name},difficulty_id,scope:"saved_lock",kills,total,encounters:[{id,name,killed,first_kill_at:null}],first_kill_at:null,lock_expires_at,extended}`. No rank. `lock_expires_at` is the saved reset expiry, never a kill timestamp; `extended` is the saved extension flag. Saved locks are separate from lifetime progression and never backfill it.
+
+`raid_first_kills_v1` stores first character/guild kills at scripted SetBossState(DONE) and the existing unambiguous authored raid-creature death boundary. Persist participants' character/guild IDs at kill time, map/difficulty/encounter and timestamp. Repeat kills, resets and guild transfers do not overwrite first records. Counts cover observed post-deploy history only.
+
+Guild credit requires at least 80% of kill participants in the same guild (`members*5 >= participants*4`: 4/5, 8/10, 16/20, 20/25). Label `guild_group_credit`. Source: Blizzard [Guild Advancement and You](https://worldofwarcraft.blizzard.com/en-gb/news/9999050/el-progreso-de-hermandad-y-tu), “at least 80% guild members”. Apply the expressly approved raid rule, not its five-player-dungeon 3/5 exception or historical guild-XP rewards. Count actual copy participants, not offline roster members.
+
+## Test catalog
+
+Source-bound tests require `SITE_DATA_WORLD_COPY` and `MYTHIC_PLUS_WORLD_COPY`. Both may point at canonical `/home/osso/Projects/world-of-osso/game-server/data/world.db`, opened read-only; it now contains the M+ catalog tables. Tests persist player state only in temporary redb files.
+
+## Privacy and catalog preparation
+
+Operator supplies public-realm character ID allowlist minus explicit opt-out ID list; redb currently has no realm/privacy flag. Never infer public membership from account/name/map. Export current public characters only. M+ parties and guild kill records require every recorded participant to be public; omit mixed/private rows rather than leak composition. Character raid rows expose only that public character's credit, not private participants.
+
+Prepare an independent world catalog using `scripts/prepare_site_catalog.py --source WORLD.db --retail-races RETAIL_ChrRaces.csv --forever-races FOREVER_ChrRaces.csv --output NEW_SITE_WORLD.db`. Only the new destination changes. Use cached 12.1.0.69933 Retail rows except race95/96, which use cached Forever1.60.1.70205 rows, matching server product identity. Resolve faction through the matching world FactionTemplate.FactionGroup. Missing catalog rows remain explicit null/gaps. Icons are decoded from existing local BLP/PNG caches into PNG; no CDN or cache mutation.
+
+`--fixture-allowlist` explicitly prepares/recoveries only an owned private-copy redb under site-data diagnostics, selecting fb-owned character IDs without exporting account identifiers. Normal export uses read-only databases. No account names/emails/IPs/tokens, coordinates, bags' private contents, inventories, money or private guild text enter snapshots.
