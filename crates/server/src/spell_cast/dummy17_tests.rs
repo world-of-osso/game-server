@@ -392,7 +392,7 @@ fn dummy17_immune_enemies_get_no_hit_dependent_fragments_marks_or_bones() {
         h.advance(15);
         assert_eq!(h.health(npc), 5000.0);
         for mark in [55078, 157736, 445474] {
-            assert!(!owned(&h, npc, caster, mark));
+            assert!(!owned(&h, npc, caster, mark), "root{root}, mark{mark}");
         }
         for buff in [195181, 117828] {
             assert!(!owned(&h, caster, caster, buff));
@@ -407,7 +407,7 @@ fn dummy17_immune_enemies_get_no_hit_dependent_fragments_marks_or_bones() {
 }
 
 #[test]
-fn dummy17_cenarion_ward_has_four_native_heals_then_expires_without_retriggering() {
+fn dummy17_cenarion_ward_has_native_initial_plus_four_heals_then_expires_without_retriggering() {
     let mut h = fixture(&[102351, 102352, 133], &[102351], 11);
     let caster = h.caster;
     execute(&mut h, 102351, Some(caster));
@@ -421,7 +421,7 @@ fn dummy17_cenarion_ward_has_four_native_heals_then_expires_without_retriggering
             .iter()
             .filter(|e| e.spell_id == Some(102352) && e.periodic && e.kind == CombatLogKind::Heal)
             .count(),
-        4
+        5
     );
     incoming(&mut h, caster);
     assert!(!owned(&h, caster, caster, 102352));
