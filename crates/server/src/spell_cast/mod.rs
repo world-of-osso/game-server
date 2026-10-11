@@ -2037,6 +2037,22 @@ fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
     mark_dirty(world, caster);
 }
 
+/// TC StartCooldown multiplies both spell and category cooldowns by ModHasteRegen.
+fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, duration: f32) -> f32 {
+    if !spell_mods::has_aura_type_affecting(
+        world,
+        caster,
+        crate::auras::handlers::MOD_COOLDOWN_BY_HASTE_REGEN,
+        spell,
+    ) {
+        return duration;
+    }
+    let haste = world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    duration / haste.max(0.01)
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let now = now(world);
     let (base_recovery_ms, base_category_ms) = spell
@@ -2047,7 +2063,8 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         if base == 0 {
             return 0;
         }
-        modify(world, caster, spell, SpellModOp::Cooldown, base as f32)
+        let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
+        haste_regen_cooldown_ms(world, caster, spell, modified)
             .max(0.0)
             .round() as u32
     };

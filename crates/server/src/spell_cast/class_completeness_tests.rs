@@ -196,6 +196,9 @@ fn cooldown_fixture(passive: bool, haste: f32) -> Harness {
 }
 
 fn cast_cooldown_button(h: &mut Harness, spell_id: u32) -> u32 {
+    if spell_id == 57755 {
+        charge_range(h); // Heroic Throw's native minimum range is 8 yards.
+    }
     h.inbox.cooldowns.clear();
     h.cast_and_deliver(spell_id, Some(h.npc));
     h.advance(2);

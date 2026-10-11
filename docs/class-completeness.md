@@ -12,8 +12,12 @@ Native Piercing Chill377359 is +12% to label1615 (Chill Streak204167). Tests exe
 
 ## Shared native charge haste (aura457)
 
-`CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN` applies once only to its native charge category, multiplying recovery by the owner's haste-regen factor. Zero aura amount is a selector, not a zero-percent bonus. Source: TrinityCore a352b1fa `SpellHistory.cpp::GetChargeRecoveryTime` (category check and ModHasteRegen multiplication, lines907–908). The class stat representation already uses one Retail haste percent.
+`CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN` applies once only to its native charge category, multiplying recovery by the owner's haste-regen factor. Zero aura amount is a selector, not a zero-percent bonus. Source: TrinityCore a352b1fa `SpellHistory.cpp::GetChargeRecoveryTime` (category check and ModHasteRegen multiplication, lines1000–1001). The class stat representation already uses one Retail haste percent.
 
-Running charge clocks preserve completed progress when the recovery rate changes (`UpdateChargeRecoveryRate`, lines797–821). A FixedUpdate reconciliation publishes changed recovery and completed charges without requiring another cast. Native Paladin137026/Crusader Strike35395 (category1627,6000ms) proves100% haste→3000ms, charge regeneration and mid-recovery retiming. Zero-haste, absent-passive and unrelated Charge100/category1386 are controls. No charge count/cost/DB2 coefficient mutation.
+Running charge clocks preserve completed progress when the recovery rate changes (`UpdateChargeRecoveryRate`, lines880–909). A FixedUpdate reconciliation publishes changed recovery and completed charges without requiring another cast. Native Paladin137026/Crusader Strike35395 (category1627,6000ms) proves100% haste→3000ms, charge regeneration and mid-recovery retiming. Zero-haste, absent-passive and unrelated Charge100/category1386 are controls. No charge count/cost/DB2 coefficient mutation.
+
+## Shared native cooldown haste (aura416)
+
+Native spell-class masks decide which spell and category cooldowns use haste regen; unrelated spells remain unchanged. Source: TrinityCore a352b1fa `SpellHistory.cpp:425–429` (both cooldowns multiplied by `ModHasteRegen`). Warrior137047/Mortal Strike12294 and Bloodthirst23881 exercise spell6000ms and category4500ms timers at100% haste. Heroic Throw57755 and zero-haste are controls. GCD is still the separate aura417 contract; no new guessed cooldown amount.
 
 No world.db writes, no master merge, no live realm or UDP5000 use.
