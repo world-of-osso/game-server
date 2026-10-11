@@ -18,6 +18,15 @@ Where it's built:
 
 How it works: [content import](../wiki/systems/content-import.md).
 
+## Open-world population (2026-10-11)
+
+- [ ] `content_policy.py --mode world-promote --maps <IDs>` promotes only explicit open-world maps on an existing private database copy; refuses canonical-name, linked, unknown and instance destinations/maps.
+- [ ] Source coordinates, IDs, phase 0/169 without phase-use flags/groups/terrain swaps and authored difficulty 0 remain authentic. No phase progression is flattened.
+- [ ] Unrelated map spawns, overlays, shared templates and existing waypoint/pool dependencies survive; repeated promotion is idempotent. This mode does not run full policy regeneration or clear overlays.
+- [ ] Every locally loadable open-world map has a source/content/phase/difficulty/event/map-filter census; missing source rows remain explicit, not synthesized.
+
+Implementation: `scripts/world_population.py` reuses the [instance import functions](../wiki/systems/content-import.md#instance-population-2026-10-11). Process/copy proof: `scripts/tests/test_world_population.py`.
+
 ## Instance population (2026-10-11)
 
 All maps in the canonical TDB `instance_template` take authentic TDB creature/gameobject spawns, templates, models, addons, formations, equipment and paths through the copy-only [instance importer](../wiki/systems/content-import.md#instance-population-2026-10-11). The historical four-map importer below remains the world/quest/vendor policy; instance population runs after it during regeneration.
