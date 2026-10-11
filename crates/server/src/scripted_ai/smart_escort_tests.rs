@@ -804,6 +804,65 @@ fn smartai_coverage_nearest_creature_filters_entry_map_alive_and_distance() {
     }
 }
 
+#[test]
+fn smartai_coverage_tracking_completion_auto_rewards_without_accept_and_is_idempotent() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    install_quest_log(&temp, &mut world, player);
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let tracking = conn
+        .query_row(
+            "SELECT ID,Flags,LogTitle FROM tdb_quest_template WHERE ID=50804",
+            [],
+            |row| {
+                Ok(crate::quest_data::QuestTemplate {
+                    id: row.get(0)?,
+                    flags: row.get(1)?,
+                    title: row.get(2)?,
+                    captured_reward_xp: Some(0),
+                    ..Default::default()
+                })
+            },
+        )
+        .unwrap();
+    world
+        .resource_mut::<crate::quest_data::QuestDb>()
+        .quests
+        .insert(tracking.id, tracking);
+    let mut action = tdb_action(197802, 9, 1);
+    action.action_params[0] = 50804;
+    action.target_type = TARGET_ACTION_INVOKER;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, Some(player));
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    let before = crate::persistence::quest_store::load_quest_log(db, 1);
+    assert!(before.is_rewarded(50804));
+    assert!(before.active(50804).is_none());
+    assert_eq!(before.active(435).unwrap().counts, vec![0]);
+    ctx.world
+        .resource_mut::<crate::quest::QuestDirty>()
+        .0
+        .clear();
+    ai.execute_action(&mut ctx, &action, Some(player));
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    assert_eq!(
+        crate::persistence::quest_store::load_quest_log(db, 1),
+        before
+    );
+    assert!(
+        ctx.world
+            .resource::<crate::quest::QuestDirty>()
+            .0
+            .is_empty()
+    );
+}
+
 fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {
     let conn = Connection::open_with_flags(
         crate::test_data::world_db_path(),
