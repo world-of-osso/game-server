@@ -426,3 +426,37 @@ fn dummy17_cenarion_ward_has_native_initial_plus_four_heals_then_expires_without
     incoming(&mut h, caster);
     assert!(!owned(&h, caster, caster, 102352));
 }
+
+#[test]
+fn dummy17_shard_casts_grant_only_after_native_cast_completion_not_cancellation() {
+    for root in [686, 6353] {
+        for cancel in [false, true] {
+            let mut h = fixture(&[root, 194192, 281490, 157736, 445474], &[root], 9);
+            let caster = h.caster;
+            h.app.world_mut().entity_mut(caster).insert(ActiveSpec(266));
+            h.set_power(PowerType::SoulShards, 0.0);
+            let npc = h.npc;
+            h.cast_and_deliver(root, Some(npc));
+            assert!(
+                h.app
+                    .world()
+                    .get::<shared::casting::CastState>(caster)
+                    .is_some()
+            );
+            assert_eq!(h.power(PowerType::SoulShards), 0.0);
+            if cancel {
+                super::cancel_cast(h.app.world_mut(), caster);
+            }
+            h.advance(140);
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            assert_eq!(
+                h.power(PowerType::SoulShards),
+                if cancel { 0.0 } else { 10.0 }
+            );
+            assert_eq!(
+                h.inbox.go.iter().filter(|go| go.spell_id == root).count(),
+                usize::from(!cancel)
+            );
+        }
+    }
+}
