@@ -237,7 +237,7 @@ fn wander_system(
             WanderPhase::Walking => tick_walk(*pos, &mut state, spawn, dt, &mut probe),
         };
         if point.is_some() {
-            tracing::debug!(?entity, from = ?*pos, to = ?next_position, ?point, driver = "wander", "concurrent scripted movement");
+            bevy::log::debug!(?entity, from = ?*pos, to = ?next_position, ?point, driver = "wander", "concurrent scripted movement");
         }
         let speed = spawn.speed_walk * BASE_WALK_SPEED;
         let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk, speed);
@@ -1246,7 +1246,7 @@ fn leash_check_system(
 ) {
     for (entity, pos, spawn, state) in &query {
         if matches!(*state, CreatureState::Pursuing { .. }) && beyond_leash(pos, spawn) {
-            tracing::debug!(
+            bevy::log::debug!(
                 ?entity,
                 ?pos,
                 ?spawn,
@@ -1298,7 +1298,7 @@ fn return_to_spawn_system(
         if *state != CreatureState::Returning {
             continue;
         }
-        tracing::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
+        bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
         let home = Position {
             x: spawn.x,
