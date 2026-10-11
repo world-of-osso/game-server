@@ -44,7 +44,11 @@ pub struct PlayerCreateInfo {
 
 /// Kits of every playable race/class (`race_class::playable_pairs`).
 #[derive(Resource, Debug, Default)]
-pub struct PlayerCreateInfos(pub HashMap<(u8, u8), PlayerCreateInfo>, SkyborneKitItems);
+pub struct PlayerCreateInfos(
+    pub HashMap<(u8, u8), PlayerCreateInfo>,
+    SkyborneKitItems,
+    HashMap<(u8, u8), crate::player_start::StartLocation>,
+);
 
 #[derive(Debug, Default)]
 struct SkyborneKitItems {
@@ -61,6 +65,14 @@ impl PlayerCreateInfos {
                 .map(|pair| (pair, PlayerCreateInfo::default()))
                 .collect(),
             SkyborneKitItems::default(),
+            crate::player_start::load_starts(
+                &Connection::open_with_flags(
+                    crate::test_data::world_db_path(),
+                    OpenFlags::SQLITE_OPEN_READ_ONLY,
+                )
+                .unwrap(),
+            )
+            .expect("import authentic starts with scripts/import-player-starts.py"),
         )
     }
 
@@ -297,7 +309,11 @@ pub fn load_player_create_infos(conn: &Connection) -> rusqlite::Result<PlayerCre
             info.actions.push((slot, action));
         }
     }
-    Ok(PlayerCreateInfos(infos, skyborne))
+    Ok(PlayerCreateInfos(
+        infos,
+        skyborne,
+        crate::player_start::load_starts(conn)?,
+    ))
 }
 
 /// Test fixture owning a kit: empty (`bare`) or the real data/world.db one.
@@ -347,6 +363,20 @@ pub struct NewCharacterKit<'a> {
 }
 
 impl NewCharacterKit<'_> {
+    pub(crate) fn starting_location(
+        &self,
+        race: u8,
+        class: u8,
+    ) -> Result<crate::player_start::StartLocation, String> {
+        self.create_info
+            .2
+            .get(&(race, class))
+            .copied()
+            .ok_or_else(|| {
+                format!("race {race} class {class} has no authored playercreateinfo start")
+            })
+    }
+
     /// `Player::Create` items (Player.cpp:521-554): each kit item through
     /// `StoreNewItemInBestSlots`, then the backpack second pass. An item that does not
     /// fit is logged and skipped, like TrinityCore.
@@ -482,3 +512,7 @@ mod tests;
 #[cfg(test)]
 #[path = "skyborne_kit_tests.rs"]
 mod skyborne_tests;
+
+#[cfg(test)]
+#[path = "player_start_tests.rs"]
+mod start_tests;

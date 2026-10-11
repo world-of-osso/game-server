@@ -3,6 +3,7 @@
 
 import argparse
 from contextlib import closing
+import importlib.util
 import json
 from pathlib import Path
 import sqlite3
@@ -19,6 +20,10 @@ def fixture_database():
     db = sqlite3.connect(":memory:")
     db.executescript((SCRIPTS / "db2_schema.sql").read_text())
     db.executescript((SCRIPTS / "tdb_schema.sql").read_text())
+    spec = importlib.util.spec_from_file_location("player_starts", SCRIPTS / "import-player-starts.py")
+    starts = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(starts)
+    starts.import_starts(db, starts.DEFAULT_DUMP)
     db.execute(
         "CREATE TABLE content_npc_vendor (entry INTEGER,slot INTEGER,item INTEGER,maxcount INTEGER,incrtime INTEGER,ExtendedCost INTEGER)"
     )
@@ -56,6 +61,7 @@ def fixture_database():
             "db2_row_source",
             "spell_name",
             "spell_effect",
+            "tdb_playercreateinfo",
             "tdb_playercreateinfo_item",
             "tdb_playercreateinfo_action",
             "skyborne_content_item",
