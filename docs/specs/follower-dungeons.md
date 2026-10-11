@@ -15,7 +15,7 @@ Additional user-approved workaround (2026-10-11): follower difficulty205 runs re
 
 ### Gameplay (acceptance remains open until behavioral/live proof)
 - [ ] Solo follower queue creates a five-member party, fills tank/healer/DPS roles, enters an instance with canonical authored spawns, follows/regroups and finishes the dungeon.
-- [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use bounded spec-spell priorities. All roles reuse server spell execution and navigation.
+- [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use bounded spec-spell priorities. All roles reuse server spell execution and navigation. Companions are player-affected combat units, not persisted characters; their real spell damage credits the authenticated owner/group for kill rewards.
 - [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
 - [ ] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
 
@@ -39,7 +39,8 @@ Additional user-approved workaround (2026-10-11): follower difficulty205 runs re
 - [ ] Live instance entry/completion and full eleven-spec combat coverage remain unproved. NPC identity/role AI have bounded behavioral proof, not end-to-end acceptance.
 - [x] User approved same-map Normal population/entrance reuse; no synthetic coordinates or mutation of authored spawn tags.
 - [x] Lead confirmed canonical follower reference/profile SQL application (11 profiles,27 LFG rows). Agent live development remains on a private copy.
-- [ ] Private live fighting proof and both-skin PNGs; no captures claimed.
+- [ ] Private live first-boss proof and both-skin PNGs. Ruby trash kills/follow/healing have bounded live proof; no complete-run certification.
+- [ ] Authenticated first-boss loot: Melidrussa188252 has lootid0 at all local difficulties and zero source/runtime loot rows. Do not fabricate a drop table.
 
 ## Out of scope
 - Agent writes to canonical world.db or UDP5000 operations: lead-only.
