@@ -19,7 +19,7 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 - [ ] Solo follower queue creates a five-member party, fills tank/healer/DPS roles, enters an instance with canonical authored spawns, follows/regroups and finishes the dungeon.
 - [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use bounded spec-spell priorities. All roles reuse server spell execution and navigation. Companions are player-affected combat units, not persisted characters; their real spell damage credits the authenticated owner/group for kill rewards.
 - [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
-- [ ] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
+- [x] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
 
 ## How it works
 - [Source audit, importer and runtime boundary](../wiki/investigations/follower-data.md)
@@ -38,10 +38,11 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 ## Known gaps (current cycle)
 - [ ] Authored NPC combat kits are absent. The approved player-spec bridge does not establish full player rotation, pet, interrupt, defensive or ground-avoidance parity.
-- [ ] Live instance entry/completion and full eleven-spec combat coverage remain unproved. NPC identity/role AI have bounded behavioral proof, not end-to-end acceptance.
+- [ ] Full-instance completion and full eleven-spec combat coverage remain unproved. Current both-skin live slice covers a Damage-role Mage, Garrick/Crenna/Shuja/Meredy, trash and the first Ruby boss; no wider certification.
 - [x] User approved same-map Normal population/entrance reuse; no synthetic coordinates or mutation of authored spawn tags.
 - [x] Lead confirmed canonical follower reference/profile SQL application (11 profiles,27 LFG rows). Agent live development remains on a private copy.
-- [ ] Private live first-boss proof and both-skin PNGs. Ruby trash kills/follow/healing have bounded live proof; no complete-run certification.
+- [x] Private live first-boss proof and both-skin PNGs: difficulty205 admission, five correct roles, following, tank threat/boss swings, NPC healing, damage/cooldown casts, Juggernaut and Melidrussa kills, owner XP. [Proof and exact limitations](../wiki/investigations/follower-data.md#both-skin-first-boss-proof--2026-10-11).
+- [ ] Physical walked route: native movement blocked near1434/-180; private admin reposition supplied boss approach. Do not claim navigation/full-dungeon completion.
 - [ ] Authenticated first-boss loot: Melidrussa188252 has lootid0 at all local difficulties and zero source/runtime loot rows. Do not fabricate a drop table.
 
 ## Out of scope
