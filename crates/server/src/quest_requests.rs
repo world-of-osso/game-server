@@ -398,11 +398,12 @@ impl<'a> QuestSession<'a, '_, '_> {
             }
             self.io.shares.next_id += 1;
             let id = self.io.shares.next_id;
+            let sender = self.character();
             self.io.shares.offers.insert(
                 character,
                 SharedOffer {
                     id,
-                    sender: self.character(),
+                    sender,
                     quest: quest_id,
                 },
             );
