@@ -811,3 +811,7 @@ Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hoo
 - 2026-10-10: Guardian final integration25bc1fc retains batch15/petbattle-effects3. Current census163 roots99/64; all40 batch15 baseline exactly reproduced, only Affliction script3→4/root A unchanged. Single earlier352/352 spell_cast gate retained; bounded post-master22/22 plus fmt/check. [Coverage](../spell-guardians2-coverage.md).
 
 - 2026-10-10: [Stranglethorn ground](investigations/stranglethorn-ground.md): legacy underground audit destination reproduced; corrected Retail coordinates; real-tile gravity/hub proof and all-map WDT root census.
+
+## 2026-10-11 — Cobrahn encounter
+
+Bounded local-data Wailing Caverns SmartAI lifecycle and aggro dialogue documented in [[boss-scripts]]. Behavioral RED exposed absent encounter state; live proof remains pending population integration.

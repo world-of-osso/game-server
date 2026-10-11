@@ -30,6 +30,12 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] `SMART_TARGET_VICTIM` resolves the current victim. `SMARTCAST_COMBAT_MOVE` disables chase after an accepted cast, including between casts; a rejected cast restores chase/melee and retries on the next update without rerolling event chance.
 - [x] New AI starts with combat movement enabled; Reset restores initial timers without changing movement permission. Real Kobold Geomancer 476 rows cast Fireball 20793, with a 0 ms initial delay and 3000–5000 ms repeat.
 
+### Wailing Caverns — bounded Cobrahn slice
+- [x] Lord Cobrahn3669 (map43, Normal1, encounter586, instance data0 from local SmartAI death action34) participates in copy-scoped encounter start/end and boss frames through the existing `BossAi` machinery. Evade fails the encounter; death succeeds.
+- [x] Its abilities are loaded, not hardcoded: SmartAI row2 casts Lightning Bolt20805 at its victim, initial0ms/repeat6000–8000ms. AGGRO4 / TALK1 speaks source group0.
+- [ ] Remaining WC bosses, Naralex escort, door progression and unsupported SmartAI events/actions are not covered. No absent C++ mechanics or coefficients are inferred.
+- [ ] Live both-skin entry/pull/death/loot proof pending; population/gate dependency belongs to `dungeon-population`. Normal has no scheduled lockout; existing encounter credit/loot paths are reused.
+
 ### The Stockade
 - [x] Hogger (46254, boss 2, encounter 1144): pull yell; Maddening Call 1-2 s then every 15-20 s; Vicious Slice 3-4 s then every 10-14 s; once below 30%: boss emote "Hogger enrages!" and Enrage (+30% melee haste, +10% physical damage); death yell, Warden Thelwater summoned, runs to (152.0, 106.2) and speaks at +1/+5/+8 s.
 - [x] Lord Overheat (46264, boss 1, encounter 1145): pull and death yells; Fireball 2 s then every 2 s; Overheat on a random player 9-11 s then 9-10 s; Rain of Fire at the victim 10-13 s then 15-20 s.
