@@ -101,11 +101,12 @@ fn dummy12_gargoyle_native_attack_crit_and_successful_owner_spend() {
             attack_power: 100.0,
             ..default()
         });
+    let observer = spawn_peer_connection(&mut h.app, gargoyle, 2);
     h.set_power(PowerType::RunicPower, 1000.0);
     let spell = world_db().unwrap().store.get(47541).unwrap();
     super::execute_cast(h.app.world_mut(), h.caster, spell, Some(h.npc)).unwrap();
     assert_eq!(h.power(PowerType::RunicPower), 700.0);
-    h.advance(100);
+    advance_actor_logs(&mut h, observer, 100);
     let bolts: Vec<_> = h
         .inbox
         .log
@@ -127,12 +128,27 @@ fn dummy12_gargoyle_native_attack_crit_and_successful_owner_spend() {
     h.set_power(PowerType::RunicPower, 0.0);
     assert!(super::execute_cast(h.app.world_mut(), h.caster, spell, Some(h.npc)).is_err());
     h.inbox.log.clear();
-    h.advance(80);
+    advance_actor_logs(&mut h, observer, 80);
+    assert!(
+        !damage(&h, 51963, h.npc).is_empty(),
+        "real guardian attacks must continue after refused owner cast"
+    );
     assert!(
         damage(&h, 51963, h.npc)
             .iter()
             .all(|&n| varied(34.776 * 2.0 * 1.3).contains(&(n as f32)))
     );
+}
+
+fn advance_actor_logs(h: &mut Harness, connection: Entity, frames: usize) {
+    for _ in 0..frames {
+        h.advance(1);
+        h.inbox
+            .log
+            .extend(drain::<shared::protocol::CombatLogEvent>(
+                &mut h.app, connection,
+            ));
+    }
 }
 
 #[test]
