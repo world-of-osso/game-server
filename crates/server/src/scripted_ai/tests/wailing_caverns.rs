@@ -68,7 +68,8 @@ fn cobrahn() -> (Harness, Entity) {
         group: None,
         leader: 2001,
         difficulty_id: 1,
-        ..Default::default()
+        raid_difficulty: Default::default(),
+        raid_group: false,
     };
     let mut instances = crate::maps::InstanceManager::default();
     assert_eq!(

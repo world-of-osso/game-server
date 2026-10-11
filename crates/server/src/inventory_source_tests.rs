@@ -59,6 +59,7 @@ fn catalog() -> ItemTemplates {
                 },
             ),
         ]),
+        loot_need: Default::default(),
     }
 }
 
@@ -105,6 +106,7 @@ fn record(
         definition_sources: HashMap::from([(guid, source)]),
         appearance_account: None,
         appearance_grants: Vec::new(),
+        transmogs: Default::default(),
     }
 }
 

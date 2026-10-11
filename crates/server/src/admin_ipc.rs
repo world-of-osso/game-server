@@ -738,6 +738,7 @@ mod tests {
             .into_iter()
             .collect(),
             forever: Default::default(),
+            loot_need: Default::default(),
         };
         let mut catalog = crate::merchant::VendorCatalog::default();
         catalog.goods.insert(

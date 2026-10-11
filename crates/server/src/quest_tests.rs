@@ -1236,6 +1236,9 @@ fn a_gray_forest_wolf_kill_counts_as_a_prowler() {
 #[path = "quest_spell_tests.rs"]
 mod spell;
 
+#[path = "quest_objectives_tests.rs"]
+mod objectives;
+
 #[test]
 fn source_requirements_quest_progress_turn_in_and_abandon_ignore_forever() {
     use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};

@@ -15,6 +15,9 @@ use crate::item_templates::load_item_templates;
 use crate::merchant::load_vendor_catalog;
 use crate::persistence::ClientId;
 
+#[path = "loot/group_tests.rs"]
+mod group_loot;
+
 const KOBOLD_VERMIN: u32 = 6;
 const MELTED_CANDLE: u32 = 755;
 const TARNISHED_CHAIN_VEST: u32 = 2379;
@@ -73,6 +76,8 @@ fn harness(tables: bool) -> Option<Harness> {
     add_inbox::<LootClosed>(&mut app);
     add_inbox::<CorpseLootable>(&mut app);
     add_inbox::<LootFailed>(&mut app);
+    add_inbox::<shared::protocol::GroupLootRoll>(&mut app);
+    app.init_resource::<crate::group::GroupRegistry>();
     app.insert_resource(load_item_templates(&path).unwrap());
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
     crate::appearance_collection::tests::install_database(&mut app);
@@ -133,6 +138,11 @@ fn spawn_looter(app: &mut App, name: &str, peer: u64) -> Looter {
             ),
         ))
         .id();
+    app.world_mut().entity_mut(connection).insert((
+        pair::<shared::protocol::GroupLootRoll>(),
+        pair::<shared::protocol::GroupLootChoice>(),
+        pair::<shared::protocol::GroupLootHistoryRequest>(),
+    ));
     Looter {
         character_id,
         player,
