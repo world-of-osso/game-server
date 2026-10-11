@@ -3,6 +3,7 @@
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
 - [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
 
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 
