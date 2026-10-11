@@ -25,7 +25,7 @@ All maps in the canonical TDB `instance_template` take authentic TDB creature/ga
 - [ ] Every instance map imports source-backed base-phase rows at its MapDifficulty difficulties; always-visible flag1 rows remain eligible, while conditional phases, terrain swaps and unsupported/inverse phase-use flags are counted separately, never flattened into visible base-phase spawns.
 - [ ] Same-ID legacy instance templates/models must not override TDB identity. Missing source templates remain explicit deficits; missing display/asset metadata never causes fabricated models.
 - [ ] A map copy spawns its eligible creatures independent of client appearance-cache coverage, at the copy's difficulty and excluding dead bosses/event/pool restrictions.
-- [ ] Copy importer refuses `world.db`, symlinks and hardlinks; repeated application preserves world-map spawns and existing source-backed loot references.
+- [ ] Copy importer refuses `world.db`, symlinks and hardlinks; repeated application preserves world-map spawns and unrelated source-backed loot references. Imported instance base/difficulty templates bind their resolved TDB LootID (+20,000,000 when nonzero), GoldMin and GoldMax, including gold-only rows; referenced TDB loot is imported through the existing Retail item policy without legacy/Wowhead substitutions.
 - [ ] Private-port client proof covers visible, attackable creatures in representative dungeons and both skins.
 
 Raid admission/lockout UX (rank 5), encounter scripting (rank 2), phase progression and unsupported gameobject interaction types remain separate gaps; importing their authentic rows is not proof those gameplay systems work.
