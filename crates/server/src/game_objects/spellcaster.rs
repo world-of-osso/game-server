@@ -15,7 +15,7 @@ pub(crate) struct SpellcasterObject {
     pub spell: u32,
     pub charges: i32,
     pub party_only: bool,
-    pub condition: u32,
+    pub(super) identity: Result<super::identity_conditions::IdentityCondition, String>,
     pub radius_override: u32,
     pub uses: u32,
 }
@@ -26,7 +26,14 @@ fn may_use(
     object: Entity,
     data: &SpellcasterObject,
 ) -> Result<(), InteractionError> {
-    if world.get::<Player>(player).is_none() || data.condition != 0 {
+    let player_data = world
+        .get::<Player>(player)
+        .ok_or(InteractionError::InvalidTarget)?;
+    let identity = data
+        .identity
+        .as_ref()
+        .map_err(|_| InteractionError::InvalidTarget)?;
+    if !identity.permits(player_data) {
         return Err(InteractionError::InvalidTarget);
     }
     if world

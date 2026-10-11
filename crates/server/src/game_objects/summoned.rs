@@ -40,7 +40,7 @@ pub(crate) struct SummonedObject {
     pub expires_at: Option<f64>,
 }
 
-fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
+fn template_from_row(row: &Row, conn: &Connection) -> rusqlite::Result<(u32, ObjectTemplate)> {
     let entry = row.get(0)?;
     let go_type = row.get(1)?;
     let scale = row.get::<_, f64>(4)? as f32;
@@ -79,7 +79,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
                         spell: row.get(16)?,
                         charges: row.get(17)?,
                         party_only: row.get::<_, u32>(18)? != 0,
-                        condition: row.get(19)?,
+                        identity: super::identity_conditions::load_condition(conn, row.get(19)?)?,
                         radius_override: row.get(20)?,
                         uses: 0,
                     })
@@ -96,7 +96,7 @@ pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObje
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
         WHERE t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)")?;
     let templates = query
-        .query_map([], template_from_row)?
+        .query_map([], |row| template_from_row(row, conn))?
         .collect::<rusqlite::Result<_>>()?;
     Ok(SummonedObjectTemplates(templates))
 }
@@ -127,13 +127,11 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
         return Some(format!("gameobject {entry} requires custom script"));
     }
     if let Some(spellcaster) = &template.spellcaster {
-        return (spellcaster.condition != 0)
-            .then(|| {
-                format!(
-                    "gameobject {entry} requires PlayerCondition {}",
-                    spellcaster.condition
-                )
-            })
+        return spellcaster
+            .identity
+            .as_ref()
+            .err()
+            .map(|reason| format!("gameobject {entry}: {reason}"))
             .or_else(|| {
                 template.bounds.is_none().then(|| {
                     format!(
