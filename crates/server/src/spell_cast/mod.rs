@@ -2052,7 +2052,8 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     let haste = world
         .get::<CharacterStats>(caster)
         .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
-    duration / haste.max(0.01)
+    // Native Duration(int64(...)) truncates fractional milliseconds.
+    (duration / haste.max(0.01)).trunc()
 }
 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {

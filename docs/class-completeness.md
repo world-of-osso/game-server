@@ -18,7 +18,7 @@ Running charge clocks preserve completed progress when the recovery rate changes
 
 ## Shared native cooldown haste (aura416)
 
-Native spell-class masks decide which spell and category cooldowns use haste regen; unrelated spells remain unchanged. Source: TrinityCore a352b1fa `SpellHistory.cpp:425–429` (both cooldowns multiplied by `ModHasteRegen`). Warrior137047/Mortal Strike12294 and Bloodthirst23881 exercise spell6000ms and category4500ms timers at100% haste. Heroic Throw57755 and zero-haste are controls. GCD is still the separate aura417 contract; no new guessed cooldown amount.
+Native spell-class masks decide which spell and category cooldowns use haste regen; unrelated spells remain unchanged. Source: TrinityCore a352b1fa `SpellHistory.cpp:425–429` (both cooldowns multiplied by `ModHasteRegen`). Warrior137047/Mortal Strike12294 and Bloodthirst23881 exercise spell6000ms and category4500ms timers at100% haste. Heroic Throw57755 and zero-haste are controls. GCD is still the separate aura417 contract; no new guessed cooldown amount. Fractional native millisecond durations truncate (6000ms at40% haste→4285ms), not round. A separate no-recast charge test verifies the FixedUpdate rate notification and eventual replenishment with no new SpellGo.
 
 ## Native-row runtime probe
 
