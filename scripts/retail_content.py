@@ -238,13 +238,17 @@ def build_template_difficulties(conn, report):
 # though nothing spawns them.
 TRANSFORM_ENTRIES = "SELECT EffectMiscValue_0 FROM spell_effect WHERE EffectAura = 56 AND EffectMiscValue_0 > 0"
 
-# Aura428 toys need the authentic linked creature even without a world spawn.
-TOY_LINKED_SUMMON_ENTRIES = """SELECT s.EffectMiscValue_0 FROM toy t
+# Aura428 linked toys and audited stationary scenery need authentic templates
+# even without world spawns. The two scenery IDs are TDB1210's Silversage
+# Incense and Totem of Harmony; click/script/control toys are not imported.
+TOY_SCENERY_SUMMON_ENTRIES = (65298, 65387)
+TOY_SUMMON_ENTRIES = f"""SELECT s.EffectMiscValue_0 FROM toy t
     JOIN item_x_item_effect x ON x.ItemID = t.ItemID
     JOIN item_effect i ON i.ID = x.ItemEffectID AND i.TriggerType = 0
     JOIN spell_effect a ON a.SpellID = i.SpellID AND a.DifficultyID = 0 AND a.EffectAura = 428
     JOIN spell_effect s ON s.SpellID = a.EffectTriggerSpell AND s.DifficultyID = 0 AND s.Effect = 28
-    WHERE s.EffectMiscValue_0 > 0"""
+    WHERE s.EffectMiscValue_0 > 0
+    UNION SELECT entry FROM tdb_creature_template WHERE entry IN {TOY_SCENERY_SUMMON_ENTRIES}"""
 
 
 def insert_tdb_templates(conn, entries):
@@ -296,7 +300,7 @@ def build_templates(conn, report):
     conn.create_function("health_expansion", 1, health_expansion, deterministic=True)
     insert_tdb_templates(conn, "SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn)")
     insert_tdb_templates(conn, TRANSFORM_ENTRIES)
-    insert_tdb_templates(conn, TOY_LINKED_SUMMON_ENTRIES)
+    insert_tdb_templates(conn, TOY_SUMMON_ENTRIES)
     # Retail quest objectives count Retail kill credits (Player::KilledMonster credits the entry
     # and its KillCredit1/2): an AzerothCore template TrinityCore also has takes them.
     conn.execute("""UPDATE content_creature_template SET KillCredit1 = t.KillCredit1, KillCredit2 = t.KillCredit2
