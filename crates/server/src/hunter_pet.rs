@@ -52,6 +52,8 @@ const TAME_BEAST: u32 = 1515;
 pub const EFFECT_TAME_CREATURE: u32 = 55;
 pub const EFFECT_SUMMON_PET: u32 = 56;
 pub const EFFECT_DISMISS_PET: u32 = 102;
+/// Local Revive Pet982 effect109; TC a352b1fa EffectResurrectPet.
+pub const EFFECT_RESURRECT_PET: u32 = 109;
 /// `SPELL_AURA_ALLOW_TAME_PET_TYPE`: `Player::CanTameExoticPets`.
 const AURA_ALLOW_TAME_PET_TYPE: u32 = 146;
 /// `DEFAULT_PLAYER_COMBAT_REACH`: `GetClosePoint(..., owner->GetCombatReach())`.
@@ -220,6 +222,7 @@ pub(crate) fn check_cast(
     for effect in &spell.effects {
         match effect.effect {
             EFFECT_SUMMON_PET => check_summon_pet(world, caster, spell, effect)?,
+            EFFECT_RESURRECT_PET => check_revive_pet(world, caster)?,
             EFFECT_DISMISS_PET if summoned_pet(world, caster).is_none() => {
                 return Err(CastFailure::Pet(PetCastFailure::NoPet));
             }
@@ -516,6 +519,92 @@ fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> Store
                 specialization: None,
             }
         }
+    }
+}
+
+fn first_dead_active_slot(world: &World, owner: Entity) -> Option<u8> {
+    world
+        .get::<PetStable>(owner)?
+        .stored
+        .active
+        .iter()
+        .position(|pet| pet.as_ref().is_some_and(|pet| pet.health == Some(0.0)))
+        .map(|slot| slot as u8)
+}
+
+/// TC Spell.cpp RESURRECT_PET checks: reject a living summon, otherwise require
+/// a dead current pet or the first dead active record (not a stable-storage pet).
+fn check_revive_pet(world: &World, owner: Entity) -> Result<(), CastFailure> {
+    if world.get::<Player>(owner).map(|player| player.class) != Some(CLASS_HUNTER) {
+        return Err(CastFailure::InvalidTarget);
+    }
+    if let Some(pet) = summoned_pet(world, owner) {
+        if world
+            .get::<Health>(pet)
+            .expect("controlled pet health")
+            .current
+            > 0.0
+        {
+            return Err(CastFailure::Pet(PetCastFailure::Tame(
+                TameFailReason::AlreadyHaveSummon,
+            )));
+        }
+        return Ok(());
+    }
+    first_dead_active_slot(world, owner)
+        .map(|_| ())
+        .ok_or(CastFailure::InvalidTarget)
+}
+
+pub(crate) fn effect_revive_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    let owner = ctx.caster;
+    if check_revive_pet(world, owner).is_err() {
+        return;
+    }
+    let Some((at, facing)) = close_point(world, owner) else {
+        return;
+    };
+    if summoned_pet(world, owner).is_none() {
+        let slot = first_dead_active_slot(world, owner).expect("dead pet validated");
+        put_pet_out(world, owner, slot, at, facing);
+    }
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    let percentage =
+        crate::spell_cast::effects::modded_base_points(world, owner, ctx.spell, effect);
+    if percentage < 0.0 {
+        return;
+    }
+    restore_pet_life(world, pet, at, percentage);
+    persist_current_pet_health(world, owner);
+    crate::pet_control::send_pet_spells(world, owner, pet);
+}
+
+fn restore_pet_life(world: &mut World, pet: Entity, at: Position, percentage: f32) {
+    crate::combat::combat_stop(world, pet);
+    world
+        .entity_mut(pet)
+        .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+    let mut health = world.get_mut::<Health>(pet).expect("controlled pet health");
+    health.current = (health.max * percentage / 100.0).min(health.max);
+    *world
+        .get_mut::<Position>(pet)
+        .expect("controlled pet position") = at;
+    if let Some(mut charm) = world.get_mut::<crate::pet_control::PetCharm>(pet) {
+        charm.command_attack = false;
+        charm.follow_ordered = false;
+        charm.stay_at = (charm.command == shared::protocol::COMMAND_STAY).then_some(at);
+    }
+    crate::interest::set_hidden(world, pet, false);
+    crate::interest::mark_interest_position_changed(
+        world
+            .get_resource::<crate::interest::InterestDirtyQueue>()
+            .map(|queue| &*queue),
+        pet,
+    );
+    if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+        queue.mark(pet);
     }
 }
 
