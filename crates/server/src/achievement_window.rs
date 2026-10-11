@@ -167,13 +167,14 @@ impl AchievementCatalog {
         race: u8,
         scope: AchievementScope,
     ) -> AchievementSummary {
-        const COUNTER_OR_GUILD: u32 = 0x1 | 0x4000;
+        // TrinityCore a352b1fa DBCEnums.h:73-93: counters, hidden, guild and tracking copies.
+        const NON_PLAYER_UI: u32 = 0x1 | 0x2 | 0x4000 | 0x100000;
         let eligible: Vec<_> = self
             .window
             .definitions
             .values()
             .filter(|row| {
-                row.flags & COUNTER_OR_GUILD == 0
+                row.flags & NON_PLAYER_UI == 0
                     && self.faction_matches(row.faction, race)
                     && matches_scope(row.flags, scope)
             })

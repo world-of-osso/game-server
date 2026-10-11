@@ -5,7 +5,8 @@ use shared::protocol::{AchievementCatalogPage, QueryAchievementCatalog};
 fn achievements_summary_counts_full_catalog_and_account_scope_not_loaded_pages() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
-    state.earned_ids.insert(633);
+    state.earned_ids.extend([633, 39958]);
+    // Authentic 0x100000 tracking copy must not add visible Summary completions.
     state.earned_at.insert(633, 1_791_244_800);
     let mut account = PlayerAchievementState::default();
     account.earned_ids.insert(4899);
