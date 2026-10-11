@@ -63,7 +63,7 @@ fn rewind_heals(h: &mut Harness) -> Vec<(i32, i32)> {
         .filter(|e| {
             e.spell_id == Some(363534)
                 && e.kind == CombatLogKind::Heal
-                && e.target == caster.to_bits()
+                && e.target == Some(caster.to_bits())
         })
         .map(|e| (e.amount, e.overflow))
         .collect()
