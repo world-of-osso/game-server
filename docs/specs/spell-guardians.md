@@ -29,10 +29,12 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - `crates/server/src/auras/damage_transfer.rs` — school-mask splits and native Sacrifice floor.
 - `crates/server/src/combat.rs` — melee splitting before health loss; nonrecursive redirect health application.
 - `scripts/import-guardian-spells.py` — archive importer for a prepared database copy.
+- `scripts/add_guardian_templates.py` — prepare authentic Darkglare103673 template/model from imported TDB tables on a copy; reject live world.db. Command: `python3 scripts/add_guardian_templates.py --db data/world.db.new`. Production import remains operator-owned.
 
 ## Tests asserting this spec
 - `crates/server/src/spell_cast/guardian_tests.rs` — authentic effect28/binding actor fixture and real spell/melee/periodic/direct damage paths.
 - `scripts/tests/test_guardian_spells.py` — exact rows, missing input and rollback.
+- `scripts/tests/test_guardian_templates.py` — authentic Darkglare template/model, idempotent prepared-copy import, missing-model rollback and live-database refusal.
 
 ## Known gaps (current cycle)
 - [ ] Wild Imp55659, Dreadstalker98035, Darkglare103673, Tyrant135002/250289 and other named guardian rotations require authentic creature-to-spell/cadence/budget data. See coverage receipts; no guessed six-bolt/energy policy.
