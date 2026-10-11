@@ -352,7 +352,7 @@ fn credit_quest_area_triggers(
 }
 
 /// Bag changes move item objectives; level changes move quest markers.
-fn mark_quest_inputs_changed(
+pub(crate) fn mark_quest_inputs_changed(
     inventories: Res<GoldUpdateQueue>,
     levels: Query<&ClientId, Changed<Level>>,
     mut dirty: ResMut<QuestDirty>,
@@ -375,7 +375,7 @@ type UpdateConnections<'w, 's> = Query<
     ),
 >;
 
-fn send_quest_updates(
+pub(crate) fn send_quest_updates(
     mut dirty: ResMut<QuestDirty>,
     store: QuestStore,
     mut connections: UpdateConnections,
