@@ -268,7 +268,7 @@ pub fn players_in_map(world: &mut World, map: InMap) -> Vec<Entity> {
 }
 
 /// `Map::SendToPlayers` on the encounter channel.
-fn send_to_players<M: lightyear::prelude::Message + Clone>(
+pub(super) fn send_to_players<M: lightyear::prelude::Message + Clone>(
     world: &mut World,
     map: InMap,
     message: M,
@@ -280,6 +280,25 @@ fn send_to_players<M: lightyear::prelude::Message + Clone>(
             sender.send::<EncounterChannel>(message.clone());
         }
     }
+}
+
+/// A live instance boss, not an ordinary creature with a similar spell.
+pub(super) fn is_active_boss(world: &World, map: InMap, unit: Entity) -> bool {
+    let Some(npc) = world.get::<shared::components::Npc>(unit) else {
+        return false;
+    };
+    world
+        .get_resource::<InstanceScripts>()
+        .and_then(|scripts| scripts.0.get(&map))
+        .is_some_and(|script| {
+            script.boss_creatures.iter().any(|&(entry, id)| {
+                entry == npc.template_id
+                    && script
+                        .bosses
+                        .get(id as usize)
+                        .is_some_and(|boss| boss.state == EncounterState::InProgress)
+            })
+        })
 }
 
 /// Unloaded copies take their instance scripts with them.

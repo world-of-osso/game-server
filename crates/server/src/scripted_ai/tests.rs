@@ -261,6 +261,8 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
             (
                 MessageSender::<ChatMessage>::default(),
                 MessageReceiver::<ChatMessage>::default(),
+                MessageSender::<shared::protocol::EncounterTimelineEvent>::default(),
+                MessageReceiver::<shared::protocol::EncounterTimelineEvent>::default(),
                 MessageSender::<EncounterStart>::default(),
                 MessageReceiver::<EncounterStart>::default(),
                 MessageSender::<EncounterEnd>::default(),
