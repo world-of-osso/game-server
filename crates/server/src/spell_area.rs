@@ -241,9 +241,80 @@ fn sync(world: &mut World) {
 mod tests {
     use super::*;
     #[test]
+    fn spell_area_jaga_authored_position_resolves_required_area() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let maps = crate::maps::store::load_map_store(&conn).unwrap();
+        let wdts = maps
+            .maps
+            .values()
+            .map(|entry| (entry.id, entry.wdt_file_data_id))
+            .collect();
+        let mut ground = crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), wdts);
+        assert_eq!(
+            ground.area_at(1, Vec3::new(1945.5, 24.1249, 4343.38)),
+            Some(5171)
+        );
+    }
+
+    #[test]
+    fn spell_area_ignore_quest_change_still_autocasts_on_aura_change() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(include_str!("../../../scripts/spell_area_schema.sql"))
+            .unwrap();
+        conn.execute(
+            "INSERT INTO tdb_spell_area VALUES (100616,5171,29401,0,89305,0,2,5,8,0)",
+            [],
+        )
+        .unwrap();
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[100616, 89305], 1).unwrap();
+        h.app.insert_resource(load(&conn).unwrap());
+        let mut inputs = Inputs {
+            area: 5171,
+            zone: 1637,
+            race: 2,
+            gender: 0,
+            statuses: HashMap::new(),
+        };
+        reconcile(h.app.world_mut(), h.caster, &inputs);
+        inputs.statuses.insert(29401, 3);
+        reconcile(h.app.world_mut(), h.caster, &inputs);
+        assert!(
+            !h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .is_some_and(|auras| auras.iter().any(|a| a.spell_id == 100616))
+        );
+        let spell = h.app.world().resource::<SpellStore>().get(89305).unwrap();
+        let mask = aura_effect_mask(spell);
+        apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 89305,
+                effect_mask: mask,
+                source: AuraSource::Cast,
+            },
+        );
+        reconcile(h.app.world_mut(), h.caster, &inputs);
+        assert!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .is_some_and(|auras| auras.iter().any(|a| a.spell_id == 100616)),
+            "ignore-quest-status-change does not disable aura-driven eligibility"
+        );
+    }
+
+    #[test]
     fn spell_area_balloon_eligibility_applies_and_removes_real_detection() {
         let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(include_str!("../../../scripts/tdb_schema.sql"))
+        conn.execute_batch(include_str!("../../../scripts/spell_area_schema.sql"))
             .unwrap();
         conn.execute(
             "INSERT INTO tdb_spell_area VALUES (100616,5171,0,29401,0,0,2,3,0,43)",
