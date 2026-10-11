@@ -97,6 +97,10 @@ pub struct SpawnPoint {
     pub speed_run: f32,
 }
 
+/// The creature's original home facing in Bevy radians, independent of current rotation.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct HomeOrientation(pub f32);
+
 /// State machine for random-wander creatures (movement_type=1).
 /// Coordinates are in Bevy space (X-right, Y-up, Z-back).
 #[derive(Component, Debug)]

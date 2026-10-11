@@ -32,6 +32,8 @@ mod timed;
 
 #[path = "smart_escort.rs"]
 mod escort;
+#[path = "smart_pose.rs"]
+mod pose;
 
 #[path = "smart_targets.rs"]
 mod targets;
@@ -67,6 +69,8 @@ const EVENT_WAYPOINT_STOPPED: u32 = 57;
 const EVENT_WAYPOINT_ENDED: u32 = 58;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
+const ACTION_SET_EMOTE_STATE: u32 = 17;
+const ACTION_SET_ORIENTATION: u32 = 66;
 const ACTION_SET_FACTION: u32 = 2;
 const ACTION_FAIL_QUEST: u32 = 6;
 const ACTION_COMPLETE_QUEST: u32 = 152;
@@ -236,6 +240,8 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_SUMMON_CREATURE
             | ACTION_SUMMON_CREATURE_GROUP
             | ACTION_FOLLOW
+            | ACTION_SET_EMOTE_STATE
+            | ACTION_SET_ORIENTATION
             | ACTION_SET_EVENT_PHASE
             | ACTION_CALL_KILLEDMONSTER
             | ACTION_DIE
@@ -575,6 +581,8 @@ impl SmartAi {
             ACTION_SUMMON_CREATURE => self.summon_action(ctx, event, &targets, invoker),
             ACTION_SUMMON_CREATURE_GROUP => self.summon_group(ctx, event, invoker),
             ACTION_FOLLOW => self.set_follow(ctx, event, &targets),
+            ACTION_SET_EMOTE_STATE => Self::set_emote_state(ctx, &targets, event.action_params[0]),
+            ACTION_SET_ORIENTATION => Self::set_orientation(ctx, event, &targets),
             ACTION_CAST => {
                 return Self::cast_targets(ctx, event, targets);
             }

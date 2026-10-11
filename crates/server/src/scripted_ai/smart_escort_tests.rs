@@ -367,6 +367,12 @@ fn smartai_coverage_ranked_orientation_turns_actor_not_selected_target() {
             < 0.0001
     );
     assert_eq!(ctx.world.get::<Rotation>(player).unwrap().y, 0.7);
+    ctx.world
+        .entity_mut(creature)
+        .insert(crate::creature_ai::HomeOrientation(4.25));
+    action.target_type = TARGET_SELF;
+    ai.execute_action(&mut ctx, &action, None);
+    assert_eq!(ctx.world.get::<Rotation>(creature).unwrap().y, 4.25);
 }
 
 #[test]
