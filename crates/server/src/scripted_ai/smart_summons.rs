@@ -13,7 +13,103 @@ struct SummonLifetime {
     duration_ms: u32,
 }
 
+impl SummonLifetime {
+    fn new(kind: u32, duration_ms: u32) -> Self {
+        Self {
+            kind,
+            remaining_ms: duration_ms,
+            duration_ms,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(super) struct GroupMember {
+    entry: u32,
+    position: [f32; 4],
+    kind: u32,
+    duration_ms: u32,
+}
+
+pub(super) fn load_summon_groups(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<(u32, u32), Vec<GroupMember>>> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='tdb_creature_summon_groups')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !exists {
+        warn!(
+            "SmartAI SUMMON_CREATURE_GROUP disabled: tdb_creature_summon_groups absent; apply overlay --tdb-world-sql"
+        );
+        return Ok(HashMap::new());
+    }
+    let mut query = conn.prepare("SELECT summonerId,groupId,entry,position_x,position_y,position_z,orientation,summonType,summonTime FROM tdb_creature_summon_groups WHERE summonerType=0")?;
+    let rows = query.query_map([], |row| {
+        Ok((
+            (row.get(0)?, row.get(1)?),
+            GroupMember {
+                entry: row.get(2)?,
+                position: [row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?],
+                kind: row.get(7)?,
+                duration_ms: row.get(8)?,
+            },
+        ))
+    })?;
+    let mut groups: HashMap<(u32, u32), Vec<GroupMember>> = HashMap::new();
+    for row in rows {
+        let (key, member) = row?;
+        groups.entry(key).or_default().push(member);
+    }
+    Ok(groups)
+}
+
 impl SmartAi {
+    pub(super) fn summon_group(
+        &mut self,
+        ctx: &mut Ctx,
+        event: &SmartEvent,
+        invoker: Option<Entity>,
+    ) {
+        let Some(entry) = ctx
+            .world
+            .get::<shared::components::Npc>(ctx.me)
+            .map(|npc| npc.template_id)
+        else {
+            return;
+        };
+        let [group_id, attack_invoker, stored_id, ..] = event.action_params;
+        let members = ctx
+            .world
+            .resource::<SmartScripts>()
+            .3
+            .get(&(entry, group_id))
+            .cloned();
+        let Some(members) = members else {
+            warn!(entry, group_id, "SmartAI creature summon group is absent");
+            return;
+        };
+        let mut summons = Vec::new();
+        for member in members {
+            let Some(summon) = ctx.summon_creature(member.entry, member.position) else {
+                continue;
+            };
+            ctx.world
+                .entity_mut(summon)
+                .insert(SummonLifetime::new(member.kind, member.duration_ms));
+            if attack_invoker != 0
+                && let Some(invoker) = invoker
+            {
+                crate::creature_aggro::add_threat(ctx.world, summon, invoker, 0.0);
+            }
+            summons.push(summon);
+        }
+        if stored_id != 0 {
+            self.stored_targets.insert(stored_id, summons);
+        }
+    }
+
     pub(super) fn summon_action(
         &mut self,
         ctx: &mut Ctx,
@@ -62,11 +158,9 @@ impl SmartAi {
         attack_target: Option<Entity>,
     ) {
         let [_, kind, duration_ms, flags, _, stored_id, _] = event.action_params;
-        ctx.world.entity_mut(summon).insert(SummonLifetime {
-            kind,
-            remaining_ms: duration_ms,
-            duration_ms,
-        });
+        ctx.world
+            .entity_mut(summon)
+            .insert(SummonLifetime::new(kind, duration_ms));
         if stored_id != 0 {
             self.stored_targets
                 .entry(stored_id)

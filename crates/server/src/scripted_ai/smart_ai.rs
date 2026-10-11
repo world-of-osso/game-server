@@ -72,6 +72,7 @@ const ACTION_FAIL_QUEST: u32 = 6;
 const ACTION_COMPLETE_QUEST: u32 = 152;
 const ACTION_CAST: u32 = 11;
 const ACTION_SUMMON_CREATURE: u32 = 12;
+const ACTION_SUMMON_CREATURE_GROUP: u32 = 107;
 const ACTION_FOLLOW: u32 = 29;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
@@ -130,6 +131,7 @@ pub(crate) struct SmartScripts(
     pub HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<paths::WaypointPath>>,
+    HashMap<(u32, u32), Vec<summons::GroupMember>>,
 );
 
 const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.event_phase_mask, \
@@ -201,6 +203,7 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
             .map(|(entry, events)| (entry, Arc::new(events)))
             .collect(),
         paths::load_waypoint_paths(&conn)?,
+        summons::load_summon_groups(&conn)?,
     ))
 }
 
@@ -231,6 +234,7 @@ fn supports_action(kind: u32) -> bool {
         ACTION_TALK
             | ACTION_CAST
             | ACTION_SUMMON_CREATURE
+            | ACTION_SUMMON_CREATURE_GROUP
             | ACTION_FOLLOW
             | ACTION_SET_EVENT_PHASE
             | ACTION_CALL_KILLEDMONSTER
@@ -569,6 +573,7 @@ impl SmartAi {
                 .talk(event.action_params[0] as u8);
             }
             ACTION_SUMMON_CREATURE => self.summon_action(ctx, event, &targets, invoker),
+            ACTION_SUMMON_CREATURE_GROUP => self.summon_group(ctx, event, invoker),
             ACTION_FOLLOW => self.set_follow(ctx, event, &targets),
             ACTION_CAST => {
                 return Self::cast_targets(ctx, event, targets);

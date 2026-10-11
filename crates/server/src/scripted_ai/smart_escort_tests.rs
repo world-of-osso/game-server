@@ -917,6 +917,80 @@ fn smartai_coverage_wizzle_path_end_wildcard_runs_the_next_authored_leg() {
     );
 }
 
+#[test]
+fn smartai_coverage_wizzle_authored_summon_group_spawns_stores_and_expires_ambushers() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    let conn = Connection::open(temp.path().join("escort.sqlite")).unwrap();
+    conn.execute_batch("CREATE TABLE tdb_creature_summon_groups(summonerId INTEGER,summonerType INTEGER,groupId INTEGER,entry INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,summonType INTEGER,summonTime INTEGER,Comment TEXT);
+        INSERT INTO tdb_creature_summon_groups VALUES (3439,0,0,3282,1075.12,-2983.98,92.9072,5.81195,4,60000,'Mercenary'),(3439,0,0,3282,1119.69,-2970.87,97.1581,4.01426,4,60000,'Mercenary');").unwrap();
+    world.insert_resource(load_smart_scripts(&temp.path().join("escort.sqlite")).unwrap());
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let expected = crate::world_data::load_expected_stats(&source);
+    let mut templates = crate::world_data::load_templates(&source, &expected);
+    templates.retain(|entry, _| *entry == 3282);
+    crate::world_data::load_template_models(&source, &mut templates);
+    let mut query = source.prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats WHERE class=1").unwrap();
+    let class_level_base_hp = query
+        .query_map([], |r| {
+            Ok(((r.get(0)?, r.get(1)?), [r.get(2)?, r.get(3)?, r.get(4)?]))
+        })
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    world.insert_resource(crate::world_data::WorldData {
+        templates,
+        class_level_base_hp,
+        ..Default::default()
+    });
+    world
+        .entity_mut(creature)
+        .insert(crate::maps::InMap::continent(1));
+    world.get_mut::<Npc>(creature).unwrap().template_id = 3439;
+    let mut action = tdb_action(343902, 9, 0);
+    action.action_params[2] = 9;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, Some(player));
+    let summons: Vec<_> = ctx
+        .world
+        .query_filtered::<Entity, With<crate::zones::TempSummon>>()
+        .iter(ctx.world)
+        .collect();
+    assert_eq!(summons.len(), 2);
+    let mut positions: Vec<_> = summons
+        .iter()
+        .map(|&entity| {
+            assert_eq!(ctx.world.get::<Npc>(entity).unwrap().template_id, 3282);
+            let position = ctx.world.get::<Position>(entity).unwrap();
+            (position.x, position.y, position.z)
+        })
+        .collect();
+    positions.sort_by(|a, b| a.0.total_cmp(&b.0));
+    assert_eq!(
+        positions,
+        vec![(1075.12, 92.9072, 2983.98), (1119.69, 97.1581, 2970.87)]
+    );
+    let mut flags = tdb_action(197800, 9, 2);
+    flags.target_type = TARGET_STORED;
+    flags.target_params[0] = 9;
+    flags.action_type = ACTION_SET_NPC_FLAG;
+    flags.action_params[0] = 8;
+    ai.execute_action(&mut ctx, &flags, None);
+    assert!(
+        summons
+            .iter()
+            .all(|&s| ctx.world.get::<NpcFlags>(s).unwrap().0 == 8)
+    );
+    lifetimes::tick_lifetimes(ctx.world, 60000);
+    assert!(summons.iter().all(|&s| ctx.world.get_entity(s).is_err()));
+}
+
 fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {
     let conn = Connection::open_with_flags(
         crate::test_data::world_db_path(),
