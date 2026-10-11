@@ -367,6 +367,25 @@ fn transmog_quote_uses_collected_visuals_but_filters_source_class_and_slot() {
 }
 
 #[test]
+fn transmog_loading_unmodified_inventory_preserves_existing_explicit_visual() {
+    let h = application_harness();
+    let id = character_id(&h);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut record = persistence::inventory_store::load_inventory_record(db, id).unwrap();
+    record.character.equipment_appearance.entries[0].display_info_id = Some(1542);
+    persistence::inventory_store::save_inventory_record(db, id, &record);
+    let model = crate::inventory::load_model(
+        db,
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        id,
+    )
+    .unwrap();
+    assert_eq!(model.appearance(), &record.character.equipment_appearance);
+}
+
+#[test]
 fn transmog_unknown_dynamic_price_is_not_replaced_by_raw_sell_price() {
     let mut h = application_harness();
     let id = character_id(&h);
