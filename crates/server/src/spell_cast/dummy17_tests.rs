@@ -141,7 +141,7 @@ fn dummy17_soul_fire_grants_named_shard_and_applies_only_selected_dot_variant() 
             h.inbox
                 .log
                 .iter()
-                .any(|e| e.spell_id == Some(dot) && e.kind == CombatLogKind::PeriodicDamage)
+                .any(|e| e.spell_id == Some(dot) && e.periodic && e.kind == CombatLogKind::Damage)
         );
     }
 }
@@ -205,7 +205,7 @@ fn dummy17_lifebloom_expires_or_dispels_into_named_heal_but_not_cancel_or_death(
         let blooms = matches!(reason, RemoveReason::Expired | RemoveReason::Dispelled);
         assert_eq!(heals.len(), usize::from(blooms));
         if blooms {
-            assert_eq!(heals[0].amount, 219.0);
+            assert_eq!(heals[0].amount, 219);
         }
     }
 }
@@ -230,7 +230,7 @@ fn dummy17_lifebloom_native_expiry_blooms_once_after_periodic_heals() {
         h.inbox
             .log
             .iter()
-            .any(|e| e.spell_id == Some(33763) && e.kind == CombatLogKind::PeriodicHeal)
+            .any(|e| e.spell_id == Some(33763) && e.periodic && e.kind == CombatLogKind::Heal)
     );
 }
 
@@ -306,7 +306,7 @@ fn dummy17_cenarion_ward_consumes_on_actual_damage_and_heals_its_ally_not_attack
         h.inbox
             .log
             .iter()
-            .any(|e| e.spell_id == Some(102352) && e.kind == CombatLogKind::PeriodicHeal)
+            .any(|e| e.spell_id == Some(102352) && e.periodic && e.kind == CombatLogKind::Heal)
     );
 }
 
