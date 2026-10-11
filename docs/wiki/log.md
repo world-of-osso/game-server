@@ -1,6 +1,6 @@
 # Wiki Log
 
-- 2026-10-11 — [Combat pet lifecycle](systems/combat-pet-lifecycle.md): V2 redb stable migration, health/spec fields and queued logout snapshot; baseline health RED and8358c09 hunter11/11 GREEN. Baseline hunter/Imp live audit retained; stable operations/UI, revive/healing and demon expansion remain pending.
+- 2026-10-11 — [Combat pet lifecycle](systems/combat-pet-lifecycle.md): V2 migration, authenticated205-position stable, health/name/spec/current durability, Revive/Mend, Call1–5 and six authored demons. Health/unsupported-demon/rename-chrome RED→GREEN; reopened persistence, Fel Domination charge/cast-time tests and both-skin native stable/healing/death/confirmed logout proof. [Demon rendering](systems/warlock-pets.md#expansion-proof-2026-10-11), Feed provenance and absent Incubus remain explicit boundaries; no world.db or shared-realm writes.
 
 - 2026-10-11 — [Achievement account/events slice2](systems/dungeon-achievements.md#account-aggregation-and-additional-criteria-slice2-2026-10-11): atomic account/character contribution migration, retained dates/deleted-character credit, isolated character dependencies, and types29/7/28. Structural union631→2584→2882→3151→3388;43/46 stay disabled without local overlay mapping/compatible Retail standing. Native cast/recipient and skill-change fixtures; durable evidence/handoff in `achievements2-2026-10-11` and `/home/osso/.worktrees/handoff-achievements2.md`. Server-only, no world.db writes.
 
