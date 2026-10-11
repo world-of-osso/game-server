@@ -45,11 +45,20 @@ def restore_rows(conn, snapshots):
 
 
 def protect_unrelated_dependencies(conn, map_list):
-    conn.execute(f"CREATE TEMP TABLE world_shared_creature AS SELECT DISTINCT id1 AS entry FROM content_creature WHERE map NOT IN ({map_list})")
-    conn.execute(f"CREATE TEMP TABLE world_shared_object AS SELECT DISTINCT id AS entry FROM content_gameobject WHERE map NOT IN ({map_list})")
+    for kind in ("creature", "gameobject"):
+        conn.execute(f"CREATE TEMP TABLE world_owned_{kind}_guid AS SELECT guid+{population.OFFSET} AS guid FROM tdb_{kind} WHERE map IN ({map_list})")
+        conn.execute(f"CREATE TEMP TABLE world_overlay_{kind} AS SELECT * FROM content_{kind} WHERE map IN ({map_list}) AND guid NOT IN (SELECT guid FROM temp.world_owned_{kind}_guid)")
+    conn.execute(f"CREATE TEMP TABLE world_shared_creature AS SELECT DISTINCT id1 AS entry FROM content_creature WHERE map NOT IN ({map_list}) UNION SELECT id1 FROM temp.world_overlay_creature")
+    conn.execute(f"CREATE TEMP TABLE world_shared_object AS SELECT DISTINCT id AS entry FROM content_gameobject WHERE map NOT IN ({map_list}) UNION SELECT id FROM temp.world_overlay_gameobject")
     shared = "SELECT entry FROM temp.world_shared_creature"
     objects = "SELECT entry FROM temp.world_shared_object"
+    overlay = "SELECT guid FROM temp.world_overlay_creature"
     rules = [
+        ("content_creature", f"guid IN ({overlay})", ("guid",)),
+        ("content_gameobject", "guid IN (SELECT guid FROM temp.world_overlay_gameobject)", ("guid",)),
+        ("content_creature_addon", f"guid IN ({overlay})", ("guid",)),
+        ("content_creature_formations", f"leaderGUID IN ({overlay}) OR memberGUID IN ({overlay})", ("memberGUID",)),
+        ("content_game_event_creature", f"guid IN ({overlay})", ("eventEntry", "guid")),
         ("content_creature_template", f"entry IN ({shared})", None),
         ("content_creature_template_difficulty", f"entry IN ({shared})", None),
         ("content_creature_template_model", f"CreatureID IN ({shared})", None),
@@ -60,7 +69,7 @@ def protect_unrelated_dependencies(conn, map_list):
         ("content_waypoint_data", "1", ("id", "point")),
         ("content_pool_template", "1", ("entry",)),
         ("content_game_event_pool", "1", ("pool_entry",)),
-        ("content_pool_members", f"NOT ((type=0 AND spawnId IN (SELECT guid FROM content_creature WHERE map IN ({map_list}))) OR (type=1 AND spawnId IN (SELECT guid FROM content_gameobject WHERE map IN ({map_list}))))", ("type", "spawnId")),
+        ("content_pool_members", "NOT ((type=0 AND spawnId IN (SELECT guid FROM temp.world_owned_creature_guid)) OR (type=1 AND spawnId IN (SELECT guid FROM temp.world_owned_gameobject_guid)))", ("type", "spawnId")),
     ]
     return [preserve_rows(conn, *rule) for rule in rules]
 
@@ -73,6 +82,9 @@ def apply_population(conn, report, maps):
     restore_rows(conn, snapshots)
     conn.execute("DROP TABLE temp.world_shared_creature")
     conn.execute("DROP TABLE temp.world_shared_object")
+    for kind in ("creature", "gameobject"):
+        conn.execute(f"DROP TABLE temp.world_owned_{kind}_guid")
+        conn.execute(f"DROP TABLE temp.world_overlay_{kind}")
     return maps
 
 
