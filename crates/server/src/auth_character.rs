@@ -359,6 +359,17 @@ fn handle_select(
     );
     commands.entity(player_entity).insert(dungeon_difficulty);
     if let Some(bind) = crate::spell_cast::homebind::load_bind(&db.db, character_id) {
+        // The creation homebind preserves source-authored facing without changing
+        // CharacterData's persisted ABI or repositioning an existing character.
+        if bind.0.map_id == place.map.map_id
+            && bind.0.position == bevy::math::Vec3::new(data.x, data.y, data.z)
+        {
+            commands.entity(player_entity).insert(Rotation {
+                x: 0.0,
+                y: bind.0.orientation + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            });
+        }
         commands.entity(player_entity).insert(bind);
     }
     if let Some(death) = saved_death {
@@ -533,12 +544,10 @@ fn build_player_identity(data: &CharacterData) -> Player {
 }
 
 fn build_player_runtime_components(character_id: u64, data: &CharacterData) -> impl Bundle {
-    let facing = crate::persistence_character::reconstructed_start_facing(data);
-    let yaw = facing.map_or(0.0, |angle| angle + std::f32::consts::FRAC_PI_2);
     (
         Rotation {
             x: 0.0,
-            y: yaw,
+            y: 0.0,
             z: 0.0,
         },
         MovementSpeed(DEFAULT_RUN_SPEED),

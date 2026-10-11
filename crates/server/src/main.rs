@@ -78,6 +78,7 @@ mod persistence_progression;
 mod persistence_types;
 mod pet_control;
 mod player_create_info;
+mod player_start;
 mod profession;
 mod pvp;
 mod quest;
