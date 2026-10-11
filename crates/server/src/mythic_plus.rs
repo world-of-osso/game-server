@@ -38,11 +38,8 @@ impl Plugin for MythicPlusPlugin {
             .add_systems(Update, update);
     }
 }
-fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("clock before Unix epoch")
-        .as_millis() as u64
+fn now_ms(world: &World) -> u64 {
+    world.resource::<crate::maps::ServerClock>().unix().max(0) as u64 * 1000
 }
 fn load_startup(world: &mut World) {
     let db = &world.resource::<GameDatabase>().db;
@@ -255,7 +252,14 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         return Err("Another keystone run already owns this copy".into());
     }
     let mut active = active;
-    active.run.start(now_ms()).map_err(str::to_owned)?;
+    active.run.start(now_ms(world)).map_err(str::to_owned)?;
+    let difficulty = *world
+        .resource::<crate::maps::MapStore>()
+        .map_difficulty(map.map_id, 8)
+        .ok_or("Dungeon has no authored Keystone difficulty")?;
+    world
+        .resource_mut::<InstanceManager>()
+        .activate_challenge_difficulty(map, difficulty)?;
     // Deplete at activation, so abandoning or restarting cannot duplicate an upgrade.
     let mut depleted = key;
     depleted.level = depleted.level.saturating_sub(1);
@@ -301,7 +305,7 @@ fn abandon(world: &mut World, connection: Entity) -> Result<(), String> {
 }
 fn update(world: &mut World) {
     receive(world);
-    let now = now_ms();
+    let now = now_ms(world);
     let mut changes = Vec::new();
     let mut summaries = Vec::new();
     {
@@ -446,7 +450,7 @@ mod tests {
                     character_id: owner,
                     group: None,
                     leader: owner,
-                    difficulty_id: 8,
+                    difficulty_id: 23,
                 },
                 crate::maps::instances::Now {
                     unix: 1791705600,
@@ -457,6 +461,10 @@ mod tests {
             .map;
         h.app.world_mut().insert_resource(store);
         h.app.world_mut().insert_resource(manager);
+        h.app.world_mut().insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1791705600),
+        });
         h.app.world_mut().entity_mut(player).insert(map);
         h.app.world_mut().insert_resource(Challenges {
             definition: Some(definition.clone()),
@@ -519,7 +527,17 @@ mod tests {
         h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
         start(h.app.world_mut(), connection).unwrap();
         assert_eq!(owned_keys(h.db(), owner)[0].level, 7);
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<InstanceManager>()
+                .copy_difficulty(map)
+                .unwrap()
+                .difficulty_id,
+            8
+        );
         assert!(start(h.app.world_mut(), connection).is_err());
+        let now = now_ms(h.app.world());
         let summary = {
             let mut state = h.app.world_mut().resource_mut::<Challenges>();
             let active = state.runs.get_mut(&map).unwrap();
@@ -529,7 +547,7 @@ mod tests {
             for boss in [2582, 2585, 2583, 2584] {
                 active.run.boss(boss);
             }
-            active.run.tick(now_ms());
+            active.run.tick(now);
             active.run.snapshot.clone()
         };
         assert_eq!(summary.phase, ChallengePhase::Completed);

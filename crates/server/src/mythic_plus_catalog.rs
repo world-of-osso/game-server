@@ -87,8 +87,8 @@ pub fn validate_font(c: FontContext) -> Result<(), &'static str> {
     if c.player_map != c.font_map || c.player_map.0 != c.challenge_map || c.player_map.1 == 0 {
         return Err("Keystone and Font must belong to this dungeon copy");
     }
-    if c.difficulty != 8 {
-        return Err("Requires Mythic Keystone difficulty");
+    if !matches!(c.difficulty, 23 | 8) {
+        return Err("Requires Mythic difficulty before keystone activation");
     }
     if !c.alive {
         return Err("Cannot activate while dead");

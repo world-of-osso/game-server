@@ -395,6 +395,29 @@ impl InstanceManager {
     }
 
     /// The `MapDifficulty` row copy `map` was created at; `None` for continents.
+    /// Font activation converts the fresh Mythic copy into its authored Keystone difficulty.
+    pub fn activate_challenge_difficulty(
+        &mut self,
+        map: InMap,
+        difficulty: MapDifficulty,
+    ) -> Result<(), String> {
+        if self.completed_encounters(map) != 0
+            || difficulty.difficulty_id != 8
+            || difficulty.map_id != map.map_id
+        {
+            return Err("Challenge requires a fresh copy and authored difficulty8".into());
+        }
+        let copy = self
+            .copies
+            .get_mut(&map)
+            .ok_or("Challenge copy is missing")?;
+        if !matches!(copy.difficulty.difficulty_id, 23 | 8) {
+            return Err("Challenge requires Mythic difficulty".into());
+        }
+        copy.difficulty = difficulty;
+        Ok(())
+    }
+
     pub fn copy_difficulty(&self, map: InMap) -> Option<&MapDifficulty> {
         self.copies.get(&map).map(|copy| &copy.difficulty)
     }
