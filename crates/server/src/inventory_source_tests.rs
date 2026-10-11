@@ -101,6 +101,7 @@ fn record(
         placements: vec![],
         equipped: vec![],
         bag_slots: vec![],
+        nonvisual_equipped: Vec::new(),
         instances: HashMap::new(),
         item_durability: HashMap::new(),
         definition_sources: HashMap::from([(guid, source)]),
