@@ -1,6 +1,39 @@
 use super::*;
 use shared::protocol::{AchievementCatalogPage, QueryAchievementCatalog};
 
+#[test]
+fn achievements_summary_counts_full_catalog_and_account_scope_not_loaded_pages() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.earned_ids.insert(633);
+    state.earned_at.insert(633, 1_791_244_800);
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids.insert(4899);
+    account.earned_at.insert(4899, 1_791_158_400);
+    state.account = Some(Box::new(account));
+    let request = serde_json::from_value(serde_json::json!({"Summary": {"scope": "All"}}))
+        .expect("Summary is a supported catalog request");
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    let summary = &page["Summary"];
+    assert_eq!(summary["points"], 20);
+    assert_eq!(summary["completed"], 2);
+    assert!(summary["total"].as_u64().unwrap() > 8);
+    assert_eq!(summary["recent"][0]["achievement_id"], 633);
+    assert_eq!(summary["recent"][1]["achievement_id"], 4899);
+    assert!(
+        summary["categories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| { row["category_id"] == 14808 && row["completed"] == 1 })
+    );
+    let request =
+        serde_json::from_value(serde_json::json!({"Summary": {"scope": "Account"}})).unwrap();
+    let page = serde_json::to_value(catalog.page(&state, request, 1)).unwrap();
+    assert_eq!(page["Summary"]["completed"], 1);
+    assert_eq!(page["Summary"]["recent"][0]["achievement_id"], 4899);
+}
+
 fn catalog() -> AchievementCatalog {
     let db = Connection::open(crate::test_data::world_db_path()).unwrap();
     load_achievement_catalog(&db).unwrap()
