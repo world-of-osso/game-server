@@ -11,7 +11,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 - Health leech effect9 and periodic aura53 deal native SP/AP damage, then heal their caster using the native amplitude times effective damage. Immunity, absorption and overkill produce no copied healing; no second power/modifier/crit roll on the copy. Native tick phase and expiry remain authoritative.
 - Positive native paths: Vampiric Touch34914, Shadow Word: Madness335467 (direct and periodic), Drain Life234153, Blood Plague55078 and Phantom Singularity205179's primary aura53. Singularity's area Dummy is retained, not a guessed duplicate area pulse.
 - Madness's explicit reapplication rule adds unpaid same-owner periodic damage to the new effect. Resolve already-due ticks first; preserve tick phase and foreign ownership. No universal Pandemic threshold is implied.
-- Ignore Pain190456 uses s2 as the per-hit absorb fraction; Protection73 accumulates remaining shields up to its s4 percent-health cap. Aura142 and other class/talent variants remain separate gaps.
+- Ignore Pain190456 includes its native tooltip's versatility factor in shield capacity and uses s2 as the per-hit absorb fraction; Protection73 accumulates remaining shields up to its s4 percent-health cap. Aura142 and other class/talent variants remain separate gaps.
 - Improved Conflagrate267115's Charges modifier grants an additional117828 use per successful ranked Conflagrate; native MaxAuraStacks supplies cap4. Magnitude stays30% per use.
 - Obliterate49020's local description variable608 selects dual-wield222024/66198 and1264082/1264083, or two-hand325461 and1264084, never all six. Zero/75 Dummy fields remain underived.
 
