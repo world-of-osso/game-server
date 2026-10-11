@@ -42,6 +42,7 @@ mod followers;
 mod frame_stats;
 mod friends;
 mod game_objects;
+mod gathering;
 mod gold;
 mod grid_activity;
 mod ground;
