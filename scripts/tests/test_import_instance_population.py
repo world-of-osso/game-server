@@ -153,8 +153,8 @@ class InstancePopulationTest(unittest.TestCase):
             importer.import_database(destination)
             with closing(sqlite3.connect(destination)) as conn:
                 self.assertEqual(421, conn.execute("SELECT count(*) FROM content_creature WHERE map=36").fetchone()[0])
-                self.assertEqual(expected, conn.execute("SELECT entry,DifficultyID,lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry IN (SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry,DifficultyID").fetchall())
-                self.assertEqual(expected_base, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE entry IN (SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry").fetchall())
+                self.assertEqual(expected, conn.execute(f"SELECT entry,DifficultyID,lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry IN (SELECT DISTINCT id1 FROM content_creature WHERE map IN ({importer.MAPS})) ORDER BY entry,DifficultyID").fetchall())
+                self.assertEqual(expected_base, conn.execute(f"SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE entry IN (SELECT DISTINCT id1 FROM content_creature WHERE map IN ({importer.MAPS})) ORDER BY entry").fetchall())
                 before_failed_import = conn.execute("SELECT * FROM content_creature WHERE map=36 ORDER BY guid").fetchall()
                 conn.execute("DROP TABLE tdb_creature_template_model")
             with self.assertRaises(sqlite3.OperationalError):
