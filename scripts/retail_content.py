@@ -12,13 +12,13 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1, 34, 670)
+RETAIL_MAPS = (0, 1, 34, 670, 2106)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
 # spawns in it are seen by everyone, like PhaseId 0.
 DEFAULT_PHASE = 169
 # Map.db2 InstanceType of open world (0, spawns at DIFFICULTY_NONE) and party dungeons (1, MAP_INSTANCE: a copy
 # spawns at its difficulty, one of the map's MapDifficulty.db2 rows).
-INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY = 0, 1
+INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND = 0, 1, 3
 # TrinityCore guids reach 11.8M and 10 collide with kept AzerothCore spawns
 # (maps 229, 230, 530, 609); AzerothCore's reach 5.3M.
 RETAIL_GUID_OFFSET = 20_000_000
@@ -48,17 +48,17 @@ SPAWN_DIFFICULTIES = f"""(SELECT group_concat(difficulty, ',') FROM (SELECT r.di
 
 def create_retail_map_table(conn):
     """temp.retail_map: each (RETAIL_MAPS map, difficulty its copies spawn at): 0 for open world, every
-    MapDifficulty.db2 DifficultyID of a party dungeon."""
+    MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use0."""
     rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({MAP_LIST})"))
     missing = [m for m in RETAIL_MAPS if m not in rows]
-    unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY)}
+    unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND)}
     if missing or unhosted:
         raise SystemExit(f"RETAIL_MAPS without a Map.db2 row {missing} or with an unhosted InstanceType {unhosted}")
     conn.execute("DROP TABLE IF EXISTS temp.retail_map")
     conn.execute("""CREATE TEMP TABLE retail_map (map_id INTEGER NOT NULL, difficulty INTEGER NOT NULL,
         PRIMARY KEY (map_id, difficulty))""")
     for map_id, instance_type in sorted(rows.items()):
-        if instance_type == INSTANCE_TYPE_WORLD:
+        if instance_type in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_BATTLEGROUND):
             difficulties = [0]
         else:
             difficulties = [d for (d,) in conn.execute(
