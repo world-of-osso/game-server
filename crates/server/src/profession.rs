@@ -631,7 +631,7 @@ fn continue_craft_queues(world: &mut World) {
 }
 
 /// Persist changed professions and send the owner its `ProfessionSnapshot`.
-fn save_and_send_professions(
+pub(crate) fn save_and_send_professions(
     changed: Query<(Entity, &ClientId, &PlayerProfessions), Changed<PlayerProfessions>>,
     mut connections: Query<(&PlayerLink, &mut MessageSender<ProfessionSnapshot>)>,
     db: Option<Res<GameDatabase>>,

@@ -279,3 +279,89 @@ fn gathering_underivable_authored_lock_is_a_gap_not_a_pool_update_panic() {
         "underivable node must not acquire a fabricated gathering category"
     );
 }
+
+#[test]
+fn gathering_skill_up_survives_redb_close_and_reopen() {
+    let (mut h, directory) = setup(2556);
+    h.app
+        .add_systems(PostUpdate, crate::profession::save_and_send_professions);
+    let target = nearby_node(&mut h, 1617);
+    use_resource(h.app.world_mut(), h.caster, target);
+    h.advance(200);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerProfessions>(h.caster)
+            .unwrap()
+            .rank(2556),
+        2
+    );
+    drop(h);
+    let db = redb::Database::open(directory.path().join("gatherer.redb")).unwrap();
+    let restored = crate::persistence::load_professions(&db, 1);
+    assert_eq!(restored.rank(2556), 2);
+}
+
+#[test]
+fn gathering_depletes_then_respawns_at_the_authored_timer_and_position() {
+    use std::time::Duration;
+    let (mut h, _directory) = setup(2556);
+    let path = crate::test_data::world_db_path();
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&path));
+    let target = nearby_node(&mut h, 1617);
+    let position = *h.app.world().get::<Position>(target).unwrap();
+    let guid = h.app.world().get::<NodeSource>(target).unwrap().0.guid;
+    let delay = h.app.world().resource::<GatheringData>().nodes[&1617].despawn_delay;
+    let respawn = h.app.world().resource::<GatheringData>().respawn_seconds[&guid];
+    use_resource(h.app.world_mut(), h.caster, target);
+    h.advance(200);
+    assert!(
+        h.app.world().get_entity(target).is_ok(),
+        "Retail depletion delay retains the shared node"
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(Duration::from_secs(1000));
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_secs(1),
+        ));
+    for _ in 0..(delay.ceil() as usize + 1) {
+        if h.app.world().get_entity(target).is_err() {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(h.app.world().get_entity(target).is_err());
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_secs_f32(respawn - 2.0),
+        ));
+    h.advance(1);
+    assert_eq!(
+        h.app
+            .world_mut()
+            .query::<&GameObjectInfo>()
+            .iter(h.app.world())
+            .filter(|info| info.entry == 1617)
+            .count(),
+        0,
+        "no early respawn"
+    );
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_secs(3),
+        ));
+    h.advance(1);
+    let nodes = h
+        .app
+        .world_mut()
+        .query::<(&GameObjectInfo, &Position, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(info, _, _)| info.entry == 1617)
+        .map(|(_, position, map)| (*position, *map))
+        .collect::<Vec<_>>();
+    assert_eq!(nodes, vec![(position, InMap::continent(0))]);
+}
