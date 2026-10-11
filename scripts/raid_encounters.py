@@ -1,4 +1,4 @@
-"""Prepare raid boss credit SQL from pinned local CASC journal rows and TDB models.
+"""Prepare dungeon and raid boss lifecycle SQL from pinned local CASC journal rows and TDB models.
 
 No database is modified. A unique display-to-creature join on the encounter's map
 is required. Multi-actor encounters and shared displays remain explicit gaps.
@@ -35,7 +35,7 @@ def derive_bindings(connection, encounters, creatures):
         encounter_id = row[6] & 0xFFFF
         encounter = connection.execute(
             "SELECT e.MapID,e.Bit,e.Name_lang FROM dungeon_encounter e "
-            "JOIN map m ON m.ID=e.MapID WHERE e.ID=? AND m.InstanceType=2",
+            "JOIN map m ON m.ID=e.MapID WHERE e.ID=? AND m.InstanceType IN (1,2)",
             (encounter_id,),
         ).fetchone()
         if encounter is None:
@@ -83,7 +83,7 @@ def prepare(db, journal, creatures, output, report):
     with closing(sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
         bindings, gaps = derive_bindings(conn, encounters, actors)
     if not bindings:
-        raise ValueError("No unambiguous raid boss bindings derived")
+        raise ValueError("No unambiguous instance boss bindings derived")
     with closing(sqlite3.connect(":memory:")) as staging:
         staging.execute("CREATE TABLE raid_encounter_creature (map_id INTEGER NOT NULL,"
                         "creature_entry INTEGER NOT NULL,encounter_id INTEGER NOT NULL,"
