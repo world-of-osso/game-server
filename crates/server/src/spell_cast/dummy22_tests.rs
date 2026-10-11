@@ -1,9 +1,117 @@
 //! Native Mainline15407 channel: six authored ticks, damage/slow and Insanity.
 use super::test_harness::*;
+use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+use crate::persistence::ClientId;
+use bevy::prelude::*;
 use lightyear::prelude::MessageSender;
-use shared::components::PowerType;
+use shared::components::{Health, PowerType};
 use shared::protocol::CombatLogKind;
 use shared::protocol::{CombatChannel, StopSpellCast};
+
+fn rewind(grouped: bool, raid: bool) -> Harness {
+    let mut spell = world_db().unwrap().store.get(363534).unwrap().clone();
+    for effect in &mut spell.effects {
+        effect.variance = 0.0;
+    }
+    let mut h = harness(vec![spell], &[363534], 13).unwrap();
+    h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
+    let mut groups = GroupRegistry::default();
+    if grouped {
+        let ally = spawn_player(&mut h.app, 1, 3.0);
+        h.app.world_mut().entity_mut(ally).insert(ClientId(2));
+        let online: OnlineView = [(1, h.caster, "Evoker"), (2, ally, "Ally")]
+            .into_iter()
+            .map(|(id, entity, name)| {
+                (
+                    id,
+                    OnlineMember {
+                        entity: entity.to_bits(),
+                        name: name.into(),
+                        class: 13,
+                        level: 10,
+                        portrait: default(),
+                        dungeon_difficulty: 1,
+                    },
+                )
+            })
+            .collect();
+        groups.sync_presence(&online);
+        groups.invite(1, "Ally", &online);
+        groups.respond_invite(2, true);
+        if raid {
+            groups.convert_to_raid(1);
+        }
+    }
+    h.app.world_mut().insert_resource(groups);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h
+}
+
+fn rewind_heals(h: &mut Harness) -> Vec<(i32, i32)> {
+    let caster = h.caster;
+    h.cast_and_deliver(363534, Some(caster));
+    h.advance(100);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 363534));
+    h.inbox
+        .log
+        .iter()
+        .filter(|e| {
+            e.spell_id == Some(363534)
+                && e.kind == CombatLogKind::Heal
+                && e.target == caster.to_bits()
+        })
+        .map(|e| (e.amount, e.overflow))
+        .collect()
+}
+
+#[test]
+fn dummy22_rewind_native_minimum_is_increased_200_percent_when_solo() {
+    let mut h = rewind(false, false);
+    assert_eq!(rewind_heals(&mut h), vec![(120, 0); 5]);
+    assert_eq!(
+        h.app.world().get::<Health>(h.caster).unwrap().current,
+        700.0
+    );
+}
+
+#[test]
+fn dummy22_rewind_party_is_not_a_raid_for_native_s4_bonus() {
+    let mut h = rewind(true, false);
+    assert_eq!(rewind_heals(&mut h), vec![(120, 0); 5]);
+}
+
+#[test]
+fn dummy22_rewind_raid_retains_native_unboosted_minimum() {
+    let mut h = rewind(true, true);
+    assert_eq!(rewind_heals(&mut h), vec![(40, 0); 5]);
+    assert_eq!(
+        h.app.world().get::<Health>(h.caster).unwrap().current,
+        300.0
+    );
+}
+
+#[test]
+fn dummy22_rewind_bonus_uses_native_heal_cap_and_overheal() {
+    let mut h = rewind(false, false);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 950.0;
+    assert_eq!(
+        rewind_heals(&mut h),
+        vec![(120, 70), (120, 120), (120, 120), (120, 120), (120, 120)]
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(h.caster).unwrap().current,
+        1000.0
+    );
+}
 
 fn mind_flay() -> Harness {
     let mut spell = world_db().unwrap().store.get(15407).unwrap().clone();
