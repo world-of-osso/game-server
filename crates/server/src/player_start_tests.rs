@@ -84,7 +84,17 @@ fn every_demon_hunter_pair_uses_its_authored_non_dh_race_start() {
     ).unwrap();
     let starts = crate::player_start::load_starts(&conn).unwrap();
     assert_eq!(starts.get(&(4, 12)), starts.get(&(4, 1)));
-    assert_eq!(starts.get(&(10, 12)), starts.get(&(10, 1)));
+    let blood_elf_dh = starts.get(&(10, 12)).unwrap();
+    assert_eq!(
+        (
+            blood_elf_dh.map_id,
+            blood_elf_dh.x,
+            blood_elf_dh.y,
+            blood_elf_dh.z,
+            blood_elf_dh.orientation
+        ),
+        (530, 10349.6, -6357.29, 33.4026, 5.31605)
+    );
     assert_eq!(starts.get(&(29, 12)), starts.get(&(29, 1)));
     conn.execute("DELETE FROM tdb_playercreateinfo WHERE race=29", [])
         .unwrap();
