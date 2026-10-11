@@ -7,10 +7,10 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 - [x] Import build/layout-pinned local MapChallengeMode, KeystoneAffix, ChallengeModeItemBonusOverride, MythicPlusSeason, Scenario and ScenarioStep records into an independent SQLite copy, preserving source hashes and gaps.
 - [x] Preserve unrelated data, replace the catalog atomically, reject corrupt layouts and refuse canonical/symlink/hardlink destinations.
 - [x] Qualify a MapChallengeMode dungeon with existing difficulty8 spawns and an authored Font of Power; selected candidate is The Azure Vault (map2515/challenge401).
-- [ ] Keep keystone item identity, challenge ID, level and affixes durable; validate actual bag ownership and Font reach/copy/difficulty before activation.
-- [ ] Show Font insertion/activation, countdown, elapsed/remaining time, death count/time lost, affixes and scenario boss/enemy-force criteria in both skins.
-- [ ] Complete only after authored boss and force criteria; use source-backed timer thresholds for upgrades, handle failed/abandoned keys without repeat awards.
-- [ ] Display authentic rating and persist completed runs without fabricating a score formula.
+- [x] Keep keystone item identity, challenge ID, level and affixes durable; validate actual current-character bag ownership and Font reach/copy/difficulty before activation.
+- [x] Show Font insertion/activation, configured countdown, elapsed/remaining time, death count/time lost, configured affixes and scenario boss/enemy-force criteria in both skins. Numeric policy absent from local sources remains disabled.
+- [x] Complete only after authored boss and force criteria; use source-backed timer thresholds for upgrades, handle failed/abandoned keys without repeat awards.
+- [x] Implement optional explicit rating policy/display and persist completed runs without fabricating a score formula. No rating is emitted by default.
 
 ## How it works
 
@@ -31,10 +31,11 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 
 ## Known gaps (current cycle)
 
-- [ ] Both-skin native activation/weighted-kill/encounter/terminal proof is still pending. The runtime exists separately from the offline catalog importer.
-- [ ] Season activation/affix rotation, default death penalty, countdown duration and current rating calculation lack an established numeric source. `UnsourcedChallengeConfig` exposes `unsourced_pre_start_countdown_ms`/`unsourced_death_penalty_ms` default0 and `unsourced_seasonal_affix_rotation` and `unsourced_rating_by_level` default empty; `unsourced_season_period_secs`/`unsourced_season_epoch_unix` default0. Period0 disables rotation; a supplied period/epoch indexes explicitly supplied level-specific rotations. No active season/pool is presumed. Rating remains `None`, not a zero score. Configured test numbers prove mechanisms only, not Retail policy. Minimum key floor and next-dungeon selection also remain unsourced; saturating level subtraction currently has no asserted Retail floor.
+- [x] Both-skin private native activation/weighted-kill/encounter/terminal proof: Modern8→11 within85s, Forever8→7 over2492s via existing private clock-advance2251. Both use genuine NPC death/BossAI boundaries, with administrative Damage/Revive, not synthetic snapshots. [Proof and boundaries](../wiki/systems/mythic-plus.md#proof--2026-10-11).
+- [ ] Season activation/affix rotation, default death penalty, countdown duration and current rating calculation lack an established numeric source. `UnsourcedChallengeConfig` exposes `unsourced_pre_start_countdown_ms`/`unsourced_death_penalty_ms` default0 and `unsourced_seasonal_affix_rotation` and `unsourced_rating_by_level` default empty; `unsourced_season_period_secs`/`unsourced_season_epoch_unix` default0. Period0 disables rotation; a supplied period/epoch indexes explicitly supplied level-specific rotations. No active season/pool is presumed. Rating remains `None`, not a zero score. Configured test numbers prove mechanisms only, not Retail policy. Minimum key floor and next-dungeon selection also remain unsourced; `unsourced_minimum_keystone_level` defaults0 (no asserted Retail floor).
 - [ ] Selected affix mechanics only where authored rules exist; historical affix rows are not a current active rotation.
-- [ ] Both-skin private UDP5800 native acceptance, completion/depletion and rating proof remain pending.
+- [x] Both-skin private UDP5800 native loop proof recorded; rating remains deliberately absent under the disabled numeric policy.
+- [ ] Scenario-event92 producers, full affix combat/art, active next-dungeon pool, key-level NPC scaling and Azure combat mechanics beyond the existing BossAI lifecycle are not covered. NPCs spawned before activation retain authored baseline Mythic stats. Slot drag-removal/banner animation parity is unclaimed.
 
 ## Out of scope
 

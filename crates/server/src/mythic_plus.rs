@@ -250,6 +250,13 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         .get(&connection)
         .cloned()
         .ok_or("Insert a keystone first")?;
+    let character = world
+        .get::<InWorld>(connection)
+        .ok_or("Not in world")?
+        .character_id;
+    if active.owner != character {
+        return Err("Slotted keystone belongs to another character".into());
+    }
     let player = world.get::<PlayerLink>(connection).ok_or("No player")?.0;
     validate_world_font(world, player, active.font, &active.run.definition)?;
     let key = owned_keys(&world.resource::<GameDatabase>().db, active.owner)
@@ -271,7 +278,7 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         .activate_challenge_difficulty(map, difficulty)?;
     // Deplete at activation, so abandoning or restarting cannot duplicate an upgrade.
     let mut depleted = key;
-    depleted.level = depleted.level.saturating_sub(1);
+    depleted.level = active.run.depleted_level();
     save_key(&world.resource::<GameDatabase>().db, &depleted);
     let mut state = world.resource_mut::<Challenges>();
     state.slots.remove(&connection);
@@ -437,13 +444,18 @@ mod tests {
     #[test]
     fn mythic_bag_slot_activation_and_persistent_settlement() {
         let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").expect("private imported copy");
-        let conn =
-            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-                .unwrap();
+        let conn = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
         let definition = load_azure(&conn).unwrap().unwrap();
         let store = crate::maps::store::load_map_store(&conn).unwrap();
         let file = tempfile::NamedTempFile::new().unwrap();
         let mut h = crate::bank_test_harness::harness_at(file.path(), "Keymaster").unwrap();
+        h.app.insert_resource(
+            crate::item_templates::load_item_templates(std::path::Path::new(&path)).unwrap(),
+        );
         let player = h.player;
         let connection = h.connection;
         let owner = h.character_id;
@@ -527,6 +539,13 @@ mod tests {
             .id();
         assert!(slot(h.app.world_mut(), connection, font.to_bits(), 999).is_err());
         slot(h.app.world_mut(), connection, font.to_bits(), 4242).unwrap();
+        let peer = h.create_alt("Keypeer");
+        h.play_as(peer);
+        assert!(
+            start(h.app.world_mut(), connection).is_err(),
+            "A persistent connection cannot activate another character's slotted bag key"
+        );
+        h.play_as(owner);
         h.app.world_mut().get_mut::<Position>(player).unwrap().x = 100.0;
         assert!(start(h.app.world_mut(), connection).is_err());
         assert_eq!(owned_keys(h.db(), owner)[0].level, 8);

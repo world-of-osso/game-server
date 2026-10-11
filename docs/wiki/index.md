@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Mythic+ catalog foundation](systems/mythic-plus.md) — local build-pinned copy import, Azure Vault source qualification and targeted5/5 proof; keystone runtime/both-skin acceptance and numeric policy gaps remain open.
+- [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
 
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).

@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub struct UnsourcedChallengeConfig {
     pub unsourced_pre_start_countdown_ms: u64,
     pub unsourced_death_penalty_ms: u64,
+    pub unsourced_minimum_keystone_level: u32,
     pub unsourced_seasonal_affix_rotation: Vec<HashMap<u32, Vec<u32>>>,
     pub unsourced_season_period_secs: u64,
     pub unsourced_season_epoch_unix: i64,
@@ -158,6 +159,14 @@ impl Run {
             .time_lost_ms
             .saturating_add(self.config.unsourced_death_penalty_ms);
     }
+    pub fn depleted_level(&self) -> u32 {
+        self.snapshot
+            .key
+            .level
+            .saturating_sub(1)
+            .max(self.config.unsourced_minimum_keystone_level)
+    }
+
     pub fn abandon(&mut self) {
         if !matches!(
             self.snapshot.phase,
@@ -166,7 +175,7 @@ impl Run {
             return;
         }
         self.snapshot.phase = ChallengePhase::Abandoned;
-        self.snapshot.resulting_level = Some(self.snapshot.key.level.saturating_sub(1));
+        self.snapshot.resulting_level = Some(self.depleted_level());
     }
     fn complete(&mut self) {
         self.snapshot.phase = ChallengePhase::Completed;
@@ -178,7 +187,7 @@ impl Run {
             .count() as u32;
         let level = self.snapshot.key.level;
         self.snapshot.resulting_level = Some(if self.snapshot.upgrade_levels == 0 {
-            level.saturating_sub(1)
+            self.depleted_level()
         } else {
             level.saturating_add(self.snapshot.upgrade_levels)
         });
@@ -301,6 +310,15 @@ mod tests {
         assert_eq!(config.affixes_at(102, 8), vec![165]);
         assert_eq!(config.affixes_at(104, 8), vec![147]);
         assert!(config.affixes_at(99, 8).is_empty());
+    }
+
+    #[test]
+    fn mythic_runtime_minimum_key_level_requires_explicit_unsourced_policy() {
+        let mut r = run();
+        r.snapshot.key.level = 2;
+        assert_eq!(r.depleted_level(), 1);
+        r.config.unsourced_minimum_keystone_level = 2; // Supplied fixture policy, not a sourced Retail minimum.
+        assert_eq!(r.depleted_level(), 2);
     }
 
     #[test]
