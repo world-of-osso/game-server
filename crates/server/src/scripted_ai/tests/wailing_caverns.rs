@@ -172,6 +172,19 @@ fn cobrahn_evade_fails_encounter_and_repull_restarts_authored_timer() {
     assert_eq!(h.inbox(0).ends.len(), 1);
     assert!(!h.inbox(0).ends[0].success);
     assert_eq!(h.inbox(0).disengages.len(), 1);
+    // A real repull happens after evade has reached home, not mid-return.
+    for _ in 0..40 {
+        if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+            == Some(&crate::creature_ai::CreatureState::Idle)
+        {
+            break;
+        }
+        h.advance(0.05);
+    }
+    assert_eq!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+        Some(&crate::creature_ai::CreatureState::Idle)
+    );
     h.engage(boss);
     h.advance(3.2);
     assert_eq!(h.inbox(0).starts.len(), 2);
