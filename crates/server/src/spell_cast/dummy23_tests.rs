@@ -79,7 +79,7 @@ fn dummy23_rune_weapon_native_lifetime_ends_summon_and_owner_parry() {
 }
 
 #[test]
-fn dummy23_rune_weapon_missing_real_template_rejects_without_parry() {
+fn dummy23_rune_weapon_missing_real_template_spawns_nothing_without_parry() {
     let mut h = rune_weapon();
     h.app
         .world_mut()
@@ -89,8 +89,35 @@ fn dummy23_rune_weapon_missing_real_template_rejects_without_parry() {
     let caster = h.caster;
     h.cast_and_deliver(49028, Some(caster));
     h.advance(4);
-    assert!(!h.inbox.failed.is_empty());
     assert!(!crate::auras::has_aura(h.app.world(), caster, 81256));
+    let world = h.app.world_mut();
+    assert_eq!(
+        world
+            .query::<&super::summon::SummonedCreature>()
+            .iter(world)
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn dummy23_rune_weapon_early_despawn_removes_owner_parry() {
+    let mut h = rune_weapon();
+    cast_rune_weapon(&mut h);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 81256));
+    let world = h.app.world_mut();
+    let actor = world.query_filtered::<bevy::prelude::Entity, bevy::prelude::With<super::summon::SummonedCreature>>().single(world).unwrap();
+    super::summon::despawn_summon(world, actor);
+    h.advance(4);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 81256));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::StatModifiers>(h.caster)
+            .unwrap()
+            .parry_pct,
+        0.0
+    );
 }
 
 fn fixture() -> Harness {
