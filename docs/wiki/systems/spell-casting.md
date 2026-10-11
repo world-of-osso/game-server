@@ -2,6 +2,14 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Fourteenth batch: owned hits and native clocks
+
+[Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers), [capabilities/proof/all40](../../spell-dummy14-coverage.md). `scripts/batch14.rs` binds Frozen Orb/Blizzard's distinct named hit slows, Survival Kill Command's actual persistent-pet caster, Wildfire's named primary hit/bleed, Deathmark's80 total Energy on its existing bleed clock, Eye Beam's named primary/ranked crit, Metamorphosis's8yd destination hit and player daze, and Consume's named Fury. These are eight bounded entries, not full class/talent parity. Frost child-hit tests are not root-cast A proofs; cone179/129 actors remain separate gaps.
+
+Eye Beam's native2000ms/200ms/EXTRA_INITIAL_PERIOD yields11 attacks. Local variable316's total expression references10: retain the discrepancy, do not replace the native clock with a guessed timer. Rank fixtures explicitly restrict KnownSpells to prevent automatic passive sync from making the no-rank case vacuous. Pet fixtures assert66 damage from the real22AP inherited state; no production scaling workaround. Landing player-CC fixtures require actual duel hostility, not an NPC faction substituted onto a player.
+
+Frozen e88f0a6 census166 roots/90 reviewed/76 underived becomes164/93/71 at95604f2. Remaining Dummy roots259489 and360194 close; Metamorphosis consumes its root E3 while descendants retain gaps. Native118-row equivalence and fixed40-row table checked; proof/integration limits are recorded in the coverage ledger. Guardian inheritance/wolf melee remain unchanged.
+
 ## Thirteenth batch: authored hits, ranks and channel clocks
 
 [Contract](../../specs/spell-dummy-scripts.md#thirteenth-batch-locally-authored-hit-rank-and-channel-contracts), [capabilities/proof/all40](../../spell-dummy13-coverage.md). `scripts/batch13.rs` binds named Mortal Strike healing reduction, Rend bleed, paid-Rage Execute refund, Shadow Word: Death execute/Deathspeaker variant, native Rapid Fire tick children, persistent-pet Bestial Wrath, Aspect's initial primary Cobra and Haunt's death-only reset. The launch boundary passes actual paid costs to Execute after its native zero-speed child resolves; no damage interpolation assumption. Rapid Fire reuses the native aura clock, including EXTRA_INITIAL_PERIOD, rather than adding a script timer. Death reset receives the owned aura instance's caster and removal reason.
