@@ -1,4 +1,4 @@
-//! Controlled pets: hunter tame/call, warlock Summon Imp, persisted current pet,
+//! Controlled pets: hunter tame/call/revive, authored warlock demons, persisted current pet,
 //! shared spawn/follow/dismiss and demon death removal. TrinityCore a352b1fa:
 //! `spell_hun_tame_beast` (spell_hunter.cpp:1255-1321), `Spell::EffectTameCreature`,
 //! `EffectSummonPet`, `EffectDismissPet` (SpellEffects.cpp:2606-2728, 3586-3598), the
@@ -46,6 +46,8 @@ use crate::world_data::{CreatureTemplate, WorldData};
 const CLASS_HUNTER: u8 = 3;
 const CLASS_WARLOCK: u8 = 9;
 const SUMMON_IMP: u32 = 688;
+/// Local Retail SUMMON_PET spells; creature entries remain SpellEffect MiscValue data.
+const DEMON_SUMMONS: [u32; 7] = [SUMMON_IMP, 691, 697, 712, 30146, 365349, 366222];
 const IMP_FIREBOLT: u32 = 3110;
 /// Tame Beast, whose `spell_hun_tame_beast::CheckCast` is `can_tame`.
 const TAME_BEAST: u32 = 1515;
@@ -145,7 +147,7 @@ pub struct PetStable {
     pub summoned: Option<Entity>,
 }
 
-/// A controlled pet's owner and storage slot. Warlock imps reuse slot 0 internally;
+/// A controlled pet's owner and storage slot. Warlock demons reuse slot 0 internally;
 /// it is not a hunter Call Pet slot exposed to the warlock.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HunterPet {
@@ -301,11 +303,11 @@ fn check_summon_pet(
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
     if effect.misc_values[0] != 0 {
-        if spell.id != SUMMON_IMP
+        if !DEMON_SUMMONS.contains(&spell.id)
             || world.get::<Player>(caster).map(|player| player.class) != Some(CLASS_WARLOCK)
         {
             return Err(CastFailure::Unsupported(
-                "Only Summon Imp is supported".into(),
+                "Unsupported controlled demon summon".into(),
             ));
         }
         let entry = effect.misc_values[0] as u32;
@@ -428,7 +430,7 @@ fn character_id(world: &mut World, player: Entity) -> Option<u64> {
 
 /// `Spell::EffectSummonPet` (TrinityCore a352b1fa, SpellEffects.cpp): MiscValue is
 /// the creature entry, or 0 for a hunter's slot. The same living pet is recalled;
-/// Summon Imp creates/loads the demon through the existing controlled-pet path.
+/// Authored demon summons create/load through the existing controlled-pet path.
 pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     let owner = ctx.caster;
     if world.get::<Player>(owner).is_none() {
@@ -460,7 +462,7 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
         return;
     }
     if entry != 0 {
-        summon_imp(world, owner, entry, at, facing);
+        summon_demon(world, owner, entry, at, facing);
         return;
     }
     let slot = effect_slot(effect);
@@ -473,12 +475,12 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
 }
 
 /// `Player::SummonPet` loads an existing record or creates a SUMMON_PET from its
-/// creature template at the owner's level, then saves it as current. Only the imp
-/// is admitted by CheckCast; no timed summons or other demon lifecycle is implied.
-fn summon_imp(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
-    let stored = create_or_reuse_imp_record(world, owner, entry);
+/// creature template at the owner's level, then saves it as current. CheckCast admits
+/// the locally sourced permanent demon spell IDs; timed guardians use their own path.
+fn summon_demon(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
+    let stored = create_or_reuse_demon_record(world, owner, entry);
     if init_pet_stable(world, owner).is_none() {
-        error!("Summon Imp owner {owner} has no in-world character");
+        error!("Demon summon owner {owner} has no in-world character");
         return;
     }
     if let Some(pet) = summoned_pet(world, owner) {
@@ -492,7 +494,7 @@ fn summon_imp(world: &mut World, owner: Entity, entry: u32, at: Position, facing
     put_pet_out(world, owner, 0, at, facing);
 }
 
-fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
+fn create_or_reuse_demon_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
     let level = world.get::<Level>(owner).expect("summoning player level").0;
     let existing = world
         .get::<PetStable>(owner)
@@ -501,6 +503,9 @@ fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> Store
     match existing {
         Some(mut stored) => {
             stored.level = level;
+            // Explicit summoning creates a living demon, unlike current-pet relog.
+            // Same living demon recall returns before this record path.
+            stored.health = None;
             stored
         }
         None => {
@@ -753,7 +758,7 @@ fn spawn_pet(
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
     let power = if demon {
-        imp_spell_power(world)
+        demon_spell_power(world)
     } else {
         PowerType::Focus
     };
@@ -813,9 +818,9 @@ fn spawn_pet(
     Some((pet.id(), stored))
 }
 
-/// Retail Firebolt 3110 consumes Energy (SpellPower.PowerType 3), not mana.
-/// Read its pool from DB2; PowerTypeTable supplies its full default/max and regen.
-fn imp_spell_power(world: &World) -> PowerType {
+/// The admitted local demon families15/16/17/23/29 all use SpellPower.PowerType3.
+/// Firebolt3110 supplies that shared Energy type; PowerTypeTable supplies max/regen.
+fn demon_spell_power(world: &World) -> PowerType {
     let firebolt = world
         .resource::<crate::spell_info::SpellStore>()
         .get(IMP_FIREBOLT)
