@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::components::{Level, Npc};
+use shared::components::{Level, Npc, Player};
 use shared::protocol::{
     AchievementCatalogPage, AchievementChannel, AchievementSnapshot, AchievementStateUpdate,
     AchievementToastSnapshot, QueryAchievementCatalog,
@@ -78,17 +78,16 @@ impl Plugin for AchievementPlugin {
 
 fn send_initial_achievement_snapshot(world: &mut World) {
     let connections: Vec<_> = world
-        .query_filtered::<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>()
+        .query_filtered::<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>()
         .iter(world)
-        .map(|(connection, link)| (connection, link.0))
+        .map(|(connection, link, in_world)| (connection, link.0, in_world.character_id))
         .collect();
-    for (connection, player) in connections {
+    for (connection, player, character) in connections {
         let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
             continue;
         };
-        let Some((snapshot, _)) =
-            update_player_events(world, player, &[CriteriaEvent::ReachLevel(level)], None)
-        else {
+        let events = load_login_events(world, character, level);
+        let Some((snapshot, _)) = update_player_events(world, player, &events, None) else {
             continue;
         };
         send_updates(world, connection, snapshot, Vec::new());
@@ -96,6 +95,19 @@ fn send_initial_achievement_snapshot(world: &mut World) {
             last_processed_level: level,
         });
     }
+}
+
+fn load_login_events(world: &World, character: u64, level: u8) -> Vec<CriteriaEvent> {
+    let mut events = vec![CriteriaEvent::ReachLevel(level)];
+    if let Some(db) = world.get_resource::<GameDatabase>() {
+        events.extend(
+            persistence::quest_store::load_quest_log(&db.db, character)
+                .rewarded
+                .into_iter()
+                .map(CriteriaEvent::CompleteQuest),
+        );
+    }
+    events
 }
 
 fn process_level_achievement_updates(world: &mut World) {
@@ -120,6 +132,25 @@ fn process_level_achievement_updates(world: &mut World) {
     }
 }
 
+/// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
+/// never reach this boundary; login reconstructs missed credit from rewarded quests.
+pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32) {
+    let owner = world
+        .query_filtered::<(Entity, &PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .find_map(|(connection, link, in_world)| {
+            (in_world.character_id == character).then_some((connection, link.0))
+        });
+    let Some((connection, player)) = owner else {
+        return;
+    };
+    if let Some((snapshot, toasts)) =
+        update_player_events(world, player, &[CriteriaEvent::CompleteQuest(quest)], None)
+    {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
 fn connection_for_player(world: &mut World, player: Entity) -> Option<Entity> {
     world
         .query_filtered::<(Entity, &PlayerLink), With<Authenticated>>()
@@ -136,17 +167,18 @@ fn update_player_events(
     if !world.contains_resource::<AchievementCatalog>() {
         return None;
     }
+    let race = world.get::<Player>(player)?.race;
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let result = world.resource_scope(|world, catalog: Mut<AchievementCatalog>| {
         let mut state = world.get_mut::<PlayerAchievementState>(player)?;
         let toasts: Vec<_> = events
             .iter()
-            .flat_map(|event| catalog.update(&mut state, *event, completed_map))
+            .flat_map(|event| catalog.update(&mut state, *event, completed_map, race))
             .collect();
         for toast in &toasts {
             state.earned_at.insert(toast.achievement_id, now);
         }
-        Some((catalog.snapshot(&state), toasts))
+        Some((catalog.snapshot(&state, race), toasts))
     });
     if result.is_some() {
         persist_player_achievements(world, player);
@@ -304,7 +336,10 @@ fn send_requested_catalog_pages(world: &mut World) {
         let Some(state) = world.get::<PlayerAchievementState>(player) else {
             continue;
         };
-        let page = catalog.page(state, request);
+        let Some(owner) = world.get::<Player>(player) else {
+            continue;
+        };
+        let page = catalog.page(state, request, owner.race);
         if let Some(mut sender) = world.get_mut::<MessageSender<AchievementCatalogPage>>(connection)
         {
             sender.send::<AchievementChannel>(page);
