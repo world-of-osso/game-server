@@ -222,6 +222,39 @@ fn class_completeness_native_cooldown_haste_scales_spell_and_category_timers() {
 }
 
 #[test]
+fn class_completeness_native_cooldown_haste_truncates_native_milliseconds() {
+    let mut h = cooldown_fixture(true, 40.0);
+    assert_eq!(cast_cooldown_button(&mut h, 12294), 4285); // Native6000 / 1.4, truncated.
+}
+
+#[test]
+fn class_completeness_native_charge_haste_syncs_without_another_cast() {
+    let mut h = charge_fixture(true, 0.0);
+    cast_charge_button(&mut h, CRUSADER_STRIKE);
+    h.advance(40);
+    h.inbox.charges.clear();
+    h.inbox.go.clear();
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 100.0;
+    h.advance(5);
+    let changed = h
+        .inbox
+        .charges
+        .last()
+        .expect("rate update without a new cast");
+    assert_eq!(changed.recharge_ms, 3000);
+    assert!(changed.remaining_ms <= 2000);
+    assert!(h.inbox.go.is_empty());
+    h.advance(45);
+    let ready = h.inbox.charges.last().expect("charge replenishment update");
+    assert_eq!(ready.current, ready.max);
+    assert!(h.inbox.go.is_empty());
+}
+
+#[test]
 fn class_completeness_native_cooldown_haste_respects_mask_and_zero_haste() {
     let mut base = cooldown_fixture(false, 100.0);
     let mut h = cooldown_fixture(true, 100.0);
