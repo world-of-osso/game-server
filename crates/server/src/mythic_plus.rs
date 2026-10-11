@@ -59,6 +59,9 @@ fn load_startup(world: &mut World) {
         }
         None => UnsourcedChallengeConfig::default(),
     };
+    config
+        .validate()
+        .expect("validate unsourced challenge config");
     let mut challenges = world.resource_mut::<Challenges>();
     challenges.definition = definition;
     challenges.config = config;
@@ -177,6 +180,12 @@ fn slot(world: &mut World, connection: Entity, font: u64, guid: u64) -> Result<(
         return Err("This copy already has a keystone run".into());
     }
     let config = world.resource::<Challenges>().config.clone();
+    let mut key = key;
+    key.affixes = config.affixes_at(
+        world.resource::<crate::maps::ServerClock>().unix(),
+        key.level,
+    );
+    save_key(&world.resource::<GameDatabase>().db, &key);
     let run = Run::new(
         persistence::next_id(&world.resource::<GameDatabase>().db, "mythic_run"),
         map.instance_id,
@@ -345,13 +354,10 @@ fn persist_summary(world: &World, summary: &ChallengeRun) {
     }
     let mut key = summary.key.clone();
     key.level = summary.resulting_level.expect("terminal level");
-    key.affixes = world
-        .resource::<Challenges>()
-        .config
-        .unsourced_seasonal_affixes_by_level
-        .get(&key.level)
-        .cloned()
-        .unwrap_or_default();
+    key.affixes = world.resource::<Challenges>().config.affixes_at(
+        world.resource::<crate::maps::ServerClock>().unix(),
+        key.level,
+    );
     txn.open_table(KEYS)
         .expect("open keystones")
         .insert(key.item_guid, bitcode::encode(&key).as_slice())
