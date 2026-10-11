@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-11
 
-Matrix: batch22 code snapshot `9f72f8d`, based exactly on origin/spell-dummy21 `ce5d03b`. [Capabilities/all40/source/proof](spell-dummy22-coverage.md). Census **157 roots,129 reviewed/28 underived**, versus157/117/40 before. Rewind consumes its native200% non-raid healing field; Mind Flay native six-tick contract is certified; ten other retained roots have exact reasons. E3=111/119, aura4=63/71, aura226=18/19 unchanged. Targeted10/10 GREEN, warning-free; final fmt/check pending. Lead cancelled spell_cast gate: no broad suite run. No master merge/live/server/UDP5000.
+Matrix: batch22 code snapshot `9f72f8d`, based exactly on origin/spell-dummy21 `ce5d03b`. [Capabilities/all40/source/proof](spell-dummy22-coverage.md). Census **157 roots,129 reviewed/28 underived**, versus157/117/40 before. Rewind consumes its native200% non-raid healing field; Mind Flay native six-tick contract is certified; ten other retained roots have exact reasons. E3=111/119, aura4=63/71, aura226=18/19 unchanged. Targeted10/10 GREEN at9f72f8d; fmt/check exit0 atbd6475e, warning-free (Rust unchanged). Lead cancelled spell_cast gate: no broad suite run. No master merge/live/server/UDP5000.
 
 Source: game-server spell-dummy22 code revision `9f72f8d738418025d00abef056000bf3689c5876`; read-only local `world.db` and client DB2 `12.1.0.69933`. Positive A proofs are bounded, not full ability parity. Verification dependency frozen at local shared-protocol44b2b0f.
 
