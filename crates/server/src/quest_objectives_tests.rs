@@ -64,6 +64,9 @@ fn spell_credit_app() -> App {
             .collect(),
     ));
     app.insert_resource(crate::spell_cast::test_harness::power_table(data));
+    app.insert_resource(
+        crate::item_stats::load_item_scaling_tables(&crate::test_data::world_db_path()).unwrap(),
+    );
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
     app
 }
