@@ -7,6 +7,9 @@
 //! cap 300 from tier 336). Bolt of Linen Cloth (2963) is learned with the line,
 //! takes 2 Linen Cloth (2589), casts 1.5 s, and is orange below rank 25.
 
+#[path = "crafting_orders/tests.rs"]
+mod crafting_order_tests;
+
 use std::path::PathBuf;
 use std::time::Duration;
 
