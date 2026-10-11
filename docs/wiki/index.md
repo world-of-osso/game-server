@@ -66,6 +66,7 @@ External resources, tooling, data sources, development workflow.
 
 | Page | Summary |
 |------|---------|
+| [[profession-reference-import]] | Nine additional source-pinned Retail profession tables, staging import and exact unresolved math/lineage boundary |
 | [[crafting-reference-import]] | Seven pinned Midnight crafting tables, exact schema/provenance, atomic staging import and modern-resolver handoff |
 | [[reference-repos]] | AzerothCore (architecture + data), Rustbolt Core (Rust patterns), SpacetimeDB (rejected), wow-engine (sibling renderer) |
 | [[auction-load-fixture]] | Executed owned 300k-offer/311-real-ID producer; reopen/counter/second-page proof, linked separate CLI latency ledger |

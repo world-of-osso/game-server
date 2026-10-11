@@ -867,3 +867,7 @@ Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reus
 ## 2026-10-11 — integrated gathering and shared-loot readiness
 
 - [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.
+
+## 2026-10-11 — additional profession references
+
+Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [receipt](reference/profession-reference-import.md) separates concrete data from unresolved quality/concentration/recraft formulas. No canonical DB mutation or runtime acceptance claim.
