@@ -331,7 +331,7 @@ impl InstanceManager {
             leader: owner,
             group: None,
             difficulty_id: 0,
-            raid_difficulty: RaidDifficulty::default(),
+            raid_difficulty: Default::default(),
             raid_group: false,
         };
         let map = InMap {
