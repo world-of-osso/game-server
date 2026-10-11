@@ -100,12 +100,19 @@ fn process_group_commands(
     mut receivers: GroupCommandReceivers,
     mut senders: GroupSenders,
     players: OnlinePlayers,
+    followers: Query<(Entity, &crate::followers::Follower, &UnitLevel)>,
     mut registry: ResMut<GroupRegistry>,
     time: Res<Time>,
     mut difficulty_changes: ResMut<crate::maps::difficulty::DifficultyChanges>,
     mut raid_changes: ResMut<crate::maps::raid::RaidChanges>,
 ) {
-    let online = build_online_view(&players);
+    let mut online = build_online_view(&players);
+    online.extend(followers.iter().map(|(entity, follower, level)| {
+        (
+            crate::followers::Follower::member_id(entity),
+            follower.online(entity, level.0),
+        )
+    }));
     let mut effects = registry.sync_presence(&online);
     effects.extend(registry.tick(time.delta_secs()));
     effects.extend(apply_commands(
@@ -155,7 +162,7 @@ fn build_online_view(players: &OnlinePlayers) -> OnlineView {
         .collect()
 }
 
-fn portrait_appearance(
+pub(crate) fn portrait_appearance(
     player: &Player,
     equipment: Option<&EquipmentAppearance>,
 ) -> GroupPortraitAppearance {
@@ -395,7 +402,7 @@ fn send_group_target_icons(
     }
 }
 
-fn empty_roster() -> GroupRosterSnapshot {
+pub(crate) fn empty_roster() -> GroupRosterSnapshot {
     GroupRosterSnapshot {
         is_raid: false,
         ready_count: 0,
