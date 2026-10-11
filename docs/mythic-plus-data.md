@@ -1,6 +1,6 @@
 # Mythic+ local data qualification
 
-Verified: 2026-10-11. Contract: [Mythic+](specs/mythic-plus.md). This is a catalog foundation, **not an operational keystone loop**.
+Verified: 2026-10-11. Contract: [Mythic+](specs/mythic-plus.md). This page qualifies catalog inputs. [Runtime and bounded native proof](wiki/systems/mythic-plus.md) are documented separately.
 
 ## Authored candidate
 
@@ -34,6 +34,6 @@ Use the canonical engine `scripts/agent/agent-run` path when running from game-s
 
 ## Required numeric-rule boundary
 
-Retail Lua receives countdown/timeLost/rating from native APIs; it does not implement their numeric server policy. Pinned TC tree has scenario support and MythicPlus packet structures, but no challenge manager/rating implementation. No authentic current rating formula, countdown duration, default death penalty or active season/affix selection was established in these local inputs. These must remain explicit gaps; a plausible constant or zero-valued invented score would violate the feature contract. Current ordinary content_item also lacks180653/158923 although ItemSparse names both Mythic Keystone; an item import/acquisition/metadata path is still needed.
+Retail Lua receives countdown/timeLost/rating from native APIs; it does not implement their numeric server policy. Pinned TC tree has scenario support and MythicPlus packet structures, but no challenge manager/rating implementation. No authentic current rating formula, countdown duration, default death penalty or active season/affix selection was established in these local inputs. These must remain explicit gaps; a plausible constant or zero-valued invented score would violate the feature contract. The copy-only `scripts/import_keystone_item.py` projects existing local Item/ItemSparse180653 into the private copy's content_item; `GrantKeystone` and GUID-keyed metadata provide explicit administrative acquisition/persistence. Canonical content_item is not modified. Unknown numeric policy remains disabled through the named config in the [contract](specs/mythic-plus.md).
 
 Local Criteria FDID1263817 extraction reported one unknown encrypted10-byte chunk; canonical criteria already exposes the Azure tree cited above. Record only; do not treat this as a blocker for the proven tree.
