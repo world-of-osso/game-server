@@ -13,6 +13,105 @@ const CHARGE: u32 = 100;
 const FISTS_OF_FURY_DAMAGE: u32 = 117418;
 
 #[test]
+fn class_completeness_native_mass_resurrection_offers_to_group_corpse_not_ghost_position() {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use crate::persistence::ClientId;
+    use lightyear::prelude::{MessageReceiver, MessageSender};
+    use shared::death::{Corpse, DeathState};
+    use shared::protocol::{ResurrectionOffer, ResurrectionResponse};
+
+    let mut h = harness(Vec::new(), &[212036], 5).unwrap();
+    h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
+    let target = spawn_player(&mut h.app, 5, 200.0);
+    let stranger = spawn_player(&mut h.app, 5, 3.0);
+    for (unit, id) in [(target, 2), (stranger, 3)] {
+        h.app.world_mut().entity_mut(unit).insert((
+            ClientId(id),
+            crate::death::PlayerDeathState {
+                state: DeathState::Ghost,
+                corpse: Some(Corpse {
+                    player: unit.to_bits(),
+                    map_id: 0,
+                    x: 3.0,
+                    y: 0.0,
+                    z: 0.0,
+                    created_at: 0,
+                }),
+                graveyard: None,
+            },
+        ));
+        h.app.world_mut().get_mut::<Health>(unit).unwrap().current = 0.0;
+    }
+    let online: OnlineView = [(1, h.caster), (2, target)]
+        .into_iter()
+        .map(|(id, unit)| {
+            (
+                id,
+                OnlineMember {
+                    entity: unit.to_bits(),
+                    name: format!("Member{id}"),
+                    class: 5,
+                    level: 80,
+                    portrait: Default::default(),
+                    dungeon_difficulty: 0,
+                    raid_difficulty: Default::default(),
+                },
+            )
+        })
+        .collect();
+    let mut groups = GroupRegistry::default();
+    groups.invite(1, "Member2", &online);
+    groups.respond_invite(2, true);
+    assert!(groups.is_in_same_group(1, 2));
+    h.app.insert_resource(groups);
+    let conn = spawn_peer_connection(&mut h.app, target, 99);
+    h.app.world_mut().entity_mut(conn).insert((
+        MessageSender::<ResurrectionOffer>::default(),
+        MessageReceiver::<ResurrectionOffer>::default(),
+    ));
+    let spell = world_db().unwrap().store.get(212036).unwrap().clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native raid corpse selector");
+    h.advance(1);
+    let offers = drain::<ResurrectionOffer>(&mut h.app, conn);
+    assert_eq!(offers.len(), 1);
+    assert_eq!(offers[0].spell_id, 212036);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::death::resurrection::PendingResurrection>(stranger)
+            .is_none()
+    );
+    crate::death::resurrection::respond(
+        h.app.world_mut(),
+        target,
+        ResurrectionResponse {
+            caster: h.caster.to_bits(),
+            spell_id: 212036,
+            accept: true,
+        },
+    );
+    let percent = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 18)
+        .unwrap()
+        .base_points;
+    assert_eq!(
+        h.health(target),
+        (h.app.world().get::<Health>(target).unwrap().max * percent / 100.0).floor()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(target)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
+}
+
+#[test]
 fn class_completeness_native_enemy_cone_hits_front_not_allies_back_or_far() {
     let mut h = harness(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
     let back = spawn_npc(&mut h.app, -4.0);
