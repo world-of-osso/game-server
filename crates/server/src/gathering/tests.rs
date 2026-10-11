@@ -431,6 +431,11 @@ fn gathering_skin_marker_waits_for_completed_normal_loot_roll() {
             h.app.world().get::<GatherableResource>(h.npc).is_none(),
             "unrolled corpse must not advertise Skinning"
         );
+        use_resource(h.app.world_mut(), h.caster, h.npc);
+        assert!(
+            h.app.world().get::<CastState>(h.caster).is_none(),
+            "a direct Skinning request must also wait for the normal loot roll"
+        );
         let looters = if has_drop {
             std::collections::HashMap::from([(
                 character_id,
