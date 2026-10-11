@@ -630,7 +630,7 @@ fn boss_timeline_script_events_publish_actual_selected_deadlines() {
     let timers = events
         .iter()
         .find_map(|event| match event {
-            EncounterTimelineEvent::Timers { caster, timers }
+            EncounterTimelineEvent::Timers { caster, timers, .. }
                 if *caster == boss.to_bits() && !timers.is_empty() =>
             {
                 Some(timers)
