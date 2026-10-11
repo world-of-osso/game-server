@@ -58,7 +58,7 @@ fn spell_credit_app() -> App {
     .expect("authentic quest data required");
     let data = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(crate::spell_info::SpellStore::fixture(
-        [94940, 37221, 37320, 37322, 37323]
+        [94940, 37221, 37320, 37322, 37323, 89040]
             .into_iter()
             .map(|id| data.store.get(id).unwrap().clone())
             .collect(),
@@ -66,6 +66,48 @@ fn spell_credit_app() -> App {
     app.insert_resource(crate::spell_cast::test_harness::power_table(data));
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
     app
+}
+
+#[test]
+fn quest_objectives_real_tear_item_cast_credits_shining_through_the_dark() {
+    let mut app = spell_credit_app();
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(50),
+    ));
+    let client = spawn_client(&mut app, 80);
+    app.world_mut().entity_mut(client.player).insert((
+        Health {
+            current: 100.0,
+            max: 100.0,
+        },
+        UnitFactionTemplate(1),
+        crate::networking::Moving(false),
+    ));
+    enter_world(&mut app, &client);
+    let giver = spawn_npc(&mut app, 47904, 0.0);
+    accept(&mut app, &client, giver, 28175);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    let location = bag_location(&app, &client, 63139); // Alexstrasza's Tear → spell89040
+    request(
+        &mut app,
+        &client,
+        UseItem {
+            location,
+            target: None,
+        },
+    );
+    for _ in 0..120 {
+        app.update();
+    }
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(28175)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    turn_in(&mut app, &client, giver, 28175, None);
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(28175));
 }
 
 #[test]
