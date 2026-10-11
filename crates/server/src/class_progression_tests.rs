@@ -441,7 +441,10 @@ fn pruned_create_actions(
             appearance: Default::default(),
         };
         let evaluated = evaluate(classes, &player, level, 0, |_| Vec::new());
-        let known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+        let known = KnownSpells(
+            evaluated.known.iter().map(|spell| spell.spell_id).collect(),
+            Vec::new(),
+        );
         let actions = &create_info.get(race, class).unwrap().actions;
         let mut bar: BTreeMap<u8, ActionRef> = actions
             .iter()
