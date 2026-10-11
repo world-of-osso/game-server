@@ -16,7 +16,14 @@ const SOURCE: u32 = 821; // Gladius2488 -> ItemAppearance154 -> display1542.
 const TARGET_GUID: u64 = 91001;
 
 fn application_harness() -> Harness {
-    let mut h = harness_with(HUMAN_TEMPLATE, |_| {}).unwrap();
+    let mut h = harness_with(HUMAN_TEMPLATE, |app| {
+        let path = crate::test_data::world_db_path();
+        let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        app.insert_resource(crate::transmog::TransmogCatalog::load(&conn).unwrap());
+        app.insert_resource(crate::item_templates::load_runtime_item_templates(&path).unwrap());
+        app.add_plugins(crate::transmog::TransmogPlugin);
+    })
+    .unwrap();
     let db = &h.app.world().resource::<GameDatabase>().db;
     let (character_id, _) =
         persistence::create_character_with_test_bags(db, 1, "Transmogger", 1, 1).unwrap();
