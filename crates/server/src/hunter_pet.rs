@@ -11,8 +11,11 @@
 //! Pet bar/AI: pet_control.rs. Not modelled: full pet base stats, stable slots beyond
 //! the five active ones, hunter pet death, and pets across map transfers.
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use rusqlite::{Connection, OpenFlags};
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
     Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers,
@@ -58,13 +61,50 @@ pub struct HunterPetPlugin;
 
 impl Plugin for HunterPetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, load_pet_stables)
+        app.init_resource::<PetCatalog>()
+            .add_systems(Startup, load_pet_catalog)
+            .add_systems(Update, load_pet_stables)
+            .add_systems(
+                FixedUpdate,
+                persist_changed_pet_health.after(crate::combat::auto_attack_system),
+            )
             .add_systems(FixedUpdate, remove_ownerless_pets)
             .add_systems(
                 FixedUpdate,
                 remove_dead_demons.after(crate::combat::auto_attack_system),
             );
     }
+}
+
+/// Imported Retail family defaults and normal (non-override) hunter pet specs.
+#[derive(Resource, Default)]
+pub(crate) struct PetCatalog {
+    pub default_specializations: HashMap<u32, u32>,
+}
+
+fn load_pet_catalog(mut commands: Commands) {
+    let conn = Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("Open world pet catalog");
+    commands.insert_resource(read_pet_catalog(&conn).expect("Load Retail pet family/spec catalog"));
+}
+
+pub(crate) fn read_pet_catalog(conn: &Connection) -> rusqlite::Result<PetCatalog> {
+    // TC a352b1fa ChrSpecializationFlag::PetOverrideSpec=0x20: separate class index.
+    let mut families = conn.prepare("SELECT f.ID, s.ID FROM creature_family f JOIN chr_specialization s ON s.ClassID=0 AND s.Flags & 32=0 AND s.PetTalentType=f.PetTalentType")?;
+    let default_specializations = families
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    Ok(PetCatalog {
+        default_specializations,
+    })
+}
+
+fn default_pet_specialization(world: &World, family: u32) -> Option<u32> {
+    world
+        .resource::<PetCatalog>()
+        .default_specializations
+        .get(&family)
+        .copied()
 }
 
 /// A hunter's `PetStable`, inserted with the first tamed pet or the stored stable at
@@ -323,6 +363,8 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
         family: template.family,
         // The new pet's `CharmInfo` sets it Passive (`CharmInfo::CharmInfo`).
         react_state: REACT_PASSIVE,
+        health: None,
+        specialization: default_pet_specialization(world, template.family),
     })
 }
 
@@ -443,6 +485,8 @@ fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> Store
                 level,
                 family: template.family,
                 react_state: REACT_PASSIVE,
+                health: None,
+                specialization: None,
             }
         }
     }
@@ -497,6 +541,7 @@ fn remove_pet(world: &mut World, pet: Entity) {
     let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
         return;
     };
+    persist_current_pet_health(world, owner);
     crate::combat::combat_stop(world, pet);
     world.entity_mut(pet).despawn();
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
@@ -597,6 +642,11 @@ fn spawn_pet(
         PowerType::Focus
     };
     let pools = PowerPools::from_table(world.resource::<PowerTypeTable>(), vec![power]);
+    let current_health = stored.health.unwrap_or(health).clamp(0.0, health);
+    stored.health = Some(current_health);
+    if !demon && stored.specialization.is_none() {
+        stored.specialization = default_pet_specialization(world, stored.family);
+    }
     let mut pet = world.spawn((
         (
             at,
@@ -610,7 +660,7 @@ fn spawn_pet(
                 name: stored.name.clone(),
             },
             Health {
-                current: health,
+                current: current_health,
                 max: health,
             },
             ModelDisplay {
@@ -675,7 +725,42 @@ pub(crate) fn pet_max_health(data: &WorldData, template: &CreatureTemplate, leve
     (base as f32 * template.health_modifier).ceil().max(1.0)
 }
 
-fn save_stable(world: &World, owner: Entity) {
+pub(crate) fn persist_current_pet_health(world: &mut World, owner: Entity) {
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    let Some(health) = world.get::<Health>(pet).map(|health| health.current) else {
+        return;
+    };
+    let slot = world
+        .get::<HunterPet>(pet)
+        .expect("owned controlled pet")
+        .slot;
+    let Some(mut stable) = world.get_mut::<PetStable>(owner) else {
+        return;
+    };
+    let Some(record) = stable.stored.active[usize::from(slot)].as_mut() else {
+        return;
+    };
+    if record.health == Some(health) {
+        return;
+    }
+    record.health = Some(health);
+    save_stable(world, owner);
+}
+
+fn persist_changed_pet_health(world: &mut World) {
+    let owners: Vec<_> = world
+        .query_filtered::<&HunterPet, Changed<Health>>()
+        .iter(world)
+        .map(|pet| pet.owner)
+        .collect();
+    for owner in owners {
+        persist_current_pet_health(world, owner);
+    }
+}
+
+pub(crate) fn save_stable(world: &World, owner: Entity) {
     let (Some(db), Some(stable)) = (
         world.get_resource::<GameDatabase>(),
         world.get::<PetStable>(owner),

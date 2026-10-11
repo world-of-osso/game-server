@@ -108,6 +108,8 @@ fn stored_wolf() -> StoredPet {
         level: 10,
         family: 1,
         react_state: shared::protocol::REACT_PASSIVE,
+        health: Some(378.0),
+        specialization: Some(74),
     }
 }
 
@@ -175,6 +177,7 @@ fn hunter_tames_a_diseased_young_wolf_after_the_channel() {
     let expected = StoredPetStable {
         current: Some(0),
         active: [Some(stored_wolf()), None, None, None, None],
+        ..Default::default()
     };
     assert_eq!(stable(&h).unwrap().stored, expected);
     assert_eq!(saved(&h), expected);
@@ -239,6 +242,7 @@ fn dismissed_pet_stays_stored_and_call_pet_brings_it_back() {
     let dismissed = StoredPetStable {
         current: None,
         active: [Some(stored_wolf()), None, None, None, None],
+        ..Default::default()
     };
     assert_eq!(stable(&h).unwrap().stored, dismissed);
     assert_eq!(saved(&h), dismissed);
@@ -303,6 +307,74 @@ fn a_summoned_pet_runs_after_its_owner() {
     assert!(gap <= 4.5, "pet {gap} yards from its owner at {at:?}");
 }
 
+#[test]
+fn pet_lifecycle_wounded_health_survives_reopened_database() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut first = hunter(&path, HOGGER).expect("real hunter fixture");
+    let pet = pet_out(&first);
+    first
+        .app
+        .world_mut()
+        .get_mut::<Health>(pet)
+        .unwrap()
+        .current = 23.0;
+    first.advance(3);
+    drop(first);
+
+    let second = hunter(&path, HOGGER).expect("reopened real hunter fixture");
+    let pet = pet_out(&second);
+    assert_eq!(second.app.world().get::<Health>(pet).unwrap().current, 23.0);
+}
+
+#[test]
+fn pet_lifecycle_logout_saves_health_before_the_next_fixed_tick() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut first = hunter(&path, HOGGER).expect("real hunter fixture");
+    let pet = pet_out(&first);
+    first
+        .app
+        .world_mut()
+        .get_mut::<Health>(pet)
+        .unwrap()
+        .current = 17.0;
+    crate::networking::queue_player_despawn(&mut first.app.world_mut().commands(), first.caster);
+    first.app.world_mut().flush();
+    drop(first);
+
+    let second = hunter(&path, HOGGER).expect("reopened real hunter fixture");
+    assert_eq!(
+        second
+            .app
+            .world()
+            .get::<Health>(pet_out(&second))
+            .unwrap()
+            .current,
+        17.0
+    );
+}
+
+#[test]
+fn pet_lifecycle_dead_health_survives_reopened_database() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut first = hunter(&path, HOGGER).expect("real hunter fixture");
+    let pet = pet_out(&first);
+    first
+        .app
+        .world_mut()
+        .get_mut::<Health>(pet)
+        .unwrap()
+        .current = 0.0;
+    first.advance(3);
+    drop(first);
+
+    let second = hunter(&path, HOGGER).expect("reopened real hunter fixture");
+    let pet = pet_out(&second);
+    assert_eq!(second.app.world().get::<Health>(pet).unwrap().current, 0.0);
+}
+
 /// A stable saved before stances were kept loads its pets Passive, as `character_pet`'s
 /// `ReactState` column defaults to 0.
 #[test]
@@ -330,6 +402,9 @@ fn a_stable_saved_without_stances_loads_passive_pets() {
         current: Some(0),
         ..Default::default()
     };
-    expected.active[0] = Some(stored_wolf());
+    let mut migrated_wolf = stored_wolf();
+    migrated_wolf.health = None;
+    migrated_wolf.specialization = None;
+    expected.active[0] = Some(migrated_wolf);
     assert_eq!(load_pet_stable(&db.db, CHARACTER_ID), Some(expected));
 }
