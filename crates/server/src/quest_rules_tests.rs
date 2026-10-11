@@ -473,6 +473,36 @@ fn quest_info_meta_calling_and_important_pick_their_marker_kinds() {
 }
 
 #[test]
+fn quest_reset_reopens_daily_exclusive_alternatives() {
+    let quest = QuestTemplate {
+        id: 1,
+        flags: 0x1000,
+        exclusive_group: 10,
+        ..Default::default()
+    };
+    let alternate = QuestTemplate {
+        id: 2,
+        ..quest.clone()
+    };
+    let before = 1_791_730_799;
+    let mut db = QuestDb {
+        now: Some(before),
+        ..Default::default()
+    };
+    db.quests.insert(1, quest);
+    db.quests.insert(2, alternate.clone());
+    db.exclusive_groups.insert(10, vec![1, 2]);
+    let mut log = log_with(&[], &[1]);
+    log.completed_at.insert(1, before);
+    assert_eq!(
+        can_take(&db, &log, HUMAN_WARRIOR, &alternate),
+        Err(QuestFailedReason::DontHaveRequirement)
+    );
+    db.now = Some(before + 1);
+    assert_eq!(can_take(&db, &log, HUMAN_WARRIOR, &alternate), Ok(()));
+}
+
+#[test]
 fn daily_quest_is_available_again_after_reset() {
     // Sunday 2026-10-11 14:59:59 UTC -> local reset 15:00:00 UTC.
     let before = 1_791_730_799;

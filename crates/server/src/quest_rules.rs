@@ -99,7 +99,13 @@ fn exclusive_group_ok(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -
     db.exclusive_groups[&quest.exclusive_group]
         .iter()
         .filter(|&&id| id != quest.id)
-        .all(|&id| log.active(id).is_none() && !log.is_rewarded(id))
+        .all(|&id| {
+            log.active(id).is_none()
+                && db
+                    .quests
+                    .get(&id)
+                    .is_none_or(|other| !reward_locked(db, log, other))
+        })
 }
 
 /// Every quest of a negative ("all of") exclusive group other than `quest_id`
