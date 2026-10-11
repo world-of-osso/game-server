@@ -1,6 +1,8 @@
 use super::*;
-use crate::pvp::pvp_support::{apply_rated_currency_rewards, build_pvp_snapshot};
+use crate::persistence::GameDatabase;
+use crate::pvp::pvp_support::build_pvp_snapshot;
 use shared::currency::{CurrencyWallet, currency_by_id};
+use shared::protocol::CurrencyStateUpdate;
 use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
 
 #[test]
@@ -29,48 +31,20 @@ fn queue_for_rated_bracket_blocks_double_queue() {
     queue_for_rated_bracket(
         &mut player_state,
         &mut state,
-        Entity::PLACEHOLDER,
         44,
         PvpBracketSnapshot::Arena2v2,
-        1,
     )
     .expect("first queue succeeds");
 
     let error = queue_for_rated_bracket(
         &mut player_state,
         &mut state,
-        Entity::PLACEHOLDER,
         44,
         PvpBracketSnapshot::Arena3v3,
-        2,
     )
     .expect_err("second queue must fail");
 
     assert!(error.contains("already queued"));
-}
-
-#[test]
-fn decide_winner_prefers_higher_rating_then_earlier_queue() {
-    let first = RatedQueueEntry {
-        player_entity: Entity::PLACEHOLDER,
-        character_id: 10,
-        bracket: PvpBracketSnapshot::Arena2v2,
-        queued_at: 5,
-    };
-    let second = RatedQueueEntry {
-        player_entity: Entity::PLACEHOLDER,
-        character_id: 20,
-        bracket: PvpBracketSnapshot::Arena2v2,
-        queued_at: 4,
-    };
-
-    let (winner, loser) = decide_winner(&first, 1550, &second, 1500);
-    assert_eq!(winner.character_id, 10);
-    assert_eq!(loser.character_id, 20);
-
-    let (winner, loser) = decide_winner(&first, 1500, &second, 1500);
-    assert_eq!(winner.character_id, 20);
-    assert_eq!(loser.character_id, 10);
 }
 
 #[test]
@@ -110,14 +84,80 @@ fn sync_progress_currencies_from_wallet_uses_wallet_amounts() {
 }
 
 #[test]
-fn apply_rated_currency_rewards_updates_wallet_and_progress() {
-    let mut progress = PlayerPvpProgress::default();
-    let mut wallet = CurrencyWallet::default();
-
-    apply_rated_currency_rewards(&mut progress, &mut wallet, 150, 100);
-
-    assert_eq!(wallet.get(1), 150);
-    assert_eq!(wallet.get(2), 100);
-    assert_eq!(progress.honor, 150);
-    assert_eq!(progress.conquest, 100);
+fn rated_pairing_never_manufactures_a_result_or_currency() {
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(shared::ProtocolPlugin);
+    app.add_plugins(PvpPlugin);
+    app.finish();
+    app.cleanup();
+    app.insert_resource(GameDatabase {
+        db: crate::persistence::temp_database(),
+    });
+    let mut owners = Vec::new();
+    for id in [41, 42] {
+        let owner = app
+            .world_mut()
+            .spawn((
+                shared::components::Player {
+                    name: format!("fb_pvp_{id}"),
+                    race: 1,
+                    class: 1,
+                    appearance: shared::components::CharacterAppearance::default(),
+                },
+                Level(90),
+                PlayerPvpState::default(),
+                crate::currency::PlayerCurrencies::default(),
+            ))
+            .id();
+        let connection = app
+            .world_mut()
+            .spawn((
+                Authenticated { account_id: id },
+                InWorld { character_id: id },
+                PlayerLink(owner),
+                RemoteId(PeerId::Local(id)),
+                Connected,
+                lightyear::connection::host::HostClient { buffer: Vec::new() },
+                MessageSender::<QueueForRatedPvp>::default(),
+                MessageReceiver::<QueueForRatedPvp>::default(),
+                MessageSender::<PvpStateUpdate>::default(),
+                MessageReceiver::<PvpStateUpdate>::default(),
+                MessageSender::<CurrencyStateUpdate>::default(),
+            ))
+            .id();
+        app.world_mut()
+            .get_mut::<MessageSender<QueueForRatedPvp>>(connection)
+            .unwrap()
+            .send::<shared::protocol::PvpChannel>(QueueForRatedPvp {
+                bracket: PvpBracketSnapshot::Arena2v2,
+            });
+        owners.push(owner);
+    }
+    for _ in 0..5 {
+        app.update();
+    }
+    for owner in owners {
+        let state = app.world().get::<PlayerPvpState>(owner).unwrap();
+        assert_eq!(
+            state.progress,
+            PlayerPvpProgress::default(),
+            "pairing is not a played arena"
+        );
+        assert!(
+            state.queue.is_some(),
+            "queue remains pending real match lifecycle"
+        );
+        assert!(
+            app.world()
+                .get::<crate::currency::PlayerCurrencies>(owner)
+                .unwrap()
+                .0
+                .entries
+                .is_empty()
+        );
+    }
 }
