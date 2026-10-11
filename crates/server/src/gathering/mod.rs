@@ -34,26 +34,9 @@ pub(crate) struct GatheringPlugin;
 impl Plugin for GatheringPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GatheringData>()
-            .add_systems(Startup, load_startup)
             .add_systems(Update, sync_skinning_corpses)
             .add_systems(FixedUpdate, update_node_timers);
     }
-}
-
-fn load_startup(mut commands: Commands) {
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::spell_info::WORLD_DB_PATH,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .expect("gathering world database unavailable");
-    let data =
-        load_data(&conn).expect("gathering metadata unavailable; apply gathering_metadata.py");
-    info!(
-        "Gathering: {} templates, {} skin mappings",
-        data.nodes.len(),
-        data.skins.len()
-    );
-    commands.insert_resource(data);
 }
 
 pub(crate) fn is_gathering(spell: &SpellInfo) -> bool {
