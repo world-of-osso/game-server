@@ -34,9 +34,58 @@ All13 classes/all40 specs remain represented:630 book IDs/1551 memberships,302 c
 |pre-c799de7|One native Mind Flay source-audit test:1/1 GREEN; existing behavior, not RED.|
 |c799de7|`cargo test --locked -p server --bin game-server dummy22`:5/5 native Mind Flay tests GREEN, warning-free.|
 |66eb38b|`cargo test --locked -p server --bin game-server dummy22_rewind`: three real40-vs120 amount/overflow RED failures; raid control passes. Optional combat-log target corrected before this run, not counted as behavioral RED.|
+|48be611|First GREEN attempt blocked by module re-export visibility compilation; not behavioral proof.|
+|9f72f8d|Visibility corrected: `cargo test --locked -p server --bin game-server dummy22` **10/10 GREEN**, warning-free. Five Rewind cases and five native Mind Flay cases.|
 
-Rewind GREEN pending. Lead cancelled the originally requested `spell_cast` gate; final proof uses targeted tests plus fmt/check only. No independent/full-server/live/full-rotation acceptance claimed.
+Final fmt/check pending. Lead cancelled the originally requested `spell_cast` gate; final proof uses targeted tests plus fmt/check only. No independent/full-server/live/full-rotation acceptance claimed.
 
 Verification uses the inherited immutable local shared-protocol44b2b0f with `--config patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy20-2026-10-11/shared-protocol"`; shared-protocol patch block remains intact. No master merge, deploy, live server or UDP5000.
 
 Durable evidence: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy22-2026-10-11/`: source/variable receipts, exact reviewed reasons, frozen before/after sources and census generator/results, behavioral test stdout/stderr. Host-load gate missed for initial source-audit build; later runs honor capacity gate.
+
+## All40-spec preference table
+
+Counts mean named script presence, not generic dispatch or full ability parity. Every batch21 ID set/count reproduced before additions. No generic handler relabelled as a new named script.
+
+| Spec | Book script roots before→after | Core script roots before→after | Core A before→after |
+|---|---:|---:|---:|
+| Mage Arcane (62) | 3→3 | 4→4 | 5→5 |
+| Mage Fire (63) | 1→1 | 3→3 | 5→5 |
+| Mage Frost (64) | 1→1 | 5→5 | 5→5 |
+| Paladin Holy (65) | 8→8 | 5→5 | 7→7 |
+| Paladin Protection (66) | 6→6 | 5→5 | 6→6 |
+| Paladin Retribution (70) | 6→6 | 4→4 | 5→5 |
+| Warrior Arms (71) | 2→2 | 4→4 | 7→7 |
+| Warrior Fury (72) | 3→3 | 4→4 | 6→6 |
+| Warrior Protection (73) | 3→3 | 4→4 | 5→5 |
+| Druid Balance (102) | 6→6 | 5→5 | 5→5 |
+| Druid Feral (103) | 5→5 | 5→5 | 6→6 |
+| Druid Guardian (104) | 5→5 | 3→3 | 4→4 |
+| Druid Restoration (105) | 5→5 | 5→5 | 5→5 |
+| Death Knight Blood (250) | 2→2 | 4→4 | 5→5 |
+| Death Knight Frost (251) | 2→2 | 4→4 | 5→5 |
+| Death Knight Unholy (252) | 2→2 | 3→3 | 4→4 |
+| Hunter Beast Mastery (253) | 2→2 | 5→5 | 6→6 |
+| Hunter Marksmanship (254) | 2→2 | 4→4 | 4→4 |
+| Hunter Survival (255) | 2→2 | 4→4 | 4→4 |
+| Priest Discipline (256) | 2→2 | 3→3 | 6→6 |
+| Priest Holy (257) | 1→1 | 4→4 | 6→6 |
+| Priest Shadow (258) | 3→3 | 5→5 | 8→9 |
+| Rogue Assassination (259) | 5→5 | 5→5 | 8→8 |
+| Rogue Outlaw (260) | 4→4 | 3→3 | 5→5 |
+| Rogue Subtlety (261) | 4→4 | 4→4 | 7→7 |
+| Shaman Elemental (262) | 1→1 | 5→5 | 6→6 |
+| Shaman Enhancement (263) | 2→2 | 4→4 | 6→6 |
+| Shaman Restoration (264) | 2→2 | 4→4 | 5→5 |
+| Warlock Affliction (265) | 1→1 | 4→4 | 5→5 |
+| Warlock Demonology (266) | 1→1 | 3→3 | 5→5 |
+| Warlock Destruction (267) | 2→2 | 5→5 | 7→7 |
+| Monk Brewmaster (268) | 3→3 | 5→5 | 6→6 |
+| Monk Windwalker (269) | 4→4 | 4→4 | 5→5 |
+| Monk Mistweaver (270) | 4→4 | 4→4 | 4→4 |
+| Demon Hunter Havoc (577) | 6→6 | 4→4 | 5→5 |
+| Demon Hunter Vengeance (581) | 5→5 | 4→4 | 4→4 |
+| Evoker Devastation (1467) | 4→4 | 4→4 | 5→5 |
+| Evoker Preservation (1468) | 4→4 | 3→4 | 4→5 |
+| Evoker Augmentation (1473) | 6→6 | 3→3 | 4→4 |
+| Demon Hunter Devourer (1480) | 7→7 | 3→3 | 4→4 |
