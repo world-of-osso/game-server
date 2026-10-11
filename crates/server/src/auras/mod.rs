@@ -1127,12 +1127,16 @@ pub fn is_immune(world: &World, unit: Entity, school_mask: u32) -> bool {
 /// Shared school immunity check for spell damage and queried melee targets.
 pub(crate) fn immune_to_school(auras: Option<&ActiveAuras>, school_mask: u32) -> bool {
     let school = school_or_physical(school_mask);
-    auras.is_some_and(|auras| {
-        auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
-            effect.aura_type == handlers::SCHOOL_IMMUNITY
-                && effect.misc_values[0] as u32 & school != 0
-        })
-    })
+    let immunity_mask = auras.map_or(0, |auras| {
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .filter(|effect| effect.aura_type == handlers::SCHOOL_IMMUNITY)
+            .fold(0, |mask, effect| mask | effect.misc_values[0] as u32)
+    });
+    // TC IsImmunedToSpell: all of a composite school must be covered;
+    // separate immunity auras may supply the combined mask.
+    immunity_mask & school == school
 }
 
 /// Chance in percent that `unit` reflects a spell of `school_mask`
