@@ -65,6 +65,95 @@ fn setup_app() -> Option<App> {
     setup_app_with(|_| {})
 }
 
+#[test]
+fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use shared::protocol::AchievementStateUpdate;
+    let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic quest data required");
+    let client = spawn_client(&mut app, 80);
+    app.world_mut()
+        .get_mut::<Player>(client.player)
+        .unwrap()
+        .class = 9;
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(PlayerAchievementState::default());
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    enter_world(&mut app, &client);
+    received::<AchievementStateUpdate>(&mut app, &client);
+    // Authored Warlock prerequisite and separate giver/ender for Dreadsteed of Xoroth.
+    mark_rewarded(&app, &client, 7629);
+    let giver = spawn_npc(&mut app, 14436, 0.0);
+    let ender = spawn_npc(&mut app, 14504, 0.0);
+    accept(&mut app, &client, giver, 7631);
+    let errors = received::<QuestFailed>(&mut app, &client);
+    assert!(errors.is_empty(), "quest acceptance failed: {errors:?}");
+    // Accepted/completed objectives are not a reward; a wrong ender is rejected.
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .earned_ids
+            .contains(&2357)
+    );
+    turn_in(&mut app, &client, giver, 7631, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .earned_ids
+            .contains(&2357)
+    );
+    turn_in(&mut app, &client, ender, 7631, None);
+    let errors = received::<QuestFailed>(&mut app, &client);
+    assert!(errors.is_empty(), "quest reward failed: {errors:?}");
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(7631));
+    let updates = received::<AchievementStateUpdate>(&mut app, &client);
+    assert_eq!(
+        updates
+            .iter()
+            .filter(|update| update
+                .completed
+                .as_ref()
+                .is_some_and(|toast| toast.achievement_id == 2357))
+            .count(),
+        1
+    );
+    let saved = persistence::load_achievements(db(&app), client.character_id);
+    assert!(saved.earned_ids.contains(&2357));
+    assert_eq!(saved.criteria_progress[&8905], 1);
+    assert!(saved.earned_at.contains_key(&2357));
+    app.world_mut()
+        .entity_mut(client.connection)
+        .remove::<InWorld>();
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(saved.clone());
+    enter_world(&mut app, &client);
+    let mut reloaded = app
+        .world()
+        .get::<PlayerAchievementState>(client.player)
+        .unwrap()
+        .clone();
+    assert!(
+        reloaded.account.take().is_some(),
+        "login reconstructs account presentation"
+    );
+    assert_eq!(reloaded, saved);
+    assert!(
+        received::<AchievementStateUpdate>(&mut app, &client)
+            .iter()
+            .all(|update| update.completed.is_none())
+    );
+}
+
 /// `setup_app` plus the plugins `add_plugins` adds before the app is finished.
 fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
     let quests = test_quest_db()?.clone();

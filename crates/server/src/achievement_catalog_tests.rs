@@ -7,6 +7,101 @@ fn catalog() -> AchievementCatalog {
 }
 
 #[test]
+fn achievements2_other_character_earned_dependencies_do_not_grant_character_meta() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids.extend([4788, 4789]);
+    state.account = Some(Box::new(account));
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    assert!(!state.earned_ids.contains(&1205));
+}
+
+#[test]
+fn achievements2_holiday_and_missing_spell_assets_remain_untrackable() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::CastSpell(62049), None, 1);
+    assert!(!state.criteria_progress.contains_key(&11118));
+    catalog.update(&mut state, CriteriaEvent::BeSpellTarget(132022), None, 1);
+    assert!(!state.criteria_progress.contains_key(&533));
+}
+
+#[test]
+fn achievements2_pinned_snapshot_trackable_union_matches_census() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.account = Some(Box::new(PlayerAchievementState::default()));
+    let union: BTreeSet<_> = [1, 2]
+        .into_iter()
+        .flat_map(|race| {
+            catalog
+                .snapshot(&state, race)
+                .progress
+                .into_iter()
+                .map(|row| row.achievement_id)
+        })
+        .collect();
+    assert_eq!(union.len(), 3388);
+}
+
+#[test]
+fn achievements_dependencies_complete_from_historical_earned_ids_once() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(1), None, 1)
+            .is_empty()
+    );
+    // Retail Hero of Shattrath references these historical earned IDs.
+    state.earned_ids.extend([4788, 4789]);
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    for id in [1205] {
+        assert!(
+            state.earned_ids.contains(&id),
+            "missing dependency achievement {id}"
+        );
+        assert_eq!(
+            toasts
+                .iter()
+                .filter(|toast| toast.achievement_id == id)
+                .count(),
+            1
+        );
+    }
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::ReachLevel(1), None, 1)
+            .is_empty()
+    );
+}
+
+#[test]
+fn achievements_quest_asset_and_repeat_credit_preserve_boolean_progress() {
+    let catalog = catalog();
+    println!(
+        "trackable achievement snapshot rows: {}",
+        catalog
+            .snapshot(&PlayerAchievementState::default(), 1)
+            .progress
+            .len()
+    );
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::CompleteQuest(7630), None, 1);
+    assert!(!state.earned_ids.contains(&2357));
+    let toasts = catalog.update(&mut state, CriteriaEvent::CompleteQuest(7631), None, 1);
+    assert!(toasts.iter().any(|toast| toast.achievement_id == 2357));
+    assert_eq!(state.criteria_progress[&8905], 1);
+    assert!(
+        catalog
+            .update(&mut state, CriteriaEvent::CompleteQuest(7631), None, 1)
+            .is_empty()
+    );
+    assert_eq!(state.criteria_progress[&8905], 1);
+}
+
+#[test]
 fn dungeonach_real_level_rows_grant_at_thresholds() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
@@ -18,19 +113,19 @@ fn dungeonach_real_level_rows_grant_at_thresholds() {
         (70, 15805),
         (80, 19459),
     ] {
-        catalog.update(&mut state, CriteriaEvent::ReachLevel(level - 1), None);
+        catalog.update(&mut state, CriteriaEvent::ReachLevel(level - 1), None, 1);
         assert!(!state.earned_ids.contains(&id));
-        let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(level), None);
+        let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(level), None, 1);
         assert!(toasts.iter().any(|toast| toast.achievement_id == id));
         assert!(state.earned_ids.contains(&id));
         assert!(
             catalog
-                .update(&mut state, CriteriaEvent::ReachLevel(level), None)
+                .update(&mut state, CriteriaEvent::ReachLevel(level), None, 1)
                 .is_empty()
         );
     }
     assert_eq!(state.criteria_progress[&5212], 80);
-    let snapshot = catalog.snapshot(&state);
+    let snapshot = catalog.snapshot(&state, 1);
     let progress = snapshot
         .progress
         .iter()
@@ -49,9 +144,9 @@ fn dungeonach_real_encounter_criteria_match_only_their_asset() {
     assert_eq!((criterion.kind, criterion.asset), (165, 1141));
     assert!(criterion.supported);
     let mut state = PlayerAchievementState::default();
-    catalog.update(&mut state, CriteriaEvent::DefeatEncounter(1140), None);
+    catalog.update(&mut state, CriteriaEvent::DefeatEncounter(1140), None, 1);
     assert!(!state.criteria_progress.contains_key(&39291));
-    catalog.update(&mut state, CriteriaEvent::DefeatEncounter(1141), None);
+    catalog.update(&mut state, CriteriaEvent::DefeatEncounter(1141), None, 1);
     assert_eq!(state.criteria_progress[&39291], 1);
 }
 
@@ -79,15 +174,15 @@ fn dungeonach_tree_all_any_and_count_operators() {
     }
     let mut state = PlayerAchievementState::default();
     assert!(!catalog.tree_progress(900002, &state).completed);
-    catalog.update(&mut state, CriteriaEvent::KillCreature(46254), None);
+    catalog.update(&mut state, CriteriaEvent::KillCreature(46254), None, 1);
     assert!(catalog.tree_progress(900002, &state).completed);
     assert!(!catalog.tree_progress(900001, &state).completed);
     assert!(!catalog.tree_progress(900003, &state).completed);
-    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None);
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
     // Count counts direct children with positive progress, not completed level thresholds.
     assert!(catalog.tree_progress(900003, &state).completed);
     assert!(!catalog.tree_progress(900001, &state).completed);
-    catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None);
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(10), None, 1);
     assert!(catalog.tree_progress(900001, &state).completed);
 }
 
@@ -116,8 +211,10 @@ fn dungeonach_criteria_progress_persists_across_database_reopen() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
-    catalog.update(&mut state, CriteriaEvent::ReachLevel(20), None);
-    catalog.update(&mut state, CriteriaEvent::KillCreature(46254), None);
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(20), None, 1);
+    catalog.update(&mut state, CriteriaEvent::KillCreature(46254), None, 1);
+    catalog.update(&mut state, CriteriaEvent::CompleteQuest(7631), None, 1);
+    assert!(state.earned_ids.contains(&2357));
     {
         let db = redb::Database::create(file.path()).unwrap();
         crate::persistence::create_tables(&db);
