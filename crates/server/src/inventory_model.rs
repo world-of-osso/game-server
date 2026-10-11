@@ -105,7 +105,12 @@ impl InventoryModel {
         model.sync_containers();
         model.load_bag_items(record.inventory.items, &record.placements, mint);
         model.bind_owned_pickup_items();
-        let equipped_slots: Vec<_> = model.equipped.keys().copied().collect();
+        let equipped_slots: Vec<_> = model
+            .equipped
+            .iter()
+            .filter(|(_, item)| model.transmogs.contains_key(&item.item_guid))
+            .map(|(slot, _)| *slot)
+            .collect();
         for slot in equipped_slots {
             model.sync_appearance(slot);
         }

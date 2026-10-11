@@ -438,12 +438,12 @@ fn apply_changes(
         cost = cost
             .checked_add(price)
             .ok_or(TransmogError::CostUnavailable)?;
-        planned.push((change.item_guid, modifier));
+        planned.push((change.item_guid, modifier, slot));
     }
     if record.inventory.gold < cost {
         return Err(TransmogError::NotEnoughMoney);
     }
-    for (guid, modifier) in planned {
+    for (guid, modifier, slot) in planned {
         match modifier {
             Some(modifier) => {
                 record.transmogs.insert(guid, modifier);
@@ -451,11 +451,26 @@ fn apply_changes(
             }
             None => {
                 record.transmogs.remove(&guid);
+                restore_original_entry(record, slot);
             }
         }
     }
     record.inventory.gold -= cost;
     Ok(())
+}
+
+fn restore_original_entry(record: &mut InventoryRecord, slot: &TransmogSlot) {
+    let visual = slot.slot.visual_slot().expect("validated visual slot");
+    let entries = &mut record.character.equipment_appearance.entries;
+    entries.retain(|entry| entry.slot != visual);
+    entries.push(shared::components::EquippedAppearanceEntry {
+        slot: visual,
+        item_id: Some(slot.item_id),
+        definition_source: Some(slot.definition_source),
+        display_info_id: None,
+        inventory_type: slot.inventory_type,
+        hidden: false,
+    });
 }
 
 fn choice_modifier(
