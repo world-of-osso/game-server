@@ -278,3 +278,88 @@ fn dummy18_obliterate_selects_native_physical_and_frost_weapon_children() {
         );
     }
 }
+
+#[test]
+fn dummy18_drain_life_native_channel_ticks_stop_on_cancellation_or_expiry() {
+    for cancel in [false, true] {
+        let mut h = fixture(&[234153], 9);
+        let caster = h.caster;
+        let npc = h.npc;
+        h.cast_and_deliver(234153, Some(npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        h.advance(25);
+        let count = |h: &Harness| {
+            h.inbox
+                .log
+                .iter()
+                .filter(|e| {
+                    e.spell_id == Some(234153) && e.kind == CombatLogKind::Heal && e.periodic
+                })
+                .count()
+        };
+        assert_eq!(count(&h), 1);
+        if cancel {
+            super::cancel_cast(h.app.world_mut(), caster);
+        }
+        h.advance(140);
+        assert_eq!(count(&h), if cancel { 1 } else { 5 });
+        assert!(!crate::auras::has_aura(h.app.world(), npc, 234153));
+    }
+}
+
+#[test]
+fn dummy18_periodic_leech_copies_post_absorb_damage_without_second_versatility() {
+    let mut h = fixture(&[34914, 17], 5);
+    let caster = h.caster;
+    let npc = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .versatility_pct = 100.0;
+    apply(&mut h, caster, npc, 34914, 2);
+    let healer = spawn_player(&mut h.app, 5, 2.0);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .healing_power = 10.0;
+    apply(&mut h, healer, npc, 17, 1);
+    h.advance(65);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|e| e.spell_id == Some(34914) && e.kind == CombatLogKind::Damage)
+        .unwrap();
+    let heal = h
+        .inbox
+        .log
+        .iter()
+        .find(|e| e.spell_id == Some(34914) && e.kind == CombatLogKind::Heal)
+        .unwrap();
+    assert!(damage.amount > 0 && damage.absorbed > 0);
+    assert_eq!(heal.amount, (damage.amount as f32 * 0.3).round() as i32);
+}
+
+#[test]
+fn dummy18_ignore_pain_versatility_scales_budget_below_cap() {
+    let mut h = fixture(&[190456], 1);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(shared::components::ActiveSpec(73));
+    let mut stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap();
+    stats.attack_power = 1.0;
+    stats.versatility_pct = 100.0;
+    apply(&mut h, caster, caster, 190456, u32::MAX);
+    let (_, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 100.0);
+    let coefficient =
+        world_db().unwrap().store.get(190456).unwrap().effects[0].bonus_coefficient_from_ap;
+    assert!((absorbed - coefficient * 2.0).abs() < 0.01);
+}
