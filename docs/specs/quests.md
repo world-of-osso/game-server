@@ -20,6 +20,9 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 ## Tests asserting this spec
 
+- [GO/spell objective census and proof](../quest-objectives-coverage.md) — exact per-Type before/after routes, data limits and real-quest evidence.
+- `crates/server/src/quest_objectives_tests.rs` — GO use and held-key validation, next-frame chest loot retention, actual item acquisition/cast and personal/group spell credit through rewards.
+
 - `crates/server/src/quest_tests.rs` — real rows through the message path: The Fargodeep Mine (62) and The Jasperlode Mine (76) stay incomplete until the player enters trigger 88 / 87 (not a ghost, not the other mine's trigger); A Threat Within (783) Willem → McBride persisted with Kobold Camp Cleanup (7) offered next; 7 blocked until 783 turned in; 7 progresses on Kobold Vermin kills and pays 25 copper; Brotherhood of Thieves (18) counts bag bandanas, rejects a missing choice, grants Militia Hammer; abandon; untrack persists across re-entry; out-of-range giver.
 - `crates/server/src/quest_rules_tests.rs` — markers, prerequisites, kill credit, trivial level, race mask, log cap, `quest-complete` objective fill.
 - `crates/server/src/admin_ipc.rs` tests — `quest-complete` persists the filled counts and marks the log dirty.
