@@ -24,11 +24,6 @@ mod dungeon;
 #[path = "scenario.rs"]
 mod scenario;
 pub(crate) use scenario::load_scenarios;
-#[cfg(test)]
-use scenario::{ScenarioDefinition, ScenarioRun, ScenarioStep};
-#[cfg(test)]
-#[path = "scenario_tests.rs"]
-mod scenario_tests;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerAchievementState {

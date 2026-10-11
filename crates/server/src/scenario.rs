@@ -4,6 +4,10 @@ use rusqlite::Connection;
 use shared::protocol::{InstanceChannel, ScenarioProgress, ScenarioStage};
 use std::collections::HashMap;
 
+#[cfg(test)]
+#[path = "scenario_tests.rs"]
+mod tests;
+
 #[derive(Clone, Debug)]
 pub(super) struct ScenarioStep {
     pub id: u32,
