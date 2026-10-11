@@ -197,6 +197,21 @@ pub(super) fn effect_enabled(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        crate::spell_cast::scripts::LIFEBLOOM,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::scripts::replace_lifebloom),
+            on_remove: Some(crate::spell_cast::scripts::bloom_lifebloom),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::CENARION_WARD,
+        AuraScript {
+            on_proc: Some(crate::spell_cast::scripts::heal_cenarion_ward),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         53563,
         AuraScript {
             on_apply: Some(crate::spell_cast::scripts::replace_beacon),
