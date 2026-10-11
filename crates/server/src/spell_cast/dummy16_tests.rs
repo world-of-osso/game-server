@@ -45,7 +45,7 @@ fn reduce_judgment(root: u32, target_enemy: bool) {
             .world_mut()
             .get_mut::<super::SpellHistory>(h.caster)
             .unwrap()
-            .cooldowns
+            .spell_ready_at
             .insert(275773, until);
         let target = if target_enemy { h.npc } else { h.caster };
         execute(&mut h, root, Some(target));
@@ -55,7 +55,7 @@ fn reduce_judgment(root: u32, target_enemy: bool) {
             .world()
             .get::<super::SpellHistory>(h.caster)
             .unwrap()
-            .cooldowns[&275773];
+            .spell_ready_at[&275773];
         assert_eq!(actual, until - if ranked { 1.5 } else { 0.0 });
         assert_eq!(
             h.inbox
@@ -69,7 +69,7 @@ fn reduce_judgment(root: u32, target_enemy: bool) {
             .world_mut()
             .get_mut::<super::SpellHistory>(h.caster)
             .unwrap()
-            .cooldowns
+            .spell_ready_at
             .remove(&275773);
         execute(&mut h, root, Some(target));
         assert!(
@@ -77,7 +77,7 @@ fn reduce_judgment(root: u32, target_enemy: bool) {
                 .world()
                 .get::<super::SpellHistory>(h.caster)
                 .unwrap()
-                .cooldowns
+                .spell_ready_at
                 .contains_key(&275773)
         );
     }
