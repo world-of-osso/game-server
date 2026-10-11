@@ -335,7 +335,11 @@ fn smartai_coverage_ooc_timed_list_waits_through_combat() {
 fn smartai_coverage_ranked_orientation_turns_actor_not_selected_target() {
     use shared::components::Rotation;
     let (_temp, mut world, mut ai, creature, player) = erland();
-    world.entity_mut(creature).insert(Rotation::default());
+    world.entity_mut(creature).insert(Rotation {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
     world.entity_mut(player).insert((
         Position {
             x: 10.0,
@@ -343,8 +347,9 @@ fn smartai_coverage_ranked_orientation_turns_actor_not_selected_target() {
             z: 0.0,
         },
         Rotation {
+            x: 0.0,
             y: 0.7,
-            ..Default::default()
+            z: 0.0,
         },
     ));
     let mut ctx = Ctx {
