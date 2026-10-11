@@ -18,12 +18,10 @@
 pub mod boss_ai;
 pub mod creature_text;
 pub mod event_map;
-pub mod grim_batol;
 pub mod instance_script;
 pub mod movement;
 pub mod smart_ai;
 pub mod the_stockade;
-pub mod wailing_caverns;
 
 use std::collections::VecDeque;
 

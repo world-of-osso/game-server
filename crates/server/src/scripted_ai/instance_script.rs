@@ -77,13 +77,6 @@ impl InstanceScript {
     }
 }
 
-/// The instance script `instance_template.script` names, fresh.
-pub fn create_instance_script(name: &str) -> Option<InstanceScript> {
-    super::the_stockade::instance_script(name)
-        .or_else(|| super::grim_batol::instance_script(name))
-        .or_else(|| super::wailing_caverns::instance_script(name))
-}
-
 /// The boss creature entries of `map_id`'s instance script whose boss id is in
 /// `done_bosses`: they do not spawn in a copy created with them `DONE` (TrinityCore
 /// keeps them dead through their saved respawn time).
@@ -100,6 +93,42 @@ pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses
         .unwrap_or_default()
 }
 
+/// Authored compatibility data preserves the eight existing saved boss ordinals.
+/// It is part of the registry, not a retry/fallback when imported bindings are missing.
+fn compatibility_catalog(map_id: u32) -> InstanceScript {
+    let mut script = InstanceScript {
+        name: "data_encounters",
+        bosses: Vec::new(),
+        boss_creatures: Vec::new(),
+    };
+    for row in include_str!("encounter_compat.csv")
+        .lines()
+        .filter(|row| !row.starts_with('#'))
+    {
+        let values: Vec<u32> = row
+            .split(',')
+            .map(|v| v.parse().expect("invalid encounter compatibility catalog"))
+            .collect();
+        let [map, entry, encounter_id, boss_id] = values.as_slice() else {
+            panic!("invalid encounter compatibility row");
+        };
+        if *map != map_id {
+            continue;
+        }
+        assert_eq!(
+            *boss_id as usize,
+            script.bosses.len(),
+            "compatibility boss ordinals must be contiguous"
+        );
+        script.bosses.push(BossInfo {
+            state: EncounterState::NotStarted,
+            encounter_id: *encounter_id,
+        });
+        script.boss_creatures.push((*entry, *boss_id));
+    }
+    script
+}
+
 /// Existing script ordinals remain stable; otherwise DB2 encounter bits are boss ids.
 /// Sparse bits keep the same saved-mask identity used by the raid-entry catalog.
 fn create_map_script(
@@ -107,16 +136,8 @@ fn create_map_script(
     map_id: u32,
     difficulty: u32,
 ) -> Option<InstanceScript> {
-    let legacy = store
-        .instance_scripts
-        .get(&map_id)
-        .and_then(|name| create_instance_script(name));
-    let has_legacy = legacy.is_some();
-    let mut script = legacy.unwrap_or(InstanceScript {
-        name: "data_encounters",
-        bosses: Vec::new(),
-        boss_creatures: Vec::new(),
-    });
+    let mut script = compatibility_catalog(map_id);
+    let has_legacy = !script.boss_creatures.is_empty();
     let mut bindings: Vec<_> = store
         .raid_creature_encounters
         .iter()
@@ -132,7 +153,7 @@ fn create_map_script(
         {
             continue;
         }
-        let encounter = store
+        let Some(encounter) = store
             .dungeon_encounters
             .values()
             .filter(|e| {
@@ -142,7 +163,10 @@ fn create_map_script(
                         || e.difficulty_id <= 0
                         || e.difficulty_id as u32 == difficulty)
             })
-            .min_by_key(|e| e.id)?;
+            .min_by_key(|e| e.id)
+        else {
+            continue;
+        };
         let boss_id = if has_legacy {
             script
                 .bosses
