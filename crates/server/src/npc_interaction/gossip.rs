@@ -128,6 +128,20 @@ fn gossip_opening(
     }
 }
 
+#[cfg(test)]
+mod transmog_tests {
+    use super::*;
+
+    #[test]
+    fn transmog_flag_opens_the_transmogrifier_service() {
+        let opening = GossipCatalog::default().open(62821, NpcFlags(NpcFlags::TRANSMOGRIFIER));
+        assert_eq!(
+            opening.map(|opening| opening.kind),
+            Some(InteractionKind::Role(NpcRole::Transmogrifier))
+        );
+    }
+}
+
 /// Roles an NPC's flags grant, in Retail gossip order.
 pub(crate) fn roles_from_flags(flags: NpcFlags) -> Vec<NpcRole> {
     const VENDOR_ANY: u64 = NpcFlags::VENDOR
