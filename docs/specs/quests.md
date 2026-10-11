@@ -29,7 +29,8 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 - [x] Type 2 game-object objectives receive matching goober-use credit after life, map-copy, model-box reach, quest and reuse-time checks. Nearby party members share credit. Consumable objects cannot be repeatedly used before their authored respawn timer.
 - [x] Chest loot uses authored content game-object loot tables and the existing inventory path; opening alone does not complete an item objective.
-- [ ] Full game-object lock/key/skill, condition, event, spell and animation/despawn semantics remain unimplemented; these paths are not full Retail GO parity.
+- [x] Local authored Lock.db2 alternatives gate GO use: Retail-source held keys and zero-skill ordinary interaction locks. Missing lock definitions fail explicitly; unsupported skill/spell-key alternatives do not award credit. Required runtime input and exporter: [game objects](../wiki/systems/game-objects.md#quest-objects-2026-10-11).
+- [ ] Profession/spell-key opening, condition, event, GO spell and animation/despawn semantics remain unimplemented; these paths are not full Retail GO parity.
 - [ ] Event quests (escorts, scripted events: `QUEST_FLAGS_COMPLETION_EVENT` with no trigger) cannot complete: no script sets the event.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
 - [x] Authored spell effects 90 and 134 advance Type 0 monster-credit objectives for the hit player, without requiring a creature death. Effect90 is personal; effect134 shares with nearby same-map-copy party members. Unrelated objectives and completed counts do not advance. Retail defines no cast-spell objective Type: Type5 means learn-spell.

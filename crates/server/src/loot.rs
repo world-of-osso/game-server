@@ -103,14 +103,7 @@ pub(crate) fn open_game_object_loot(
     let quests = world.resource::<QuestDb>();
     let log = load_quest_log(&db.db, character);
     let inventory = persistence::load_inventory(&db.db, character);
-    let bag_count = |item| {
-        inventory
-            .items
-            .iter()
-            .filter(|slot| slot.item_id == item)
-            .map(|slot| slot.stack_count)
-            .sum()
-    };
+    let bag_count = |item| crate::quest_view::bag_count(&db.db, &inventory, item);
     let rolled = world.resource::<LootTables>().roll_game_object(
         loot_id,
         world.resource::<ItemTemplates>(),
