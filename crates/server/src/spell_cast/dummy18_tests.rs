@@ -254,12 +254,7 @@ fn dummy18_obliterate_selects_native_physical_and_frost_weapon_children() {
                 .world_mut()
                 .get_mut::<crate::stats::CharacterStats>(h.caster)
                 .unwrap()
-                .off_hand = Some(crate::item_stats::WeaponDamage {
-                min_damage: 1.0,
-                max_damage: 1.0,
-                speed: 2.0,
-                weapon_type: shared::components::WeaponType::Unarmed,
-            });
+                .off_hand = Some(crate::item_stats::WeaponDamage::UNARMED);
         }
         let npc = h.npc;
         execute(&mut h, 49020, npc);
