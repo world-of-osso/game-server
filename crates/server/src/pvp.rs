@@ -23,6 +23,8 @@ use crate::persistence::GameDatabase;
 #[path = "pvp_support.rs"]
 mod pvp_support;
 
+#[path = "pvp_entry.rs"]
+mod pvp_entry;
 #[path = "pvp_invites.rs"]
 mod pvp_invites;
 use pvp_invites::process_battleground_invitation_responses;
@@ -134,6 +136,8 @@ struct RatedQueueEntry {
 struct InvitedBattleground {
     instance: BgInstance,
     accepted: BTreeSet<u64>,
+    map: Option<crate::maps::InMap>,
+    origins: BTreeMap<u64, crate::maps::WorldLocation>,
 }
 
 #[derive(Resource, Default)]
@@ -154,6 +158,8 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
         InvitedBattleground {
             instance: BgInstance::from_match(&matched, &template),
             accepted: BTreeSet::new(),
+            map: None,
+            origins: BTreeMap::new(),
         },
     );
     Some(match_id)
