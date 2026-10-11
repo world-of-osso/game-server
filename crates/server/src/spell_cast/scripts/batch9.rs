@@ -8,6 +8,8 @@ use bevy::prelude::*;
 use shared::components::Health;
 
 pub(super) const HEALING_RAIN: u32 = 73920;
+const SIGIL_OF_FLAME: u32 = 204596;
+const SIGIL_FLAME_DAMAGE: u32 = 204598;
 pub(super) const RAIN_OF_FIRE: u32 = 5740;
 const RAIN_OF_FIRE_DAMAGE: u32 = 42223;
 pub(super) const CONSECRATION: u32 = 26573;
@@ -27,9 +29,11 @@ const ATONEMENT: u32 = 194384;
 
 pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<CastEffectHandler> {
     match (spell_id, index) {
-        (HEALING_RAIN, 0) | (EARTHQUAKE, 2) | (EMERALD_BLOSSOM, 0) | (RAIN_OF_FIRE, 1) => {
-            Some(spawn_ground_pulses)
-        }
+        (HEALING_RAIN, 0)
+        | (EARTHQUAKE, 2)
+        | (EMERALD_BLOSSOM, 0)
+        | (RAIN_OF_FIRE, 1)
+        | (SIGIL_OF_FLAME, 0) => Some(spawn_ground_pulses),
         (VOID_STEP, 0) => Some(teleport_void_step),
         _ => None,
     }
@@ -113,6 +117,19 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
             0,
             targets::Relation::Enemy,
             f64::from(ctx.spell.effects[1].aura_period_ms) / 1000.0,
+        ),
+        SIGIL_OF_FLAME => (
+            SIGIL_FLAME_DAMAGE,
+            targets::effect_radius(
+                &world
+                    .resource::<SpellStore>()
+                    .get(SIGIL_FLAME_DAMAGE)
+                    .expect("Sigil requires204598")
+                    .effects[0],
+            ),
+            0,
+            targets::Relation::Enemy,
+            0.0,
         ),
         EMERALD_BLOSSOM => (
             BLOSSOM_HEAL,
@@ -267,6 +284,16 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         }),
         chain_multipliers,
     }];
+    //204598 has one targeted native bleed plus a latent duplicate with target0.
+    //Keep the field's fixed destination; do not spawn an invented179 actor.
+    if pulses.root == SIGIL_OF_FLAME {
+        plan.push(PlannedEffect {
+            index: 1,
+            units: plan[0].units.clone(),
+            dest: plan[0].dest,
+            chain_multipliers: Vec::new(),
+        });
+    }
     // Named damage/heal effect only: Earthquake's knockdown77 remains unsupported.
     spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);
     spell_cast::missiles::launch(world, pulses.caster, &child, plan, pulses.depth);
