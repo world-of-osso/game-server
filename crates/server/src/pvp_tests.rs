@@ -8,14 +8,14 @@ fn queue_for_battleground_sets_queue_state() {
     let mut player_state = PlayerPvpState::default();
     let mut state = PvpServerState::default();
 
-    let message = queue_for_battleground(&mut player_state, &mut state, 10, 30, 1, 5)
+    let message = queue_for_battleground(&mut player_state, &mut state, 10, 90, 1014, 5)
         .expect("queue succeeds");
 
     assert_eq!(message, "queued for Warsong Gulch");
     assert!(matches!(
         player_state.queue,
         Some(PlayerPvpQueue::Battleground {
-            battleground_id: 1,
+            battleground_id: 1014,
             ..
         })
     ));
