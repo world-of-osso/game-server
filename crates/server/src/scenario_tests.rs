@@ -84,6 +84,7 @@ fn scenarios_entry_and_real_death_boundary_are_copy_scoped_and_clear_on_exit() {
                         leader: character_id,
                         group: None,
                         difficulty_id: 1,
+                        ..Default::default()
                     },
                     now,
                 )
