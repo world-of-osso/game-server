@@ -902,6 +902,42 @@ pub enum RemoveReason {
     Replaced,
 }
 
+///31850s2 rescues exactly the next otherwise fatal attack; reserve its field
+///immediately so deferred melee commands cannot spend the same rescue twice.
+pub(crate) fn rescue_ardent_defender(
+    health: &mut shared::components::Health,
+    auras: Option<&mut ActiveAuras>,
+    loss: f32,
+) -> Option<u32> {
+    if health.current <= 0.0 || loss < health.current {
+        return None;
+    }
+    let aura = auras?.auras.iter_mut().find(|a| {
+        a.spell_id == 31850 && a.effects.iter().any(|e| e.index == 1 && e.amount > 0.0)
+    })?;
+    let effect = aura
+        .effects
+        .iter_mut()
+        .find(|e| e.index == 1)
+        .expect("Ardent Defender field");
+    health.current = health.max * effect.amount / 100.0;
+    effect.amount = 0.0;
+    Some(aura.instance_id)
+}
+
+pub(crate) fn apply_attack_damage(world: &mut World, unit: Entity, loss: f32) -> bool {
+    let mut query = world.query::<(&mut shared::components::Health, Option<&mut ActiveAuras>)>();
+    let Ok((mut health, mut auras)) = query.get_mut(world, unit) else {
+        return false;
+    };
+    let rescue = rescue_ardent_defender(&mut health, auras.as_deref_mut(), loss);
+    let lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
+    if let Some(instance) = rescue {
+        remove_instance(world, unit, instance, RemoveReason::Consumed);
+    }
+    lethal
+}
+
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     scripts::run_remove(world, unit, aura, reason);
     linked_summon::on_removed(world, unit, aura);
@@ -1380,6 +1416,7 @@ pub fn dispel(world: &mut World, dispel: &CombatLogEvent, dispel_type: u32, coun
         chosen.contains(&aura.instance_id)
     });
     for aura in removed {
+        crate::spell_cast::scripts::on_dispelled(world, dispeller, &aura);
         let event = CombatLogEvent {
             amount: i32::from(aura.stacks),
             extra_spell_id: Some(aura.spell_id),

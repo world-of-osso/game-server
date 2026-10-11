@@ -2,6 +2,14 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Nineteenth batch: counts, healing totals and owned damage
+
+[Contract](../../specs/spell-dummy-scripts.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [source/census/all40](../../spell-dummy19-coverage.md). `scripts/batch19.rs` consumes Flurry's explicit count, Mutilate variable394 and Dispersion variable872. Dispersion preserves native extra-initial ticks; its description's total is distributed across native ticks with ordinary rounding, including Intangibility and existing Altered Form duration modifiers. This distribution is a local total/clock derivation, not independently observed Retail tick amounts.
+
+Dispel passes the actual dispeller to the named34914→87204 response. Havoc's native single-target mark replaces only this owner's other mark. Direct single-target family-matched spell damage can echo its effective amount at s1 percent; the copied branch skips source modifiers/crit and recursion, but retains destination defenses. Rain of Fire's explicitly area-owned42223 child is excluded even though its per-enemy selector is6. Specialized child selectors/range/destination-mitigation live parity remain gaps.
+
+Ardent Defender's native index1 field is reserved synchronously before deferred melee aura removal, preventing double rescue. Spell/direct/redirect paths share `apply_attack_damage`; normal melee uses the same reservation function inside its borrowed-health query. Environmental damage remains separate. Tests prove fatal-hit restoration/one-shot depletion and the deferred reservation boundary, not random melee outcomes or live timing. Aura316/118/137 behavior remains uncertified; this is only a Dummy-field closure.
+
 ## Eighteenth batch: native leech and reapplication
 
 [Contract](../../specs/spell-dummy-scripts.md#eighteenth-batch-native-leech-and-reapplication-contracts), [proof/census/all40](../../spell-dummy18-coverage.md). Effect9 and aura53 share damage resolution with ordinary attacks; the resolver returns damage less overkill after immunity, absorbs, routing and scaling. Leech copies that amount through normal living-health clamping/logging, without another power, multiplier or crit roll. Periodic leech snapshots native SP/AP amounts, reads the original effect's amplitude and preserves existing tick scheduling.
