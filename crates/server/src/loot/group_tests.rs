@@ -335,6 +335,105 @@ fn completed_last_roll_removes_the_corpses_group_sparkles() {
 }
 
 #[test]
+fn transmog_beats_higher_greed_and_completed_history_replays_to_new_connection() {
+    const RAGECLAW_BOOTS: u32 = 15379;
+    const BOOTS_APPEARANCE: u32 = 2478;
+    let (mut h, other) = grouped();
+    for (looter, account_id) in [(h.looter, 1), (other, 2)] {
+        h.app
+            .world_mut()
+            .entity_mut(looter.connection)
+            .insert(crate::auth::Authenticated { account_id });
+    }
+    let mut learned = shared::transmog::AppearanceCollection::default();
+    learned.learn_many([BOOTS_APPEARANCE]);
+    crate::persistence::appearance_store::save_account_appearances(
+        &h.app.world().resource::<GameDatabase>().db,
+        1,
+        &learned,
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<LootTables>()
+        .creature
+        .get_mut(&KOBOLD_VERMIN)
+        .unwrap()
+        .entries[0]
+        .item = RAGECLAW_BOOTS;
+    let mut values = std::collections::VecDeque::from([99, 1]);
+    h.app
+        .world_mut()
+        .insert_resource(group::GroupRollRng(Box::new(move || {
+            values.pop_front().expect("two authoritative rolls")
+        })));
+    h.kill_kobold();
+    let roll = h.take::<GroupLootRoll>().remove(0);
+    assert!(
+        !roll
+            .players
+            .iter()
+            .find(|p| p.character_id == h.looter.character_id)
+            .unwrap()
+            .can_transmog
+    );
+    assert!(
+        roll.players
+            .iter()
+            .find(|p| p.character_id == other.character_id)
+            .unwrap()
+            .can_transmog
+    );
+    h.send::<_, LootChannel>(
+        h.looter,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Greed,
+        },
+    );
+    h.send::<_, LootChannel>(
+        other,
+        GroupLootChoice {
+            roll_id: roll.roll_id,
+            choice: LootRollChoice::Transmog,
+        },
+    );
+    assert_eq!(owned(&h, h.looter.character_id, RAGECLAW_BOOTS), 0);
+    assert_eq!(owned(&h, other.character_id, RAGECLAW_BOOTS), 1);
+    let completed = h
+        .take::<GroupLootRoll>()
+        .into_iter()
+        .find(|r| r.complete)
+        .unwrap();
+    assert_eq!(completed.winner, Some(other.character_id));
+    assert!(completed.delivered);
+    h.app.world_mut().despawn(other.connection);
+    let connection = h
+        .app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(2)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            InWorld {
+                character_id: other.character_id,
+            },
+            PlayerLink(other.player),
+            crate::auth::Authenticated { account_id: 2 },
+            pair::<shared::protocol::GroupLootHistoryRequest>(),
+            pair::<GroupLootRoll>(),
+        ))
+        .id();
+    let reconnected = Looter {
+        connection,
+        ..other
+    };
+    h.send::<_, LootChannel>(reconnected, shared::protocol::GroupLootHistoryRequest);
+    let history = h.take::<GroupLootRoll>();
+    assert_eq!(history, [completed]);
+    assert_eq!(owned(&h, other.character_id, RAGECLAW_BOOTS), 1);
+}
+
+#[test]
 fn group_kill_broadcasts_one_shared_item_roll_not_two_personal_items() {
     let (mut h, other) = grouped();
     let corpse = h.kill_kobold();

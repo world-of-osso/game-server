@@ -20,7 +20,7 @@ Authoritative grouped corpse distribution in `crates/server/src/loot.rs` and `lo
 - `crates/server/src/group/mod.rs`: policy messages.
 
 ## Tests asserting this spec
-- `crates/server/src/loot/group_tests.rs`
+- `crates/server/src/loot/group_tests.rs`: deterministic Need/all-pass/timeout and shared coins; authentic Rageclaw Boots (15379, appearance 2478), Transmog 1 > Greed 99, account-known appearance eligibility, once-only delivery and completed history on a replaced connection.
 
 ## Known gaps (current cycle)
 - [ ] Complete Need-policy parity (powerful-owned variant, proficiency/profession restrictions) and live proof.
