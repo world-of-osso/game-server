@@ -8,7 +8,7 @@ use shared::protocol::{
 
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
-use crate::pvp::{DEFAULT_RATING, PlayerPvpBracketState, PlayerPvpQueue, PlayerPvpState};
+use crate::pvp::{PlayerPvpBracketState, PlayerPvpQueue, PlayerPvpState};
 
 pub(super) fn connection_for_character(
     connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
@@ -58,7 +58,8 @@ pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
         honor: state.progress.honor,
         honor_max: state.progress.honor_max,
         conquest: state.progress.conquest,
-        conquest_max: state.progress.conquest_max,
+        // Old stored caps/ratings came from the retired simulation, not a source policy.
+        conquest_max: None,
         brackets: state
             .progress
             .brackets
@@ -66,7 +67,7 @@ pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
             .cloned()
             .map(|entry| PvpBracketStatsSnapshot {
                 bracket: entry.bracket,
-                rating: entry.rating,
+                rating: None,
                 season_wins: entry.season_wins,
                 season_losses: entry.season_losses,
                 weekly_wins: entry.weekly_wins,
@@ -135,7 +136,7 @@ pub(super) fn default_brackets() -> Vec<PlayerPvpBracketState> {
     .into_iter()
     .map(|bracket| PlayerPvpBracketState {
         bracket,
-        rating: DEFAULT_RATING,
+        rating: None,
         season_wins: 0,
         season_losses: 0,
         weekly_wins: 0,

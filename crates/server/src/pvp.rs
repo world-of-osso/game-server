@@ -37,15 +37,12 @@ use pvp_leave::process_battleground_leave_requests;
 mod pvp_objective;
 pub(crate) use pvp_objective::use_battleground_flag;
 
-const DEFAULT_RATING: u32 = 1500;
 const HONOR_CAP: u32 = 15_000;
-// CurrencyTypes1602 has no static cap; WorldState31270 is unresolved.
-const CONQUEST_CAP: u32 = 0;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlayerPvpBracketState {
     pub bracket: PvpBracketSnapshot,
-    pub rating: u32,
+    pub rating: Option<u32>,
     pub season_wins: u32,
     pub season_losses: u32,
     pub weekly_wins: u32,
@@ -57,7 +54,7 @@ pub struct PlayerPvpProgress {
     pub honor: u32,
     pub honor_max: u32,
     pub conquest: u32,
-    pub conquest_max: u32,
+    pub conquest_max: Option<u32>,
     pub brackets: Vec<PlayerPvpBracketState>,
     #[serde(default)]
     pub war_mode_desired: bool,
@@ -71,7 +68,7 @@ impl Default for PlayerPvpProgress {
             honor: 0,
             honor_max: HONOR_CAP,
             conquest: 0,
-            conquest_max: CONQUEST_CAP,
+            conquest_max: None,
             brackets: default_brackets(),
             war_mode_desired: false,
             pvp_talents: BTreeMap::new(),
