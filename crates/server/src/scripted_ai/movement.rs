@@ -68,7 +68,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
             (spawn.speed_run * BASE_RUN_SPEED, CreatureMotion::Run)
         };
         let (next, reached) = step_toward(*position, movement.target, speed * dt);
-        tracing::debug!(?entity, from = ?*position, to = ?next, ?movement, reached, driver = "point", "scripted movement");
+        bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, reached, driver = "point", "scripted movement");
         let facing = crate::creature_ai::facing_along(next.x - position.x, next.z - position.z);
         if *position != next {
             *position = next;
