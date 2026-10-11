@@ -85,6 +85,17 @@ fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
 }
 
 #[test]
+fn fresh_login_initializes_noncombat_state_for_pvp_context() {
+    let db = test_db();
+    let (id, _) = persistence::create_character(&db.db, 1, "Pvpfresh", 1, 2).unwrap();
+    let (app, player) = select_character_in_world(db, 1, id);
+    assert_eq!(
+        app.world().get::<shared::components::CombatStatus>(player),
+        Some(&shared::components::CombatStatus(false))
+    );
+}
+
+#[test]
 fn source_start_facing_is_used_on_login_without_repositioning_saved_characters() {
     for moved in [false, true] {
         let db = test_db();
