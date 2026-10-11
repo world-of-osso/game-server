@@ -154,7 +154,7 @@ mod tests {
                         state: EncounterState::NotStarted,
                         encounter_id: 663,
                     }],
-                    boss_creatures: &[],
+                    boss_creatures: vec![],
                 },
             )])));
         assert!(set_boss_state(

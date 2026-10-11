@@ -5,6 +5,7 @@
 - 2026-10-11 — [Mythic Keystone runtime](systems/mythic-plus.md): supersedes the earlier catalog-only boundary with persistent bag GUIDs, authenticated Font activation, Mythic23→Keystone8, shared clock/weighted kill/death/encounter state and idempotent terminal key/history. Real connection character-switch authority regression; default-disabled numeric policy. Private5800 Modern8→11 and Forever8→7 accelerated-clock proof; inspected both-skin PNGs, admin Damage/Revive boundaries and visual/season/combat gaps explicit. No canonical world.db/5000/master mutation.
 
 - 2026-10-11 — [Mythic+ catalog foundation](systems/mythic-plus.md): six local-CASC challenge tables, copy-only layout/hash receipts, atomic replacement and linked/canonical refusal; authentic5/5 behavioral tests. Qualified populated Azure Vault/Font/timer/scenario/weighted forces. Runtime inventory/Font/countdown/tracker/completion/rating and both-skin live proof remain unimplemented; no numeric rule fabricated or canonical DB mutated.
+- 2026-10-11 — [DB2 instance coverage](../instance-coverage-counts.md): union231 dungeon/raid maps with authored difficulties, excluding garrison expansion; shared-base priority retains old124-map rows and Hogger source-backed loot. Targeted importer RED→GREEN7/7; private snapshot row diff zero. Entrance/ground census separates hostability, walk-in reachability and sparse-source gaps; no canonical DB writes.
 - 2026-10-11 — [Open-world population](systems/content-import.md#open-world-population-2026-10-11):589-map/762-zone census;31 scoped terrain-backed expansion maps,12,427 NPC/2,424 GO additions on private copy; Python2/2, Rust admission/ECS2/2, unchanged raw/non-target rows and42-table final equivalence. Private UDP5820 native Wixler Brass pick in Boralus in both skins; PNGs inspected. Authored same-map overlays retained; source-empty/phase/event/appearance gaps explicit. No canonical write, master merge or UDP5000.
 
 - 2026-10-11 — [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry): scripted197835 points consume121471 native100-percent modifier; actual49028/27893 spawn grants native81256 owner30-percent parry, lifetime/early removal controlled. Genuine per-target combo and missing-parry RED→targeted12/12 GREEN at449bb8e.2031 exact native rows, all28 previously underived roots reviewed and30 deferred revisited. [Census/limits](../spell-dummy23-coverage.md):157/129/28→157/157/0, all157 unresolved roots and missing mechanics retained; no no-op closure, full suite, DB write, realm/server/UDP5000 or master merge.
@@ -843,10 +844,22 @@ Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hoo
 ## 2026-10-11 — raid-entry
 
 Added [raid system](systems/raid-entry.md) and contract reconciliation: source-derived single-creature credit, native both-skin private entry/saves/reset/extension proof, and stale terrain-hint ownership fix. Full raid mechanics/data coverage remains incomplete.
+
+## 2026-10-11 — Gathering branch (acceptance incomplete)
+
+[Gathering](systems/gathering.md): local Lock/TDB skin metadata import, GO50 namespace repair, cast/loot/progression, authored pools/depletion/respawn and reopen persistence. Ten behavioral tests; both-skin native acceptance and independent gate remain open. Lead applied world import; agents did not write world.db.
+
+## 2026-10-11 — gathering corpse loot readiness
+
+- [Gathering](systems/gathering.md#corpse-loot-readiness): native corpse-before-loot ordering reproduced; completed empty normal rolls now remain distinguishable from unrolled corpses. Targeted regression and both-skin native recheck owned by gathering-live.
 ## 2026-10-11 — Cobrahn encounter
 
 Bounded local-data Wailing Caverns SmartAI lifecycle and aggro dialogue documented in [[boss-scripts]]. Behavioral RED exposed absent encounter state. Both-skin native entry/pull/death/tracker credit inspected;20 regression passes, one explicit population-copy loot gate fails due lost authored binding. Actor4213 and physical portal traversal remain unproved; full playable acceptance is blocked, not complete.
 
+- 2026-10-11: data-selected boss lifecycle replaces per-dungeon registration; journal dungeon joins, inspectable compatibility ordinals,393-entry SmartAI census and private both-skin Skum proof documented in [[boss-scripts]].
 ## 2026-10-11 — Scenarios
 
 Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reuse and stage snapshots. Native proof/fixture boundary lives in [shared system SSOT](../../../game-engine/docs/wiki/systems/scenarios.md); [server contract](../specs/scenarios.md).
+## 2026-10-11 — integrated gathering and shared-loot readiness
+
+- [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.

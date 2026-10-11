@@ -8,6 +8,8 @@ Professions in `crates/server/src/profession.rs`, with `profession/data.rs` (wor
 
 `profession_tests::modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence` exercises actual Simon Tanner/TDB trainer56, profession264578, repeated Light Leather2881 casts, recipe2153 purchase, pants2303 result, authored skill advancement and redb/snapshot persistence. No synthetic recipe/formula or world.db writes. The [native client proof](../../../../game-engine/docs/wiki/systems/native-professions-crafting.md) owns both-skin UDP5770 artifacts and current quality-operation gaps. Client automatic-learning thresholds must not override a recipe the authoritative trainer taught.
 
+See [[gathering]] for the gathering-nodes branch's authored resource loop and explicit acceptance boundary.
+
 ## Model
 
 Retail splits a profession into a parent `SkillLine` (197 Tailoring) and one child line per expansion (2540 Classic Tailoring, `ParentSkillLineID` 197, `ParentTierIndex` 4). `PlayerProfessions { lines, spells }` holds each learned line (`skill_line`, `step`, `rank`, `max_rank`) and every spell learned through professions. It is saved (redb `profession_state`, bitcode) and sent as `ProfessionSnapshot` whenever it changes (`save_and_send_professions`, `Changed<PlayerProfessions>`), which includes entering the world. The AzerothCore-era `professions` table (placeholder Mining/Blacksmithing) is deleted by `create_tables`.
