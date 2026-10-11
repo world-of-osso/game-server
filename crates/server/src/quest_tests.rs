@@ -83,6 +83,7 @@ fn quest_share_accept_replay_and_party_change_use_real_message_path() {
                     level: 10,
                     portrait: Default::default(),
                     dungeon_difficulty: 1,
+                    raid_difficulty: crate::maps::RaidDifficulty::default(),
                 },
             )
         })

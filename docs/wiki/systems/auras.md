@@ -28,6 +28,16 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 - **From player:** the caster has `Player` at application.
 - **Dispel type:** `spell_categories.DispelType`.
 
+## Typed invisibility and spell-area eligibility (2026-10-11)
+
+Aura18 and19 now reconcile an `Invisibility` component: maps from authored MiscValue0 types to summed integer invisibility/detection values, plus aura335's reciprocal-detection exception. Both type presence and value matter; zero does not remove a type. Interest checks this per observer on both observer and target updates, including stationary detectors and late arrivals. Spell relation checks, melee swings and creature sight use typed detection rather than treating every invisible unit as universally hidden. The old `Invisible` boolean marker is removed; the boss vanish regression asserts player detection instead.
+
+`spell_area.rs` consumes authored `tdb_spell_area` rules for area/zone, race/sex, signed aura prerequisites and quest-status masks. Current quest representation supports none0, complete1, incomplete3 and rewarded6. Autocast/autoremove and ignore-quest-change flags govern managed auras; aura-triggered changes do not count as quest-only changes. Managed autocasts cannot be canceled by the player. Location/status/aura changes reconcile before quest-update dirtiness is drained.
+
+Jaga's89302/type35/value100 is detected by100616/type35/value1000 in Valley of Wisdom area5171 until29401 is rewarded. Real private5496 Modern+Forever native loot, credit, turn-in and post-reward disappearance were captured and inspected (1400XP,20silver,Horde Balloon). Authentic Jaga model125367 and11 reference assets were receipted against local CASC; no aura stripping or objective/item grants. The original root cause was boolean invisibility routed through universal `interest::set_hidden` and absent spell-area input.
+
+[Safe incremental import and source gaps](../../invisibility-import.md) owns rollout instructions and the unproven Vin/Rendan eligibility routes. [Contract](../../specs/invisibility-detection.md). Pinned TC source is archived read-only under engine `data/diagnostics/invis-detection-2026-10-11/`: Object.cpp992, SpellAuraEffects.cpp1650/1676, SpellMgr.cpp732/2309 and Player.cpp26499/26509.
+
 ## Passives
 
 - Passive spells with an aura effect in the unit's `KnownSpells` are applied as permanent self-cast auras (`AuraSource::KnownSpell`).
@@ -41,7 +51,7 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 |---|---|
 | Expired | `expires_at` passed (after that frame's ticks) |
 | Death | the unit's health reached 0: every non-passive aura without `ALLOW_AURA_WHILE_DEAD` is removed |
-| Cancelled | `CancelAura{spell_id}` from the owner: removes the owner's non-harmful, non-passive auras of that spell, unless the spell has `SPELL_ATTR0_NO_AURA_CANCEL` |
+| Cancelled | `CancelAura{spell_id}` from the owner: removes the owner's non-harmful, non-passive auras of that spell, unless the spell has `SPELL_ATTR0_NO_AURA_CANCEL` or its source is a spell-area autocast |
 | Dispelled | effect 38 DISPEL (below) |
 | Interrupted | aura interrupt flags (below) |
 | ChannelEnded | a channel completed or was cancelled: that caster's auras of the channel spell are removed from every unit |
