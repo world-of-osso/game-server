@@ -56,6 +56,17 @@ pub(crate) struct CorpseLoot {
     pub looters: HashMap<u64, Vec<Option<LootContent>>>,
 }
 
+/// A completed roll with neither personal nor shared/rolling loot left.
+pub(crate) fn corpse_loot_is_empty(world: &World, corpse: Entity) -> bool {
+    world.get::<CorpseLoot>(corpse).is_some_and(|loot| {
+        loot.looters
+            .values()
+            .all(|slots| slots.iter().all(Option::is_none))
+    }) && world
+        .get::<group::CorpseGroupLoot>(corpse)
+        .is_none_or(|shared| !shared.has_loot())
+}
+
 /// A personal item-loot source attached to its owner, not an NPC corpse.
 #[derive(Component)]
 pub(crate) struct ItemLoot;

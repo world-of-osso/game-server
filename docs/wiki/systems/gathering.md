@@ -12,7 +12,7 @@ Verified: 2026-10-11, gathering-nodes branch; not merged or live-accepted. The [
 
 ## Corpse loot readiness
 
-Native `forever-skin-a23` reproduced a dead, correctly targeted wolf refusing Skinning because normal loot remained, while its prematurely published resource marker prevented the normal loot interaction. Death and deferred loot generation are separate boundaries: absence of `CorpseLoot` does not mean an empty completed roll. The loot producer now retains an empty `CorpseLoot` for zero-drop rolls, and the Skinning publisher requires that completed roll before checking empty slots. The regression exercises unrolled, pending and completed-empty states; the loot decay test retains observable half-decay and refusal of an empty loot window.
+Native `forever-skin-a23` reproduced a dead, correctly targeted wolf refusing Skinning because normal loot remained, while its prematurely published resource marker prevented the normal loot interaction. Death and deferred loot generation are separate boundaries: absence of `CorpseLoot` does not mean an empty completed roll. The loot producer now retains an empty `CorpseLoot` for zero-drop rolls, and the Skinning publisher requires that completed roll before checking empty slots. After integrating group loot, one authoritative empty-loot predicate also rejects pending rolls and untaken shared slots. The regression exercises unrolled, pending and completed-empty states; the loot decay test retains observable half-decay and refusal of an empty loot window.
 
 ## Proof boundary
 

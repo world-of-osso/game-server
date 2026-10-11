@@ -126,19 +126,15 @@ pub(crate) fn spawn_selected_node(
 }
 
 fn sync_skinning_corpses(world: &mut World) {
-    let mut query = world.query_filtered::<(Entity, &Npc, &InMap, &crate::loot::CorpseLoot), (
+    let mut query = world.query_filtered::<(Entity, &Npc, &InMap), (
         With<crate::combat::Corpse>,
         Without<Skinned>,
         Without<GatherableResource>,
     )>();
     let corpses = query
         .iter(world)
-        .filter(|(_, _, _, loot)| {
-            loot.looters
-                .values()
-                .all(|slots| slots.iter().all(Option::is_none))
-        })
-        .map(|(entity, npc, map, _)| (entity, npc.template_id, *map))
+        .filter(|(entity, _, _)| crate::loot::corpse_loot_is_empty(world, *entity))
+        .map(|(entity, npc, map)| (entity, npc.template_id, *map))
         .collect::<Vec<_>>();
     for (entity, entry, map) in corpses {
         let difficulty = world
@@ -353,14 +349,7 @@ fn check_skin(world: &World, target: Entity) -> Result<(), CastFailure> {
     {
         return Err(CastFailure::InvalidTarget);
     }
-    if world
-        .get::<crate::loot::CorpseLoot>(target)
-        .is_some_and(|loot| {
-            loot.looters
-                .values()
-                .any(|slots| slots.iter().any(Option::is_some))
-        })
-    {
+    if !crate::loot::corpse_loot_is_empty(world, target) {
         return Err(CastFailure::Unsupported(
             "Corpse must be looted before Skinning".into(),
         ));

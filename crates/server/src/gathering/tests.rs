@@ -152,6 +152,7 @@ fn gathering_skinning_requires_looted_dead_corpse_and_uses_authored_loot() {
             max: 100.0,
         },
         crate::combat::Corpse { remaining: 60.0 },
+        crate::loot::CorpseLoot::default(),
         GatherableResource {
             parent_skill: data::SKINNING,
         },
