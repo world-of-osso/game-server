@@ -221,6 +221,76 @@ fn class_completeness_native_cooldown_haste_scales_spell_and_category_timers() {
     }
 }
 
+fn native80_fixture(ids: &[u32], class: u8, spec: u32) -> Harness {
+    let mut h = harness(Vec::new(), ids, class).unwrap();
+    h.app.insert_resource(world_db().unwrap().store.clone());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        shared::components::Level(80),
+        shared::components::ActiveSpec(spec),
+    ));
+    h.advance(3);
+    h
+}
+
+#[test]
+fn class_completeness_native80_astral_generator_and_spender() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[190984, 78674, 137009, 137013], 11, 102);
+    h.set_power(PowerType::LunarPower, 0.0);
+    h.cast_and_deliver(190984, Some(h.npc));
+    h.advance(60);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::LunarPower), 60.0); // Native Balance modifier:6 Astral.
+    h.set_power(PowerType::LunarPower, 400.0);
+    h.cast_and_deliver(78674, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::LunarPower), 0.0); // Native Starsurge cost40 Astral.
+}
+
+#[test]
+fn class_completeness_native80_word_of_glory_spends_three_holy_power() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[85673, 115675, 137026, 137028], 2, 66);
+    h.set_power(PowerType::HolyPower, 3.0);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h.cast_and_deliver(85673, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::HolyPower), 0.0);
+    assert!(h.health(h.caster) > 100.0);
+}
+
+#[test]
+fn class_completeness_native80_rune_runic_generator_and_spender() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[49184, 49998, 137005], 6, 251);
+    h.set_power(PowerType::RunicPower, 0.0);
+    h.cast_and_deliver(49184, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::Runes), 5.0);
+    assert_eq!(h.power(PowerType::RunicPower), 100.0); // Native negative-cost100 raw.
+    h.advance(40);
+    h.set_power(PowerType::RunicPower, 450.0);
+    h.cast_and_deliver(49998, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::RunicPower), 0.0);
+}
+
+#[test]
+fn class_completeness_native80_disintegrate_spends_three_essence() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[356995, 356809], 13, 1467);
+    h.set_power(PowerType::Essence, 3.0);
+    h.cast_and_deliver(356995, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|event| event.spell_id == 356995));
+    // Native0.2/s fractional regeneration resumes after the three-point spend.
+    assert!((0.0..=0.1).contains(&h.power(PowerType::Essence)));
+}
+
 #[test]
 fn class_completeness_native_cooldown_haste_truncates_native_milliseconds() {
     let mut h = cooldown_fixture(true, 40.0);
