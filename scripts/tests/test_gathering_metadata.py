@@ -34,6 +34,29 @@ class GatheringMetadataTests(unittest.TestCase):
         self.assertEqual(rows[2850], [2850, 0, 32, 2, 0, 0, 0, 0, 0, 0,
                                      *([0] * 8), 2, 2, 0, 0, 0, 0, 0, 0, *([0] * 8)])
 
+    def test_import_preserves_authored_skin_loot_and_offsets_resource_nodes(self):
+        import gathering_metadata
+        conn = sqlite3.connect(":memory:")
+        conn.executescript((Path(__file__).parents[1] / "world_schema.sql").read_text())
+        conn.executescript((Path(__file__).parents[1] / "tdb_schema.sql").read_text())
+        conn.execute("CREATE TABLE content_item (ID INTEGER PRIMARY KEY)")
+        conn.executemany("INSERT INTO content_item VALUES (?)", [(2318,), (2934,)])
+        conn.execute("CREATE TABLE content_creature_loot_template AS SELECT * FROM creature_loot_template")
+        conn.execute("CREATE TABLE content_gameobject_template AS SELECT * FROM gameobject_template")
+        conn.execute("INSERT INTO tdb_gameobject_template (entry,type,Data1) VALUES (1617,50,1414)")
+        conn.execute("INSERT INTO content_gameobject_template (entry,type,Data1) VALUES (1617,50,1414)")
+        conn.commit()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "lock.db2").write_bytes(lock_fixture())
+            (root / "tdb.sql").write_text("INSERT INTO `skinning_loot_template` VALUES (113,0,2318,39.2962,0,1,1,1,1,NULL),(113,0,2934,60.7038,0,1,1,1,1,NULL);\n")
+            gathering_metadata.import_metadata(conn, root / "lock.db2", root / "tdb.sql")
+            self.assertEqual(conn.execute("SELECT Index_0,Index_1,Type_0,Type_1 FROM gathering_lock WHERE ID=2850").fetchone(), (32, 2, 2, 2))
+            self.assertEqual(conn.execute("SELECT Entry,Item,Chance FROM content_skinning_loot_template ORDER BY Item").fetchall(), [(20000113, 2318, 39.2962), (20000113, 2934, 60.7038)])
+            self.assertEqual(conn.execute("SELECT Data1 FROM content_gameobject_template WHERE entry=1617").fetchone(), (20001414,))
+            gathering_metadata.import_metadata(conn, root / "lock.db2", root / "tdb.sql")
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM content_skinning_loot_template").fetchone(), (2,))
+
 
 if __name__ == "__main__":
     unittest.main()
