@@ -57,6 +57,8 @@ No TrinityCore checkout is available under `~/Repos`. Pinned primary source was 
 
 ## Proof ledger
 
+- Slice2 code/test revision `4109b84`, after merging origin/master at `05dab72`: `agent-run ach2 cargo test --locked -p server --bin game-server -- achievement dungeonach --nocapture` **31 passed/0 failed**,13.29s. `cargo fmt --all -- --check` and `cargo check --locked -p server`: exit0, no warnings. Logs: canonical game-engine `data/diagnostics/achievements2-2026-10-11/final-{achievement-tests-corrected,format,check}.log`. First integration run29/31 failed solely because two old tests compared transient account presentation with durable character JSON; updated assertions prove account reconstruction and unchanged character serialization. No full suite or live/deploy claim.
+
 - RED: baseline `c8cd38f` + Retail-ID assertion failed because placeholder achievement 1 was granted instead of Retail 6. `/tmp/claude/dungeonach-red.log`.
 - `702cb80`: detached build-lock + agent-run + desktop-server-build with explicit `--build-host local`, filter `dungeonach`: eight tests passed; Stockade fixture lost its toast by draining after two frames. The Lightyear host receiver clears each frame (`lightyear_messages-0.28.0/src/receive.rs`, `clear_typed`). Saved `/tmp/claude/dungeonach-second-green.log`.
 - `96cad53`: only that fixture changed to drain both frames. Same locked detached runner, filter `dungeonach_stockade_real_boss_deaths_record_ordered_progress_and_send_final_toast`: PASS, including real scripted boss deaths, ordered masks, copy isolation, final toast/snapshot, duplicate DONE and persisted character state. `target/server-test.log`, `/tmp/claude/dungeonach.out`.
