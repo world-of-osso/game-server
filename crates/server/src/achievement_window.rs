@@ -142,6 +142,18 @@ impl AchievementCatalog {
                 AchievementCatalogPage::Summary(self.summary(state, race, scope))
             }
             QueryAchievementCatalog::Categories { after_id } => self.categories_page(after_id),
+            QueryAchievementCatalog::Achievement { achievement_id } => {
+                let entry = self
+                    .window
+                    .definitions
+                    .get(&achievement_id)
+                    .filter(|row| self.faction_matches(row.faction, race))
+                    .map(|row| self.window_entry(state, row, race));
+                AchievementCatalogPage::Achievement {
+                    achievement_id,
+                    entry,
+                }
+            }
             QueryAchievementCatalog::Category {
                 category_id,
                 after_id,
