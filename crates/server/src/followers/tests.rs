@@ -119,7 +119,6 @@ fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(h.npc);
-    let enemy_before = h.health(h.npc);
     for _ in 0..40 {
         update_ai(h.app.world_mut());
         h.advance(1);
@@ -128,9 +127,51 @@ fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
         h.health(injured) > 100.0,
         "healer must heal the most injured ally"
     );
-    assert_eq!(h.health(h.npc), enemy_before);
+    assert!(
+        !h.inbox.log.iter().any(|event| {
+            event.source == Some(healer.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }),
+        "the healer must prioritize healing, even while another party member attacks"
+    );
     assert!(
         h.app.world().get::<Mana>(healer).unwrap().current < 10000.0,
         "ordinary spells must spend mana"
+    );
+}
+
+#[test]
+fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[62124], 2).unwrap();
+    let mut kit = profile(209057, GroupRole::Tank, 0, 0);
+    kit.taunt_spell = 62124;
+    kit.melee = true;
+    let tank = spawn_follower(&mut h, kit);
+    let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Pursuing {
+            target: h.caster.to_bits(),
+        },
+        crate::networking::CombatTarget(Some(h.caster)),
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, h.caster, 100.0);
+    update_ai(h.app.world_mut());
+    h.advance(4);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(enemy)
+            .unwrap()
+            .0,
+        Some(tank)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ThreatTable>(enemy)
+            .unwrap()
+            .threat_for(tank.to_bits())
+            >= 100.0
     );
 }
