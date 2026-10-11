@@ -31,10 +31,10 @@ def select_instance_spawns(conn):
                  f"FROM map_difficulty WHERE MapID IN ({MAPS})")
     conn.execute("CREATE TEMP TABLE old_instance_guid AS SELECT guid FROM content_creature "
                  f"WHERE map IN ({MAPS})")
-    for table, key in (("creature", "id1"), ("gameobject", "id")):
-        conn.execute(f"CREATE TEMP TABLE instance_{table} AS SELECT s.*, s.id AS {key + '_entry'} "
+    for table in ("creature", "gameobject"):
+        alias = ", s.id AS id1" if table == "creature" else ""
+        conn.execute(f"CREATE TEMP TABLE instance_{table} AS SELECT s.*{alias} "
                      f"FROM tdb_{table} s WHERE map IN ({MAPS}) AND {BASE_PHASE} AND {retail.SPAWNS_ON_MAP}")
-    conn.execute("ALTER TABLE temp.instance_creature RENAME COLUMN id1_entry TO id1")
     conn.execute("CREATE TEMP TABLE retail_spawn AS SELECT guid AS tdb_guid, guid+? AS guid "
                  "FROM temp.instance_creature", (OFFSET,))
     conn.execute("CREATE TEMP TABLE retail_gameobject AS SELECT guid AS tdb_guid,id "
@@ -133,12 +133,23 @@ def population_counts(conn):
             holiday = "" if table == "creature" else "AND (guid NOT IN " \
                 "(SELECT guid FROM tdb_game_event_gameobject WHERE eventEntry>0) OR guid IN " \
                 "(SELECT guid FROM tdb_game_event_gameobject WHERE eventEntry<0))"
+            row[f"phase_excluded_{label}"] = conn.execute(f"SELECT count(*) FROM tdb_{table} "
+                f"WHERE map=? AND NOT ({BASE_PHASE})", (map_id,)).fetchone()[0]
+            row[f"difficulty_excluded_{label}"] = conn.execute(f"SELECT count(*) FROM tdb_{table} s "
+                f"WHERE map=? AND {BASE_PHASE} AND NOT ({difficulty_match})", (map_id,)).fetchone()[0]
             eligible = f"map=? AND {BASE_PHASE} AND {difficulty_match} {holiday}"
             available = f"id IN (SELECT entry FROM tdb_{table}_template)"
             row[f"missing_{label}_templates"] = conn.execute(f"SELECT count(*) FROM tdb_{table} s "
                 f"WHERE {eligible} AND NOT ({available})", (map_id,)).fetchone()[0]
             row[f"eligible_{label}"] = conn.execute(f"SELECT count(*) FROM tdb_{table} s "
                 f"WHERE {eligible} AND {available}", (map_id,)).fetchone()[0]
+        row["inactive_event_creatures"] = conn.execute("SELECT count(*) FROM content_creature c WHERE map=? "
+            "AND EXISTS (SELECT 1 FROM content_game_event_creature e WHERE e.guid=c.guid) "
+            "AND NOT EXISTS (SELECT 1 FROM content_game_event_creature e WHERE e.guid=c.guid AND e.eventEntry<0)",
+            (map_id,)).fetchone()[0]
+        row["model_bearing_gameobjects"] = conn.execute("SELECT count(*) FROM content_gameobject g "
+            "JOIN content_gameobject_template t ON t.entry=g.id "
+            "JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=?", (map_id,)).fetchone()[0]
         rows.append(row)
     return rows
 

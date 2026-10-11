@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 
 - [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
