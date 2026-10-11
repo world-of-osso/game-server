@@ -66,6 +66,7 @@ mod melee;
 mod merchant;
 mod messaging;
 mod mirror_timers;
+mod mythic_plus;
 mod navigation;
 mod networking;
 mod npc_interaction;
@@ -230,6 +231,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
+        .add_plugins(mythic_plus::MythicPlusPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(creature_aggro::CreatureAggroPlugin)
