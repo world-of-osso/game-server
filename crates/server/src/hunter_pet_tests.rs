@@ -603,6 +603,18 @@ fn pet_lifecycle_stable_refusals_preserve_records() {
     let path = db_path();
     seed_stable(&path, Some(0));
     let mut h = stable_master_hunter(&path);
+    let known: Vec<_> = h
+        .app
+        .world()
+        .get::<KnownSpells>(h.caster)
+        .unwrap()
+        .iter()
+        .filter(|spell| *spell != CALL_PET_5)
+        .collect();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(KnownSpells::fixture(known.clone()));
     let before = saved(&h);
     for (operation, error) in [
         (
@@ -639,6 +651,18 @@ fn pet_lifecycle_stable_refusals_preserve_records() {
         assert_eq!(failure.error, error);
         assert_eq!(saved(&h), before);
     }
+    // The same slot accepts the swap once its authored Call Pet spell is learned.
+    let mut unlocked = known;
+    unlocked.push(CALL_PET_5);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(KnownSpells::fixture(unlocked));
+    stable_request(&mut h, PetStableOperation::Swap { from: 0, to: 4 });
+    let contents = stable_contents(&mut h);
+    assert_eq!(contents.current, Some(4));
+    assert_eq!(contents.pets[0].slot, 4);
+    assert!(h.app.world().resource::<StableInbox>().failed.is_empty());
 }
 
 #[test]
