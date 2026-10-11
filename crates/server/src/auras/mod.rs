@@ -17,6 +17,7 @@
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
+pub mod invisibility;
 pub(crate) mod linked_summon;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
@@ -28,6 +29,7 @@ pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
 mod unit_state;
+pub use invisibility::Invisibility;
 
 use std::collections::HashSet;
 
@@ -45,7 +47,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub use unit_state::{Confused, Invisible, is_polymorphed};
+pub use unit_state::{Confused, is_polymorphed};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
@@ -126,6 +128,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Authored spell_area autocast; cannot be canceled by the player.
+    SpellArea,
 }
 
 /// One aura application request: the aura effects of `spell_id` that hit
@@ -1723,7 +1727,10 @@ fn receive_cancel_aura(world: &mut World) {
             continue;
         }
         remove_auras(world, owner, RemoveReason::Cancelled, |aura| {
-            aura.spell_id == spell_id && !aura.harmful && !aura.passive
+            aura.spell_id == spell_id
+                && !aura.harmful
+                && !aura.passive
+                && aura.source != AuraSource::SpellArea
         });
     }
 }

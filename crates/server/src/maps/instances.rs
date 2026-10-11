@@ -29,8 +29,14 @@ pub const INSTANCE_UNLOAD_DELAY_SECS: f64 = 1800.0;
 /// `MIN_UNLOAD_DELAY`: an expired copy left empty unloads at once.
 const MIN_UNLOAD_DELAY_SECS: f64 = 1.0;
 
-/// The world maps the server hosts; other world maps are refused.
-pub const HOSTED_CONTINENTS: [u32; 3] = [0, 1, 2991];
+/// World maps with local terrain and promoted TDB1210 content, plus the existing
+/// Eastern Kingdoms, Kalimdor and Zephras realms. Other world maps remain refused.
+/// See docs/world-population-counts.md for source/terrain/exclusion evidence.
+pub const HOSTED_CONTINENTS: [u32; 34] = [
+    0, 1, 870, 1064, 1116, 1220, 1265, 1464, 1479, 1481, 1502, 1642, 1643, 1669, 1860, 1865, 2081,
+    2127, 2175, 2222, 2241, 2268, 2297, 2374, 2444, 2454, 2552, 2570, 2601, 2694, 2738, 2771, 2785,
+    2991,
+];
 
 /// Who a player enters instances with: its character, its group and the group's
 /// leader, and the dungeon difficulty it enters at (the group's in a group).
