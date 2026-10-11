@@ -32,7 +32,7 @@ Impact (world.db, verified 2026-10-05): 26,854 UPDATE_IC rows / 9,796 distinct e
 
 `wailing_caverns.rs` identifies only Cobrahn3669 as instance data0 / encounter586. Local `tdb_smart_scripts` death row0 sets data0→DONE3; `dungeon_encounter` names the same creature on map43/Normal1. `SmartAi` retains the authored spell timers and adds optional `BossAi` lifecycle; the existing hook boundary emits encounter/frame messages and death credit, with no separate spell schedule or new persistence model. AGGRO4 runs TALK1 using existing CreatureText selection.
 
-Sources: read-only canonical world.db `tdb_smart_scripts`3669, `content_creature_text`3669, `dungeon_encounter`586; [contract](../../specs/boss-scripts.md); real-data `scripted_ai/tests/wailing_caverns.rs`. Full escort/doors/other bosses, unsupported script actions and live proof remain separate gaps. Population gate/importer is a separate dependency, not duplicated here.
+Sources: read-only canonical world.db `tdb_smart_scripts`3669, `content_creature_text`3669, `dungeon_encounter`586; [contract](../../specs/boss-scripts.md); real-data `scripted_ai/tests/wailing_caverns.rs`. Full escort/doors/other bosses and unsupported script actions remain separate gaps. [Native proof and blockers](../../specs/boss-scripts.md#cobrahn-native-proof--2026-10-11) records both-skin entry/pull/death/credit, absent actor4213 and a reproduced population-copy loot-binding loss. Population gate/importer is a separate dependency, not duplicated here.
 
 ## Pitfalls found
 
