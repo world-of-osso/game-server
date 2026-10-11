@@ -1,0 +1,186 @@
+//! Temporary actors cast only locally bound creature spells. No guessed rotations.
+use std::collections::HashMap;
+
+use bevy::prelude::*;
+use rusqlite::{Connection, OpenFlags};
+use shared::casting::CastState;
+use shared::components::{Npc, PowerType};
+
+use super::summon::SummonedCreature;
+
+#[derive(Resource, Default)]
+pub struct GuardianSpells(pub HashMap<u32, Vec<u32>>);
+
+pub fn load_guardian_spells(conn: &Connection) -> rusqlite::Result<GuardianSpells> {
+    let mut statement = conn
+        .prepare("SELECT CreatureID, Spell FROM guardian_spells ORDER BY CreatureID, SpellIndex")?;
+    let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    let mut result = GuardianSpells::default();
+    for row in rows {
+        let (entry, spell) = row?;
+        let spells = result.0.entry(entry).or_default();
+        if !spells.contains(&spell) {
+            spells.push(spell);
+        }
+    }
+    Ok(result)
+}
+
+pub(super) fn load_startup(mut commands: Commands) {
+    let path = std::path::Path::new(crate::spell_info::WORLD_DB_PATH);
+    if !path.exists() {
+        warn!("world.db absent: guardian spell bindings unavailable");
+        return;
+    }
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("open guardian spell bindings");
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='guardian_spells' AND type='table')",
+        [], |row| row.get(0),
+    ).expect("check guardian spell table");
+    if !exists {
+        warn!(
+            "guardian_spells not imported; run scripts/import-guardian-spells.py against local TDB archive"
+        );
+        return;
+    }
+    commands.insert_resource(load_guardian_spells(&conn).expect("load guardian spells"));
+}
+
+#[derive(Component)]
+pub(super) struct GuardianActor {
+    spells: Vec<u32>,
+    /// Untimed spells can be attempted once, never assigned a synthetic cadence.
+    untimed_used: Vec<u32>,
+}
+
+pub(super) fn initialize(world: &mut World, actor: Entity) {
+    let summon = world.get::<SummonedCreature>(actor).unwrap();
+    if !summon.properties.is_guardian() {
+        return;
+    }
+    let entry = world.get::<Npc>(actor).unwrap().template_id;
+    let spells = world
+        .resource::<GuardianSpells>()
+        .0
+        .get(&entry)
+        .cloned()
+        .unwrap_or_default();
+    if spells.is_empty() {
+        warn!(
+            "Guardian creature {entry}: no local creature spell binding; actor has no guessed attack"
+        );
+        return;
+    }
+    let pools = load_actor_powers(world, entry, &spells);
+    let demon = world
+        .resource::<crate::world_data::WorldData>()
+        .template_for(entry, 0)
+        .is_some_and(|template| template.creature_type == 3);
+    world.entity_mut(actor).insert((
+        GuardianActor {
+            spells,
+            untimed_used: Vec::new(),
+        },
+        pools,
+    ));
+    if demon {
+        world
+            .entity_mut(actor)
+            .insert(crate::hunter_pet::SummonedDemon);
+    }
+}
+
+fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers::PowerPools {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let mut powers = Vec::new();
+    for id in spells {
+        let Some(spell) = store.get(*id) else {
+            warn!("Guardian creature {entry}: bound spell {id} absent");
+            continue;
+        };
+        for power in spell
+            .power_costs
+            .iter()
+            .filter_map(|cost| PowerType::from_db(cost.power_type))
+        {
+            if !powers.contains(&power) {
+                powers.push(power);
+            }
+        }
+    }
+    super::powers::PowerPools::from_table(world.resource::<super::powers::PowerTypeTable>(), powers)
+}
+
+pub(super) fn update(world: &mut World) {
+    let actors: Vec<_> = world
+        .query_filtered::<Entity, With<GuardianActor>>()
+        .iter(world)
+        .collect();
+    for actor in actors {
+        cast_on_owner_target(world, actor);
+    }
+}
+
+fn cast_on_owner_target(world: &mut World, actor: Entity) {
+    let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
+    let target = world
+        .get::<crate::networking::CombatTarget>(owner)
+        .and_then(|target| target.0);
+    world
+        .get_mut::<crate::networking::CombatTarget>(actor)
+        .unwrap()
+        .0 = target;
+    if world.get::<CastState>(actor).is_some() || !super::targets::is_alive(world, actor) {
+        return;
+    }
+    let Some(target) = target.filter(|target| {
+        super::targets::is_alive(world, *target)
+            && world.get::<crate::maps::InMap>(*target) == world.get::<crate::maps::InMap>(actor)
+    }) else {
+        return;
+    };
+    cast_first_ready(world, actor, target);
+}
+
+fn has_repeat_clock(spell: &crate::spell_info::SpellInfo) -> bool {
+    let has_cast_time = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.cast_time)
+        .is_some_and(|time| time.base_ms > 0);
+    let has_cooldown = spell
+        .cooldowns
+        .as_ref()
+        .is_some_and(|cooldowns| cooldowns.recovery_ms > 0 || cooldowns.category_recovery_ms > 0);
+    has_cast_time || has_cooldown
+}
+
+fn cast_first_ready(world: &mut World, actor: Entity, target: Entity) {
+    let spells = world.get::<GuardianActor>(actor).unwrap().spells.clone();
+    for id in spells {
+        let Some(spell) = world.resource::<crate::spell_info::SpellStore>().get(id) else {
+            continue;
+        };
+        let timed = has_repeat_clock(spell);
+        let used = world
+            .get::<GuardianActor>(actor)
+            .unwrap()
+            .untimed_used
+            .contains(&id);
+        if !timed && used {
+            continue;
+        }
+        if super::creature_cast(world, actor, id, Some(target), false).is_err() {
+            continue;
+        }
+        if !timed {
+            world
+                .get_mut::<GuardianActor>(actor)
+                .unwrap()
+                .untimed_used
+                .push(id);
+        }
+        break;
+    }
+}

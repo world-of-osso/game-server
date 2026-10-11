@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Guardian actors and damage transfer](systems/spell-casting.md#guardian-actors-and-damage-transfer) — authentic creature spell bindings, owner-target actors, native81 spell/melee/periodic/direct splitting and6940 health floor; retained named-guardian/source gaps and [all40-spec table](../spell-guardians-coverage.md).
+
 - [Shared resource spell mechanics](systems/spell-casting.md#shared-resource-mechanics) — optional raw spend, native combo durations and authored charge formulas; eight focused functions,168 retained Dummy roots, all40-spec table and explicit actor/transfer/data limits.
 
 - [Class spell batch11](systems/spell-casting.md#eleventh-batch-local-mainline-low-count-paths) — eight bounded low-count paths,13 native functions,168 retained Dummy roots/all40-spec table; named Lashing Flames271 specificity, preserved Colossus base contract.

@@ -2,6 +2,8 @@
 
 Spell-specific behaviours beyond generic Retail effects live in `crates/server/src/spell_cast/scripts.rs` and `crates/server/src/auras/scripts.rs`. Generic dispatch alone is not gameplay coverage. See [spell casting](../wiki/systems/spell-casting.md).
 
+Generic guardian actors and native damage transfer have a separate [contract](spell-guardians.md) and [all40-spec/source boundary inventory](../spell-guardians-coverage.md). They do not imply closure of unknown summon Dummy roots.
+
 ## What it must do
 
 ### First-batch defensive and hit bridges

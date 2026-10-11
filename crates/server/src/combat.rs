@@ -1,4 +1,6 @@
 use bevy::ecs::system::SystemParam;
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Health, Npc, Player, Position, UnitFactionTemplate};
@@ -481,6 +483,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     scaling: Query<'w, 's, ScalingItem<'static>>,
     sight: SwingSight<'w, 's>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
+    spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
     commands: Commands<'w, 's>,
@@ -495,6 +498,8 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
     let mut swings = Vec::new();
+    // Recipient health not yet mutated by this batch's deferred split deliveries.
+    let mut redirect_health = HashMap::new();
 
     let attackers: Vec<Entity> = params.units.p0().iter().map(|item| item.0).collect();
     for attacker_entity in attackers {
@@ -522,10 +527,12 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                     scaling: &params.scaling,
                     sight: &params.sight,
                     armor_constants: params.armor_constants.as_deref(),
+                    spells: params.spells.as_deref(),
                 },
                 target_entity,
                 &mut snapshot.auto_attack,
                 &mut params.commands,
+                &mut redirect_health,
             ) else {
                 continue;
             };
@@ -688,6 +695,7 @@ impl Attacker<'_> {
 pub(crate) struct SwingContext<'a, 'w, 's> {
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
     pub armor_constants: Option<&'a ArmorConstants>,
+    spells: Option<&'a crate::spell_info::SpellStore>,
     sight: &'a SwingSight<'w, 's>,
 }
 
@@ -862,6 +870,48 @@ struct SwingOutcome {
     duel_defeated: bool,
 }
 
+fn melee_damage_splits(
+    targets: &mut AutoAttackTargets,
+    context: &SwingContext,
+    victim: Entity,
+    attacker: Entity,
+) -> Vec<crate::auras::damage_transfer::Split> {
+    let candidates = match targets.get_mut(victim) {
+        Ok((_, _, _, _, _, _, _, _, _, _, avoidance, _)) => {
+            crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
+        }
+        Err(_) => return Vec::new(),
+    };
+    let mut splits = Vec::new();
+    for mut split in candidates {
+        if split.recipient == victim
+            || context.sight.maps.get(split.recipient).ok() != context.sight.maps.get(victim).ok()
+        {
+            continue;
+        }
+        let Ok((_, health, _, _, _, _, _, _, _, _, avoidance, _)) =
+            targets.get_mut(split.recipient)
+        else {
+            continue;
+        };
+        if health.current <= 0.0 || crate::auras::immune_to_school(avoidance.1.as_deref(), 1) {
+            continue;
+        }
+        let scaling = |entity| {
+            context.scaling.get(entity).map_or(
+                UnitScaling::from_item((None, None, None)),
+                UnitScaling::from_item,
+            )
+        };
+        let multiplier = scaling(split.recipient).health_multiplier(&scaling(attacker));
+        split.health_at_plan = health.current;
+        split.budget =
+            (health.current - health.max * split.floor_pct / 100.0).max(0.0) * multiplier;
+        splits.push(split);
+    }
+    splits
+}
+
 /// Swing `hand` if its timer is ready, it has a weapon and the target is in
 /// range. Players roll the hit table, and every swing takes the target's armor
 /// (Unit::CalculateMeleeDamage, Unit.cpp:1387-1495).
@@ -873,6 +923,7 @@ fn try_swing(
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
+    redirect_health: &mut HashMap<Entity, f32>,
 ) -> Option<SwingOutcome> {
     let timer = match hand {
         Hand::Main => auto_attack.timer,
@@ -882,6 +933,7 @@ fn try_swing(
         return None;
     }
     let weapon = attacker.weapon(hand)?;
+    let splits = melee_damage_splits(targets, context, target_entity, attacker.entity);
     let Ok((
         target_pos,
         mut health,
@@ -957,8 +1009,35 @@ fn try_swing(
         outcome_damage,
     );
     let absorbed = absorption.absorbed;
-    let damage =
-        crate::level_scaling::damage_dealt(&attacker_scaling, &target, absorption.remaining);
+    let mut remaining = absorption.remaining;
+    for split in splits {
+        let recipient_scaling = context.scaling.get(split.recipient).map_or(
+            UnitScaling::from_item((None, None, None)),
+            UnitScaling::from_item,
+        );
+        let health_left = redirect_health
+            .entry(split.recipient)
+            .or_insert(split.health_at_plan);
+        let multiplier = recipient_scaling.health_multiplier(&attacker_scaling);
+        let reserved = (split.health_at_plan - *health_left) * multiplier;
+        let budget = (split.budget - reserved).max(0.0);
+        let share = (remaining * split.fraction).min(budget);
+        *health_left -=
+            crate::level_scaling::health_loss(&attacker_scaling, &recipient_scaling, share);
+        remaining -= share;
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::auras::damage_transfer::deliver(
+                world,
+                attacker_entity,
+                target_entity,
+                1,
+                split,
+                share,
+            );
+        });
+    }
+    let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, remaining);
     commands.queue(move |world: &mut World| {
         crate::auras::finish_absorbs(world, target_entity, absorption)
     });
@@ -1223,6 +1302,23 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     if !crate::spell_cast::targets::is_alive(world, victim) {
         return;
     }
+    let damage = crate::auras::damage_transfer::route(world, attacker, victim, 1, damage);
+    deal_health_damage(world, attacker, victim, damage, 1, None, 0.0);
+}
+
+/// Health application for an already-mitigated direct or redirected hit.
+pub(crate) fn deal_health_damage(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    damage: f32,
+    school: u32,
+    spell_id: Option<u32>,
+    absorbed: f32,
+) {
+    if !crate::spell_cast::targets::is_alive(world, victim) {
+        return;
+    }
     let (attacker_scaling, victim_scaling) = (
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),
@@ -1246,11 +1342,11 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
         CombatLogEvent {
             source: Some(attacker.to_bits()),
             target: Some(victim.to_bits()),
-            spell_id: None,
-            school_mask: 1,
+            spell_id,
+            school_mask: school,
             amount: damage as i32,
             overflow: (loss - before).max(0.0) as i32,
-            absorbed: 0,
+            absorbed: absorbed as i32,
             resisted: 0,
             blocked: 0,
             crit: false,

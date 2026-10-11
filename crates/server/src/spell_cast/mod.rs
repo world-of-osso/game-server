@@ -44,6 +44,9 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+mod guardian;
+#[cfg(test)]
+mod guardian_tests;
 mod hit;
 mod missiles;
 pub mod powers;
@@ -119,6 +122,8 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<teleport_positions::SpellTargetPositions>()
             .add_systems(Startup, teleport_positions::load_positions_startup)
             .init_resource::<missiles::PendingSpellHits>()
+            .init_resource::<guardian::GuardianSpells>()
+            .add_systems(Startup, guardian::load_startup)
             .init_resource::<summon::SummonPropertiesStore>()
             .add_systems(Startup, summon::load_summon_properties_startup)
             .add_systems(Startup, powers::load_power_type_table_startup)
@@ -148,7 +153,9 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_creature_health,
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
-                    summon::expire_summons.after(advance_casts),
+                    (summon::expire_summons, guardian::update)
+                        .chain()
+                        .after(advance_casts),
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),

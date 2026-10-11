@@ -160,6 +160,14 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 
 /// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
 pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
+    if let Some(summon) = world.get::<super::summon::SummonedCreature>(unit) {
+        if world
+            .get::<crate::hunter_pet::SummonedDemon>(unit)
+            .is_some()
+        {
+            return demon_power_stats(world, summon.owner);
+        }
+    }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
         if world
             .get::<crate::hunter_pet::SummonedDemon>(unit)
@@ -603,6 +611,7 @@ pub fn deal_damage(
         amount
     };
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, ctx.caster),
         UnitScaling::of(world, target),

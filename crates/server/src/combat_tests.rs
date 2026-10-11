@@ -106,7 +106,9 @@ fn run_attack_tick(app: &mut App) {
                 scaling: &scaling,
                 sight: &sight,
                 armor_constants: armor_constants.as_deref(),
+                spells: None,
             };
+            let mut redirect_health = std::collections::HashMap::new();
             for (entity, mut aa, position, stats) in &mut attackers {
                 let te = aa.victim;
                 aa.timer -= dt;
@@ -128,6 +130,7 @@ fn run_attack_tick(app: &mut App) {
                         te,
                         &mut aa,
                         &mut commands,
+                        &mut redirect_health,
                     )
                     .is_some()
                     {

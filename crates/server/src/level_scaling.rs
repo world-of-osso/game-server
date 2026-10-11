@@ -317,7 +317,7 @@ impl<'a> UnitScaling<'a> {
 
     /// Creature::GetHealthMultiplierForTarget: max health at the attacker's
     /// level over the creature's own (CreateHealth, the native-level max).
-    fn health_multiplier(&self, attacker: &UnitScaling) -> f32 {
+    pub(crate) fn health_multiplier(&self, attacker: &UnitScaling) -> f32 {
         self.tuned.map_or(1.0, |(scaling, stats)| {
             stats.max_health(self.level_against(attacker))
                 / stats.max_health(scaling.native_level())
