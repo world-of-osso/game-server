@@ -1,6 +1,6 @@
 # Server spell behaviour coverage — 2026-10-10
 
-Source: game-server spell-dummy12 code revision `60ce7ac`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
+Source: game-server spell-dummy12 code revision `a995632`; local `world.db` and client DB2 `12.1.0.69933`. Source/data inspection only; no new test run or realm claim.
 
 ## Scope and classification
 
@@ -348,13 +348,13 @@ All paths relative to game-server/crates/server/src. Matrix proof classification
 - **T75** `spell_cast/dummy4_tests.rs:162::dummy4_vivify_rank_heals_owned_renewing_mist_only` — IDs 116670.
 - **T76** `spell_cast/dummy5_tests.rs:128::dummy5_chaos_bolt_always_crits_with_zero_crit_stats` — IDs 116858.
 - **T77** `spell_cast/dummy5_tests.rs:85::dummy5_chaos_strike_refunds_once_at_catalog_chance_endpoint` — IDs 162794.
-- **T78** `spell_cast/dummy5_tests.rs:193::dummy5_deaths_caress_generates_two_bone_shield_stacks` — IDs 195292.
+- **T78** `spell_cast/dummy5_tests.rs:194::dummy5_deaths_caress_generates_two_bone_shield_stacks` — IDs 195292.
 - **T79** `spell_cast/dummy5_tests.rs:52::dummy5_demons_bite_insatiable_hunger_adds_catalog_fury_range` — IDs 162243.
 - **T80** `spell_cast/dummy5_tests.rs:94::dummy5_disintegrate_applies_three_second_slow_and_ticks` — IDs 356995.
-- **T81** `spell_cast/dummy5_tests.rs:216::dummy5_epidemic_eruptions_require_owned_virulent_plague` — IDs 207317.
-- **T82** `spell_cast/dummy5_tests.rs:282::dummy5_lava_burst_crits_on_flame_shock_and_generates_eight_maelstrom` — IDs 51505.
+- **T81** `spell_cast/dummy5_tests.rs:217::dummy5_epidemic_eruptions_require_owned_virulent_plague` — IDs 207317.
+- **T82** `spell_cast/dummy5_tests.rs:283::dummy5_lava_burst_crits_on_flame_shock_and_generates_eight_maelstrom` — IDs 51505.
 - **T83** `spell_cast/dummy5_tests.rs:137::dummy5_rapture_counts_only_owned_damaging_periodic_effects` — IDs 324536.
-- **T84** `spell_cast/dummy5_tests.rs:168::dummy5_shuriken_storm_awards_combo_points_per_enemy_hit` — IDs 197835.
+- **T84** `spell_cast/dummy5_tests.rs:169::dummy5_shuriken_storm_awards_combo_points_per_enemy_hit` — IDs 197835.
 - **T85** `spell_cast/dummy6_tests.rs:98::dummy6_ice_lance_resolves_named_damage_child` — IDs 30455.
 - **T86** `spell_cast/dummy6_tests.rs:122::dummy6_keg_smash_primary_bonus_keeps_area_damage_and_slow` — IDs 121253.
 - **T87** `spell_cast/dummy6_tests.rs:247::dummy6_shadow_word_death_backlash_when_target_survives` — IDs 32379.

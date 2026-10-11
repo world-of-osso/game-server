@@ -23,7 +23,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 - [x] Shield of the Righteous53600 selects enemies inside its native6yd/120-degree caster-facing cone and applies132403's primary-stat armor modifier once per successful cast, including empty cones. Optional heal triggers and duration extension remain open.
 - [x] Butchery212436 with459868 applies its named459870 bleed to each successful enemy damage target, excluding allies/out-of-area units; native tick/expiry remain active. Existing294029 cooldown reduction is retained; secondary soft-cap curve remains open.
 
-Sources: local Mainline12.1.0.69933 DB2/read-only world.db; guardian_spells from TDB1210. Receipts and RED/GREEN ledger: game-engine/data/diagnostics/spell-dummy12-2026-10-10/. No TrinityCore C++ body, invented actor attack, IDs or numeric coefficients.
+Sources: local Mainline12.1.0.69933 DB2/read-only world.db; guardian_spells from TDB1210. `crates/server/src/spell_cast/dummy12_tests.rs`: ten native functions across eight paths; inherited Rapture fixture adds30108 dependency and native10% bonus. Single post-origin/master spell_cast gate325/325 ata995632; fmt/check pass. [Coverage/all40 table](../spell-dummy12-coverage.md), receipts and RED/GREEN ledger: game-engine/data/diagnostics/spell-dummy12-2026-10-10/. No TrinityCore C++ body, invented actor attack, IDs or numeric coefficients.
 
 ### First-batch channel bridge
 
