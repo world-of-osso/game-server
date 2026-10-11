@@ -12,7 +12,7 @@ use shared::protocol::{
 };
 
 #[derive(Resource)]
-struct HousingAvailability(Result<HousingCatalog, String>);
+pub(crate) struct HousingAvailability(pub(crate) Result<HousingCatalog, String>);
 
 #[derive(Clone, Copy)]
 struct Actor {
@@ -76,7 +76,7 @@ fn receive_requests(world: &mut World) -> Vec<(Actor, HousingRequest)> {
         .collect()
 }
 
-fn process_requests(world: &mut World) {
+pub(crate) fn process_requests(world: &mut World) {
     for (actor, request) in receive_requests(world) {
         let result = execute(world, actor, &request.command);
         let (neighborhood, error) = match result {
@@ -205,6 +205,14 @@ fn enter_neighborhood(world: &mut World, actor: Actor, neighborhood_id: u32) -> 
             .revoke_housing_entry(actor.character);
         return Err("Neighborhood transfer was refused.".into());
     }
+    store::save_neighborhood_location(
+        &world.resource::<GameDatabase>().db,
+        actor.character,
+        &store::NeighborhoodLocation {
+            map_id: neighborhood.entry.map_id,
+            neighborhood_id: neighborhood.id,
+        },
+    )?;
     Ok(())
 }
 

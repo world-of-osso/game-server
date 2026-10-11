@@ -159,6 +159,88 @@ fn housing_copies_require_authority_and_isolate_properties_without_difficulty() 
     );
 }
 
+#[test]
+fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("housing.redb");
+    let db = redb::Database::create(&path).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let mut h = housing_harness(db);
+    let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(owner.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    let refused = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    assert!(refused.error.unwrap().contains("Enter this neighborhood"));
+    let entering = h.housing_request(
+        &owner,
+        HousingCommand::EnterNeighborhood { neighborhood_id: 1 },
+    );
+    assert_eq!(entering.error, None);
+    assert_eq!(entering.state.plots.len(), 1);
+    assert_eq!(h.map_of(&owner), None);
+    assert_eq!(h.new_worlds(&owner).last().unwrap().map_id, 2735);
+    h.ack(&owner);
+    assert_eq!(h.map_of(&owner).unwrap().map_id, 2735);
+    let distant = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    assert!(distant.error.unwrap().contains("cornerstone"));
+    let cornerstone = Vec3::new(2942.744, -214.26563, 113.11285);
+    h.walk_to(&owner, cornerstone);
+    let bought = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    assert_eq!(bought.error, None);
+    assert_eq!(bought.state.owned_houses.len(), 1);
+    assert_eq!(
+        bought.state.plots[0].house_id,
+        Some(bought.state.owned_houses[0].house_id)
+    );
+    let position = bevy(cornerstone);
+    drop(h);
+    let db = redb::Database::open(&path).unwrap();
+    assert_eq!(crate::persistence::load_inventory(&db, 30).gold, 10_000_000);
+    let mut restarted = housing_harness(db);
+    let place = restarted
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                1,
+                RaidDifficulty::default(),
+                2735,
+                position,
+            )
+        })
+        .unwrap()
+        .expect("persisted housing admission must survive a fresh manager and reopened database");
+    assert_eq!(place.map.map_id, 2735);
+    assert_ne!(place.map.instance_id, 0);
+    assert_eq!(place.position, position);
+}
+
+fn housing_harness(db: redb::Database) -> Harness {
+    let catalog = crate::housing_catalog::HousingCatalog::read(
+        &crate::housing_catalog::tests::catalog_fixture(),
+    )
+    .unwrap();
+    harness_with(move |app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.add_systems(Update, crate::housing::process_requests);
+    })
+    .unwrap()
+}
+
 fn map_store() -> Option<&'static MapStore> {
     static STORE: OnceLock<Option<MapStore>> = OnceLock::new();
     STORE
@@ -582,6 +664,34 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
 const TRAVELER_LEVEL: u8 = 80;
 
 impl Harness {
+    fn housing_request(&mut self, who: &Traveler, command: HousingCommand) -> HousingReply {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<HousingRequest>>(who.connection)
+            .unwrap()
+            .send::<HousingChannel>(HousingRequest {
+                request_id: 1,
+                command,
+            });
+        let mut replies = Vec::new();
+        for _ in 0..6 {
+            self.advance(1);
+            replies.extend(
+                self.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<HousingReply>>(who.connection)
+                    .unwrap()
+                    .receive(),
+            );
+        }
+        assert_eq!(
+            replies.len(),
+            1,
+            "exactly one authoritative reply per request"
+        );
+        replies.remove(0)
+    }
+
     fn spawn(&mut self, character_id: u64, map: InMap, at: Vec3) -> Traveler {
         self.spawn_at_level(character_id, TRAVELER_LEVEL, map, at)
     }

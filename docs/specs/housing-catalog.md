@@ -40,7 +40,9 @@ Only an owner inside that house edits. Place consumes stored quantity, remove re
 
 The runtime service binds requests to authenticated account/character/player links. Neighborhood entry reserves the authored copy before the existing transfer handshake. Purchase additionally requires authoritative presence in that neighborhood and within the server's 5-unit gameobject interaction distance of its cornerstone; nonfinite positions cannot satisfy proximity. Accepted payment updates persisted gold and the live replication queue. Plot lists overlay durable ownership without exposing account IDs. Missing first-house grant data explicitly refuses house entry instead of creating substitute geometry.
 
-Native controls, playable terrain, component placement, item collection integration, relog admission, editor networking and visitor convergence still require end-to-end proof. Persistence/domain tests alone do not certify them.
+Successful neighborhood transfers persist the authenticated character's map/neighborhood identity independently of process-local instance IDs. A fresh server resolves a character saved on that housing map into the same logical neighborhood copy; absent/mismatched admission is refused. The full wire/WorldPortAck purchase test closes and reopens redb and creates a fresh instance manager before exercising login admission.
+
+Native controls, playable terrain, component placement, item collection integration, editor networking and visitor convergence still require end-to-end proof. Persistence/domain tests alone do not certify them.
 
 ## Behavioral proof
 

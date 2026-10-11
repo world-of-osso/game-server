@@ -14,6 +14,14 @@ use super::{INVENTORIES, InventoryData, inventory_store};
 pub(crate) const BUILD_KEY: &str = "dcfc90fffd79ba00406ae46f5f657592";
 const STATE: TableDefinition<u8, &[u8]> = TableDefinition::new("housing_state");
 const STATE_ROW: u8 = 0;
+const NEIGHBORHOOD_LOCATIONS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("housing_neighborhood_locations");
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct NeighborhoodLocation {
+    pub map_id: u32,
+    pub neighborhood_id: u32,
+}
 
 /// Trusted identity/map context, constructed from the authenticated server world.
 #[derive(Clone, Copy)]
@@ -63,6 +71,8 @@ impl State {
 }
 
 pub(crate) fn create_tables(txn: &WriteTransaction) {
+    txn.open_table(NEIGHBORHOOD_LOCATIONS)
+        .expect("create housing neighborhood locations");
     let mut table = txn.open_table(STATE).expect("create housing state table");
     let exists = table
         .get(STATE_ROW)
@@ -74,6 +84,42 @@ pub(crate) fn create_tables(txn: &WriteTransaction) {
             .insert(STATE_ROW, bytes.as_slice())
             .expect("initialize empty housing state");
     }
+}
+
+pub(crate) fn save_neighborhood_location(
+    db: &Database,
+    character_id: u64,
+    location: &NeighborhoodLocation,
+) -> Result<(), String> {
+    let txn = db.begin_write().map_err(|error| error.to_string())?;
+    read_in(&txn)?;
+    let bytes = serde_json::to_vec(location)
+        .map_err(|error| format!("Encode housing admission: {error}"))?;
+    txn.open_table(NEIGHBORHOOD_LOCATIONS)
+        .map_err(|error| error.to_string())?
+        .insert(character_id, bytes.as_slice())
+        .map_err(|error| error.to_string())?;
+    txn.commit().map_err(|error| {
+        format!("Persist neighborhood admission for character {character_id}: {error}")
+    })
+}
+
+pub(crate) fn load_neighborhood_location(
+    db: &Database,
+    character_id: u64,
+) -> Result<Option<NeighborhoodLocation>, String> {
+    let txn = db.begin_read().map_err(|error| error.to_string())?;
+    read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
+    let table = txn
+        .open_table(NEIGHBORHOOD_LOCATIONS)
+        .map_err(|error| error.to_string())?;
+    let row = table.get(character_id).map_err(|error| error.to_string())?;
+    row.map(|row| {
+        serde_json::from_slice(row.value()).map_err(|error| {
+            format!("Decode character {character_id} neighborhood admission: {error}")
+        })
+    })
+    .transpose()
 }
 
 fn read_state(table: &impl ReadableTable<u8, &'static [u8]>) -> Result<State, String> {
