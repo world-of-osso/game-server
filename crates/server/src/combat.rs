@@ -417,7 +417,6 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static DuelOpponent>,
         TargetArmor<'static>,
         Option<&'static shared::components::UnitFlags>,
-        Has<crate::auras::Invisible>,
         CanAvoid<'static>,
         Option<&'static shared::components::PlayerStandState>,
     ),
@@ -482,6 +481,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     sight: SwingSight<'w, 's>,
+    invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
@@ -510,6 +510,19 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             continue;
         };
         let target_entity = snapshot.auto_attack.victim;
+        let observer = params
+            .invisibility
+            .get(attacker_entity)
+            .cloned()
+            .unwrap_or_default();
+        let target = params
+            .invisibility
+            .get(target_entity)
+            .cloned()
+            .unwrap_or_default();
+        if !observer.detects(&target) {
+            continue;
+        }
         let attacker = Attacker {
             entity: attacker_entity,
             position: &snapshot.position,
@@ -877,7 +890,7 @@ fn melee_damage_splits(
     attacker: Entity,
 ) -> Vec<crate::auras::damage_transfer::Split> {
     let candidates = match targets.get_mut(victim) {
-        Ok((_, _, _, _, _, _, _, _, _, _, avoidance, _)) => {
+        Ok((_, _, _, _, _, _, _, _, _, avoidance, _)) => {
             crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
         }
         Err(_) => return Vec::new(),
@@ -889,8 +902,7 @@ fn melee_damage_splits(
         {
             continue;
         }
-        let Ok((_, health, _, _, _, _, _, _, _, _, avoidance, _)) =
-            targets.get_mut(split.recipient)
+        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _)) = targets.get_mut(split.recipient)
         else {
             continue;
         };
@@ -944,15 +956,14 @@ fn try_swing(
         duel,
         armor,
         flags,
-        invisible,
         mut avoidance,
         stand_state,
     )) = targets.get_mut(target_entity)
     else {
         return None;
     };
-    // IsValidAttackTarget: an invisible or NON_ATTACKABLE_2 unit is not attacked.
-    let attackable = !invisible && flags.is_none_or(|flags| flags.is_attackable());
+    // Typed detection was checked for this attacker before the swing.
+    let attackable = flags.is_none_or(|flags| flags.is_attackable());
     if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
         return None;
     }
@@ -1277,6 +1288,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
         crate::achievement::record_creature_death(world, npc, killer);
         crate::mythic_plus::record_kill(world, npc);
+        crate::maps::raid::record_creature_death(world, npc);
     });
 }
 
@@ -1413,7 +1425,10 @@ pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
 /// A dead summon goes with its corpse (`TempSummon::Update`: `DEAD` → `UnSummon`).
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
-    mut corpses: Query<(Entity, &mut Corpse, Has<crate::zones::TempSummon>)>,
+    mut corpses: Query<
+        (Entity, &mut Corpse, Has<crate::zones::TempSummon>),
+        Without<crate::loot::PendingGroupLoot>,
+    >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
@@ -1566,7 +1581,10 @@ pub(crate) fn respawn_system(
             Has<crate::spawn_pools::PooledSpawn>,
             Option<&crate::vignettes::CreatureVignette>,
         ),
-        Without<crate::zones::TempSummon>,
+        (
+            Without<crate::zones::TempSummon>,
+            Without<crate::loot::PendingGroupLoot>,
+        ),
     >,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
