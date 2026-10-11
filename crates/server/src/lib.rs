@@ -4,3 +4,4 @@ pub mod mythic_plus_catalog;
 pub mod mythic_plus_history;
 pub mod mythic_plus_runtime;
 pub mod pet_battle;
+pub mod raid_history_store;

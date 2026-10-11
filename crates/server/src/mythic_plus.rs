@@ -519,6 +519,7 @@ mod tests {
                     group: None,
                     leader: owner,
                     difficulty_id: 23,
+                    ..Default::default()
                 },
                 crate::maps::instances::Now {
                     unix: 1791705600,

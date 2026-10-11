@@ -2,12 +2,50 @@
 use crate::maps::InMap;
 use bevy::prelude::*;
 
-pub(crate) fn record_first_kill(
-    _world: &mut World,
-    _map: InMap,
-    _encounter: u32,
-    _difficulty: u32,
-) {
+pub(crate) fn record_first_kill(world: &mut World, map: InMap, encounter: u32, difficulty: u32) {
+    use crate::maps::store::InstanceType;
+    use crate::persistence::{ClientId, GameDatabase};
+    use ::server::raid_history_store::{Participant, persist_first_kills};
+    use shared::components::GuildMembership;
+    let store = world.resource::<crate::maps::MapStore>();
+    let is_raid = store
+        .map(map.map_id)
+        .is_some_and(|m| m.instance_type == InstanceType::Raid);
+    let is_authored = store
+        .dungeon_encounter(encounter, map.map_id, difficulty)
+        .is_some();
+    if !is_raid || !is_authored {
+        return;
+    }
+    let mut party: Vec<_> = crate::scripted_ai::instance_script::players_in_map(world, map)
+        .into_iter()
+        .map(|player| {
+            let id = world
+                .get::<ClientId>(player)
+                .expect("persistent raid player identity")
+                .0;
+            let guild = world.get::<GuildMembership>(player);
+            Participant {
+                character_id: id.to_string(),
+                guild_id: guild.map(|g| g.guild_id.to_string()),
+                guild_name: guild.map(|g| g.guild_name.clone()),
+            }
+        })
+        .collect();
+    party.sort_by_key(|p| {
+        p.character_id
+            .parse::<u64>()
+            .expect("server-generated character id")
+    });
+    let unix = world.resource::<crate::maps::ServerClock>().unix();
+    let txn = world
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .expect("begin raid first-kill transaction");
+    persist_first_kills(&txn, map.map_id, difficulty, encounter, unix, &party)
+        .expect("persist raid first kills");
+    txn.commit().expect("commit raid first-kill transaction");
 }
 
 #[cfg(test)]
@@ -41,6 +79,11 @@ mod tests {
                     group: None,
                     leader: h.character_id,
                     difficulty_id: 9,
+                    raid_difficulty: crate::maps::RaidDifficulty {
+                        primary: 14,
+                        legacy: 9,
+                    },
+                    raid_group: true,
                 },
                 crate::maps::instances::Now {
                     unix: 1000,
