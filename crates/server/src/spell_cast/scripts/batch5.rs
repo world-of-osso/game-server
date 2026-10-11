@@ -28,6 +28,7 @@ const VIRULENT_PLAGUE: u32 = 191587;
 const DREAD_PLAGUE: u32 = 1240996;
 const OUTBREAK: u32 = 77575;
 const FLAME_SHOCK: u32 = 188389;
+const SHADOW_BLADES: u32 = 121471;
 const PERIODIC_HEALTH_LEECH: u32 = 53;
 
 /// 162243 names258876s3/s4 as additional Fury, gated by the applied rank.
@@ -107,7 +108,12 @@ pub(super) fn rapture_damage(world: &World, caster: Entity, target: Entity, amou
 
 /// 197835s2 is explicitly combo points per target hit, not per cast.
 pub(super) fn shuriken_storm(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
-    let points = script_effect_value(world, caster, SHURIKEN_STORM, 1);
+    let mut points = script_effect_value(world, caster, SHURIKEN_STORM, 1);
+    //121471 explicitly doubles combo-generating abilities. Its native masks
+    //do not match197835's scripted effect1, unlike Backstab's native energize.
+    if crate::auras::has_aura(world, caster, SHADOW_BLADES) {
+        points *= 1.0 + script_effect_value(world, caster, SHADOW_BLADES, 3) / 100.0;
+    }
     spell_cast::powers::change_power(world, caster, PowerType::ComboPoints, points);
 }
 
