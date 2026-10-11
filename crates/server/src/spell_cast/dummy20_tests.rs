@@ -160,20 +160,21 @@ fn dummy20_barbed_foreign_owner_gets_only_its_fresh_budget() {
     h.advance(45);
     apply(&mut h, other, npc, 217200);
     h.advance(250);
-    for source in [caster, other] {
-        let hits: Vec<_> = h
-            .inbox
-            .log
-            .iter()
-            .filter(|e| {
-                e.spell_id == Some(217200)
-                    && e.kind == CombatLogKind::Damage
-                    && e.source == Some(source.to_bits())
-            })
-            .map(|e| e.amount)
-            .collect();
-        assert_eq!(hits, vec![61; 7]);
-    }
+    let owned: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| {
+            e.spell_id == Some(217200)
+                && e.kind == CombatLogKind::Damage
+                && e.source == Some(caster.to_bits())
+        })
+        .map(|e| e.amount)
+        .collect();
+    assert_eq!(owned, vec![61; 7]);
+    // The second player has no authenticated connection; health proves both
+    // independent budgets without requiring its private log in our inbox.
+    assert_eq!(h.health(npc), 5000.0 - 14.0 * 61.0);
 }
 
 #[test]
