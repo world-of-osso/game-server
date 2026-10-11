@@ -6,9 +6,9 @@ Verified: 2026-10-11. Private SQLite backup of canonical world.db; no canonical 
 
 Selection reads the already imported local Map.db2 and MapDifficulty.db2 tables. All dungeon/raid selection columns (ID, InstanceType, Directory) match `/home/osso/Projects/world-of-osso/game-engine/data/db2/12.1.0.69933/Map.csv`; all 1,908 MapDifficulty rows match its pinned CSV. Other Map columns have 22 source-overlay differences and one extra common map2991, none affecting selection. No CSV download or source-table rewrite.
 
-231 selected maps = existing124 plus107 DB2 maps. Garrison directories (including1158) are excluded from expansion; InstanceType5 scenarios are excluded unless already in the TDB union. 26 added maps have creatures (23 party,3 raid); Ancient Zul'Gurub309 is a genuine retired raid with only4 authored rows, not a populated replacement raid. 48 added maps have any raw placement.
+231 selected maps = existing124 plus107 DB2 maps. Garrison directories (including1158) are excluded from expansion; InstanceType5 scenarios are excluded unless already in the TDB union. 26 added maps have creatures (23 party,3 raid); Ancient Zul'Gurub309 is explicitly InstanceType1 in the pinned DB2 despite being the historical raid directory; only4 authored rows remain. It is retained by the literal dungeon-type policy and labelled sparse, not counted as a complete replacement instance. 48 added maps have any raw placement.
 
-Across selected maps: creatures 35260→41925; gameobjects 7676→8657. All124 existing maps have zero bidirectional spawn row differences. Existing-map templates, offered difficulty rows, models, equipment, addons, formations, events, paths, loot and existing pool memberships have zero row differences across35 content_* tables. New shared-entry difficulties and new-map pool memberships are additions outside the old-map projection, not silently counted as old124-map changes.
+Across selected maps: creatures 35260→41925; gameobjects 7676→8657. All124 existing maps have zero bidirectional spawn row differences. Existing-map templates, offered difficulty rows, models, equipment, addons, formations, events, paths, loot and existing pool memberships have zero row differences across42 content_* tables. New shared-entry difficulties and new-map pool memberships are additions outside the old-map projection, not silently counted as old124-map changes.
 
 Shared base-row priority fixes four formerly changed Valarjar templates: new maps' lower difficulties must not alter an existing map's base template. TDB difficulty/phase/fallback/template/loot rules stay shared; resolved zero LootID preserves existing source-backed Wowhead bindings. Hogger regression remains passing.
 
@@ -22,12 +22,16 @@ Ground columns are file-presence/structural census, not gameplay collision/rende
 
 ## Proof and lead command
 
-Targeted Python importer: selection/Algethar RED2/2; shared-base preservation RED1/1; GREEN7/7 with ResourceWarnings errors. Private `before.sqlite`/`population.sqlite`, audit.py/json/log, reachability.py/json/log and test logs live under engine `data/diagnostics/instance-coverage-2026-10-11/`. Live both-skin proof pending.
+Targeted Python importer: selection/Algethar RED2/2; shared-base preservation RED1/1; GREEN7/7 with ResourceWarnings errors. Private `before.sqlite`/`population.sqlite`, audit.py/json/log, reachability.py/json/log and test logs live under engine `data/diagnostics/instance-coverage-2026-10-11/`. Private UDP5840 both-skin entry spot check executed with fb_instancecoverage/Instancecov30: server created map2526 instance1 at Normal1; admin lookup confirms living Global Affix Stalker159796/159796, Jump Pad Visual21861/21861 and Overgrown Ancient849896/849896. Both inspected PNGs show the academy terrain/HUD, but retain a death dialog even after admin revive. No visible-combat success is claimed. Entrance displays46710/107996 are outside imported appearance coverage; WMO textures4220430/4244526 are absent in extracted-only mode. These are data/client gaps, not populated replacements.
 
-After integrating this branch, the lead creates a fresh SQLite backup (not a symlink/hardlink) and runs:
+Initial prebuilt protocol mismatch was resolved by matching native builds against shared252f409; shared source equals the engine helper snapshot. Modern and Forever use explicit account/realm-scoped preset files. Screenshot artifacts: `/syncthing/AgentShared/2026-10-11/instance-coverage/{modern,forever}-algethar-death-state.png` (1280px, inspected). All owned runtime processes stopped after captures; no UDP5000 access or canonical world.db mutation.
+
+Isolation caveat: the first rendered Modern run inherited the pool slot's shared local-listfile-cache.sqlite symlink. Its log contains shared-cache insert attempts (several failed with database locked); absence of successful canonical cache writes cannot be certified. The mutable listfile/cache paths were isolated before the final Modern/Forever captures. No attempt was made to roll back a shared cache other agents may be using.
+
+After integrating this branch, the lead runs the prepared script below. It creates `lead-population.sqlite` exclusively, backs up current canonical SQLite read-only, applies the integrated importer and writes `lead-import.json`; it refuses an existing destination:
 
 ```text
-python3 scripts/import_instance_population.py --db /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/instance-coverage-2026-10-11/lead-population.sqlite --report /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/instance-coverage-2026-10-11/lead-import.json
+python3 /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/instance-coverage-2026-10-11/lead-import.py
 ```
 
 Lead owns publication/swap/runtime reload. The private population.sqlite is evidence, not a canonical replacement.
