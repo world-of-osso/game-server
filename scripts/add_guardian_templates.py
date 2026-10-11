@@ -14,6 +14,7 @@ DARKGLARE = 103673
 
 
 def add_guardian_templates(conn):
+    retail_content.create_retail_map_table(conn)
     retail_content.create_difficulty_table(conn)
     conn.create_function("health_expansion", 1, retail_content.health_expansion, deterministic=True)
     present = conn.execute("SELECT 1 FROM content_creature_template WHERE entry=?", (DARKGLARE,)).fetchone()
