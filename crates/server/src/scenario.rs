@@ -174,12 +174,19 @@ fn definition_for_map(world: &World, map: InMap, race: u8) -> Option<u32> {
 }
 
 pub(super) fn send_entry_progress(world: &mut World) {
-    let entries:Vec<_> = world.query_filtered::<(Entity,&PlayerLink,Ref<InWorld>,Option<&LastScenarioMap>),With<Authenticated>>()
-        .iter(world).filter_map(|(connection,link,in_world,last)| {
-            let map=*world.get::<InMap>(link.0)?;
-            let race=world.get::<Player>(link.0)?.race;
-            (in_world.is_added() || last.is_none_or(|l| l.0 != map)).then_some((connection,map,race))
-        }).collect();
+    let mut connections = world.query_filtered::<
+        (Entity, &PlayerLink, Ref<InWorld>, Option<&LastScenarioMap>),
+        With<Authenticated>,
+    >();
+    let entries: Vec<_> = connections
+        .iter(world)
+        .filter_map(|(connection, link, in_world, last)| {
+            let map = *world.get::<InMap>(link.0)?;
+            let race = world.get::<Player>(link.0)?.race;
+            let changed_map = last.is_none_or(|last| last.0 != map);
+            (in_world.is_added() || changed_map).then_some((connection, map, race))
+        })
+        .collect();
     for (connection, map, race) in entries {
         if let Some(id) = definition_for_map(world, map, race) {
             world
