@@ -46,6 +46,8 @@ enum Selector {
     Caster,
     /// The explicit (requested) unit target.
     Explicit(Relation),
+    ///119: dead party/raid members selected at their stored corpse positions.
+    RaidCorpses,
     /// Area center = caster (SRC/DEST_CASTER).
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
@@ -86,6 +88,7 @@ fn selector(id: u32) -> Option<Selector> {
         0 | 9 | 17 => Selector::None, // Homebind / spell database destinations handled by teleport.
         1 | 56 | 120 => Selector::Caster,
         5 => Selector::Pet,
+        119 => Selector::RaidCorpses,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
         42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
         47 => Selector::CasterOffset(0.0),
@@ -330,6 +333,17 @@ pub fn select_targets(
                     ));
                 }
             }
+            Selector::RaidCorpses => {
+                selected_any = true;
+                units.extend(raid_corpses(
+                    world,
+                    caster,
+                    spell,
+                    effect,
+                    radius(effect, slot),
+                    max_targets,
+                ));
+            }
             Selector::CenterCaster => center = Some(caster_pos),
             Selector::CenterExplicit(_) => {
                 center = explicit.and_then(|target| position(world, target));
@@ -418,6 +432,61 @@ pub fn select_targets(
     }
     units.dedup();
     Ok(units)
+}
+
+///TC a352b1fa SpellInfo.cpp:367/Spell.cpp:9361 selects raid corpse owners.
+///The stored body, not a ghost's graveyard position, determines the radius.
+///Corpse state has no separate instance key; owners must remain in the caster's copy.
+fn raid_corpses(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    radius: f32,
+    cap: u32,
+) -> Vec<Entity> {
+    let Some(id) = world.get::<crate::persistence::ClientId>(caster) else {
+        return Vec::new();
+    };
+    let members = world
+        .resource::<crate::group::GroupRegistry>()
+        .group_members(id.0);
+    let Some(origin) = position(world, caster) else {
+        return Vec::new();
+    };
+    let Some(map) = world.get::<crate::maps::InMap>(caster).copied() else {
+        return Vec::new();
+    };
+    let mut query = world.query_filtered::<(
+        Entity,
+        &crate::persistence::ClientId,
+        &crate::death::PlayerDeathState,
+        &crate::maps::InMap,
+    ), With<Player>>();
+    let mut bodies: Vec<_> = query
+        .iter(world)
+        .filter_map(|(unit, id, death, owner_map)| {
+            if *owner_map != map
+                || !members.contains(&id.0)
+                || death.state == shared::death::DeathState::Alive
+            {
+                return None;
+            }
+            let body = death.corpse.as_ref()?;
+            if u32::from(body.map_id) != map.map_id {
+                return None;
+            }
+            let distance = origin.distance(Vec3::new(body.x, body.y, body.z));
+            (distance <= radius).then_some((distance, unit))
+        })
+        .collect();
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    bodies.retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit));
+    bodies.sort_by(|a, b| a.0.total_cmp(&b.0));
+    if cap > 0 {
+        bodies.truncate(cap as usize);
+    }
+    bodies.into_iter().map(|(_, unit)| unit).collect()
 }
 
 ///24 uses caster facing; 104/134 use the caster-to-destination direction.
@@ -750,7 +819,8 @@ pub fn selects_area(effect: &SpellEffect) -> bool {
         matches!(
             selector(id),
             Some(
-                Selector::AreaAroundSrc(_)
+                Selector::RaidCorpses
+                    | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
                     | Selector::ConeEnemy
                     | Selector::ConeToDest
