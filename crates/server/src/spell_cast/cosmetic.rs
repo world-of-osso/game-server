@@ -25,6 +25,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     286277,  // Worn Cloak
     302273,  // Heart of a Champion
     318452,  // Aqir Egg Cluster's missile-triggered swarm attachments
+    302730,  // Brewfest Chowdown Trophy's champion animation aura (visual88525)
     383065,  // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)
