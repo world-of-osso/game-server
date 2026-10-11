@@ -35,6 +35,9 @@ native client uses Retail registrar/petition controls in both skins.
 | `crates/server/src/persistence_inventory.rs` | Item-disposal invalidation inside inventory saves |
 | `crates/server/src/persistence_character.rs` | Joining invalidation inside membership writes |
 | `crates/server/src/persistence.rs` | New tables and authentic legacy-name initialization |
+| `crates/server/src/guild_charters.rs` | Authenticated request actor, live petitioner checks, owner/target routing and founding roster refresh |
+| `crates/server/src/inventory.rs` | Owned charter UseItem before spell-use dispatch |
+| `crates/server/src/npc_interaction.rs` | Reused live NPC health/faction/range validator |
 
 ## Tests asserting this spec
 
@@ -44,7 +47,8 @@ creation/lowest-rank founders, consumption and disposal.
 
 ## Known gaps (current cycle)
 
-- [ ] RPC/real NPC authority and native item-use/registrar/petition integration.
+- [ ] Authenticated RPC/real NPC and bag-use live proof.
+- [ ] Native registrar/petition integration.
 - [ ] Both-skin authenticated charter creation captures.
 
 ## Out of scope
