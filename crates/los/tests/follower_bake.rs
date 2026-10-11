@@ -37,7 +37,7 @@ fn follower_ruby_models_bake_every_eye_pose_and_load_in_runtime() {
             let eye = loaded
                 .eye(display, state)
                 .expect("every runtime pose has eyes");
-            assert!(eye.is_finite());
+            assert!(eye.iter().all(|coordinate| coordinate.is_finite()));
         }
     }
     println!(
