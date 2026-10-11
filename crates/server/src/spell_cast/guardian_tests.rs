@@ -109,8 +109,19 @@ fn guardians_sacrifice_splits_spell_damage_and_stops_on_native_health_floor() {
     let before = h.health(ally);
     super::cast_triggered(h.app.world_mut(), h.npc, 108853, Some(ally), 1);
     h.advance(5);
-    assert!(varied(197.25 * 0.7).contains(&(before - h.health(ally))));
-    assert!(varied(197.25 * 0.3).contains(&(1000.0 - h.health(h.caster))));
+    // The split runs on unrounded damage and each recipient's health loss is
+    // rounded separately, so the shares may each be off by one point.
+    let (ally_damage, caster_damage) = (before - h.health(ally), 1000.0 - h.health(h.caster));
+    let total = ally_damage + caster_damage;
+    let spread = varied(197.25);
+    assert!(
+        total >= spread.start() - 1.0 && total <= spread.end() + 1.0,
+        "total {total}"
+    );
+    assert!(
+        (caster_damage - total * 0.3).abs() <= 1.0,
+        "ally {ally_damage} caster {caster_damage}"
+    );
     h.app
         .world_mut()
         .get_mut::<Health>(h.caster)
