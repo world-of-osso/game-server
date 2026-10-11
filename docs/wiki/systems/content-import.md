@@ -2,6 +2,14 @@
 
 Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. Raw dump tables keep their Wrath IDs verbatim. `scripts/content_policy.py` derives the Retail-first `content_*` tables that the server should read (policy chosen 2026-09-23, option 4 below). This page records the imported tables, the policy and its drop counts, and the ID measurements that motivated it.
 
+## Open-world population (2026-10-11)
+
+`content_policy.py --mode world-promote --maps <explicit IDs>` bypasses full policy regeneration and overlay clearing. `world_population.py` reuses the instance import functions with open-world difficulty0 and strict unflagged phase0/169/no groups/no terrain swap. TDB-owned GUIDs use +20m; authored placements outside that namespace survive even on a promoted map, with their addons/formations/events. Shared templates, existing waypoint rows and unrelated pools are restored by indexed snapshots inside the same transaction. Copy-only destination protections are shared with the instance importer.
+
+The old runtime host list (0/1/2991) independently prevented admission and startup spawning. `HOSTED_CONTINENTS` now includes the same31 locally present, source-backed expansion maps. [Full589-map/762-zone census,31-map counts and both-skin Boralus evidence](../../world-population-counts.md) own coverage and limitations. Source-empty maps, conditional phases and client appearance coverage remain explicit gaps; Zandalar's only eligible NPC is an inactive event Ghost, not an invented populated hub. Scoped promotion must be reapplied after a full content regeneration.
+
+Sources: [contract](../../specs/retail-world-content.md#open-world-population-2026-10-11), `scripts/world_population.py`, `scripts/tests/test_world_population.py`, `crates/server/src/maps/instances.rs`, `maps/tests.rs`, `zones.rs`.
+
 ## Instance population (2026-10-11)
 
 `import_instance_population.py` applies authentic TDB instance spawns to an existing **copy**, refusing `world.db`, symlinks and hardlinks. `content_policy.apply_policy` also runs this step after the world/quest/vendor policy, so regeneration retains the fix. Source tables remain unchanged; GUIDs and instance waypoint paths use +20,000,000 namespaces. Same-ID legacy creature templates/models are replaced by TDB identity; addons, equipment, formations and events follow their source. Unrelated source-backed loot references remain intact. Instance templates and every resolved spawn difficulty rebind authored TDB LootID (+20,000,000 when nonzero) and GoldMin/GoldMax, including gold-only rows. `retail_content.insert_tdb_loot` imports creature/reference rows using the existing Retail item policy. No legacy/Wowhead substitutions or new loot-roll implementation.
