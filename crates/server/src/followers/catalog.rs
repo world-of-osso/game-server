@@ -57,7 +57,7 @@ pub(crate) fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog>
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    let mut query = db.prepare("SELECT d.id,d.name,d.map_id,l.LocX,l.LocY,l.LocZ,l.Facing FROM follower_lfg_dungeons d JOIN tdb_world_safe_locs l ON l.MapID=d.map_id WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3 AND l.Comment LIKE '%Entrance%' AND EXISTS(SELECT 1 FROM content_creature c WHERE c.map=d.map_id AND (','||c.spawnDifficulties||',') LIKE '%,205,%') ORDER BY d.id,l.ID")?;
+    let mut query = db.prepare("SELECT d.id,d.name,d.map_id,l.LocX,l.LocY,l.LocZ,l.Facing FROM follower_lfg_dungeons d JOIN tdb_world_safe_locs l ON l.MapID=d.map_id WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3 AND l.Comment LIKE '%Entrance%' AND EXISTS(SELECT 1 FROM content_creature c WHERE c.map=d.map_id AND (','||c.spawnDifficulties||',') LIKE '%,1,%') ORDER BY d.id,l.ID")?;
     let rows = query.query_map([], |row| {
         Ok(Dungeon {
             id: row.get(0)?,
@@ -90,7 +90,7 @@ pub(super) fn load_startup(mut commands: Commands) {
     match load_catalog(&db) {
         Ok(catalog) => {
             info!(
-                "Follower bridge: {} sourced profiles, {} populated difficulty205 dungeons",
+                "Follower bridge: {} sourced profiles, {} follower dungeons with Normal population and authored entrance",
                 catalog.profiles.len(),
                 catalog.dungeons.len()
             );
