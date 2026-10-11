@@ -93,4 +93,6 @@ impl Plugin for FollowerPlugin {
 }
 
 #[cfg(test)]
+mod catalog_tests;
+#[cfg(test)]
 mod tests;

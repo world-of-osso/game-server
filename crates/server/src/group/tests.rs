@@ -1,3 +1,6 @@
+#[path = "follower_tests.rs"]
+mod follower_tests;
+
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
