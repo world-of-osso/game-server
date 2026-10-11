@@ -126,7 +126,7 @@ pub(crate) fn send_to_player<M: lightyear::prelude::Message>(
 }
 
 /// `(player, character, message)` of every message `M` the in-world players sent.
-fn drain<M: lightyear::prelude::Message>(world: &mut World) -> Vec<(Entity, u64, M)> {
+pub(crate) fn drain<M: lightyear::prelude::Message>(world: &mut World) -> Vec<(Entity, u64, M)> {
     let mut receivers =
         world.query_filtered::<(&PlayerLink, &mut MessageReceiver<M>), With<InWorld>>();
     let received: Vec<(Entity, M)> = receivers
