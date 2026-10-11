@@ -10,7 +10,7 @@ Beacon copies native53651s1/10% effective healing through53652 after the source 
 
 Sigil uses the existing destination-owned ground pulse lifecycle with period0: wait root2sec, emit native204598 hit and targeted bleed once, then retire the field. It does not move with the caster or execute latent duplicate effect2; child markers/179 visuals/Fury timing remain open. Karma implements only authentic capacity/depletion/expiry, not its70% redirect.
 
-Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood's last remaining Dummy root closes. Native238-row equivalence and exact previous40-spec ID sets checked. Targeted11/11 warning-free; detailed corrected RED and integration proof boundaries live in the coverage ledger. Guardian inheritance/melee and Eye Beam11-vs-tooltip10 discrepancy unchanged.
+Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood's last remaining Dummy root closes. Native238-row equivalence and exact previous40-spec ID sets checked. Targeted11/11 warning-free; single post-origin/master spell_cast gate360/360, fmt/check pass at6a56656. Detailed corrected RED and proof boundaries live in the coverage ledger. Guardian inheritance/melee and Eye Beam11-vs-tooltip10 discrepancy unchanged.
 
 ## Fourteenth batch: owned hits and native clocks
 
