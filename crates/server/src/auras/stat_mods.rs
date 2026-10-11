@@ -297,6 +297,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             OVERRIDE_SPELL_POWER_BY_AP_PCT => stats.spell_power_from_ap_pct += amount,
             MOD_INCREASE_HEALTH => stats.max_health_flat += amount,
             MOD_INCREASE_HEALTH_PERCENT => stats.max_health_pct += amount,
+            // Mainline55233s4 explicitly supplies Vampiric Blood's max-health percent.
+            DUMMY if aura.spell_id == 55233 && effect.index == 3 => stats.max_health_pct += amount,
             // Unit::GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT) (StatSystem.cpp:499).
             MOD_BLOCK_PERCENT => stats.block_pct += amount,
             // Player::UpdateDodgePercentage adds aura 49 outside rating DR.
