@@ -47,6 +47,16 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] Deviation: TrinityCore has no Grim Batol creature scripts, so no kill there sets a boss state or locks anyone. Each `creatureData` boss runs a spell-less `BossAI`: engage → `IN_PROGRESS`, wipe → `NOT_STARTED`, death → `DONE` (then the instance lock, docs/specs/instances.md). No boss abilities.
 - [x] An instance script created for a copy with an instance lock starts with the lock's `DONE` bosses (`InstanceScript::Load`); encounter messages carry the copy's difficulty.
 
+## Cobrahn behavioral acceptance
+
+`cargo test --locked -p server --bin game-server scripted_ai::` on c7b792a:20 passed, zero failed, one ignored; native build, cargo fmt check and cargo check pass without compiler warnings. Canonical Normal loot roll yields one authored group1 item and87–168 copper, excluding the quest-only gem. Explicit population-copy gate:
+
+```text
+DUNGEON_ENCOUNTER_POPULATION_DB=<prepared-copy> cargo test --locked -p server --bin game-server cobrahn_population_copy_normal_loot -- --ignored --nocapture
+```
+
+The existing prepared population.sqlite fails this gate with empty items/copper0; this is a real acceptance blocker, not a waived failure. The test opens data read-only. Independent lead review and repaired-copy/live-loot proof remain required; no master merge or deployment claimed.
+
 ## Cobrahn native proof — 2026-10-11
 
 Private UDP5700, fresh redb, `fb_dungeon_encounter` characters Cobrmodern/Cobrforever; server integration e77ba78 with population prepared copy. Both skins entered WC through production far transfer/ack, pulled the authentic spawn, received yell/Lightning Bolt20805 and compact boss frame, clicked that frame to target, killed with ordinary Fireball133, cleared the frame and marked Lord Cobrahn complete in the existing dungeon tracker. Setup used level80, periodic admin player-health restoration (not injected boss damage), and an authored Charged Invoker222450 on Forever. This is transport/encounter proof, not normal solo balance.
