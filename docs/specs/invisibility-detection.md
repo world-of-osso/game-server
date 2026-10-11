@@ -1,11 +1,47 @@
 # Typed invisibility and quest-area auras
 
-Authority: TrinityCore a352b1fa Object.cpp `CanDetectInvisibilityOf`, SpellAuraEffects.cpp `HandleModInvisibility` / `HandleModInvisibilityDetect`, SpellMgr.cpp `SpellArea::IsFitToRequirements`; TDB1210.26091 `spell_area`.
+Authored invisibility and quest-area eligibility must determine which units each observer can see. Source: TrinityCore a352b1fa Object.cpp `CanDetectInvisibilityOf`, SpellAuraEffects.cpp `HandleModInvisibility`/`HandleModInvisibilityDetect`, SpellMgr.cpp `SpellArea::IsFitToRequirements`, and TDB1210.26091 `spell_area`. [Implementation](../wiki/systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11).
 
-- Aura18 carries its authored invisibility type (MiscValue0) and summed integer amount, including stacks. Aura19 carries independent detection types/values; zero value still marks a type present.
-- An observer detects a unit only when every hidden type has matching detection with at least its hidden value. Invisible observers also require reciprocal type detection, except aura335.
-- Visibility/replication and hostile/friendly spell targeting and attacks use observer-specific detection. Detection changes re-evaluate stationary observers and targets; late arrivals follow the same policy. Self remains visible.
-- Authored spell_area requirements use zone/area, quest status masks, signed aura prerequisite, race mask and gender. Autocast applies eligible auras; ineligible managed auras are removed. Quest changes and area movement update eligibility.
-- No authored invisibility aura is stripped to make quests playable. No canonical world database changes are part of this feature branch.
+## What it must do
 
-Acceptance: real Jaga/Vin and Mountain-Lord Rendan visibility eligibility, native quest credit/loot/turn-in with Modern and Forever skins on a private realm; targeted RED/GREEN and check/fmt evidence. Generic scripted phasing is not included.
+### Detection
+- [x] Aura18 carries its authored MiscValue0 type and summed integer amount, including stacks. Aura19 carries independent detection types/values; zero still marks a type present.
+- [x] Detect only when every hidden type has matching detection at least as strong. Invisible observers also require reciprocal type flags, except aura335.
+- [x] Stationary detector changes, detector removal and late arrivals update per-observer replication. Self remains visible under the existing interest contract.
+- [x] Boss vanish still hides its target until the aura ends; hostile/friendly spell relations follow observer detection.
+- [ ] Melee and creature acquisition use the same typed predicate; dedicated detector-vs-swing/acquisition request proof is not recorded.
+
+### Spell-area lifecycle
+- [x] Requirements preserve area/zone, quest-status masks, signed aura prerequisites, race mask and gender. Autocast/autoremove and ignore-quest-change flags control lifecycle; aura-only changes are not quest-only changes.
+- [x] Quest none/incomplete/complete/rewarded states drive authored detection; Jaga29401 becomes visible while eligible and disappears after real reward.
+- [x] Import authored TDB rows through the importer without replacing unrelated world tables.
+- [ ] Spell-area autocasts must not be cancelable by the player; implemented, dedicated CancelAura request proof not recorded.
+
+### Native acceptance
+- [x] Jaga29401 is accepted, five authored balloons are looted for item credit, and the quest is genuinely turned in in Modern and Forever. Both skins assert post-reward giver removal and have inspected PNGs from private UDP5496.
+- [ ] Vin29412 and Rendan28029 have an authored eligibility route and real native completion proof; source-data gaps remain, not successful completions.
+
+## How it works
+- [Aura runtime and proof](../wiki/systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11)
+- [Safe import and current source gaps](../invisibility-import.md)
+
+## Implementation inventory
+- `crates/server/src/auras/{invisibility.rs,unit_state.rs,handlers.rs,mod.rs}` — typed aura values and cancellation source.
+- `crates/server/src/{interest.rs,combat.rs,creature_sight.rs,spell_cast/targets.rs}` — observer-specific replication and targeting.
+- `crates/server/src/{spell_area.rs,quest.rs,main.rs}` — quest/area/aura eligibility reconciliation and runtime wiring.
+- `scripts/{spell_area_schema.sql,mysql_dump.py,import-azerothcore.sh}` — safe incremental and full-import entry points.
+
+## Tests asserting this spec
+- `crates/server/src/auras/invisibility.rs` — real aura/stack sums, threshold/type presence, reciprocal flags/aura335.
+- `crates/server/src/interest_tests.rs` — real89302/82343/100616/82336 stationary/new observer transitions.
+- `crates/server/src/spell_area.rs` — authored100616 lifecycle, real Jaga area5171, source flags and signed/race/gender requirements.
+- `crates/server/src/scripted_ai/tests.rs` — Moloch vanish detection; `scripts/tests/test_spell_area_import.py` — unsigned masks and unrelated-table preservation.
+- Engine `godot/tests/quest_objectives_live.gd` — both-skin native loot, credit, reward and post-reward hiding; evidence in engine `data/diagnostics/invis-detection-2026-10-11/live-proof-ledger.json`.
+
+## Known gaps (current cycle)
+- [ ] No authored spell-area/quest start/reward/SmartAI route to Rendan's82336 detector in inspected source. Vin has no corresponding Stormwind/29412 spell-area rule. Do not guess rows, strip invisibility or grant detectors/credit to claim completion.
+- [ ] Current Core Fragment input is normal difficulty1 and passes server copy-spawn/interest proof; native dungeon loot/turn-in remains unverified. Map530 remains explicitly unhosted.
+- [ ] Pet/possessor detector delegation, failed-quest state representation and TC battlefield-specific spell-area conditions are not verified by this NPC slice.
+
+## Out of scope
+Canonical world.db writes, UDP5000, master merge and full suites are prohibited for this branch. Generic scripted phasing is not part of the requested typed-invisibility/quest-area change.

@@ -50,6 +50,101 @@ mod tests {
     use super::*;
 
     #[test]
+    fn invisibility_detection_spell_relations_follow_observer_values() {
+        use crate::spell_cast::targets::{Relation, relation_matches};
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[89302, 100616], 1).unwrap();
+        for (unit, spell_id) in [(h.npc, 89302), (h.caster, 100616)] {
+            let spell = h
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(spell_id)
+                .unwrap();
+            let mask = super::super::aura_effect_mask(spell);
+            super::super::apply_aura(
+                h.app.world_mut(),
+                &super::super::AuraApplication {
+                    caster: unit,
+                    target: unit,
+                    spell_id,
+                    effect_mask: mask,
+                    source: super::super::AuraSource::Cast,
+                },
+            );
+            assert_eq!(
+                relation_matches(h.app.world(), h.caster, h.npc, Relation::Enemy),
+                unit == h.caster
+            );
+        }
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert(shared::components::UnitFactionTemplate(1));
+        assert!(relation_matches(
+            h.app.world(),
+            h.caster,
+            h.npc,
+            Relation::Ally
+        ));
+        super::super::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            super::super::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 100616,
+        );
+        assert!(!relation_matches(
+            h.app.world(),
+            h.caster,
+            h.npc,
+            Relation::Ally
+        ));
+    }
+
+    #[test]
+    fn invisibility_detection_sums_real_aura_values_and_stacks() {
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[89302, 101058], 1).unwrap();
+        for spell_id in [89302, 101058] {
+            let spell = h
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(spell_id)
+                .unwrap();
+            let mask = super::super::aura_effect_mask(spell);
+            super::super::apply_aura(
+                h.app.world_mut(),
+                &super::super::AuraApplication {
+                    caster: h.npc,
+                    target: h.npc,
+                    spell_id,
+                    effect_mask: mask,
+                    source: super::super::AuraSource::Cast,
+                },
+            );
+        }
+        let mut auras = h.app.world_mut().get_mut::<ActiveAuras>(h.npc).unwrap();
+        auras
+            .auras
+            .iter_mut()
+            .find(|aura| aura.spell_id == 89302)
+            .unwrap()
+            .stacks = 2;
+        let target = Invisibility::from_auras(&auras);
+        let mut observer = Invisibility {
+            detection: BTreeMap::from([(35, 299)]),
+            ..default()
+        };
+        assert!(
+            !observer.detects(&target),
+            "two 100-point stacks plus a 100-point aura need300 detection"
+        );
+        observer.detection.insert(35, 300);
+        assert!(observer.detects(&target));
+    }
+
+    #[test]
     fn invisibility_detection_requires_every_type_and_sufficient_value() {
         let mut target = Invisibility {
             hidden: BTreeMap::from([(12, 100), (35, 100)]),
