@@ -2,7 +2,8 @@
 use shared::protocol::{ChallengeBoss, ChallengePhase, ChallengeRun, KeystoneInfo};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct UnsourcedChallengeConfig {
     pub unsourced_pre_start_countdown_ms: u64,
     pub unsourced_death_penalty_ms: u64,

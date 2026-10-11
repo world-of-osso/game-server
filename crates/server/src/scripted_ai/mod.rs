@@ -15,6 +15,7 @@
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
 
+pub mod azure_vault;
 pub mod boss_ai;
 pub mod creature_text;
 pub mod event_map;
@@ -159,6 +160,9 @@ pub struct CreatureAiState {
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    if let Some(ai) = azure_vault::creature_ai(world, creature) {
+        return Some(ai);
+    }
     if script_name == SMART_AI {
         return smart_ai::creature_ai(world, creature);
     }
@@ -176,7 +180,8 @@ const SMART_AI: &str = "SmartAI";
 /// (`Creature::AIM_Initialize` at `AddToMap`; `FactorySelector::SelectAI` prefers the
 /// ScriptName).
 pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
-    let scriptless_boss = script_name.is_empty() && grim_batol::boss_id_of(entry).is_some();
+    let scriptless_boss = (script_name.is_empty() && grim_batol::boss_id_of(entry).is_some())
+        || azure_vault::boss_id(entry).is_some();
     let script_name = if the_stockade::is_creature_script(script_name) || scriptless_boss {
         Some(script_name.to_owned())
     } else {

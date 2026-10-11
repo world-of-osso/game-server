@@ -182,6 +182,7 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
+            49 => ObjectUse::Challenge,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self
@@ -226,6 +227,8 @@ enum ObjectUse {
     Spell,
     /// Seats the user (`chair::sit`).
     Chair,
+    /// Retail GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE.
+    Challenge,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -340,6 +343,12 @@ fn process_game_object_uses(
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::chair::sit(world, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::Challenge)) => {
+                    commands.queue(move |world: &mut World| {
+                        crate::mythic_plus::open_font(world, connection, object)
                     });
                     continue;
                 }

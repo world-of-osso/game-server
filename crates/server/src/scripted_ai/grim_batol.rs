@@ -79,6 +79,14 @@ pub struct InstanceBossAi {
     boss: BossAi,
 }
 
+impl InstanceBossAi {
+    pub(crate) fn new(boss_id: u32) -> Self {
+        Self {
+            boss: BossAi::new(boss_id),
+        }
+    }
+}
+
 impl BossScript for InstanceBossAi {
     fn boss_ai(&mut self) -> &mut BossAi {
         &mut self.boss

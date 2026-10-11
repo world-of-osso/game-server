@@ -1276,6 +1276,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         combat_stop(world, npc);
         crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
         crate::achievement::record_creature_death(world, npc, killer);
+        crate::mythic_plus::record_kill(world, npc);
     });
 }
 
