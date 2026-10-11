@@ -305,10 +305,10 @@ fn project(world: &World, owner: Entity) -> Option<(PvpTalentsSnapshot, Vec<(u32
         })
         .collect();
     let map = world.get::<crate::maps::InMap>(owner)?;
-    let active = state
-        .war_mode
-        .as_ref()
-        .is_some_and(|s| s.enlisted_spell.is_some())
+    // TC Player::ArePvpTalentsEnabled: actual SPELL_AURA_PVP_TALENTS (119).
+    let active = world
+        .get::<crate::auras::ActiveAuras>(owner)
+        .is_some_and(|auras| auras.has_type(119))
         || state
             .battleground
             .as_ref()
@@ -548,6 +548,56 @@ mod tests {
         );
     }
     #[test]
+    fn pvp_grants_follow_actual_aura_not_cached_war_mode_state() {
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[210256, 282559], 2).unwrap();
+        h.app.insert_resource(Catalog::fixture());
+        let mut state = PlayerPvpState::default();
+        state
+            .progress
+            .pvp_talents
+            .insert(70, [(1, 752)].into_iter().collect());
+        state.war_mode = Some(shared::protocol::WarModeSnapshot {
+            desired: true,
+            active: false,
+            can_enable: true,
+            can_disable: true,
+            enlisted_spell: Some(282559),
+        });
+        h.app.world_mut().entity_mut(h.caster).insert((
+            state,
+            ActiveSpec(70),
+            Level(90),
+            crate::maps::InMap::continent(0),
+            CombatStatus(false),
+        ));
+        assert!(
+            project(h.app.world(), h.caster).unwrap().1.is_empty(),
+            "cached Enlisted identity is not an actual aura"
+        );
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 282559,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert_eq!(
+            project(h.app.world(), h.caster).unwrap().1,
+            vec![(210256, 0)]
+        );
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Unlearned,
+            |a| a.spell_id == 282559,
+        );
+        assert!(project(h.app.world(), h.caster).unwrap().1.is_empty());
+    }
+    #[test]
     fn active_pvp_talent_grants_survive_entering_combat() {
         let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[853, 210256, 282559], 2)
             .unwrap();
@@ -571,6 +621,16 @@ mod tests {
             crate::maps::InMap::continent(0),
             CombatStatus(false),
         ));
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 282559,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
         let (_, before) = project(h.app.world(), h.caster).unwrap();
         assert_eq!(before, vec![(210256, 0)]);
         h.app
