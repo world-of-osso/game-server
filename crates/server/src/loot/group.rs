@@ -372,6 +372,7 @@ pub(super) struct RollDelivery<'w, 's> {
     >,
     senders: Query<'w, 's, (&'static InWorld, &'static mut MessageSender<GroupLootRoll>)>,
     failures: Query<'w, 's, (&'static InWorld, &'static mut MessageSender<LootFailed>)>,
+    lootable: Query<'w, 's, (&'static InWorld, &'static mut MessageSender<CorpseLootable>)>,
 }
 
 impl RollDelivery<'_, '_> {
@@ -422,8 +423,34 @@ impl RollDelivery<'_, '_> {
                 }
             }
         }
+        self.notify_finished_looters(corpse, &roll.snapshot);
         refresh_responses(roll);
         self.send(&roll.snapshot);
+    }
+
+    fn notify_finished_looters(&mut self, corpse: Entity, snapshot: &GroupLootRoll) {
+        for (world, mut sender) in &mut self.lootable {
+            if !snapshot
+                .players
+                .iter()
+                .any(|player| player.character_id == world.character_id)
+            {
+                continue;
+            }
+            let remaining = self
+                .corpses
+                .get(corpse)
+                .ok()
+                .and_then(|(loot, shared, ..)| {
+                    remaining_for(loot, Some(shared), world.character_id)
+                });
+            if remaining.is_none() {
+                sender.send::<LootChannel>(CorpseLootable {
+                    corpse: corpse.to_bits(),
+                    lootable: false,
+                });
+            }
+        }
     }
 }
 
