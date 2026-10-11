@@ -355,7 +355,7 @@ fn dummy12_gargoyle_foreign_owner_spend_and_triggered_cast_do_not_empower() {
         .entity_mut(foreign)
         .insert(super::powers::PowerPools::from_table(
             &power_table(world_db().unwrap()),
-            [PowerType::RunicPower],
+            vec![PowerType::RunicPower],
         ));
     super::powers::change_power(h.app.world_mut(), foreign, PowerType::RunicPower, 1000.0);
     apply(&mut h, foreign, foreign, 1242147, u32::MAX);
