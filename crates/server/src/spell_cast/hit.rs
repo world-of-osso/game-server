@@ -55,7 +55,9 @@ fn remove_immune_effect_targets(
         let effect = &spell.effects[planned.index];
         let harmful = negative & (1 << effect.index) != 0;
         planned.units.retain(|unit| {
-            if harmful && misses.iter().any(|(missed, _)| missed == unit) {
+            // A whole-spell miss removes every effect on that unit. Numeric
+            // Dummy markers cannot turn an immune primary into a successful hit.
+            if misses.iter().any(|(missed, _)| missed == unit) {
                 return false;
             }
             if crate::auras::effect_immunity::blocks_effect(world, *unit, spell, effect)
