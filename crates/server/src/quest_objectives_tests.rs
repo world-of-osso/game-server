@@ -1,10 +1,195 @@
 //! Authored game-object and spell-credit objectives through server requests.
+// TC a352b1fa SpellEffects.cpp: EffectKillCreditPersonal (90), EffectKillCredit (134).
 use super::*;
 use shared::components::{Health, UnitFactionTemplate};
 use shared::protocol::{
     CloseInteraction, InteractNpc, InteractionClosed, InteractionFailed, InteractionOpened,
     SelectGossipOption, UseGameObject,
 };
+
+fn spawn_quest_group_member(app: &mut App, client: &Client) -> (u64, Entity) {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    let (character, _) = persistence::create_character(db(app), 1, "Creditbuddy", 2, 1).unwrap();
+    let log = load_quest_log(db(app), client.character_id);
+    save_quest_log(db(app), character, &log);
+    let player = app.world().get::<Player>(client.player).unwrap().clone();
+    let entity = app
+        .world_mut()
+        .spawn((
+            player,
+            ClientId(character),
+            Position {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    let profile = |entity: Entity, name: &str| OnlineMember {
+        entity: entity.to_bits(),
+        name: name.into(),
+        class: 1,
+        level: 80,
+        portrait: Default::default(),
+        dungeon_difficulty: 1,
+    };
+    let online = OnlineView::from([
+        (client.character_id, profile(client.player, "Questor")),
+        (character, profile(entity, "Creditbuddy")),
+    ]);
+    let mut groups = GroupRegistry::default();
+    groups.sync_presence(&online);
+    groups.invite(client.character_id, "Creditbuddy", &online);
+    groups.respond_invite(character, true);
+    assert!(groups.is_in_same_group(client.character_id, character));
+    app.insert_resource(groups);
+    (character, entity)
+}
+
+fn spell_credit_app() -> App {
+    let mut app = setup_app_with(|app| {
+        app.add_plugins((
+            crate::combat::CombatPlugin,
+            crate::spell_cast::SpellCastPlugin,
+            crate::auras::AuraPlugin,
+        ));
+    })
+    .expect("authentic quest data required");
+    let data = crate::spell_cast::test_harness::world_db().unwrap();
+    app.insert_resource(crate::spell_info::SpellStore::fixture(
+        [94940, 37221, 37320, 37322, 37323]
+            .into_iter()
+            .map(|id| data.store.get(id).unwrap().clone())
+            .collect(),
+    ));
+    app.insert_resource(crate::spell_cast::test_harness::power_table(data));
+    app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+    app
+}
+
+#[test]
+fn quest_objectives_personal_spell_credit_completes_eye_spy_without_a_kill() {
+    let mut app = spell_credit_app();
+    let client = spawn_client(&mut app, 80);
+    app.world_mut()
+        .get_mut::<Player>(client.player)
+        .unwrap()
+        .race = 2;
+    app.world_mut().entity_mut(client.player).insert(Health {
+        current: 100.0,
+        max: 100.0,
+    });
+    enter_world(&mut app, &client);
+    mark_rewarded(&app, &client, 27954);
+    let giver = spawn_npc(&mut app, 46323, 0.0);
+    accept(&mut app, &client, giver, 27955);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    let (buddy, _) = spawn_quest_group_member(&mut app, &client);
+    crate::spell_cast::cast_triggered(
+        app.world_mut(),
+        client.player,
+        94940,
+        Some(client.player),
+        0,
+    );
+    app.update();
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(27955)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    assert_eq!(
+        load_quest_log(db(&app), buddy)
+            .active(27955)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    // The credit is capped; another hit cannot award a second count.
+    crate::spell_cast::cast_triggered(
+        app.world_mut(),
+        client.player,
+        94940,
+        Some(client.player),
+        0,
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(27955)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    turn_in(&mut app, &client, giver, 27955, None);
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(27955));
+}
+
+#[test]
+fn quest_objectives_event_spell_credit_matches_each_trial_and_error_wand() {
+    let mut app = spell_credit_app();
+    let client = spawn_client(&mut app, 80);
+    app.world_mut()
+        .get_mut::<Player>(client.player)
+        .unwrap()
+        .race = 2;
+    app.world_mut().entity_mut(client.player).insert(Health {
+        current: 100.0,
+        max: 100.0,
+    });
+    enter_world(&mut app, &client);
+    mark_rewarded(&app, &client, 10565);
+    let giver = spawn_npc(&mut app, 21496, 0.0);
+    accept(&mut app, &client, giver, 10566);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    let (buddy, buddy_entity) = spawn_quest_group_member(&mut app, &client);
+    let target = Entity::try_from_bits(spawn_npc(&mut app, 21709, 0.0)).unwrap();
+    for (index, spell) in [37221, 37320, 37322, 37323].into_iter().enumerate() {
+        crate::spell_cast::cast_triggered(app.world_mut(), client.player, spell, Some(target), 0);
+        app.update();
+        let expected = (0..4)
+            .map(|objective| u32::from(objective <= index))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            load_quest_log(db(&app), client.character_id)
+                .active(10566)
+                .unwrap()
+                .counts,
+            expected
+        );
+        match index {
+            0 => {
+                app.world_mut().entity_mut(buddy_entity).insert(Position {
+                    x: 100.0,
+                    y: 0.0,
+                    z: 0.0,
+                });
+            }
+            1 => {
+                app.world_mut()
+                    .entity_mut(buddy_entity)
+                    .insert((origin(), crate::maps::InMap::continent(1)));
+            }
+            2 => {
+                app.world_mut()
+                    .entity_mut(buddy_entity)
+                    .insert(crate::maps::InMap::continent(0));
+            }
+            _ => {}
+        }
+    }
+    assert_eq!(
+        load_quest_log(db(&app), buddy)
+            .active(10566)
+            .unwrap()
+            .counts,
+        vec![1, 0, 0, 1]
+    );
+    turn_in(&mut app, &client, giver, 10566, None);
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(10566));
+}
 
 fn add_object_plugins(app: &mut App) {
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());

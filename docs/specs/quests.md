@@ -32,7 +32,9 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 - [ ] Full game-object lock/key/skill, condition, event, spell and animation/despawn semantics remain unimplemented; these paths are not full Retail GO parity.
 - [ ] Event quests (escorts, scripted events: `QUEST_FLAGS_COMPLETION_EVENT` with no trigger) cannot complete: no script sets the event.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
-- [ ] Spell-credit objectives (Extinguishing Hope 26391's Vineyard Fires from Milly's Extinguisher) never progress; admin `quest-complete <character> <quest_id>` (TrinityCore `.quest complete`) fills a logged quest's kill/object objectives for tests.
+- [x] Authored spell effects 90 and 134 advance Type 0 monster-credit objectives for the hit player, without requiring a creature death. Effect90 is personal; effect134 shares with nearby same-map-copy party members. Unrelated objectives and completed counts do not advance. Retail defines no cast-spell objective Type: Type5 means learn-spell.
+- [x] Extinguishing Hope26391 retains its existing item-use → Spray Water → SmartAI spell-hit → monster credit path (`quest_spell_tests.rs`).
+- [ ] Effect16 quest-completion events, effect316/317 label credit, arbitrary dummy/scripted spell credit and Type5 learn-spell objectives are not covered by this slice.
 - [ ] Daily/weekly quests have no reset; they are one-time. Timed quests, `RequiredFactionId`/reputation, skill requirements, reward spells, reputation rewards and `ItemDrop` quest-item drops are not applied.
 - [ ] Creature `KillCredit1/2` entries do not give credit; kill credit ignores tap rules and dead group members.
 - [ ] `zone` in `QuestEntrySnapshot` is empty (no area names server-side); clients resolve `sort_id`. POI `world_map_area_id` is a Wrath `WorldMapArea` id, not a Retail `UiMap` id.
