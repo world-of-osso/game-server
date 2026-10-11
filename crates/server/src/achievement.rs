@@ -78,17 +78,24 @@ impl Plugin for AchievementPlugin {
 
 fn send_initial_achievement_snapshot(world: &mut World) {
     let connections: Vec<_> = world
-        .query_filtered::<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>()
+        .query_filtered::<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>()
         .iter(world)
-        .map(|(connection, link)| (connection, link.0))
+        .map(|(connection, link, in_world)| (connection, link.0, in_world.character_id))
         .collect();
-    for (connection, player) in connections {
+    for (connection, player, character) in connections {
         let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
             continue;
         };
-        let Some((snapshot, _)) =
-            update_player_events(world, player, &[CriteriaEvent::ReachLevel(level)], None)
-        else {
+        let mut events = vec![CriteriaEvent::ReachLevel(level)];
+        if let Some(db) = world.get_resource::<GameDatabase>() {
+            events.extend(
+                persistence::quest_store::load_quest_log(&db.db, character)
+                    .rewarded
+                    .into_iter()
+                    .map(CriteriaEvent::CompleteQuest),
+            );
+        }
+        let Some((snapshot, _)) = update_player_events(world, player, &events, None) else {
             continue;
         };
         send_updates(world, connection, snapshot, Vec::new());
@@ -117,6 +124,25 @@ fn process_level_achievement_updates(world: &mut World) {
         if let Some(connection) = connection_for_player(world, player) {
             send_updates(world, connection, snapshot, toasts);
         }
+    }
+}
+
+/// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
+/// never reach this boundary; login reconstructs missed credit from rewarded quests.
+pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32) {
+    let owner = world
+        .query_filtered::<(Entity, &PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .find_map(|(connection, link, in_world)| {
+            (in_world.character_id == character).then_some((connection, link.0))
+        });
+    let Some((connection, player)) = owner else {
+        return;
+    };
+    if let Some((snapshot, toasts)) =
+        update_player_events(world, player, &[CriteriaEvent::CompleteQuest(quest)], None)
+    {
+        send_updates(world, connection, snapshot, toasts);
     }
 }
 

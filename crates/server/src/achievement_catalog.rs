@@ -1,5 +1,5 @@
 //! Achievement/Criteria/CriteriaTree DB2 rows imported by scripts/import_achievements.py.
-//! Only unconditional character kill/level/encounter criteria are enabled. Trees
+//! Unconditional character kill/level/quest/achievement/encounter criteria are enabled. Trees
 //! containing unknown criteria, modifiers, timers or world-state conditions stay disabled.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -16,6 +16,7 @@ use super::PlayerAchievementState;
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
+    CompleteQuest(u32),
     DefeatEncounter(u32),
 }
 
@@ -24,6 +25,7 @@ impl CriteriaEvent {
         match self {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
+            Self::CompleteQuest(_) => 27,
             Self::DefeatEncounter(_) => 165,
         }
     }
@@ -34,7 +36,9 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
-            Self::KillCreature(asset) | Self::DefeatEncounter(asset) => asset == criteria.asset,
+            Self::KillCreature(asset)
+            | Self::CompleteQuest(asset)
+            | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
 }
@@ -122,6 +126,7 @@ impl AchievementCatalog {
             let counter = state.criteria_progress.entry(id).or_default();
             *counter = match event {
                 CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+                CriteriaEvent::CompleteQuest(_) => 1,
                 _ => counter.saturating_add(1),
             };
         }
@@ -133,28 +138,31 @@ impl AchievementCatalog {
         state: &mut PlayerAchievementState,
         completed_map: Option<u32>,
     ) -> Vec<AchievementToastSnapshot> {
-        let completed: Vec<_> = self
-            .definitions
-            .values()
-            .filter(|definition| {
-                let map_eligible =
-                    definition.map_id.is_none() || definition.map_id == completed_map;
-                map_eligible
-                    && !state.earned_ids.contains(&definition.id)
-                    && self.tree_progress(definition.root, state).completed
-            })
-            .collect();
-        completed
-            .into_iter()
-            .map(|definition| {
+        let mut toasts = Vec::new();
+        loop {
+            let completed: Vec<_> = self
+                .definitions
+                .values()
+                .filter(|definition| {
+                    let map_eligible =
+                        definition.map_id.is_none() || definition.map_id == completed_map;
+                    map_eligible
+                        && !state.earned_ids.contains(&definition.id)
+                        && self.tree_progress(definition.root, state).completed
+                })
+                .collect();
+            if completed.is_empty() {
+                return toasts;
+            }
+            for definition in completed {
                 state.earned_ids.insert(definition.id);
-                AchievementToastSnapshot {
+                toasts.push(AchievementToastSnapshot {
                     achievement_id: definition.id,
                     name: definition.name.clone(),
                     points: definition.points,
-                }
-            })
-            .collect()
+                });
+            }
+        }
     }
 
     pub fn snapshot(&self, state: &PlayerAchievementState) -> AchievementSnapshot {
@@ -179,7 +187,7 @@ impl AchievementCatalog {
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
         let tree = &self.trees[&id];
-        let counter = state.criteria_progress.get(&tree.criteria_id).copied();
+        let counter = self.criterion_counter(tree.criteria_id, state);
         let children = self.children.get(&id).into_iter().flatten();
         let progress: Vec<_> = children
             .map(|child| self.tree_progress(*child, state))
@@ -215,10 +223,8 @@ impl AchievementCatalog {
                 .flatten()
                 .filter(|child| {
                     let criteria = self.trees[child].criteria_id;
-                    state
-                        .criteria_progress
-                        .get(&criteria)
-                        .is_some_and(|counter| *counter >= 1)
+                    self.criterion_counter(criteria, state)
+                        .is_some_and(|counter| counter >= 1)
                 })
                 .count() as u64,
             TreeOperator::SumChildren => self.sum_counters(id, state, false),
@@ -235,11 +241,7 @@ impl AchievementCatalog {
 
     fn sum_counters(&self, id: u32, state: &PlayerAchievementState, weighted: bool) -> u64 {
         let tree = &self.trees[&id];
-        let counter = state
-            .criteria_progress
-            .get(&tree.criteria_id)
-            .copied()
-            .unwrap_or(0);
+        let counter = self.criterion_counter(tree.criteria_id, state).unwrap_or(0);
         let own = if weighted {
             counter.saturating_mul(tree.amount)
         } else {
@@ -255,16 +257,23 @@ impl AchievementCatalog {
     }
 
     fn max_counter(&self, id: u32, state: &PlayerAchievementState) -> u64 {
-        let own = state
-            .criteria_progress
-            .get(&self.trees[&id].criteria_id)
-            .copied()
+        let own = self
+            .criterion_counter(self.trees[&id].criteria_id, state)
             .unwrap_or(0);
         self.children
             .get(&id)
             .into_iter()
             .flatten()
             .fold(own, |max, child| max.max(self.max_counter(*child, state)))
+    }
+
+    fn criterion_counter(&self, id: u32, state: &PlayerAchievementState) -> Option<u64> {
+        if let Some(criteria) = self.criteria.get(&id)
+            && criteria.kind == 8
+        {
+            return state.earned_ids.contains(&criteria.asset).then_some(1);
+        }
+        state.criteria_progress.get(&id).copied()
     }
 
     fn supports_tree(&self, id: u32, visiting: &mut BTreeSet<u32>) -> bool {
@@ -323,7 +332,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             Criteria {
                 kind,
                 asset: row.get::<_, i32>(2)? as u32,
-                supported: matches!(kind, 0 | 5 | 165)
+                supported: matches!(kind, 0 | 5 | 8 | 27 | 165)
                     && conditional.iter().all(|value| *value == 0),
             },
         ))
