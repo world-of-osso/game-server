@@ -6,6 +6,17 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Nineteenth-batch counts, healing totals and owned damage
+
+- [x] Flurry44614 casts its native s1 count of228596/228354 bolts, not all four stored trigger slots. Optional Freezing/talent bridges remain uncertified.
+- [x] Mutilate1329 variable394 halves27576's damage and leaves5374 unchanged; no universal offhand multiplier is inferred.
+- [x] Dispersion47585 variable872 heals its native total over its native initial/regular ticks. Intangibility288733 adds s2 to that total; Altered Form453729's existing native duration modifier extends the healing clock. Equal tick distribution is derived from the total and unchanged native clock, not a new timer. Per-tick rounding remains normal engine rounding.
+- [x] Successful34914 dispel applies native87204 Horror to the dispeller, from the original aura owner. Expiry/cancellation never retaliate. Root aura4 Base2 remains unidentified.
+- [x] Havoc80240 copies s1 percent of effective direct single-target Warlock spell damage to the owned marked victim, without recursive copies or a second source modifier/critical roll. Destination immunity/absorption/mitigation still apply. Native single-target ownership excludes replaced marks but preserves foreign owners. Periodic/area/foreign-owner/expired marks do not copy. Range, specialized child selectors, destination mitigation parity and talent variants remain uncertified.
+- [x] Ardent Defender31850s2 restores native percent-max health on the next otherwise fatal attack and consumes the aura once. Spell/direct/redirect paths share health application; melee reserves its rescue before deferred removal, preventing two spends before command flush. Environmental damage remains separate. Ordinary melee outcome/live parity and unrelated aura316/118/137 semantics remain uncertified.
+
+Eight spell/rank entries, not eight new script bindings or whole-spec parity. Real store children, local Mainline12.1.0.69933 CSV/read-only world.db and TDB1210 registration evidence only. Tests: `spell_cast/dummy19_tests.rs`, `spell_cast/dummy19_boundary_tests.rs`. [Runtime](../wiki/systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [all40/source/proof](../spell-dummy19-coverage.md).
+
 ### Eighteenth-batch native leech and reapplication contracts
 
 - Health leech effect9 and periodic aura53 deal native SP/AP damage, then heal their caster using the native amplitude times effective damage. Immunity, absorption and overkill produce no copied healing; no second power/modifier/crit roll on the copy. Native tick phase and expiry remain authoritative.
