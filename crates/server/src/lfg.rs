@@ -129,6 +129,8 @@ fn process_lfg_queue_requests(
     time: Res<Time>,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut senders: Query<&mut MessageSender<LfgStateUpdate>>,
+    followers: Res<crate::followers::FollowerCatalog>,
+    mut commands: Commands,
 ) {
     process_player_lfg_requests(
         &mut receivers,
@@ -137,7 +139,27 @@ fn process_lfg_queue_requests(
         &connections,
         &mut senders,
         current_seconds(&time),
-        handle_queue_request,
+        |player, player_state, state, request, now| {
+            let follower_queue = request
+                .dungeon_ids
+                .iter()
+                .any(|id| followers.follower_ids.contains(id));
+            if !follower_queue {
+                return handle_queue_request(player, player_state, state, request, now);
+            }
+            if request.dungeon_ids.len() != 1 {
+                return SnapshotUpdate::error("select one follower dungeon");
+            }
+            if state.queue.is_queued(player.to_bits()) || player_state.role_check.is_some() {
+                return SnapshotUpdate::error("already queued or checking roles");
+            }
+            let dungeon = request.dungeon_ids[0];
+            let role = map_snapshot_role(request.role);
+            commands.queue(move |world: &mut World| {
+                crate::followers::queue_player(world, player, role, dungeon)
+            });
+            SnapshotUpdate::message("follower dungeon requested")
+        },
     );
 }
 
@@ -450,7 +472,7 @@ fn queue_error_message(error: shared::dungeon_finder::QueueError) -> String {
     }
 }
 
-fn map_group_role(role: GroupRole) -> GroupRoleSnapshot {
+pub(crate) fn map_group_role(role: GroupRole) -> GroupRoleSnapshot {
     match role {
         GroupRole::Tank => GroupRoleSnapshot::Tank,
         GroupRole::Healer => GroupRoleSnapshot::Healer,

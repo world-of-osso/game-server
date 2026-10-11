@@ -852,9 +852,57 @@ impl GroupRegistry {
         effects
     }
 
-    /// Records who is online. Resends rosters when a member logs in, out or relogs, and
-    /// disbands groups with no online member.
-    pub fn sync_presence(&mut self, online: &OnlineView) -> Effects {
+    /// Atomically form a solo player's runtime companion group, without human invites.
+    pub(crate) fn create_companion_party(
+        &mut self,
+        leader: CharacterId,
+        role: GroupRole,
+        companions: &[(CharacterId, GroupRole)],
+        online: &OnlineView,
+    ) -> Result<GroupId, String> {
+        if companions.len() != MAX_PARTY_SIZE - 1 || self.group_id_of(leader).is_some() {
+            return Err("companion party requires a solo player and four followers".into());
+        }
+        let ids: std::collections::HashSet<_> = companions.iter().map(|&(id, _)| id).collect();
+        if ids.len() != companions.len() || ids.contains(&leader) {
+            return Err("duplicate companion party identity".into());
+        }
+        for (required, count) in [
+            (GroupRole::Tank, 1),
+            (GroupRole::Healer, 1),
+            (GroupRole::Dps, 3),
+        ] {
+            let assigned = companions
+                .iter()
+                .filter(|(_, role)| *role == required)
+                .count()
+                + usize::from(role == required);
+            if assigned != count {
+                return Err("invalid follower party composition".into());
+            }
+        }
+        if std::iter::once(&leader)
+            .chain(ids.iter())
+            .any(|id| !online.contains_key(id) || self.membership.contains_key(id))
+        {
+            return Err("companion party member unavailable".into());
+        }
+        self.remember_profiles(online);
+        let group_id = self.create_group(leader);
+        let group = self
+            .groups
+            .get_mut(&group_id)
+            .expect("created companion group");
+        group.roles.assign(leader, role);
+        for &(id, role) in companions {
+            group.add(id).expect("validated party capacity");
+            group.roles.assign(id, role);
+            self.membership.insert(id, group_id);
+        }
+        Ok(group_id)
+    }
+
+    fn remember_profiles(&mut self, online: &OnlineView) {
         for (&id, member) in online {
             self.profiles.insert(
                 id,
@@ -868,6 +916,12 @@ impl GroupRegistry {
                 },
             );
         }
+    }
+
+    /// Records who is online. Resends rosters when a member logs in, out or relogs, and
+    /// disbands groups with no online member.
+    pub fn sync_presence(&mut self, online: &OnlineView) -> Effects {
+        self.remember_profiles(online);
         self.solo_target_icons
             .retain(|id, _| online.contains_key(id));
         let mut effects = Vec::new();
