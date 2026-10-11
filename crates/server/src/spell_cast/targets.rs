@@ -52,8 +52,10 @@ enum Selector {
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
-    ///91: destination moved in a random direction by this slot's native radius.
-    DestRadius,
+    ///72: random direction at this slot's radius around the caster.
+    CasterRandom,
+    ///86/91: destination moved in a random direction by this slot's native radius.
+    DestRandom,
     /// Destination moved backward by this target slot's DB2 radius (79).
     DestBack,
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
@@ -102,7 +104,8 @@ fn selector(id: u32) -> Option<Selector> {
         18 | 22 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
         79 => Selector::DestBack,
-        91 => Selector::DestRadius,
+        72 => Selector::CasterRandom,
+        86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
@@ -354,7 +357,10 @@ pub fn select_targets(
             Selector::DestTargetBack => {
                 center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
             }
-            Selector::DestRadius => {
+            Selector::CasterRandom => {
+                center = Some(random_destination(caster_pos, radius(effect, slot)));
+            }
+            Selector::DestRandom => {
                 let origin = center.unwrap_or(caster_pos);
                 center = Some(random_destination(origin, radius(effect, slot)));
             }
@@ -741,7 +747,7 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
 }
 
 ///TC a352b1fa SpellInfo.cpp:128/339 and Spell.cpp:1690-1736:
-///target91 uses TARGET_DIR_RANDOM and this slot's authored CalcRadius.
+///targets72/86/91 use TARGET_DIR_RANDOM and this slot's authored CalcRadius.
 fn random_destination(point: Vec3, distance: f32) -> Vec3 {
     let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
@@ -785,7 +791,10 @@ pub fn effect_dest(
             Selector::ExistingDest => dest
                 .map(|dest: Dest| dest.position)
                 .or_else(|| position(world, caster)),
-            Selector::DestRadius => {
+            Selector::CasterRandom => {
+                position(world, caster).map(|point| random_destination(point, radius(effect, slot)))
+            }
+            Selector::DestRandom => {
                 dest.map(|dest: Dest| random_destination(dest.position, radius(effect, slot)))
             }
             Selector::DestBack => dest.map(|dest: Dest| {
