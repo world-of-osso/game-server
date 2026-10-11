@@ -348,7 +348,8 @@ fn update(world: &mut World) {
         send_map(world, map);
     }
 }
-fn persist_summary(world: &World, summary: &ChallengeRun) {
+fn persist_summary(world: &mut World, summary: &ChallengeRun) {
+    let completed = completion_record(world, summary);
     let db = &world.resource::<GameDatabase>().db;
     let txn = db.begin_write().expect("begin challenge settlement");
     let mut history = txn.open_table(HISTORY).expect("open run history");
@@ -373,7 +374,56 @@ fn persist_summary(world: &World, summary: &ChallengeRun) {
         .insert(summary.run_id, bitcode::encode(summary).as_slice())
         .expect("persist summary");
     drop(history);
+    if let Some(completed) = completed {
+        txn.open_table(::server::mythic_plus_history::COMPLETED_RUNS)
+            .expect("open attributable completion history")
+            .insert(
+                summary.run_id,
+                serde_json::to_vec(&completed)
+                    .expect("encode completion")
+                    .as_slice(),
+            )
+            .expect("persist attributable completion");
+    }
     txn.commit().expect("commit challenge settlement");
+}
+fn completion_record(
+    world: &mut World,
+    summary: &ChallengeRun,
+) -> Option<::server::mythic_plus_history::CompletedRun> {
+    use ::server::mythic_plus_history::{CompletedRun, Participant};
+    use shared::components::{ActiveSpec, Player};
+    let connections: Vec<_> = world
+        .query::<(&InWorld, &PlayerLink)>()
+        .iter(world)
+        .map(|(session, link)| (session.character_id, link.0))
+        .collect();
+    let party = connections
+        .into_iter()
+        .filter_map(|(character_id, player)| {
+            let map = world.get::<InMap>(player)?;
+            if map.map_id != summary.map_id || map.instance_id != summary.instance_id {
+                return None;
+            }
+            let identity = world
+                .get::<Player>(player)
+                .expect("in-world player identity");
+            Some(Participant {
+                character_id: character_id.to_string(),
+                name: identity.name.clone(),
+                class_id: identity.class,
+                spec_id: world
+                    .get::<ActiveSpec>(player)
+                    .map(|spec| spec.0)
+                    .filter(|id| *id != 0),
+            })
+        })
+        .collect();
+    CompletedRun::from_completed(
+        summary,
+        party,
+        world.resource::<crate::maps::ServerClock>().unix(),
+    )
 }
 fn send_map(world: &mut World, map: InMap) {
     let connections: Vec<_> = world
@@ -562,6 +612,10 @@ mod tests {
             8
         );
         assert!(start(h.app.world_mut(), connection).is_err());
+        h.app
+            .world_mut()
+            .entity_mut(player)
+            .insert(shared::components::ActiveSpec(71));
         let now = now_ms(h.app.world());
         let summary = {
             let mut state = h.app.world_mut().resource_mut::<Challenges>();
@@ -576,8 +630,8 @@ mod tests {
             active.run.snapshot.clone()
         };
         assert_eq!(summary.phase, ChallengePhase::Completed);
-        persist_summary(h.app.world(), &summary);
-        persist_summary(h.app.world(), &summary);
+        persist_summary(h.app.world_mut(), &summary);
+        persist_summary(h.app.world_mut(), &summary);
         assert_eq!(owned_keys(h.db(), owner)[0].level, 11);
         {
             let txn = h.db().begin_read().unwrap();
@@ -587,6 +641,24 @@ mod tests {
                 bitcode::decode::<ChallengeRun>(row.value()).unwrap(),
                 summary
             );
+        }
+        {
+            let txn = h.db().begin_read().unwrap();
+            let table = txn
+                .open_table(TableDefinition::<u64, &[u8]>::new(
+                    "mythic_completed_runs_v1",
+                ))
+                .unwrap();
+            let row = table.get(summary.run_id).unwrap().unwrap();
+            let record: serde_json::Value = serde_json::from_slice(row.value()).unwrap();
+            assert_eq!(record["party"][0]["character_id"], owner.to_string());
+            assert_eq!(record["party"][0]["spec_id"], 71);
+            assert_eq!(record["party"].as_array().unwrap().len(), 1);
+            assert_eq!(record["completed_at"], 1791705600_i64);
+            assert_eq!(record["level"], 8);
+            assert_eq!(record["timer_ms"], 2250000);
+            assert_eq!(record["in_time"], true);
+            assert!(record["season_id"].is_null());
         }
         drop(h);
         let reopened = redb::Database::open(file.path()).unwrap();
