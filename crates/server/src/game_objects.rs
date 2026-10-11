@@ -204,8 +204,9 @@ pub(crate) fn spawn_map_game_objects(
     map: crate::maps::InMap,
     difficulty_id: u32,
 ) -> usize {
+    let population = crate::followers::population_difficulty(difficulty_id);
     let spawns = spawns.0.iter().filter(|spawn| {
-        spawn.map_id == map.map_id && spawn.spawn_difficulties.contains(&difficulty_id)
+        spawn.map_id == map.map_id && spawn.spawn_difficulties.contains(&population)
     });
     let mut count = 0;
     for spawn in spawns {

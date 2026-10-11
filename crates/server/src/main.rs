@@ -38,6 +38,7 @@ mod equipment_admin_types;
 mod experience;
 mod faction;
 mod faction_reaction;
+mod followers;
 mod frame_stats;
 mod friends;
 mod game_objects;
@@ -189,6 +190,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)
+        .add_plugins(followers::FollowerPlugin)
         .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(trade::TradePlugin)
