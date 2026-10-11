@@ -12,6 +12,10 @@ use shared::protocol::{
 
 use super::PlayerAchievementState;
 
+// Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
+// 0x00010000 is SHOW_CRITERIA_MEMBERS, not account scope.
+const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
@@ -91,6 +95,7 @@ struct AchievementDef {
     points: u32,
     root: u32,
     map_id: Option<u32>,
+    faction: i32,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -101,6 +106,7 @@ pub(crate) struct AchievementCatalog {
     pub trees: HashMap<u32, CriteriaTree>,
     pub children: HashMap<u32, Vec<u32>>,
     event_criteria: HashMap<u32, Vec<u32>>,
+    faction_groups: HashMap<u32, u32>,
 }
 
 #[derive(Debug, Default)]
@@ -118,6 +124,7 @@ impl AchievementCatalog {
         state: &mut PlayerAchievementState,
         event: CriteriaEvent,
         completed_map: Option<u32>,
+        race: u8,
     ) -> Vec<AchievementToastSnapshot> {
         for &id in self.event_criteria.get(&event.kind()).into_iter().flatten() {
             if !event.matches(&self.criteria[&id]) {
@@ -130,27 +137,18 @@ impl AchievementCatalog {
                 _ => counter.saturating_add(1),
             };
         }
-        self.grant_completed(state, completed_map)
+        self.grant_completed(state, completed_map, race)
     }
 
     fn grant_completed(
         &self,
         state: &mut PlayerAchievementState,
         completed_map: Option<u32>,
+        race: u8,
     ) -> Vec<AchievementToastSnapshot> {
         let mut toasts = Vec::new();
         loop {
-            let completed: Vec<_> = self
-                .definitions
-                .values()
-                .filter(|definition| {
-                    let map_eligible =
-                        definition.map_id.is_none() || definition.map_id == completed_map;
-                    map_eligible
-                        && !state.earned_ids.contains(&definition.id)
-                        && self.tree_progress(definition.root, state).completed
-                })
-                .collect();
+            let completed = self.find_completed_definitions(state, completed_map, race);
             if completed.is_empty() {
                 return toasts;
             }
@@ -165,10 +163,51 @@ impl AchievementCatalog {
         }
     }
 
-    pub fn snapshot(&self, state: &PlayerAchievementState) -> AchievementSnapshot {
-        let progress = self
-            .definitions
+    fn find_completed_definitions(
+        &self,
+        state: &PlayerAchievementState,
+        completed_map: Option<u32>,
+        race: u8,
+    ) -> Vec<&AchievementDef> {
+        self.definitions
             .values()
+            .filter(|definition| {
+                if state.earned_ids.contains(&definition.id) {
+                    return false;
+                }
+                if !self.faction_matches(definition.faction, race) {
+                    return false;
+                }
+                if let Some(map) = definition.map_id
+                    && completed_map != Some(map)
+                {
+                    return false;
+                }
+                self.tree_progress(definition.root, state).completed
+            })
+            .collect()
+    }
+
+    pub fn snapshot(&self, state: &PlayerAchievementState, race: u8) -> AchievementSnapshot {
+        AchievementSnapshot {
+            earned_ids: state
+                .earned_ids
+                .iter()
+                .filter(|id| !self.window.has_account_flag(**id))
+                .copied()
+                .collect(),
+            progress: self.progress_snapshot(state, race),
+        }
+    }
+
+    fn progress_snapshot(
+        &self,
+        state: &PlayerAchievementState,
+        race: u8,
+    ) -> Vec<AchievementProgressSnapshot> {
+        self.definitions
+            .values()
+            .filter(|definition| self.faction_matches(definition.faction, race))
             .map(|definition| {
                 let progress = self.tree_progress(definition.root, state);
                 AchievementProgressSnapshot {
@@ -178,11 +217,7 @@ impl AchievementCatalog {
                     completed: state.earned_ids.contains(&definition.id),
                 }
             })
-            .collect();
-        AchievementSnapshot {
-            earned_ids: state.earned_ids.iter().copied().collect(),
-            progress,
-        }
+            .collect()
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
@@ -267,6 +302,21 @@ impl AchievementCatalog {
             .fold(own, |max, child| max.max(self.max_counter(*child, state)))
     }
 
+    fn faction_matches(&self, required: i32, race: u8) -> bool {
+        if required == -1 {
+            return true;
+        }
+        let template = crate::faction::faction_template_for_race(race);
+        // FactionTemplate group bits: Alliance=2, Horde=4; player bit=1.
+        // Achievement.Faction uses Horde=0, Alliance=1, Any=-1 instead.
+        let faction = match self.faction_groups.get(&template).map(|group| group & 6) {
+            Some(2) => Some(1),
+            Some(4) => Some(0),
+            _ => None,
+        };
+        faction == Some(required)
+    }
+
     fn criterion_counter(&self, id: u32, state: &PlayerAchievementState) -> Option<u64> {
         if let Some(criteria) = self.criteria.get(&id)
             && criteria.kind == 8
@@ -307,6 +357,10 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
     load_criteria(conn, &mut catalog)?;
     load_trees(conn, &mut catalog)?;
     load_definitions(conn, &mut catalog)?;
+    let mut query = conn.prepare("SELECT ID, FactionGroup FROM faction_template")?;
+    catalog.faction_groups = query
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
     catalog.window = window::load_window_data(conn)?;
     for (&id, criteria) in &catalog.criteria {
         if criteria.supported {
@@ -365,10 +419,9 @@ fn load_trees(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::
 }
 
 fn load_definitions(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    // Faction-specific, account-wide and counter/statistic achievements require
-    // eligibility/account tracking outside phase 1. Do not grant them as character achievements.
-    const ACCOUNT_OR_COUNTER: u32 = 0x1 | 0x10000;
-    let mut query = conn.prepare("SELECT ID, Title_lang, Points, CriteriaTree, Instance_ID FROM achievement WHERE CriteriaTree != 0 AND Faction = -1 AND (Flags & ?1) = 0")?;
+    // Account-wide and statistic achievements still require separate tracking.
+    const ACCOUNT_OR_COUNTER: u32 = 0x1 | ACHIEVEMENT_FLAG_ACCOUNT;
+    let mut query = conn.prepare("SELECT ID, Title_lang, Points, CriteriaTree, Instance_ID, Faction FROM achievement WHERE CriteriaTree != 0 AND (Flags & ?1) = 0")?;
     let rows = query.query_map([ACCOUNT_OR_COUNTER], |row| {
         let map_id: i32 = row.get(4)?;
         Ok(AchievementDef {
@@ -377,6 +430,7 @@ fn load_definitions(conn: &Connection, catalog: &mut AchievementCatalog) -> rusq
             points: row.get(2)?,
             root: row.get(3)?,
             map_id: (map_id >= 0).then_some(map_id as u32),
+            faction: row.get(5)?,
         })
     })?;
     for row in rows {

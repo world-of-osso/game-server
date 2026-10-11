@@ -78,41 +78,43 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
     .expect("authentic quest data required");
     let client = spawn_client(&mut app, 80);
     app.world_mut()
+        .get_mut::<Player>(client.player)
+        .unwrap()
+        .class = 9;
+    app.world_mut()
         .entity_mut(client.player)
         .insert(PlayerAchievementState::default());
     add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
     enter_world(&mut app, &client);
     received::<AchievementStateUpdate>(&mut app, &client);
-    // Authored negative prerequisite group: every preceding D.E.H.T.A. quest.
-    for quest_id in [11866, 11868, 11872, 11879, 11884] {
-        mark_rewarded(&app, &client, quest_id);
-    }
-    let giver = spawn_npc(&mut app, 25809, 0.0);
-    accept(&mut app, &client, giver, 11892);
+    // Authored Warlock prerequisite and separate giver/ender for Dreadsteed of Xoroth.
+    mark_rewarded(&app, &client, 7629);
+    let giver = spawn_npc(&mut app, 14436, 0.0);
+    let ender = spawn_npc(&mut app, 14504, 0.0);
+    accept(&mut app, &client, giver, 7631);
     let errors = received::<QuestFailed>(&mut app, &client);
     assert!(errors.is_empty(), "quest acceptance failed: {errors:?}");
-    // Incomplete and rejected rewards must not credit achievements.
-    turn_in(&mut app, &client, giver, 11892, None);
+    // Accepted/completed objectives are not a reward; a wrong ender is rejected.
     assert!(
         !app.world()
             .get::<PlayerAchievementState>(client.player)
             .unwrap()
             .earned_ids
-            .contains(&561)
+            .contains(&2357)
     );
-    received::<QuestFailed>(&mut app, &client);
-    kill(&mut app, &client, 25804, 1);
+    turn_in(&mut app, &client, giver, 7631, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
     assert!(
         !app.world()
             .get::<PlayerAchievementState>(client.player)
             .unwrap()
             .earned_ids
-            .contains(&561)
+            .contains(&2357)
     );
-    turn_in(&mut app, &client, giver, 11892, Some(0));
+    turn_in(&mut app, &client, ender, 7631, None);
     let errors = received::<QuestFailed>(&mut app, &client);
     assert!(errors.is_empty(), "quest reward failed: {errors:?}");
-    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(11892));
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(7631));
     let updates = received::<AchievementStateUpdate>(&mut app, &client);
     assert_eq!(
         updates
@@ -120,14 +122,14 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
             .filter(|update| update
                 .completed
                 .as_ref()
-                .is_some_and(|toast| toast.achievement_id == 561))
+                .is_some_and(|toast| toast.achievement_id == 2357))
             .count(),
         1
     );
     let saved = persistence::load_achievements(db(&app), client.character_id);
-    assert!(saved.earned_ids.contains(&561));
-    assert_eq!(saved.criteria_progress[&347], 1);
-    assert!(saved.earned_at.contains_key(&561));
+    assert!(saved.earned_ids.contains(&2357));
+    assert_eq!(saved.criteria_progress[&8905], 1);
+    assert!(saved.earned_at.contains_key(&2357));
     app.world_mut()
         .entity_mut(client.connection)
         .remove::<InWorld>();
