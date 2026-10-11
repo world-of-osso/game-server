@@ -99,7 +99,13 @@ fn exclusive_group_ok(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -
     db.exclusive_groups[&quest.exclusive_group]
         .iter()
         .filter(|&&id| id != quest.id)
-        .all(|&id| log.active(id).is_none() && !log.is_rewarded(id))
+        .all(|&id| {
+            log.active(id).is_none()
+                && db
+                    .quests
+                    .get(&id)
+                    .is_none_or(|other| !reward_locked(db, log, other))
+        })
 }
 
 /// Every quest of a negative ("all of") exclusive group other than `quest_id`
@@ -144,6 +150,23 @@ fn chain_ok(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
     !next_taken && !prev_active
 }
 
+fn reward_locked(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
+    if !log.is_rewarded(quest.id) || quest.is_repeatable() {
+        return false;
+    }
+    let interval = match quest.repeatability() {
+        shared::protocol::QuestRepeatability::Normal => return true,
+        shared::protocol::QuestRepeatability::Daily => crate::maps::store::ResetInterval::Daily,
+        shared::protocol::QuestRepeatability::Weekly => crate::maps::store::ResetInterval::Weekly,
+    };
+    let now = db
+        .now
+        .unwrap_or_else(crate::persistence::quest_store::unix_now);
+    log.completed_at
+        .get(&quest.id)
+        .is_some_and(|&completed| now < crate::maps::locks::next_reset_time(interval, completed))
+}
+
 /// Everything `CanTakeQuest` checks except level.
 fn requirements(
     db: &QuestDb,
@@ -154,7 +177,7 @@ fn requirements(
     if log.active(quest.id).is_some() {
         return Err(QuestFailedReason::AlreadyOn);
     }
-    if log.is_rewarded(quest.id) && !quest.is_repeatable() {
+    if reward_locked(db, log, quest) {
         return Err(QuestFailedReason::AlreadyDone);
     }
     if !mask_allows(quest.allowable_classes, player.class) {
@@ -192,6 +215,14 @@ pub(crate) fn can_take(
 ) -> Result<(), QuestFailedReason> {
     requirements(db, log, player, quest)?;
     level_ok(player, quest)?;
+    if quest.time_allowed != 0
+        && log
+            .active
+            .iter()
+            .any(|q| q.expires_at.is_some() && !q.failed)
+    {
+        return Err(QuestFailedReason::OnlyOneTimedQuest);
+    }
     if log.active.len() >= MAX_QUEST_LOG_SIZE {
         return Err(QuestFailedReason::QuestLogFull);
     }
@@ -351,7 +382,13 @@ pub(crate) fn is_complete_in_log(
     let (Some(quest), Some(active)) = (db.quests.get(&quest_id), log.active(quest_id)) else {
         return false;
     };
-    objectives_done(quest, &objective_counts(quest, active, bag_count))
+    !active.failed
+        && active.expires_at.is_none_or(|end| {
+            end > db
+                .now
+                .unwrap_or_else(crate::persistence::quest_store::unix_now)
+        })
+        && objectives_done(quest, &objective_counts(quest, active, bag_count))
 }
 
 /// How a starter quest appears to this player, if at all

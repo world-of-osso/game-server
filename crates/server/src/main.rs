@@ -85,6 +85,7 @@ mod pvp;
 mod quest;
 mod quest_data;
 mod quest_rules;
+mod quest_time;
 mod quest_view;
 mod race_class;
 mod reputation;

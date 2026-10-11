@@ -6,10 +6,11 @@ use lightyear::prelude::*;
 use redb::Database;
 use shared::components::{Level, Npc, Player, Position};
 use shared::protocol::{
-    AbandonQuest, QuestChannel, QuestFailed, QuestFailedReason, QuestGiverAcceptQuest,
-    QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello, QuestGiverOfferReward,
-    QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails, QuestGiverQuestList,
-    QuestGiverRequestItems, QuestGiverStatusMultiple, QuestGiverStatusQuery, QuestRewardItem,
+    AbandonQuest, PushQuestToParty, QuestChannel, QuestFailed, QuestFailedReason,
+    QuestGiverAcceptQuest, QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello,
+    QuestGiverOfferReward, QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails,
+    QuestGiverQuestList, QuestGiverRequestItems, QuestGiverStatusMultiple, QuestGiverStatusQuery,
+    QuestPushReason, QuestPushResponse, QuestPushResult, QuestRewardItem, QuestShareOffer,
     SetQuestWatched,
 };
 
@@ -51,6 +52,8 @@ pub(super) struct QuestReceivers<'w, 's> {
     choose: Receivers<'w, 's, QuestGiverChooseReward>,
     abandon: Receivers<'w, 's, AbandonQuest>,
     watch: Receivers<'w, 's, SetQuestWatched>,
+    push: Receivers<'w, 's, PushQuestToParty>,
+    push_response: Receivers<'w, 's, QuestPushResponse>,
 }
 
 enum QuestRequest {
@@ -62,6 +65,8 @@ enum QuestRequest {
     Choose(QuestGiverChooseReward),
     Abandon(AbandonQuest),
     Watch(SetQuestWatched),
+    Push(PushQuestToParty),
+    PushResponse(QuestPushResponse),
 }
 
 fn drain<M: Message>(
@@ -89,6 +94,12 @@ impl QuestReceivers<'_, '_> {
         drain(&mut self.choose, QuestRequest::Choose, &mut out);
         drain(&mut self.abandon, QuestRequest::Abandon, &mut out);
         drain(&mut self.watch, QuestRequest::Watch, &mut out);
+        drain(&mut self.push, QuestRequest::Push, &mut out);
+        drain(
+            &mut self.push_response,
+            QuestRequest::PushResponse,
+            &mut out,
+        );
         out
     }
 }
@@ -102,6 +113,8 @@ pub(super) struct QuestSenders<'w, 's> {
     offer_reward: Senders<'w, 's, QuestGiverOfferReward>,
     completed: Senders<'w, 's, QuestGiverQuestComplete>,
     failed: Senders<'w, 's, QuestFailed>,
+    share_offers: Senders<'w, 's, QuestShareOffer>,
+    push_results: Senders<'w, 's, QuestPushResult>,
 }
 
 fn send<M: Message>(senders: &mut Senders<M>, connection: Entity, message: M) {
@@ -113,10 +126,11 @@ fn send<M: Message>(senders: &mut Senders<M>, connection: Entity, message: M) {
 /// Live state requests read: who is asking and the NPCs around them.
 #[derive(SystemParam)]
 pub(super) struct QuestUnits<'w, 's> {
-    connections: Query<'w, 's, (&'static InWorld, &'static PlayerLink)>,
+    connections: Query<'w, 's, (Entity, &'static InWorld, &'static PlayerLink)>,
     queried: Query<'w, 's, &'static mut QueriedQuestGivers>,
     players: Query<'w, 's, (&'static Player, &'static Level, &'static Position)>,
     npcs: Query<'w, 's, (&'static Npc, &'static Position, Has<DeathState>)>,
+    lives: Query<'w, 's, &'static crate::death::PlayerDeathState>,
 }
 
 /// Bag and gold side effects: inventory deltas and gold replication.
@@ -135,6 +149,19 @@ pub(super) struct QuestIo<'w, 's> {
     units: QuestUnits<'w, 's>,
     senders: QuestSenders<'w, 's>,
     effects: QuestSideEffects<'w>,
+    groups: Option<Res<'w, crate::group::GroupRegistry>>,
+    shares: ResMut<'w, PendingShares>,
+}
+
+#[derive(Resource, Default)]
+pub(super) struct PendingShares {
+    next_id: u64,
+    offers: std::collections::HashMap<u64, SharedOffer>,
+}
+struct SharedOffer {
+    id: u64,
+    sender: u64,
+    quest: u32,
 }
 
 struct Requester {
@@ -142,6 +169,22 @@ struct Requester {
     character_id: u64,
     player: QuestPlayer,
     position: Position,
+    name: String,
+}
+
+fn push_reason(reason: QuestFailedReason) -> QuestPushReason {
+    match reason {
+        QuestFailedReason::AlreadyOn => QuestPushReason::OnQuest,
+        QuestFailedReason::AlreadyDone => QuestPushReason::AlreadyDone,
+        QuestFailedReason::QuestLogFull => QuestPushReason::LogFull,
+        QuestFailedReason::LowLevel => QuestPushReason::LowLevel,
+        QuestFailedReason::HighLevel => QuestPushReason::HighLevel,
+        QuestFailedReason::WrongClass => QuestPushReason::Class,
+        QuestFailedReason::WrongRace => QuestPushReason::Race,
+        QuestFailedReason::DontHaveRequirement => QuestPushReason::Prerequisite,
+        QuestFailedReason::TimedOut => QuestPushReason::TimerExpired,
+        _ => QuestPushReason::Invalid,
+    }
 }
 
 fn failed(quest_id: u32, reason: QuestFailedReason) -> QuestFailed {
@@ -184,13 +227,14 @@ pub(super) fn process_quest_requests(
 }
 
 fn resolve_requester(units: &QuestUnits, connection: Entity) -> Option<Requester> {
-    let (in_world, link) = units.connections.get(connection).ok()?;
+    let (_, in_world, link) = units.connections.get(connection).ok()?;
     let (player, level, position) = units.players.get(link.0).ok()?;
     Some(Requester {
         connection,
         character_id: in_world.character_id,
         player: quest_player(player, level),
         position: *position,
+        name: player.name.clone(),
     })
 }
 
@@ -210,7 +254,281 @@ impl<'a> QuestSession<'a, '_, '_> {
             }
             QuestRequest::Abandon(abandon) => self.abandon(abandon.quest_id),
             QuestRequest::Watch(watch) => self.watch(watch.quest_id, watch.watched),
+            QuestRequest::Push(push) => {
+                self.push(push.quest_id);
+                Ok(())
+            }
+            QuestRequest::PushResponse(response) => {
+                self.respond_share(response);
+                Ok(())
+            }
         }
+    }
+
+    fn push_result(
+        &mut self,
+        connection: Entity,
+        quest_id: u32,
+        player_name: String,
+        reason: QuestPushReason,
+    ) {
+        send(
+            &mut self.io.senders.push_results,
+            connection,
+            QuestPushResult {
+                quest_id,
+                quest_title: self
+                    .quests
+                    .quests
+                    .get(&quest_id)
+                    .map_or_else(String::new, |q| q.title.clone()),
+                recipient: false,
+                player_name,
+                reason,
+            },
+        );
+    }
+
+    fn recipient_result(
+        &mut self,
+        connection: Entity,
+        quest_id: u32,
+        sender_name: String,
+        reason: QuestPushReason,
+    ) {
+        send(
+            &mut self.io.senders.push_results,
+            connection,
+            QuestPushResult {
+                quest_id,
+                quest_title: self.quests.quests[&quest_id].title.clone(),
+                recipient: true,
+                player_name: sender_name,
+                reason,
+            },
+        );
+    }
+
+    fn same_party(&self, sender: u64, recipient: u64) -> bool {
+        self.io
+            .groups
+            .as_deref()
+            .is_some_and(|g| g.group_members(sender).contains(&recipient))
+    }
+
+    fn share_eligibility(&self, target: &Requester, quest_id: u32) -> Result<(), QuestPushReason> {
+        let (_, _, link) = self
+            .io
+            .units
+            .connections
+            .get(target.connection)
+            .map_err(|_| QuestPushReason::Invalid)?;
+        if self
+            .io
+            .units
+            .lives
+            .get(link.0)
+            .is_ok_and(|life| life.state != shared::death::DeathState::Alive)
+        {
+            return Err(QuestPushReason::Dead);
+        }
+        let quest = self
+            .quests
+            .quests
+            .get(&quest_id)
+            .ok_or(QuestPushReason::Invalid)?;
+        can_take(
+            self.quests,
+            &load_quest_log(self.db, target.character_id),
+            target.player,
+            quest,
+        )
+        .map_err(push_reason)
+    }
+
+    fn push(&mut self, quest_id: u32) {
+        let allowed = self
+            .quests
+            .quests
+            .get(&quest_id)
+            .is_some_and(|q| q.flags & 0x8 != 0)
+            && load_quest_log(self.db, self.character())
+                .active(quest_id)
+                .is_some_and(|q| !q.failed);
+        if !allowed {
+            self.push_result(
+                self.requester.connection,
+                quest_id,
+                String::new(),
+                QuestPushReason::NotAllowed,
+            );
+            return;
+        }
+        let members = self
+            .io
+            .groups
+            .as_deref()
+            .map_or_else(Vec::new, |g| g.group_members(self.character()));
+        if members.is_empty() {
+            self.push_result(
+                self.requester.connection,
+                quest_id,
+                String::new(),
+                QuestPushReason::NotInParty,
+            );
+            return;
+        }
+        let online: std::collections::HashSet<_> = self
+            .io
+            .units
+            .connections
+            .iter()
+            .map(|(_, c, _)| c.character_id)
+            .collect();
+        self.io
+            .shares
+            .offers
+            .retain(|to, offer| online.contains(to) && online.contains(&offer.sender));
+        for character in members
+            .into_iter()
+            .filter(|&id| id != self.character())
+            .collect::<Vec<_>>()
+        {
+            let Some(connection) = self.connection_for(character) else {
+                continue;
+            };
+            let Some(target) = resolve_requester(&self.io.units, connection) else {
+                continue;
+            };
+            let result = if crate::faction::faction_group_for_race(target.player.race)
+                != crate::faction::faction_group_for_race(self.requester.player.race)
+            {
+                Err(QuestPushReason::CrossFactionRestricted)
+            } else if self.io.shares.offers.contains_key(&character) {
+                Err(QuestPushReason::Busy)
+            } else {
+                self.share_eligibility(&target, quest_id)
+            };
+            let reason = match result {
+                Ok(()) => QuestPushReason::Success,
+                Err(reason) => reason,
+            };
+            self.push_result(
+                self.requester.connection,
+                quest_id,
+                target.name.clone(),
+                reason,
+            );
+            if reason != QuestPushReason::Success {
+                if reason != QuestPushReason::Busy
+                    && reason != QuestPushReason::CrossFactionRestricted
+                {
+                    self.recipient_result(
+                        connection,
+                        quest_id,
+                        self.requester.name.clone(),
+                        reason,
+                    );
+                }
+                continue;
+            }
+            self.io.shares.next_id += 1;
+            let id = self.io.shares.next_id;
+            let sender = self.character();
+            self.io.shares.offers.insert(
+                character,
+                SharedOffer {
+                    id,
+                    sender,
+                    quest: quest_id,
+                },
+            );
+            send(
+                &mut self.io.senders.share_offers,
+                connection,
+                QuestShareOffer {
+                    offer_id: id,
+                    sender_name: self.requester.name.clone(),
+                    quest_id,
+                    title: self.quests.quests[&quest_id].title.clone(),
+                },
+            );
+        }
+    }
+
+    fn respond_share(&mut self, response: QuestPushResponse) {
+        let character = self.character();
+        if !self
+            .io
+            .shares
+            .offers
+            .get(&character)
+            .is_some_and(|o| o.id == response.offer_id)
+        {
+            return;
+        }
+        let offer = self
+            .io
+            .shares
+            .offers
+            .remove(&character)
+            .expect("matched offer");
+        let Some(sender_connection) = self.connection_for(offer.sender) else {
+            return;
+        };
+        let sender_log = load_quest_log(self.db, offer.sender);
+        let active = sender_log.active(offer.quest);
+        let still_allowed = self.same_party(offer.sender, character)
+            && active.is_some_and(|q| !q.failed)
+            && self
+                .quests
+                .quests
+                .get(&offer.quest)
+                .is_some_and(|q| q.flags & 0x8 != 0);
+        let reason = if !still_allowed {
+            QuestPushReason::NotAllowed
+        } else if !response.accepted {
+            QuestPushReason::Declined
+        } else if let Err(reason) = self.share_eligibility(&self.requester, offer.quest) {
+            reason
+        } else {
+            let deadline = active.and_then(|q| q.expires_at);
+            if deadline.is_some_and(|end| {
+                end <= self
+                    .quests
+                    .now
+                    .unwrap_or_else(crate::persistence::quest_store::unix_now)
+            }) {
+                QuestPushReason::TimerExpired
+            } else {
+                let (mut log, mut inventory) = self.load();
+                match self.accept_log(offer.quest, &mut log, &mut inventory, deadline) {
+                    Ok(()) => QuestPushReason::Accepted,
+                    Err(error) => push_reason(error.reason),
+                }
+            }
+        };
+        self.push_result(
+            sender_connection,
+            offer.quest,
+            self.requester.name.clone(),
+            reason,
+        );
+        if response.accepted && reason != QuestPushReason::Accepted {
+            if let Some(sender) = resolve_requester(&self.io.units, sender_connection) {
+                self.recipient_result(self.requester.connection, offer.quest, sender.name, reason);
+            }
+        }
+    }
+
+    fn connection_for(&self, character: u64) -> Option<Entity> {
+        self.io
+            .units
+            .connections
+            .iter()
+            .find_map(|(connection, owner, _)| {
+                (owner.character_id == character).then_some(connection)
+            })
     }
 
     fn character(&self) -> u64 {
@@ -344,24 +662,39 @@ impl<'a> QuestSession<'a, '_, '_> {
     fn accept(&mut self, npc: u64, quest_id: u32) -> QuestResult {
         let (mut log, mut inventory) = self.load();
         self.offerable(npc, quest_id, &log)?;
+        self.accept_log(quest_id, &mut log, &mut inventory, None)
+    }
+
+    fn accept_log(
+        &mut self,
+        quest_id: u32,
+        log: &mut QuestLogData,
+        inventory: &mut InventoryData,
+        shared_deadline: Option<i64>,
+    ) -> QuestResult {
         let quest = self.quest(quest_id)?;
+        can_take(self.quests, log, self.requester.player, quest)
+            .map_err(|reason| failed(quest_id, reason))?;
         if quest.start_item != 0 {
             if self.free_cells() == 0 {
                 return Err(failed(quest_id, QuestFailedReason::InventoryFull));
             }
             let count = quest.provided_item_count.max(1);
-            grant_item(
-                &mut inventory,
-                self.db,
-                self.quests,
-                quest.start_item,
-                count,
-            );
+            grant_item(inventory, self.db, self.quests, quest.start_item, count);
             self.save_inventory(&inventory, false);
         }
         log.active.push(ActiveQuestData {
             quest_id,
             counts: vec![0; quest.objectives.len()],
+            expires_at: shared_deadline.or_else(|| {
+                (quest.time_allowed > 0).then(|| {
+                    self.quests
+                        .now
+                        .unwrap_or_else(crate::persistence::quest_store::unix_now)
+                        + i64::from(quest.time_allowed)
+                })
+            }),
+            failed: false,
         });
         // Retail auto quest watch (`autoQuestWatch` default on).
         log.watched.push(quest_id);
@@ -454,6 +787,12 @@ impl<'a> QuestSession<'a, '_, '_> {
         inventory.gold = gold;
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
+        log.completed_at.insert(
+            quest_id,
+            self.quests
+                .now
+                .unwrap_or_else(crate::persistence::quest_store::unix_now),
+        );
         self.persist_reward(&inventory, &log, self.reward_appearances(quest, &items));
         let character = self.character();
         self.io.commands.queue(move |world: &mut World| {
