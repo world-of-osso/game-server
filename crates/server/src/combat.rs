@@ -890,7 +890,7 @@ fn melee_damage_splits(
     attacker: Entity,
 ) -> Vec<crate::auras::damage_transfer::Split> {
     let candidates = match targets.get_mut(victim) {
-        Ok((_, _, _, _, _, _, _, _, _, _, avoidance, _)) => {
+        Ok((_, _, _, _, _, _, _, _, _, avoidance, _)) => {
             crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
         }
         Err(_) => return Vec::new(),
@@ -902,8 +902,7 @@ fn melee_damage_splits(
         {
             continue;
         }
-        let Ok((_, health, _, _, _, _, _, _, _, _, avoidance, _)) =
-            targets.get_mut(split.recipient)
+        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _)) = targets.get_mut(split.recipient)
         else {
             continue;
         };

@@ -18,12 +18,8 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{ModelDisplay, Position, UnitFlags};
 
-use super::handlers::{MOD_CONFUSE, MOD_INVISIBILITY, MOD_UNATTACKABLE, TRANSFORM};
+use super::handlers::{MOD_CONFUSE, MOD_UNATTACKABLE, TRANSFORM};
 use super::{ActiveAuras, AuraInstance};
-
-/// Under a MOD_INVISIBILITY aura; visibility depends on observer detection.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Invisible;
 
 /// Under a MOD_UNATTACKABLE aura: the aura set `NON_ATTACKABLE_2`.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,7 +65,6 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let Some(auras) = world.get::<ActiveAuras>(unit) else {
         return;
     };
-    let invisible = has_type(auras, MOD_INVISIBILITY);
     let visibility = super::Invisibility::from_auras(auras);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
@@ -78,13 +73,6 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         shared::components::FeatherFall(has_type(auras, super::handlers::FEATHER_FALL));
     reconcile_scale(world, unit);
     reconcile_feather_fall(world, unit, feather_fall);
-    if invisible != world.get::<Invisible>(unit).is_some() {
-        if invisible {
-            world.entity_mut(unit).insert(Invisible);
-        } else {
-            world.entity_mut(unit).remove::<Invisible>();
-        }
-    }
     if world.get::<super::Invisibility>(unit) != Some(&visibility) {
         world.entity_mut(unit).insert(visibility.clone());
         crate::interest::set_invisibility(world, unit, visibility);
