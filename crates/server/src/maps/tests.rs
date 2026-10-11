@@ -37,6 +37,37 @@ const STOCKADE_GRAVEYARD: Vec3 = Vec3::new(-8786.88, 829.083, 97.6504);
 /// Ratchet, Northern Barrens (Kalimdor).
 const RATCHET: Vec3 = Vec3::new(-956.0, -3754.0, 5.0);
 
+#[test]
+fn housing_map_rows_keep_authored_identity_without_public_admission() {
+    let store = map_store().expect("authentic world map catalog");
+    let mut manager = InstanceManager::default();
+    let entrant = InstanceEntrant {
+        character_id: 30,
+        leader: 30,
+        group: None,
+        difficulty_id: 0,
+    };
+    let now = instances::Now {
+        elapsed: 0.0,
+        unix: 0,
+    };
+    for (id, name, wdt) in [
+        (2735, "Founder's Point", 5660542),
+        (2736, "Razorwind Shores", 5660543),
+        (2783, "Home Interior", 5890928),
+    ] {
+        let entry = store.map(id).expect("housing map row must load");
+        assert_eq!(entry.id, id);
+        assert_eq!(entry.name, name);
+        assert_eq!(entry.wdt_file_data_id, wdt);
+        assert!(!entry.is_dungeon());
+        assert_eq!(
+            manager.create_map(store, id, entrant, now),
+            Err(TransferAbortReason::MapNotAllowed)
+        );
+    }
+}
+
 fn map_store() -> Option<&'static MapStore> {
     static STORE: OnceLock<Option<MapStore>> = OnceLock::new();
     STORE

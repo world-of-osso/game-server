@@ -20,6 +20,10 @@ pub enum InstanceType {
     Battleground,
     Arena,
     Scenario,
+    /// Retail Map.db2 type 7: Home Interior (map 2783).
+    House,
+    /// Retail Map.db2 type 8: Founder's Point and Razorwind Shores.
+    Neighborhood,
 }
 
 impl InstanceType {
@@ -31,6 +35,8 @@ impl InstanceType {
             3 => Self::Battleground,
             4 => Self::Arena,
             5 => Self::Scenario,
+            7 => Self::House,
+            8 => Self::Neighborhood,
             _ => return None,
         })
     }
