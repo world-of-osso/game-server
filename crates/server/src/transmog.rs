@@ -130,7 +130,12 @@ impl TransmogCatalog {
                         .get(&(definition, equipped.item.item_id))
                         .copied(),
                     can_hide: can_hide(slot),
-                    sources: self.eligible_sources(target, &record.character, collection),
+                    sources: if definition == ItemDefinitionSource::Retail {
+                        self.eligible_sources(target, &record.character, collection)
+                    } else {
+                        // Retail display IDs cannot be interpreted in a different item namespace.
+                        Vec::new()
+                    },
                 })
             })
             .collect();
@@ -458,7 +463,6 @@ fn choice_modifier(
         TransmogChoice::Original => Ok(None),
         TransmogChoice::Hidden if slot.can_hide => Ok(Some(ItemTransmog {
             source_id: 0,
-            item_id: slot.item_id,
             display_id: 0,
             inventory_type: 0,
             hidden: true,
@@ -472,7 +476,6 @@ fn choice_modifier(
                 .ok_or(TransmogError::AppearanceNotUsable)?;
             Ok(Some(ItemTransmog {
                 source_id: id,
-                item_id: source.item_id,
                 display_id: source.display_id,
                 inventory_type: source.inventory_type,
                 hidden: false,
