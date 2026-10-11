@@ -408,7 +408,11 @@ pub(crate) fn effect_gather(
         .0;
     crate::loot::open_item_loot(world, ctx.caster, id, rolled);
     advance_skill(world, ctx.caster, progress, rng.gen_range(1..=1000));
-    if ability.effect == SKIN {
+    mark_resource_collected(world, target, id, ability.effect);
+}
+
+fn mark_resource_collected(world: &mut World, target: Entity, character_id: u64, effect: u32) {
+    if effect == SKIN {
         world
             .entity_mut(target)
             .insert(Skinned)
@@ -420,7 +424,7 @@ pub(crate) fn effect_gather(
         let max_loots = node.max_loots as usize;
         let count = {
             let mut claims = world.get_mut::<NodeClaims>(target).unwrap();
-            claims.0.insert(id);
+            claims.0.insert(character_id);
             claims.0.len()
         };
         if world.get::<Depletion>(target).is_none() {
@@ -491,6 +495,11 @@ fn advance_skill(
 
 fn update_node_timers(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
+    deplete_expired_nodes(world, dt);
+    respawn_due_nodes(world, dt);
+}
+
+fn deplete_expired_nodes(world: &mut World, dt: f32) {
     let mut depleted = world.query::<(Entity, &mut Depletion, &NodeSource, &InMap)>();
     let expired = depleted
         .iter_mut(world)
@@ -516,6 +525,9 @@ fn update_node_timers(world: &mut World) {
             ),
         }
     }
+}
+
+fn respawn_due_nodes(world: &mut World, dt: f32) {
     let mut respawns = world.query::<(Entity, &mut NodeRespawn, &InMap)>();
     let ready = respawns
         .iter_mut(world)
