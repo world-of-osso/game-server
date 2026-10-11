@@ -768,6 +768,28 @@ pub fn apply_heal(
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
         .max(0.0)
         .round();
+    apply_resolved_heal(world, ctx, target, amount, crit, periodic);
+}
+
+/// A named transfer already computed from effective healing; no second spell-power,
+/// healing multiplier or crit roll on the copied amount.
+pub(in crate::spell_cast) fn apply_fixed_heal(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+) {
+    apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), false, false);
+}
+
+fn apply_resolved_heal(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+) {
     let Some(mut health) = world.get_mut::<Health>(target) else {
         return;
     };
@@ -790,6 +812,9 @@ pub fn apply_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    if !periodic {
+        super::scripts::heal_beacon(world, ctx, target, effective);
+    }
     if periodic {
         procs::push_event(
             world,

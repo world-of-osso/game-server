@@ -242,3 +242,16 @@ Sources: local Mainline12.1.0.69933 DB2/read-only world.db; no C++ bodies or ext
 - Fifth-batch limits: unidentified Demon's Bite/Disintegrate/Chaos Bolt markers; Chaos Strike's30 mirror is not separately consumed; Shuriken soft-cap/stealth/talent fields; Bone Shield consumption/haste/armor parity and Blood Plague leech; latent plague talent effects. Crash Lightning's native104 cone and initial enhancement are completed in batch8; cleave/proc damage remains uncertified. These base-path tests do not certify full class rotations.
 - Sixth-batch limits: unknown root/child markers; Starfire/Keg/Butchery reduced-damage curves beyond their soft caps; Starfire429523 variant; Keg Shuffle/Brew reduction; Wild Growth declining tick curve/Tree of Life targets; Shadow Word: Death execute/damage-effect variants; Ice Lance Freezing/shatter; Starfall overlap/base tick child contracts. Selector104's authored destination-directed cone is exercised by batch8 Crash Lightning/Breath of Fire; unit-center geometry does not certify combat-reach edge expansion or scope-wide rotations.
 - Realm UDP 5000, deployment and merging.
+
+### Fifteenth-batch named health, weapon, rank and delayed-hit contracts
+
+- [x] Vampiric Blood55233s4 supplies its30% maximum-health modifier; refresh must not stack it and removal restores base maximum health.
+- [x] Frost Strike49143 variable609 uses325464 without an off-hand weapon, or222026+66196 with one, never all three damage variants. Root Dummy marker remains unassigned.
+- [x] Rising Sun Kick's named185099 primary hit applies115804 Mortal Wounds only with128595 and an actual damage hit; native lifetime/healing reduction are retained.
+- [x] Touch of Karma122470s3 supplies50%-maximum-health absorb capacity, consumed by real damage. Its70% redirect, refresh accumulation and s5 remain uncertified.
+- [x] Combustion190319 snapshots1254512s1's20% of pre-cast character crit chance into its native direct/periodic damage modifiers, retaining the native talent's10% base. Mastery189/383967 and periodic226 remain underived.
+- [x] High Tide288675s2 removes Chain Heal1064s2's30% jump loss while active; existing native modifier charges spend once per completed root cast, restoring falloff after two casts. Mana-threshold generation is separate.
+- [x] Beacon53563 transfers53651s1's10% of effective direct healing on another party/raid member through named53652, excluding periodic healing, overheal and foreign marks; transfer is a fixed already-scaled amount, not a second spell-power/crit roll. Remaining Beacon fields/range/talents are uncertified.
+- [x] Sigil of Flame204596 retains the original selected destination until its native delay, then resolves204598's native radius/direct hit and one targeted bleed. Latent duplicate bleed/markers,179 actor/visuals and389787 timing remain uncertified.
+
+Sources: local Mainline12.1.0.69933 descriptions, native effect/duration/radius rows and Frost Strike description variable609. No external/C++ sources, invented numeric coefficients, database writes or generic Dummy no-ops. [Batch15 coverage](../spell-dummy15-coverage.md).
