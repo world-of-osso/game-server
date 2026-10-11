@@ -133,6 +133,22 @@ mod transmog_tests {
     use super::*;
 
     #[test]
+    fn transmog_authored_gossip_option_opens_the_service() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let catalog = load_gossip_catalog(&conn).unwrap();
+        let opening = catalog.open(54442, NpcFlags(268435585)).unwrap();
+        assert!(
+            opening
+                .actions
+                .contains(&(0, GossipAction::Role(NpcRole::Transmogrifier)))
+        );
+    }
+
+    #[test]
     fn transmog_flag_opens_the_transmogrifier_service() {
         let opening = GossipCatalog::default().open(62821, NpcFlags(NpcFlags::TRANSMOGRIFIER));
         assert_eq!(
