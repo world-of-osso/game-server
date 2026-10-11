@@ -48,6 +48,10 @@ pub struct PlayerRestState {
 }
 
 impl PlayerRestState {
+    pub(crate) fn is_resting(&self) -> bool {
+        self.area_kind.is_some()
+    }
+
     pub(crate) fn rested_xp(&self) -> u32 {
         self.rested_xp.amount
     }
@@ -674,10 +678,10 @@ mod tests {
         areas
             .execute_batch(
                 "CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER,
-             ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER);
+             ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER);
              INSERT INTO area_table VALUES
-             (12,0,0,16448,2), (1519,0,0,2113848,2), (1637,0,1,2113848,4),
-             (5148,1519,0,1075855672,0), (5170,1637,1,1075855672,0);",
+             (12,0,0,16448,2,0), (1519,0,0,2113848,2,12288), (1637,0,1,2113848,4,12288),
+             (5148,1519,0,1075855672,0,4096), (5170,1637,1,1075855672,0,4096);",
             )
             .unwrap();
         app.insert_resource(crate::area_table::load_area_table(&areas).unwrap());

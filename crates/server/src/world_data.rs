@@ -956,6 +956,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
+    commands
+        .insert_resource(crate::pvp::pvp_talents::Catalog::load(&conn).expect(
+            "Load local PvP catalog; run scripts/import-pvp-progression.py before startup",
+        ));
 }
 
 pub struct WorldDataPlugin;
