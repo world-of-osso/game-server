@@ -9,6 +9,8 @@ use crate::spell_info::{SpellDuration, SpellInfo};
 
 const ENVENOM: u32 = 32645;
 const BLACK_POWDER: u32 = 319175;
+const DISPATCH: u32 = 2098;
+const EVISCERATE: u32 = 196819;
 const ARCANE_BARRAGE: u32 = 44425;
 const ARCANE_CHARGE: u32 = 36032;
 
@@ -71,7 +73,7 @@ pub(super) fn snapshot(
     }
     let multiplier = match spell.id {
         // Native descriptions explicitly multiply m1 by combo points spent.
-        ENVENOM | BLACK_POWDER => combo,
+        ENVENOM | BLACK_POWDER | DISPATCH | EVISCERATE => combo,
         ARCANE_BARRAGE => barrage_multiplier(world, caster),
         _ => return spell,
     };
