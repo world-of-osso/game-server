@@ -45,11 +45,16 @@ impl LoginMaps<'_> {
         commands: &mut Commands,
         character_id: u64,
         difficulty_id: u32,
+        raid_difficulty: super::RaidDifficulty,
         map_id: u32,
         position: Position,
     ) -> Option<LoginPlace> {
-        let entrant: InstanceEntrant =
-            super::transfer::entrant_for(self.groups.as_deref(), character_id, difficulty_id);
+        let entrant: InstanceEntrant = super::transfer::entrant_for(
+            self.groups.as_deref(),
+            character_id,
+            difficulty_id,
+            raid_difficulty,
+        );
         match self.enter(map_id, entrant) {
             Some(resolved) => {
                 let position = match (resolved.created, self.is_dungeon(map_id)) {

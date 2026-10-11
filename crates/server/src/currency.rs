@@ -56,6 +56,15 @@ trait CurrencyRequest: lightyear::prelude::Message {
 
 impl CurrencyRequest for EarnCurrency {
     fn apply(wallet: &mut CurrencyWallet, request: &Self) -> Result<String, String> {
+        if matches!(
+            request.currency_id,
+            shared::currency::HONOR_CURRENCY_ID | shared::currency::CONQUEST_CURRENCY_ID
+        ) {
+            return Err(
+                "PvP currency awards require a server match result and authored reward policy"
+                    .into(),
+            );
+        }
         earn_currency(wallet, request.currency_id, request.amount)
     }
 }

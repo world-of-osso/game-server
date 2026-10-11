@@ -457,7 +457,26 @@ def main():
     )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--mode", choices=("rebuild", "world-promote"), default="rebuild")
+    parser.add_argument("--maps", help="comma-separated explicit open-world map IDs; world-promote only")
     args = parser.parse_args()
+    if args.mode == "world-promote":
+        import world_population
+
+        if not args.maps:
+            parser.error("world-promote requires --maps")
+        maps = [int(value) for value in args.maps.split(",")]
+        if args.check:
+            world_population.population.validate_copy(args.db)
+            with sqlite3.connect(f"file:{args.db}?mode=ro", uri=True) as conn:
+                world_population.validate_maps(conn, maps)
+            return
+        result = world_population.import_database(args.db, maps)
+        world_population.write_report(args.report, result)
+        print(f"Promoted open-world maps {result['target_maps']}; report: {args.report}")
+        return
+    if args.maps:
+        parser.error("--maps is only valid with --mode world-promote")
     wrath_path = args.csv_root / WRATH_BUILD / "SpellName.csv"
     missing = [str(p) for p in (wrath_path, args.overrides) if not p.is_file()]
     if missing:

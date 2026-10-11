@@ -5,6 +5,75 @@ use shared::protocol::{GroupLootChoice, GroupLootRoll};
 
 const MOSS_AGATE: u32 = 1206;
 
+#[test]
+fn gathering_group_rolls_and_shared_slots_block_skinning() {
+    let connection = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(crate::gathering::GatheringPlugin);
+    app.insert_resource(crate::gathering::load_data(&connection).unwrap());
+    let corpse = app
+        .world_mut()
+        .spawn((
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: 525,
+                name: "Mangy Wolf".into(),
+            },
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            Corpse { remaining: 60.0 },
+            CorpseLoot::default(),
+            group::CorpseGroupLoot(vec![group::GroupPool {
+                members: vec![30, 31],
+                slots: Vec::new(),
+                pending: 1,
+            }]),
+        ))
+        .id();
+    app.update();
+    assert!(
+        app.world()
+            .get::<shared::protocol::GatherableResource>(corpse)
+            .is_none(),
+        "pending group rolls must not advertise Skinning"
+    );
+    {
+        let mut shared = app
+            .world_mut()
+            .get_mut::<group::CorpseGroupLoot>(corpse)
+            .unwrap();
+        shared.0[0].pending = 0;
+        shared.0[0]
+            .slots
+            .push(Some(LootContent::Money { copper: 3 }));
+    }
+    app.update();
+    assert!(
+        app.world()
+            .get::<shared::protocol::GatherableResource>(corpse)
+            .is_none(),
+        "untaken shared slots still precede Skinning"
+    );
+    app.world_mut()
+        .get_mut::<group::CorpseGroupLoot>(corpse)
+        .unwrap()
+        .0[0]
+        .slots[0] = None;
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<shared::protocol::GatherableResource>(corpse),
+        Some(&shared::protocol::GatherableResource { parent_skill: 393 })
+    );
+}
+
 fn grouped() -> (Harness, Looter) {
     let mut h = harness(false).expect("canonical read-only world fixture");
     let other = spawn_looter(&mut h.app, "Other", 2);
@@ -20,6 +89,7 @@ fn grouped() -> (Harness, Looter) {
                     level: 1,
                     portrait: Default::default(),
                     dungeon_difficulty: 1,
+                    raid_difficulty: Default::default(),
                 },
             )
         })

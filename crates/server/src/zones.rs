@@ -28,7 +28,7 @@ impl Plugin for ZonePlugin {
 }
 
 /// The hosted continents are created at startup with all their creatures.
-fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
+pub(crate) fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
     for map_id in crate::maps::HOSTED_CONTINENTS {
         let count = spawn_map_creatures(
             &mut commands,
@@ -101,6 +101,7 @@ pub(crate) fn spawn_map_creatures(
     let mut map_pools = MapPools {
         spawns: pool_spawns,
         entities: HashMap::new(),
+        gameobjects: HashMap::new(),
         difficulty_id: content.difficulty_id,
         replicate,
     };
@@ -1024,6 +1025,33 @@ mod tests {
             assert_eq!(spawn_map_creatures(&mut commands, &data, content, false), 1);
             queue.apply(&mut world);
             assert_eq!(world.query::<&Npc>().iter(&world).count(), 1);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
+    fn world_population_real_copy_spawns_living_expansion_creatures() {
+        let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
+        let data = crate::world_data::load_world_data(std::path::Path::new(&path));
+        // Zandalar1642 has only one eligible source row: an inactive event12
+        // Headless Ghost. Do not invent hub NPCs or activate that event.
+        assert!(!data.spawns_by_map.contains_key(&1642));
+        for map_id in [2444, 2552, 2601, 2222, 1643] {
+            let mut world = World::new();
+            let mut queue = bevy::ecs::world::CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, &world);
+            let count =
+                spawn_map_creatures(&mut commands, &data, MapContent::continent(map_id), false);
+            assert!(count > 0, "empty promoted map {map_id}");
+            queue.apply(&mut world);
+            let mut npcs = world.query::<(&Npc, &Health, &crate::maps::InMap)>();
+            let actors: Vec<_> = npcs.iter(&world).collect();
+            assert_eq!(actors.len(), count as usize);
+            assert!(
+                actors.iter().all(|(_, hp, map)| hp.current > 0.0
+                    && *map == &crate::maps::InMap::continent(map_id))
+            );
+            println!("map {map_id}: {count} living continent NPCs");
         }
     }
 

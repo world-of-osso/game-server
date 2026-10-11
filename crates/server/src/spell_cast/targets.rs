@@ -121,9 +121,10 @@ fn selector(id: u32) -> Option<Selector> {
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
         let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
+        let gathering_target = id == 23 && effect.effect == 33;
         let unsupported_back =
             id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
-        unsupported_back || (selector(id).is_none() && !item_target)
+        unsupported_back || (selector(id).is_none() && !item_target && !gathering_target)
     })
 }
 
@@ -208,7 +209,7 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     if caster == target {
         return relation == Relation::Ally;
     }
-    if world.get::<crate::auras::Invisible>(target).is_some() {
+    if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;
     }
     // WorldObject::IsValidAttackTarget / IsValidAssistTarget (Object.cpp:2374, 2538): an
