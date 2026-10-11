@@ -22,5 +22,11 @@ All paths relative to snapshot root: `index.json`, `characters/<decimal-id>.json
 
 Operator must explicitly supply public-realm character ID allowlist, minus opt-out ID list. Redb does not currently store realm membership or armory privacy: never infer public eligibility from account names, character names or map. Private fixtures use explicit fb-owned allowlist only. Filter ranking parties to fully public participants; omit mixed/private parties rather than leak identity/composition. Never emit account IDs/names/emails/IPs/tokens, inventories, money, coordinates or private guild text.
 
-Observed source gaps: current origin/master has no Mythic+ persistence; raid locks lack first-kill times/lifetime/guild-at-kill attribution. Race names/faction catalog absent from local world.db. Character render optional and currently absent. Item level means authored base item level (effective bonus/scaling absent); overall equipped average withheld if actual complete equipment is unavailable. Gaps remain explicit, not invented fixtures.
+Observed source gaps: legacy Mythic+ runs cannot be backfilled; raid locks lack first-kill times/lifetime/guild-at-kill attribution. Race names/faction catalog absent from local world.db. Character render optional and currently absent. Item level means authored base item level (effective bonus/scaling absent); overall equipped average withheld if actual complete equipment is unavailable. Gaps remain explicit, not invented fixtures.
 
+
+## Attributable Mythic+ completion history
+
+Future completions use `mythic_completed_runs_v1`, committed atomically with key settlement. Party identity/class/spec are captured from players in the dungeon copy at completion. Only complete public parties are exported. Abandoned runs and legacy anonymous history never rank. Stored elapsed time includes configured death penalties; timer is the authored runtime timer. `season_id` remains null because historical MythicPlusSeason rows do not select an active season. Ranking records additionally include map_id, affixes and time_lost_ms. Icons are decoded from existing local BLP/PNG caches into PNG, never fetched remotely.
+
+`--fixture-allowlist` prepares only an owned private-copy redb under site-data diagnostics (including explicit crash recovery); normal exports always open redb and SQLite read-only. Fixtures include only fb-owned accounts but export no account identifiers.
