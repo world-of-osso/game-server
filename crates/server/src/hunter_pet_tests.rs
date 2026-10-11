@@ -24,6 +24,8 @@ const TAME_BEAST_TRIGGER: u32 = 13_481;
 const CALL_PET_1: u32 = 883;
 const CALL_PET_2: u32 = 83_242;
 const DISMISS_PET: u32 = 2641;
+const REVIVE_PET: u32 = 982;
+const MEND_PET: u32 = 136;
 /// Diseased Young Wolf: a tameable Beast (family 1, Wolf) near Northshire.
 const DISEASED_YOUNG_WOLF: u32 = 299;
 /// Hogger: Humanoid.
@@ -70,6 +72,8 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
             CALL_PET_1,
             CALL_PET_2,
             DISMISS_PET,
+            REVIVE_PET,
+            MEND_PET,
         ],
         CLASS_HUNTER,
         false,
@@ -610,6 +614,104 @@ fn pet_lifecycle_stable_rejects_closed_interaction_without_mutation() {
         Some(PetStableError::NotInteracting)
     );
     assert!(saved(&h).active[0].is_some());
+}
+
+#[test]
+fn pet_lifecycle_revive_restores_lethally_damaged_owned_pet() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut h = hunter(&path, HOGGER).expect("real revive fixture");
+    let pet = pet_out(&h);
+    let max_health = h.app.world().get::<Health>(pet).unwrap().max;
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, pet, max_health + 1.0);
+    assert_eq!(h.app.world().get::<Health>(pet).unwrap().current, 0.0);
+    h.advance(3);
+    h.cast_and_deliver(REVIVE_PET, None);
+    h.advance(130);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let revived = pet_out(&h);
+    assert_eq!(
+        h.app.world().get::<Health>(revived).unwrap().current,
+        max_health
+    );
+    assert!(h.app.world().get::<DeathState>(revived).is_none());
+    assert_eq!(
+        saved(&h).active[0].as_ref().unwrap().health,
+        Some(max_health)
+    );
+    drop(h);
+    let reloaded = hunter(&path, HOGGER).expect("reopened revived fixture");
+    assert_eq!(
+        reloaded
+            .app
+            .world()
+            .get::<Health>(pet_out(&reloaded))
+            .unwrap()
+            .current,
+        max_health
+    );
+}
+
+#[test]
+fn pet_lifecycle_revive_summons_first_dead_active_slot_not_a_living_one() {
+    let path = db_path();
+    seed_stable(&path, None);
+    let db = open_db(&path);
+    let mut stored = load_pet_stable(&db.db, CHARACTER_ID).unwrap();
+    let mut dead = stored_wolf();
+    dead.name = "Ember".into();
+    dead.health = Some(0.0);
+    stored.active[1] = Some(dead);
+    save_pet_stable(&db.db, CHARACTER_ID, &stored);
+    drop(db);
+    let mut h = hunter(&path, HOGGER).expect("dismissed dead-slot revive fixture");
+    h.cast_and_deliver(REVIVE_PET, None);
+    h.advance(130);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let pet = pet_out(&h);
+    assert_eq!(h.app.world().get::<HunterPet>(pet).unwrap().slot, 1);
+    assert_eq!(h.app.world().get::<Npc>(pet).unwrap().name, "Ember");
+    assert_eq!(
+        h.app.world().get::<Health>(pet).unwrap().current,
+        h.app.world().get::<Health>(pet).unwrap().max
+    );
+    assert_eq!(saved(&h).current, Some(1));
+    assert_eq!(
+        saved(&h).active[0].as_ref().unwrap().name,
+        "Diseased Young Wolf"
+    );
+}
+
+#[test]
+fn pet_lifecycle_revive_refuses_living_pet_before_cast() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut h = hunter(&path, HOGGER).expect("living-pet revive fixture");
+    let pet = pet_out(&h);
+    h.cast_and_deliver(REVIVE_PET, None);
+    assert_eq!(
+        h.inbox.failed.first().map(|failure| failure.reason),
+        Some(CastFailReason::NotSupported)
+    );
+    assert_eq!(pet_out(&h), pet);
+}
+
+#[test]
+fn pet_lifecycle_mend_heals_owned_pet_by_authored_periodic_percentage() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut h = hunter(&path, HOGGER).expect("real Mend fixture");
+    let pet = pet_out(&h);
+    let max_health = h.app.world().get::<Health>(pet).unwrap().max;
+    h.app.world_mut().get_mut::<Health>(pet).unwrap().current = 50.0;
+    h.cast_and_deliver(MEND_PET, None);
+    h.advance(41);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    // Local SpellEffect136: aura20, 10% of max health every2s.
+    assert!(
+        (h.app.world().get::<Health>(pet).unwrap().current - (50.0 + max_health * 0.1)).abs()
+            < 0.001
+    );
 }
 
 #[test]
