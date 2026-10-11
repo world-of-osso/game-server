@@ -236,3 +236,54 @@ fn dummy14_consume_generates_named_fury_once_without_optional_fragments() {
     assert_eq!(h.power(PowerType::Fury), 8.0);
     assert!(varied(315.0).contains(&(5000.0 - h.health(target))));
 }
+
+#[test]
+fn dummy14_eye_beam_cancel_stops_future_primary_hits() {
+    let mut h = harness(Vec::new(), &[198013, 198030], 12).unwrap();
+    let target = h.npc;
+    h.set_power(PowerType::Fury, 100.0);
+    h.cast_and_deliver(198013, Some(target));
+    h.advance(14);
+    super::cancel_cast(h.app.world_mut(), h.caster);
+    h.advance(1);
+    let hits = |h: &Harness| {
+        h.inbox
+            .log
+            .iter()
+            .filter(|e| e.spell_id == Some(198030) && e.kind == CombatLogKind::Damage)
+            .count()
+    };
+    let count = hits(&h);
+    assert!((1..11).contains(&count));
+    h.advance(60);
+    assert_eq!(hits(&h), count);
+}
+#[test]
+fn dummy14_deathmark_eight_native_gains_total_eighty_then_stop() {
+    let mut h = harness(Vec::new(), &[360194], 4).unwrap();
+    let caster = h.caster;
+    let target = h.npc;
+    apply(&mut h, caster, target, 360194);
+    let mut gained = 0.0;
+    for _ in 0..8 {
+        h.set_power(PowerType::Energy, 0.0);
+        h.advance(40);
+        gained += h.power(PowerType::Energy) - 20.0; // Native10Energy/sec regeneration.
+    }
+    assert_eq!(gained, 80.0);
+    assert!(!crate::auras::has_aura(h.app.world(), target, 360194));
+    h.set_power(PowerType::Energy, 0.0);
+    h.advance(40);
+    assert_eq!(h.power(PowerType::Energy), 20.0);
+}
+#[test]
+fn dummy14_consume_immune_target_does_not_generate_fury() {
+    let mut h = harness(Vec::new(), &[473662, 1261710, 642], 12).unwrap();
+    let caster = h.caster;
+    let target = h.npc;
+    apply(&mut h, caster, target, 642);
+    h.set_power(PowerType::Fury, 0.0);
+    execute(&mut h, 473662, Some(target));
+    assert_eq!(h.power(PowerType::Fury), 0.0);
+    assert_eq!(h.health(target), 5000.0);
+}
