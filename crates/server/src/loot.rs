@@ -15,8 +15,8 @@
 //! faster (`combat::corpse_looted`, also applied at death when nobody got any
 //! loot, AzerothCore Unit.cpp:14312). `auto` takes every slot at once.
 //!
-//! Out of scope: group loot methods (round robin, need/greed rolls, master loot),
-//! coin splitting, dungeon round-robin loot, chest and item loot.
+//! Grouped corpse loot uses `group` for Mainline roll/history lifecycle and shared
+//! coins. Personal item sources and ungrouped tappers retain their personal windows.
 
 use std::collections::HashMap;
 
@@ -45,6 +45,7 @@ use crate::persistence::{self, GameDatabase, InventoryItemData};
 use crate::quest_data::QuestDb;
 use crate::quest_rules::quest_needs_item;
 
+mod group;
 mod tables;
 
 pub(crate) use tables::{LootTables, RolledLoot, load_disenchant_tables, load_loot_tables};
@@ -101,18 +102,23 @@ pub struct LootPlugin;
 
 impl Plugin for LootPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<LootTables>().add_systems(
-            Update,
-            (
-                generate_corpse_loot,
-                process_loot_units,
-                process_loot_slots,
-                process_loot_releases,
-                close_invalid_loot,
-                drop_decayed_loot,
-            )
-                .chain(),
-        );
+        app.init_resource::<LootTables>()
+            .init_resource::<group::GroupRolls>()
+            .init_resource::<group::GroupRollRng>()
+            .add_systems(
+                Update,
+                (
+                    generate_corpse_loot,
+                    group::process_rolls,
+                    group::replay_history,
+                    process_loot_units,
+                    process_loot_slots,
+                    process_loot_releases,
+                    close_invalid_loot,
+                    drop_decayed_loot,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -159,6 +165,28 @@ fn remaining_slots(slots: &[Option<LootContent>]) -> Vec<LootSlot> {
         .collect()
 }
 
+fn remaining_for(
+    loot: &CorpseLoot,
+    shared: Option<&group::CorpseGroupLoot>,
+    character: u64,
+) -> Option<Vec<LootSlot>> {
+    let personal = loot
+        .looters
+        .get(&character)
+        .filter(|slots| slots.iter().any(Option::is_some));
+    let pool = shared
+        .and_then(|shared| shared.pool(character))
+        .filter(|pool| pool.has_loot());
+    if personal.is_none() && pool.is_none() {
+        return None;
+    }
+    let mut slots = personal.map_or_else(Vec::new, |slots| remaining_slots(slots));
+    if let Some(pool) = pool {
+        slots.extend(pool.remaining());
+    }
+    Some(slots)
+}
+
 /// Persistence, templates and names: what taking a slot reads and writes.
 #[derive(SystemParam)]
 struct LootStore<'w> {
@@ -171,6 +199,31 @@ struct LootStore<'w> {
 impl LootStore<'_> {
     fn get(&self) -> Option<(&Database, &ItemTemplates)> {
         Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
+    }
+
+    /// Validate every member before writing any coin share (LootHandler::HandleLootMoneyOpcode).
+    fn split_money(&mut self, characters: &[u64], copper: u64) -> Result<(), LootError> {
+        let (db, templates) = self.get().ok_or(LootError::NoPermission)?;
+        let share = copper / characters.len() as u64;
+        let mut models = Vec::new();
+        for &character in characters {
+            let mut model =
+                load_model(db, templates, character).map_err(|_| LootError::NoPermission)?;
+            let gold = model
+                .gold()
+                .checked_add(share)
+                .filter(|gold| *gold <= MAX_MONEY)
+                .ok_or(LootError::TooMuchGold)?;
+            model.set_gold(gold);
+            models.push((character, gold, model.into_record()));
+        }
+        for (character, _, record) in &models {
+            save_inventory_record(db, *character, record);
+        }
+        for (character, gold, _) in models {
+            self.gold.record(character, gold);
+        }
+        Ok(())
     }
 
     /// Store one slot's content for `character_id`.
@@ -289,7 +342,13 @@ struct LootRolls<'w> {
 }
 
 impl LootRolls<'_> {
-    fn roll(&self, entry: u32, difficulty_id: u32, character_id: u64) -> Vec<Option<LootContent>> {
+    fn roll(
+        &self,
+        entry: u32,
+        difficulty_id: u32,
+        character_id: u64,
+        quest_only: Option<bool>,
+    ) -> Vec<Option<LootContent>> {
         let Some((db, templates)) = self.store.get() else {
             return Vec::new();
         };
@@ -308,13 +367,19 @@ impl LootRolls<'_> {
                 .as_deref()
                 .is_some_and(|quests| quest_needs_item(quests, &log, item_id, bag_count))
         };
-        let rolled = self.tables.roll_creature(
+        let mut rolled = self.tables.roll_creature(
             entry,
             difficulty_id,
             templates,
             needs,
             &mut rand::thread_rng(),
         );
+        if let Some(quest_only) = quest_only {
+            rolled.items.retain(|item| item.needs_quest == quest_only);
+            if quest_only {
+                rolled.copper = 0;
+            }
+        }
         loot_slots(rolled, &self.store.catalog)
     }
 }
@@ -325,6 +390,7 @@ type Killed<'w, 's> = Query<
     (
         Entity,
         &'static Npc,
+        &'static Position,
         Option<&'static CreatureTap>,
         &'static crate::maps::InMap,
         &'static mut Corpse,
@@ -339,33 +405,31 @@ fn generate_corpse_loot(
     players: RewardPlayers,
     connections: Query<(Entity, &InWorld)>,
     rolls: LootRolls,
+    mut groups: group::GroupGeneration,
     mut senders: LootSenders,
     mut commands: Commands,
 ) {
-    for (corpse, npc, tap, map, mut decay, mut death, difficulty) in &mut killed {
+    for (corpse, npc, position, tap, map, mut decay, mut death, difficulty) in &mut killed {
         let difficulty_id = difficulty.map_or(0, |difficulty| difficulty.0);
-        let mut loot = CorpseLoot::default();
         let tappers = tap.map_or(&[][..], |tap| tap.tappers.as_slice());
-        for &character_id in tappers.iter().filter(|&&tapper| {
-            players
-                .iter()
-                .any(|(id, _, at)| id.0 == tapper && at == map)
-        }) {
-            let slots = rolls.roll(npc.template_id, difficulty_id, character_id);
-            if !slots.is_empty() {
-                loot.looters.insert(character_id, slots);
-            }
-        }
-        if loot.looters.is_empty() {
+        let rewarded = crate::creature_tap::rewarded_characters(
+            tappers,
+            (map, position),
+            &players,
+            groups.groups.as_deref(),
+        );
+        let (loot, shared) =
+            groups.distribute(corpse, npc.template_id, difficulty_id, &rewarded, &rolls);
+        if loot.looters.is_empty() && !shared.has_loot() {
             corpse_looted(&mut decay, &mut death);
             continue;
         }
         for (connection, in_world) in &connections {
-            if loot.looters.contains_key(&in_world.character_id) {
+            if remaining_for(&loot, Some(&shared), in_world.character_id).is_some() {
                 senders.lootable(connection, corpse, true);
             }
         }
-        commands.entity(corpse).insert(loot);
+        commands.entity(corpse).insert((loot, shared));
     }
 }
 
@@ -375,6 +439,7 @@ type Corpses<'w, 's> = Query<
     (
         &'static Position,
         &'static mut CorpseLoot,
+        Option<&'static mut group::CorpseGroupLoot>,
         Option<&'static mut Corpse>,
         Option<&'static mut DeathState>,
     ),
@@ -386,6 +451,7 @@ struct Looting<'w, 's> {
     store: LootStore<'w>,
     corpses: Corpses<'w, 's>,
     players: Query<'w, 's, (&'static Position, &'static Health)>,
+    connections: Query<'w, 's, (Entity, &'static InWorld, Option<&'static ActiveLoot>)>,
     senders: LootSenders<'w, 's>,
 }
 
@@ -397,7 +463,7 @@ impl Looting<'_, '_> {
         character_id: u64,
         corpse: Entity,
     ) -> Result<Vec<LootSlot>, LootError> {
-        let (corpse_position, loot, ..) = self
+        let (corpse_position, loot, shared, ..) = self
             .corpses
             .get(corpse)
             .map_err(|_| LootError::NoPermission)?;
@@ -408,14 +474,11 @@ impl Looting<'_, '_> {
         if health.current <= 0.0 {
             return Err(LootError::PlayerDead);
         }
-        let slots = loot
-            .looters
-            .get(&character_id)
-            .ok_or(LootError::NoPermission)?;
+        let slots = remaining_for(loot, shared, character_id).ok_or(LootError::NoPermission)?;
         if distance(player_position, corpse_position) > INTERACTION_DISTANCE {
             return Err(LootError::TooFar);
         }
-        Ok(remaining_slots(slots))
+        Ok(slots)
     }
 
     /// Take one slot. Returns whether the looter's window closed (nothing left).
@@ -426,35 +489,121 @@ impl Looting<'_, '_> {
         corpse: Entity,
         slot: u8,
     ) -> Result<bool, LootError> {
-        let content = self
+        let (content, members) = self.slot_content(corpse, character_id, slot)?;
+        if let LootContent::Money { copper } = content {
+            if let Some(members) = &members {
+                self.store.split_money(members, copper)?;
+            } else {
+                self.store.take(character_id, &content)?;
+            }
+        } else {
+            self.store.take(character_id, &content)?;
+        }
+        self.clear_slot(corpse, character_id, slot);
+        self.senders.removed(connection, corpse, slot);
+        let affected = members.unwrap_or_else(|| vec![character_id]);
+        self.refresh_viewers(corpse, connection, &affected);
+        let (_, loot, shared, ..) = self.corpses.get(corpse).expect("read above");
+        Ok(remaining_for(loot, shared, character_id).is_none())
+    }
+
+    fn slot_content(
+        &self,
+        corpse: Entity,
+        character: u64,
+        slot: u8,
+    ) -> Result<(LootContent, Option<Vec<u64>>), LootError> {
+        let (_, loot, shared, ..) = self
             .corpses
             .get(corpse)
-            .ok()
-            .and_then(|(_, loot, ..)| {
+            .map_err(|_| LootError::NoPermission)?;
+        let (content, members) = if slot >= group::SHARED_SLOT_BASE {
+            let pool = shared
+                .and_then(|shared| shared.pool(character))
+                .ok_or(LootError::NoPermission)?;
+            (
+                pool.slots.get(usize::from(slot - group::SHARED_SLOT_BASE)),
+                Some(pool.members.clone()),
+            )
+        } else {
+            (
                 loot.looters
-                    .get(&character_id)?
-                    .get(usize::from(slot))
-                    .cloned()
-                    .flatten()
-            })
-            .ok_or(LootError::NoPermission)?;
-        self.store.take(character_id, &content)?;
-        self.senders.removed(connection, corpse, slot);
-        let (_, mut loot, mut decay, mut death) = self.corpses.get_mut(corpse).expect("read above");
-        let slots = loot.looters.get_mut(&character_id).expect("read above");
-        slots[usize::from(slot)] = None;
-        if slots.iter().any(Option::is_some) {
-            return Ok(false);
+                    .get(&character)
+                    .and_then(|slots| slots.get(usize::from(slot))),
+                None,
+            )
+        };
+        Ok((
+            content.cloned().flatten().ok_or(LootError::NoPermission)?,
+            members,
+        ))
+    }
+
+    fn clear_slot(&mut self, corpse: Entity, character: u64, slot: u8) {
+        let (_, mut loot, mut shared, mut decay, mut death) =
+            self.corpses.get_mut(corpse).expect("read above");
+        if slot >= group::SHARED_SLOT_BASE {
+            let pool = shared
+                .as_deref_mut()
+                .expect("shared slot")
+                .pool_mut(character)
+                .expect("eligible");
+            pool.slots[usize::from(slot - group::SHARED_SLOT_BASE)] = None;
+        } else {
+            loot.looters.get_mut(&character).expect("personal slot")[usize::from(slot)] = None;
         }
-        loot.looters.remove(&character_id);
+        loot.looters
+            .retain(|_, slots| slots.iter().any(Option::is_some));
         if loot.looters.is_empty()
+            && !shared
+                .as_deref()
+                .is_some_and(group::CorpseGroupLoot::has_loot)
             && let (Some(decay), Some(death)) = (decay.as_deref_mut(), death.as_deref_mut())
         {
             corpse_looted(decay, death);
         }
-        self.senders.lootable(connection, corpse, false);
-        self.senders.closed(connection, corpse);
-        Ok(true)
+    }
+
+    fn refresh_viewers(&mut self, corpse: Entity, taker: Entity, affected: &[u64]) {
+        let (_, loot, shared, ..) = self.corpses.get(corpse).expect("read above");
+        for (connection, world, active) in self
+            .connections
+            .iter()
+            .filter(|(_, world, _)| affected.contains(&world.character_id))
+        {
+            let slots = remaining_for(loot, shared, world.character_id);
+            if slots.is_none() {
+                self.senders.lootable(connection, corpse, false);
+                if active.is_some_and(|active| active.corpse == corpse) {
+                    self.senders.closed(connection, corpse);
+                }
+            } else if connection != taker && active.is_some_and(|active| active.corpse == corpse) {
+                self.senders.response(
+                    connection,
+                    LootResponse {
+                        corpse: corpse.to_bits(),
+                        auto: false,
+                        slots: slots.expect("present"),
+                    },
+                );
+            }
+        }
+        // The first auto-loot request has no ActiveLoot yet.
+        if let Some((_, world, _)) = self
+            .connections
+            .iter()
+            .find(|(connection, _, _)| *connection == taker)
+            && remaining_for(loot, shared, world.character_id).is_none()
+        {
+            let already_open = self
+                .connections
+                .get(taker)
+                .ok()
+                .is_some_and(|(_, _, active)| active.is_some_and(|active| active.corpse == corpse));
+            if !already_open {
+                self.senders.closed(taker, corpse);
+            }
+        }
     }
 
     /// Take every slot; the first refusal is reported and its slot stays.
@@ -610,18 +759,23 @@ fn close_invalid_loot(
 /// A decayed corpse (no longer `Corpse`) loses its loot; its remaining looters are
 /// told it is no longer lootable.
 fn drop_decayed_loot(
-    decayed: Query<(Entity, &CorpseLoot), (Without<Corpse>, Without<ItemLoot>)>,
+    decayed: Query<
+        (Entity, &CorpseLoot, Option<&group::CorpseGroupLoot>),
+        (Without<Corpse>, Without<ItemLoot>),
+    >,
     connections: Query<(Entity, &InWorld)>,
     mut senders: LootSenders,
     mut commands: Commands,
 ) {
-    for (corpse, loot) in &decayed {
+    for (corpse, loot, shared) in &decayed {
         for (connection, in_world) in &connections {
-            if loot.looters.contains_key(&in_world.character_id) {
+            if remaining_for(loot, shared, in_world.character_id).is_some() {
                 senders.lootable(connection, corpse, false);
             }
         }
-        commands.entity(corpse).remove::<CorpseLoot>();
+        commands
+            .entity(corpse)
+            .remove::<(CorpseLoot, group::CorpseGroupLoot)>();
     }
 }
 
