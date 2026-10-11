@@ -1208,7 +1208,16 @@ fn validate_target(
     let requirement = scripts::target_plan(spell.id)
         .map(|(relation, _)| relation)
         .or_else(|| targets::explicit_requirement(handled_effects(spell)))
-        .or_else(|| resurrects.then_some(Relation::Ally));
+        .or_else(|| {
+            spell
+                .effects
+                .iter()
+                .any(|effect| {
+                    crate::death::resurrection::is_resurrection(effect)
+                        && effect.implicit_targets == [0, 0]
+                })
+                .then_some(Relation::Ally)
+        });
     let Some(relation) = requirement else {
         return Ok(explicit);
     };
