@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
+
 - [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.

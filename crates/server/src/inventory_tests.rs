@@ -264,7 +264,7 @@ fn add_nonvisual_templates(app: &mut App) {
     let catalog = crate::item_templates::load_item_templates(&path).expect("Retail catalog");
     let mut templates = app.world_mut().resource_mut::<ItemTemplates>();
     for id in [
-        1116, 1319, 1490, 2820, 4112, 12344, 35748, 35749, 18472, 2504,
+        1116, 1319, 1490, 2820, 4112, 12344, 35748, 35749, 18472, 2504, 4549,
     ] {
         templates
             .retail
@@ -571,6 +571,37 @@ fn nonvisual_equipment_keeps_class_checks_and_mainline_ranged_mapping() {
             .contains_key(&equipped_location(EquipmentSlot::Ranged))
     );
     assert_eq!(model.view()[&bag(3)].item_id, 18472);
+}
+
+#[test]
+fn nonvisual_equipment_auto_replaces_lower_level_paired_ring() {
+    let mut app = setup_app(persistence::temp_database());
+    add_nonvisual_templates(&mut app);
+    let client = spawn_client(&mut app, 98, "Pairwearer");
+    grant_bag_item(&app, client.character_id, 1116, "Ring of Pure Silver");
+    grant_bag_item(&app, client.character_id, 1319, "Ring of Iron Will");
+    grant_bag_item(&app, client.character_id, 4549, "Seafire Band");
+    enter_world(&mut app, &client);
+    for from in [bag(3), bag(4), bag(5)] {
+        request(&mut app, &client, EquipItem { from });
+    }
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let view = load_model(
+        db(&app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap()
+    .view();
+    assert_eq!(
+        view[&equipped_location(EquipmentSlot::Finger1)].item_id,
+        1116
+    );
+    assert_eq!(
+        view[&equipped_location(EquipmentSlot::Finger2)].item_id,
+        4549
+    );
+    assert_eq!(view[&bag(5)].item_id, 1319);
 }
 
 #[test]
