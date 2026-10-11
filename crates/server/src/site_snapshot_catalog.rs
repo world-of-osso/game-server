@@ -80,7 +80,7 @@ pub fn raid(db: &Connection, lock: &super::store::Lock) -> Result<Option<Value>>
     let Some(name) = raid else {
         return Ok(None);
     };
-    let mut query=db.prepare("SELECT ID,Name_lang,Bit FROM dungeon_encounter WHERE MapID=?1 AND (DifficultyID=0 OR DifficultyID=?2) ORDER BY Bit,DifficultyID DESC,ID")?;
+    let mut query=db.prepare("SELECT ID,Name_lang,Bit FROM dungeon_encounter WHERE MapID=?1 AND (DifficultyID<=0 OR DifficultyID=?2) ORDER BY Bit,DifficultyID DESC,ID")?;
     let rows = query.query_map([lock.map_id, lock.difficulty_id], |r| {
         Ok((
             r.get::<_, u32>(0)?,
