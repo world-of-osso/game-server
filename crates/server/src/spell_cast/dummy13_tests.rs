@@ -196,6 +196,8 @@ fn dummy13_rapid_fire_cancellation_stops_future_shots_and_focus() {
     assert_eq!(damage(&h, 257045, target).len(), count);
 }
 
+// Non-Npc attacker pins the hit table; fixture CharacterStats pins crit at zero.
+// This proves persistent-pet script routing, not live pet spawn/stat inheritance.
 fn pet(h: &mut Harness) -> Entity {
     let owner = h.caster;
     let pet = spawn_player(&mut h.app, 3, 2.0);
@@ -219,7 +221,7 @@ fn pet(h: &mut Harness) -> Entity {
 }
 
 #[test]
-fn dummy13_bestial_wrath_buff_and_strike_use_own_pets_current_target() {
+fn dummy13_bestial_wrath_strike_uses_own_pets_current_target() {
     let mut h = harness(Vec::new(), &[19574, 344572], 3).unwrap();
     let own = pet(&mut h);
     let target = h.npc;
@@ -227,19 +229,23 @@ fn dummy13_bestial_wrath_buff_and_strike_use_own_pets_current_target() {
     h.select(Some(other));
     h.advance(4);
     execute(&mut h, 19574, None);
-    assert!(crate::auras::has_aura(h.app.world(), own, 19574));
-    assert!(h.health(target) < 5000.0);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), own, 19574),
+        "owner modifier is not an authored pet buff binding"
+    );
+    assert!(varied(176.0).contains(&(5000.0 - h.health(target))));
     assert_eq!(
         h.health(other),
         5000.0,
         "owner selection is not pet selection"
     );
+    let after = h.health(target);
     h.advance(400);
-    assert!(!crate::auras::has_aura(h.app.world(), own, 19574));
+    assert_eq!(h.health(target), after, "no invented repeated attack clock");
 }
 
 #[test]
-fn dummy13_bestial_wrath_buffs_only_owned_pet_even_with_no_pet_selection() {
+fn dummy13_bestial_wrath_does_not_infer_target_or_buff_foreign_pet() {
     let mut h = harness(Vec::new(), &[19574, 344572], 3).unwrap();
     let own = pet(&mut h);
     let foreign_owner = spawn_player(&mut h.app, 3, 0.0);
@@ -258,8 +264,8 @@ fn dummy13_bestial_wrath_buffs_only_owned_pet_even_with_no_pet_selection() {
         .0 = None;
     let target = h.npc;
     execute(&mut h, 19574, None);
-    assert!(crate::auras::has_aura(h.app.world(), own, 19574));
     assert!(!crate::auras::has_aura(h.app.world(), foreign, 19574));
+    assert_eq!(h.health(foreign), 1000.0);
     assert_eq!(h.health(target), 5000.0, "no inferred pet target");
 }
 

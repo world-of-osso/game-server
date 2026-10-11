@@ -116,16 +116,15 @@ pub(crate) fn cast_rapid_fire_tick(
     spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_FOCUS, Some(aura.caster), 1);
 }
 
-///19574 names344572 and buffs the actual persistent pet, not a temporary
-///guardian or the owner's selected enemy. CC removal/charge ranks are separate.
-pub(super) fn buff_and_strike_pet(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+///19574 explicitly names344572 at the persistent pet's own target.
+///Its owner a108 does not establish a pet a79 binding; buff/CC/charges remain open.
+pub(super) fn strike_with_owned_pet(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     let Some(pet) = crate::hunter_pet::summoned_pet(world, caster) else {
         return;
     };
     let target = world
         .get::<crate::networking::CombatTarget>(pet)
         .and_then(|target| target.0);
-    apply_owned_aura(world, caster, pet, BESTIAL_WRATH, (1 << 0) | (1 << 3));
     if let Some(target) = target.filter(|target| targets::is_alive(world, *target)) {
         spell_cast::cast_triggered(world, pet, BESTIAL_STRIKE, Some(target), 1);
     }
