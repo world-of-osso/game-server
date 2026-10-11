@@ -36,10 +36,12 @@ class InstancePopulationTest(unittest.TestCase):
             destination = Path(directory) / "algethar.sqlite"
             with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as original:
                 self.assertIsNone(original.execute("SELECT map FROM tdb_instance_template WHERE map=2526").fetchone())
+                existing_templates = original.execute("SELECT * FROM content_creature_template WHERE entry IN (SELECT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry").fetchall()
                 with closing(sqlite3.connect(destination)) as copy:
                     original.backup(copy)
             importer.import_database(destination)
             with closing(sqlite3.connect(destination)) as conn:
+                self.assertEqual(existing_templates, conn.execute("SELECT * FROM content_creature_template WHERE entry IN (SELECT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry").fetchall())
                 self.assertEqual(231, conn.execute("SELECT count(*) FROM content_creature WHERE map=2526").fetchone()[0])
                 self.assertEqual(29, conn.execute("SELECT count(*) FROM content_gameobject WHERE map=2526").fetchone()[0])
                 self.assertEqual(0, conn.execute("SELECT count(*) FROM content_creature WHERE map=1158").fetchone()[0])
@@ -120,10 +122,11 @@ class InstancePopulationTest(unittest.TestCase):
                 # Every spawned difficulty uses its authored resolved row, including gold-only creatures.
                 importer.select_instance_spawns(conn)
                 importer.retail.create_difficulty_table(conn, map_list=importer.MAPS, base_phase=importer.BASE_PHASE)
+                importer.prefer_existing_base_difficulties(conn)
                 expected = conn.execute("SELECT s.entry,s.difficulty,CASE WHEN d.LootID=0 THEN 0 ELSE d.LootID+20000000 END,d.GoldMin,d.GoldMax FROM temp.spawn_row s JOIN tdb_creature_template_difficulty d ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty WHERE s.difficulty>0 ORDER BY s.entry,s.difficulty").fetchall()
                 def with_authored_wowhead(row):
                     entry, difficulty, loot, low, high = row
-                    base = conn.execute("SELECT min(difficulty) FROM temp.spawn_map_difficulty WHERE entry=?", (entry,)).fetchone()[0]
+                    base = conn.execute("SELECT difficulty FROM temp.instance_base_difficulty WHERE entry=?", (entry,)).fetchone()[0]
                     scrape_loot = 30000000 + entry + (0 if difficulty == base else difficulty * 1000000)
                     authored = conn.execute("SELECT 1 FROM wowhead_creature_drop w JOIN content_creature_loot_template l ON l.Entry=? AND l.Item=w.item WHERE w.entry=? AND w.difficulty=?", (scrape_loot, entry, difficulty)).fetchone()
                     if loot == 0 and authored:
@@ -133,7 +136,7 @@ class InstancePopulationTest(unittest.TestCase):
                 self.assertEqual(expected, conn.execute("SELECT entry,DifficultyID,lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry IN (SELECT entry FROM temp.spawn_row) ORDER BY entry,DifficultyID").fetchall())
                 expected_base = conn.execute("SELECT Entry,CASE WHEN LootID=0 THEN 0 ELSE LootID+20000000 END,GoldMin,GoldMax FROM temp.tdb_difficulty WHERE Entry IN (SELECT id1 FROM temp.instance_creature) ORDER BY Entry").fetchall()
                 expected_base = [
-                    (entry, *with_authored_wowhead((entry, conn.execute("SELECT min(difficulty) FROM temp.spawn_map_difficulty WHERE entry=?", (entry,)).fetchone()[0], loot, low, high))[2:])
+                    (entry, *with_authored_wowhead((entry, conn.execute("SELECT difficulty FROM temp.instance_base_difficulty WHERE entry=?", (entry,)).fetchone()[0], loot, low, high))[2:])
                     for entry, loot, low, high in expected_base
                 ]
                 self.assertEqual(expected_base, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE entry IN (SELECT id1 FROM temp.instance_creature) ORDER BY entry").fetchall())
