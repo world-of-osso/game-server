@@ -48,6 +48,7 @@ External resources, tooling, data sources, development workflow.
 ## systems/
 
 - [Toy-effects10 cosmetic auras](systems/toys.md#toy-effects10-cosmetic-target-and-growth-auras-2026-10-10) — source-bound refreshment/crystal/swarm auras, real target/trigger/lifetime fixtures; retained gameplay scripts and rendering limits.
+- [Guardian source follow-ups](systems/spell-casting.md#guardian-source-follow-ups) — native-description Darkglare attack and prepared-template proof; explicit owner-stat/stamina/melee source limits, integrated163 roots99/64 and [all40 table](../spell-guardians2-coverage.md).
 
 - [Toy-effects9 banners/sign](systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10) — authentic15 banner item definitions and16 scenery templates; source-bound locations, wild faction and expiry, imported-copy census109→125, no shared DB write.
 - [Class spell batch15](systems/spell-casting.md#fifteenth-batch-native-health-weapon-ranks-and-delayed-hits) — eight local health/weapon/rank/heal-copy/delayed-hit contracts;163 remaining Dummy roots,98/65 reviewed/underived, [all40 table](../spell-dummy15-coverage.md). Karma redirect/guardian/Eye Beam gaps retained.

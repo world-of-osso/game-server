@@ -11,6 +11,12 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - [x] Import exact local TDB creature spell rows atomically; preserve prior bindings on duplicate-key failure and reject absent source data rather than synthesizing bindings.
 - [x] Named49206's temporary Gargoyle uses its native pet-title3238 and authentic27829/51963 binding without enabling generic pet-title actors; [batch12 contract](spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers).
 
+### Source-backed Darkglare attack
+- [x] Native205180 effect28's103673 actor casts205231, explicitly named in the local root description, with native2000ms cast time and20000ms actor lifetime; an empty archive binding table must not disable this named binding.
+- [x] Reuse existing demon SP contribution live: changed owner spell power affects subsequent Eye Beams. This is not new Retail inheritance-percentage proof.
+- [x] Retarget from owner selection, stop initiating without selection, and expire without occupying/replacing a persistent pet.
+- [ ] Root's DoT extension, Presence, per-DoT bonus and Dummy/aura4 consumers remain unconverted; direct effect28 tests are not whole-root proof.
+
 ### Damage sharing
 - [x] Native6940 aura81 redirects30% of post-mitigation damage to its caster for spell, periodic and real auto-attack paths; direct damage also shares.
 - [x] Native6940 effect2 terminates transfer at20% caster health, not an invented threshold.
@@ -29,14 +35,16 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - `crates/server/src/auras/damage_transfer.rs` — school-mask splits and native Sacrifice floor.
 - `crates/server/src/combat.rs` — melee splitting before health loss; nonrecursive redirect health application.
 - `scripts/import-guardian-spells.py` — archive importer for a prepared database copy.
+- `scripts/add_guardian_templates.py` — prepare authentic Darkglare103673 template/model from imported TDB tables on a copy; reject live world.db. Command: `python3 scripts/add_guardian_templates.py --db data/world.db.new`. Production import remains operator-owned.
 
 ## Tests asserting this spec
 - `crates/server/src/spell_cast/guardian_tests.rs` — authentic effect28/binding actor fixture and real spell/melee/periodic/direct damage paths.
 - `scripts/tests/test_guardian_spells.py` — exact rows, missing input and rollback.
+- `scripts/tests/test_guardian_templates.py` — authentic Darkglare template/model, idempotent prepared-copy import, missing-model rollback and live-database refusal.
 
 ## Known gaps (current cycle)
-- [ ] Wild Imp55659, Dreadstalker98035, Darkglare103673, Tyrant135002/250289 and other named guardian rotations require authentic creature-to-spell/cadence/budget data. See coverage receipts; no guessed six-bolt/energy policy.
-- [ ] Non-demon guardian power inheritance, movement/AI priorities, untimed-repeat cadence and talent modifiers remain uncertified. [Batch13 source recheck](../spell-dummy13-coverage.md#capabilities--limits) preserves this gap: wolf1500ms template timing does not establish its damage curve. Simultaneous split reservations with recipient absorbs and floor-limit ordering lack complete Retail proof.
+- [ ] Wild Imp55659, Dreadstalker98035, Tyrant135002/250289 and other named guardian rotations require authentic creature-to-spell/cadence/budget data. Darkglare's base Eye Beam binding is derived above; its modifiers remain open. See coverage receipts; no guessed six-bolt/energy policy.
+- [ ] Non-demon guardian AP/SP inheritance, owner-to-pet/guardian stamina share and melee weapon-damage curves remain underivable from inspected DB2/TDB/gametables; no new percentage or flat-damage substitute. Archive pet_levelstats contains base attributes, not inheritance coefficients, and cannot establish level90 scaling. Xuen123999→123996 is an authentic driver, but actor AP inheritance and target policy remain unproved. See [follow-up source receipts and all40 table](../spell-guardians2-coverage.md). Movement/AI priorities, untimed-repeat cadence and talent modifiers remain uncertified. [Batch13 source recheck](../spell-dummy13-coverage.md#capabilities--limits) preserves this gap: wolf1500ms template timing does not establish its damage curve. Simultaneous split reservations with recipient absorbs and floor-limit ordering lack complete Retail proof.
 - [ ] Root111859 Dummy0 cleanse bridge remains unbound; effect28 fixture is not whole-root execution proof.
 - [ ] Blade Flurry secondary geometry, Atonement soft-cap curve, Touch of Karma and Spirit Link scripts remain underived.
 
