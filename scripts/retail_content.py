@@ -674,7 +674,9 @@ def build_gameobject_templates(conn, report, *, retain_missing_displays=False):
     conn.execute(f"DELETE FROM content_gameobject_template WHERE entry IN ({retail})")
     conn.execute(f"DELETE FROM content_gameobject_template_addon WHERE entry IN ({retail})")
     data = ", ".join(f"Data{n}" for n in range(AZEROTHCORE_DATA_FIELDS))
-    loot_types = f"({GAMEOBJECT_TYPE_CHEST}, {GAMEOBJECT_TYPE_FISHINGHOLE})"
+    # TC GameObjectTemplate::GetLootId: type50 gatheringNode.chestLoot is
+    # the same TDB loot namespace as chest and fishing-hole loot.
+    loot_types = f"({GAMEOBJECT_TYPE_CHEST}, {GAMEOBJECT_TYPE_FISHINGHOLE}, 50)"
     mapped = data.replace("Data1,", f"CASE WHEN type IN {loot_types} AND Data1 <> 0 THEN Data1 + {TDB_LOOT_OFFSET} "
                                    "ELSE Data1 END,", 1)
     displayed = "(displayId = 0 OR displayId IN (SELECT ID FROM game_object_display_info))"

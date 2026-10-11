@@ -930,6 +930,14 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
     info!("Loaded {} game object spawns", game_objects.0.len());
     commands.insert_resource(game_objects);
+    let gathering = crate::gathering::load_data(&conn)
+        .expect("Failed to load gathering metadata; apply scripts/gathering_metadata.py");
+    info!(
+        "Loaded {} gathering templates and {} skin mappings",
+        gathering.nodes.len(),
+        gathering.skins.len()
+    );
+    commands.insert_resource(gathering);
     commands.insert_resource(
         crate::game_objects::summoned::load_templates(&conn)
             .expect("Failed to load spell-summoned gameobject templates"),

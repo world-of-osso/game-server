@@ -108,6 +108,21 @@ fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
 }
 
 #[test]
+fn gathering_nodes_load_authored_herb_and_ore_models() {
+    let spawns = spawns().unwrap();
+    for (entry, name, display) in [(1617, "Silverleaf", 270), (1731, "Copper Vein", 310)] {
+        let node = spawns
+            .0
+            .iter()
+            .find(|spawn| spawn.info.entry == entry && spawn.map_id == 0)
+            .expect("Retail herb and ore nodes must load with authored positions");
+        assert_eq!(node.info.name, name);
+        assert_eq!(node.info.display_id, display);
+        assert_eq!(node.info.go_type, 50);
+    }
+}
+
+#[test]
 #[ignore = "requires DUNGEON_POPULATION_DB pointing to an imported database copy"]
 fn dungeon_population_loads_all_model_bearing_instance_gameobjects() {
     let path = std::env::var("DUNGEON_POPULATION_DB").expect("imported copy path");
