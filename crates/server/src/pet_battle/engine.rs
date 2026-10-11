@@ -75,6 +75,7 @@ impl Battle {
             rng,
             events: Vec::new(),
             healing_target: None,
+            used_ability: None,
         };
         if rt.replace_fainted(actions)? {
             return Ok((rt.battle, rt.events));
@@ -97,6 +98,7 @@ pub(super) struct Runtime<'a, R> {
     pub rng: &'a mut R,
     pub events: Vec<Event>,
     pub healing_target: Option<PetRef>,
+    pub used_ability: Option<u32>,
 }
 impl<R: BattleRng> Runtime<'_, R> {
     pub fn state(&self, pet: PetRef, name: &str) -> i32 {
@@ -171,6 +173,9 @@ impl<R: BattleRng> Runtime<'_, R> {
                 for cooldown in pet.cooldowns.values_mut() {
                     *cooldown = cooldown.saturating_sub(1);
                 }
+                for lockout in &mut pet.lockouts {
+                    *lockout = lockout.saturating_sub(1);
+                }
             }
         }
     }
@@ -193,6 +198,14 @@ impl<R: BattleRng> Runtime<'_, R> {
                 }
                 if pet.cooldowns.get(&ability).copied().unwrap_or(0) > 0 {
                     return Err(format!("ability {ability} on cooldown"));
+                }
+                if pet
+                    .abilities
+                    .iter()
+                    .enumerate()
+                    .any(|(index, id)| *id == ability && pet.lockouts[index] > 0)
+                {
+                    return Err(format!("ability {ability} locked out"));
                 }
                 rules::validate_ability(self.catalog, ability)
             }
@@ -340,11 +353,29 @@ impl<R: BattleRng> Runtime<'_, R> {
             None
         };
         if turn == 1 {
+            self.trigger_used_ability(caster, ability)?;
             self.battle
                 .pet_mut(caster)
                 .cooldowns
                 .insert(ability, self.catalog.abilities[&ability].cooldown);
         }
+        Ok(())
+    }
+    /// DB2 Nevermore/Spell Gulp consume their wearer's next ability use once.
+    /// No generic event9 ownership or recursive callback dispatcher is admitted.
+    fn trigger_used_ability(&mut self, wearer: PetRef, ability: u32) -> Result<(), String> {
+        let auras: Vec<_> = self
+            .battle
+            .auras
+            .iter()
+            .filter(|a| a.target == wearer && matches!(a.ability, 738 | 1859))
+            .map(|a| a.ability)
+            .collect();
+        self.used_ability = Some(ability);
+        for aura in auras {
+            self.cast_turn(wearer, wearer, aura, 0, 9)?;
+        }
+        self.used_ability = None;
         Ok(())
     }
     pub fn cast_turn(

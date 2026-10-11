@@ -77,6 +77,8 @@ pub struct Pet {
     pub abilities: [u32; 3],
     pub states: States,
     pub cooldowns: BTreeMap<u32, u32>,
+    /// Ability-slot lockdown is separate from an ability's ordinary cooldown.
+    pub lockouts: [u32; 3],
     pub continuation: Option<(u32, u32)>,
     pub resurrection_used: bool,
     pub undead_expires: Option<u32>,
@@ -125,6 +127,7 @@ impl Pet {
             abilities,
             states,
             cooldowns: BTreeMap::new(),
+            lockouts: [0; 3],
             continuation: None,
             resurrection_used: false,
             undead_expires: None,
