@@ -1,5 +1,8 @@
 """Concrete WDC5 Lock rows and the exported runtime contract."""
 from pathlib import Path
+import json
+import subprocess
+import tempfile
 import struct
 import sys
 import unittest
@@ -35,6 +38,25 @@ class LockImportTests(unittest.TestCase):
                 "1673": [{"kind": 1, "index": 24337, "skill": 0, "action": 0}],
             },
         })
+
+    def test_cli_places_companion_beside_sqlites_resolved_source_without_writing_db(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            world = source / "world.db"
+            world.write_bytes(b"immutable world fixture")
+            link = root / "world.db"
+            link.symlink_to(world)
+            binary = root / "Lock.db2"
+            binary.write_bytes(lock_fixture())
+            command = [sys.executable, str(Path(__file__).resolve().parents[1] / "import_game_object_locks.py"), "--db2", str(binary), "--world-db", str(link)]
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(world.read_bytes(), b"immutable world fixture")
+            self.assertFalse((root / "game_object_locks.json").exists())
+            exported = json.loads((source / "game_object_locks.json").read_text())
+            self.assertEqual(exported["locks"]["1673"][0]["index"], 24337)
 
     def test_unknown_layout_fails_instead_of_guessing_array_order(self):
         data = bytearray(lock_fixture())
