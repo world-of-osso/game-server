@@ -1028,6 +1028,30 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
+    fn world_population_real_copy_spawns_living_expansion_creatures() {
+        let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
+        let data = crate::world_data::load_world_data(std::path::Path::new(&path));
+        for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+            let mut world = World::new();
+            let mut queue = bevy::ecs::world::CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, &world);
+            let count =
+                spawn_map_creatures(&mut commands, &data, MapContent::continent(map_id), false);
+            assert!(count > 0, "empty promoted map {map_id}");
+            queue.apply(&mut world);
+            let mut npcs = world.query::<(&Npc, &Health, &crate::maps::InMap)>();
+            let actors: Vec<_> = npcs.iter(&world).collect();
+            assert_eq!(actors.len(), count as usize);
+            assert!(
+                actors.iter().all(|(_, hp, map)| hp.current > 0.0
+                    && *map == &crate::maps::InMap::continent(map_id))
+            );
+            println!("map {map_id}: {count} living continent NPCs");
+        }
+    }
+
+    #[test]
     #[ignore = "requires DUNGEON_POPULATION_DB pointing to an imported database copy"]
     fn dungeon_population_real_copy_loads_all_maps_and_spawns_three_dungeons() {
         let path = std::env::var("DUNGEON_POPULATION_DB").expect("imported copy path");
