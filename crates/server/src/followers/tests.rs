@@ -162,6 +162,41 @@ fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
 }
 
 #[test]
+fn follower_initialization_applies_authored_aura_and_native_class_level_stats() {
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[458324], 8).unwrap();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
+    let kit = profile(209059, GroupRole::Dps, 133, 0);
+    let expected = super::spawning::class_stats(h.app.world(), &kit, 10)
+        .unwrap()
+        .0;
+    let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    super::spawning::initialize(h.app.world_mut(), h.caster, unit, kit).unwrap();
+    assert!(crate::auras::has_aura(h.app.world(), unit, 458324));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitLevel>(unit)
+            .unwrap()
+            .0,
+        10
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(unit).unwrap().max,
+        expected.max_health
+    );
+    assert_eq!(
+        h.app.world().get::<Mana>(unit).unwrap().max,
+        expected.base_mana
+    );
+}
+
+#[test]
 fn tank_recovers_a_party_attackers_threat_with_real_hand_of_reckoning() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[62124], 2).unwrap();
     let mut kit = profile(209057, GroupRole::Tank, 0, 0);

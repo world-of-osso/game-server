@@ -1,6 +1,6 @@
 # Follower dungeons and NPC companions
 
-Retail follower dungeons must group a solo player with four role-aware NPCs and complete an authored instance. User-approved workaround (2026-10-11): no authored NPC combat kits exist locally; followers use their labelled spec's real player spells through the existing executor. Spell coefficients, templates and displays remain authored. This is a bridge, not an NPC-kit authenticity claim; retire it when sourced NPC kits become available. [Local data audit and lead-only import](../wiki/investigations/follower-data.md).
+Retail follower dungeons must group a solo player with four role-aware NPCs and complete an authored instance. User-approved workaround (2026-10-11): no authored NPC combat kits exist locally; followers use their labelled spec's real player spells through the existing executor. Spell coefficients, templates and displays remain authored. The bridge initializes native class/spec/level stats and keeps replicated health/mana consistent with those stats; it does not claim authenticated Retail NPC gear or stat-budget parity. This is a bridge, not an NPC-kit authenticity claim; retire it when sourced NPC kits become available. [Local data audit and lead-only import](../wiki/investigations/follower-data.md).
 
 ## What it must do
 

@@ -18,7 +18,7 @@ pub(super) fn spawn(world: &mut World, owner: Entity, profile: Profile) -> Resul
     Ok(unit)
 }
 
-fn initialize(
+pub(super) fn initialize(
     world: &mut World,
     owner: Entity,
     unit: Entity,
@@ -36,6 +36,10 @@ fn initialize(
         current: stats.base_mana,
         max: stats.base_mana,
     };
+    let health = shared::components::Health {
+        current: stats.max_health,
+        max: stats.max_health,
+    };
     let form = profile.form_spell;
     world
         .entity_mut(unit)
@@ -45,6 +49,7 @@ fn initialize(
             stats,
             pools,
             mana,
+            health,
             UnitLevel(level),
             faction,
             UnitSummonedBy(owner.to_bits()),
