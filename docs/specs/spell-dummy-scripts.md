@@ -13,6 +13,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 - [ ] Holy Light82326 with231642 casts named88852 once, including overhealing; absent rank gives no Holy Power.
 - [ ] Holy Shock20473 and Crusader Strike35395 with196926 reduce only a running Holy Judgment275773 cooldown by their separate native millisecond fields; ready cooldowns remain ready.
 - [ ] Holy Judgment275773 and Retribution Judgment20271 with315867 cast named220637 once on actual primary damage; no rank or immune hit gives no gain.
+- [ ] Healing Wave77472 admits only its explicit living ally and applies one native heal; native selector45/zero chain targets never invents jumps or heals enemies.
 - [ ] Riptide61295 with51564 grants native53390 uses up to its native stack cap; Healing Wave77472/Chain Heal1064 consume one use with the same20% cast reduction, not stacked magnitude.
 
 Bounded low-count batch only: offspec Crusader's Might cooldown variants, Judgment mark/talent/secondary effects, Arcane charge-aura visuals and full rotation parity remain uncertified. Guardian modules are excluded. Tests: `crates/server/src/spell_cast/dummy16_tests.rs`; [runtime](../wiki/systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers).
