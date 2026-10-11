@@ -234,6 +234,8 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
+            crate::game_objects::GAMEOBJECT_TYPE_CHEST
+            | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self
@@ -272,6 +274,7 @@ impl InteractionWorld<'_, '_> {
 /// Result of using a game object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ObjectUse {
+    QuestObject,
     /// Opens a role frame.
     Role(NpcRole),
     /// Casts the object's spell (`meeting_stone::use_object`).
@@ -385,6 +388,22 @@ fn process_game_object_uses(
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::meeting_stone::use_object(world, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::QuestObject)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) =
+                            crate::game_objects::quest_object::use_object(world, player, object)
+                            && let Some(mut sender) =
+                                world.get_mut::<MessageSender<InteractionFailed>>(connection)
+                        {
+                            sender.send::<InteractionChannel>(InteractionFailed {
+                                npc: object.to_bits(),
+                                error,
+                            });
+                        }
                     });
                     continue;
                 }
