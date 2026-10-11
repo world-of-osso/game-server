@@ -22,6 +22,7 @@ pub(super) struct EscortPath {
     pub index: usize,
     pub pause_ms: Option<u32>,
     pub reached: bool,
+    pub walk: bool,
 }
 
 pub(super) fn load_waypoint_paths(

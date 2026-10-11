@@ -48,6 +48,7 @@ const EVENT_WAYPOINT_STOPPED: u32 = 57;
 const EVENT_WAYPOINT_ENDED: u32 = 58;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
+const ACTION_SET_FACTION: u32 = 2;
 const ACTION_FAIL_QUEST: u32 = 6;
 const ACTION_COMPLETE_QUEST: u32 = 152;
 const ACTION_CAST: u32 = 11;
@@ -56,6 +57,10 @@ const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_DIE: u32 = 37;
 const ACTION_WP_START: u32 = 53;
 const ACTION_WP_PAUSE: u32 = 54;
+const ACTION_WP_STOP: u32 = 55;
+const ACTION_SET_RUN: u32 = 59;
+const ACTION_SET_NPC_FLAG: u32 = 81;
+const ACTION_ADD_NPC_FLAG: u32 = 82;
 const ACTION_WP_RESUME: u32 = 65;
 const ACTION_STORE_TARGET_LIST: u32 = 64;
 const ACTION_CALL_TIMED_ACTION_LIST: u32 = 80;
@@ -211,6 +216,11 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_STORE_TARGET_LIST
             | ACTION_CALL_TIMED_ACTION_LIST
             | ACTION_REMOVE_NPC_FLAG
+            | ACTION_SET_FACTION
+            | ACTION_WP_STOP
+            | ACTION_SET_RUN
+            | ACTION_SET_NPC_FLAG
+            | ACTION_ADD_NPC_FLAG
     )
 }
 
@@ -521,14 +531,18 @@ impl SmartAi {
             ACTION_CALL_TIMED_ACTION_LIST => {
                 self.start_timed_list(ctx, event.action_params[0], invoker)
             }
-            ACTION_REMOVE_NPC_FLAG => {
-                for target in targets {
-                    if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(target)
-                    {
-                        flags.0 &= !u64::from(event.action_params[0]);
-                    }
-                }
+            ACTION_SET_FACTION => Self::set_faction(ctx, &targets, event.action_params[0]),
+            ACTION_SET_NPC_FLAG | ACTION_ADD_NPC_FLAG | ACTION_REMOVE_NPC_FLAG => {
+                Self::change_npc_flags(ctx, &targets, event);
             }
+            ACTION_SET_RUN => {
+                let walk = event.action_params[0] == 0;
+                if let Some(escort) = &mut self.escort {
+                    escort.walk = walk;
+                }
+                ctx.set_walk(ctx.me, walk);
+            }
+            ACTION_WP_STOP => self.stop_path(ctx, event.action_params[2] != 0),
             ACTION_WP_START => self.start_path(ctx, event, invoker),
             ACTION_WP_PAUSE => self.pause_path(ctx, event.action_params[0]),
             ACTION_WP_RESUME => {
@@ -599,10 +613,11 @@ impl SmartAi {
         };
         self.escort = Some(paths::EscortPath {
             path_id,
-            path,
+            path: path.clone(),
             index: 0,
             pause_ms: None,
             reached: false,
+            walk: path.walk,
         });
         self.move_to_waypoint(ctx);
         if invoker.is_some_and(|entity| {
@@ -614,6 +629,63 @@ impl SmartAi {
                 flags.0 = 0;
             }
         }
+    }
+
+    fn set_faction(ctx: &mut Ctx, targets: &[Entity], requested: u32) {
+        for &target in targets {
+            let faction = if requested == 0 {
+                let Some(entry) = ctx
+                    .world
+                    .get::<shared::components::Npc>(target)
+                    .map(|npc| npc.template_id)
+                else {
+                    continue;
+                };
+                let Some(template) = ctx
+                    .world
+                    .resource::<crate::world_data::WorldData>()
+                    .templates
+                    .get(&entry)
+                else {
+                    continue;
+                };
+                u32::from(template.faction)
+            } else {
+                requested
+            };
+            ctx.world
+                .entity_mut(target)
+                .insert(shared::components::UnitFactionTemplate(faction));
+        }
+    }
+
+    fn change_npc_flags(ctx: &mut Ctx, targets: &[Entity], event: &SmartEvent) {
+        for &target in targets {
+            if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(target) {
+                let mask = u64::from(event.action_params[0]);
+                flags.0 = match event.action_type {
+                    ACTION_SET_NPC_FLAG => mask,
+                    ACTION_ADD_NPC_FLAG => flags.0 | mask,
+                    ACTION_REMOVE_NPC_FLAG => flags.0 & !mask,
+                    _ => unreachable!(),
+                };
+            }
+        }
+    }
+
+    fn stop_path(&mut self, ctx: &mut Ctx, failed: bool) {
+        let Some(escort) = &self.escort else {
+            return;
+        };
+        let node_id = escort.path.nodes[escort.index].id;
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<super::movement::PointMovement>();
+        self.process_events_for(ctx, EVENT_WAYPOINT_STOPPED, None, node_id);
+        if !failed {
+            self.process_events_for(ctx, EVENT_WAYPOINT_ENDED, None, node_id);
+        }
+        self.escort = None;
     }
 
     fn pause_path(&mut self, ctx: &mut Ctx, duration_ms: u32) {
@@ -678,7 +750,7 @@ impl SmartAi {
         let Some(node) = escort.path.nodes.get(escort.index) else {
             return;
         };
-        ctx.set_walk(ctx.me, escort.path.walk);
+        ctx.set_walk(ctx.me, escort.walk);
         ctx.move_point(ctx.me, node.id, node.position);
     }
 }
