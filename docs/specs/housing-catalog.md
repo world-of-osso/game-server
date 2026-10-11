@@ -26,6 +26,10 @@ Property copies are keyed by authored map ID and authoritative neighborhood/hous
 
 No verified first-house exterior/interior grant source is available. Do not infer default grants from component membership, UnlockItemID=0 or the placeholder House row. Rank3 may use one bounded authentic vendor-item redemption path backed by world.db/TDB npc_vendor or an authored DB2 item effect (lead approval, 2026-10-11); never turn StartingQuantity into ownership without grant semantics.
 
+## Authoritative catalog coordinates
+
+The server reads build-qualified NeighborhoodMap entries and NeighborhoodPlot cornerstone/teleport coordinates from the imported catalog. Supported shipping neighborhoods are map2735/2736; record4/map2640 has no matching Map.db2 row. Plot prices retain authored copper amounts under the Retail cornerstone MoneyFrame/GetMoney contract. Names may be authentically empty; do not generate neighborhood/plot names or grants. Missing catalog imports must produce an explicit unavailable error.
+
 ## Atomic ownership and basic storage
 
 The housing persistence table records account ownership, paid plot claims, storage counts and stable placed-instance IDs independently of character serialization. Purchase and inventory copper debit commit in one transaction; competing buyers cannot both claim one plot. No first-house exterior/room/decor grants are inferred.
