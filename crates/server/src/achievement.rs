@@ -17,6 +17,8 @@ use crate::persistence::{self, GameDatabase};
 #[path = "achievement_catalog.rs"]
 mod catalog;
 pub(crate) use catalog::{AchievementCatalog, CriteriaEvent, load_achievement_catalog};
+#[path = "achievement_account.rs"]
+mod account_store;
 #[path = "dungeon_progress.rs"]
 mod dungeon;
 
@@ -27,6 +29,9 @@ pub struct PlayerAchievementState {
     pub criteria_progress: BTreeMap<u32, u64>,
     #[serde(default)]
     pub earned_at: BTreeMap<u32, i64>,
+    /// Presentation-only aggregate; never serialized into character contributions.
+    #[serde(skip)]
+    pub account: Option<Box<PlayerAchievementState>>,
 }
 
 /// One-time migration of the six former level placeholders. Counter-bearing rows
@@ -169,39 +174,52 @@ fn update_player_events(
     }
     let race = world.get::<Player>(player)?.race;
     let now = world.resource::<crate::maps::ServerClock>().unix();
-    let result = world.resource_scope(|world, catalog: Mut<AchievementCatalog>| {
-        let mut state = world.get_mut::<PlayerAchievementState>(player)?;
-        let toasts: Vec<_> = events
+    let owner = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .find_map(|(auth, link, in_world)| {
+            (link.0 == player).then_some((auth.account_id, in_world.character_id))
+        });
+    world.resource_scope(|world, catalog: Mut<AchievementCatalog>| {
+        let mut state = world.get::<PlayerAchievementState>(player)?.clone();
+        let mut toasts: Vec<_> = events
             .iter()
             .flat_map(|event| catalog.update(&mut state, *event, completed_map, race))
             .collect();
         for toast in &toasts {
             state.earned_at.insert(toast.achievement_id, now);
         }
-        Some((catalog.snapshot(&state, race), toasts))
-    });
-    if result.is_some() {
-        persist_player_achievements(world, player);
-    }
-    result
-}
-
-fn persist_player_achievements(world: &mut World, player: Entity) {
-    let character = world
-        .get::<persistence::ClientId>(player)
-        .map(|id| id.0)
-        .or_else(|| {
-            world
-                .query::<(&PlayerLink, &InWorld)>()
-                .iter(world)
-                .find_map(|(link, in_world)| (link.0 == player).then_some(in_world.character_id))
-        });
-    if let Some(character) = character
-        && let Some(db) = world.get_resource::<GameDatabase>()
-        && let Some(state) = world.get::<PlayerAchievementState>(player)
-    {
-        persistence::save_achievements(&db.db, character, state);
-    }
+        if let Some((account, character)) = owner
+            && let Some(db) = world.get_resource::<GameDatabase>()
+        {
+            loop {
+                let (aggregate, account_toasts) = account_store::save_account_progress(
+                    &db.db,
+                    account,
+                    character,
+                    &state,
+                    &catalog,
+                    completed_map,
+                    race,
+                    now,
+                );
+                state.account = Some(Box::new(aggregate));
+                toasts.extend(account_toasts);
+                let character_toasts =
+                    catalog.grant_completed(&mut state, completed_map, race, false);
+                if character_toasts.is_empty() {
+                    break;
+                }
+                for toast in &character_toasts {
+                    state.earned_at.insert(toast.achievement_id, now);
+                }
+                toasts.extend(character_toasts);
+            }
+        }
+        let snapshot = catalog.snapshot(&state, race);
+        world.entity_mut(player).insert(state);
+        Some((snapshot, toasts))
+    })
 }
 
 fn send_updates(
