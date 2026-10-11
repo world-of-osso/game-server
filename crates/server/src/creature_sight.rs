@@ -202,7 +202,7 @@ type Units<'w, 's> = Query<
         Option<&'static UnitFlags>,
         Option<&'static CreatureState>,
         &'static Npc,
-        Has<crate::auras::Invisible>,
+        Option<&'static crate::auras::Invisibility>,
         (Has<DeathState>, Has<GridDormant>),
     ),
 >;
@@ -231,6 +231,7 @@ struct UnitView<'a> {
     state: Option<CreatureState>,
     template: u32,
     targetable: bool,
+    invisibility: crate::auras::Invisibility,
 }
 
 impl SightParams<'_, '_> {
@@ -246,7 +247,7 @@ impl SightParams<'_, '_> {
             flags,
             state,
             npc,
-            invisible,
+            invisibility,
             (dead, dormant),
         ) = self.units.get(unit).ok()?;
         (health.current > 0.0 && !dead && !dormant).then(|| UnitView {
@@ -259,8 +260,8 @@ impl SightParams<'_, '_> {
             flags: flags.map_or(0, |flags| flags.0),
             state: state.copied(),
             template: npc.template_id,
-            targetable: !invisible
-                && flags.is_none_or(|flags| flags.is_attackable() && flags.is_selectable()),
+            targetable: flags.is_none_or(|flags| flags.is_attackable() && flags.is_selectable()),
+            invisibility: invisibility.cloned().unwrap_or_default(),
         })
     }
 
@@ -331,6 +332,7 @@ impl SightParams<'_, '_> {
         // hostile; IsValidAttackTarget refuses a target immune to NPCs.
         let hostile = self.templates.reaction(me.faction, who.faction) == Reaction::Hostile;
         let attackable = who.targetable
+            && me.invisibility.detects(&who.invisibility)
             && who.flags & (UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_NON_ATTACKABLE) == 0
             && self.templates.can_attack(
                 UnitFaction {

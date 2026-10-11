@@ -1,5 +1,14 @@
 # Class spell scripts
 
+## Twenty-third batch: authored combo builders and Rune Weapon parry
+
+- [x] Active121471 doubles197835's authored per-enemy combo grant using its native100-percent effect3. Each landed enemy grants two instead of one; ordinary pool caps apply. No active aura/expiry retains one; native Backstab modifiers remain unchanged and must not double twice.
+- [x] Actual49028 Rune Weapon spawn grants its owner native81256 parry30% for the native8sec lifetime. Early summon despawn removes the owner buff. A missing authentic27893 template spawns nothing and grants no parry; existing root cast admission is unchanged.
+- [ ]49028 attack mirroring and its50707/1206/10/8 Dummy fields remain unbound; parry is not full Rune Weapon parity.
+- [ ]121471's20-percent additional Shadow damage remains separate and underivable locally: no proc-event/child binding establishes damage basis, melee/spell eligibility or279043 dispatch. Native combo certification is not full Shadow Blades parity.
+
+Source: local Mainline12.1.0.69933 description “causing your combo point generating abilities to generate double combo points”;197835s2 supplies per-target points. Native121471 masks do not match197835's scripted effect1. [Batch23 census/proof](../spell-dummy23-coverage.md).
+
 ## Twenty-second batch: native Rewind non-raid healing
 
 - [x] Rewind363534s4 increases its existing native healing by200% when its caster is outside a raid; solo and party casters receive three times the native amount, raid casters retain it. Ordinary heal cap/overheal handling remains authoritative.

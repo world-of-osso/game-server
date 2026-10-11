@@ -4,7 +4,7 @@ The Transmogrifier service resolves eligible collected Retail appearance sources
 
 ## Service and validation
 
-The workspace consumes published shared-protocol d867b80 rather than overriding it with the canonical sibling checkout. This keeps branch compilation independent of a temporary leased-slot patch; unrelated vendor patches remain unchanged.
+The tracked workspace retains the canonical shared-protocol sibling patch. Leased build/test runs select the matching protocol checkout with a local `.cargo/config.toml` override; remove that temporary override before release and never commit slot paths. The engine helper uses `DEPOT_SIBLING_SHARED_PROTOCOL` for the same purpose.
 
 Merged Retail NPC flags survive zone import. Hashom's authored gossip menu21043 option0 opens the Transmogrifier role, not a vendor. Requests require the active in-range interaction and current equipped GUIDs. Every slot/source/cost is validated before mutation; invalid batches preserve the whole record.
 

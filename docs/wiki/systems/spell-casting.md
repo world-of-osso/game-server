@@ -8,6 +8,14 @@ Mind Flay15407's native4500ms/750ms clock and300-raw aura24 payment already fulf
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Twenty-third batch: authored combo builders and Rune Weapon parry
+
+[Contract](../../specs/spell-dummy-scripts.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry), [source/census/proof](../../spell-dummy23-coverage.md). `scripts/batch5.rs::shuriken_storm` applies active121471's native100-percent effect3 to197835's scripted per-enemy combo grant. Native Backstab energize already matches121471's modifier masks; the scripted Storm effect does not. This named correction does not double native builders twice or invent a Shadow-damage copy.
+
+`summon.rs::spawn_summon` grants81256 only after authentic49028/27893 Rune Weapon creation. Native aura47 supplies30-percent owner parry; both durations are8sec. `despawn_summon` removes that owner's81256 on early actor removal. Missing real template spawns nothing/grants nothing; existing root admission remains unchanged. Mirrored attacks and49028 Dummy markers remain unbound.
+
+All28 previously unreviewed roots now carry exact reasons:157/129/28→157/157/0, with all157 unresolved upper-bound roots retained. Zero underived means no unreviewed roots, not full gameplay closure. Thirty deferred roots re-read; known empower/radius/count data does not create missing movement/actor/history/selector algorithms. Targeted12/12 GREEN at449bb8e; no broad suite/live parity claim.
+
 ## Twenty-first batch: native combo builders
 
 [Contract](../../specs/spell-dummy-scripts.md#twenty-first-batch-native-combo-builders), [source/proof/census](../../spell-dummy21-coverage.md). `effects.rs::energize` admits positive self-directed combo grants from depth0 native casts. `scripts/batch21.rs::berserk_combo_bonus` reads the active106951 index1 amount only for matching spell families; combined grant flows through ordinary pool clamping and overflow logging. Thrash's caster effect grants once, independent of its area target count. Native343216's1500ms periodic point remains independent and receives no extra builder point.

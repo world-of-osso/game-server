@@ -475,6 +475,7 @@ fn dungeonach_scheduled_instance_lock_round_trip_restores_bosses_and_encounters(
         group: None,
         leader: 42,
         difficulty_id: 2,
+        ..Default::default()
     };
     let now = Now {
         elapsed: 0.0,

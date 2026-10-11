@@ -96,6 +96,7 @@ mod scripted_ai;
 mod sheet_visibility;
 mod skyriding;
 mod spawn_pools;
+mod spell_area;
 mod spell_cast;
 mod spell_info;
 mod spell_scaling_data;
@@ -200,6 +201,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(transmog::TransmogPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)
+        .add_plugins(spell_area::SpellAreaPlugin)
         .add_plugins(experience::ExperiencePlugin);
 }
 
