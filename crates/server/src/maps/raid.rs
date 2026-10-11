@@ -150,3 +150,51 @@ pub(crate) fn send(world: &mut World) {
         );
     }
 }
+
+/// Real creature death boundary, shared by melee, spells and periodic damage.
+/// Only unambiguous authored single-creature encounters receive generic credit.
+pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
+    let Some(map) = world.get::<InMap>(creature).copied() else {
+        return;
+    };
+    let Some(npc) = world.get::<shared::components::Npc>(creature) else {
+        return;
+    };
+    let Some(store) = world.get_resource::<MapStore>() else {
+        return;
+    };
+    let Some(&bit) = store
+        .raid_creature_encounters
+        .get(&(map.map_id, npc.template_id))
+    else {
+        return;
+    };
+    let Some(instances) = world.get_resource::<InstanceManager>() else {
+        return;
+    };
+    let difficulty = instances.copy_difficulty(map).map(|d| d.difficulty_id);
+    let Some(difficulty) = difficulty else { return };
+    if !store
+        .encounters_for_map(map.map_id, difficulty)
+        .iter()
+        .any(|e| e.bit == bit)
+    {
+        return;
+    }
+    let completed = instances.completed_encounters(map);
+    if completed & (1 << bit) != 0 {
+        return;
+    }
+    let players: Vec<_> = crate::scripted_ai::instance_script::players_in_map(world, map)
+        .into_iter()
+        .filter_map(|entity| Some((entity, world.get::<ClientId>(entity)?.0)))
+        .collect();
+    let unix = now(world).unix;
+    let saved = world
+        .resource_mut::<InstanceManager>()
+        .update_instance_lock(map, &players, completed | (1 << bit), Some(bit), unix);
+    super::difficulty::send_instance_saved(world, &saved);
+    for (entity, character) in players {
+        super::difficulty::send_raid_info(world, entity, character);
+    }
+}

@@ -24,3 +24,8 @@ Retail Mainline raid entry extends the existing instance manager and saved-insta
 
 ## Out of scope
 Encounter mechanics and raid rewards are separate slices.
+
+## Authenticated encounter derivation
+`raid_encounters.py` decodes local CASC JournalEncounter FDID1240336/layoutB88D11CC and JournalEncounterCreature FDID1301155/layout81A3C769 using WoWDBDefs layouts for12.1.0.69933. JournalEncounter.DungeonEncounterID selects the existing DB2 map/bit. Exactly one journal creature must join exactly one TDB creature on that map by CreatureDisplayInfoID→creature_template_model. A creature matching multiple encounters is excluded. Names never create bindings.106 accepted bindings;331 multi-actor/shared-display/missing joins are recorded, not guessed. This does not implement council or scripted non-death completion semantics.
+
+Lead import procedure (canonical database remains read-only): prepare a fresh population-imported SQLite backup copy, then run `python3 scripts/raid_encounters.py --db COPY --journal EXTRACTED/1240336.db2 --creatures EXTRACTED/1301155.db2 --output raid-reference.sql --report raid-reference.json`. Apply generated SQL to that copy, review report and publish separately. No script writes world.db. Private proof copy: game-engine/data/diagnostics/raid-entry-2026-10-11/raid.sqlite.

@@ -313,6 +313,8 @@ pub struct MapStore {
     pub difficulty_entries: HashMap<u32, DifficultyEntry>,
     /// `DungeonEncounter.db2` by ID.
     pub dungeon_encounters: HashMap<u32, DungeonEncounter>,
+    /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
+    pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// `graveyard_zone`: ghost zone → WorldSafeLocs ids.
@@ -487,12 +489,32 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         difficulty_conditions: load_difficulty_conditions(conn)?,
         difficulty_entries: load_difficulty_entries(conn)?,
         dungeon_encounters: load_dungeon_encounters(conn)?,
+        raid_creature_encounters: load_raid_creature_encounters(conn)?,
         area_triggers: load_area_triggers(conn, &safe_locs)?,
         graveyard_zones: load_graveyard_zones(conn)?,
         instance_parents: load_instance_parents(conn)?,
         instance_scripts: load_instance_scripts(conn)?,
         safe_locs,
     })
+}
+
+fn load_raid_creature_encounters(conn: &Connection) -> rusqlite::Result<HashMap<(u32, u32), u32>> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='raid_encounter_creature')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !exists {
+        warn!(
+            "Raid boss credit catalog absent; prepare/import scripts/raid_encounters.py reference SQL before raid boss credit is available"
+        );
+        return Ok(HashMap::new());
+    }
+    let mut statement =
+        conn.prepare("SELECT map_id, creature_entry, bit FROM raid_encounter_creature")?;
+    statement
+        .query_map([], |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)))?
+        .collect()
 }
 
 fn load_maps(conn: &Connection) -> rusqlite::Result<HashMap<u32, MapEntry>> {
