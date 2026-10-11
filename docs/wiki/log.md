@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Native Leatherworking proof](systems/professions.md#native-leatherworking-proof--verified2026-10-11): real trainer/cast/reagent/skill/persistence behavioral test and linked both-skin private client acceptance; no world.db writes or invented quality formulas.
+
 - 2026-10-11 — [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage): eight spell/rank entries with real-store deterministic tests. Source-bound Flurry/Mutilate, Dispersion/Intangibility/Altered Form totals, actual dispeller Horror, owned Havoc copy and shared Ardent fatal-hit reservation. [Coverage](../spell-dummy19-coverage.md) records163/103/60→160/104/56,277 exact native rows, all40 baseline reproduction and feature/masterf5d60ca single spell_cast418/418, fmt/check passing. Unknown markers, destination-defense/live and source gaps remain; later edits docs/proof only.
 - 2026-10-11 — [Toy-effects12 non-summon cosmetics](systems/toys.md#toy-effects12-non-summon-cosmetics-2026-10-11): highest eligible blockers aura4/35 and effect3/31; source-bound Heartbreaker, Death's Door Charm, B.B.F. Fist and Abyss Caller Horn. Behavioral RED5/5 rejects the actual missing cosmetic admissions. Source lifetimes and animation/model chains retained; no generic dummy implementation, gameplay water or canonical DB write. [Coverage](../toy-effects12-coverage.md) records the final proof boundary.
 
