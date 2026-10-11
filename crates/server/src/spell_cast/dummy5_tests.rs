@@ -137,7 +137,7 @@ fn dummy5_chaos_bolt_damage_scales_with_critical_strike_chance() {
 fn dummy5_rapture_counts_only_owned_damaging_periodic_effects() {
     let mut h = harness(
         Vec::new(),
-        &[324536, 324540, 146739, 233490, 703, 119611],
+        &[324536, 324540, 146739, 30108, 233490, 703, 119611],
         9,
     )
     .expect("real catalog");
@@ -158,7 +158,8 @@ fn dummy5_rapture_counts_only_owned_damaging_periodic_effects() {
     h.advance(40);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(varied(45.9196).contains(&(damage(&h, 324540, primary) as f32)));
-    assert!(varied(91.8392).contains(&(damage(&h, 324540, two) as f32)));
+    // Two owned DoTs plus30108s3's native10% vulnerability on this target.
+    assert!(varied(91.8392 * 1.1).contains(&(damage(&h, 324540, two) as f32)));
     for unit in [foreign, unmarked, ally] {
         assert_eq!(damage(&h, 324540, unit), 0);
     }
