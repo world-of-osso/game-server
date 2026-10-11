@@ -11,7 +11,8 @@ const PROTECTION_WARRIOR: u32 = 73;
 
 pub(super) fn prepare_application(world: &mut World, target: Entity, new: &mut AuraInstance) {
     match new.spell_id {
-        SHADOW_WORD_MADNESS | BARBED_SHOT => roll_remaining_damage(world, target, new),
+        SHADOW_WORD_MADNESS => roll_remaining_damage(world, target, new),
+        BARBED_SHOT => roll_barbed_damage(world, target, new),
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         _ => {}
     }
@@ -35,9 +36,7 @@ fn remaining_ticks(next: f64, expiry: f64, period_ms: u32) -> u32 {
     (((expiry - next) / (f64::from(period_ms) / 1000.0) + 1e-6).floor() as u32) + 1
 }
 
-///335467/217200 explicitly roll unpaid damage, not Pandemic. Barbed Shot's
-///s2 defines the new five-tick budget even when preserved phase skips its
-///extra-initial tick on refresh.
+///335467: "all remaining damage is added to the new effect", not Pandemic.
 fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstance) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -50,15 +49,8 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
     let Some((old_expiry, new_expiry)) = old.expires_at.zip(new.expires_at) else {
         return;
     };
-    let authored_ticks = (new.spell_id == BARBED_SHOT).then(|| {
-        crate::spell_cast::scripts::script_effect_value(world, new.caster, BARBED_SHOT, 1)
-    });
     for fresh in &mut new.effects {
-        let damaging = matches!(
-            fresh.aura_type,
-            super::handlers::PERIODIC_LEECH | super::handlers::PERIODIC_DAMAGE
-        );
-        if !damaging {
+        if fresh.aura_type != super::handlers::PERIODIC_LEECH {
             continue;
         }
         let Some(prior) = old
@@ -71,10 +63,40 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
         let unpaid = remaining_ticks(prior.next_tick_at, old_expiry, prior.period_ms);
         let future = remaining_ticks(prior.next_tick_at, new_expiry, prior.period_ms);
         if future > 0 {
-            let new_budget = fresh.amount * authored_ticks.unwrap_or(future as f32);
-            let old_budget = prior.amount * old.stack_multiplier() * unpaid as f32;
-            fresh.amount = (new_budget + old_budget) / future as f32;
+            fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
         }
+    }
+}
+
+///217200's description totals five damage amounts, while the native clock
+///has seven ticks. Distribute that total without replacing the native clock.
+fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance) {
+    if let Some(old) = previous(world, target, new) {
+        periodic::run_ticks_until(world, target, old.instance_id, aura_now(world));
+    }
+    let old = previous(world, target, new);
+    let count = crate::spell_cast::scripts::script_effect_value(world, new.caster, BARBED_SHOT, 1);
+    let expiry = new.expires_at.expect("Barbed Shot native duration");
+    let fresh = new
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Barbed Shot periodic damage");
+    let new_budget = fresh.amount * count;
+    let prior = old.as_ref().and_then(|aura| {
+        let effect = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == fresh.index)?;
+        Some((effect, aura.expires_at?, aura.stack_multiplier()))
+    });
+    let (next, old_budget) = prior.map_or((fresh.next_tick_at, 0.0), |(effect, end, stacks)| {
+        let unpaid = remaining_ticks(effect.next_tick_at, end, effect.period_ms);
+        (effect.next_tick_at, effect.amount * stacks * unpaid as f32)
+    });
+    let future = remaining_ticks(next, expiry, fresh.period_ms);
+    if future > 0 {
+        fresh.amount = (new_budget + old_budget) / future as f32;
     }
 }
 
