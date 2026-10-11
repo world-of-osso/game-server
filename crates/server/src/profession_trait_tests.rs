@@ -3,8 +3,11 @@ use crate::spell_info::load_trait_tree_by_id;
 use rusqlite::{Connection, OpenFlags};
 
 fn leatherworking_tree() -> TraitTree {
-    let conn =
-        Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
     load_trait_tree_by_id(&conn, 350).unwrap()
 }
 
