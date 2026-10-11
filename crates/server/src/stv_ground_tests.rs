@@ -154,43 +154,51 @@ fn census_all_map_wdt_root_tiles() {
         })
         .unwrap();
     let data = client_data();
-    let mut reports = Vec::new();
-    for row in rows {
-        let (map, directory, wdt) = row.unwrap();
-        let mut report = serde_json::json!({"map":map,"directory":directory,"wdt":wdt,"tiles":0,"missing":[],"unparseable":[]});
-        match read_client_file(&data, "terrain", wdt, "wdt") {
-            Err(error) => report["wdt_error"] = error.into(),
-            Ok(bytes) => {
-                if read_u32(find_chunk(&bytes, b"MPHD").unwrap().unwrap(), 0).unwrap()
-                    & MPHD_FLAG_GLOBAL_WMO
-                    != 0
-                {
-                    report["global_wmo"] = true.into();
-                } else {
-                    match parse_maid(&bytes) {
-                        Err(error) => report["wdt_error"] = error.into(),
-                        Ok(tiles) => {
-                            for (index, tile) in
-                                tiles.iter().enumerate().filter(|(_, tile)| tile.root != 0)
-                            {
-                                report["tiles"] = (report["tiles"].as_u64().unwrap() + 1).into();
-                                let path = data.join(format!("terrain/{}.adt", tile.root));
-                                let category = if !path.is_file() {
-                                    "missing"
-                                } else {
-                                    "unparseable"
-                                };
-                                if let Err(error) = load_terrain(&data, tile.root) {
-                                    report[category].as_array_mut().unwrap().push(serde_json::json!({"row":index%64,"col":index/64,"fdid":tile.root,"error":error}));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        reports.push(report);
-    }
+    let reports: Vec<_> = rows
+        .map(|row| {
+            let (map, directory, wdt) = row.unwrap();
+            scan_map_root_tiles(&data, map, &directory, wdt)
+        })
+        .collect();
     std::fs::write(output, serde_json::to_vec_pretty(&reports).unwrap()).unwrap();
     println!("{} Map.db2 rows scanned", reports.len());
+}
+
+fn read_wdt_root_tiles(data: &Path, wdt: u32) -> Result<Option<Vec<TileFiles>>, String> {
+    let bytes = read_client_file(data, "terrain", wdt, "wdt")?;
+    let mphd = find_chunk(&bytes, b"MPHD")?.ok_or("WDT has no MPHD")?;
+    if read_u32(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO != 0 {
+        return Ok(None);
+    }
+    parse_maid(&bytes).map(Some)
+}
+
+fn scan_map_root_tiles(data: &Path, map: u32, directory: &str, wdt: u32) -> serde_json::Value {
+    let mut report = serde_json::json!({"map":map,"directory":directory,"wdt":wdt,"tiles":0,"missing":[],"unparseable":[]});
+    match read_wdt_root_tiles(data, wdt) {
+        Err(error) => report["wdt_error"] = error.into(),
+        Ok(None) => report["global_wmo"] = true.into(),
+        Ok(Some(tiles)) => scan_root_tile_files(data, &tiles, &mut report),
+    }
+    report
+}
+
+fn scan_root_tile_files(data: &Path, tiles: &[TileFiles], report: &mut serde_json::Value) {
+    for (index, tile) in tiles.iter().enumerate().filter(|(_, tile)| tile.root != 0) {
+        report["tiles"] = (report["tiles"].as_u64().unwrap() + 1).into();
+        let path = data.join(format!("terrain/{}.adt", tile.root));
+        let category = if path.is_file() {
+            "unparseable"
+        } else {
+            "missing"
+        };
+        if let Err(error) = load_terrain(data, tile.root) {
+            report[category]
+                .as_array_mut()
+                .unwrap()
+                .push(serde_json::json!({
+                    "row":index % MAP_TILES,"col":index / MAP_TILES,"fdid":tile.root,"error":error
+                }));
+        }
+    }
 }

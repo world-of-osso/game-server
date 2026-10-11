@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
+
 - [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
 
 ## October 9 reconciliation
