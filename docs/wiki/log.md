@@ -842,10 +842,22 @@ Updated [spell casting](systems/spell-casting.md#class-dummy-scripts), [aura hoo
 ## 2026-10-11 — raid-entry
 
 Added [raid system](systems/raid-entry.md) and contract reconciliation: source-derived single-creature credit, native both-skin private entry/saves/reset/extension proof, and stale terrain-hint ownership fix. Full raid mechanics/data coverage remains incomplete.
+
+## 2026-10-11 — Gathering branch (acceptance incomplete)
+
+[Gathering](systems/gathering.md): local Lock/TDB skin metadata import, GO50 namespace repair, cast/loot/progression, authored pools/depletion/respawn and reopen persistence. Ten behavioral tests; both-skin native acceptance and independent gate remain open. Lead applied world import; agents did not write world.db.
+
+## 2026-10-11 — gathering corpse loot readiness
+
+- [Gathering](systems/gathering.md#corpse-loot-readiness): native corpse-before-loot ordering reproduced; completed empty normal rolls now remain distinguishable from unrolled corpses. Targeted regression and both-skin native recheck owned by gathering-live.
 ## 2026-10-11 — Cobrahn encounter
 
 Bounded local-data Wailing Caverns SmartAI lifecycle and aggro dialogue documented in [[boss-scripts]]. Behavioral RED exposed absent encounter state. Both-skin native entry/pull/death/tracker credit inspected;20 regression passes, one explicit population-copy loot gate fails due lost authored binding. Actor4213 and physical portal traversal remain unproved; full playable acceptance is blocked, not complete.
 
+- 2026-10-11: data-selected boss lifecycle replaces per-dungeon registration; journal dungeon joins, inspectable compatibility ordinals,393-entry SmartAI census and private both-skin Skum proof documented in [[boss-scripts]].
 ## 2026-10-11 — Scenarios
 
 Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reuse and stage snapshots. Native proof/fixture boundary lives in [shared system SSOT](../../../game-engine/docs/wiki/systems/scenarios.md); [server contract](../specs/scenarios.md).
+## 2026-10-11 — integrated gathering and shared-loot readiness
+
+- [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.
