@@ -101,6 +101,9 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
+            flags: Default::default(),
+            scoreboard: Vec::new(),
+            flag_positions: [None, None],
         },
     );
     respond_to_battleground_invitation(&mut state, 17, 1, true).unwrap();

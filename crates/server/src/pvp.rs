@@ -32,6 +32,9 @@ use pvp_invites::process_battleground_invitation_responses;
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
 use pvp_leave::process_battleground_leave_requests;
+#[path = "pvp_objective.rs"]
+mod pvp_objective;
+pub(crate) use pvp_objective::use_battleground_flag;
 
 const DEFAULT_RATING: u32 = 1500;
 const HONOR_CAP: u32 = 15_000;
@@ -142,6 +145,9 @@ struct InvitedBattleground {
     accepted: BTreeSet<u64>,
     map: Option<crate::maps::InMap>,
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
+    flags: shared::battleground::FlagObjective,
+    scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    flag_positions: [Option<Vec3>; 2],
 }
 
 #[derive(Resource, Default)]
@@ -164,6 +170,9 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
+            flags: Default::default(),
+            scoreboard: Vec::new(),
+            flag_positions: [None, None],
         },
     );
     Some(match_id)
@@ -216,6 +225,7 @@ pub struct PvpPlugin;
 impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
+        app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);
@@ -593,6 +603,12 @@ fn resolve_battleground_matches(
                 phase: invitation.instance.phase,
                 accepted: false,
                 invitation_time_left_secs: None,
+                score_a: invitation.instance.score_a.score,
+                score_b: invitation.instance.score_b.score,
+                flags: invitation.flags.clone(),
+                outcome: invitation.instance.outcome,
+                players: invitation.scoreboard.clone(),
+                honor_reward: None,
             });
             send_pvp_update(
                 conn_entity,
