@@ -1,0 +1,283 @@
+//! Native Mainline leech, shield budget and weapon-branch contracts.
+use super::test_harness::*;
+use bevy::prelude::*;
+use shared::components::{Health, PowerType};
+use shared::protocol::CombatLogKind;
+
+fn fixture(ids: &[u32], class: u8) -> Harness {
+    let spells = ids
+        .iter()
+        .map(|id| {
+            let mut spell = world_db().unwrap().store.get(*id).unwrap().clone();
+            for effect in &mut spell.effects {
+                effect.variance = 0.0;
+            }
+            spell
+        })
+        .collect();
+    let mut h = harness(spells, &[], class).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(ids.to_vec()));
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100.0;
+    h
+}
+fn execute(h: &mut Harness, id: u32, target: Entity) {
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(id)
+        .unwrap()
+        .clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, Some(target)).unwrap();
+}
+fn apply(h: &mut Harness, caster: Entity, target: Entity, id: u32, mask: u32) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: id,
+            effect_mask: mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+}
+fn periodic_leech(id: u32, class: u8, index: u8, ticks: usize) {
+    let mut h = fixture(&[id], class);
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, npc, id, 1 << index);
+    h.advance(125);
+    let damage: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(id) && e.kind == CombatLogKind::Damage && e.periodic)
+        .collect();
+    let healing: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(id) && e.kind == CombatLogKind::Heal && e.periodic)
+        .collect();
+    assert_eq!(damage.len(), ticks);
+    assert_eq!(healing.len(), ticks);
+    let effect = world_db()
+        .unwrap()
+        .store
+        .get(id)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|e| e.index == index)
+        .unwrap();
+    for (damage, heal) in damage.iter().zip(healing) {
+        assert!(damage.amount > 0);
+        assert_eq!(heal.target, Some(caster.to_bits()));
+        assert_eq!(
+            heal.amount,
+            (damage.amount as f32 * effect.amplitude).round() as i32
+        );
+    }
+}
+#[test]
+fn dummy18_vampiric_touch_native_tick_leech() {
+    periodic_leech(34914, 5, 1, 2);
+}
+#[test]
+fn dummy18_madness_native_tick_leech() {
+    periodic_leech(335467, 5, 2, 3);
+}
+#[test]
+fn dummy18_drain_life_native_tick_leech() {
+    periodic_leech(234153, 9, 0, 5);
+}
+#[test]
+fn dummy18_blood_plague_native_tick_leech() {
+    periodic_leech(55078, 6, 0, 2);
+}
+#[test]
+fn dummy18_singularity_native_primary_leech_area_dummy_retained() {
+    periodic_leech(205179, 9, 0, 3);
+}
+
+#[test]
+fn dummy18_madness_direct_leech_excludes_absorbs_immunity_and_overkill() {
+    for mode in [0, 1, 2, 3] {
+        let mut h = fixture(&[335467, 17, 45438], 5);
+        let caster = h.caster;
+        let npc = h.npc;
+        match mode {
+            1 => apply(&mut h, caster, npc, 17, 1),
+            2 => apply(&mut h, npc, npc, 45438, u32::MAX),
+            3 => h.app.world_mut().get_mut::<Health>(npc).unwrap().current = 20.0,
+            _ => {}
+        }
+        execute(&mut h, 335467, npc);
+        h.advance(2);
+        let damage =
+            h.inbox.log.iter().find(|e| {
+                e.spell_id == Some(335467) && e.kind == CombatLogKind::Damage && !e.periodic
+            });
+        let healing =
+            h.inbox.log.iter().find(|e| {
+                e.spell_id == Some(335467) && e.kind == CombatLogKind::Heal && !e.periodic
+            });
+        if mode == 1 || mode == 2 {
+            assert!(healing.is_none());
+        } else {
+            let damage = damage.unwrap();
+            let healing = healing.unwrap();
+            assert_eq!(
+                healing.amount,
+                ((damage.amount - damage.overflow) as f32 * 0.3).round() as i32
+            );
+            if mode == 3 {
+                assert_eq!(healing.amount, 6);
+            }
+        }
+    }
+}
+
+#[test]
+fn dummy18_madness_reapplication_rolls_remaining_damage_only_for_same_owner() {
+    let mut h = fixture(&[335467], 5);
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, npc, 335467, 4);
+    h.advance(65);
+    let initial = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(npc)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 335467)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|e| e.index == 2)
+        .unwrap()
+        .amount;
+    apply(&mut h, caster, npc, 335467, 4);
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(npc)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 335467)
+        .unwrap();
+    let refreshed = aura.effects.iter().find(|e| e.index == 2).unwrap().amount;
+    assert!((refreshed - initial * 5.0 / 3.0).abs() < 0.01);
+    let other = spawn_player(&mut h.app, 5, 2.0);
+    h.advance(1);
+    apply(&mut h, other, npc, 335467, 4);
+    let foreign = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(npc)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 335467 && a.caster == other)
+        .unwrap();
+    assert!(
+        (foreign
+            .effects
+            .iter()
+            .find(|e| e.index == 2)
+            .unwrap()
+            .amount
+            - initial)
+            .abs()
+            < 0.01
+    );
+}
+
+#[test]
+fn dummy18_ignore_pain_soaks_native_fraction_and_accumulates_to_health_cap() {
+    let mut h = fixture(&[190456], 1);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(shared::components::ActiveSpec(73));
+    apply(&mut h, caster, caster, 190456, u32::MAX);
+    let (left, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 100.0);
+    assert_eq!((left, absorbed), (50.0, 50.0));
+    apply(&mut h, caster, caster, 190456, u32::MAX);
+    let (left, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 1000.0);
+    assert_eq!((left, absorbed), (700.0, 300.0));
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 190456));
+}
+
+#[test]
+fn dummy18_improved_conflagrate_grants_two_uses_and_native_cap_four() {
+    let mut h = fixture(&[17962, 245330, 196406, 117828, 267115], 9);
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, caster, 196406, u32::MAX);
+    apply(&mut h, caster, caster, 267115, u32::MAX);
+    h.set_power(PowerType::SoulShards, 0.0);
+    for expected in [2, 4, 4] {
+        execute(&mut h, 17962, npc);
+        let stacks = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 117828)
+            .unwrap()
+            .stacks;
+        assert_eq!(stacks, expected);
+    }
+    assert_eq!(h.power(PowerType::SoulShards), 15.0);
+}
+
+#[test]
+fn dummy18_obliterate_selects_native_physical_and_frost_weapon_children() {
+    for dual in [false, true] {
+        let mut h = fixture(
+            &[49020, 222024, 66198, 325461, 1264082, 1264083, 1264084],
+            6,
+        );
+        if dual {
+            h.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(h.caster)
+                .unwrap()
+                .off_hand = Some(crate::item_stats::WeaponDamage {
+                min_damage: 1.0,
+                max_damage: 1.0,
+                speed: 2.0,
+                weapon_type: shared::components::WeaponType::Unarmed,
+            });
+        }
+        let npc = h.npc;
+        execute(&mut h, 49020, npc);
+        h.advance(2);
+        let ids: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|e| e.kind == CombatLogKind::Damage)
+            .filter_map(|e| e.spell_id)
+            .collect();
+        assert_eq!(
+            ids,
+            if dual {
+                vec![222024, 66198, 1264082, 1264083]
+            } else {
+                vec![325461, 1264084]
+            }
+        );
+    }
+}
