@@ -7,8 +7,10 @@ Creatures whose TDB template selects SmartAI and has source-0 script rows can us
 Create a consistent SQLite backup of `data/world.db` in an owned diagnostics directory, then run:
 
 ```text
-python3 scripts/import_smartai_overlay.py --db <private-copy>
+python3 scripts/import_smartai_overlay.py --db <private-copy> --tdb-world-sql data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql
 ```
+
+`--tdb-world-sql` imports the dump's exact creature_summon_groups rows through the existing MySQL tokenizer; malformed/missing group rows fail before mutation. It preserves escaped comments and all authored positions/types/lifetimes. Group import replaces only its TDB support table, never spawns or template stats. Template-only imports omit that explicit flag; SUMMON_CREATURE_GROUP needs the support table.
 
 Start the private server with that copy, fresh private redb, UDP5780 and fb_* credentials. Never apply this importer to canonical data during agent verification. Lead may integrate reviewed data changes separately.
 
