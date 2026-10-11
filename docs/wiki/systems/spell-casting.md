@@ -2,6 +2,12 @@
 
 Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
+## Twentieth batch: authored totals and next-spell uses
+
+[Contract](../../specs/spell-dummy-scripts.md#twentieth-batch-authored-totals-and-next-spell-uses), [source/proof/census](../../spell-dummy20-coverage.md). `scripts/batch20.rs` starts Barbed Shot's named246152 Focus aura once after completed root casting. `auras/refresh.rs` reuses the named unpaid-damage rule:217200s2 defines the fresh damage budget, added to same-owner unpaid ticks and divided across the preserved phase's future ticks. Thus refresh retains the new five-tick budget even though it does not repeat the extra-initial tick. Due ticks are paid before snapshot; foreign owners remain independent.
+
+Stormkeeper's aura construction initializes charges from191634s5 before ordinary charge modifiers. Existing family-matched spell modifiers consume one use per completed cast; refresh rebuilds the authored count rather than resetting to the options row's single charge. No separate universal proc or overload algorithm is added. Unknown markers, soft-cap curves, massive-damage thresholds and unrelated guardian/rotation mechanics remain uncertified.
+
 ## Nineteenth batch: counts, healing totals and owned damage
 
 [Contract](../../specs/spell-dummy-scripts.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [source/census/all40](../../spell-dummy19-coverage.md). `scripts/batch19.rs` consumes Flurry's explicit count, Mutilate variable394 and Dispersion variable872. Dispersion preserves native extra-initial ticks; its description's total is distributed across native ticks with ordinary rounding, including Intangibility and existing Altered Form duration modifiers. This distribution is a local total/clock derivation, not independently observed Retail tick amounts.
