@@ -47,6 +47,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
+
 - [Class spell batch15](systems/spell-casting.md#fifteenth-batch-native-health-weapon-ranks-and-delayed-hits) — eight local health/weapon/rank/heal-copy/delayed-hit contracts;163 remaining Dummy roots,98/65 reviewed/underived, [all40 table](../spell-dummy15-coverage.md). Karma redirect/guardian/Eye Beam gaps retained.
 
 - [Class spell batch14](systems/spell-casting.md#fourteenth-batch-owned-hits-and-native-clocks) — eight local hit/pet/periodic consumers;164 remaining Dummy roots,93/71 reviewed/underived and [all40 proof table](../spell-dummy14-coverage.md); primary-only geometry/data discrepancies explicit.
