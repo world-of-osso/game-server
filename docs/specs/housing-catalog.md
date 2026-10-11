@@ -24,6 +24,16 @@ Load authored Map.db2 types 7 (House) and 8 (Neighborhood), retaining map2735/27
 
 No verified first-house exterior/interior grant source is available. Do not infer default grants from component membership, UnlockItemID=0 or the placeholder House row. Rank3 may use one bounded authentic vendor-item redemption path backed by world.db/TDB npc_vendor or an authored DB2 item effect (lead approval, 2026-10-11); never turn StartingQuantity into ownership without grant semantics.
 
+## Atomic ownership and basic storage
+
+The housing persistence table records account ownership, paid plot claims, storage counts and stable placed-instance IDs independently of character serialization. Purchase and inventory copper debit commit in one transaction; competing buyers cannot both claim one plot. No first-house exterior/room/decor grants are inferred.
+
+A bounded redemption candidate is authenticated by vendor252312/item245259/decor1693 (Small Val'sharah Bookcase), ExtendedCost0, item_sparse.BuyPrice500000 and collect spell1238340/effect324/MiscValue1693. Storage redemption consumes one owned Retail bag item and grants one stored copy atomically; it does not create vendor items or waive acquisition costs.
+
+Only an owner inside that house edits. Place consumes stored quantity, remove restores it, move/rotate preserve quantity, nonfinite transforms are refused. Account ownership/storage/layouts survive database reopen. Visitors require explicit owner HouseAccessAnyone configuration, receive the same saved layout, cannot edit and never receive the owner's private account storage. Unset access remains unknown and grants no visitor permission.
+
+These are persistence/domain contracts, not proof of live neighborhood admission, cornerstone interaction, models, native editor or networking integration.
+
 ## Behavioral proof
 
 Focused `scripts/tests/test_import_housing.py`: exact authored fireplace/plot data; unknown-field retention; no ownership/currency invention; idempotence; unrelated table preservation; wrong build/key and altered CSV/DB2 refusal; transactional rollback across tables.
