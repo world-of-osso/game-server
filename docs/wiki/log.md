@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [SmartAI motion authority](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): authentic Wizzle acceptance plus production fixed-schedule point/wander integration reproduces a second0.125-yard stride; active escort ownership excludes idle roaming. Client stall/home-return and both-skin live acceptance still pending.
+
 - 2026-10-11 — SmartAI escort coverage: generic private overlay, timed-list combat gates/self-nesting policy and generic death/distance/waypoint lifecycle. Targeted proofs and remaining vocabulary/live work tracked in coverage handoff; [system](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11).
 
 - 2026-10-11 — [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry): scripted197835 points consume121471 native100-percent modifier; actual49028/27893 spawn grants native81256 owner30-percent parry, lifetime/early removal controlled. Genuine per-target combo and missing-parry RED→targeted12/12 GREEN at449bb8e.2031 exact native rows, all28 previously underived roots reviewed and30 deferred revisited. [Census/limits](../spell-dummy23-coverage.md):157/129/28→157/157/0, all157 unresolved roots and missing mechanics retained; no no-op closure, full suite, DB write, realm/server/UDP5000 or master merge.

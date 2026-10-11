@@ -704,6 +704,9 @@ impl SmartAi {
             node_delay_ms: None,
             range_check_ms: 1000,
         });
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(super::movement::ScriptedPath);
         self.move_to_waypoint(ctx);
         if invoker.is_some_and(|entity| {
             ctx.world

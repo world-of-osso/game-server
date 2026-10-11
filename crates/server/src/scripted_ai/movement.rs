@@ -18,6 +18,10 @@ const BASE_RUN_SPEED: f32 = 7.0;
 #[derive(Component, Debug, Clone, Copy)]
 pub struct Walking;
 
+/// An escort owns idle movement even while its point generator is paused.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct ScriptedPath;
+
 /// A running `PointMovementGenerator`.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct PointMovement {

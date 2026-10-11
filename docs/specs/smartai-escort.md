@@ -14,6 +14,10 @@ python3 scripts/import_smartai_overlay.py --db <private-copy> --tdb-world-sql da
 
 Start the private server with that copy, fresh private redb, UDP5780 and fb_* credentials. Never apply this importer to canonical data during agent verification. Lead may integrate reviewed data changes separately.
 
+## Movement authority
+
+Authored point movement must exclude idle wandering/patrol. An active escort retains movement ownership during pauses and node delays; finishing/stopping releases idle movement. Combat and escort-distance behavior remain separate acceptance boundaries.
+
 ## Runtime acceptance (pending)
 
 Escort acceptance must execute authored paths, pauses, summons and event credit, including death/distance failure and waypoint-stop quest/despawn parameters. Timed lists honor combat gates, chance and nested-list semantics; waypoint movement honors delays, orientation and repeat. Both Retail and Forever require inspected accept/path/ambush/completion/turn-in evidence. Reference: TrinityCore a352b1fa SmartAI.cpp and SmartScript.cpp, archived under engine `data/diagnostics/smartai-coverage-2026-10-11/`.

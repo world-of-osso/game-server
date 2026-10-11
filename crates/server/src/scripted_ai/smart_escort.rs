@@ -79,9 +79,10 @@ impl SmartAi {
         let Some(mut escort) = self.escort.take() else {
             return;
         };
-        ctx.world
-            .entity_mut(ctx.me)
-            .remove::<super::super::movement::PointMovement>();
+        ctx.world.entity_mut(ctx.me).remove::<(
+            super::super::movement::PointMovement,
+            super::super::movement::ScriptedPath,
+        )>();
         if escort.npc_flags != 0 {
             if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(ctx.me) {
                 flags.0 = escort.npc_flags;
@@ -118,6 +119,9 @@ impl SmartAi {
             escort.pause_ms = None;
             escort.node_delay_ms = None;
             self.escort = Some(escort);
+            ctx.world
+                .entity_mut(ctx.me)
+                .insert(super::super::movement::ScriptedPath);
             self.move_to_waypoint(ctx);
         }
     }
