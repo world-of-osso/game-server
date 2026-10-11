@@ -325,7 +325,12 @@ fn dummy6_butchery_does_not_start_ready_bomb_recharge() {
 }
 #[test]
 fn dummy6_butchery_counts_fully_absorbed_hits_for_recharge() {
-    let mut h = harness(Vec::new(), &[212436, 294029, 259495, 265163, 17], 3).unwrap();
+    let mut h = harness(
+        Vec::new(),
+        &[212436, 294029, 259495, 265163, 265157, 269747, 17],
+        3,
+    )
+    .unwrap();
     let caster = h.caster;
     let npc = h.npc;
     apply(&mut h, caster, caster, 294029, u32::MAX);

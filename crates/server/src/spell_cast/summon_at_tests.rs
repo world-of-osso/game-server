@@ -186,16 +186,17 @@ fn summon_at_periodic_configuration_ticks_only_inside() {
 #[test]
 fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
     // Emerald Blossom355913 now has a named delayed heal, exercised by dummy9.
-    // Only unbound generic area spells belong in this no-action fixture.
+    // Only unbound generic actors belong here: Wildfire's named primary hit
+    // is separate from its still-unbound265163 cone actor.
     for (root, area_spell, class, count) in [
         (84714, 84714, 8, 2),
         (153626, 153626, 8, 2),
         (259495, 265163, 3, 1),
     ] {
-        let ids = if root == area_spell {
-            vec![root]
+        let ids = if root == 259495 {
+            vec![root, area_spell, 265157, 269747]
         } else {
-            vec![root, area_spell]
+            vec![root]
         };
         let mut h = harness(Vec::new(), &ids, class).unwrap();
         let target = h.npc;
