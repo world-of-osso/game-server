@@ -53,6 +53,12 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     known.push(spell.id);
     h.app.world_mut().entity_mut(h.caster).insert((
         Level(80),
+        crate::persistence::ClientId(u64::from(spell.id)),
+        shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
         ActiveSpec(spec.id),
         KnownSpells::fixture(known),
         Health {
@@ -241,6 +247,9 @@ fn census_harness(class: u8) -> Harness {
     .unwrap();
     h.app
         .insert_resource(super::teleport_positions::load_positions(&conn).unwrap());
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    h.app.init_resource::<crate::maps::InstanceManager>();
     h
 }
 
@@ -266,8 +275,12 @@ fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
     .unwrap();
     let destinations = super::teleport_positions::load_positions(&conn).unwrap();
     assert_eq!(
-        *h.app.world().get::<Position>(h.caster).unwrap(),
-        destinations.0[&(3567, 0)].bevy_position()
+        h.app
+            .world()
+            .get::<crate::maps::MapTransfer>(h.caster)
+            .unwrap()
+            .destination,
+        destinations.0[&(3567, 0)],
     );
 }
 
