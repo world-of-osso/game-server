@@ -1,10 +1,32 @@
 # Class spell scripts
 
+## Twenty-second batch: native Rewind non-raid healing
+
+- [x] Rewind363534s4 increases its existing native healing by200% when its caster is outside a raid; solo and party casters receive three times the native amount, raid casters retain it. Ordinary heal cap/overheal handling remains authoritative.
+- [x] Mind Flay15407s4 is the authored six-tick count, not an extra resource grant: native4500ms/750ms pays six300-raw Insanity ticks. Cancellation stops target damage and self resource; cap/overflow and friendly rejection remain native.
+- [ ] Rewind's five-second incoming-damage history, historical30% amount/distribution and376210 rank remain unimplemented. Native0.4 SP per tick is an existing minimum, not a replacement for the historical component. Neither spell's full talent/haste/rotation parity is claimed.
+
+Sources and exact deferred-root reasons: [batch22](../spell-dummy22-coverage.md). Mainline12.1.0.69933 local data only; no generic Dummy no-op or guessed history.
+
 Spell-specific behaviours beyond generic Retail effects live in `crates/server/src/spell_cast/scripts.rs` and `crates/server/src/auras/scripts.rs`. Generic dispatch alone is not gameplay coverage. See [spell casting](../wiki/systems/spell-casting.md).
 
 Generic guardian actors and native damage transfer have a separate [contract](spell-guardians.md) and [all40-spec/source boundary inventory](../spell-guardians-coverage.md). They do not imply closure of unknown summon Dummy roots.
 
 ## What it must do
+
+### Twenty-first-batch native combo builders
+
+- [x] Active Berserk106951 adds its authored s2 amount to positive native self-directed ENERGIZE combo-point effects of untriggered same-family casts. Shred, Rake and Thrash gain one additional point; Thrash grants once per cast, not once per enemy. Native pool caps and overflow logging apply to the combined grant.
+- [x] The independent343216 periodic point, other spell families, rejected casts and casts after expiry receive no builder bonus. Existing periodic timing and over-cap/finisher behavior are not changed.
+
+Source: local Mainline12.1.0.69933 description “Combo point generating abilities generate $s2 additional combo $lpoint:points;.” and aura4 index1 Base1. Tests: `spell_cast/dummy21_tests.rs`. This consumes the numeric Dummy field only; full Berserk/rotation parity, script-only resource grants and405189 over-cap storage remain uncertified. Seven other reviewed roots retain exact source boundaries in [batch21 coverage](../spell-dummy21-coverage.md).
+
+### Twentieth-batch authored totals and next-spell uses
+
+- [x] Barbed Shot217200 distributes its authored s2-tick damage total over its unchanged native initial/regular schedule. Local s2=5 versus native seven ticks is reconciled by equal distribution, an inference from total and clock, not independently observed Retail tick amounts. Same-owner reapplication adds unpaid damage to the new total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; rejected casts do not grant it.
+- [x] Stormkeeper191634 grants its s5 empowered-spell uses instead of the single options-row charge. Each matching completed Lightning Bolt/Chain Lightning consumes one use; unrelated spells do not. Native modifiers remain authoritative. Elemental Overload targeting/variants remain uncertified.
+
+Tests: `spell_cast/dummy20_tests.rs`. Local Mainline12.1.0.69933 and TDB1210 only; [coverage](../spell-dummy20-coverage.md), [runtime](../wiki/systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses). Audited but unidentified Dummy fields are retained, not no-op closures.
 
 ### Nineteenth-batch counts, healing totals and owned damage
 
