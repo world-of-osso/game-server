@@ -188,14 +188,14 @@ def resolve_difficulty_rows(conn, spawned):
     return resolved
 
 
-def create_difficulty_table(conn, *, map_list=MAP_LIST):
+def create_difficulty_table(conn, *, map_list=MAP_LIST, base_phase=BASE_PHASE):
     """temp.spawn_map_difficulty: each (entry, difficulty) a Retail spawn of it spawns at.
     temp.spawn_row: the creature_template_difficulty row each of those uses (resolve_difficulty_rows).
     temp.tdb_difficulty: the row of the entry's lowest spawn difficulty, or DifficultyID 0 for entries spawned
     nowhere, the entry's content_creature_template values."""
     conn.execute(f"""CREATE TEMP TABLE spawn_map_difficulty AS SELECT DISTINCT c.id AS entry, r.difficulty
         FROM tdb_creature c JOIN temp.retail_map r ON r.map_id = c.map
-        WHERE c.map IN ({map_list}) AND {BASE_PHASE}
+        WHERE c.map IN ({map_list}) AND {base_phase}
           AND {SPAWN_DIFFICULTY_MATCH}""")
     spawned = conn.execute("SELECT entry, difficulty FROM temp.spawn_map_difficulty").fetchall()
     resolved = resolve_difficulty_rows(conn, spawned)
