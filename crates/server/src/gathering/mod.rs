@@ -50,10 +50,15 @@ pub(crate) fn spawn_node(
     world: &mut World,
     spawn: &crate::game_objects::GameObjectSpawn,
     map: InMap,
-) -> Entity {
-    let parent = node_parent(world.resource::<GatheringData>(), spawn.info.entry)
-        .expect("gathering node has no authored skill mapping");
-    world
+) -> Result<Entity, String> {
+    let parent =
+        node_parent(world.resource::<GatheringData>(), spawn.info.entry).ok_or_else(|| {
+            format!(
+                "GATHERING GAP: node {} has no authored DB2 gathering skill",
+                spawn.info.entry
+            )
+        })?;
+    Ok(world
         .spawn((
             crate::game_objects::game_object_bundle(spawn),
             map,
@@ -65,7 +70,7 @@ pub(crate) fn spawn_node(
                 parent_skill: parent,
             },
         ))
-        .id()
+        .id())
 }
 
 fn node_parent(data: &GatheringData, entry: u32) -> Option<u32> {
@@ -102,14 +107,13 @@ pub(crate) fn spawn_selected_node(
     {
         return;
     }
-    if node_parent(world.resource::<GatheringData>(), spawn.info.entry).is_none() {
-        warn!(
-            "GATHERING GAP: node {} lock has no DB2 gathering ability",
-            spawn.info.entry
-        );
-        return;
-    }
-    let entity = spawn_node(world, &spawn, map);
+    let entity = match spawn_node(world, &spawn, map) {
+        Ok(entity) => entity,
+        Err(gap) => {
+            warn!("{gap}");
+            return;
+        }
+    };
     if pooled {
         world
             .resource_mut::<crate::spawn_pools::PoolSpawns>()
@@ -239,6 +243,17 @@ pub(crate) fn check_target(
         || world.get::<GatherableResource>(target).is_none()
     {
         return Err(CastFailure::InvalidTarget);
+    }
+    let pending_materials = world.get::<crate::loot::ItemLoot>(caster).is_some()
+        && world
+            .get::<crate::loot::CorpseLoot>(caster)
+            .is_some_and(|loot| {
+                loot.looters
+                    .values()
+                    .any(|slots| slots.iter().any(Option::is_some))
+            });
+    if pending_materials {
+        return Err(CastFailure::InProgress);
     }
     let from = world
         .get::<Position>(caster)

@@ -55,7 +55,7 @@ fn nearby_node(h: &mut Harness, entry: u32) -> Entity {
     let position = crate::game_objects::game_object_bundle(&spawn).0;
     *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position;
     spawn.orientation = 0.0;
-    spawn_node(h.app.world_mut(), &spawn, InMap::continent(0))
+    spawn_node(h.app.world_mut(), &spawn, InMap::continent(0)).unwrap()
 }
 
 #[test]
@@ -192,5 +192,90 @@ fn gathering_authored_thresholds_are_not_recipe_trivial_ranks() {
     assert_eq!(
         [1, 50, 75, 100].map(|rank| progress.chance_permille(rank)),
         [1000, 750, 250, 0]
+    );
+}
+
+#[test]
+fn gathering_pending_materials_survive_a_second_resource_request() {
+    let (mut h, _directory) = setup(2556);
+    let herb = nearby_node(&mut h, 1617);
+    use_resource(h.app.world_mut(), h.caster, herb);
+    h.advance(200);
+    let original = h
+        .app
+        .world()
+        .get::<crate::loot::CorpseLoot>(h.caster)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(h.caster)
+        .unwrap()
+        .lines
+        .push(ProfessionSkillLine {
+            skill_line: 2572,
+            step: 1,
+            rank: 1,
+            max_rank: 300,
+        });
+    let ore = nearby_node(&mut h, 1731);
+    use_resource(h.app.world_mut(), h.caster, ore);
+    assert!(
+        h.app.world().get::<CastState>(h.caster).is_none(),
+        "pending gathered loot must not be replaced"
+    );
+    h.advance(100);
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<crate::loot::CorpseLoot>(h.caster)
+            .unwrap(),
+        original
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerProfessions>(h.caster)
+            .unwrap()
+            .rank(2572),
+        1
+    );
+}
+
+#[test]
+fn gathering_underivable_authored_lock_is_a_gap_not_a_pool_update_panic() {
+    let (mut h, _directory) = setup(2572);
+    // TDB authored gathering-node entry176116 has no local DB2 gathering ability.
+    let spawn = h
+        .app
+        .world()
+        .resource::<crate::game_objects::GameObjectSpawns>()
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 176116)
+        .unwrap()
+        .clone();
+    let before = h
+        .app
+        .world_mut()
+        .query::<&GameObjectInfo>()
+        .iter(h.app.world())
+        .count();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = spawn_node(h.app.world_mut(), &spawn, InMap::continent(spawn.map_id));
+    }));
+    assert!(
+        result.is_ok(),
+        "unavailable authored mapping must not crash a shared pool update"
+    );
+    let after = h
+        .app
+        .world_mut()
+        .query::<&GameObjectInfo>()
+        .iter(h.app.world())
+        .count();
+    assert_eq!(
+        before, after,
+        "underivable node must not acquire a fabricated gathering category"
     );
 }
