@@ -68,6 +68,7 @@ impl SmartAi {
         if in_range {
             return false;
         }
+        tracing::debug!(creature = ?ctx.me, path = escort.path_id, quest = escort.quest_id, ?targets, ?range, position = ?ctx.position(), driver = "escort_range", "escort failed");
         self.stop_path(ctx, true);
         self.process_events_for(ctx, EVENT_DEATH, Some(ctx.me), 0);
         super::lifetimes::despawn_creature(ctx.world, ctx.me, 0);

@@ -864,7 +864,93 @@ fn smartai_coverage_tracking_completion_auto_rewards_without_accept_and_is_idemp
 }
 
 #[test]
-fn smartai_coverage_wizzle_path_end_wildcard_runs_the_next_authored_leg() {
+fn smartai_coverage_wizzle_point_movement_excludes_spawn_wander_in_fixed_schedule() {
+    use crate::creature_ai::{
+        CreatureAiPlugin, CreatureState, SpawnPoint, WanderPhase, WanderState,
+    };
+    use bevy::time::TimeUpdateStrategy;
+    use std::time::Duration;
+
+    let (_temp, mut world, mut ai, creature, player) = wizzle();
+    let origin = Position {
+        x: 1109.15,
+        y: 82.4108,
+        z: 3104.11,
+    };
+    world.entity_mut(creature).insert((
+        origin,
+        CreatureState::Idle,
+        SpawnPoint {
+            x: origin.x,
+            y: origin.y,
+            z: origin.z,
+            wander_distance: 5.0,
+            speed_walk: 1.0,
+            speed_run: 1.0,
+        },
+        WanderState {
+            phase: WanderPhase::Walking,
+            target_x: origin.x + 10.0,
+            target_z: origin.z,
+            idle_remaining: 0.0,
+            seed: 42,
+        },
+    ));
+    world.entity_mut(player).insert(origin);
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.quest_accepted(&mut ctx, player, 863);
+    ai.update_ai(&mut ctx, 50);
+    ai.update_ai(&mut ctx, 6001);
+    let destination = ctx
+        .world
+        .get::<super::super::movement::PointMovement>(creature)
+        .unwrap()
+        .target;
+    ctx.world
+        .entity_mut(creature)
+        .insert(super::super::CreatureAiState {
+            ai: Some(Box::new(ai)),
+            pending: Default::default(),
+        });
+
+    let mut app = App::new();
+    std::mem::swap(app.world_mut(), &mut world);
+    app.add_plugins((bevy::MinimalPlugins, CreatureAiPlugin));
+    app.insert_resource(crate::world_data::WorldData::default());
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+        50,
+    )));
+    app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)));
+    app.add_systems(
+        FixedUpdate,
+        (
+            super::super::update_creature_ai,
+            super::super::movement::point_movement_system,
+        )
+            .chain()
+            .before(crate::creature_ai::chase_system),
+    );
+    app.update();
+    app.update();
+    let actual = *app.world().get::<Position>(creature).unwrap();
+    let direction = Vec3::new(
+        destination.x - origin.x,
+        destination.y - origin.y,
+        destination.z - origin.z,
+    )
+    .normalize();
+    let expected = Vec3::new(origin.x, origin.y, origin.z) + direction * 0.125;
+    let error = Vec3::new(actual.x, actual.y, actual.z).distance(expected);
+    assert!(
+        error < 0.001,
+        "only the authored point driver may move the cart: actual={actual:?}, expected={expected:?}, error={error}"
+    );
+}
+
+fn wizzle() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
     let (temp, mut world, mut ai, creature, player) = erland();
     let conn = Connection::open(temp.path().join("escort.sqlite")).unwrap();
     conn.execute(
@@ -884,6 +970,13 @@ fn smartai_coverage_wizzle_path_end_wildcard_runs_the_next_authored_leg() {
     ai.states = vec![EventState::default(); ai.events.len()];
     world.insert_resource(scripts);
     world.get_mut::<Npc>(creature).unwrap().template_id = 3439;
+    (temp, world, ai, creature, player)
+}
+
+#[test]
+fn smartai_coverage_wizzle_path_end_wildcard_runs_the_next_authored_leg() {
+    let (temp, mut world, mut ai, creature, player) = wizzle();
+    let conn = Connection::open(temp.path().join("escort.sqlite")).unwrap();
     let nodes: Vec<u32> = conn
         .prepare("SELECT NodeId FROM tdb_waypoint_path_node WHERE PathId=2751201 ORDER BY NodeId")
         .unwrap()
