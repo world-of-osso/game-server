@@ -1270,7 +1270,7 @@ fn smartai_coverage_summon_dispatch_and_expiry_execute_parent_lifecycle_hooks() 
         .id();
     let mut created = tdb_action(197800, 9, 2);
     created.event_type = 17;
-    created.event_params = [3282, 0, 0, 0, 0];
+    created.event_params = [3282, 10, 10, 0, 0];
     created.target_type = TARGET_ACTION_INVOKER;
     created.action_type = ACTION_SET_NPC_FLAG;
     created.action_params[0] = 8;
@@ -1278,6 +1278,7 @@ fn smartai_coverage_summon_dispatch_and_expiry_execute_parent_lifecycle_hooks() 
     let mut removed = created.clone();
     removed.id += 1;
     removed.event_type = 35;
+    removed.event_params = [3282, 0, 0, 0, 0];
     removed.target_type = TARGET_SELF;
     removed.action_params[0] = 4;
     ai.events = Arc::new(vec![created, removed]);
@@ -1311,6 +1312,35 @@ fn smartai_coverage_summon_dispatch_and_expiry_execute_parent_lifecycle_hooks() 
         world.get::<NpcFlags>(summon).unwrap().0,
         8,
         "the parent hook must receive the actual summon as invoker"
+    );
+    world.get_mut::<NpcFlags>(summon).unwrap().0 = 0;
+    super::super::dispatch(
+        &mut world,
+        creature,
+        super::super::Hook::JustSummoned(summon),
+    );
+    assert_eq!(
+        world.get::<NpcFlags>(summon).unwrap().0,
+        0,
+        "cooldown blocks a repeated hook"
+    );
+    super::super::dispatch(&mut world, creature, super::super::Hook::UpdateAi(9));
+    super::super::dispatch(
+        &mut world,
+        creature,
+        super::super::Hook::JustSummoned(summon),
+    );
+    assert_eq!(world.get::<NpcFlags>(summon).unwrap().0, 0);
+    super::super::dispatch(&mut world, creature, super::super::Hook::UpdateAi(2));
+    super::super::dispatch(
+        &mut world,
+        creature,
+        super::super::Hook::JustSummoned(summon),
+    );
+    assert_eq!(
+        world.get::<NpcFlags>(summon).unwrap().0,
+        8,
+        "elapsed cooldown admits the next actual hook without firing it by itself"
     );
     lifetimes::schedule_despawn(&mut world, summon, 10, 0, false);
     lifetimes::tick_lifetimes(&mut world, 9);
