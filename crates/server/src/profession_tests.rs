@@ -56,10 +56,10 @@ fn world_db_path() -> Option<PathBuf> {
 fn profession_spells(conn: &Connection) -> Vec<u32> {
     let mut statement = conn
         .prepare(
-            "SELECT SpellId FROM tdb_trainer_spell WHERE TrainerId IN (163, 27, 91, 136) \
+            "SELECT SpellId FROM tdb_trainer_spell WHERE TrainerId IN (163, 27, 91, 136, 56) \
              UNION SELECT EffectTriggerSpell FROM spell_effect WHERE Effect = 36 AND SpellID IN \
-               (SELECT SpellId FROM tdb_trainer_spell WHERE TrainerId IN (163, 27, 91, 136)) \
-             UNION SELECT Spell FROM skill_line_ability WHERE SkillLine IN (197, 164, 186, 185)",
+               (SELECT SpellId FROM tdb_trainer_spell WHERE TrainerId IN (163, 27, 91, 136, 56)) \
+             UNION SELECT Spell FROM skill_line_ability WHERE SkillLine IN (197, 164, 186, 185, 165)",
         )
         .unwrap();
     statement
@@ -259,7 +259,11 @@ impl Harness {
 
     /// Talk to Georgio and pick "Train me." (gossip menu 4353 option 0, type 5).
     fn open_georgio(&mut self) -> Entity {
-        let npc = self.spawn_npc(GEORGIO_BOLERO);
+        self.open_trainer(GEORGIO_BOLERO)
+    }
+
+    fn open_trainer(&mut self, entry: u32) -> Entity {
+        let npc = self.spawn_npc(entry);
         self.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
         let opened = self.take::<InteractionOpened>();
         assert!(
@@ -552,6 +556,52 @@ fn third_primary_profession_is_refused_but_cooking_is_not() {
         learner.blocked_by_primary_limit(profs, COOKING)
     });
     assert_eq!(blocked, Some(false));
+}
+
+#[test]
+fn modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence() {
+    let Some(mut h) = harness(10) else { return };
+    h.set_gold(1000);
+    let npc = h.open_trainer(5564); // Simon Tanner: trainer56, gossip4203/0.
+    h.buy(npc, 264578);
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    assert!(h.professions().knows(2108));
+    assert!(h.professions().knows(2881));
+    assert_eq!(h.line(2532).unwrap().rank, 1);
+    assert_eq!(h.line(2532).unwrap().max_rank, 300);
+    assert_eq!(h.gold(), 990);
+    assert!(!h.professions().knows(2153));
+
+    h.give(2934, "Ruined Leather Scraps", 42);
+    h.craft(2881, 14);
+    assert!(h.casting());
+    h.advance(1000); // 50s budget for this authored multi-cast queue.
+    h.finish_crafting();
+    assert_eq!(h.bag_count(2934), 0);
+    assert_eq!(h.bag_count(2318), 14);
+    assert_eq!(h.line(2532).unwrap().rank, 15);
+
+    h.buy(npc, 2153); // Handstitched Leather Pants, authored rank15/cost50.
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    assert!(h.professions().knows(2153));
+    assert_eq!(h.gold(), 940);
+    h.give(2320, "Coarse Thread", 1);
+    h.craft(2153, 1);
+    assert!(h.casting());
+    h.finish_crafting();
+    assert_eq!(h.bag_count(2318), 10);
+    assert_eq!(h.bag_count(2320), 0);
+    assert_eq!(h.bag_count(2303), 1);
+    assert_eq!(h.line(2532).unwrap().rank, 16);
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(
+        persistence::load_professions(h.db(), h.character_id),
+        h.professions()
+    );
+    assert_eq!(
+        h.take::<ProfessionSnapshot>().last(),
+        Some(&h.professions().snapshot())
+    );
 }
 
 #[test]

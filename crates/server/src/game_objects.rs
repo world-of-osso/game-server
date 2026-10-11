@@ -17,6 +17,8 @@
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
+mod locks;
+pub(crate) mod quest_object;
 pub(crate) mod summoned;
 
 use std::f32::consts::FRAC_PI_2;
@@ -34,17 +36,21 @@ use shared::protocol::{
 use crate::interest::NetworkVisibility;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 
+pub(crate) const GAMEOBJECT_TYPE_CHEST: u8 = 3;
+pub(crate) const GAMEOBJECT_TYPE_GOOBER: u8 = 10;
+
 /// Retail interaction distance around the model box (yd).
 pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties, t.Data0, t.Data1 \
+     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6) ORDER BY g.guid";
+     WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10) \
+     OR (g.map = ?7 AND t.type = ?8 AND t.entry IN (?9, ?10)) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -60,6 +66,7 @@ pub struct GameObjectSpawn {
     pub spawn_difficulties: Vec<u32>,
     /// A `GAMEOBJECT_TYPE_CHAIR`'s seats.
     pub chair: Option<crate::chair::Chair>,
+    pub quest_object: Option<quest_object::QuestObject>,
 }
 
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
@@ -85,7 +92,7 @@ impl GameObjectBounds {
 #[derive(Resource, Debug, Default, Clone)]
 pub struct GameObjectSpawns(pub Vec<GameObjectSpawn>);
 
-fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
+fn spawn_from_row(row: &Row, locks: &locks::LockDb) -> rusqlite::Result<GameObjectSpawn> {
     let scale: f64 = row.get(9)?;
     let geo = |index: usize| -> rusqlite::Result<f32> { Ok(row.get::<_, f64>(index)? as f32) };
     Ok(GameObjectSpawn {
@@ -115,6 +122,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
                 Ok(crate::chair::Chair::new(row.get(18)?, row.get(19)?))
             })
             .transpose()?,
+        quest_object: quest_object::QuestObject::from_row(row, locks)?,
         spawn_difficulties: row
             .get::<_, String>(17)?
             .split(',')
@@ -129,17 +137,22 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
 }
 
 pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObjectSpawns> {
+    let locks = locks::load_locks(conn.path().ok_or(rusqlite::Error::InvalidQuery)?)?;
     let mut statement = conn.prepare(SPAWN_QUERY)?;
     let rows = statement.query_map(
-        [
+        rusqlite::params![
             GAMEOBJECT_TYPE_GUILD_BANK,
             GAMEOBJECT_TYPE_MAILBOX,
             GAMEOBJECT_TYPE_MEETINGSTONE,
             GAMEOBJECT_TYPE_GENERIC,
             GAMEOBJECT_TYPE_SPELL_FOCUS,
             GAMEOBJECT_TYPE_CHAIR,
+            shared::battleground::warsong_gulch().map_id,
+            shared::protocol::GAMEOBJECT_TYPE_BATTLEGROUND_FLAG,
+            shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
+            shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
         ],
-        spawn_from_row,
+        |row| spawn_from_row(row, &locks),
     )?;
     Ok(GameObjectSpawns(rows.collect::<rusqlite::Result<_>>()?))
 }
@@ -202,6 +215,9 @@ pub(crate) fn spawn_map_game_objects(
             Replicate::to_clients(NetworkTarget::All),
             NetworkVisibility::default(),
         ));
+        if let Some(quest_object) = &spawn.quest_object {
+            object.insert(quest_object.clone());
+        }
         if let Some(chair) = &spawn.chair {
             object.insert(chair.clone());
         }

@@ -68,6 +68,9 @@ pub struct ActiveInteraction {
 #[path = "auction_house_tests/regressions.rs"]
 mod ahserver_regressions;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct NpcInteractionsProcessed;
+
 pub struct NpcInteractionPlugin;
 
 impl Plugin for NpcInteractionPlugin {
@@ -82,7 +85,8 @@ impl Plugin for NpcInteractionPlugin {
                 process_close_requests,
                 close_invalid_interactions,
             )
-                .chain(),
+                .chain()
+                .in_set(NpcInteractionsProcessed),
         );
     }
 }
@@ -111,6 +115,73 @@ type NpcView<'a> = (
     &'a UnitFactionTemplate,
     Option<&'a CombatStatus>,
 );
+
+fn validate_npc_view(
+    (player_position, player_health, player_faction): (&Position, &Health, &UnitFactionTemplate),
+    (_, _, npc_position, npc_health, npc_faction, combat): NpcView<'_>,
+    templates: &FactionTemplates,
+) -> Result<(), InteractionError> {
+    if player_health.current <= 0.0 {
+        return Err(InteractionError::PlayerDead);
+    }
+    if npc_health.current <= 0.0 {
+        return Err(InteractionError::TargetDead);
+    }
+    if templates.reaction(npc_faction.0, player_faction.0) == Reaction::Hostile {
+        return Err(InteractionError::TargetHostile);
+    }
+    if combat.is_some_and(|status| status.0) {
+        return Err(InteractionError::TargetInCombat);
+    }
+    if distance(player_position, npc_position) > INTERACTION_DISTANCE {
+        return Err(InteractionError::TooFarAway);
+    }
+    Ok(())
+}
+
+/// Repeat the normal live-NPC checks on every registrar purchase/turn-in request.
+pub(crate) fn find_interactable_petitioner(
+    world: &World,
+    player: Entity,
+    npc: Entity,
+) -> Result<&Npc, InteractionError> {
+    let target = world
+        .get::<Npc>(npc)
+        .ok_or(InteractionError::InvalidTarget)?;
+    let flags = world
+        .get::<NpcFlags>(npc)
+        .ok_or(InteractionError::InvalidTarget)?;
+    if !flags.contains(NpcFlags::PETITIONER) {
+        return Err(InteractionError::InvalidTarget);
+    }
+    let player_view = (
+        world
+            .get::<Position>(player)
+            .ok_or(InteractionError::InvalidTarget)?,
+        world
+            .get::<Health>(player)
+            .ok_or(InteractionError::InvalidTarget)?,
+        world
+            .get::<UnitFactionTemplate>(player)
+            .ok_or(InteractionError::InvalidTarget)?,
+    );
+    let npc_view = (
+        target,
+        flags,
+        world
+            .get::<Position>(npc)
+            .ok_or(InteractionError::InvalidTarget)?,
+        world
+            .get::<Health>(npc)
+            .ok_or(InteractionError::InvalidTarget)?,
+        world
+            .get::<UnitFactionTemplate>(npc)
+            .ok_or(InteractionError::InvalidTarget)?,
+        world.get::<CombatStatus>(npc),
+    );
+    validate_npc_view(player_view, npc_view, world.resource::<FactionTemplates>())?;
+    Ok(target)
+}
 
 #[derive(SystemParam)]
 struct InteractionWorld<'w, 's> {
@@ -144,26 +215,11 @@ impl InteractionWorld<'_, '_> {
             .npcs
             .get(npc)
             .map_err(|_| InteractionError::InvalidTarget)?;
-        let (player_position, player_health, player_faction) = self
+        let player_view = self
             .players
             .get(player)
             .map_err(|_| InteractionError::InvalidTarget)?;
-        let (_, _, npc_position, npc_health, npc_faction, combat) = npc_view;
-        if player_health.current <= 0.0 {
-            return Err(InteractionError::PlayerDead);
-        }
-        if npc_health.current <= 0.0 {
-            return Err(InteractionError::TargetDead);
-        }
-        if self.templates.reaction(npc_faction.0, player_faction.0) == Reaction::Hostile {
-            return Err(InteractionError::TargetHostile);
-        }
-        if combat.is_some_and(|status| status.0) {
-            return Err(InteractionError::TargetInCombat);
-        }
-        if distance(player_position, npc_position) > INTERACTION_DISTANCE {
-            return Err(InteractionError::TooFarAway);
-        }
+        validate_npc_view(player_view, npc_view, &self.templates)?;
         Ok(npc_view)
     }
 
@@ -178,6 +234,9 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
+            _ if info.is_battleground_flag() => ObjectUse::BattlegroundFlag,
+            crate::game_objects::GAMEOBJECT_TYPE_CHEST
+            | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self
@@ -216,12 +275,14 @@ impl InteractionWorld<'_, '_> {
 /// Result of using a game object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ObjectUse {
+    QuestObject,
     /// Opens a role frame.
     Role(NpcRole),
     /// Casts the object's spell (`meeting_stone::use_object`).
     Spell,
     /// Seats the user (`chair::sit`).
     Chair,
+    BattlegroundFlag,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -332,10 +393,33 @@ fn process_game_object_uses(
                     });
                     continue;
                 }
+                Ok((object, ObjectUse::QuestObject)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) =
+                            crate::game_objects::quest_object::use_object(world, player, object)
+                            && let Some(mut sender) =
+                                world.get_mut::<MessageSender<InteractionFailed>>(connection)
+                        {
+                            sender.send::<InteractionChannel>(InteractionFailed {
+                                npc: object.to_bits(),
+                                error,
+                            });
+                        }
+                    });
+                    continue;
+                }
                 Ok((object, ObjectUse::Chair)) => {
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::chair::sit(world, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::BattlegroundFlag)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::pvp::use_battleground_flag(world, connection, player, object);
                     });
                     continue;
                 }

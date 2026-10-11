@@ -205,7 +205,7 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     if caster == target {
         return relation == Relation::Ally;
     }
-    if world.get::<crate::auras::Invisible>(target).is_some() {
+    if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;
     }
     // WorldObject::IsValidAttackTarget / IsValidAssistTarget (Object.cpp:2374, 2538): an

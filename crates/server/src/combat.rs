@@ -417,7 +417,6 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static DuelOpponent>,
         TargetArmor<'static>,
         Option<&'static shared::components::UnitFlags>,
-        Has<crate::auras::Invisible>,
         CanAvoid<'static>,
         Option<&'static shared::components::PlayerStandState>,
     ),
@@ -482,6 +481,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     sight: SwingSight<'w, 's>,
+    invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
@@ -510,6 +510,19 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             continue;
         };
         let target_entity = snapshot.auto_attack.victim;
+        let observer = params
+            .invisibility
+            .get(attacker_entity)
+            .cloned()
+            .unwrap_or_default();
+        let target = params
+            .invisibility
+            .get(target_entity)
+            .cloned()
+            .unwrap_or_default();
+        if !observer.detects(&target) {
+            continue;
+        }
         let attacker = Attacker {
             entity: attacker_entity,
             position: &snapshot.position,
@@ -877,7 +890,7 @@ fn melee_damage_splits(
     attacker: Entity,
 ) -> Vec<crate::auras::damage_transfer::Split> {
     let candidates = match targets.get_mut(victim) {
-        Ok((_, _, _, _, _, _, _, _, _, _, avoidance, _)) => {
+        Ok((_, _, _, _, _, _, _, _, _, avoidance, _)) => {
             crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
         }
         Err(_) => return Vec::new(),
@@ -889,8 +902,7 @@ fn melee_damage_splits(
         {
             continue;
         }
-        let Ok((_, health, _, _, _, _, _, _, _, _, avoidance, _)) =
-            targets.get_mut(split.recipient)
+        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _)) = targets.get_mut(split.recipient)
         else {
             continue;
         };
@@ -944,15 +956,14 @@ fn try_swing(
         duel,
         armor,
         flags,
-        invisible,
         mut avoidance,
         stand_state,
     )) = targets.get_mut(target_entity)
     else {
         return None;
     };
-    // IsValidAttackTarget: an invisible or NON_ATTACKABLE_2 unit is not attacked.
-    let attackable = !invisible && flags.is_none_or(|flags| flags.is_attackable());
+    // Typed detection was checked for this attacker before the swing.
+    let attackable = flags.is_none_or(|flags| flags.is_attackable());
     if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
         return None;
     }
@@ -1049,7 +1060,19 @@ fn try_swing(
         health.current,
         health_loss(training_dummy, scaled_loss),
     );
-    let became_lethal = crate::death::apply_health_damage(&mut health, loss);
+    let rescue =
+        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss);
+    let became_lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
+    if let Some(instance) = rescue {
+        commands.queue(move |world: &mut World| {
+            crate::auras::remove_instance(
+                world,
+                target_entity,
+                instance,
+                crate::auras::RemoveReason::Consumed,
+            )
+        });
+    }
     if is_npc && loss > 0.0 {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
@@ -1325,11 +1348,11 @@ pub(crate) fn deal_health_damage(
         UnitScaling::of(world, victim),
     );
     let loss = crate::level_scaling::health_loss(&attacker_scaling, &victim_scaling, damage);
-    let Some(mut health) = world.get_mut::<Health>(victim) else {
+    let Some(health) = world.get::<Health>(victim) else {
         return;
     };
     let before = health.current;
-    let lethal = crate::death::apply_health_damage(&mut health, loss);
+    let lethal = crate::auras::apply_attack_damage(world, victim, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::stand_state::stand_on_damage(world, victim);
@@ -1401,7 +1424,10 @@ pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
 /// A dead summon goes with its corpse (`TempSummon::Update`: `DEAD` → `UnSummon`).
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
-    mut corpses: Query<(Entity, &mut Corpse, Has<crate::zones::TempSummon>)>,
+    mut corpses: Query<
+        (Entity, &mut Corpse, Has<crate::zones::TempSummon>),
+        Without<crate::loot::PendingGroupLoot>,
+    >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
@@ -1554,7 +1580,10 @@ pub(crate) fn respawn_system(
             Has<crate::spawn_pools::PooledSpawn>,
             Option<&crate::vignettes::CreatureVignette>,
         ),
-        Without<crate::zones::TempSummon>,
+        (
+            Without<crate::zones::TempSummon>,
+            Without<crate::loot::PendingGroupLoot>,
+        ),
     >,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,

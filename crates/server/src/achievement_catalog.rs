@@ -147,13 +147,7 @@ impl AchievementCatalog {
             if !event.matches(&self.criteria[&id]) {
                 continue;
             }
-            let counter = state.criteria_progress.entry(id).or_default();
-            *counter = match event {
-                CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
-                CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
-                CriteriaEvent::CompleteQuest(_) => 1,
-                _ => counter.saturating_add(1),
-            };
+            Self::update_counter(state, id, event);
         }
         self.grant_completed(state, completed_map, race, false)
     }
@@ -178,6 +172,7 @@ impl AchievementCatalog {
                     achievement_id: definition.id,
                     name: definition.name.clone(),
                     points: definition.points,
+                    icon_fdid: self.window.icon_fdid(definition.id),
                 });
             }
         }
@@ -301,6 +296,38 @@ impl AchievementCatalog {
         aggregate
     }
 
+    fn update_counter(state: &mut PlayerAchievementState, id: u32, event: CriteriaEvent) {
+        let counter = state.criteria_progress.entry(id).or_default();
+        *counter = match event {
+            CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+            CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
+            CriteriaEvent::CompleteQuest(_) => 1,
+            _ => counter.saturating_add(1),
+        };
+    }
+
+    /// Scenario credit is restricted to the active tree and never grants achievements.
+    pub(crate) fn update_tree_event(
+        &self,
+        root: u32,
+        state: &mut PlayerAchievementState,
+        event: CriteriaEvent,
+    ) -> bool {
+        let mut changed = false;
+        for tree_id in self.criterion_tree_ids(root) {
+            let id = self.trees[&tree_id].criteria_id;
+            if self
+                .criteria
+                .get(&id)
+                .is_some_and(|row| row.supported && event.matches(row))
+            {
+                Self::update_counter(state, id, event);
+                changed = true;
+            }
+        }
+        changed
+    }
+
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
         let tree = &self.trees[&id];
         let counter = self.criterion_counter(tree.criteria_id, state);
@@ -383,7 +410,7 @@ impl AchievementCatalog {
             .fold(own, |max, child| max.max(self.max_counter(*child, state)))
     }
 
-    fn faction_matches(&self, required: i32, race: u8) -> bool {
+    pub(crate) fn faction_matches(&self, required: i32, race: u8) -> bool {
         if required == -1 {
             return true;
         }
@@ -412,7 +439,7 @@ impl AchievementCatalog {
         state.criteria_progress.get(&id).copied()
     }
 
-    fn supports_tree(&self, id: u32, visiting: &mut BTreeSet<u32>) -> bool {
+    pub(crate) fn supports_tree(&self, id: u32, visiting: &mut BTreeSet<u32>) -> bool {
         let Some(tree) = self.trees.get(&id) else {
             return false;
         };
