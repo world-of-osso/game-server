@@ -56,6 +56,36 @@ fn achievementlinks_detail_uses_authoritative_state_and_rejects_other_faction() 
 }
 
 #[test]
+fn achievements_catalog_queries_preserve_a_valid_multibyte_search_term() {
+    let catalog = catalog();
+    let text = "É".repeat(200);
+    let request = serde_json::from_value(
+        serde_json::json!({"Search":{"text":text,"scope":"All","after_id":0}}),
+    )
+    .unwrap();
+    let page =
+        serde_json::to_value(catalog.page(&PlayerAchievementState::default(), request, 1)).unwrap();
+    assert_eq!(page["Search"]["text"].as_str().unwrap(), text);
+}
+
+#[test]
+fn achievements_catalog_queries_do_not_browse_hidden_tracking_copies() {
+    let catalog = catalog();
+    let page = catalog.page(
+        &PlayerAchievementState::default(),
+        QueryAchievementCatalog::Category {
+            category_id: 14861,
+            after_id: 39957,
+        },
+        1,
+    );
+    let AchievementCatalogPage::Category { achievements, .. } = page else {
+        panic!("category response")
+    };
+    assert!(achievements.iter().all(|row| row.achievement_id != 39958));
+}
+
+#[test]
 fn achievements_alert_payload_has_the_authored_earned_icon() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
