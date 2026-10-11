@@ -4,11 +4,11 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 
 ## Sixteenth batch: low-count rank and charge consumers
 
-[Contract](../../specs/spell-dummy-scripts.md#sixteenth-batch-low-count-rank-and-charge-contracts). `scripts/batch16.rs` binds Holy Light's231642/88852 gain, Holy/Ret Judgment's315867/220637 gain, Crusader's Might196926's separate Holy Shock/Crusader Strike cooldown reductions and Riptide51564's named53390 grant. Rank fixtures pin KnownSpells separately from loaded child rows. Crusader's Might covers Holy Judgment275773 only; other Judgment variants and owned-mark/secondary/talent mechanics stay open.
+[Contract](../../specs/spell-dummy-scripts.md#sixteenth-batch-low-count-rank-and-charge-contracts), [capabilities/proof/all40](../../spell-dummy16-coverage.md). `scripts/batch16.rs` binds Holy Light's231642/88852 gain, Holy/Ret Judgment's315867/220637 gain, Crusader's Might196926's separate Holy Shock/Crusader Strike cooldown reductions and Riptide51564's named53390 grant. Rank fixtures pin KnownSpells separately from loaded child rows. Crusader's Might covers Holy Judgment275773 only; other Judgment variants and owned-mark/secondary/talent mechanics stay open.
 
 Arcane Blast's successful-launch resource clone freezes36032s1 damage from pre-gain charges. Cast time and mana admission/payment separately read36032s4/s5. Arcane Power's343208 gate applies12042s2 to mana only; no generic aura72 implementation is claimed. Tidal Waves stacks represent future uses, so53390 modifiers retain their per-use magnitude and completed matching casts consume one accumulated stack before removing the final native charge. No guardian module changes.
 
-Targeted RED recorded; GREEN/final census proof pending. Detailed capability/all40 ledger will supersede this pending status.
+Healing Wave77472's native45/zero-chain-target heal now has a named single-primary plan, needed to test real Tidal use consumption through native cast admission. Generic45 stays unsupported; existing friendly self selection is unchanged. Frozen8ff636a→9721cec census stays163 roots/98 reviewed/65 underived: no existing census markers are silently removed.229 native rows match local CSVs; all prior40-spec ID sets match. Targeted12/12 warning-free; corrected fixture/RED boundaries and pending integration gate are recorded in the linked ledger.
 
 ## Fifteenth batch: native health, weapon ranks and delayed hits
 
