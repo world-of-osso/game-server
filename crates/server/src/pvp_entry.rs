@@ -17,6 +17,23 @@ pub(super) fn enter_battleground(
     match_id: u64,
 ) -> Result<(), String> {
     let destination = entry_location(world, player)?;
+    let sources = world
+        .get_resource::<crate::game_objects::GameObjectSpawns>()
+        .ok_or("gameobject catalog unavailable")?;
+    for entry in [
+        shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
+        shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
+    ] {
+        if !sources
+            .0
+            .iter()
+            .any(|spawn| spawn.map_id == destination.map_id && spawn.info.entry == entry)
+        {
+            return Err(format!(
+                "authored battleground flag {entry} is absent; rebuild Retail source content"
+            ));
+        }
+    }
     let current = world
         .get::<InMap>(player)
         .ok_or("current map transfer is still pending")?;
