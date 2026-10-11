@@ -27,7 +27,7 @@ Lead owns copy review/publication. Tables are replaced atomically; `mythic_plus_
 Targeted tests:
 
 ```text
-MYTHIC_PLUS_DB2_SOURCE=/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/mythic-plus-2026-10-11/local-db2 MYTHIC_PLUS_WORLD_SOURCE=/home/osso/Projects/world-of-osso/game-server/data/world.db scripts/agent/agent-run mythic-plus python3 -W error::ResourceWarning scripts/tests/test_import_mythic_plus.py
+MYTHIC_PLUS_DB2_SOURCE=/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/mythic-plus-2026-10-11/local-db2 MYTHIC_PLUS_WORLD_SOURCE=/home/osso/Projects/world-of-osso/game-server/data/world.db /home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run mythic-plus python3 -W error::ResourceWarning scripts/tests/test_import_mythic_plus.py
 ```
 
 Use the canonical engine `scripts/agent/agent-run` path when running from game-server.

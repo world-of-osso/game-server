@@ -4,9 +4,9 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 
 ## What it must do
 
-- [ ] Import build/layout-pinned local MapChallengeMode, KeystoneAffix, ChallengeModeItemBonusOverride, MythicPlusSeason, Scenario and ScenarioStep records into an independent SQLite copy, preserving source hashes and gaps.
-- [ ] Preserve unrelated data, replace the catalog atomically, reject corrupt layouts and refuse canonical/symlink/hardlink destinations.
-- [ ] Use a MapChallengeMode dungeon with existing difficulty8 spawns and an authored Font of Power; selected candidate is The Azure Vault (map2515/challenge401).
+- [x] Import build/layout-pinned local MapChallengeMode, KeystoneAffix, ChallengeModeItemBonusOverride, MythicPlusSeason, Scenario and ScenarioStep records into an independent SQLite copy, preserving source hashes and gaps.
+- [x] Preserve unrelated data, replace the catalog atomically, reject corrupt layouts and refuse canonical/symlink/hardlink destinations.
+- [x] Qualify a MapChallengeMode dungeon with existing difficulty8 spawns and an authored Font of Power; selected candidate is The Azure Vault (map2515/challenge401).
 - [ ] Keep keystone item identity, challenge ID, level and affixes durable; validate actual bag ownership and Font reach/copy/difficulty before activation.
 - [ ] Show Font insertion/activation, countdown, elapsed/remaining time, death count/time lost, affixes and scenario boss/enemy-force criteria in both skins.
 - [ ] Complete only after authored boss and force criteria; use source-backed timer thresholds for upgrades, handle failed/abandoned keys without repeat awards.
@@ -14,6 +14,7 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 
 ## How it works
 
+- [Catalog import architecture](../wiki/systems/mythic-plus.md).
 - [Local source evidence, copy-import command and numeric-rule boundary](../mythic-plus-data.md).
 
 ## Implementation inventory
