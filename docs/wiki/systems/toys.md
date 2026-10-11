@@ -2,6 +2,20 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Toy-effects10 cosmetic target and growth auras (2026-10-10)
+
+Ranked prepared-copy runtime blockers: summon28=43, aura4=42, effect3=31. Missing summon templates do not establish interactions/control scripts. Three source-complete aura4 actions extend the unchanged complete zero-valued cosmetic predicate in `spell_cast/cosmetic.rs`; the root Aqir missile remains ordinary trigger32, not an audited dummy.
+
+|Item / root|Audited aura|Source lifetime / target|Local visual evidence|
+|---|---|---|---|
+|Iron Belly Spirits88587/128327|128327|1000ms cast;60000ms aura / friendly21|visual27023, cast kit23617 and impact9579, animation829 and sound101465; no resource restoration|
+|Darkshard Fragment131812/196783|196783|5000ms / caster1|visual51069, crystal model1249984 via kit61005/positioner36; cast392109 via61004|
+|Aqir Egg Cluster175063/318453|318452|15000ms / target25|authored missile32 triggers318452/visual94332; kit123945 models1249925,1733424,165723 plus sound147889; no creature spawning/damage|
+
+Local Retail12.1.0.69933 DB2 rows and the actual TDB1210 archive have no selected spell_script_names binding. Descriptions and full visual chains, not absence of bindings alone, establish these cosmetics. Heartbreaker/emote actions, procedural Frosh Hat, Wormhole menus, Gokk'lok's Shell/nonzero dummy, scouting maps and scaled Flame's Radiance stay blocked. No new importer/content changes: prepare toy-effects9 templates on a disposable copy with its existing importer. Behavioral tests exercise real bag learning, UseToy, target-vs-caster routing, missile-triggered aura, unchanged health/model, source lifetimes and retained refusals. Native rendering/audio/positioners are not certified by server proof.
+
+Sources: server `data/diagnostics/toy-effects10-2026-10-10/{selected-source.json,visual-source.json,spell-script-names.sql,before.json}`; [contract](../../specs/toys.md), `crates/server/src/toys_tests.rs`. Prepared-copy census125→128/1166, added only88587/131812/175063 and removed none. Behavioral RED4 aura4 refusals; final GREEN4 including source1000ms cast/8yd missile delay, near-expiry existence and removal. First post-master5e858c8 gates passed349 spell_cast/47 toy tests. Before-push fetch then found source-changing master3953eb3 (class-spell batch15); merged featuref838340 passes360 spell_cast/47 toy tests and format/check warning-free. The second gate is required by that new spell-execution scope, not a repeat on unchanged code. Canonical data was also prepared externally during the task: initial scratch import added16 toy-effects9 templates; final read-only canonical census is128. This branch never wrote canonical world.db. Durable receipts and exact revisions: `/home/osso/.worktrees/handoff-toy-effects10.md` and the linked diagnostics.
+
 ## Toy-effects9 stationary banners and sign (2026-10-10)
 
 Missing runtime items and effect28 templates, not absent generic summon execution, blocked this source-complete group. `scripts/add_toy_summon_templates.py` now adds15 Retail banner item definitions using `content_policy.ITEM_COLUMNS` and16 authentic TDB1210 templates/models (15 banners plus Artisan's Sign). Full content-policy rebuilding retains those selected item/template identities. No world.db mutation is part of this branch: run `python3 scripts/add_toy_summon_templates.py --db data/world.db.new` on an approved copy, then let the owner promote it separately.
