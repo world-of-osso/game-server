@@ -8,7 +8,9 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-spec = importlib.util.spec_from_file_location("keystone", SCRIPTS / "import_keystone_item.py")
+spec = importlib.util.spec_from_file_location(
+    "keystone", SCRIPTS / "import_keystone_item.py"
+)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
@@ -29,8 +31,16 @@ class KeystoneItemTest(unittest.TestCase):
             module.import_item(db)
             module.import_item(db)
             with closing(sqlite3.connect(db)) as conn:
-                self.assertEqual(conn.execute("SELECT * FROM content_item WHERE ID=180653").fetchone(), (180653, "Mythic Keystone", 4, 5, 1))
-                self.assertEqual(conn.execute("SELECT * FROM content_item WHERE ID=2589").fetchone(), (2589, "Linen Cloth", 1, 7, 200))
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT * FROM content_item WHERE ID=180653"
+                    ).fetchone(),
+                    (180653, "Mythic Keystone", 4, 5, 1),
+                )
+                self.assertEqual(
+                    conn.execute("SELECT * FROM content_item WHERE ID=2589").fetchone(),
+                    (2589, "Linen Cloth", 1, 7, 200),
+                )
 
 
 if __name__ == "__main__":

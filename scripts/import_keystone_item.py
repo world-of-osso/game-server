@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Publish local Item/ItemSparse Mythic Keystone180653 into an independent world copy."""
+
 import argparse
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+
 from import_mythic_plus import validate_destination
 
 
@@ -19,12 +21,19 @@ def import_item(destination):
         values.update(dict(item))
         values["Name"] = sparse["Display_lang"]
         values["Quality"] = sparse["OverallQualityID"]
-        columns = [row[1] for row in conn.execute("PRAGMA table_info(content_item)") if row[1] in values]
+        columns = [
+            row[1]
+            for row in conn.execute("PRAGMA table_info(content_item)")
+            if row[1] in values
+        ]
         if "ID" not in columns or "Name" not in columns:
             raise ValueError("content_item schema is missing ID/Name")
         names = ",".join(f'"{column}"' for column in columns)
         placeholders = ",".join("?" for _ in columns)
-        conn.execute(f"INSERT OR REPLACE INTO content_item ({names}) VALUES ({placeholders})", [values[column] for column in columns])
+        conn.execute(
+            f"INSERT OR REPLACE INTO content_item ({names}) VALUES ({placeholders})",
+            [values[column] for column in columns],
+        )
         return True
 
 
