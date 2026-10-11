@@ -239,9 +239,17 @@ def build_template_difficulties(conn, report):
 TRANSFORM_ENTRIES = "SELECT EffectMiscValue_0 FROM spell_effect WHERE EffectAura = 56 AND EffectMiscValue_0 > 0"
 
 # Aura428 linked toys and audited stationary scenery need authentic templates
-# even without world spawns. The two scenery IDs are TDB1210's Silversage
-# Incense and Totem of Harmony; click/script/control toys are not imported.
-TOY_SCENERY_SUMMON_ENTRIES = (65298, 65387)
+# even without world spawns. TDB1210 incense, harmony totem, Artisan's Sign
+# and stationary banners have no click/script/control actions.
+TOY_SCENERY_SUMMON_ENTRIES = (
+    65298, 65387, 144025, 144026, 181826, 182459, 182461, 193182,
+    201798, 208477, 214220, 220620, 233144, 233145, 233146, 233148,
+    233149, 233150,
+)
+TOY_BANNER_ITEM_IDS = (
+    163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
+    218128, 232301, 232302, 232303, 232305, 232306, 232307,
+)
 TOY_SUMMON_ENTRIES = f"""SELECT s.EffectMiscValue_0 FROM toy t
     JOIN item_x_item_effect x ON x.ItemID = t.ItemID
     JOIN item_effect i ON i.ID = x.ItemEffectID AND i.TriggerType = 0
@@ -454,7 +462,8 @@ def tdb_item_ids(conn):
                 "SELECT itemid FROM tdb_playercreateinfo_item",
                 f"SELECT action FROM tdb_playercreateinfo_action WHERE type = {ACTION_BUTTON_ITEM}"]
     sources += [f"SELECT Item FROM tdb_{table} WHERE ItemType = {LOOT_ITEM}" for table in TDB_LOOT_TABLES]
-    sources += ["SELECT item FROM wowhead_creature_drop",
+    sources += [f"SELECT ID FROM item WHERE ID IN {TOY_BANNER_ITEM_IDS}",
+                "SELECT item FROM wowhead_creature_drop",
                 "SELECT Entry FROM tdb_item_loot_template",
                 "SELECT ObjectID FROM tdb_quest_objectives WHERE Type = 1"]  # QUEST_OBJECTIVE_ITEM
     sources += [f"SELECT {column} FROM tdb_quest_template" for column in QUEST_ITEM_COLUMNS]
