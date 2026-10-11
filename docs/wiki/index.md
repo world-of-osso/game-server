@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private-copy template overlay, timed-list gates, generic path lifecycle and reproduced point/wander contention; live/full vocabulary pending.
+- [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
 
 - [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry) — authored scripted Shadow-Blades combo doubling, real Rune-Weapon owner parry, all28 exact reviews and30 deferred revisits; [157/157/0 census/proof/limits](../spell-dummy23-coverage.md). Zero underived is no unreviewed roots, not zero missing mechanics.
 
