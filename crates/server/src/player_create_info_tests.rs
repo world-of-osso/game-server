@@ -389,7 +389,7 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
 /// Every playable race/class gets its authored loadout, and every kit item has a
 /// template, so creation stores all of them.
 #[test]
-fn every_playable_pair_has_a_loadout_and_creates() {
+fn every_playable_pair_has_an_authored_start_loadout_and_creates() {
     let Some(kit) = OwnedKit::from_world_db() else {
         return;
     };
@@ -405,6 +405,9 @@ fn every_playable_pair_has_a_loadout_and_creates() {
                 "race {race} item {item_id} source-local template"
             );
         }
+        kit.kit()
+            .starting_location(race, class)
+            .unwrap_or_else(|error| panic!("offered pair has no start: {error}"));
         let created = create(&kit, "Probe", race, class);
         let owned = created.equipped.len() + created.bags.len() + created.backpack.len();
         let expected: usize = info

@@ -72,20 +72,26 @@ fn starts_use_both_race_and_class_and_preserve_source_facing_in_homebind() {
 }
 
 #[test]
-fn demon_hunter_unimplemented_intro_uses_authored_race_start_but_missing_rows_do_not() {
+fn every_demon_hunter_pair_uses_its_authored_non_dh_race_start() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(
         "CREATE TABLE tdb_playercreateinfo (race, class, map, position_x, position_y, position_z, orientation);
          INSERT INTO tdb_playercreateinfo VALUES
          (4,1,1,10311.3,831.463,1326.57,5.48033),
          (4,12,1481,1180.64,3284.96,70.3484,4.76134),
-         (10,1,530,10349.6,-6357.29,33.4026,5.31605);",
+         (10,1,530,10349.6,-6357.29,33.4026,5.31605),
+         (29,1,1865,2121.0,3318.0,54.7061,0.0872665);",
     ).unwrap();
     let starts = crate::player_start::load_starts(&conn).unwrap();
     assert_eq!(starts.get(&(4, 12)), starts.get(&(4, 1)));
+    assert_eq!(starts.get(&(10, 12)), starts.get(&(10, 1)));
+    assert_eq!(starts.get(&(29, 12)), starts.get(&(29, 1)));
+    conn.execute("DELETE FROM tdb_playercreateinfo WHERE race=29", [])
+        .unwrap();
+    let without_void_elf = crate::player_start::load_starts(&conn).unwrap();
     assert!(
-        !starts.contains_key(&(10, 12)),
-        "a missing DH row must not use its Warrior row"
+        !without_void_elf.contains_key(&(29, 12)),
+        "no other-race start may substitute"
     );
     assert_eq!(starts[&(95, 1)].map_id, 2991);
     assert_eq!(starts[&(52, 13)].map_id, 0);
