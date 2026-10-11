@@ -164,6 +164,58 @@ fn all_pass_unlocks_one_shared_item_for_exactly_one_looter() {
 }
 
 #[test]
+fn greed_only_item_disables_need_for_every_member() {
+    let (mut h, _) = grouped();
+    h.app
+        .world_mut()
+        .resource_mut::<ItemTemplates>()
+        .retail
+        .get_mut(&MOSS_AGATE)
+        .unwrap()
+        .scaling
+        .flags2 |= 0x100; // ITEM_FLAG2_CAN_ONLY_ROLL_GREED
+    h.kill_kobold();
+    let roll = h.take::<GroupLootRoll>().remove(0);
+    assert!(roll.players.iter().all(|player| !player.can_need
+        && player.need_reason.as_deref() == Some("Need rolls are disabled for this item.")));
+}
+
+#[test]
+fn cloth_need_uses_retail_class_armor_mask_not_required_equip_level() {
+    let (mut h, other) = grouped();
+    h.app
+        .world_mut()
+        .resource_mut::<LootTables>()
+        .creature
+        .get_mut(&KOBOLD_VERMIN)
+        .unwrap()
+        .entries[0]
+        .item = 3985; // Monogrammed Sash: real Uncommon cloth
+    h.app
+        .world_mut()
+        .get_mut::<Player>(other.player)
+        .unwrap()
+        .class = 8;
+    h.kill_kobold();
+    let roll = h.take::<GroupLootRoll>().remove(0);
+    assert!(
+        !roll
+            .players
+            .iter()
+            .find(|player| player.character_id == h.looter.character_id)
+            .unwrap()
+            .can_need
+    );
+    assert!(
+        roll.players
+            .iter()
+            .find(|player| player.character_id == other.character_id)
+            .unwrap()
+            .can_need
+    );
+}
+
+#[test]
 fn timeout_keeps_the_real_decay_boundary_lootable_until_all_pass_items_are_claimed() {
     let (mut h, _) = grouped();
     h.app.add_systems(
