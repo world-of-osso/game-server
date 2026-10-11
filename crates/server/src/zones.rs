@@ -231,7 +231,9 @@ pub(crate) fn spawn_creature(
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
             UnitFlags(spawn.unit_flags.unwrap_or(template.unit_flags)),
-            NpcFlags::from_azerothcore(template.npc_flags),
+            // The merged content view includes Retail-only services such as
+            // Transmogrifier; an AzerothCore mask would discard their flags.
+            NpcFlags(u64::from(template.npc_flags)),
             shared::components::CreatureMotion::Still,
             // Set by the movement systems while it moves (`creature_ai::Bearing`).
             shared::components::MovementSpeed(0.0),
