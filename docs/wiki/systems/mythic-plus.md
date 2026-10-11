@@ -30,6 +30,10 @@ Scenario-event92 weights are preserved/testable but producers are not connected.
 - [Azure encounter identities](../../../crates/server/src/scripted_ai/encounter_compat.csv), [encounter DONE hook](../../../crates/server/src/scripted_ai/instance_script.rs).
 - [Source qualification](../../mythic-plus-data.md), [contract](../../specs/mythic-plus.md), [catalog importer](../../../scripts/import_mythic_plus.py), [item projection](../../../scripts/import_keystone_item.py).
 
+## Party key sharing
+
+The built-in [Mythic Mentor contract](../../specs/mythic-mentor.md) owns party summary visibility and bag authority. Producer: [mythic_mentor.rs](../../../crates/server/src/mythic_mentor.rs). Final native/private proof and screenshots are [client-owned](../../../../game-engine/docs/wiki/systems/mythic-mentor.md); server6a07a86d's targeted persisted-bag/roster/recipient/raid test passes. No addon messaging or peer bag GUID disclosure.
+
 ## See Also
 
 - [[content-import]] — authored population; not duplicated here.
