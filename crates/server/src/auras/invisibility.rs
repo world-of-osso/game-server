@@ -17,9 +17,9 @@ impl Invisibility {
         for aura in auras.iter() {
             for effect in &aura.effects {
                 let values = match effect.aura_type {
-                    18 => &mut state.hidden,
-                    19 => &mut state.detection,
-                    335 => {
+                    super::handlers::MOD_INVISIBILITY => &mut state.hidden,
+                    super::handlers::MOD_INVISIBILITY_DETECT => &mut state.detection,
+                    super::handlers::DETECT_VISIBLE_WHILE_INVISIBLE => {
                         state.detect_while_invisible = true;
                         continue;
                     }
@@ -42,6 +42,60 @@ impl Invisibility {
                 .hidden
                 .keys()
                 .all(|kind| target.detection.contains_key(kind)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invisibility_detection_requires_every_type_and_sufficient_value() {
+        let mut target = Invisibility {
+            hidden: BTreeMap::from([(12, 100), (35, 100)]),
+            ..default()
+        };
+        let mut observer = Invisibility {
+            detection: BTreeMap::from([(12, 99), (35, 100)]),
+            ..default()
+        };
+        assert!(!observer.detects(&target), "one detection value is too low");
+        observer.detection.insert(12, 100);
+        assert!(observer.detects(&target));
+        observer.detection.remove(&35);
+        assert!(
+            !observer.detects(&target),
+            "missing a type still hides the unit"
+        );
+        target.hidden = BTreeMap::from([(35, 0)]);
+        assert!(
+            !observer.detects(&target),
+            "zero invisibility retains type presence"
+        );
+        observer.detection.insert(35, 0);
+        assert!(observer.detects(&target));
+    }
+
+    #[test]
+    fn invisibility_detection_requires_reciprocal_flags_unless_aura335() {
+        let mut observer = Invisibility {
+            hidden: BTreeMap::from([(12, 100)]),
+            detection: BTreeMap::from([(35, 100)]),
+            ..default()
+        };
+        let mut target = Invisibility {
+            hidden: BTreeMap::from([(35, 100)]),
+            ..default()
+        };
+        assert!(!observer.detects(&target));
+        target.detection.insert(12, 0);
+        assert!(
+            observer.detects(&target),
+            "reciprocal check needs the type, not its value"
+        );
+        target.detection.clear();
+        observer.detect_while_invisible = true;
+        assert!(observer.detects(&target));
     }
 }
 

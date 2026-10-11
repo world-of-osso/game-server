@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11) — observer detection, authored spell-area quest masks, both-skin Jaga loot/turn-in and post-reward hiding; Vin/Rendan data-route gaps explicit.
+
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 
 - [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
