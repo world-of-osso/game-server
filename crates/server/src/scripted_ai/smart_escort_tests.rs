@@ -191,3 +191,71 @@ fn smartai_coverage_erland_node_fourteen_credits_only_the_event_objective() {
     assert_eq!(log.active(435).unwrap().counts, vec![1]);
     assert!(!log.active(435).unwrap().failed);
 }
+
+#[derive(Clone, Default)]
+struct WarningCapture(std::sync::Arc<std::sync::Mutex<Vec<String>>>);
+
+impl bevy::log::tracing::Subscriber for WarningCapture {
+    fn enabled(&self, _: &bevy::log::tracing::Metadata<'_>) -> bool {
+        true
+    }
+    fn new_span(
+        &self,
+        _: &bevy::log::tracing::span::Attributes<'_>,
+    ) -> bevy::log::tracing::span::Id {
+        bevy::log::tracing::span::Id::from_u64(1)
+    }
+    fn record(&self, _: &bevy::log::tracing::span::Id, _: &bevy::log::tracing::span::Record<'_>) {}
+    fn record_follows_from(
+        &self,
+        _: &bevy::log::tracing::span::Id,
+        _: &bevy::log::tracing::span::Id,
+    ) {
+    }
+    fn enter(&self, _: &bevy::log::tracing::span::Id) {}
+    fn exit(&self, _: &bevy::log::tracing::span::Id) {}
+    fn event(&self, event: &bevy::log::tracing::Event<'_>) {
+        if *event.metadata().level() == bevy::log::tracing::Level::WARN {
+            let mut visitor = WarningFields(String::new());
+            event.record(&mut visitor);
+            self.0.lock().unwrap().push(visitor.0);
+        }
+    }
+}
+
+struct WarningFields(String);
+impl bevy::log::tracing::field::Visit for WarningFields {
+    fn record_debug(
+        &mut self,
+        field: &bevy::log::tracing::field::Field,
+        value: &dyn std::fmt::Debug,
+    ) {
+        self.0.push_str(&format!("{}={value:?};", field.name()));
+    }
+}
+
+#[test]
+fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
+    let (temp, _world, _ai, _creature, _player) = erland();
+    let capture = WarningCapture::default();
+    bevy::log::tracing::subscriber::with_default(capture.clone(), || {
+        load_smart_scripts(&temp.path().join("escort.sqlite")).unwrap();
+    });
+    let warnings = capture.0.lock().unwrap();
+    assert_eq!(
+        warnings
+            .iter()
+            .filter(|line| line.contains("action type 59"))
+            .count(),
+        1,
+        "duplicate unsupported SET_RUN rows must produce one actionable warning: {warnings:?}"
+    );
+    assert_eq!(
+        warnings
+            .iter()
+            .filter(|line| line.contains("target type 19"))
+            .count(),
+        1,
+        "timed-list targets must be diagnosed: {warnings:?}"
+    );
+}

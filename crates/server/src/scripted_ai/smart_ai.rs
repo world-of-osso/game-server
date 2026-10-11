@@ -9,10 +9,10 @@
 //! 0 = every phase) and not a spent `NOT_REPEATABLE` one; its action then runs, and its
 //! `link` event right after with the same invoker.
 //!
-//! Modelled: events UPDATE_IC, AGGRO, RESET, HAS_AURA, SPELLHIT, LINK; actions TALK,
-//! CAST, SET_EVENT_PHASE,
-//! CALL_KILLEDMONSTER, DIE; targets NONE, SELF, ACTION_INVOKER. Other event types never
-//! run and other actions or targets do nothing (counted when loaded).
+//! Quest accept/reward can invoke timed action lists and authored TDB waypoint
+//! paths. Reached/pause/resume events, stored invokers and quest event credit are
+//! interpreted generically. Unsupported event/action/target kinds are diagnosed
+//! once per kind at startup, including rows outside the loaded creature subset.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -115,6 +115,7 @@ const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.e
 
 pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    log_unsupported_types(&conn)?;
     let mut statement = conn.prepare(SMART_QUERY)?;
     let rows = statement.query_map([], |row| {
         let int = |index: usize| row.get::<_, u32>(index);
@@ -156,33 +157,10 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
         };
         destination.entry(entry).or_default().push(event);
     }
-    let rows: Vec<&SmartEvent> = scripts.values().flatten().collect();
-    let unmodelled = rows
-        .iter()
-        .filter(|event| {
-            !matches!(
-                event.event_type,
-                EVENT_UPDATE_IC
-                    | EVENT_AGGRO
-                    | EVENT_SPELLHIT
-                    | EVENT_HAS_AURA
-                    | EVENT_RESET
-                    | EVENT_LINK
-            ) || !matches!(
-                event.action_type,
-                ACTION_TALK
-                    | ACTION_CAST
-                    | ACTION_SET_EVENT_PHASE
-                    | ACTION_CALL_KILLEDMONSTER
-                    | ACTION_DIE
-            )
-        })
-        .count();
     info!(
-        "Loaded SmartAI scripts of {} creatures ({} of {} rows use unmodelled events or actions)",
+        "Loaded SmartAI scripts for {} creatures and {} timed lists",
         scripts.len(),
-        unmodelled,
-        rows.len()
+        lists.len()
     );
     Ok(SmartScripts(
         scripts
@@ -195,6 +173,81 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
             .collect(),
         paths::load_waypoint_paths(&conn)?,
     ))
+}
+
+fn supports_event(kind: u32) -> bool {
+    matches!(
+        kind,
+        EVENT_UPDATE_IC
+            | EVENT_AGGRO
+            | EVENT_DEATH
+            | EVENT_SPELLHIT
+            | EVENT_HAS_AURA
+            | EVENT_RESET
+            | EVENT_LINK
+            | EVENT_ACCEPTED_QUEST
+            | EVENT_REWARD_QUEST
+            | EVENT_WAYPOINT_REACHED
+            | EVENT_WAYPOINT_PAUSED
+            | EVENT_WAYPOINT_RESUMED
+            | EVENT_WAYPOINT_STOPPED
+            | EVENT_WAYPOINT_ENDED
+    )
+}
+
+fn supports_action(kind: u32) -> bool {
+    matches!(
+        kind,
+        ACTION_TALK
+            | ACTION_CAST
+            | ACTION_SET_EVENT_PHASE
+            | ACTION_CALL_KILLEDMONSTER
+            | ACTION_DIE
+            | ACTION_FAIL_QUEST
+            | ACTION_COMPLETE_QUEST
+            | ACTION_WP_START
+            | ACTION_WP_PAUSE
+            | ACTION_WP_RESUME
+            | ACTION_STORE_TARGET_LIST
+            | ACTION_CALL_TIMED_ACTION_LIST
+            | ACTION_REMOVE_NPC_FLAG
+    )
+}
+
+fn supports_target(kind: u32) -> bool {
+    matches!(
+        kind,
+        TARGET_NONE | TARGET_SELF | TARGET_VICTIM | TARGET_ACTION_INVOKER | TARGET_STORED
+    )
+}
+
+fn log_unsupported_types(conn: &Connection) -> rusqlite::Result<()> {
+    let mut query = conn.prepare("SELECT event_type,action_type,target_type,COUNT(*) FROM tdb_smart_scripts GROUP BY event_type,action_type,target_type")?;
+    let rows = query.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            row.get::<_, u32>(2)?,
+            row.get::<_, u64>(3)?,
+        ))
+    })?;
+    let mut unsupported = std::collections::BTreeMap::new();
+    for row in rows {
+        let (event, action, target, count) = row?;
+        for (dimension, kind, supported) in [
+            ("event", event, supports_event(event)),
+            ("action", action, supports_action(action)),
+            ("target", target, supports_target(target)),
+        ] {
+            if !supported {
+                *unsupported.entry((dimension, kind)).or_insert(0_u64) += count;
+            }
+        }
+    }
+    for ((dimension, kind), count) in unsupported {
+        warn!("SmartAI unsupported {dimension} type {kind}: {count} TDB rows");
+    }
+    Ok(())
 }
 
 pub(crate) fn startup_load_smart_scripts(mut commands: Commands) {
