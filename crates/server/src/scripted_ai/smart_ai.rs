@@ -712,9 +712,7 @@ impl SmartAi {
             node_delay_ms: None,
             range_check_ms: 1000,
         });
-        ctx.world
-            .entity_mut(ctx.me)
-            .insert(super::movement::ScriptedPath);
+        super::movement::retain_path_home(ctx.world, ctx.me);
         self.move_to_waypoint(ctx);
         if invoker.is_some_and(|entity| {
             ctx.world
@@ -874,6 +872,13 @@ impl CreatureAi for SmartAi {
             boss.just_engaged_with(ctx);
         }
         self.process_events_for(ctx, EVENT_AGGRO, Some(who), 0);
+    }
+
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        self.process_events_for(ctx, 7, None, 0);
+        if self.escort.is_none() {
+            self.reset(ctx);
+        }
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, killer: Option<Entity>) {

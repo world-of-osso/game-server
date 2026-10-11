@@ -16,7 +16,7 @@ Start the private server with that copy, fresh private redb, UDP5780 and fb_* cr
 
 ## Movement authority
 
-Authored point movement must exclude idle wandering/patrol. An active escort retains movement ownership during pauses and node delays; finishing/stopping releases idle movement. An escort's point generator suspends while combat chase or evade-home owns movement; it must not advance the path concurrently. Other explicitly requested point movement remains unchanged. Escort evade-return destination and distance failure remain separate acceptance boundaries.
+Authored point movement must exclude idle wandering/patrol. An active escort retains movement ownership during pauses and node delays; finishing/stopping releases idle movement. An escort's point generator suspends while combat chase or evade-home owns movement; it must not advance the path concurrently. Other explicitly requested point movement remains unchanged. While walking its path, an escort updates its home to the last out-of-combat path position. Combat leash and evade return use that dynamic home without changing the original respawn position. Escort distance failure remains a separate acceptance boundary.
 
 ## Runtime acceptance (pending)
 
