@@ -9,7 +9,7 @@ Private UDP5881, fresh `fb_*` accounts and a SQLite backup; no canonical world.d
 | Case | Map / WoW X,Y | Supplied Z | Retail surface |
 |---|---|---:|---:|
 | cooldown-assist | 0 / -8985,-179 | 76.9624 | server79.55275; client79.55338 |
-| smartai-erland | 0 / 1407,1090 | 54 | client60.47844 |
+| smartai-erland | 0 / 1407,1090 | 54 | server/client60.478443 |
 
 Baseline per-second instrumentation records replicated authority below the surface while the client is still Loading and has no parsed tile. Once parsed, client terrain returns the surface above, but the already-underground player continues falling. Tiles complete without failures. Thus waiting for client streaming cannot repair these destinations. The server/client Elwynn sample discrepancy is below0.001 yd, not the2.59 yd error in the supplied destination.
 
@@ -31,7 +31,9 @@ The raw AzerothCore Erland/NPC data in the earlier private overlay remains histo
 
 `ground::private_runs_tests` consumes the same manifest, parses real WDT775971/ADT/WMO assets and executes production authority gravity for200 ticks per destination, checking surface position and unchanged health. With the original Z values it fails on tick0 (`76.9624` versus actual server surface`79.55275`). A separate test retains `Unsupported` for both old underground coordinates, proving no collision clamp was introduced.
 
-Live and final-check results are recorded in the task handoff and diagnostics; completion is not inferred from this page.
+Four inspected1280×720 PNGs prove the original map/X/Y in Modern and Forever, grounded for15 seconds after loading: `elwynn-modern`, `elwynn-forever`, `silverpine-modern2`, `silverpine-forever`. Both authority and prediction stay on the measured surface, health292/293, all9 tiles parsed, zero failures. Silverpine uses the original Undead faction; an earlier Human probe stayed grounded but died to nearby Horde NPCs and is not acceptance evidence.
+
+The maintained [native live fixture](../../../../game-engine/godot/tests/private_terrain_destinations_live.gd) captures per-second authority/prediction/terrain, saves final JSON/PNG and fails if either height is off-surface or the player is dead. It rejects any server argument other than private5881. Final-check results and exact revisions remain in the task handoff/proof ledger.
 
 ## Sources
 
