@@ -49,10 +49,6 @@ def select_instance_spawns(conn):
 def import_creatures(conn, report):
     retail.create_difficulty_table(conn, map_list=MAPS, base_phase=BASE_PHASE)
     conn.create_function("health_expansion", 1, retail.health_expansion, deterministic=True)
-    conn.execute(f"CREATE TEMP TABLE kept_instance_loot AS SELECT entry,lootid,mingold,maxgold "
-                 f"FROM content_creature_template WHERE entry IN ({ENTRIES}) AND lootid>={OFFSET}")
-    conn.execute(f"CREATE TEMP TABLE kept_instance_difficulty_loot AS SELECT entry,DifficultyID,lootid,mingold,maxgold "
-                 f"FROM content_creature_template_difficulty WHERE entry IN ({ENTRIES}) AND lootid>={OFFSET}")
     conn.execute(f"DELETE FROM content_creature_template WHERE entry IN ({ENTRIES})")
     retail.insert_tdb_templates(conn, ENTRIES, replace_legacy=True)
     # Keep every unrelated difficulty/loot row: the shared builder recreates this table.
@@ -60,11 +56,7 @@ def import_creatures(conn, report):
                  f"WHERE entry NOT IN ({ENTRIES})")
     retail.build_template_difficulties(conn, report)
     conn.execute("INSERT INTO content_creature_template_difficulty SELECT * FROM temp.kept_difficulty")
-    for table, saved, match in (("content_creature_template", "kept_instance_loot", "t.entry=s.entry"),
-                               ("content_creature_template_difficulty", "kept_instance_difficulty_loot",
-                                "t.entry=s.entry AND t.DifficultyID=s.DifficultyID")):
-        conn.execute(f"UPDATE {table} AS t SET lootid=s.lootid,mingold=s.mingold,maxgold=s.maxgold "
-                     f"FROM temp.{saved} s WHERE {match}")
+    import_instance_loot(conn, report)
     for table, key in (("creature_template_model", "CreatureID"), ("creature_template_addon", "entry"),
                        ("creature_equip_template", "CreatureID")):
         conn.execute(f"DELETE FROM content_{table} WHERE {key} IN ({ENTRIES})")
@@ -82,6 +74,27 @@ def import_creatures(conn, report):
         spawntimesecs,wander_distance,currentwaypoint,MovementType,COALESCE(unit_flags,0),ScriptName,VerifiedBuild,
         modelid,{retail.SPAWN_DIFFICULTIES} FROM temp.instance_creature
         WHERE id IN (SELECT entry FROM content_creature_template)""")
+
+
+def import_instance_loot(conn, report):
+    """Bind resolved TDB difficulty loot and gold, without legacy/Wowhead substitutions."""
+    loot_offset = retail.TDB_LOOT_OFFSET
+    conn.execute(f"""UPDATE content_creature_template AS t
+        SET lootid=CASE WHEN d.LootID=0 THEN 0 ELSE d.LootID+{loot_offset} END,
+            mingold=d.GoldMin,maxgold=d.GoldMax
+        FROM temp.tdb_difficulty d WHERE t.entry=d.Entry AND t.entry IN ({ENTRIES})""")
+    conn.execute(f"""UPDATE content_creature_template_difficulty AS t
+        SET lootid=CASE WHEN d.LootID=0 THEN 0 ELSE d.LootID+{loot_offset} END,
+            mingold=d.GoldMin,maxgold=d.GoldMax
+        FROM temp.spawn_row s JOIN tdb_creature_template_difficulty d
+            ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty
+        WHERE t.entry=s.entry AND t.DifficultyID=s.difficulty AND t.entry IN ({ENTRIES})""")
+    retail.insert_tdb_loot(conn, "creature_loot_template", f"""Entry IN (
+        SELECT LootID FROM temp.tdb_difficulty WHERE Entry IN ({ENTRIES})
+        UNION SELECT d.LootID FROM temp.spawn_row s JOIN tdb_creature_template_difficulty d
+            ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty
+        WHERE s.entry IN ({ENTRIES}))""", report)
+    retail.insert_tdb_loot(conn, "reference_loot_template", "1", report)
 
 
 def import_creature_relationships(conn):
