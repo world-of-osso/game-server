@@ -358,7 +358,6 @@ fn generate_corpse_loot(
         }
         if loot.looters.is_empty() {
             corpse_looted(&mut decay, &mut death);
-            continue;
         }
         for (connection, in_world) in &connections {
             if loot.looters.contains_key(&in_world.character_id) {
