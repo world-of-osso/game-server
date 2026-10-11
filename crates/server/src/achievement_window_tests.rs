@@ -7,13 +7,166 @@ fn catalog() -> AchievementCatalog {
 }
 
 #[test]
+fn achievements_dependency_criterion_pages_read_the_actual_earned_ids() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.earned_ids.extend([4788, 4789]);
+    let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Criteria {
+            achievement_id: 1205,
+            after_id: 0,
+        },
+        1,
+    ) else {
+        panic!("criteria page")
+    };
+    assert_eq!(criteria.len(), 2);
+    assert!(criteria.iter().all(|row| row.progress_supported
+        && row.completed
+        && row.current == 1
+        && row.required == 1));
+}
+
+#[test]
+fn achievements_faction_filters_catalog_criteria_and_live_snapshots() {
+    let catalog = catalog();
+    let state = PlayerAchievementState::default();
+    for (race, allowed) in [(1, true), (2, false), (24, false), (52, true), (84, false)] {
+        let AchievementCatalogPage::Criteria {
+            criteria, next_id, ..
+        } = catalog.page(
+            &state,
+            QueryAchievementCatalog::Criteria {
+                achievement_id: 4899,
+                after_id: 0,
+            },
+            race,
+        )
+        else {
+            panic!("criteria page")
+        };
+        assert_eq!(
+            !criteria.is_empty(),
+            allowed,
+            "Loch criteria for race {race}"
+        );
+        if !allowed {
+            assert!(next_id.is_none());
+        }
+        let AchievementCatalogPage::Category { achievements, .. } = catalog.page(
+            &state,
+            QueryAchievementCatalog::Category {
+                category_id: 14861,
+                after_id: 4898,
+            },
+            race,
+        ) else {
+            panic!("category page")
+        };
+        assert_eq!(
+            achievements.iter().any(|row| row.achievement_id == 4899),
+            allowed
+        );
+        let snapshot = catalog.snapshot(&state, race);
+        assert!(
+            !snapshot
+                .progress
+                .iter()
+                .any(|row| row.achievement_id == 4899)
+        );
+        assert_eq!(
+            snapshot
+                .progress
+                .iter()
+                .any(|row| row.achievement_id == 39958),
+            allowed
+        );
+        assert!(snapshot.progress.iter().any(|row| row.achievement_id == 6));
+    }
+    let alliance = catalog.snapshot(&state, 1);
+    let horde = catalog.snapshot(&state, 2);
+    let neutral = catalog.snapshot(&state, 24);
+    let union: BTreeSet<_> = alliance
+        .progress
+        .iter()
+        .chain(&horde.progress)
+        .map(|row| row.achievement_id)
+        .collect();
+    println!(
+        "trackable census: alliance={} horde={} neutral={} union={}",
+        alliance.progress.len(),
+        horde.progress.len(),
+        neutral.progress.len(),
+        union.len()
+    );
+}
+
+#[test]
+fn achievements_account_scoped_rows_never_expose_character_progress_as_account_progress() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    catalog.update(&mut state, CriteriaEvent::CompleteQuest(26145), None, 1);
+    // Preserve historical rows in persistence, but do not present them as account state.
+    state.earned_ids.insert(4899);
+    state.earned_at.insert(4899, 1_790_000_000);
+    let snapshot = catalog.snapshot(&state, 1);
+    assert!(
+        !snapshot
+            .progress
+            .iter()
+            .any(|row| row.achievement_id == 4899)
+    );
+    assert!(!snapshot.earned_ids.contains(&4899));
+    let AchievementCatalogPage::Category { achievements, .. } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Category {
+            category_id: 14861,
+            after_id: 4898,
+        },
+        1,
+    ) else {
+        panic!("category page")
+    };
+    let loch = achievements
+        .iter()
+        .find(|row| row.achievement_id == 4899)
+        .unwrap();
+    assert!(!loch.progress_supported && !loch.earned && loch.earned_at.is_none());
+    assert!(
+        loch.criteria
+            .iter()
+            .all(|row| !row.progress_supported && !row.completed && row.current == 0)
+    );
+    let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Criteria {
+            achievement_id: 39958,
+            after_id: 0,
+        },
+        1,
+    ) else {
+        panic!("character criteria")
+    };
+    assert!(
+        criteria
+            .iter()
+            .any(|row| row.criteria_id == 38400 && row.completed && row.current == 1)
+    );
+}
+
+#[test]
 fn dungeon2_real_category_and_achievement_pages_have_continuations() {
     let catalog = catalog();
     let state = PlayerAchievementState::default();
     let AchievementCatalogPage::Categories {
         categories,
         next_id,
-    } = catalog.page(&state, QueryAchievementCatalog::Categories { after_id: 0 })
+    } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Categories { after_id: 0 },
+        1,
+    )
     else {
         panic!("categories");
     };
@@ -28,6 +181,7 @@ fn dungeon2_real_category_and_achievement_pages_have_continuations() {
         QueryAchievementCatalog::Categories {
             after_id: next_id.unwrap(),
         },
+        1,
     )
     else {
         panic!("categories");
@@ -48,6 +202,7 @@ fn dungeon2_real_category_and_achievement_pages_have_continuations() {
             category_id: 14808,
             after_id: 0,
         },
+        1,
     )
     else {
         panic!("category");
@@ -62,6 +217,7 @@ fn dungeon2_real_category_and_achievement_pages_have_continuations() {
             category_id: 14808,
             after_id: next_id.unwrap(),
         },
+        1,
     )
     else {
         panic!("category");
@@ -96,7 +252,7 @@ fn dungeon2_criteria_paging_and_unknown_requests_are_bounded() {
     };
     let AchievementCatalogPage::Criteria {
         criteria, next_id, ..
-    } = catalog.page(&state, request)
+    } = catalog.page(&state, request, 1)
     else {
         panic!("criteria");
     };
@@ -112,6 +268,7 @@ fn dungeon2_criteria_paging_and_unknown_requests_are_bounded() {
             achievement_id: 42,
             after_id: next_id.unwrap(),
         },
+        1,
     )
     else {
         panic!("criteria");
@@ -132,6 +289,7 @@ fn dungeon2_criteria_paging_and_unknown_requests_are_bounded() {
             category_id: u32::MAX,
             after_id: 0,
         },
+        1,
     )
     else {
         panic!("category");
@@ -146,6 +304,7 @@ fn dungeon2_criteria_paging_and_unknown_requests_are_bounded() {
             achievement_id: u32::MAX,
             after_id: u32::MAX,
         },
+        1,
     )
     else {
         panic!("criteria");
@@ -171,6 +330,7 @@ fn dungeon2_legacy_earned_dates_are_unknown() {
             category_id: 14808,
             after_id: 632,
         },
+        1,
     );
     let AchievementCatalogPage::Category { achievements, .. } = page else {
         panic!("category");
