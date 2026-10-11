@@ -1,83 +1,79 @@
-# Retail follower data
+# Retail follower data and approved spec bridge
 
-Verified: 2026-10-11. Local Retail data proves follower dungeon identities and NPC appearances, but not a combat spell kit for any of the37 Expedition Escort templates. The [contract](../../specs/follower-dungeons.md) remains open: reference import is not working companion AI.
+Verified: 2026-10-11. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present, but dungeon entry and both-skin live completion remain data-blocked.
 
-## Authored sources
+## Source identity
 
-The local install `.build.info` identifies wow build `dcfc90fffd79ba00406ae46f5f657592` as12.1.0.69933. The existing pinned CSV directory lacked LFGDungeons and companion/follower exports. Local `casc-local` extracted the following files into `game-engine/data/diagnostics/follower-ai-2026-10-11/db2/`, without Blizzard CDN requests:
+Local wow build `dcfc90fffd79ba00406ae46f5f657592` is12.1.0.69933. CASC LFGDungeons1361033/layout34B02DE8 has27 difficulty205 entries; pinned Difficulty names205 `Follower`, five players. Width truncation is required when decoding pallet values: Ruby's map is2521, not raw8128985.
 
-| Source | FDID / layout | Finding |
-|---|---|---|
-| LFGDungeons |1361033 /34B02DE8 |1806 header records;27 difficulty205 entries |
-| Difficulty.csv |Existing pinned CSV |205=`Follower`, min/max players5 |
-| GarrFollower |949906 /1183F1B8 |985 records; no HordeCreatureID/AllianceCreatureID join to the37 escorts |
-| GarrFollowerXAbility |968468 /11D80996 |Garrison ability references, not a dungeon NPC combat-spell mapping |
-| GarrFollowerUICreature |1412636 /AED9E7F8 |Garrison presentation records |
-| PlayerCompanionInfo |5922429 /55DA5E60 |Five seasonal Delves companion trait trees; not dungeon escort spell assignments |
+Follower identity spells store their class/spec in **Spell.Description_lang**, not NameSubtext_lang. The eleven verified profiles are:
 
-CreatureSpellData3032554 is absent from this local CASC root. This is recorded once; it does not prevent catalog preparation. WoWDBDefs layout34B02DE8 pins the LFG field order/widths. The decoder's raw palette values can carry unused high bits: Ruby's raw map value8128985 must be truncated to uint16 map2521; role counts similarly use uint8. Do not classify a follower using a guessed flags mask: the pinned difficulty row names the mode.
+| Template | Identity spell | Follower | Spec |
+|---|---:|---|---|
+|209057|458306|Captain Garrick|Protection Paladin|
+|215517|458309|Warlord Breka Grimaxe|Protection Warrior|
+|209072|458313|Crenna Earth-Daughter|Restoration Druid|
+|215011|458314|Henry Garrick|Holy Priest|
+|209059|458342|Meredy Huntswell|Fire Mage|
+|209053|458346|Shuja Grimaxe|Elemental Shaman|
+|209065|458348|Austin Huxworth|Beast Mastery Hunter|
+|215240|458349|Kybel|Devastation Evoker|
+|227734|458660|Bo|Windwalker Monk|
+|230861|464927|Lantha Shadeborne|Demonology Warlock|
+|232800|469014|Ralia Dreamchaser|Feral Druid|
 
-The local TDB1210.26091 September9 archive contains9586 `creature_template_spell` rows, none for the37 templates whose subname is `Expedition Escort`. These templates also have empty AIName/ScriptName and zero local `tdb_smart_scripts` rows. Examples: Captain Garrick209057, Crenna Earth-Daughter209072, Meredy Huntswell209059, Austin Huxworth209065 and Shuja Grimaxe209053. Their authored model/difficulty rows are present. Names, `unit_class` (creature stat categories) and global SpellName rows do not authorize assigning a class/spec, rotation or player spell kit.
+These are eleven specs across ten classes. No Rogue/Death Knight/Demon Hunter follower identity exists locally. The pinned TDB has9586 creature-template spell rows, none for the37 Expedition Escort templates; these also lack SmartAI/script kits. Garrison/Delves records do not establish dungeon kits. The workaround retires when authenticated NPC kits become available; it is not Retail bot-rotation, gear or stat-budget parity.
 
-All13 requested class/spec dungeon kits therefore remain **unproved**, including the requested first tank/healer/DPS trio. Garrison mission followers cover many classes but cannot be substituted for dungeon NPCs. No role or spell coefficients were inferred.
+## Runtime bridge
 
-## Dungeon selection and runtime boundary
+`followers/` loads verified profiles and populated difficulty205 destinations, fills the selected player role to1 tank/1 healer/3 damage, uses authenticated templates/models and applies aura458324. Companion group identities occupy the high half of the runtime group-ID space; they are not persisted characters. Existing party rosters and health updates include the NPCs.
 
-`follower_import.py` emits all27 authored follower entries. Ruby Life Pools is a viable reference-data candidate: LFG2436/map2521 has306 `tdb_creature` rows in canonical world.db. The Rookery2653/map2648 has93; Algeth'ar Academy2464/map2526 has231. Full counts live in `catalog-report.json` in the diagnostics root.
+Role AI uses ordinary `creature_cast`, native cooldowns/costs/passives, threat/taunt, chase and owner-follow systems. Tanks recover an ally's attacker with their real taunt and approach melee reach; healers pick the lowest living party-health fraction before damage; damage roles use bounded cooldown/filler priorities. Missing cast-range metadata stops combat instead of substituting melee. The bridge uses native class/spec/level stats and consistent health/mana; it does not infer NPC gear. Holy Priest137031 activates the sourced Flash Heal mana-cost row, so passives must be applied rather than allowing a free heal.
 
-Each has zero current `content_creature` rows. `world_data.rs` loads runtime `content_*`, not raw `tdb_*`; `retail_content.py` currently selects maps0,1,34,670. A reference spawn count is not a running dungeon. A later in-scope content-policy change must select an authentic dungeon, preserve phase/difficulty/tuning/model/loot data, and be applied by the lead. This importer does not promote spawns or create synthetic entrances.
+The native Godot host now forwards existing LFG IPC requests on LfgChannel and retains authoritative state/refusals. Send acknowledgment does not mean server acceptance. Full pet/guardian rotation, interrupts/defensives, hazard avoidance, NPC portraits, relog recovery and full-instance completion are not established by these bounded proofs.
 
-The existing server LFG advances five-human role checks into match snapshots, without an NPC group/instance-entry pipeline. GroupRegistry uses character/player identities and player presence. Creature AI already provides navigation/chase/following; threat/taunt/healing threat and `Ctx::do_cast_at` are reusable. None supplies an absent authenticated kit.
+## Actual dungeon data blocker
 
-## Prepare and apply (lead only)
+Canonical instance population has now been promoted; it is no longer correct to describe all candidate maps as reference-only. Latest read-only audit is `game-engine/data/diagnostics/follower-ai2-2026-10-11/admission-data-audit.json`.
 
-Run from the server branch with `scripts/agent/agent-run follower-ai` from game-engine wrapping the command:
+Ruby Life Pools2436/map2521 has306 runtime spawns, but304 are tagged1/2/8/23 and2 are8/23: **zero205 spawns**. It has authored entrance100030. Conversely, map2830 (Eco-Dome Al'dani2991) has167 actual205 spawns, map2813 has2, maps2652/2669 have1 each, but none has a `tdb_world_safe_locs` entrance. The full pinned TDB world-safe-location table likewise contains no entrance row for those four maps. The prepared private copy and current canonical data therefore have **zero populated205-map/entrance pairs**.
+
+TrinityCore a352b1fa `ObjectGridLoader::LoadN` passes the map's selected difficulty into `GetGridObjectGuids`; ObjectMgr indexes `{mapid, spawnMode}` and inserts each spawn under its declared difficulties. Difficulty's template fallback does not widen population tags. No synthetic entrance or Normal→205 population remap was added.
+
+Local WorldSafeLocs1369425 extraction was attempted once; the current local CASC root has no such content/path. Record this source gap without CDN requests. Supplying an authenticated entrance for a205-populated map (or a separately approved population-authoring change) is necessary before live dungeon admission can be proved. No static posed capture substitutes for that proof.
+
+## Lead import instructions
+
+Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Canonical still lacks both follower tables. Existing instance population is separate from follower profile/reference import.
+
+From the server branch, wrap commands in engine `scripts/agent/agent-run follower-ai2`:
 
 ```text
-python3 scripts/follower_import.py
-  --lfg-db2 /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-ai-2026-10-11/db2/1361033.db2
-  --world-sql /home/osso/Projects/world-of-osso/game-server/data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql
-  --world-db /home/osso/Projects/world-of-osso/game-server/data/world.db
-  --output /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-ai-2026-10-11/follower-reference.sql
-  --report /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-ai-2026-10-11/catalog-report.json
+python3 scripts/follower_import.py --lfg-db2 <follower-ai diagnostics>/db2/1361033.db2 --world-sql data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql --world-db data/world.db --output <diagnostics>/follower-reference.sql --report <diagnostics>/catalog-report.json
+python3 scripts/follower_profiles.py --world-db data/world.db --output <diagnostics>/follower-profiles.sql
 ```
 
-This prepares SQL only. `--world-db` opens SQLite `mode=ro`. The SQL atomically replaces only `follower_lfg_dungeons` and `tdb_creature_template_spell`, with source spell column names preserved; unrelated tables remain intact. It deliberately contains **no runtime follower profiles** or fabricated ability list. The JSON receipt records the LFG binary SHA256/layout, counts, reference/runtime spawn counts and candidate spell/SmartAI counts.
+Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-2026-10-11/`. The lead backs up canonical world.db, inspects both files, then applies reference SQL and profile SQL. The latter reuses the existing Retail template converter and promotes only the eleven named templates/models/addons/equipment plus the explicit bridge profile table. Application alone cannot resolve the missing entrance/population pairing.
 
-After inspecting the artifact, the lead may back up and apply:
+## Proof ledger
 
-```python
-from contextlib import closing
-from pathlib import Path
-import sqlite3
-
-world = Path("/home/osso/Projects/world-of-osso/game-server/data/world.db")
-source = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-ai-2026-10-11/follower-reference.sql")
-with closing(sqlite3.connect(world)) as db:
-    with closing(sqlite3.connect(world.with_name("world.db.pre-follower-20261011"))) as backup:
-        db.backup(backup)
-    db.executescript(source.read_text())
-```
-
-Applying reference SQL does not enable queueing/fighting. Agents must not run the apply snippet.
-
-## Proof and gaps
-
-Behavioral fixtures read the actual extracted DB2 and TDB dump and apply generated SQL only to an in-memory database. They assert Ruby's map/role composition,27 entries,9586 source assignments, concrete NPC48 spell rows, zero assignments for the first candidate trio, idempotent reapplication and preservation of unrelated state. Rejected-layout/missing-source and database-output collision cases publish no partial import. A read-only canonical audit confirms37 candidates, no assigned kits/SmartAI, and the reference/runtime spawn split.
-
-Combat AI, NPC party membership, solo queue/instance entry, class/spec extensions and private both-skin fighting proof remain missing. No server/client was started, no UDP5000 was touched, and no posed screenshot was substituted for combat evidence.
+- Profile SQL: initial RED; current2/2 behavioral tests pass, including repeated application, source display preservation and refusal to overwrite the source database; no ResourceWarnings.
+- Role/executor/catalog: current7/7 targeted tests pass. Actual Fireball damage, Hand of Reckoning threat, lowest-health Flash Heal/native cost, authored458324 initialization, role composition, source-range refusal and admission-source gating are exercised.
+- Party integration: loopback roster/health test passes; five members remain online and changed Garrick health reaches the player. This is not rendered party-frame proof.
+- Native host/transport:2/2 targeted tests pass, including ephemeral UDP request/refusal round trip and decoded native account state. Source protocol pinnedb452322 for that proof.
+- Server cargo check and cargo fmt --check pass. No full suites were run. Evidence logs live in the diagnostics directory, not only slot targets.
+- **Missing:** UDP5750 dungeon queue→entry→trash/boss completion and inspected Modern/Forever PNGs. No rendered client/private game server was started; UDP5000 and canonical database writes were untouched by this agent.
 
 ## Sources
 
-- [Importer](../../../scripts/follower_import.py), [behavioral tests](../../../scripts/tests/test_follower_import.py)
-- Local canonical world.db opened read-only; local TDB `data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql`
-- Local pinned Retail `Difficulty.csv`; extracted DB2s and WoWDBDefs schema snapshots in the diagnostics path above
-- WoWDBDefs `definitions/{LFGDungeons,GarrFollower,GarrFollowerXAbility,GarrFollowerUICreature,PlayerCompanionInfo}.dbd`
-- Local Blizzard Retail `Blizzard_APIDocumentationGenerated/LFGInfoDocumentation.lua`: `IsLFGFollowerDungeon`/`IsInLFGFollowerDungeon`
-- [Runtime world loader](../../../crates/server/src/world_data.rs), [Retail content policy](../../../scripts/retail_content.py), [LFG](../../../crates/server/src/lfg.rs), [groups](../../../crates/server/src/group/mod.rs)
+- [Reference importer](../../../scripts/follower_import.py), [profile importer](../../../scripts/follower_profiles.py), [SQL tests](../../../scripts/tests/test_follower_profiles.py)
+- [Runtime bridge](../../../crates/server/src/followers/mod.rs), [group presence](../../../crates/server/src/group/mod.rs), [member health](../../../crates/server/src/group/member_state.rs)
+- Local pinned Spell/Difficulty CSVs, canonical read-only world.db, full TDB1210.26091 SQL, diagnostics receipts
+- [TrinityCore a352b1fa grid loader](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Grids/ObjectGridLoader.cpp#L95-L103), [exact difficulty key](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Globals/ObjectMgr.cpp#L2180-L2216)
+- Retail Blizzard_APIDocumentationGenerated/LFGInfoDocumentation.lua: IsLFGFollowerDungeon/IsInLFGFollowerDungeon
 
-## See Also
+## See also
 
-- [Content import](../systems/content-import.md)
 - [Follower contract](../../specs/follower-dungeons.md)
-- [Navigation](../../specs/navigation.md), [Creature aggro](../../specs/creature-aggro.md), [Groups](../../specs/groups.md)
+- [Content import](../systems/content-import.md)
+- [Groups](../../specs/groups.md), [navigation](../../specs/navigation.md), [creature aggro](../../specs/creature-aggro.md)
