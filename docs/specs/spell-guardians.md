@@ -9,6 +9,7 @@ Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage
 - [x] Subsequent casts inherit changed owner selection; absent selection stops new attacks.
 - [x] Native27000ms duration and owner death remove the actor without replacing a persistent pet.
 - [x] Import exact local TDB creature spell rows atomically; preserve prior bindings on duplicate-key failure and reject absent source data rather than synthesizing bindings.
+- [x] Named49206's temporary Gargoyle uses its native pet-title3238 and authentic27829/51963 binding without enabling generic pet-title actors; [batch12 contract](spell-dummy-scripts.md#twelfth-batch-actorresourcesnapshot-consumers).
 
 ### Damage sharing
 - [x] Native6940 aura81 redirects30% of post-mitigation damage to its caster for spell, periodic and real auto-attack paths; direct damage also shares.

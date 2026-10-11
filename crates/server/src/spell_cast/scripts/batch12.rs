@@ -68,25 +68,24 @@ fn owned_gargoyles(world: &mut World, owner: Entity) -> Vec<Entity> {
         .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
         .iter(world)
         .filter(|(actor, summon)| {
-            summon.owner == owner
-                && summon.spell_id == SUMMON_GARGOYLE
-                && targets::is_alive(world, *actor)
-                && world.get::<crate::maps::InMap>(*actor) == world.get::<crate::maps::InMap>(owner)
+            let owned = summon.owner == owner && summon.spell_id == SUMMON_GARGOYLE;
+            let same_map =
+                world.get::<crate::maps::InMap>(*actor) == world.get::<crate::maps::InMap>(owner);
+            owned && same_map && targets::is_alive(world, *actor)
         })
         .map(|(actor, _)| actor)
         .collect()
 }
 
 fn apply_gargoyle_power(world: &mut World, owner: Entity, actor: Entity, increase: f32) {
-    let previous = world.get::<ActiveAuras>(actor).map_or(0.0, |auras| {
+    let current = world.get::<ActiveAuras>(actor).and_then(|auras| {
         auras
             .iter()
-            .filter(|aura| aura.spell_id == GARGOYLE_POWER && aura.caster == owner)
-            .flat_map(|aura| &aura.effects)
-            .filter(|effect| effect.index == 0)
-            .map(|effect| effect.amount)
-            .sum::<f32>()
+            .find(|aura| aura.spell_id == GARGOYLE_POWER && aura.caster == owner)
     });
+    let previous = current
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
     let mut spell = world
         .resource::<SpellStore>()
         .get(GARGOYLE_POWER)
