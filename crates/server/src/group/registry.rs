@@ -109,13 +109,18 @@ struct Group {
     dungeon_difficulty: u32,
     /// `Group::m_targetIcons`.
     target_icons: RaidTargetIcons,
+    loot_threshold: u8,
+    loot_cursor: usize,
 }
 
 impl Group {
     fn new(leader: CharacterId, dungeon_difficulty: u32) -> Self {
         Self {
             dungeon_difficulty,
-            raid: Raid::new(leader),
+            raid: Raid {
+                loot_mode: LootMode::GroupLoot,
+                ..Raid::new(leader)
+            },
             is_raid: false,
             roles: RoleAssignments::default(),
             ready_check: None,
@@ -123,6 +128,8 @@ impl Group {
             assistants: BTreeSet::new(),
             reported_online: HashMap::new(),
             target_icons: RaidTargetIcons::default(),
+            loot_threshold: 2,
+            loot_cursor: 0,
         }
     }
 
@@ -570,12 +577,47 @@ impl GroupRegistry {
         vec![GroupEffect::Roster(group_id)]
     }
 
+    pub fn loot_policy_of(&self, member: CharacterId) -> Option<(LootMode, u8)> {
+        self.group_of(member)
+            .map(|(_, group)| (group.raid.loot_mode, group.loot_threshold))
+    }
+
+    pub fn next_loot_owner(
+        &mut self,
+        member: CharacterId,
+        eligible: &[CharacterId],
+    ) -> CharacterId {
+        let group_id = self.group_id_of(member).expect("group member");
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        let owner = eligible[group.loot_cursor % eligible.len()];
+        group.loot_cursor += 1;
+        owner
+    }
+
+    pub fn set_loot_threshold(&mut self, leader: CharacterId, quality: u8) -> Effects {
+        let group_id = match self.led_group(leader) {
+            Ok(id) => id,
+            Err(effect) => return vec![effect],
+        };
+        if !(2..=4).contains(&quality) {
+            return vec![notice(leader, GroupMessageCode::LootMethodUnavailable, "")];
+        }
+        self.groups
+            .get_mut(&group_id)
+            .expect("group exists")
+            .loot_threshold = quality;
+        vec![GroupEffect::Roster(group_id)]
+    }
+
     pub fn set_loot_method(&mut self, leader: CharacterId, method: LootMode) -> Effects {
         let group_id = match self.led_group(leader) {
             Ok(id) => id,
             Err(effect) => return vec![effect],
         };
         let group = self.groups.get_mut(&group_id).expect("group exists");
+        if !method.is_mainline() {
+            return vec![notice(leader, GroupMessageCode::LootMethodUnavailable, "")];
+        }
         group.raid.loot_mode = method;
         let code = loot_code(method);
         let mut effects: Effects = group
@@ -951,6 +993,7 @@ impl GroupRegistry {
             total_count,
             members,
             loot_method: group.raid.loot_mode,
+            loot_threshold: group.loot_threshold,
         };
         let reported = group
             .members()
@@ -1195,5 +1238,6 @@ fn loot_code(method: LootMode) -> GroupMessageCode {
         LootMode::RoundRobin => GroupMessageCode::SetLootRoundRobin,
         LootMode::NeedBeforeGreed => GroupMessageCode::SetLootNeedBeforeGreed,
         LootMode::PersonalLoot => GroupMessageCode::SetLootPersonal,
+        LootMode::GroupLoot => GroupMessageCode::SetLootGroup,
     }
 }
