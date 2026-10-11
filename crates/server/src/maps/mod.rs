@@ -14,6 +14,7 @@ pub(crate) mod instances;
 pub(crate) mod locks;
 mod login;
 pub(crate) mod persistence;
+pub(crate) mod raid;
 pub(crate) mod store;
 pub(crate) mod transfer;
 
@@ -23,6 +24,7 @@ use shared::components::{Player, Position};
 pub(crate) use difficulty::{DungeonDifficulty, ServerClock};
 pub(crate) use instances::{HOSTED_CONTINENTS, InstanceManager};
 pub(crate) use login::LoginMaps;
+pub(crate) use raid::RaidDifficulty;
 pub(crate) use store::MapStore;
 pub(crate) use transfer::{MapTransfer, TeleportOptions, teleport_to};
 
@@ -78,6 +80,7 @@ impl Plugin for MapPlugin {
         app.init_resource::<InstanceManager>()
             .init_resource::<ServerClock>()
             .init_resource::<difficulty::DifficultyChanges>()
+            .init_resource::<raid::RaidChanges>()
             .add_observer(track_player_added_to_map)
             .add_observer(track_player_removed_from_map)
             .add_systems(PostStartup, load_instance_locks)
@@ -86,6 +89,9 @@ impl Plugin for MapPlugin {
                 (
                     transfer::receive_world_port_acks,
                     difficulty::receive_set_dungeon_difficulty,
+                    raid::receive,
+                    raid::apply_changes,
+                    raid::send,
                     difficulty::apply_difficulty_changes,
                     difficulty::send_dungeon_difficulty,
                     difficulty::send_world_server_info,

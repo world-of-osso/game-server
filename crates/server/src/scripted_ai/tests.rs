@@ -207,6 +207,7 @@ fn stockade_app(data: &'static Data) -> App {
             group: None,
             leader: character_id,
             difficulty_id: crate::maps::store::DIFFICULTY_NORMAL,
+            ..Default::default()
         };
         let now = crate::maps::instances::Now {
             elapsed: 0.0,

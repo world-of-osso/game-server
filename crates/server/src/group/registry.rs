@@ -30,6 +30,7 @@ pub struct OnlineMember {
     pub portrait: GroupPortraitAppearance,
     /// `Player::GetDungeonDifficultyID`: a group it creates starts at it.
     pub dungeon_difficulty: u32,
+    pub raid_difficulty: crate::maps::RaidDifficulty,
 }
 
 pub type OnlineView = HashMap<CharacterId, OnlineMember>;
@@ -60,6 +61,10 @@ pub enum GroupEffect {
     /// `Player::SetDungeonDifficultyID` + `SendDungeonDifficulty`: the member now enters
     /// dungeons at the group's difficulty.
     DungeonDifficulty { to: CharacterId, difficulty_id: u32 },
+    RaidDifficulty {
+        to: CharacterId,
+        selection: crate::maps::RaidDifficulty,
+    },
     /// Send the group's raid target icons to every online member.
     TargetIcons(GroupId),
     /// Send a solo player their own raid target icons.
@@ -93,6 +98,7 @@ struct Group {
     reported_online: HashMap<CharacterId, Option<(u64, u8, GroupPortraitAppearance)>>,
     /// `Group::m_dungeonDifficulty`, the leader's when the group formed.
     dungeon_difficulty: u32,
+    raid_difficulty: crate::maps::RaidDifficulty,
     /// `Group::m_targetIcons`.
     target_icons: RaidTargetIcons,
 }
@@ -101,6 +107,7 @@ impl Group {
     fn new(leader: CharacterId, dungeon_difficulty: u32) -> Self {
         Self {
             dungeon_difficulty,
+            raid_difficulty: crate::maps::RaidDifficulty::default(),
             raid: Raid::new(leader),
             is_raid: false,
             roles: RoleAssignments::default(),
@@ -316,6 +323,10 @@ impl GroupRegistry {
             to: invitee,
             difficulty_id: self.groups[&group_id].dungeon_difficulty,
         });
+        effects.push(GroupEffect::RaidDifficulty {
+            to: invitee,
+            selection: self.groups[&group_id].raid_difficulty,
+        });
         effects.push(GroupEffect::Roster(group_id));
         effects
     }
@@ -330,7 +341,12 @@ impl GroupRegistry {
             .map_or(crate::maps::store::DIFFICULTY_NORMAL, |profile| {
                 profile.dungeon_difficulty
             });
-        self.groups.insert(id, Group::new(leader, difficulty));
+        let mut group = Group::new(leader, difficulty);
+        group.raid_difficulty = self
+            .profiles
+            .get(&leader)
+            .map_or_default(|p| p.raid_difficulty);
+        self.groups.insert(id, group);
         self.membership.insert(leader, id);
         id
     }
@@ -930,6 +946,31 @@ impl GroupRegistry {
                 .map(|to| GroupEffect::DungeonDifficulty { to, difficulty_id })
                 .collect(),
         )
+    }
+
+    pub fn set_raid_difficulty(
+        &mut self,
+        member: CharacterId,
+        selection: crate::maps::RaidDifficulty,
+    ) -> Option<Vec<CharacterId>> {
+        let (id, group) = self.group_of(member)?;
+        if group.raid.leader != member || group.raid_difficulty == selection {
+            return Some(Vec::new());
+        }
+        let members = group.members();
+        self.groups
+            .get_mut(&id)
+            .expect("group exists")
+            .raid_difficulty = selection;
+        Some(members)
+    }
+
+    pub fn raid_difficulty_of(&self, member: CharacterId) -> Option<crate::maps::RaidDifficulty> {
+        self.group_of(member).map(|(_, g)| g.raid_difficulty)
+    }
+
+    pub fn is_raid_of(&self, member: CharacterId) -> bool {
+        self.group_of(member).is_some_and(|(_, g)| g.is_raid)
     }
 
     // --- Lookups ---

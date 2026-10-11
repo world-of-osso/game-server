@@ -1125,6 +1125,7 @@ mod tests {
                     level: 10,
                     portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                    raid_difficulty: crate::maps::RaidDifficulty::default(),
                 };
                 (
                     p.character_id.expect("participant has a character id"),
