@@ -17,6 +17,66 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
 }
 
 #[test]
+fn guild_lifecycle_leave_and_remove_enforce_hierarchy_and_survive_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("lifecycle.redb");
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    let (master, officer, member) = members(&db);
+    assert_eq!(
+        apply_rank_request(&db, 7, master, GuildRankRequest::Leave),
+        Err(GuildRankError::LeaderCannotLeave)
+    );
+    assert_eq!(
+        apply_rank_request(
+            &db,
+            7,
+            member,
+            GuildRankRequest::RemoveMember {
+                character_name: "Officer".into()
+            }
+        ),
+        Err(GuildRankError::Permissions)
+    );
+    assert_eq!(
+        apply_rank_request(
+            &db,
+            7,
+            officer,
+            GuildRankRequest::RemoveMember {
+                character_name: "Master".into()
+            }
+        ),
+        Err(GuildRankError::RankTooHigh)
+    );
+    save_guild_member_rank(&db, member, 3);
+    apply_rank_request(
+        &db,
+        7,
+        officer,
+        GuildRankRequest::RemoveMember {
+            character_name: "Member".into(),
+        },
+    )
+    .unwrap();
+    assert!(crate::persistence::load_character_guild(&db, member).is_none());
+    apply_rank_request(&db, 7, officer, GuildRankRequest::Leave).unwrap();
+    assert!(crate::persistence::load_character_guild(&db, officer).is_none());
+    drop(db);
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    assert!(crate::persistence::load_character_guild(&db, member).is_none());
+    assert!(crate::persistence::load_character_guild(&db, officer).is_none());
+    assert_eq!(
+        crate::persistence_character::list_guild_members(&db, 7).len(),
+        1
+    );
+    // Rejoining must not retain the removed member's previous promotion.
+    set_character_guild_by_id(&db, member, 7, "Bank Testers").unwrap();
+    assert_eq!(load_guild_member_rank(&db, &load_guild(&db, 7), member), 4);
+}
+
+#[test]
 fn guild_ranks_master_creates_and_configures_persisted_rank() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("guild.redb");

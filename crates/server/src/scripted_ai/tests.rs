@@ -35,6 +35,7 @@ const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
 mod dungeonach;
 mod smart_combat;
+mod wailing_caverns;
 const NPC_LORD_OVERHEAT: u32 = 46264;
 const NPC_HOGGER: u32 = 46254;
 
