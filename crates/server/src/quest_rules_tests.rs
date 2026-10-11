@@ -30,6 +30,7 @@ fn active(quest_id: u32) -> ActiveQuestData {
     ActiveQuestData {
         quest_id,
         counts: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -40,6 +41,7 @@ fn log_with(active_quests: &[u32], rewarded: &[u32]) -> QuestLogData {
         active: active_quests.iter().copied().map(active).collect(),
         rewarded,
         watched: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -468,4 +470,31 @@ fn quest_info_meta_calling_and_important_pick_their_marker_kinds() {
         with_info(0, 0, DAILY).marker_class(),
         QuestMarkerClass::Repeatable
     );
+}
+
+#[test]
+fn daily_quest_is_available_again_after_reset() {
+    // Sunday 2026-10-11 14:59:59 UTC -> local reset 15:00:00 UTC.
+    let before = 1_791_730_799;
+    let mut db = QuestDb {
+        now: Some(before),
+        ..Default::default()
+    };
+    for (flags, boundary) in [(0x1000, before + 1), (0x8000, before + 2 * 86400 + 1)] {
+        let quest = QuestTemplate {
+            id: 1,
+            flags,
+            ..Default::default()
+        };
+        let mut log = log_with(&[], &[1]);
+        log.completed_at.insert(1, before);
+        db.now = Some(boundary - 1);
+        assert_eq!(
+            can_take(&db, &log, HUMAN_WARRIOR, &quest),
+            Err(QuestFailedReason::AlreadyDone)
+        );
+        db.now = Some(boundary);
+        assert_eq!(can_take(&db, &log, HUMAN_WARRIOR, &quest), Ok(()));
+        assert!(log.is_rewarded(1), "prerequisite history survives reset");
+    }
 }

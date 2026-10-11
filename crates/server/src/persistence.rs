@@ -288,7 +288,7 @@ pub(crate) fn create_tables(db: &Database) {
         .expect("create item durability table");
     txn.open_table(inventory_store::ITEM_DEFINITION_SOURCES)
         .expect("Failed to create item definition sources table");
-    let _ = txn.open_table(quest_store::QUEST_LOGS);
+    quest_store::migrate(&txn, quest_store::unix_now());
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
     let _ = txn.open_table(pet_store::PET_STABLES);
     let _ = txn.open_table(PROFESSIONS);
