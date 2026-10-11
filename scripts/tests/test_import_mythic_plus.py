@@ -1,12 +1,12 @@
 """Targeted offline import tests using the extracted local Mainline DB2s."""
 
-from contextlib import closing
 import importlib.util
 import os
 import sqlite3
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]

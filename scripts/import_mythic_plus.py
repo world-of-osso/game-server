@@ -7,13 +7,13 @@ Layouts/column order: WoWDBDefs and TrinityCore a352b1fa DB2Structure.h.
 """
 
 import argparse
-from contextlib import closing
 import hashlib
 import json
-from pathlib import Path
 import sqlite3
 import sys
 import warnings
+from contextlib import closing
+from pathlib import Path
 
 import db2_casc
 
