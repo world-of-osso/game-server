@@ -574,9 +574,14 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
         .flatten()
         .filter_map(Entity::try_from_bits)
     {
-        let player = world
-            .get::<crate::hunter_pet::HunterPet>(unit)
-            .map_or(unit, |pet| pet.owner);
+        let player = world.get::<crate::followers::Follower>(unit).map_or_else(
+            || {
+                world
+                    .get::<crate::hunter_pet::HunterPet>(unit)
+                    .map_or(unit, |pet| pet.owner)
+            },
+            |follower| follower.owner,
+        );
         if !players.contains(&player) {
             players.push(player);
         }
@@ -1470,6 +1475,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // with a `CharmInfo`).
     if world.get::<Npc>(caster).is_some()
         && world.get::<crate::pet_control::PetCharm>(caster).is_none()
+        && world.get::<crate::followers::Follower>(caster).is_none()
     {
         return;
     }
