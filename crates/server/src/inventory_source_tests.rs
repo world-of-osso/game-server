@@ -59,6 +59,7 @@ fn catalog() -> ItemTemplates {
                 },
             ),
         ]),
+        loot_need: Default::default(),
     }
 }
 
