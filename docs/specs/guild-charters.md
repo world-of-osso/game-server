@@ -6,21 +6,21 @@ native client uses Retail registrar/petition controls in both skins.
 
 ## What it must do
 
-- [ ] Purchase validates the real open petitioner, guild membership, name,1000c
+- [x] Purchase validates the real open petitioner, guild membership, name,1000c
   realm price, authentic item template and inventory space. Money, item and petition
   commit together; no vendor/world.db row is fabricated.
-- [ ] Using the owned charter opens PetitionFrame; offering it delivers actual
+- [x] Using the owned charter opens PetitionFrame; offering it delivers actual
   owner/title/signatures to the named online recipient.
-- [ ] Signing rejects the owner, guilded/pending-invite players and a second
+- [x] Signing rejects the owner, guilded/pending-invite players and a second
   character from an already signed account. Four signatures are required by realm
   defaults; the UI presents that same authoritative quota.
-- [ ] Only the owner renames or submits. Pending titles do not reserve actual guild names.
-- [ ] Creation atomically consumes the charter and petition, reserves the name,
+- [x] Only the owner renames or submits. Pending titles do not reserve actual guild names.
+- [x] Creation atomically consumes the charter and petition, reserves the name,
   writes the actual date, gives the owner rank0 and signers the lowest default rank.
-- [ ] Purchase, signatures, rename, membership/ranks and consumption survive reopen.
-- [ ] Item disposal and joining another guild remove invalid petitions/signatures
+- [x] Purchase, signatures, rename, membership/ranks and consumption survive reopen.
+- [x] Item disposal and joining another guild remove invalid petitions/signatures
   in the same inventory or membership transaction.
-- [ ] Legacy guilds with no recorded date remain explicitly unknown, not backdated.
+- [x] Legacy guilds with no recorded date remain explicitly unknown, not backdated.
 
 ## How it works
 
@@ -47,9 +47,7 @@ creation/lowest-rank founders, consumption and disposal.
 
 ## Known gaps (current cycle)
 
-- [ ] Authenticated RPC/real NPC and bag-use live proof.
-- [ ] Native registrar/petition integration.
-- [ ] Both-skin authenticated charter creation captures.
+Private UDP54381 behavioral proof covers authentic Aldwin Laughlin, purchase5863, owned bag use, rename, four distinct account signatures, early-turn-in refusal and registration in both skins. Charter consumption and five founding memberships persist; petition/rename/signatures and created profile/date survive reopen. Evidence: sibling engine canonical `data/diagnostics/guilds4-2026-10-11/` and inspected PNGs under `/syncthing/AgentShared/2026-10-11/guilds/`. No world.db writes or fake vendor/guild fixtures.
 
 ## Out of scope
 
