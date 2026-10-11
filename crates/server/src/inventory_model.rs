@@ -5,8 +5,8 @@
 //! size, required level, class/race masks, bonding and container size/type.
 //! Containers 1-4 and the reagent bag (5) are as large as the bag equipped in
 //! their bag slot. Gaps: dual wield and weapon/armor skills are not tracked
-//! (one-handers go to the main hand only), and neck, finger, trinket and ranged
-//! slots have no server storage.
+//! (one-handers go to the main hand only). Non-visual paperdoll slots are stored
+//! separately from visual equipment to preserve existing character encodings.
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use shared::components::EquippedAppearanceEntry;
@@ -69,6 +69,7 @@ impl InventoryModel {
             .items
             .iter()
             .chain(record.equipped.iter().map(|entry| &entry.item))
+            .chain(record.nonvisual_equipped.iter().map(|(_, item)| item))
             .chain(record.bag_slots.iter().map(|entry| &entry.item))
             .filter_map(|item| {
                 let source = record.definition_sources[&item.item_guid];
@@ -97,6 +98,13 @@ impl InventoryModel {
             model
                 .equipped
                 .insert(EquipmentSlot::from_visual_slot(entry.slot), entry.item);
+        }
+        for (id, item) in record.nonvisual_equipped {
+            let slot = EquipmentSlot::ALL
+                .into_iter()
+                .find(|slot| slot.inv_slot_id() == id && slot.visual_slot().is_none())
+                .expect("saved nonvisual equipment slot id");
+            model.equipped.insert(slot, item);
         }
         for entry in record.bag_slots {
             let slot = EquipmentSlot::from_bag_index(entry.bag).expect("saved bag slot");
@@ -333,12 +341,15 @@ impl InventoryModel {
         }
         items.extend(self.overflow);
         let mut equipped = Vec::new();
+        let mut nonvisual_equipped = Vec::new();
         let mut bag_slots = Vec::new();
         for (slot, item) in self.equipped {
             if let Some(bag) = slot.bag_index() {
                 bag_slots.push(EquippedBagData { bag, item });
             } else if let Some(slot) = slot.visual_slot() {
                 equipped.push(EquippedItem { slot, item });
+            } else {
+                nonvisual_equipped.push((slot.inv_slot_id(), item));
             }
         }
         InventoryRecord {
@@ -349,6 +360,7 @@ impl InventoryModel {
             },
             placements,
             equipped,
+            nonvisual_equipped,
             bag_slots,
             instances: self.instances,
             item_durability: self.item_durability,
@@ -522,10 +534,6 @@ impl InventoryModel {
                     ))
                 }
             }
-            ItemLocation::Equipment(slot) if !has_storage(slot) => Err(error(
-                InventoryErrorReason::WrongSlot,
-                format!("server has no storage for equipment slot {slot:?}"),
-            )),
             ItemLocation::Equipment(_) => Ok(()),
             ItemLocation::Bank { tab, slot } => {
                 let exists = self
@@ -830,7 +838,7 @@ impl InventoryModel {
         let valid: Vec<EquipmentSlot> = slots
             .iter()
             .copied()
-            .filter(|slot| has_storage(*slot) && self.validate_equip(item, *slot).is_ok())
+            .filter(|slot| self.validate_equip(item, *slot).is_ok())
             .collect();
         let target = valid
             .iter()
@@ -876,6 +884,27 @@ impl InventoryModel {
                     "item {} is not usable by class {} race {}",
                     item.item_id, self.character.class, self.character.race
                 ),
+            ));
+        }
+        self.validate_unique_equipped(item, slot)
+    }
+
+    /// TrinityCore Player::CanEquipUniqueItem ignores the slot being replaced.
+    /// The same GUID may move between paired slots without counting itself.
+    fn validate_unique_equipped(&self, item: &InventoryItemData, slot: EquipmentSlot) -> OpResult {
+        let template = self.template(item).expect("equippable item template");
+        if !template.unique_equipped {
+            return Ok(());
+        }
+        let duplicate = self.equipped.iter().any(|(occupied_slot, equipped)| {
+            *occupied_slot != slot
+                && equipped.item_guid != item.item_guid
+                && self.same_definition(item, equipped)
+        });
+        if duplicate {
+            return Err(error(
+                InventoryErrorReason::ItemUniqueEquippable,
+                format!("item {} is unique-equipped", item.item_id),
             ));
         }
         Ok(())
@@ -1473,8 +1502,7 @@ impl InventoryModel {
     /// wield (`validate_equip`).
     fn free_equip_slot(&self, item: &InventoryItemData) -> Option<EquipmentSlot> {
         self.equip_slots(item).iter().copied().find(|&slot| {
-            has_storage(slot)
-                && !self.equipped.contains_key(&slot)
+            !self.equipped.contains_key(&slot)
                 && !(slot == EquipmentSlot::OffHand && self.two_hand_used())
                 && self.validate_equip(item, slot).is_ok()
         })
@@ -1656,11 +1684,6 @@ impl InventoryModel {
             .and_then(|item| self.template(item))
             .is_some_and(|template| template.scaling.subclass_id == 0)
     }
-}
-
-/// Equipment slots the server stores: visual slots and bag slots.
-fn has_storage(slot: EquipmentSlot) -> bool {
-    slot.visual_slot().is_some() || slot.bag_index().is_some()
 }
 
 fn not_equippable(inventory_type: u8) -> InventoryError {

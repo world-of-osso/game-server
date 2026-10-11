@@ -38,6 +38,8 @@ pub struct ItemTemplate {
     pub container_slots: u8,
     /// `BagFamily`: `BAG_FAMILY_MASK_*` bits a profession bag accepts.
     pub bag_family: u32,
+    /// ItemSparse.Flags_0: ITEM_FLAG_UNIQUE_EQUIPPABLE (TrinityCore ItemTemplate.h).
+    pub unique_equipped: bool,
 }
 
 /// An item's on-use `ItemEffect`.
@@ -162,7 +164,7 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
       AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1), \
      u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec, \
-     s.ContainerSlots, s.BagFamily \
+     s.ContainerSlots, s.BagFamily, s.Flags_0 \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
      LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
       ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY CASE WHEN e.TriggerType = 6 THEN 0 ELSE 1 END, e.LegacySlotIndex, e.ID) AS slot \
@@ -227,6 +229,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         on_use: on_use_from_row(row)?,
         container_slots: row.get(APPEARANCE_COLUMN + 5)?,
         bag_family: row.get(APPEARANCE_COLUMN + 6)?,
+        unique_equipped: row.get::<_, i64>(APPEARANCE_COLUMN + 7)? & 0x0008_0000 != 0,
     };
     Ok((row.get(0)?, template))
 }
