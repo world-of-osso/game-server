@@ -562,7 +562,7 @@ impl InstanceManager {
             let Some(at) = copy.expires_at else {
                 continue;
             };
-            if at >= now.unix {
+            if at > now.unix {
                 continue;
             }
             copy.expires_at = Some(next_reset_time(copy.difficulty.reset_interval, now.unix));
