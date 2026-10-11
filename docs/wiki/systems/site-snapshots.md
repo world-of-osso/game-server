@@ -1,6 +1,6 @@
 # Static armory and ranking snapshots
 
-Offline exporter `game-server-site-export` produces the public JSON contract in [site snapshots](../../specs/site-snapshots.md). Static publishing opens no game-host listener. Realm membership/privacy is operator-supplied: an explicit character ID allowlist minus opt-outs, never account-name inference.
+Offline exporter `game-server-site-export` produces the public JSON contract in [site snapshots](../../specs/site-snapshots.md). Static publishing opens no game-host listener. All characters in the realm redb are public by default minus character-ID opt-outs ([user decision and privacy contract](../../specs/site-snapshots.md#privacy-and-catalog-preparation)), never account-name inference.
 
 ## Content
 
@@ -9,12 +9,12 @@ Offline exporter `game-server-site-export` produces the public JSON contract in 
 Build with `python3 scripts/build-host.py --bin game-server-site-export` through the normal native adapter. Agents wrap local commands with `agent-run`. Export a consistent closed/offline redb backup and matching read-only SQLite catalog into a **new** directory:
 
 ```text
-game-server-site-export --redb PRIVATE_BACKUP.redb --world-db WORLD.db --public-characters public-ids.json --opt-outs opted-out-ids.json --textures LOCAL_TEXTURE_CACHE --output NEW_SNAPSHOT_DIR --realm world-of-osso --realm-name "World of Osso"
+game-server-site-export --redb PRIVATE_BACKUP.redb --world-db WORLD.db --opt-outs opted-out-ids.json --textures LOCAL_TEXTURE_CACHE --output NEW_SNAPSHOT_DIR --realm world-of-osso --realm-name "World of Osso"
 ```
 
-Both ID files are JSON arrays of decimal strings. `as_of` is read once from the actual export-start clock; only tests inject a deterministic clock. A single redb read transaction and SQLite read transaction cover each snapshot. All reads, decodes and icon conversions complete before destination creation. An existing destination is rejected so privacy removals cannot leave stale character pages. File-write failure may leave an incomplete new directory; the publisher must publish only a successful complete export. Publishing/atomic directory switching is lead-owned, outside exporter scope.
+The opt-out file is a JSON array of decimal character ID strings (`[]` publishes all). `as_of` is read once from the actual export-start clock; only tests inject a deterministic clock. A single redb read transaction and SQLite read transaction cover each snapshot. All reads, decodes and icon conversions complete before destination creation. An existing destination is rejected so privacy removals cannot leave stale character pages. File-write failure may leave an incomplete new directory; the publisher must publish only a successful complete export. Publishing/atomic directory switching is lead-owned, outside exporter scope.
 
-Source backups must be clean: redb read-only opening refuses a crash-dirty database rather than repairing the source. The private-fixture utility explicitly recovers only an owned diagnostic **copy** under site-data diagnostics, then selects IDs owned by `fb_*` accounts. Those account names never enter the output. The regular exporter opens no auth/account tables.
+Read-only opening refuses crash-dirty backups. Explicit `--repair-copy SOURCE NEW_PRIVATE_COPY` copies into an exclusively created destination and repairs only that new copy; source bytes never change. See [copy recovery safety](../../specs/site-snapshots.md#privacy-and-catalog-preparation). The regular exporter opens no auth/account tables.
 
 ### Future ranking history
 
