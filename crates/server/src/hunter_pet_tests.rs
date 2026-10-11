@@ -23,6 +23,9 @@ use crate::world_data::{CreatureTemplate, load_expected_stats, load_templates};
 const TAME_BEAST_TRIGGER: u32 = 13_481;
 const CALL_PET_1: u32 = 883;
 const CALL_PET_2: u32 = 83_242;
+const CALL_PET_3: u32 = 83_243;
+const CALL_PET_4: u32 = 83_244;
+const CALL_PET_5: u32 = 83_245;
 const DISMISS_PET: u32 = 2641;
 const REVIVE_PET: u32 = 982;
 const MEND_PET: u32 = 136;
@@ -71,6 +74,9 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
             TAME_BEAST_TRIGGER,
             CALL_PET_1,
             CALL_PET_2,
+            CALL_PET_3,
+            CALL_PET_4,
+            CALL_PET_5,
             DISMISS_PET,
             REVIVE_PET,
             MEND_PET,
@@ -297,6 +303,43 @@ fn call_pet_of_an_empty_slot_has_no_pet_to_summon() {
         Some("You do not have a pet to summon")
     );
     assert!(stable(&h).unwrap().summoned.is_none());
+}
+
+#[test]
+fn pet_lifecycle_each_authored_call_spell_loads_its_owned_active_slot() {
+    for (slot, spell) in [CALL_PET_1, CALL_PET_2, CALL_PET_3, CALL_PET_4, CALL_PET_5]
+        .into_iter()
+        .enumerate()
+    {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("call-pets.redb");
+        {
+            let db = open_db(&path);
+            let mut stable = StoredPetStable::default();
+            let mut record = stored_wolf();
+            record.name = format!("Wolf{}", slot + 1);
+            stable.active[slot] = Some(record);
+            save_pet_stable(&db.db, CHARACTER_ID, &stable);
+        }
+        let mut h = hunter(&path, HOGGER).expect("real pet data");
+        h.app.world_mut().entity_mut(h.caster).insert(Level(60));
+        h.cast_and_deliver(spell, None);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "spell{spell}: {:?}",
+            h.inbox.failed
+        );
+        let pet = pet_out(&h);
+        assert_eq!(
+            h.app.world().get::<HunterPet>(pet).unwrap().slot,
+            slot as u8
+        );
+        assert_eq!(
+            h.app.world().get::<Npc>(pet).unwrap().name,
+            format!("Wolf{}", slot + 1)
+        );
+        assert_eq!(saved(&h).current, Some(slot as u8));
+    }
 }
 
 #[test]

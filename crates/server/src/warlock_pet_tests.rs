@@ -202,8 +202,8 @@ fn pet_lifecycle_warlock_authored_demons_summon_dismiss_and_reopen() {
             entry
         );
         let max_health = first.h.app.world().get::<Health>(pet).unwrap().max;
-        // Some legacy demon templates have no class-level health row; preserve a
-        // legal wound within the real computed maximum, not an over-max fixture.
+        // Felhunter's legacy expansion base-health row is1; preserve a legal wound
+        // within the computed maximum, not an over-max fixture.
         let wounded_health = 23.0_f32.min(max_health * 0.5);
         println!("spell{spell} entry{entry}: max={max_health}, wound={wounded_health}");
         first
@@ -249,6 +249,70 @@ fn pet_lifecycle_warlock_authored_demons_summon_dismiss_and_reopen() {
             "explicit summon starts living/full"
         );
     }
+}
+
+#[test]
+fn pet_lifecycle_fel_domination_accelerates_one_authored_summon() {
+    const FEL_DOMINATION: u32 = 333_889;
+    let directory = tempfile::tempdir().unwrap();
+    let mut normal =
+        ImpHarness::login_with_spells(&directory.path().join("normal.redb"), 60, &[SUMMON_IMP]);
+    normal.h.cast(SUMMON_IMP, None);
+    normal.advance(20);
+    assert!(
+        normal.pet().is_none(),
+        "ordinary six-second summon completed within one second"
+    );
+    assert!(
+        normal.h.inbox.failed.is_empty(),
+        "{:?}",
+        normal.h.inbox.failed
+    );
+
+    let mut accelerated = ImpHarness::login_with_spells(
+        &directory.path().join("accelerated.redb"),
+        60,
+        &[SUMMON_IMP, FEL_DOMINATION],
+    );
+    accelerated.h.cast(FEL_DOMINATION, None);
+    accelerated.advance(3);
+    assert!(
+        accelerated.h.inbox.failed.is_empty(),
+        "{:?}",
+        accelerated.h.inbox.failed
+    );
+    assert!(
+        accelerated
+            .h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(accelerated.h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == FEL_DOMINATION)
+    );
+    accelerated.h.cast(SUMMON_IMP, None);
+    accelerated.advance(20);
+    assert!(
+        accelerated.h.inbox.failed.is_empty(),
+        "{:?}",
+        accelerated.h.inbox.failed
+    );
+    assert!(
+        accelerated.pet().is_some(),
+        "90% faster summon did not complete within one second"
+    );
+    assert!(
+        !accelerated
+            .h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(accelerated.h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == FEL_DOMINATION),
+        "next-summon charge was not consumed"
+    );
 }
 
 #[test]
