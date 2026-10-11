@@ -6,6 +6,9 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Record native cast/passive-sync outcomes, warning tuples and raw resources for all 13 classes/all 40 local Retail specs, using level-80 actors and real spell rows, without writing world.db or opening a realm port.
 - [x] Preserve exact missing effect/aura types and source/state prerequisites; never close unidentified Dummy fields with no-ops or guessed coefficients.
+- [x] Census uses authored production destinations/maps, actor identity and group state rather than reporting absent fixture startup resources as product gaps.
+- [x] Native target24 selects hostile units within the authored caster-facing cone/radius.
+- [x] Native target119 offers resurrection to eligible party/raid corpse owners at their body positions, using authored restoration percentages.
 - [x] Apply native aura537 damage percentages only for matching label and aura owner.
 - [x] Apply aura457 haste only to its charge category; preserve running-clock progress and publish rate changes/replenishment without another cast.
 - [x] Apply aura416 haste only to matching spell families, for both spell/category cooldowns, truncating native fractional milliseconds.
@@ -36,7 +39,11 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] Underivable Dummy actions, resource proc/reservoir algorithms, empower input, moving fields, soft-cap curves, guardian ownership/stat inheritance and missing imported rows remain explicit table gaps.
 - [ ] Whole-spec rotation, PvP and all optional talent interactions are not established by handler coverage or these fixtures.
 
-## Out of scope
+## Continuation acceptance
 
-- Master merge/deployment, world.db writes and UDP5000: explicitly excluded by the task.
-- Client/protocol changes: existing resource/cast contracts carry these server corrections; no new client-visible payload required.
+- [ ] Repair every broken membership by shared root cause, then partial mechanics in descending membership count; preserve authentic unavailable-data gaps.
+- [ ] Complete legal talents and all class/spec mechanics, not just handler dispatch.
+- [ ] Prove representative repaired mechanics live, at least one per class, on a private fb_* realm in both skins; retain requested PNGs.
+- [ ] Commit/push batches, regenerate census counts, merge origin/master and run targeted tests/check/fmt before final report.
+
+Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast suite and unfiltered server tests are prohibited. [Continuation proof](../class-completeness2.md).

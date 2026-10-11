@@ -859,3 +859,5 @@ Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reus
 ## 2026-10-11 — integrated gathering and shared-loot readiness
 
 - [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.
+
+- 2026-10-11 class-completeness2: [continuation](../class-completeness2.md) records native cone24/corpse119, startup-resource census corrections and exact all7827 counts/proof boundaries; whole goal and live evidence remain open.

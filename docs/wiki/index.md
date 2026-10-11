@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; shared537/457/416, signed Rune/Runic costs and composite-school miss boundaries; [source/proof/limits](../class-completeness.md).
+- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; [baseline](../class-completeness.md), [continuation](../class-completeness2.md): authored census startup, native cone24 and raid corpse119; whole spell/talent coverage remains open.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.
 - [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic dungeon/raid registration, preserved saved ordinals, SmartAI gaps and private both-skin Skum proof.
 
