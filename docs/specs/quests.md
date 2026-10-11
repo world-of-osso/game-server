@@ -27,7 +27,9 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 ## Known gaps (current cycle)
 
-- [ ] Game object objectives never progress (game object templates/spawns are not imported).
+- [x] Type 2 game-object objectives receive matching goober-use credit after life, map-copy, model-box reach, quest and reuse-time checks. Nearby party members share credit. Consumable objects cannot be repeatedly used before their authored respawn timer.
+- [x] Chest loot uses authored content game-object loot tables and the existing inventory path; opening alone does not complete an item objective.
+- [ ] Full game-object lock/key/skill, condition, event, spell and animation/despawn semantics remain unimplemented; these paths are not full Retail GO parity.
 - [ ] Event quests (escorts, scripted events: `QUEST_FLAGS_COMPLETION_EVENT` with no trigger) cannot complete: no script sets the event.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
 - [ ] Spell-credit objectives (Extinguishing Hope 26391's Vineyard Fires from Milly's Extinguisher) never progress; admin `quest-complete <character> <quest_id>` (TrinityCore `.quest complete`) fills a logged quest's kill/object objectives for tests.
