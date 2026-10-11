@@ -22,6 +22,8 @@
 
 Content catalog for the game-server wiki.
 
+- [Combat pet lifecycle](systems/combat-pet-lifecycle.md) — V2 stable migration, health/name/spec durability, authenticated stable mutations, Revive/Mend and Call1–5; both-skin native logout proof and food/render boundaries.
+
 [Appearance acquisition](investigations/appearance-acquisition.md) — Retail Warbands disposal/quest rules, atomic collection receipts, real-item acquisition/reopen proofs and missing-path limits.
 
 [Group roster portrait transport](../group-roster-portraits.md) — cached head appearance, cross-zone/offline lifecycle, behavioral fixtures and deferred native-client hookup.
@@ -121,7 +123,7 @@ Server gameplay systems.
 | [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour; Northshire native-vs-effective pool audit and starter regressions |
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, player-managed guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
-| [[warlock-pets]] | Level-3 Imp lifecycle/AI; Retail command-dismiss investigation removes artificial 2641 fixture grant, RED blocked by build-helper API drift |
+| [[warlock-pets]] | Authored permanent demon lifecycle, reopened wounded/dismissed state and Fel Domination proof; both-skin native bars/logout, body-data boundaries explicit |
 | [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal; pinned override/form/capability/restriction rows distinguish Skyward Ascent from source-blocked Lift Off 374763 |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |
