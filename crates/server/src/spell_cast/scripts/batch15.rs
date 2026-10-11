@@ -1,10 +1,7 @@
 //! Bounded consumers of local Mainline12.1.0.69933 fields and named children.
 use super::{batch8, script_effect_value};
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
-use crate::spell_cast::{
-    self,
-    effects::{self, EffectCtx},
-};
+use crate::spell_cast::effects::{self, EffectCtx};
 use crate::spell_info::SpellInfo;
 use bevy::prelude::*;
 

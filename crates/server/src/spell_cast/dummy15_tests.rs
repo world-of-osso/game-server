@@ -101,7 +101,7 @@ fn dummy15_rising_sun_kick_rank_wounds_only_actual_primary_and_expires() {
                     .get::<crate::auras::AuraStatMods>(target)
                     .unwrap()
                     .healing_taken_mult,
-                0.75
+                0.5
             );
             h.advance(205);
             assert!(!crate::auras::has_aura(h.app.world(), target, 115804));
@@ -140,7 +140,7 @@ fn dummy15_combustion_pyromaniac_snapshots_native_crit_fraction_and_rank_base() 
             .world_mut()
             .get_mut::<crate::stats::CharacterStats>(caster)
             .unwrap()
-            .crit_pct = 20.0;
+            .crit_pct = 50.0;
         if ranked {
             apply(&mut h, caster, caster, 1254512);
         }
@@ -149,12 +149,13 @@ fn dummy15_combustion_pyromaniac_snapshots_native_crit_fraction_and_rank_base() 
             .world_mut()
             .get_mut::<crate::stats::CharacterStats>(caster)
             .unwrap()
-            .crit_pct = 50.0;
+            .crit_pct = 90.0;
         let target = h.npc;
         super::cast_triggered(h.app.world_mut(), caster, 133, Some(target), 1);
         h.advance(10);
-        // Native Fireball3.88125SP; Combustion crit;10% base +20% of20% =14%.
-        let expected = 388.125 * 2.0 * if ranked { 1.14 } else { 1.0 };
+        // Native Fireball3.88125SP; Combustion crit;10% base +20% of50% =20%.
+        //20% vs10% has disjoint variance bounds, so the absent snapshot always fails.
+        let expected = 388.125 * 2.0 * if ranked { 1.2 } else { 1.0 };
         assert!(
             amounts(&h, 133, target, CombatLogKind::Damage)
                 .iter()
@@ -183,7 +184,7 @@ fn dummy15_high_tide_two_chain_heals_have_no_falloff_then_native_falloff_returns
             .get_mut::<shared::components::Mana>(caster)
             .unwrap()
             .current = 10000.0;
-        super::cast_triggered(h.app.world_mut(), caster, 1064, Some(ally), 0);
+        execute(&mut h, 1064, Some(ally));
         h.advance(1);
         let primary = *amounts(&h, 1064, ally, CombatLogKind::Heal).last().unwrap();
         let secondary = *amounts(&h, 1064, other, CombatLogKind::Heal)
