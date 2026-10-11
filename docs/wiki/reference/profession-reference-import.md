@@ -19,6 +19,9 @@ Replace `--check` with `--db /absolute/private-world.db` for a lead-owned stagin
 | ProfTraitPerkNode | 4542084 | 741F7E26 | 5929 / 5929 |
 | ProfTraitTree | 4542085 | D2C4C5BD | 138 / 138 |
 | CraftingOrder | 4529122 | 05F8699D | 2047 / 2047 |
+| CurrencyTypes | 1095531 | exact pinned CSV header | 1523 exported rows |
+
+CurrencyTypes.csv is the local-CASC export retained by the PvP source investigation, now included in the same import corpus. Knowledge2025 is explicitly named Dragon Isles Leatherworking Knowledge, with MaxQty0, MaxEarnablePerWeek0 and both flag words0. This allows source-backed character-wallet acquisition and caps without making profession currencies available to the generic client EarnCurrency request.
 
 CraftingDifficulty includes a copy row; requiring decoded count equal to the raw record count would discard/reject authentic data. Row1 preserves reagent craft bonus25%, recraft6.25% and concentration curves77360/77361. Row2 of CraftingDifficultyQuality preserves tier2, QualityPercentage50 and difficulty1. These facts do not specify an operation algorithm.
 

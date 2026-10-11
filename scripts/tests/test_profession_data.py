@@ -22,7 +22,7 @@ class ProfessionDataTests(unittest.TestCase):
                 db.execute('CREATE TABLE untouched (value TEXT)')
                 db.execute("INSERT INTO untouched VALUES ('keep')")
             report = mod.import_data(database, SOURCE)
-            self.assertEqual([r['rows'] for r in report], [27, 91, 1403, 104, 15, 915, 5929, 138, 2047])
+            self.assertEqual([r['rows'] for r in report], [27, 91, 1403, 104, 15, 915, 5929, 138, 2047, 1523])
             with closing(sqlite3.connect(database)) as db:
                 self.assertEqual(db.execute('SELECT CraftSkillBonusPercent, ReCraftSkillBonusPercent, ConcentrationSkillCurveID, ConcentrationDifficultyCurveID FROM crafting_difficulty WHERE ID=1').fetchone(), (25.0, 6.25, 77360, 77361))
                 self.assertEqual(db.execute('SELECT "Order", CraftingQualityID, QualityPercentage, CraftingDifficultyID FROM crafting_difficulty_quality WHERE ID=2').fetchone(), (1, 2, 50.0, 1))
@@ -30,6 +30,7 @@ class ProfessionDataTests(unittest.TestCase):
                 self.assertEqual(db.execute('SELECT TraitTreeID FROM prof_trait_tree WHERE ID=58').fetchone(), (239,))
                 self.assertEqual(db.execute('SELECT RequiredPointsInThisNode, Flags FROM prof_trait_perk_node WHERE ID=2181').fetchone(), (5, 0))
                 self.assertEqual(db.execute('SELECT SkillLineAbilityID, CraftingOrderHouseID FROM crafting_order WHERE ID=624').fetchone(), (48716, 1))
+                self.assertEqual(db.execute('SELECT Name_lang, MaxQty, MaxEarnablePerWeek, Flags_0, Flags_1 FROM currency_types WHERE ID=2025').fetchone(), ('Dragon Isles Leatherworking Knowledge', 0, 0, 0, 0))
                 self.assertEqual(db.execute('SELECT value FROM untouched').fetchone(), ('keep',))
                 before = tuple(db.iterdump())
             self.assertEqual(report, mod.import_data(database, SOURCE))
@@ -47,7 +48,7 @@ class ProfessionDataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'source'
             source.mkdir()
-            for path in SOURCE.glob('*.db2'):
+            for path in SOURCE.iterdir():
                 (source / path.name).write_bytes(path.read_bytes())
             database = Path(directory) / 'staging.db'
             mod.import_data(database, source)
