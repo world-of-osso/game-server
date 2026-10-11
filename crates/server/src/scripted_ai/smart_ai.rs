@@ -37,7 +37,7 @@ mod escort;
 mod targets;
 
 #[path = "smart_lifetimes.rs"]
-mod lifetimes;
+pub(super) mod lifetimes;
 
 #[cfg(test)]
 #[path = "smart_escort_tests.rs"]
@@ -67,6 +67,7 @@ const ACTION_CAST: u32 = 11;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_DIE: u32 = 37;
+const ACTION_FORCE_DESPAWN: u32 = 41;
 const ACTION_WP_START: u32 = 53;
 const ACTION_WP_PAUSE: u32 = 54;
 const ACTION_WP_STOP: u32 = 55;
@@ -220,6 +221,7 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_SET_EVENT_PHASE
             | ACTION_CALL_KILLEDMONSTER
             | ACTION_DIE
+            | ACTION_FORCE_DESPAWN
             | ACTION_FAIL_QUEST
             | ACTION_COMPLETE_QUEST
             | ACTION_WP_START
@@ -545,6 +547,19 @@ impl SmartAi {
                     }
                 }
             }
+            ACTION_FORCE_DESPAWN => {
+                for target in targets {
+                    if ctx.world.get::<shared::components::Npc>(target).is_some() {
+                        lifetimes::schedule_despawn(
+                            ctx.world,
+                            target,
+                            event.action_params[0],
+                            event.action_params[1],
+                            false,
+                        );
+                    }
+                }
+            }
             ACTION_DIE => {
                 if ctx.is_alive() {
                     ctx.kill_self();
@@ -571,6 +586,12 @@ impl SmartAi {
                         escort.quest_id = event.action_params[1];
                     }
                     escort.despawn_ms = event.action_params[0];
+                }
+                if self.escort.is_none()
+                    && event.action_params[2] == 0
+                    && event.action_params[0] > 0
+                {
+                    lifetimes::schedule_despawn(ctx.world, ctx.me, event.action_params[0], 0, true);
                 }
                 self.stop_path(ctx, event.action_params[2] != 0);
             }
