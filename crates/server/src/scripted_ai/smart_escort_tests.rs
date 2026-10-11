@@ -1103,6 +1103,39 @@ fn wizzle_movement_app() -> (App, Entity, Entity, Position, Position) {
 }
 
 #[test]
+fn smartai_coverage_wizzle_evade_returns_to_last_path_position_not_original_spawn() {
+    let (mut app, creature, player, _, _) = wizzle_movement_app();
+    for _ in 0..41 {
+        app.update();
+    }
+    let anchor = *app.world().get::<Position>(creature).unwrap();
+    super::super::dispatch(
+        app.world_mut(),
+        creature,
+        super::super::Hook::JustEngagedWith(player),
+    );
+    let battle = Position {
+        x: anchor.x + 10.0,
+        ..anchor
+    };
+    app.world_mut().entity_mut(creature).insert((
+        battle,
+        crate::creature_ai::CreatureState::Pursuing {
+            target: player.to_bits(),
+        },
+    ));
+    crate::creature_aggro::enter_evade_mode(app.world_mut(), creature);
+    app.update();
+    let actual = *app.world().get::<Position>(creature).unwrap();
+    let expected = Vec3::new(battle.x - 0.35, battle.y, battle.z);
+    let error = Vec3::new(actual.x, actual.y, actual.z).distance(expected);
+    assert!(
+        error < 0.001,
+        "escort returns toward its last waypoint position, not spawn: anchor={anchor:?}, actual={actual:?}, expected={expected:?}"
+    );
+}
+
+#[test]
 fn smartai_coverage_wizzle_combat_pauses_path_while_chase_owns_fixed_movement() {
     let (mut app, creature, player, origin, _) = wizzle_movement_app();
     app.world_mut().entity_mut(player).insert(Position {
