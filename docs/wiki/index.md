@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.
 - [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic dungeon/raid registration, preserved saved ordinals, SmartAI gaps and private both-skin Skum proof.
 
 - [Raid entry and saved instances](systems/raid-entry.md) — native both-skin private proof, persistent difficulty/locks, Tuesday reset, source-derived credit and explicit data gaps.
@@ -7,6 +8,7 @@
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
 - [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+- [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
 - [Open-world population](systems/content-import.md#open-world-population-2026-10-11) — scoped31-map TDB promotion and runtime hosting, full map/zone census, both-skin native Boralus pick; source/phase/client coverage gaps explicit.
 
 - [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry) — authored scripted Shadow-Blades combo doubling, real Rune-Weapon owner parry, all28 exact reviews and30 deferred revisits; [157/157/0 census/proof/limits](../spell-dummy23-coverage.md). Zero underived is no unreviewed roots, not zero missing mechanics.
@@ -14,14 +16,8 @@
 - [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
 - [Scenario progression](../../../game-engine/docs/wiki/systems/scenarios.md) — shared system SSOT for local scenario imports, copy-scoped achievement-evaluator reuse and both-skin native stage completion; [server contract](../specs/scenarios.md).
 
-- [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
-- [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
 - [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
-- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
-- [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
-- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
 
-- [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11) — observer detection, authored spell-area quest masks, both-skin Jaga loot/turn-in and post-reward hiding; Vin/Rendan data-route gaps explicit.
 - [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
 
