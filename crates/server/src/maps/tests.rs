@@ -1858,6 +1858,7 @@ fn raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later() {
 }
 
 #[test]
+#[ignore = "needs RAID_WORLD_DB: a prepared raid world.db copy (docs/specs, raid-entry)"]
 fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
     let path = std::env::var("RAID_WORLD_DB").expect("prepared read-only raid copy");
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
