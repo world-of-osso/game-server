@@ -4,7 +4,8 @@ use shared::protocol::{
     ACHIEVEMENT_CATEGORY_PAGE_SIZE, ACHIEVEMENT_CRITERIA_PAGE_SIZE,
     ACHIEVEMENT_DESCRIPTION_MAX_BYTES, ACHIEVEMENT_NAME_MAX_BYTES, ACHIEVEMENT_PAGE_SIZE,
     AchievementCatalogEntry, AchievementCatalogPage, AchievementCategoryEntry,
-    AchievementCriterionLine, QueryAchievementCatalog,
+    AchievementCategoryTotals, AchievementCriterionLine, AchievementScope, AchievementSummary,
+    QueryAchievementCatalog,
 };
 
 #[derive(Debug)]
@@ -100,6 +101,15 @@ fn load_tree_labels(conn: &Connection) -> rusqlite::Result<HashMap<u32, (String,
     rows.collect()
 }
 
+fn matches_scope(flags: u32, scope: AchievementScope) -> bool {
+    let account = flags & ACHIEVEMENT_FLAG_ACCOUNT != 0;
+    match scope {
+        AchievementScope::All => true,
+        AchievementScope::Account => account,
+        AchievementScope::Character => !account,
+    }
+}
+
 /// A UTF-8 prefix, bounded in bytes rather than characters.
 pub(crate) fn bound_text(text: &str, max_bytes: usize) -> String {
     let mut end = text.len().min(max_bytes);
@@ -128,6 +138,9 @@ impl AchievementCatalog {
         race: u8,
     ) -> AchievementCatalogPage {
         match request {
+            QueryAchievementCatalog::Summary { scope } => {
+                AchievementCatalogPage::Summary(self.summary(state, race, scope))
+            }
             QueryAchievementCatalog::Categories { after_id } => self.categories_page(after_id),
             QueryAchievementCatalog::Category {
                 category_id,
@@ -144,6 +157,110 @@ impl AchievementCatalog {
                     next_id,
                 }
             }
+        }
+    }
+
+    /// Retail AchievementUI.lua:2334-2348,2508-2512: full counts and three latest earned rows.
+    fn summary(
+        &self,
+        state: &PlayerAchievementState,
+        race: u8,
+        scope: AchievementScope,
+    ) -> AchievementSummary {
+        const COUNTER_OR_GUILD: u32 = 0x1 | 0x4000;
+        let eligible: Vec<_> = self
+            .window
+            .definitions
+            .values()
+            .filter(|row| {
+                row.flags & COUNTER_OR_GUILD == 0
+                    && self.faction_matches(row.faction, race)
+                    && matches_scope(row.flags, scope)
+            })
+            .collect();
+        let mut summary = self.count_summary_rows(state, &eligible, scope);
+        summary.recent = self.latest_earned_rows(state, &eligible, race);
+        summary
+    }
+
+    fn count_summary_rows(
+        &self,
+        state: &PlayerAchievementState,
+        rows: &[&WindowDefinition],
+        scope: AchievementScope,
+    ) -> AchievementSummary {
+        let mut summary = AchievementSummary {
+            scope,
+            points: 0,
+            total: rows.len() as u32,
+            completed: 0,
+            categories: Vec::new(),
+            recent: Vec::new(),
+        };
+        let mut categories = BTreeMap::new();
+        for row in rows {
+            let completed = self
+                .definition_state(state, row.id)
+                .earned_ids
+                .contains(&row.id);
+            summary.completed += u32::from(completed);
+            if completed {
+                summary.points += row.points;
+            }
+            self.accumulate_category_totals(&mut categories, row.category, completed);
+        }
+        summary.categories = categories.into_values().collect();
+        summary
+    }
+
+    fn latest_earned_rows(
+        &self,
+        state: &PlayerAchievementState,
+        rows: &[&WindowDefinition],
+        race: u8,
+    ) -> Vec<AchievementCatalogEntry> {
+        let mut earned: Vec<_> = rows
+            .iter()
+            .copied()
+            .filter(|row| {
+                self.definition_state(state, row.id)
+                    .earned_ids
+                    .contains(&row.id)
+            })
+            .collect();
+        earned.sort_by_key(|row| {
+            let date = self
+                .definition_state(state, row.id)
+                .earned_at
+                .get(&row.id)
+                .copied();
+            (std::cmp::Reverse(date), row.id)
+        });
+        earned
+            .into_iter()
+            .take(3)
+            .map(|row| self.window_entry(state, row, race))
+            .collect()
+    }
+
+    fn accumulate_category_totals(
+        &self,
+        totals: &mut BTreeMap<u32, AchievementCategoryTotals>,
+        category: u32,
+        completed: bool,
+    ) {
+        let Some(row) = self.window.categories.get(&category) else {
+            return;
+        };
+        let counts = totals.entry(category).or_insert(AchievementCategoryTotals {
+            category_id: category,
+            total: 0,
+            completed: 0,
+        });
+        counts.total += 1;
+        counts.completed += u32::from(completed);
+        if row.parent_id >= 0 {
+            self.accumulate_category_totals(totals, row.parent_id as u32, completed);
         }
     }
 
@@ -204,6 +321,7 @@ impl AchievementCatalog {
             description: row.description.clone(),
             points: row.points,
             icon_fdid: row.icon,
+            flags: row.flags,
             earned,
             earned_at: earned
                 .then(|| state.earned_at.get(&row.id).copied())

@@ -25,6 +25,12 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [x] Serve categories, category achievements and criterion lines on request with bounded pages; never push the catalog on login.
 - [x] Include character earned state, known completion dates and numeric criterion progress in category responses; preserve unknown historical dates.
 
+### Native Summary
+
+- [ ] Serve full faction-eligible non-statistic, non-guild catalog counts and earned points, independent of client-loaded pages; distinguish All, account-flag and character-flag scopes.
+- [ ] Include category totals with descendant contributions and the newest three earned rows, known dates before unknown dates. Preserve authoritative account aggregates and character isolation.
+- [ ] Expose authentic Achievement.Flags with every row for native account/character and Statistics presentation.
+
 ## How it works
 
 - [Dungeon achievements](../wiki/systems/dungeon-achievements.md)
