@@ -36,6 +36,24 @@ class ToySceneryImportTests(unittest.TestCase):
                 self.assertEqual(actual, source)
                 self.assertEqual(len(actual), 2)
 
+    def test_missing_source_models_rolls_back_new_templates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.sqlite"
+            shutil.copyfile(ROOT / "data/world.db", path)
+            with sqlite3.connect(path) as conn:
+                conn.execute("DELETE FROM content_creature_template WHERE entry IN (?, ?)", ENTRIES)
+                conn.execute("DELETE FROM content_creature_template_model WHERE CreatureID IN (?, ?)", ENTRIES)
+                conn.execute("DELETE FROM tdb_creature_template_model WHERE CreatureID = 65387")
+            result = subprocess.run(["python3", str(ROOT / "scripts/add_toy_summon_templates.py"),
+                                     "--db", str(path)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("missing authentic TDB templates/models: [65387]", result.stderr)
+            with sqlite3.connect(path) as conn:
+                self.assertEqual(conn.execute("""SELECT count(*) FROM content_creature_template
+                    WHERE entry IN (?, ?)""", ENTRIES).fetchone()[0], 0)
+                self.assertEqual(conn.execute("""SELECT count(*) FROM content_creature_template_model
+                    WHERE CreatureID IN (?, ?)""", ENTRIES).fetchone()[0], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
