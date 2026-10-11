@@ -35,7 +35,7 @@ All13 classes/all40 specs remain represented:630 book IDs/1551 memberships,302 c
 |c799de7|`cargo test --locked -p server --bin game-server dummy22`:5/5 native Mind Flay tests GREEN, warning-free.|
 |66eb38b|`cargo test --locked -p server --bin game-server dummy22_rewind`: three real40-vs120 amount/overflow RED failures; raid control passes. Optional combat-log target corrected before this run, not counted as behavioral RED.|
 
-Rewind GREEN and requested final `spell_cast` gate pending. Final gate must run ONCE after integration, followed by recorded fmt/check. No independent/full-server/live/full-rotation acceptance claimed.
+Rewind GREEN pending. Lead cancelled the originally requested `spell_cast` gate; final proof uses targeted tests plus fmt/check only. No independent/full-server/live/full-rotation acceptance claimed.
 
 Verification uses the inherited immutable local shared-protocol44b2b0f with `--config patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/spell-dummy20-2026-10-11/shared-protocol"`; shared-protocol patch block remains intact. No master merge, deploy, live server or UDP5000.
 
