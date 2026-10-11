@@ -114,7 +114,8 @@ impl CreatureSpawn {
     /// Whether the spawn is part of a copy at `difficulty_id` (`ObjectMgr`'s
     /// `_mapObjectGuidsStore[{map, difficulty}]`).
     pub fn spawns_at(&self, difficulty_id: u32) -> bool {
-        self.spawn_difficulties.contains(&difficulty_id)
+        let population = crate::followers::population_difficulty(difficulty_id);
+        self.spawn_difficulties.contains(&population)
     }
 }
 

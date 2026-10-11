@@ -296,7 +296,11 @@ type Engaged<'w, 's> = Query<
             Option<&'static LastDamagedTime>,
         ),
     ),
-    (Without<DeathState>, Without<GridDormant>),
+    (
+        Without<DeathState>,
+        Without<GridDormant>,
+        Without<crate::followers::Follower>,
+    ),
 >;
 
 /// `Creature::SetLastDamagedTime`: until when direct damage exempts the creature's
