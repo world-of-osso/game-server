@@ -19,7 +19,7 @@ Guardian priority was investigated first. Local29264 template establishes1500ms 
 
 ## Census and sources
 
-Frozen0ac5c4d baseline exactly reproduces168 roots,88 reviewed/80 underived. After2476ec8:166 roots,90 reviewed/76 underived. Execute's refund and Shadow Word: Death's threshold consume their remaining E3 numeric contracts; this is not full damage/legacy/talent certification. E3 falls119 IDs/127 memberships→117/125; aura4 stays68/76 and aura226 stays18/19. No newly exposed root. Scope remains13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships.
+Frozen0ac5c4d baseline exactly reproduces168 roots,88 reviewed/80 underived. After33b965c:166 roots,90 reviewed/76 underived. Execute's refund and Shadow Word: Death's threshold consume their remaining E3 numeric contracts; this is not full damage/legacy/talent certification. E3 falls119 IDs/127 memberships→117/125; aura4 stays68/76 and aura226 stays18/19. No newly exposed root. Scope remains13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships.
 
 151 native rows match corresponding local CSVs: zero missing rows/differences, numeric comparison tolerance1e-10, strings/newlines exact. Sources and all40 previous IDs/counts are checked by reproducible `regenerate.py`/`per_spec.py`; frozen before/after source prevents checkout drift from changing the result.
 
@@ -27,7 +27,7 @@ Frozen0ac5c4d baseline exactly reproduces168 roots,88 reviewed/80 underived. Aft
 
 83f3f70: initial nine fixtures RED0/9. Seven failures identify missing/wrong behavior; Aspect initially lacked an explicit enemy and Bestial initially asserted an unbound pet buff (not valid final-contract REDs). ada5136 corrects that fixture; focused RED0/1 observes no Cobra.4584772 targeted GREEN9/9.2476ec8 adds partial paid-resource, refusal/trigger, persistent-pet ownership and actual Haunt death/expiry boundary fixtures: GREEN12/12, warning-free. A later source audit rejected applying owner19574 a108 to the pet: multiple reverse-description a79 candidates (186254/1285912) lack an explicit binding. Unsupported buff removed; only the named344572 strike retained. The initial pet-aura assertion is not final strike RED proof. No RNG-dependent exact damage expectations; variance bounds/zero crit/non-Npc hit source used.
 
-3f637a3/0fa4079 Bestial focused failures exposed the fixture's pre-cast real pet melee swing, not incorrect AP inheritance. The assertion now isolates immediate cast health loss instead of including earlier melee; post-cast ordinary pet melee is not suppressed. Final Bestial proof and master integration/single requested spell_cast gate pending. Parent owns independent integration acceptance; no full-crate/live/rotation claim.
+3f637a3/0fa4079 Bestial focused failures exposed the fixture's pre-cast real pet melee swing, not incorrect AP inheritance. The assertion now isolates immediate cast health loss instead of including earlier melee; post-cast ordinary pet melee is not suppressed. 33b965c final focused Bestial2/2 passes. Remaining ten unchanged batch13 fixtures retain2476ec8 proof; master integration/single requested spell_cast gate pending. Parent owns independent integration acceptance; no full-crate/live/rotation claim.
 
 Durable evidence: `game-engine/data/diagnostics/spell-dummy13-2026-10-10/` (frozen before/after sources, source receipts/equivalence, census/all40 generators and proof logs).
 
