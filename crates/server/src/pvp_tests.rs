@@ -161,6 +161,7 @@ fn build_snapshot_reflects_queue_kind() {
         progress: PlayerPvpProgress::default(),
         battleground: None,
         war_mode: None,
+        talents: None,
         queue: Some(PlayerPvpQueue::RatedBracket {
             bracket: PvpBracketSnapshot::SoloShuffle,
         }),
