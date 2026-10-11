@@ -209,17 +209,15 @@ fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
     let hostile = spawn_npc(&mut h.app, 27.9);
     let far = spawn_npc(&mut h.app, 28.1);
     let player = spawn_player(&mut h.app, 1, 23.0);
-    let hostile_faction = h
-        .app
-        .world()
-        .get::<shared::components::UnitFactionTemplate>(target)
-        .unwrap()
-        .0;
+    // Player-v-player hostility requires an actual duel, not an NPC template.
     h.app
         .world_mut()
-        .get_mut::<shared::components::UnitFactionTemplate>(player)
-        .unwrap()
-        .0 = hostile_faction;
+        .entity_mut(h.caster)
+        .insert(crate::duel::DuelOpponent(player));
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::duel::DuelOpponent(h.caster));
     cast_at(&mut h, 191427, [20.0, 0.0, 0.0]);
     assert!(varied(44.0).contains(&(5000.0 - h.health(target))));
     assert!(varied(44.0).contains(&(5000.0 - h.health(hostile))));
