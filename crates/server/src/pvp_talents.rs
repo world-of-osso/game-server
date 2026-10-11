@@ -11,7 +11,7 @@ use rusqlite::Connection;
 use shared::components::{ActiveSpec, CombatStatus, Health, Level, Player};
 use shared::protocol::{
     ActionBarSnapshot, PvpChannel, PvpStateUpdate, PvpTalentSlotSnapshot, PvpTalentSnapshot,
-    PvpTalentsSnapshot, SelectPvpTalent, SpellChannel, SpellsLearned, SpellsUnlearned,
+    PvpTalentsSnapshot, SelectPvpTalent, SpellsLearned, SpellsUnlearned, TalentChannel,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -368,12 +368,12 @@ fn update_grants(
     let known = world.get::<KnownSpells>(owner).unwrap().clone();
     let after: BTreeSet<_> = known.iter().collect();
     if let Some(mut sender) = world.get_mut::<MessageSender<SpellsLearned>>(connection) {
-        sender.send::<SpellChannel>(SpellsLearned {
+        sender.send::<TalentChannel>(SpellsLearned {
             spells: after.difference(&before).copied().collect(),
         });
     }
     if let Some(mut sender) = world.get_mut::<MessageSender<SpellsUnlearned>>(connection) {
-        sender.send::<SpellChannel>(SpellsUnlearned {
+        sender.send::<TalentChannel>(SpellsUnlearned {
             spells: before.difference(&after).copied().collect(),
         });
     }
@@ -383,7 +383,7 @@ fn update_grants(
     if let Some(bar) = bar
         && let Some(mut sender) = world.get_mut::<MessageSender<ActionBarSnapshot>>(connection)
     {
-        sender.send::<SpellChannel>(bar);
+        sender.send::<TalentChannel>(bar);
     }
 }
 #[cfg(test)]
