@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Static armory snapshots](systems/site-snapshots.md): versioned JSON contract, read-only public allowlist/opt-out export, real fb-owned private fixtures, local PNG conversion, future M+ attribution and raid first-kill/guild credit. Reset-lock progress stays separate from post-deploy lifetime rankings; no invented score, season or historical timestamps. Source and exporter behavioral tests linked in site-data diagnostics; final integration gates recorded in handoff.
+
 - 2026-10-11 — [Mythic Keystone runtime](systems/mythic-plus.md): supersedes the earlier catalog-only boundary with persistent bag GUIDs, authenticated Font activation, Mythic23→Keystone8, shared clock/weighted kill/death/encounter state and idempotent terminal key/history. Real connection character-switch authority regression; default-disabled numeric policy. Private5800 Modern8→11 and Forever8→7 accelerated-clock proof; inspected both-skin PNGs, admin Damage/Revive boundaries and visual/season/combat gaps explicit. No canonical world.db/5000/master mutation.
 
 - 2026-10-11 — [Mythic+ catalog foundation](systems/mythic-plus.md): six local-CASC challenge tables, copy-only layout/hash receipts, atomic replacement and linked/canonical refusal; authentic5/5 behavioral tests. Qualified populated Azure Vault/Font/timer/scenario/weighted forces. Runtime inventory/Font/countdown/tracker/completion/rating and both-skin live proof remain unimplemented; no numeric rule fabricated or canonical DB mutated.

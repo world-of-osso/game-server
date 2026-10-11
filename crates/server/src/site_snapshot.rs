@@ -9,6 +9,8 @@ type Bundle = BTreeMap<String, Vec<u8>>;
 mod catalog;
 #[path = "site_snapshot_mythic.rs"]
 mod mythic;
+#[path = "site_snapshot_raids.rs"]
+mod raids;
 #[path = "site_snapshot_store.rs"]
 mod store;
 
@@ -160,7 +162,16 @@ fn compose(
     let mut bundle = Bundle::new();
     let mut summaries = Vec::new();
     let mut guilds: BTreeMap<String, Value> = BTreeMap::new();
-    let mut rankings = Vec::new();
+    let mut saved_rankings = Vec::new();
+    let lifetime = raids::read_rankings(txn, world, selected, options.as_of)?;
+    for progression in &lifetime.guilds {
+        let id = progression["guild_id"]
+            .as_str()
+            .ok_or("guild history missing identity")?;
+        guilds.entry(id.to_owned()).or_insert_with(
+            || json!({"id":id,"name":progression["guild_name"],"roster":[],"raid_progression":[]}),
+        );
+    }
     let locks = store::locks(txn)?;
     let mythic_rankings = mythic::read_rankings(txn, world, selected, options.as_of)?;
     for &id in selected {
@@ -172,7 +183,7 @@ fn compose(
             "complete_effective_equipment_item_level_unavailable".into(),
             "character_render_unavailable".into(),
             "legacy_mythic_runs_not_attributable_or_backfilled".into(),
-            "raid_first_kill_and_lifetime_history_unavailable".into(),
+            "pre_deploy_raid_history_not_backfilled".into(),
         ];
         let guild: Option<store::Guild> = store::decode(txn, "character_guilds", id)?;
         let guild_value = guild
@@ -208,14 +219,21 @@ fn compose(
                 if let Some(mut raid) = catalog::raid(world, lock)? {
                     if raid["kills"].as_u64().unwrap_or(0) > 0 {
                         raid["character_id"] = json!(id.to_string());
-                        rankings.push(raid.clone());
+                        saved_rankings.push(raid.clone());
                     }
                     raid_progression.push(raid);
                 }
             }
         }
         raid_progression.sort_by_key(|r| (r["raid"]["id"].as_u64(), r["difficulty_id"].as_u64()));
-        page["raid_progression"] = json!(raid_progression);
+        page["saved_lock_progression"] = json!(raid_progression);
+        page["raid_progression"] = json!(
+            lifetime
+                .characters
+                .iter()
+                .filter(|r| r["character_id"] == id.to_string())
+                .collect::<Vec<_>>()
+        );
         add_json(
             &mut bundle,
             format!("characters/{id}.json"),
@@ -231,15 +249,21 @@ fn compose(
         summaries.push(summary);
     }
     let mut guild_index = Vec::new();
-    for (id, guild) in guilds {
+    for (id, mut guild) in guilds {
+        guild["raid_progression"] = json!(
+            lifetime
+                .guilds
+                .iter()
+                .filter(|r| r["guild_id"] == id)
+                .collect::<Vec<_>>()
+        );
         guild_index.push(json!({"id":id,"name":guild["name"],"url":format!("guilds/{id}.json")}));
         add_json(
             &mut bundle,
             format!("guilds/{id}.json"),
-            options.document(guild, vec!["guild_at_kill_attribution_unavailable".into()]),
+            options.document(guild, vec!["pre_deploy_raid_history_not_backfilled".into()]),
         )?;
     }
-    rank_raids(&mut rankings);
     add_json(
         &mut bundle,
         "index.json".into(),
@@ -248,7 +272,14 @@ fn compose(
             vec!["public_membership_and_opt_outs_operator_supplied".into()],
         ),
     )?;
-    add_json(&mut bundle,"rankings/raids.json".into(),options.document(json!({"policy":"kills_per_difficulty_then_first_kill","scope":"saved_lock","characters":rankings,"guilds":[]}),vec!["raid_first_kill_and_lifetime_history_unavailable".into(),"guild_at_kill_attribution_unavailable".into()]))?;
+    saved_rankings.sort_by_key(|r| {
+        (
+            r["character_id"].as_str().map(str::to_owned),
+            r["raid"]["id"].as_u64(),
+            r["difficulty_id"].as_u64(),
+        )
+    });
+    add_json(&mut bundle,"rankings/raids.json".into(),options.document(json!({"policy":"kills_per_difficulty_then_first_kill","scope":"post_deploy_lifetime","characters":lifetime.characters,"guilds":lifetime.guilds,"saved_lock_characters":saved_rankings}),vec!["pre_deploy_raid_history_not_backfilled".into()]))?;
     add_json(
         &mut bundle,
         "rankings/mythic-plus.json".into(),
@@ -261,26 +292,6 @@ fn compose(
         ),
     )?;
     Ok(bundle)
-}
-fn rank_raids(rows: &mut [Value]) {
-    rows.sort_by_key(|r| {
-        (
-            r["raid"]["id"].as_u64(),
-            r["difficulty_id"].as_u64(),
-            std::cmp::Reverse(r["kills"].as_u64()),
-            r["character_id"]
-                .as_str()
-                .and_then(|s| s.parse::<u64>().ok()),
-        )
-    });
-    let mut ranks = BTreeMap::new();
-    for row in rows {
-        let rank = ranks
-            .entry((row["raid"]["id"].as_u64(), row["difficulty_id"].as_u64()))
-            .or_insert(0);
-        *rank += 1;
-        row["rank"] = json!(rank);
-    }
 }
 fn equipment(
     options: &Options,
@@ -535,6 +546,81 @@ mod tests {
         for forbidden in ["account_id", "email", "password", "x", "y", "z"] {
             assert!(page.get(forbidden).is_none());
         }
+    }
+    #[test]
+    fn site_snapshot_raid_lifetime_timestamp_ranks_and_guild_privacy() {
+        let dir = tempfile::tempdir().unwrap();
+        seed(dir.path());
+        std::fs::write(dir.path().join("public.json"), "[\"1\",\"2\",\"3\"]").unwrap();
+        let world = rusqlite::Connection::open(dir.path().join("world.db")).unwrap();
+        world.execute_batch("INSERT INTO map VALUES(409,'Molten Core',2); INSERT INTO dungeon_encounter VALUES(663,'Lucifron',409,0,0),(664,'Magmadar',409,0,1);").unwrap();
+        let db = Database::open(dir.path().join("private.redb")).unwrap();
+        let txn = db.begin_write().unwrap();
+        {
+            let mut table = txn
+                .open_table(server::raid_history_store::FIRST_KILLS)
+                .unwrap();
+            for (subject, id, encounter, time, participants) in [
+                ("character", "1", 663, 50, vec!["1", "3"]),
+                ("character", "1", 664, 80, vec!["1", "3"]),
+                ("character", "3", 663, 10, vec!["1", "3"]),
+                ("character", "3", 664, 70, vec!["1", "3"]),
+                ("character", "2", 663, 1, vec!["2"]),
+                ("guild", "7", 663, 40, vec!["1", "3"]),
+                ("guild", "8", 663, 20, vec!["1", "2"]),
+            ] {
+                let row = server::raid_history_store::FirstKill {
+                    character_id: (subject == "character").then(|| id.into()),
+                    guild_id: (subject == "guild").then(|| id.into()),
+                    guild_name: (subject == "guild").then(|| "Proof Guild".into()),
+                    map_id: 409,
+                    difficulty_id: 9,
+                    encounter_id: encounter,
+                    first_kill_at: time,
+                    participants: participants
+                        .into_iter()
+                        .map(|id| server::raid_history_store::Participant {
+                            character_id: id.to_owned(),
+                            guild_id: None,
+                            guild_name: None,
+                        })
+                        .collect(),
+                    guild_group_credit: subject == "guild",
+                };
+                let key = format!("{subject}:{id}:409:9:{encounter}");
+                table
+                    .insert(key.as_str(), serde_json::to_vec(&row).unwrap().as_slice())
+                    .unwrap();
+            }
+        }
+        txn.commit().unwrap();
+        drop(db);
+        run(arguments(dir.path(), "raid")).unwrap();
+        let ranks: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("raid/rankings/raids.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ranks["characters"].as_array().unwrap().len(), 2);
+        assert_eq!(ranks["characters"][0]["character_id"], "3");
+        assert_eq!(ranks["characters"][0]["kills"], 2);
+        assert_eq!(ranks["characters"][0]["total"], 2);
+        assert_eq!(ranks["characters"][0]["progression_at"], 70);
+        assert_eq!(ranks["guilds"].as_array().unwrap().len(), 1);
+        assert_eq!(ranks["guilds"][0]["guild_id"], "7");
+        assert_eq!(ranks["guilds"][0]["guild_group_credit"], true);
+        assert!(!dir.path().join("raid/guilds/8.json").exists());
+        let page: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("raid/characters/1.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(page["raid_progression"][0]["kills"], 2);
+        assert_eq!(page["raid_progression"][0]["scope"], "post_deploy_lifetime");
+        assert!(
+            page["saved_lock_progression"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
     }
     #[test]
     fn site_snapshot_mythic_ranking_best_and_private_party_filter() {

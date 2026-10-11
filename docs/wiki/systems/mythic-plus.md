@@ -2,6 +2,8 @@
 
 Verified: 2026-10-11. The [contract](../../specs/mythic-plus.md) owns scope; [local source qualification](../../mythic-plus-data.md) owns catalog identities/numeric evidence. This implements the qualified Azure Vault loop, not complete Retail season/combat parity.
 
+Future attributable completion records for the static armory are separate from the frozen wire/run ABI; see [[site-snapshots]]. Legacy anonymous history is not backfilled.
+
 ## Content
 
 The offline catalog importer validates destination independence and six DB2 layouts before one atomic replacement. A separate copy-only item publication script projects existing Item/ItemSparse180653 into content_item. Neither writes canonical world.db.

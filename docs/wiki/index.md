@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Static armory snapshots](systems/site-snapshots.md) — public-only offline JSON, local PNG icons, attributable future M+ completion and raid first-kill/guild credit; no listener or production publishing.
+
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [Raid entry and saved instances](systems/raid-entry.md) — native both-skin private proof, persistent difficulty/locks, Tuesday reset, source-derived credit and explicit data gaps.
 

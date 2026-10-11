@@ -19,7 +19,7 @@ pub struct FirstKill {
     pub difficulty_id: u32,
     pub encounter_id: u32,
     pub first_kill_at: i64,
-    pub participants: Vec<String>,
+    pub participants: Vec<Participant>,
     pub guild_group_credit: bool,
 }
 
@@ -46,7 +46,7 @@ pub fn persist_first_kills(
     first_kill_at: i64,
     party: &[Participant],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let participants: Vec<_> = party.iter().map(|p| p.character_id.clone()).collect();
+    let participants = party.to_vec();
     let mut table = txn.open_table(FIRST_KILLS)?;
     let base = FirstKill {
         character_id: None,
