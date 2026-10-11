@@ -132,6 +132,40 @@ fn dispatch_resource_commands(
     if let Some(r) = dispatch_autobroadcast(request, &mut res.autobroadcast) {
         return Some(r);
     }
+    if let AdminRequest::GrantKeystone {
+        character_name,
+        challenge_id,
+        level,
+    } = request
+    {
+        let Some(character) = persistence::find_character_id_by_name(&db.db, character_name) else {
+            return Some(AdminResponse::Error("Character not found".into()));
+        };
+        let (Some(templates), Some(catalog)) = (&res.item_templates, &res.vendor_catalog) else {
+            return Some(AdminResponse::Error("Item data not loaded".into()));
+        };
+        return Some(
+            match crate::mythic_plus::issue_keystone(
+                &db.db,
+                templates,
+                catalog,
+                character,
+                *challenge_id,
+                *level,
+            ) {
+                Ok(()) => {
+                    res.inventory_updates.record_items(character);
+                    AdminResponse::ItemGranted {
+                        character_name: character_name.clone(),
+                        item_id: crate::mythic_plus::KEYSTONE_ITEM,
+                        name: "Mythic Keystone".into(),
+                        count: 1,
+                    }
+                }
+                Err(error) => AdminResponse::Error(error),
+            },
+        );
+    }
     if let AdminRequest::GrantItem {
         character_name,
         item_id,
@@ -438,6 +472,7 @@ fn dispatch(
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. }
         | AdminRequest::GrantItem { .. }
+        | AdminRequest::GrantKeystone { .. }
         | AdminRequest::CreateCharacter { .. }
         | AdminRequest::QuestComplete { .. }
         | AdminRequest::MailDeliverNow { .. } => {

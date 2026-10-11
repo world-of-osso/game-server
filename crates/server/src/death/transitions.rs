@@ -85,6 +85,7 @@ pub(super) fn process_player_death_transitions(
             .insert(death_state.clone());
         params.commands.queue(move |world: &mut World| {
             crate::damage_meter::record_player_death_transition(world, player_entity);
+            crate::mythic_plus::record_death(world, player_entity);
         });
         // `Player::setDeathState` -> `Unit::setDeathState` -> `CombatStop`
         // (AzerothCore Player.cpp:1078, Unit.cpp:11439-11441).
