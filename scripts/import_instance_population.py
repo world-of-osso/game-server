@@ -14,7 +14,13 @@ from pathlib import Path
 import retail_content as retail
 
 OFFSET = retail.RETAIL_GUID_OFFSET
-MAPS = "SELECT map FROM tdb_instance_template"
+# `map` / `map_difficulty` are imported local Map.db2 / MapDifficulty.db2.
+# instance_template supplies scripts/parents, not the complete dungeon roster.
+# Garrisons carry InstanceType=1 too, but are not party dungeons.
+MAPS = """SELECT map FROM tdb_instance_template
+    UNION SELECT ID AS map FROM map m
+    WHERE InstanceType IN (1,2) AND lower(Directory) NOT LIKE '%garrison%'
+      AND EXISTS (SELECT 1 FROM map_difficulty d WHERE d.MapID=m.ID)"""
 ENTRIES = "SELECT DISTINCT id1 FROM temp.instance_creature"
 # TrinityCore a352b1fa PhasingHandler::InitDbPhaseShift: ALWAYS_VISIBLE ignores phases.
 BASE_PHASE = "terrainSwapMap=-1 AND (phaseUseFlags=1 OR " \
@@ -48,6 +54,7 @@ def select_instance_spawns(conn, *, map_list=MAPS, base_phase=BASE_PHASE):
 
 def import_creatures(conn, report, *, map_list=MAPS, base_phase=BASE_PHASE):
     retail.create_difficulty_table(conn, map_list=map_list, base_phase=base_phase)
+    prefer_existing_base_difficulties(conn)
     conn.create_function("health_expansion", 1, retail.health_expansion, deterministic=True)
     conn.execute(f"DELETE FROM content_creature_template WHERE entry IN ({ENTRIES})")
     retail.insert_tdb_templates(conn, ENTRIES, replace_legacy=True)
@@ -74,6 +81,21 @@ def import_creatures(conn, report, *, map_list=MAPS, base_phase=BASE_PHASE):
         spawntimesecs,wander_distance,currentwaypoint,MovementType,COALESCE(unit_flags,0),ScriptName,VerifiedBuild,
         modelid,{retail.SPAWN_DIFFICULTIES} FROM temp.instance_creature
         WHERE id IN (SELECT entry FROM content_creature_template)""")
+
+
+def prefer_existing_base_difficulties(conn):
+    """New-map difficulties must not change an existing map's shared base template."""
+    conn.execute(f"""CREATE TEMP TABLE instance_base_difficulty AS
+        SELECT c.id AS entry, COALESCE(
+            min(CASE WHEN c.map IN (SELECT map FROM tdb_instance_template) THEN r.difficulty END),
+            min(r.difficulty)) AS difficulty
+        FROM temp.instance_creature c JOIN temp.retail_map r ON r.map_id=c.map
+        WHERE {retail.SPAWN_DIFFICULTY_MATCH} GROUP BY c.id""")
+    conn.execute("DELETE FROM temp.tdb_difficulty WHERE Entry IN (SELECT entry FROM temp.instance_base_difficulty)")
+    conn.execute("""INSERT INTO temp.tdb_difficulty SELECT d.*
+        FROM temp.instance_base_difficulty b JOIN temp.spawn_row s
+            ON s.entry=b.entry AND s.difficulty=b.difficulty
+        JOIN tdb_creature_template_difficulty d ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty""")
 
 
 def import_instance_loot(conn, report):
@@ -107,8 +129,7 @@ def bind_authored_wowhead_loot(conn):
             s.difficulty=b.difficulty AS base
         FROM wowhead_creature_drop w
         JOIN temp.spawn_map_difficulty s ON s.entry=w.entry AND s.difficulty=w.difficulty
-        JOIN (SELECT entry,min(difficulty) AS difficulty FROM temp.spawn_map_difficulty GROUP BY entry) b
-            ON b.entry=w.entry
+        JOIN temp.instance_base_difficulty b ON b.entry=w.entry
         WHERE w.entry IN ({ENTRIES})""")
     # build_loot already imported these source-backed scrape rows. Population replaces
     # templates, not loot rows; only their bindings need to be restored.
@@ -166,7 +187,7 @@ def import_gameobjects(conn, report, *, map_list=MAPS, rebuild_pools=True):
 
 def population_counts(conn):
     rows = []
-    for (map_id,) in conn.execute(f"{MAPS} ORDER BY map"):
+    for (map_id,) in conn.execute(f"SELECT map FROM ({MAPS}) ORDER BY map"):
         row = {"map": map_id}
         for table, label in (("creature", "creatures"), ("gameobject", "gameobjects")):
             row[f"tdb_{label}"] = conn.execute(f"SELECT count(*) FROM tdb_{table} WHERE map=?", (map_id,)).fetchone()[0]
@@ -199,7 +220,7 @@ def population_counts(conn):
 
 def apply_population(conn, report, *, map_list=MAPS, base_phase=BASE_PHASE, rebuild_pools=True):
     """Apply inside the caller's transaction, also used by scoped world promotion."""
-    for name in ("retail_map", "retail_spawn", "retail_gameobject", "spawn_map_difficulty", "spawn_row", "tdb_difficulty"):
+    for name in ("retail_map", "retail_spawn", "retail_gameobject", "spawn_map_difficulty", "spawn_row", "tdb_difficulty", "instance_base_difficulty"):
         conn.execute(f"DROP TABLE IF EXISTS temp.{name}")
     select_instance_spawns(conn, map_list=map_list, base_phase=base_phase)
     import_creatures(conn, report, map_list=map_list, base_phase=base_phase)
