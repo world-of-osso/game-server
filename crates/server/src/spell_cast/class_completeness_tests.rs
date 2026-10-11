@@ -235,7 +235,7 @@ fn native80_fixture(ids: &[u32], class: u8, spec: u32) -> Harness {
 #[test]
 fn class_completeness_native80_astral_generator_and_spender() {
     use shared::components::PowerType;
-    let mut h = native80_fixture(&[190984, 78674, 137009, 137013], 11, 102);
+    let mut h = native80_fixture(&[190984, 78674, 137009, 137013, 197911], 11, 102);
     h.set_power(PowerType::LunarPower, 0.0);
     h.cast_and_deliver(190984, Some(h.npc));
     h.advance(60);
@@ -277,6 +277,37 @@ fn class_completeness_native80_rune_runic_generator_and_spender() {
     h.cast_and_deliver(49998, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(h.power(PowerType::RunicPower), 0.0);
+}
+
+#[test]
+fn class_completeness_native80_rune_generation_caps_at_native_max() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[49184, 137005], 6, 251);
+    h.set_power(PowerType::RunicPower, 950.0);
+    h.cast_and_deliver(49184, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.power(PowerType::RunicPower), 1000.0);
+    assert_eq!(h.power(PowerType::Runes), 5.0);
+}
+
+#[test]
+fn class_completeness_native80_rune_rejection_never_grants_runic_power() {
+    use shared::components::PowerType;
+    let mut h = native80_fixture(&[49184, 137005], 6, 251);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(super::runes::Runes {
+            cooldowns: vec![10.0; 6],
+            order: vec![0, 1, 2, 3, 4, 5],
+        });
+    h.set_power(PowerType::Runes, 0.0);
+    h.set_power(PowerType::RunicPower, 0.0);
+    h.cast_and_deliver(49184, Some(h.npc));
+    assert_eq!(h.inbox.failed.len(), 1);
+    assert_eq!(h.power(PowerType::RunicPower), 0.0);
+    assert_eq!(h.power(PowerType::Runes), 0.0);
+    assert!(!h.inbox.go.iter().any(|event| event.spell_id == 49184));
 }
 
 #[test]
