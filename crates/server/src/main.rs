@@ -92,6 +92,7 @@ mod quest_rules;
 mod quest_time;
 mod quest_view;
 mod race_class;
+mod raid_history;
 mod reputation;
 mod rest;
 mod scripted_ai;

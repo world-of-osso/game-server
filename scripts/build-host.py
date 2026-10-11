@@ -15,6 +15,7 @@ COMMON_SCRIPTS = SCRIPTS.parent.parent / "game-engine/scripts"
 BINARIES = {
     "game-server": "server",
     "game-server-admin": "server",
+    "game-server-site-export": "server",
     "game-cli": "client",
 }
 GROUND_GAPS = Path("crates/server/src/ground_gaps.tsv")
