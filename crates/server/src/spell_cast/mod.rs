@@ -221,7 +221,7 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    fn to_contract(&self) -> (CastFailReason, Option<String>) {
+    pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
         use CastFailReason as R;
         match self {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
