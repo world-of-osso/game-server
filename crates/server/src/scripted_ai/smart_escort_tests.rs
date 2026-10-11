@@ -36,7 +36,14 @@ fn erland() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
             NpcFlags(2),
         ))
         .id();
-    let player = world.spawn_empty().id();
+    let player = world
+        .spawn(shared::components::Player {
+            name: "fb_escort".into(),
+            race: 5,
+            class: 1,
+            appearance: Default::default(),
+        })
+        .id();
     let mut ai = SmartAi {
         states: vec![EventState::default(); events.len()],
         events,
@@ -46,6 +53,7 @@ fn erland() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
         timed_list: None,
         processing_timed_list: false,
         escort: None,
+        path_event_id: None,
     };
     ai.reset(&mut Ctx {
         world: &mut world,
@@ -340,6 +348,201 @@ fn smartai_coverage_nested_timed_list_does_not_start_after_outer_finishes() {
             .get::<super::super::movement::PointMovement>(creature)
             .is_none()
     );
+}
+
+fn start_quest_escort(ctx: &mut Ctx, ai: &mut SmartAi, player: Entity) {
+    ctx.world
+        .entity_mut(player)
+        .insert(shared::components::Player {
+            name: "fb_escort".into(),
+            race: 5,
+            class: 1,
+            appearance: Default::default(),
+        });
+    let mut start = tdb_action(197800, 9, 3);
+    start.action_params[3] = 435;
+    start.target_type = TARGET_ACTION_INVOKER;
+    ai.execute_action(ctx, &start, Some(player));
+}
+
+#[test]
+fn smartai_coverage_escort_death_fails_quest_without_explicit_death_row() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    install_quest_log(&temp, &mut world, player);
+    ai.events = Arc::new(
+        ai.events
+            .iter()
+            .filter(|e| e.event_type != EVENT_DEATH)
+            .cloned()
+            .collect(),
+    );
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    start_quest_escort(&mut ctx, &mut ai, player);
+    ai.just_died(&mut ctx, None);
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    assert!(
+        crate::persistence::quest_store::load_quest_log(db, 1)
+            .active(435)
+            .unwrap()
+            .failed
+    );
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
+    );
+}
+
+#[test]
+fn smartai_coverage_out_of_range_escort_fails_without_explicit_death_row() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    install_quest_log(&temp, &mut world, player);
+    world.entity_mut(player).insert(Position {
+        x: 200.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    ai.events = Arc::new(Vec::new());
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    start_quest_escort(&mut ctx, &mut ai, player);
+    ai.update_ai(&mut ctx, 1001);
+    let db = &ctx.world.resource::<crate::persistence::GameDatabase>().db;
+    assert!(
+        crate::persistence::quest_store::load_quest_log(db, 1)
+            .active(435)
+            .unwrap()
+            .failed
+    );
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
+    );
+}
+
+#[test]
+fn smartai_coverage_node_delay_orientation_and_repeat_are_data_driven() {
+    let (temp, mut world, mut ai, creature, player) = erland();
+    let conn = Connection::open(temp.path().join("escort.sqlite")).unwrap();
+    conn.execute("DELETE FROM tdb_waypoint_path_node WHERE NodeId>2", [])
+        .unwrap();
+    conn.execute(
+        "UPDATE tdb_waypoint_path_node SET Delay=700,Orientation=1.25 WHERE NodeId=1",
+        [],
+    )
+    .unwrap();
+    world.insert_resource(load_smart_scripts(&temp.path().join("escort.sqlite")).unwrap());
+    world
+        .entity_mut(creature)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    // No scripted pauses: this fixture exercises waypoint table delays, not action54.
+    ai.events = Arc::new(Vec::new());
+    let mut start = tdb_action(197800, 9, 3);
+    start.action_params[2] = 1;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &start, Some(player));
+    ctx.world
+        .entity_mut(creature)
+        .remove::<super::super::movement::PointMovement>();
+    ai.movement_inform(&mut ctx, super::super::MotionType::Point, 1);
+    assert_eq!(
+        ctx.world
+            .get::<shared::components::Rotation>(creature)
+            .unwrap()
+            .y,
+        1.25 + std::f32::consts::FRAC_PI_2
+    );
+    ai.update_ai(&mut ctx, 699);
+    assert!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .is_none()
+    );
+    ai.update_ai(&mut ctx, 1);
+    assert_eq!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .unwrap()
+            .id,
+        2
+    );
+    ctx.world
+        .entity_mut(creature)
+        .remove::<super::super::movement::PointMovement>();
+    ai.movement_inform(&mut ctx, super::super::MotionType::Point, 2);
+    assert_eq!(
+        ctx.world
+            .get::<super::super::movement::PointMovement>(creature)
+            .unwrap()
+            .id,
+        1
+    );
+}
+
+#[test]
+fn smartai_coverage_party_targets_include_same_map_members_once() {
+    let (_temp, mut world, mut ai, creature, player) = erland();
+    let mut online = crate::group::OnlineView::new();
+    let mut members = Vec::new();
+    for (id, name, map) in [(1, "fb_one", 0), (2, "fb_two", 0), (3, "fb_othermap", 1)] {
+        let entity = if id == 1 {
+            player
+        } else {
+            world.spawn_empty().id()
+        };
+        world.entity_mut(entity).insert((
+            crate::persistence::ClientId(id),
+            shared::components::Player {
+                name: name.into(),
+                race: 5,
+                class: 1,
+                appearance: Default::default(),
+            },
+            crate::maps::InMap::continent(map),
+            NpcFlags(2),
+        ));
+        online.insert(
+            id,
+            crate::group::OnlineMember {
+                entity: entity.to_bits(),
+                name: name.into(),
+                class: 1,
+                level: 10,
+                portrait: Default::default(),
+                dungeon_difficulty: 1,
+            },
+        );
+        members.push(entity);
+    }
+    let mut groups = crate::group::GroupRegistry::default();
+    groups.invite(1, "fb_two", &online);
+    groups.respond_invite(2, true);
+    groups.invite(1, "fb_othermap", &online);
+    groups.respond_invite(3, true);
+    world.insert_resource(groups);
+    let mut action = tdb_action(197800, 9, 2);
+    action.target_type = TARGET_INVOKER_PARTY;
+    let mut ctx = Ctx {
+        world: &mut world,
+        me: creature,
+    };
+    ai.execute_action(&mut ctx, &action, Some(player));
+    assert_eq!(ctx.world.get::<NpcFlags>(members[0]).unwrap().0, 0);
+    assert_eq!(ctx.world.get::<NpcFlags>(members[1]).unwrap().0, 0);
+    assert_eq!(ctx.world.get::<NpcFlags>(members[2]).unwrap().0, 2);
 }
 
 fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {

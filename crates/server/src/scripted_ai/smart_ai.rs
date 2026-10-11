@@ -30,6 +30,15 @@ mod paths;
 #[path = "smart_timed.rs"]
 mod timed;
 
+#[path = "smart_escort.rs"]
+mod escort;
+
+#[path = "smart_targets.rs"]
+mod targets;
+
+#[path = "smart_lifetimes.rs"]
+mod lifetimes;
+
 #[cfg(test)]
 #[path = "smart_escort_tests.rs"]
 mod escort_tests;
@@ -300,6 +309,7 @@ pub(crate) struct SmartAi {
     timed_list: Option<TimedList>,
     processing_timed_list: bool,
     escort: Option<paths::EscortPath>,
+    path_event_id: Option<u32>,
 }
 
 struct TimedList {
@@ -324,6 +334,7 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         timed_list: None,
         processing_timed_list: false,
         escort: None,
+        path_event_id: None,
     }))
 }
 
@@ -431,7 +442,12 @@ impl SmartAi {
             | EVENT_WAYPOINT_RESUMED
             | EVENT_WAYPOINT_STOPPED
             | EVENT_WAYPOINT_ENDED => {
-                let path_id = self.escort.as_ref().map_or(0, |escort| escort.path_id);
+                let path_id = self
+                    .escort
+                    .as_ref()
+                    .map(|escort| escort.path_id)
+                    .or(self.path_event_id)
+                    .unwrap_or(0);
                 if (event.event_params[0] == 0 || event.event_params[0] == spell)
                     && (event.event_params[1] == 0 || event.event_params[1] == path_id)
                 {
@@ -492,7 +508,10 @@ impl SmartAi {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
-            TARGET_ACTION_INVOKER | TARGET_INVOKER_PARTY => invoker.into_iter().collect(),
+            TARGET_ACTION_INVOKER => invoker.into_iter().collect(),
+            TARGET_INVOKER_PARTY => {
+                invoker.map_or_else(Vec::new, |player| targets::party_targets(ctx.world, player))
+            }
             TARGET_STORED => self
                 .stored_targets
                 .get(&event.target_params[0])
@@ -546,8 +565,16 @@ impl SmartAi {
                 }
                 ctx.set_walk(ctx.me, walk);
             }
-            ACTION_WP_STOP => self.stop_path(ctx, event.action_params[2] != 0),
-            ACTION_WP_START => self.start_path(ctx, event, invoker),
+            ACTION_WP_STOP => {
+                if let Some(escort) = &mut self.escort {
+                    if event.action_params[1] != 0 {
+                        escort.quest_id = event.action_params[1];
+                    }
+                    escort.despawn_ms = event.action_params[0];
+                }
+                self.stop_path(ctx, event.action_params[2] != 0);
+            }
+            ACTION_WP_START => self.start_path(ctx, event, invoker, targets),
             ACTION_WP_PAUSE => self.pause_path(ctx, event.action_params[0]),
             ACTION_WP_RESUME => {
                 if let Some(escort) = &mut self.escort
@@ -561,7 +588,13 @@ impl SmartAi {
         true
     }
 
-    fn start_path(&mut self, ctx: &mut Ctx, event: &SmartEvent, invoker: Option<Entity>) {
+    fn start_path(
+        &mut self,
+        ctx: &mut Ctx,
+        event: &SmartEvent,
+        invoker: Option<Entity>,
+        targets: Vec<Entity>,
+    ) {
         let path_id = event.action_params[1];
         let path = ctx
             .world
@@ -580,6 +613,23 @@ impl SmartAi {
             pause_ms: None,
             reached: false,
             walk: path.walk,
+            repeat: event.action_params[2] != 0,
+            quest_id: event.action_params[3],
+            targets: targets
+                .into_iter()
+                .filter(|&entity| {
+                    ctx.world
+                        .get::<shared::components::Player>(entity)
+                        .is_some()
+                })
+                .collect(),
+            npc_flags: ctx
+                .world
+                .get::<shared::protocol::NpcFlags>(ctx.me)
+                .map_or(0, |flags| flags.0),
+            despawn_ms: event.action_params[4],
+            node_delay_ms: None,
+            range_check_ms: 1000,
         });
         self.move_to_waypoint(ctx);
         if invoker.is_some_and(|entity| {
@@ -644,10 +694,7 @@ impl SmartAi {
             .entity_mut(ctx.me)
             .remove::<super::movement::PointMovement>();
         self.process_events_for(ctx, EVENT_WAYPOINT_STOPPED, None, node_id);
-        if !failed {
-            self.process_events_for(ctx, EVENT_WAYPOINT_ENDED, None, node_id);
-        }
-        self.escort = None;
+        self.finish_path(ctx, failed);
     }
 
     fn pause_path(&mut self, ctx: &mut Ctx, duration_ms: u32) {
@@ -666,6 +713,9 @@ impl SmartAi {
     }
 
     fn update_path(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        if self.update_node_delay(ctx, diff_ms) {
+            return;
+        }
         let Some(escort) = &mut self.escort else {
             return;
         };
@@ -684,7 +734,13 @@ impl SmartAi {
         let reached = escort.reached;
         self.process_events_for(ctx, EVENT_WAYPOINT_RESUMED, None, node_id);
         if reached {
-            self.advance_waypoint(ctx);
+            if self
+                .escort
+                .as_ref()
+                .is_some_and(|escort| escort.node_delay_ms.is_none())
+            {
+                self.advance_waypoint(ctx);
+            }
         } else {
             self.move_to_waypoint(ctx);
         }
@@ -694,14 +750,12 @@ impl SmartAi {
         let Some(escort) = &mut self.escort else {
             return;
         };
-        escort.index += 1;
-        escort.reached = false;
-        if escort.index >= escort.path.nodes.len() {
-            let last = escort.path.nodes.last().map_or(0, |node| node.id);
-            self.process_events_for(ctx, EVENT_WAYPOINT_ENDED, None, last);
-            self.escort = None;
+        if escort.index + 1 >= escort.path.nodes.len() {
+            self.finish_path(ctx, false);
             return;
         }
+        escort.index += 1;
+        escort.reached = false;
         self.move_to_waypoint(ctx);
     }
 
@@ -742,6 +796,7 @@ impl CreatureAi for SmartAi {
         if let Some(boss) = &mut self.boss {
             boss.just_died(ctx);
         }
+        self.finish_path(ctx, true);
         self.process_events_for(ctx, EVENT_DEATH, killer, 0);
     }
 
@@ -756,12 +811,19 @@ impl CreatureAi for SmartAi {
             return;
         }
         escort.reached = true;
+        let node = &escort.path.nodes[escort.index];
+        escort.node_delay_ms = (node.delay_ms > 0).then_some(node.delay_ms);
+        if let Some(orientation) = node.orientation {
+            if let Some(mut rotation) = ctx.world.get_mut::<shared::components::Rotation>(ctx.me) {
+                rotation.y = orientation + std::f32::consts::FRAC_PI_2;
+            }
+        }
         self.process_events_for(ctx, EVENT_WAYPOINT_REACHED, None, node_id);
         self.update_timed_list(ctx, 0);
         if self
             .escort
             .as_ref()
-            .is_some_and(|escort| escort.pause_ms.is_none())
+            .is_some_and(|escort| escort.pause_ms.is_none() && escort.node_delay_ms.is_none())
         {
             self.advance_waypoint(ctx);
         }
@@ -783,6 +845,9 @@ impl CreatureAi for SmartAi {
     /// events (SmartScript.cpp:3777-3850), after refreshing the victim.
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         ctx.update_victim();
+        if self.fail_out_of_range_escort(ctx, diff_ms) {
+            return;
+        }
         self.update_path(ctx, diff_ms);
         self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
