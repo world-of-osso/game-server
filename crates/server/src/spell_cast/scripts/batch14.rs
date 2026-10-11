@@ -70,7 +70,11 @@ fn landed(world: &World, caster: Entity, spell: u32, target: Entity) -> bool {
 
 ///259489 names259277; the actual owned pet is the damage caster, not the owner.
 pub(super) fn command_pet(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    if let Some(pet) = crate::hunter_pet::summoned_pet(world, caster) {
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, caster).filter(|&pet| {
+        world
+            .get::<crate::hunter_pet::HunterPet>(pet)
+            .is_some_and(|pet| pet.owner == caster)
+    }) {
         spell_cast::cast_triggered(world, pet, COMMAND_DAMAGE, Some(target), depth + 1);
     }
 }
@@ -114,6 +118,46 @@ pub(crate) fn deathmark_energy(world: &mut World, caster: Entity, spell: &SpellI
 
 ///198013's local variable316 names198030;320415 explicitly guarantees crit.
 ///No rank means ordinary generic crit, not a forced noncritical hit.
+pub(crate) fn cast_eye_beam_tick(world: &mut World, caster: Entity) {
+    let Some(target) = world
+        .get::<shared::casting::CastState>(caster)
+        .filter(|cast| {
+            cast.cast_type == shared::casting::CastType::Channel && cast.spell_id == EYE_BEAM
+        })
+        .and_then(|cast| Entity::try_from_bits(cast.target))
+    else {
+        return;
+    };
+    let from = targets::position(world, caster).expect("Eye Beam caster position");
+    let Some(to) = targets::position(world, target) else {
+        return;
+    };
+    let angle = targets::orientation(world, caster);
+    let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
+    let child = world
+        .resource::<SpellStore>()
+        .get(EYE_BEAM_DAMAGE)
+        .expect("Eye Beam requires198030")
+        .clone();
+    if !targets::is_alive(world, target)
+        || !targets::relation_matches(world, caster, target, targets::Relation::Enemy)
+        || forward.dot(to - from) < 0.0
+        || from.distance(to) > targets::effect_radius(&child.effects[0])
+    {
+        return;
+    }
+    // Named damage to the channel's primary only. Secondary129 cone geometry
+    // and the root's reduced-damage threshold remain uncertified.
+    let mut plan = vec![PlannedEffect {
+        index: 0,
+        units: vec![target],
+        dest: None,
+        chain_multipliers: Vec::new(),
+    }];
+    spell_cast::hit::remove_defended_targets(world, caster, &child, &mut plan);
+    spell_cast::missiles::launch(world, caster, &child, plan, 1);
+}
+
 pub(super) fn eye_beam_crit(world: &World, caster: Entity) -> Option<f32> {
     crate::auras::has_aura(world, caster, EYE_BEAM_RANK).then_some(100.0)
 }

@@ -159,14 +159,15 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         ),
         PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
         OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
+        PERIODIC_TRIGGER_SPELL
+            if spell.id == crate::spell_cast::scripts::EYE_BEAM && tick.effect_index == 0 =>
+        {
+            crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster);
+        }
         PERIODIC_TRIGGER_SPELL => crate::spell_cast::cast_triggered(
             world,
             tick.caster,
-            if spell.id == crate::spell_cast::scripts::EYE_BEAM && tick.effect_index == 0 {
-                crate::spell_cast::scripts::EYE_BEAM_DAMAGE
-            } else {
-                tick.trigger_spell
-            },
+            tick.trigger_spell,
             Some(unit),
             TICK_TRIGGER_DEPTH,
         ),

@@ -21,7 +21,7 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
-pub(crate) use batch14::{DEATHMARK, EYE_BEAM, EYE_BEAM_DAMAGE, deathmark_energy};
+pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     batch11::effect_enabled(world, caster, spell, index) && batch13::effect_enabled(spell, index)
