@@ -21,6 +21,7 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
             398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
             203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
+            239560, 254513, 405634,
         ],
         8,
     )
@@ -1505,6 +1506,138 @@ fn toyfx6_duck_lovie_learns_uses_replicates_and_cancels_authored_nap() {
             .auras
             .iter()
             .any(|aura| aura.spell_id == 383065)
+    );
+}
+
+#[test]
+fn toyfx7_rabbit_hat_casts_then_expires_without_spawning_a_creature() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 147838); // Akazamzarak's Spare Hat239560.
+    assert_eq!(activate(&mut h, 147838)[0].error, None);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 239560));
+    h.advance(50); // The authored2000ms cast precedes the5000ms hat/rabbit visual.
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 239560));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 239560)
+    );
+    assert_eq!(
+        h.app
+            .world_mut()
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(h.app.world())
+            .count(),
+        0,
+        "the rabbit is an authored visual model, not an NPC"
+    );
+    h.advance(110);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 239560)
+    );
+}
+
+#[test]
+fn toyfx7_barrier_is_a_timed_cosmetic_channel_not_a_damage_absorb() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 153183); // Barrier Generator254513.
+    let health_before = *h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.caster)
+        .unwrap();
+    assert_eq!(activate(&mut h, 153183)[0].error, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 254513));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 254513)
+    );
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.npc, h.caster, 20.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap()
+            .current,
+        health_before.current - 20.0,
+        "a shield visual must not absorb damage"
+    );
+    h.advance(210); // Authored10000ms channel and visual aura lifetime.
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 254513)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(h.caster)
+            .unwrap()
+            .max,
+        health_before.max
+    );
+}
+
+#[test]
+fn toyfx7_drake_basket_preserves_aura_identity_and_cancellation() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    learn_effect_toy(&mut h, character, 204675); // A Drake's Big Basket of Eggs405634.
+    assert_eq!(activate(&mut h, 204675)[0].error, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 405634));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 405634)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(h.caster)
+            .is_none()
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 405634 });
+    h.advance(5);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == 405634)
     );
 }
 
