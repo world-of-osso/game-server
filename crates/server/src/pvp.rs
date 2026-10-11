@@ -19,6 +19,8 @@ use crate::networking::PlayerLink;
 
 #[path = "pvp_support.rs"]
 mod pvp_support;
+#[path = "pvp_war_mode.rs"]
+mod pvp_war_mode;
 
 #[path = "pvp_entry.rs"]
 mod pvp_entry;
@@ -55,6 +57,8 @@ pub struct PlayerPvpProgress {
     pub conquest: u32,
     pub conquest_max: u32,
     pub brackets: Vec<PlayerPvpBracketState>,
+    #[serde(default)]
+    pub war_mode_desired: bool,
 }
 
 impl Default for PlayerPvpProgress {
@@ -65,6 +69,7 @@ impl Default for PlayerPvpProgress {
             conquest: 0,
             conquest_max: CONQUEST_CAP,
             brackets: default_brackets(),
+            war_mode_desired: false,
         }
     }
 }
@@ -80,6 +85,7 @@ pub struct PlayerPvpState {
     pub progress: PlayerPvpProgress,
     pub queue: Option<PlayerPvpQueue>,
     pub battleground: Option<shared::protocol::BattlegroundSnapshot>,
+    pub war_mode: Option<shared::protocol::WarModeSnapshot>,
 }
 
 impl PlayerPvpState {
@@ -88,6 +94,7 @@ impl PlayerPvpState {
             progress,
             queue: None,
             battleground: None,
+            war_mode: None,
         }
     }
 }
@@ -199,6 +206,10 @@ impl Plugin for PvpPlugin {
         );
         app.add_systems(Update, process_rated_queue_requests);
         app.add_systems(Update, process_pvp_dequeue_requests);
+        app.add_systems(
+            Update,
+            (pvp_war_mode::receive_requests, pvp_war_mode::sync_state).chain(),
+        );
     }
 }
 

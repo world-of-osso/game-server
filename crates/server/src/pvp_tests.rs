@@ -160,6 +160,7 @@ fn build_snapshot_reflects_queue_kind() {
     let state = PlayerPvpState {
         progress: PlayerPvpProgress::default(),
         battleground: None,
+        war_mode: None,
         queue: Some(PlayerPvpQueue::RatedBracket {
             bracket: PvpBracketSnapshot::SoloShuffle,
         }),
