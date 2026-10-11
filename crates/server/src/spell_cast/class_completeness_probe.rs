@@ -248,6 +248,8 @@ fn census_harness(class: u8) -> Harness {
     h.app
         .insert_resource(super::teleport_positions::load_positions(&conn).unwrap());
     h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    h.app
         .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
     h.app.init_resource::<crate::maps::InstanceManager>();
     h.app.init_resource::<crate::group::GroupRegistry>();
