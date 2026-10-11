@@ -26,6 +26,7 @@ struct ObjectTemplate {
     bounds: Option<GameObjectBounds>,
     chair: Option<crate::chair::Chair>,
     scripted: bool,
+    spellcaster: Option<super::spellcaster::SpellcasterObject>,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -72,13 +73,26 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
                 })
                 .transpose()?,
             scripted: !row.get::<_, String>(7)?.is_empty() || !row.get::<_, String>(8)?.is_empty(),
+            spellcaster: (go_type == super::spellcaster::GAMEOBJECT_TYPE_SPELLCASTER)
+                .then(|| -> rusqlite::Result<_> {
+                    Ok(super::spellcaster::SpellcasterObject {
+                        spell: row.get(16)?,
+                        charges: row.get(17)?,
+                        party_only: row.get::<_, u32>(18)? != 0,
+                        condition: row.get(19)?,
+                        radius_override: row.get(20)?,
+                        uses: 0,
+                    })
+                })
+                .transpose()?,
         },
     ))
 }
 
 pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObjectTemplates> {
     let mut query = conn.prepare("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
-        d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5
+        d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
+        t.Data0,t.Data1,t.Data2,t.Data5,t.Data8
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
         WHERE t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)")?;
     let templates = query
@@ -111,6 +125,23 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
     }
     if template.scripted {
         return Some(format!("gameobject {entry} requires custom script"));
+    }
+    if let Some(spellcaster) = &template.spellcaster {
+        return (spellcaster.condition != 0)
+            .then(|| {
+                format!(
+                    "gameobject {entry} requires PlayerCondition {}",
+                    spellcaster.condition
+                )
+            })
+            .or_else(|| {
+                template.bounds.is_none().then(|| {
+                    format!(
+                        "gameobject {entry} missing display {}",
+                        template.info.display_id
+                    )
+                })
+            });
     }
     if !matches!(
         template.info.go_type,
@@ -197,6 +228,9 @@ fn spawn_object(
     ));
     if let Some(chair) = template.chair {
         object.insert(chair);
+    }
+    if let Some(spellcaster) = template.spellcaster {
+        object.insert(spellcaster);
     }
 }
 
