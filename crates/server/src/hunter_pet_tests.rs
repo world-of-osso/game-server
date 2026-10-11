@@ -7,6 +7,11 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{ModelDisplay, Npc, Position, UnitFactionTemplate, UnitLevel};
+use shared::protocol::{
+    InteractNpc, InteractionChannel, InteractionKind, InteractionOpened, NpcRole, PetStableChannel,
+    PetStableContents, PetStableError, PetStableFailed, PetStableOperation, PetStableRequest,
+    SelectGossipOption,
+};
 use shared::spell_data::CastFailReason;
 
 use super::*;
@@ -74,7 +79,22 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
                 ..Default::default()
             });
             app.insert_resource(db);
-            app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
+            app.insert_resource(
+                crate::faction::world_db_faction_templates().expect("real faction metadata"),
+            );
+            let conn = Connection::open_with_flags(
+                crate::test_data::world_db_path(),
+                OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .unwrap();
+            app.insert_resource(crate::npc_interaction::load_gossip_catalog(&conn).unwrap());
+            app.init_resource::<StableInbox>()
+                .add_systems(First, collect_stable_inbox);
+            app.add_plugins((
+                HunterPetPlugin,
+                crate::creature_ai::CreatureAiPlugin,
+                crate::npc_interaction::NpcInteractionPlugin,
+            ));
         },
     )?;
     let template = &h.app.world().resource::<WorldData>().templates[&entry];
@@ -305,6 +325,291 @@ fn a_summoned_pet_runs_after_its_owner() {
     let at = *h.app.world().get::<Position>(pet).unwrap();
     let gap = (20.0 - at.x).hypot(at.z);
     assert!(gap <= 4.5, "pet {gap} yards from its owner at {at:?}");
+}
+
+#[derive(Resource, Default)]
+struct StableInbox {
+    opened: Vec<InteractionOpened>,
+    contents: Vec<PetStableContents>,
+    failed: Vec<PetStableFailed>,
+}
+
+// HostClient replies must be consumed in First, before Lightyear clears them in Last.
+fn collect_stable_inbox(
+    mut opened: Query<&mut MessageReceiver<InteractionOpened>>,
+    mut contents: Query<&mut MessageReceiver<PetStableContents>>,
+    mut failed: Query<&mut MessageReceiver<PetStableFailed>>,
+    mut inbox: ResMut<StableInbox>,
+) {
+    for mut receiver in &mut opened {
+        inbox.opened.extend(receiver.receive());
+    }
+    for mut receiver in &mut contents {
+        inbox.contents.extend(receiver.receive());
+    }
+    for mut receiver in &mut failed {
+        inbox.failed.extend(receiver.receive());
+    }
+}
+
+fn stable_master_hunter(path: &Path) -> Harness {
+    let mut h = hunter(path, HOGGER).expect("real stable hunter fixture");
+    let at = *h.app.world().get::<Position>(h.caster).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: 6749,
+            name: "Erma".into(),
+        },
+        NpcFlags(NpcFlags::GOSSIP | NpcFlags::STABLEMASTER),
+        UnitFactionTemplate(1),
+        at,
+    ));
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<InteractNpc>::default(),
+        MessageReceiver::<InteractNpc>::default(),
+        MessageSender::<InteractionOpened>::default(),
+        MessageReceiver::<InteractionOpened>::default(),
+        MessageSender::<SelectGossipOption>::default(),
+        MessageReceiver::<SelectGossipOption>::default(),
+        MessageSender::<PetStableRequest>::default(),
+        MessageReceiver::<PetStableRequest>::default(),
+        MessageSender::<PetStableContents>::default(),
+        MessageReceiver::<PetStableContents>::default(),
+        MessageSender::<PetStableFailed>::default(),
+        MessageReceiver::<PetStableFailed>::default(),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<InteractNpc>>(h.connection)
+        .unwrap()
+        .send::<InteractionChannel>(InteractNpc {
+            npc: h.npc.to_bits(),
+        });
+    h.advance(3);
+    let opened = h
+        .app
+        .world_mut()
+        .resource_mut::<StableInbox>()
+        .opened
+        .pop()
+        .expect("real NPC hello response");
+    if let InteractionKind::Gossip(menu) = opened.kind {
+        // Authored content_gossip_menu_option9821/0 is StableMaster; other visible
+        // options are battle-pet healing, not additional combat-pet services.
+        let stable_option = menu
+            .options
+            .iter()
+            .find(|option| option.text == "I'd like to stable my pet here.")
+            .expect("Erma's authored combat-pet stable option")
+            .option_id;
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<SelectGossipOption>>(h.connection)
+            .unwrap()
+            .send::<InteractionChannel>(SelectGossipOption {
+                npc: h.npc.to_bits(),
+                option_id: stable_option,
+            });
+        h.advance(3);
+        let opened = h
+            .app
+            .world_mut()
+            .resource_mut::<StableInbox>()
+            .opened
+            .pop()
+            .expect("stable gossip selection response");
+        assert_eq!(opened.kind, InteractionKind::Role(NpcRole::StableMaster));
+    } else {
+        assert_eq!(opened.kind, InteractionKind::Role(NpcRole::StableMaster));
+    }
+    h
+}
+
+fn stable_request(h: &mut Harness, operation: PetStableOperation) {
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<PetStableRequest>>(h.connection)
+        .unwrap()
+        .send::<PetStableChannel>(PetStableRequest {
+            npc: h.npc.to_bits(),
+            operation,
+        });
+    h.advance(3);
+}
+
+fn stable_contents(h: &mut Harness) -> PetStableContents {
+    h.app
+        .world_mut()
+        .resource_mut::<StableInbox>()
+        .contents
+        .pop()
+        .expect("authoritative stable contents response")
+}
+
+#[test]
+fn pet_lifecycle_stable_move_rename_spec_and_reopen() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut h = stable_master_hunter(&path);
+    stable_request(&mut h, PetStableOperation::List);
+    let contents = stable_contents(&mut h);
+    assert_eq!(contents.current, Some(0));
+    assert_eq!(contents.pets[0].family, "Wolf");
+    assert_eq!(contents.pets[0].specialization, Some(74));
+    let pet = pet_out(&h);
+    h.app.world_mut().get_mut::<Health>(pet).unwrap().current = 23.0;
+    stable_request(&mut h, PetStableOperation::Swap { from: 0, to: 204 });
+    let contents = stable_contents(&mut h);
+    assert_eq!(contents.current, None);
+    assert_eq!(contents.pets[0].slot, 204);
+    assert_eq!(contents.pets[0].health, 23.0);
+    assert!(h.app.world().get_entity(pet).is_err());
+    stable_request(
+        &mut h,
+        PetStableOperation::Rename {
+            slot: 204,
+            name: "Ash".into(),
+        },
+    );
+    assert_eq!(stable_contents(&mut h).pets[0].name, "Ash");
+    stable_request(
+        &mut h,
+        PetStableOperation::Specialization {
+            slot: 204,
+            specialization: 79,
+        },
+    );
+    assert_eq!(stable_contents(&mut h).pets[0].specialization, Some(79));
+    drop(h);
+
+    let mut reloaded = stable_master_hunter(&path);
+    stable_request(&mut reloaded, PetStableOperation::List);
+    let contents = stable_contents(&mut reloaded);
+    assert_eq!(contents.current, None);
+    assert_eq!(contents.pets[0].name, "Ash");
+    assert_eq!(contents.pets[0].health, 23.0);
+    assert_eq!(contents.pets[0].specialization, Some(79));
+    stable_request(&mut reloaded, PetStableOperation::Swap { from: 204, to: 0 });
+    assert_eq!(stable_contents(&mut reloaded).pets[0].slot, 0);
+    reloaded.cast_and_deliver(CALL_PET_1, None);
+    assert_eq!(
+        reloaded
+            .app
+            .world()
+            .get::<Health>(pet_out(&reloaded))
+            .unwrap()
+            .current,
+        23.0
+    );
+    assert_eq!(
+        reloaded
+            .app
+            .world()
+            .get::<Npc>(pet_out(&reloaded))
+            .unwrap()
+            .name,
+        "Ash"
+    );
+    stable_request(&mut reloaded, PetStableOperation::Abandon { slot: 0 });
+    assert!(stable_contents(&mut reloaded).pets.is_empty());
+    drop(reloaded);
+    let last = hunter(&path, HOGGER).expect("reopened abandoned pet fixture");
+    assert!(saved(&last).active[0].is_none());
+    assert!(saved(&last).stabled.iter().all(Option::is_none));
+}
+
+#[test]
+fn pet_lifecycle_stable_swaps_active_slots_without_replacing_owned_pet() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let db = open_db(&path);
+    let mut stored = load_pet_stable(&db.db, CHARACTER_ID).unwrap();
+    let mut second = stored_wolf();
+    second.name = "Ember".into();
+    stored.active[1] = Some(second);
+    save_pet_stable(&db.db, CHARACTER_ID, &stored);
+    drop(db);
+    let mut h = stable_master_hunter(&path);
+    let pet = pet_out(&h);
+    stable_request(&mut h, PetStableOperation::Swap { from: 0, to: 0 });
+    assert_eq!(stable_contents(&mut h).pets.len(), 2);
+    stable_request(&mut h, PetStableOperation::Swap { from: 0, to: 1 });
+    assert_eq!(stable_contents(&mut h).current, Some(1));
+    assert_eq!(pet_out(&h), pet);
+    assert_eq!(h.app.world().get::<HunterPet>(pet).unwrap().slot, 1);
+    stable_request(
+        &mut h,
+        PetStableOperation::Rename {
+            slot: 1,
+            name: "Ash".into(),
+        },
+    );
+    assert_eq!(stable_contents(&mut h).pets[1].name, "Ash");
+    assert_eq!(h.app.world().get::<Npc>(pet).unwrap().name, "Ash");
+    stable_request(&mut h, PetStableOperation::Abandon { slot: 0 });
+    assert_eq!(stable_contents(&mut h).pets.len(), 1);
+    assert_eq!(pet_out(&h), pet);
+}
+
+#[test]
+fn pet_lifecycle_stable_refusals_preserve_records() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut h = stable_master_hunter(&path);
+    let before = saved(&h);
+    for (operation, error) in [
+        (
+            PetStableOperation::Swap { from: 0, to: 205 },
+            PetStableError::InvalidSlot,
+        ),
+        (
+            PetStableOperation::Swap { from: 0, to: 4 },
+            PetStableError::SlotLocked,
+        ),
+        (
+            PetStableOperation::Rename {
+                slot: 0,
+                name: "8Bad".into(),
+            },
+            PetStableError::InvalidName,
+        ),
+        (
+            PetStableOperation::Specialization {
+                slot: 0,
+                specialization: 999,
+            },
+            PetStableError::InvalidSpecialization,
+        ),
+    ] {
+        stable_request(&mut h, operation);
+        let failure = h
+            .app
+            .world_mut()
+            .resource_mut::<StableInbox>()
+            .failed
+            .pop()
+            .expect("stable refusal response");
+        assert_eq!(failure.error, error);
+        assert_eq!(saved(&h), before);
+    }
+}
+
+#[test]
+fn pet_lifecycle_stable_rejects_closed_interaction_without_mutation() {
+    let path = db_path();
+    seed_stable(&path, Some(0));
+    let mut h = stable_master_hunter(&path);
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<crate::npc_interaction::ActiveInteraction>();
+    stable_request(&mut h, PetStableOperation::Abandon { slot: 0 });
+    let failures = &h.app.world().resource::<StableInbox>().failed;
+    assert_eq!(
+        failures.last().map(|failure| failure.error),
+        Some(PetStableError::NotInteracting)
+    );
+    assert!(saved(&h).active[0].is_some());
 }
 
 #[test]

@@ -65,6 +65,12 @@ impl Plugin for HunterPetPlugin {
             .add_systems(Startup, load_pet_catalog)
             .add_systems(Update, load_pet_stables)
             .add_systems(
+                Update,
+                crate::pet_stable::process_pet_stable_requests
+                    .after(crate::npc_interaction::close_invalid_interactions)
+                    .after(load_pet_stables),
+            )
+            .add_systems(
                 FixedUpdate,
                 persist_changed_pet_health.after(crate::combat::auto_attack_system),
             )
@@ -80,6 +86,8 @@ impl Plugin for HunterPetPlugin {
 #[derive(Resource, Default)]
 pub(crate) struct PetCatalog {
     pub default_specializations: HashMap<u32, u32>,
+    pub families: HashMap<u32, (String, u32)>,
+    pub specializations: Vec<shared::protocol::PetSpecializationInfo>,
 }
 
 fn load_pet_catalog(mut commands: Commands) {
@@ -98,8 +106,23 @@ pub(crate) fn read_pet_catalog(conn: &Connection) -> rusqlite::Result<PetCatalog
     let default_specializations = families
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    let mut family_names = conn.prepare("SELECT ID, Name_lang, IconFileID FROM creature_family")?;
+    let families = family_names
+        .query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    let mut specs = conn.prepare("SELECT ID, Name_lang FROM chr_specialization WHERE ClassID=0 AND Flags & 32=0 ORDER BY OrderIndex")?;
+    let specializations = specs
+        .query_map([], |row| {
+            Ok(shared::protocol::PetSpecializationInfo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(PetCatalog {
         default_specializations,
+        families,
+        specializations,
     })
 }
 
@@ -373,7 +396,7 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
 }
 
 /// `Player::GetOrInitPetStable`: attach this character's pet storage once.
-fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
+pub(crate) fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
     if world.get::<PetStable>(owner).is_none() {
         let character_id = character_id(world, owner)?;
         world.entity_mut(owner).insert(PetStable {
@@ -541,7 +564,7 @@ pub(crate) fn abandon_or_dismiss_pet(world: &mut World, pet: Entity) {
     remove_pet(world, pet);
 }
 
-fn remove_pet(world: &mut World, pet: Entity) {
+pub(crate) fn remove_pet(world: &mut World, pet: Entity) {
     let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
         return;
     };
