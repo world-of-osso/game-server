@@ -29,7 +29,9 @@ Initial RED1/9: eight expected missing-behavior failures; foreign-pet exclusion 
 
 95604f2 adds three concrete boundaries: Energy total/expiry, channel cancellation and immune-hit resource refusal, focused3/3. The first boundary command put libtest filters in Cargo's argument position and failed before tests; corrected argv runs those3 cases. No fabricated whole-nine RED or full-crate/live/rotation proof.
 
-Final integration gate pending. Durable evidence: `game-engine/data/diagnostics/spell-dummy14-2026-10-10/` (frozen before/after source tars,118-row equivalence, native clock/variable receipts, census/all40 generators and proof logs). Parent owns independent integration acceptance.
+Merged origin/master before the requested gate (already up to date at143ea18). Single requested `cargo test -p server --bin game-server spell_cast` ran ONCE:347 passed/2 failed. Both failures were existing fixtures loading259495 without its newly required native265157/269747 children, not a production/data failure. ff410fe adds those real rows to the fixture stores and retains the unbound cone-actor assertions. Bounded rerun of those2 failures plus all12 batch14 cases:14/14, warning-free. No repeated broad gate or fresh349/349 claim. `cargo check --locked -p server --bin game-server` passes at143ea18; later Rust changes are test-only. Final `cargo fmt --all --check` passes atff410fe. No full-crate/live/rotation or independent acceptance claim. Manual readability scan records long explicit plan functions; metric CLI unavailable.
+
+Durable evidence: `game-engine/data/diagnostics/spell-dummy14-2026-10-10/` (frozen before/after source tars,118-row equivalence, native clock/variable receipts, census/all40 generators and proof logs). Parent owns independent integration acceptance.
 
 ## All40-spec preference table
 

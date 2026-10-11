@@ -8,7 +8,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 
 Eye Beam's native2000ms/200ms/EXTRA_INITIAL_PERIOD yields11 attacks. Local variable316's total expression references10: retain the discrepancy, do not replace the native clock with a guessed timer. Rank fixtures explicitly restrict KnownSpells to prevent automatic passive sync from making the no-rank case vacuous. Pet fixtures assert66 damage from the real22AP inherited state; no production scaling workaround. Landing player-CC fixtures require actual duel hostility, not an NPC faction substituted onto a player.
 
-Frozen e88f0a6 census166 roots/90 reviewed/76 underived becomes164/93/71 at95604f2. Remaining Dummy roots259489 and360194 close; Metamorphosis consumes its root E3 while descendants retain gaps. Native118-row equivalence and fixed40-row table checked; proof/integration limits are recorded in the coverage ledger. Guardian inheritance/wolf melee remain unchanged.
+Frozen e88f0a6 census166 roots/90 reviewed/76 underived becomes164/93/71 at95604f2. Remaining Dummy roots259489 and360194 close; Metamorphosis consumes its root E3 while descendants retain gaps. Native118-row equivalence and fixed40-row table checked. Requested single spell_cast gate347/349 exposed two fixture stores missing the new authentic Wildfire children; ff410fe adds those rows and bounded failing-plus-new cases pass14/14. No second broad gate claim; proof/integration limits are recorded in the coverage ledger. Guardian inheritance/wolf melee remain unchanged.
 
 ## Thirteenth batch: authored hits, ranks and channel clocks
 
