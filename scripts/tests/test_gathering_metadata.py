@@ -43,7 +43,7 @@ class GatheringMetadataTests(unittest.TestCase):
         conn.executemany("INSERT INTO content_item VALUES (?)", [(2318,), (2934,)])
         conn.execute("CREATE TABLE content_creature_loot_template AS SELECT * FROM creature_loot_template")
         conn.execute("CREATE TABLE content_gameobject_template AS SELECT * FROM gameobject_template")
-        conn.execute("INSERT INTO tdb_gameobject_template (entry,type,Data1) VALUES (1617,50,1414)")
+        conn.execute("INSERT INTO tdb_gameobject_template (entry,type,name,Data1) VALUES (1617,50,'Silverleaf',1414)")
         conn.execute("INSERT INTO content_gameobject_template (entry,type,Data1) VALUES (1617,50,1414)")
         conn.commit()
         with tempfile.TemporaryDirectory() as directory:
