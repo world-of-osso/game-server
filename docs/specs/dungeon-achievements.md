@@ -8,7 +8,7 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [x] Successful scripted deaths record encounter progress; duplicate DONE does not credit it.
 - [x] Persist scheduled instance boss/encounter masks with existing instance locks; normal-copy checkpoints survive restart without acquiring scheduled reset restrictions and clear on manual reset.
 - [x] Grant Stockade achievement 633 after all three encounters, using its real Hogger criterion; deliver existing toast and snapshot to that copy's players only.
-- [x] Evaluate unconditional kill-creature (0), reach-level (5), complete-quest (27), earned-achievement dependency (8), and defeat-dungeon-encounter (165) criteria from DB2.
+- [x] Evaluate unconditional kill-creature (0), reach-level (5), complete-quest (27), earned-achievement dependency (8), successful spell casts (29), and defeat-dungeon-encounter (165) criteria from DB2.
 - [x] Credit quest completion only after successful reward persistence; incomplete/rejected turn-ins never credit. Repeat reward events remain boolean, not accumulated counts.
 - [x] Recover quest criteria from the character's persisted rewarded quest IDs on login; dependency criteria read persisted earned IDs and cascade newly earned meta-achievements to a fixed point. Reconnect sends snapshots without replaying earned toasts.
 - [x] Match Achievement.Faction (-1 both, 0 Horde, 1 Alliance) to the player's authored faction template; exclude opposing/neutral faction-only rows from grants, catalog/criteria pages and live progress.
@@ -60,4 +60,4 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 
 - Client objective tracker / achievement window rendering; client stays read-only in phase 2.
 - ModifierTree, timed, world-state and unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated.
-- Additional criteria types beyond 0/5/8/27/165.
+- Additional criteria types beyond 0/5/8/27/29/165. Cast rows require a local spell and no DB2 conditions; TDB1210 holiday404 criteria11118–11127 remain disabled.

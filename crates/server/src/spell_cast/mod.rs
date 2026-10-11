@@ -1457,6 +1457,7 @@ fn execute_cast(
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
+    crate::achievement::record_spell_cast(world, caster, spell.id);
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
@@ -1948,7 +1949,10 @@ pub(super) fn cast_triggered_with_item_level(
     spell.cast_item_level = item_level;
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, &spell, explicit, true) {
-        Ok(plan) => missiles::launch(world, caster, &spell, plan, depth),
+        Ok(plan) => {
+            crate::achievement::record_spell_cast(world, caster, spell.id);
+            missiles::launch(world, caster, &spell, plan, depth);
+        }
         Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
     }
 }

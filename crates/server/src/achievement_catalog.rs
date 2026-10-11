@@ -21,6 +21,7 @@ pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
     CompleteQuest(u32),
+    CastSpell(u32),
     DefeatEncounter(u32),
 }
 
@@ -30,6 +31,7 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
             Self::CompleteQuest(_) => 27,
+            Self::CastSpell(_) => 29,
             Self::DefeatEncounter(_) => 165,
         }
     }
@@ -42,6 +44,7 @@ impl CriteriaEvent {
             Self::ReachLevel(_) => true,
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
+            | Self::CastSpell(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -117,6 +120,14 @@ pub(crate) struct TreeProgress {
 }
 
 impl AchievementCatalog {
+    pub(super) fn tracks(&self, event: CriteriaEvent) -> bool {
+        self.event_criteria
+            .get(&event.kind())
+            .into_iter()
+            .flatten()
+            .any(|id| event.matches(&self.criteria[id]))
+    }
+
     /// Apply one event and return newly earned toasts. Map achievements are granted
     /// only at the complete-run boundary, not on a partial dungeon's boss kill.
     pub fn update(
@@ -440,7 +451,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT ID, Type, Asset, ModifierTreeId, StartEvent, StartTimer, FailEvent, EligibilityWorldStateID FROM criteria")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -451,7 +462,12 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             Criteria {
                 kind,
                 asset: row.get::<_, i32>(2)? as u32,
-                supported: matches!(kind, 0 | 5 | 8 | 27 | 165)
+                // TDB1210 criteria_data:11118-11127 require holiday404;
+                // 5258 has data_type0 (no condition). No holiday inference.
+                supported: (matches!(kind, 0 | 5 | 8 | 27 | 165)
+                    || (kind == 29
+                        && row.get::<_, bool>(8)?
+                        && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
                     && conditional.iter().all(|value| *value == 0),
             },
         ))
