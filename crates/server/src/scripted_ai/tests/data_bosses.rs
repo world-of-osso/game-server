@@ -136,7 +136,7 @@ fn boss_timeline_data_bound_skum_uses_its_authored_smartai_deadline() {
         .timeline
         .iter()
         .find_map(|event| match event {
-            EncounterTimelineEvent::Timers { caster, timers } if *caster == boss.to_bits() => {
+            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
                 timers.iter().find(|timer| timer.spell_id == 6254)
             }
             _ => None,

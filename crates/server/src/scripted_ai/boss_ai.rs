@@ -156,6 +156,7 @@ fn publish_script_timers<S: BossScript>(script: &mut S, ctx: &mut Ctx) {
             map,
             shared::protocol::EncounterTimelineEvent::Timers {
                 caster: ctx.me.to_bits(),
+                sample_unix_ms: shared::protocol::read_encounter_unix_ms(),
                 timers,
             },
         );

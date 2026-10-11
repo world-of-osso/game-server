@@ -136,7 +136,7 @@ fn cobrahn_timeline_uses_selected_timer_and_warns_only_on_real_cast() {
         .iter()
         .rev()
         .find_map(|e| match e {
-            EncounterTimelineEvent::Timers { caster, timers } if *caster == boss.to_bits() => {
+            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
                 timers
                     .iter()
                     .find(|t| t.spell_id == LIGHTNING_BOLT)
