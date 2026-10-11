@@ -32,7 +32,10 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     let party = party_units(world, follower.owner);
     if follower.profile.heal_spell != 0 {
         if let Some(patient) = lowest_health(world, &party, unit) {
-            pursue(world, unit, patient, follower.profile.heal_spell, false);
+            if !pursue(world, unit, patient, follower.profile.heal_spell, false) {
+                regroup(world, unit, follower.owner);
+                return;
+            }
             cast(world, unit, patient, follower.profile.heal_spell);
             return;
         }
@@ -41,13 +44,16 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         regroup(world, unit, follower.owner);
         return;
     };
-    pursue(
+    if !pursue(
         world,
         unit,
         enemy,
         follower.profile.attack_spell,
         follower.profile.melee,
-    );
+    ) {
+        regroup(world, unit, follower.owner);
+        return;
+    }
     if needs_taunt(world, unit, enemy, follower) {
         if cast(world, unit, enemy, follower.profile.taunt_spell) {
             return;
@@ -134,11 +140,15 @@ fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) 
             .is_some_and(|victim| victim != tank)
 }
 
-fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee: bool) {
+fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee: bool) -> bool {
     let reach = if melee {
-        2.0
+        Some(2.0)
     } else {
         spell_reach(world, spell_id)
+    };
+    let Some(reach) = reach else {
+        warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
+        return false;
     };
     world.entity_mut(unit).remove::<FollowOwner>().insert((
         CreatureState::Pursuing {
@@ -147,17 +157,18 @@ fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee:
         FollowerReach(reach),
         CombatTarget(Some(target)),
     ));
+    true
 }
 
-fn spell_reach(world: &World, spell_id: u32) -> f32 {
+fn spell_reach(world: &World, spell_id: u32) -> Option<f32> {
     world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
         .and_then(|spell| spell.misc.as_ref())
         .and_then(|misc| misc.range)
-        .map_or(2.0, |range| {
-            range.max_hostile.max(range.max_friendly).max(2.0) - 1.0
-        })
+        .map(|range| range.max_hostile.max(range.max_friendly))
+        .filter(|range| *range > 0.0)
+        .map(|range| (range - 1.0).max(2.0))
 }
 
 fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
