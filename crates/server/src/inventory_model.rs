@@ -670,7 +670,9 @@ impl InventoryModel {
             self.equipped
                 .get(&slot)
                 .map(|item| match self.transmogs.get(&item.item_guid) {
-                    Some(modifier) => modifier.entry(visual),
+                    Some(modifier) => {
+                        modifier.entry(visual, item.item_id, self.definition_source(item.item_guid))
+                    }
                     None => EquippedAppearanceEntry {
                         slot: visual,
                         item_id: Some(item.item_id),

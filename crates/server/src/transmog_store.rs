@@ -10,7 +10,6 @@ const ITEM_TRANSMOGS: TableDefinition<u64, &[u8]> = TableDefinition::new("item_t
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ItemTransmog {
     pub source_id: u32,
-    pub item_id: u32,
     pub display_id: u32,
     pub inventory_type: u8,
     pub hidden: bool,
@@ -25,11 +24,16 @@ impl ItemTransmog {
         }
     }
 
-    pub(crate) fn entry(self, slot: EquipmentVisualSlot) -> EquippedAppearanceEntry {
+    pub(crate) fn entry(
+        self,
+        slot: EquipmentVisualSlot,
+        item_id: u32,
+        definition_source: ItemDefinitionSource,
+    ) -> EquippedAppearanceEntry {
         EquippedAppearanceEntry {
             slot,
-            item_id: Some(self.item_id),
-            definition_source: Some(ItemDefinitionSource::Retail),
+            item_id: Some(item_id),
+            definition_source: Some(definition_source),
             display_info_id: Some(self.display_id),
             inventory_type: self.inventory_type,
             hidden: self.hidden,
