@@ -61,6 +61,7 @@ pub(super) fn send_pvp_error(
 
 pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
     PvpSnapshot {
+        battleground: None,
         honor: state.progress.honor,
         honor_max: state.progress.honor_max,
         conquest: state.progress.conquest,
