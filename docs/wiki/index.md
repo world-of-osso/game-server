@@ -1,7 +1,17 @@
 # Wiki Index
 
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
+- [Raid entry and saved instances](systems/raid-entry.md) — native both-skin private proof, persistent difficulty/locks, Tuesday reset, source-derived credit and explicit data gaps.
+
+- [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
+- [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
+- [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
+- [Open-world population](systems/content-import.md#open-world-population-2026-10-11) — scoped31-map TDB promotion and runtime hosting, full map/zone census, both-skin native Boralus pick; source/phase/client coverage gaps explicit.
+
+- [Class spell batch23](systems/spell-casting.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry) — authored scripted Shadow-Blades combo doubling, real Rune-Weapon owner parry, all28 exact reviews and30 deferred revisits; [157/157/0 census/proof/limits](../spell-dummy23-coverage.md). Zero underived is no unreviewed roots, not zero missing mechanics.
+
 - [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
+- [Scenario progression](../../../game-engine/docs/wiki/systems/scenarios.md) — shared system SSOT for local scenario imports, copy-scoped achievement-evaluator reuse and both-skin native stage completion; [server contract](../specs/scenarios.md).
 
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
 - [Quest sharing, resets and timers](systems/quest-share-resets.md) — timestamp migration, local reset calendar, one-shot party offers and offline expiry.
@@ -11,6 +21,7 @@
 - [Instance population](systems/content-import.md#instance-population-2026-10-11) — authentic 124-map copy import, runtime NPC gate removal, per-map census and explicit client receipt/coverage blockers.
 
 - [Class spell batch17](systems/spell-casting.md#seventeenth-batch-named-resources-and-restorative-hooks) — eight named low-count resource/healing roots; retained164/100/64 Dummy census, source429-row equivalence and [all40/proof](../spell-dummy17-coverage.md).
+- [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11) — observer detection, authored spell-area quest masks, both-skin Jaga loot/turn-in and post-reward hiding; Vin/Rendan data-route gaps explicit.
 
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 
@@ -70,6 +81,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch19](systems/spell-casting.md#nineteenth-batch-counts-healing-totals-and-owned-damage) — source-bound counts, total healing, dispel Horror, owned Havoc copies and one-shot fatal-hit rescue; [all40/proof/limits](../spell-dummy19-coverage.md).
 
 - [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
+- [Quest GO/spell objectives](systems/game-objects.md#quest-objects-2026-10-11) — authored locks, goober use, chest quest-item loot and personal/group spell-credit events; real-data turn-in tests and retained Retail gaps.
 
 - [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
 - [Toy-effects12 non-summon cosmetics](systems/toys.md#toy-effects12-non-summon-cosmetics-2026-10-11) — ranked dummy handlers; source-bound sob, ghost, fist and water art; [coverage](../toy-effects12-coverage.md), retained underivable scripts/rendering.

@@ -73,7 +73,7 @@ pub struct InstanceLock {
 
 impl InstanceLock {
     pub fn is_expired(&self, now: i64) -> bool {
-        self.expiry < now
+        self.expiry <= now
     }
 
     /// `InstanceLock::GetEffectiveExpiryTime`.
@@ -251,8 +251,13 @@ impl InstanceLocks {
         entries: &MapDifficulty,
         instance_id: u32,
         now: i64,
+        instance_completed_encounters: u32,
     ) -> Option<TransferAbortReason> {
         let lock = self.find_active_lock(character, entries, now)?;
+        if entries.flexible_locking {
+            return (lock.data.completed_encounters & !instance_completed_encounters != 0)
+                .then_some(TransferAbortReason::AlreadyCompletedEncounter);
+        }
         (!entries.is_using_encounter_locks() && !lock.is_new && lock.instance_id != instance_id)
             .then_some(TransferAbortReason::LockedToDifferentInstance)
     }

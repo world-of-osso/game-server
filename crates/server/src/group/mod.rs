@@ -16,7 +16,7 @@ use shared::protocol::{
     GroupInvitePrompt, GroupPortraitAppearance, GroupRosterSnapshot, GroupUninviteIntent,
     LeaveGroup, MinimapPing, MinimapPingRequest, PromoteGroupLeader, RaidTargetIcons,
     ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupAssistant, SetGroupLootMethod,
-    SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
+    SetGroupLootThreshold, SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -30,7 +30,8 @@ pub struct GroupPlugin;
 impl Plugin for GroupPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GroupRegistry>()
-            .init_resource::<crate::maps::difficulty::DifficultyChanges>();
+            .init_resource::<crate::maps::difficulty::DifficultyChanges>()
+            .init_resource::<crate::maps::raid::RaidChanges>();
         app.init_resource::<member_state::SentMemberStates>();
         app.add_systems(
             Update,
@@ -59,6 +60,7 @@ struct GroupCommandReceivers<'w, 's> {
     roles: Receivers<'w, 's, SetGroupRole>,
     assistants: Receivers<'w, 's, SetGroupAssistant>,
     loot: Receivers<'w, 's, SetGroupLootMethod>,
+    loot_threshold: Receivers<'w, 's, SetGroupLootThreshold>,
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
     countdowns: Receivers<'w, 's, GroupCountdownRequest>,
@@ -90,6 +92,7 @@ type OnlinePlayers<'w, 's> = Query<
         Option<&'static UnitLevel>,
         Option<&'static crate::maps::difficulty::DungeonDifficulty>,
         Option<&'static EquipmentAppearance>,
+        Option<&'static crate::maps::RaidDifficulty>,
     ),
 >;
 
@@ -100,6 +103,7 @@ fn process_group_commands(
     mut registry: ResMut<GroupRegistry>,
     time: Res<Time>,
     mut difficulty_changes: ResMut<crate::maps::difficulty::DifficultyChanges>,
+    mut raid_changes: ResMut<crate::maps::raid::RaidChanges>,
 ) {
     let online = build_online_view(&players);
     let mut effects = registry.sync_presence(&online);
@@ -112,6 +116,12 @@ fn process_group_commands(
     ));
     let connections = connections_by_character(&senders.connections, &players);
     deliver_effects(&effects, &mut registry, &online, &connections, &mut senders);
+    raid_changes
+        .0
+        .extend(effects.iter().filter_map(|effect| match *effect {
+            GroupEffect::RaidDifficulty { to, selection } => Some((to, selection)),
+            _ => None,
+        }));
     difficulty_changes
         .0
         .extend(effects.iter().filter_map(|effect| match *effect {
@@ -124,7 +134,7 @@ fn build_online_view(players: &OnlinePlayers) -> OnlineView {
     players
         .iter()
         .map(
-            |(entity, player, client_id, level, difficulty, equipment)| {
+            |(entity, player, client_id, level, difficulty, equipment, raid_difficulty)| {
                 (
                     client_id.0,
                     OnlineMember {
@@ -133,6 +143,7 @@ fn build_online_view(players: &OnlinePlayers) -> OnlineView {
                         class: player.class,
                         level: level.map_or(1, |l| l.0),
                         portrait: portrait_appearance(player, equipment),
+                        raid_difficulty: raid_difficulty.copied().unwrap_or_default(),
                         dungeon_difficulty: difficulty
                             .map_or(crate::maps::store::DIFFICULTY_NORMAL, |difficulty| {
                                 difficulty.0
@@ -169,7 +180,7 @@ fn drain<M: lightyear::prelude::Message>(
 ) -> Vec<(CharacterId, M)> {
     let mut drained = Vec::new();
     for (link, mut receiver) in receivers.iter_mut() {
-        let Ok((_, _, client_id, _, _, _)) = players.get(link.0) else {
+        let Ok((_, _, client_id, _, _, _, _)) = players.get(link.0) else {
             receiver.receive().for_each(drop);
             continue;
         };
@@ -218,6 +229,9 @@ fn apply_commands(
     for (from, msg) in drain(&mut rx.loot, players) {
         effects.extend(registry.set_loot_method(from, msg.method));
     }
+    for (from, msg) in drain(&mut rx.loot_threshold, players) {
+        effects.extend(registry.set_loot_threshold(from, msg.quality));
+    }
     for (from, _) in drain(&mut rx.ready_starts, players) {
         effects.extend(registry.start_ready_check(from, online));
     }
@@ -247,7 +261,7 @@ fn connections_by_character(
     connections
         .iter()
         .filter_map(|(conn, link)| {
-            let (_, _, client_id, _, _, _) = players.get(link.0).ok()?;
+            let (_, _, client_id, _, _, _, _) = players.get(link.0).ok()?;
             Some((client_id.0, conn))
         })
         .collect()
@@ -334,7 +348,7 @@ fn deliver_effects(
                 send_to(&mut senders.countdowns, connections, *to, update.clone());
             }
             // Applied to the player by maps::difficulty (DifficultyChanges).
-            GroupEffect::DungeonDifficulty { .. } => {}
+            GroupEffect::DungeonDifficulty { .. } | GroupEffect::RaidDifficulty { .. } => {}
             GroupEffect::ReadyCheck(group_id) => {
                 let Some((recipients, update)) = registry.build_ready_check(*group_id) else {
                     continue;
@@ -388,6 +402,7 @@ fn empty_roster() -> GroupRosterSnapshot {
         total_count: 0,
         members: Vec::new(),
         loot_method: shared::loot::LootMode::PersonalLoot,
+        loot_threshold: 2,
     }
 }
 

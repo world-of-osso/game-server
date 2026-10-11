@@ -48,6 +48,7 @@ fn fixture(id: u32, tools: Option<Tools>) -> (World, Entity, u64, SpellInfo) {
     world.insert_resource(ItemTemplates {
         retail: HashMap::from([(id, template)]),
         forever: HashMap::from([(id, template)]),
+        loot_need: Default::default(),
     });
     world.insert_resource(VendorCatalog::default());
     world.insert_resource(data);

@@ -74,6 +74,11 @@ for table in "${TDB_TABLES[@]}"; do
     TDB_ARGS+=("$table=$f")
 done
 
+if [[ ! -f "$TDB_DIR/spell_area.sql" ]]; then
+    echo "ERROR: Missing TDB excerpt: $TDB_DIR/spell_area.sql" >&2
+    exit 1
+fi
+
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
 python3 "$SCRIPT_DIR/crafting_data.py" --check --source-dir "$CRAFTING_SOURCE_DIR"
 python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT"
@@ -93,6 +98,7 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DU
 
 echo "  Importing TDB tables ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_schema.sql" --prefix tdb_ "${TDB_ARGS[@]}"
+python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/spell_area_schema.sql" --prefix tdb_ "spell_area=$TDB_DIR/spell_area.sql"
 python3 "$SCRIPT_DIR/retail_action_bars.py" --db "$DB_PATH"
 
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---
