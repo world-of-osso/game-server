@@ -101,6 +101,34 @@ fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
 }
 
 #[test]
+fn dummy13_execute_partial_optional_spend_refusal_and_trigger_do_not_invent_refunds() {
+    let mut h = harness(Vec::new(), &[163201, 260798, 316405], 1).unwrap();
+    let caster = h.caster;
+    let target = h.npc;
+    apply(&mut h, caster, caster, 316405, u32::MAX);
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 900.0;
+    h.set_power(PowerType::Rage, 300.0);
+    execute(&mut h, 163201, Some(target));
+    assert_eq!(
+        h.power(PowerType::Rage),
+        30.0,
+        "10% of actual300, not maximum400"
+    );
+    h.set_power(PowerType::Rage, 100.0);
+    let spell = world_db().unwrap().store.get(163201).unwrap();
+    let before = h.health(target);
+    assert!(super::execute_cast(h.app.world_mut(), caster, spell, Some(target)).is_err());
+    assert_eq!(h.power(PowerType::Rage), 100.0);
+    assert_eq!(h.health(target), before);
+    super::cast_triggered(h.app.world_mut(), caster, 163201, Some(target), 1);
+    assert_eq!(
+        h.power(PowerType::Rage),
+        100.0,
+        "triggered cast paid no Rage"
+    );
+}
+
+#[test]
 fn dummy13_shadow_word_death_native_execute_threshold_and_deathspeaker() {
     for (rank, health, multiplier) in [
         (false, 1000.0, 1.0),
@@ -211,6 +239,31 @@ fn dummy13_bestial_wrath_buff_and_strike_use_own_pets_current_target() {
 }
 
 #[test]
+fn dummy13_bestial_wrath_buffs_only_owned_pet_even_with_no_pet_selection() {
+    let mut h = harness(Vec::new(), &[19574, 344572], 3).unwrap();
+    let own = pet(&mut h);
+    let foreign_owner = spawn_player(&mut h.app, 3, 0.0);
+    let foreign = spawn_player(&mut h.app, 3, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(foreign)
+        .insert(crate::hunter_pet::HunterPet {
+            owner: foreign_owner,
+            slot: 0,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(own)
+        .unwrap()
+        .0 = None;
+    let target = h.npc;
+    execute(&mut h, 19574, None);
+    assert!(crate::auras::has_aura(h.app.world(), own, 19574));
+    assert!(!crate::auras::has_aura(h.app.world(), foreign, 19574));
+    assert_eq!(h.health(target), 5000.0, "no inferred pet target");
+}
+
+#[test]
 fn dummy13_aspect_wild_fires_free_primary_cobra_without_later_focus_spend() {
     let mut h = harness(Vec::new(), &[193530, 193455, 34026], 3).unwrap();
     let target = h.npc;
@@ -224,6 +277,48 @@ fn dummy13_aspect_wild_fires_free_primary_cobra_without_later_focus_spend() {
     assert_eq!(shots.len(), 1, "{shots:?}");
     assert!(varied(390.4 * ((112.0 + 9.0 * 12.0) / 340.0)).contains(&(shots[0] as f32)));
     assert_eq!(focus, 100.0, "triggered Cobra must not spend Focus");
+}
+
+#[test]
+fn dummy13_haunt_foreign_owner_and_real_expiry_preserve_other_running_timer() {
+    let mut h = harness(Vec::new(), &[48181, 108853], 9).unwrap();
+    let target = h.npc;
+    let other = spawn_npc(&mut h.app, 4.0);
+    let foreign = spawn_player(&mut h.app, 9, 0.0);
+    let spell = world_db().unwrap().store.get(48181).unwrap();
+    execute(&mut h, 48181, Some(target));
+    super::execute_cast(h.app.world_mut(), foreign, spell, Some(other)).unwrap();
+    h.advance(10);
+    assert!(crate::auras::has_aura(h.app.world(), other, 48181));
+    let foreign_ready = crate::auras::aura_now(h.app.world()) + 1000.0;
+    h.app
+        .world_mut()
+        .get_mut::<super::SpellHistory>(foreign)
+        .unwrap()
+        .spell_ready_at
+        .insert(48181, foreign_ready);
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+    super::cast_triggered(h.app.world_mut(), h.caster, 108853, Some(target), 0);
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<super::SpellHistory>(foreign)
+            .unwrap()
+            .spell_ready_at[&48181],
+        foreign_ready
+    );
+    h.advance(500);
+    assert!(!crate::auras::has_aura(h.app.world(), other, 48181));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<super::SpellHistory>(foreign)
+            .unwrap()
+            .spell_ready_at[&48181],
+        foreign_ready,
+        "real expiry is not death"
+    );
 }
 
 #[test]

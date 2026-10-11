@@ -25,12 +25,12 @@ const COBRA_SHOT: u32 = 193455;
 pub(crate) const HAUNT: u32 = 48181;
 
 ///12294 explicitly names115804's healing reduction and lifetime.
-pub(super) fn mortal_wounds(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+pub(super) fn apply_mortal_wounds(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     apply_owned_aura(world, caster, target, MORTAL_WOUNDS, 1);
 }
 
 ///772 explicitly names388539, independent of talent/weapon proc guesses.
-pub(super) fn rend_bleed(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+pub(super) fn apply_rend_bleed(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     apply_owned_aura(world, caster, target, REND_BLEED, 1);
 }
 
@@ -103,7 +103,12 @@ pub(super) fn death_execute(world: &World, caster: Entity, target: Entity, amoun
 
 ///257044 explicitly names257045 and263585. Its333ms period,2000ms duration
 ///and EXTRA_INITIAL_PERIOD attribute author seven shots; no synthetic timer.
-pub(crate) fn rapid_fire_tick(world: &mut World, unit: Entity, aura: &AuraInstance, index: u8) {
+pub(crate) fn cast_rapid_fire_tick(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    index: u8,
+) {
     if index != 1 {
         return;
     }
@@ -113,7 +118,7 @@ pub(crate) fn rapid_fire_tick(world: &mut World, unit: Entity, aura: &AuraInstan
 
 ///19574 names344572 and buffs the actual persistent pet, not a temporary
 ///guardian or the owner's selected enemy. CC removal/charge ranks are separate.
-pub(super) fn bestial_wrath(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+pub(super) fn buff_and_strike_pet(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     let Some(pet) = crate::hunter_pet::summoned_pet(world, caster) else {
         return;
     };
@@ -128,12 +133,12 @@ pub(super) fn bestial_wrath(world: &mut World, caster: Entity, _spell: &SpellInf
 
 ///193530 explicitly fires a free Cobra Shot at the primary on activation.
 ///Extra nearby targets require an authored radius; don't invent geometry.
-pub(super) fn wild_primary(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+pub(super) fn cast_wild_primary(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     spell_cast::cast_triggered(world, caster, COBRA_SHOT, Some(target), depth + 1);
 }
 
 ///48181's reset is on the owned mark's death removal, not expiry/cancellation.
-pub(crate) fn haunt_removed(
+pub(crate) fn reset_haunt_on_death(
     world: &mut World,
     _unit: Entity,
     aura: &AuraInstance,
