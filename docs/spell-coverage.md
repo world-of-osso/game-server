@@ -1,6 +1,6 @@
-# Server spell behaviour coverage — 2026-10-10
+# Server spell behaviour coverage — 2026-10-11
 
-Matrix baseline: game-server spell-dummy15 revision `1e719bf`, plus spell-dummy16 (`9721cec`); local `world.db` and client DB2 `12.1.0.69933`. [Guardian follow-up](spell-guardians2-coverage.md) adds native205180/103673→205231 attack binding with direct effect28 proof, not root A. [Batch16 capabilities/all40/proof](spell-dummy16-coverage.md) adds nine bounded Arcane/Paladin/Resto Shaman paths without closing a root. Integrated Dummy census **163 roots,99 reviewed/64 underived**; numeric E3/aura4/aura226 totals and batch15 A/B/C/D matrix unchanged. Affliction core named-script presence3→4. Inheritance percentages, stamina shares and guardian melee damage remain underivable from inspected local data. No realm claim.
+Matrix: batch17 production76c4591, with integrated batch16/guardian follow-up. [Batch17 capabilities/all40/proof](spell-dummy17-coverage.md). Census **164 roots,100 reviewed/64 underived**, versus163/99/64 before: new Blood Boil disease dependency adds a retained Dummy; no old core root closed. E3=114/122, aura4=67/75, aura226=18/19. [Guardian source limits](spell-guardians2-coverage.md), Karma redirect, Eye Beam/live and Deathmark resource gaps remain unchanged. Native source-backed tests prove bounded paths only; no realm claim.
 
 ## Scope and classification
 
@@ -37,7 +37,7 @@ D uses handled/scripted selecting effects only and explicit spell-owned target p
 | Priest / Discipline (256) | 6/5/12/1 | 6/4/0/0 |
 | Priest / Holy (257) | 5/4/15/1 | 6/1/2/0 |
 | Priest / Shadow (258) | 5/5/16/0 | 5/0/4/0 |
-| Death Knight / Blood (250) | 2/4/18/0 | 4/3/2/0 |
+| Death Knight / Blood (250) | 2/4/18/0 | 5/2/2/0 |
 | Death Knight / Frost (251) | 2/6/18/0 | 5/1/2/0 |
 | Death Knight / Unholy (252) | 2/4/19/0 | 4/1/4/0 |
 | Shaman / Elemental (262) | 2/19/17/0 | 5/2/2/0 |
@@ -46,16 +46,16 @@ D uses handled/scripted selecting effects only and explicit spell-owned target p
 | Mage / Arcane (62) | 6/25/67/0 | 5/2/1/0 |
 | Mage / Fire (63) | 5/25/67/0 | 5/2/1/0 |
 | Mage / Frost (64) | 4/26/67/0 | 4/2/3/0 |
-| Warlock / Affliction (265) | 3/8/18/3 | 5/0/4/0 |
-| Warlock / Demonology (266) | 3/7/19/3 | 4/1/3/0 |
-| Warlock / Destruction (267) | 4/7/20/3 | 5/1/3/0 |
+| Warlock / Affliction (265) | 4/7/18/3 | 5/0/4/0 |
+| Warlock / Demonology (266) | 4/6/19/3 | 5/0/3/0 |
+| Warlock / Destruction (267) | 5/6/20/3 | 6/0/3/0 |
 | Monk / Brewmaster (268) | 4/3/16/0 | 6/1/2/0 |
 | Monk / Windwalker (269) | 5/3/14/0 | 5/1/3/0 |
 | Monk / Mistweaver (270) | 5/5/15/1 | 4/2/3/0 |
-| Druid / Balance (102) | 7/11/21/0 | 5/3/0/0 |
-| Druid / Feral (103) | 6/8/24/0 | 5/1/2/0 |
-| Druid / Guardian (104) | 6/8/23/0 | 4/2/3/0 |
-| Druid / Restoration (105) | 6/9/23/1 | 3/6/0/0 |
+| Druid / Balance (102) | 8/10/21/0 | 5/3/0/0 |
+| Druid / Feral (103) | 7/7/24/0 | 5/1/2/0 |
+| Druid / Guardian (104) | 7/7/23/0 | 4/2/3/0 |
+| Druid / Restoration (105) | 7/8/23/1 | 5/4/0/0 |
 | Demon Hunter / Havoc (577) | 7/11/12/0 | 5/1/2/0 |
 | Demon Hunter / Vengeance (581) | 7/9/16/0 | 4/2/3/0 |
 | Demon Hunter / Devourer (1480) | 8/9/13/0 | 4/0/2/0 |
@@ -69,203 +69,203 @@ Each book ID appears once per spec below. Core probes may be talented IDs absent
 
 ### Warrior / Arms (71)
 Book: A: 100,1464,1715,2565,163201; B: 355,1680,6552,18499,34428,57755,117313,118779,203526,205545,205546,205547,209577,215537,1258398; C: 6673,23922,156287,203524,260708,279423,294184,294189,1229376; D: —.
-Core: 12294 Mortal Strike — A[T55]; 7384 Overpower — B [handlers: E2]; 163201 Execute — A[T53]; 772 Rend — A[T57] (a308); 167105 Colossus Smash — A[T122] (a4,a343,E3); 227847 Bladestorm — C (a147,a263); 1464 Slam — A[T163]; 100 Charge — A[T16] (E3); 6552 Pummel — B [handlers: E68]; 871 Shield Wall — A[T12].
-Other A: 1715 Hamstring A[T18]; 2565 Shield Block A[T149]
+Core: 12294 Mortal Strike — A[T55]; 7384 Overpower — B [handlers: E2]; 163201 Execute — A[T53]; 772 Rend — A[T57] (a308); 167105 Colossus Smash — A[T130] (a4,a343,E3); 227847 Bladestorm — C (a147,a263); 1464 Slam — A[T171]; 100 Charge — A[T16] (E3); 6552 Pummel — B [handlers: E68]; 871 Shield Wall — A[T12].
+Other A: 1715 Hamstring A[T18]; 2565 Shield Block A[T157]
 
 ### Warrior / Fury (72)
 Book: A: 100,1464,1715,2565,163201,190411; B: 355,1680,5308,6552,18499,34428,57755,76856,117313,118779,203526,205545,205546,205547,209577,215537; C: 6673,23922,46917,81099,156287,184361,203524,231842,294184,294189,1229376; D: —.
-Core: 23881 Bloodthirst — A[T147] (a443,a458); 85288 Raging Blow — A[T124] (a4); 184367 Rampage — A[T148] (a443,a458,E3); 5308 Execute — B [handlers: E2,E30,E64]; 184364 Enraged Regeneration — B [handlers: E6,a107,a87]; 1719 Recklessness — C (E3); 190411 Whirlwind — A[T127] (a4,E3); 100 Charge — A[T16] (E3); 6552 Pummel — B [handlers: E68]; 871 Shield Wall — A[T12].
-Other A: 1464 Slam A[T163]; 1715 Hamstring A[T18]; 2565 Shield Block A[T149]; 163201 Execute A[T53]
+Core: 23881 Bloodthirst — A[T155] (a443,a458); 85288 Raging Blow — A[T132] (a4); 184367 Rampage — A[T156] (a443,a458,E3); 5308 Execute — B [handlers: E2,E30,E64]; 184364 Enraged Regeneration — B [handlers: E6,a107,a87]; 1719 Recklessness — C (E3); 190411 Whirlwind — A[T135] (a4,E3); 100 Charge — A[T16] (E3); 6552 Pummel — B [handlers: E68]; 871 Shield Wall — A[T12].
+Other A: 1464 Slam A[T171]; 1715 Hamstring A[T18]; 2565 Shield Block A[T157]; 163201 Execute A[T53]
 
 ### Warrior / Protection (73)
 Book: A: 100,1464,1715,2565,20243,163201; B: 71,355,1161,1680,6552,18499,34428,57755,117313,118779,203526,205545,205546,205547,209577,215537; C: 6673,23922,76857,156287,161798,203524,294184,294189,397708,1229376; D: —.
-Core: 23922 Shield Slam — C (a4); 20243 Devastate — A[T90] (E3); 6572 Revenge — B [handlers: E2]; 2565 Shield Block — A[T149]; 190456 Ignore Pain — C (a4,a142); 6343 Thunder Clap — A[T96] (E3); 1160 Demoralizing Shout — C (a269,a343); 871 Shield Wall — A[T12]; 355 Taunt — B [handlers: E114,E6,a11,a31]; 6552 Pummel — B [handlers: E68].
-Other A: 100 Charge A[T16] (E3); 1464 Slam A[T163]; 1715 Hamstring A[T18]; 163201 Execute A[T53]
+Core: 23922 Shield Slam — C (a4); 20243 Devastate — A[T98] (E3); 6572 Revenge — B [handlers: E2]; 2565 Shield Block — A[T157]; 190456 Ignore Pain — C (a4,a142); 6343 Thunder Clap — A[T104] (E3); 1160 Demoralizing Shout — C (a269,a343); 871 Shield Wall — A[T12]; 355 Taunt — B [handlers: E114,E6,a11,a31]; 6552 Pummel — B [handlers: E68].
+Other A: 100 Charge A[T16] (E3); 1464 Slam A[T171]; 1715 Hamstring A[T18]; 163201 Execute A[T53]
 
 ### Paladin / Holy (65)
 Book: A: 642,853,6940,19750,20271,26573,35395,53563,53600,82326,275773; B: 498,1044,4987,7328,24275,62124,66235,81297,85673,86704,114919,162056,200654; C: 465,633,1022,5502,10326,13819,23214,31884,32223,34767,34769,69820,69826,73629,73630,114852,114871,121183,183435,183997,190784,200652,205273,209202,270562,270564,290608,363613,391054,415091,440013,453785,1229376; D: 212056.
-Core: 20473 Holy Shock — A[T79]; 82326 Holy Light — A[T78]; 19750 Flash of Light — A[T22]; 85222 Light of Dawn — A[T101] (E3); 85673 Word of Glory — B [handlers: E10]; 53563 Beacon of Light — A[T65] (a226); 275773 Judgment — A[T77]; 31884 Avenging Wrath — C (a4,a262,a334); 642 Divine Shield — A[T7] (a485).
-Other A: 853 Hammer of Justice A[T24] (a4); 6940 Blessing of Sacrifice A[T150] (a41); 20271 Judgment A[T80]; 26573 Consecration A[T30]; 35395 Crusader Strike A[T75]; 53600 Shield of the Righteous A[T49] (a4) Other D: 212056 Absolution (target 119)
+Core: 20473 Holy Shock — A[T79]; 82326 Holy Light — A[T78]; 19750 Flash of Light — A[T22]; 85222 Light of Dawn — A[T109] (E3); 85673 Word of Glory — B [handlers: E10]; 53563 Beacon of Light — A[T65] (a226); 275773 Judgment — A[T77]; 31884 Avenging Wrath — C (a4,a262,a334); 642 Divine Shield — A[T7] (a485).
+Other A: 853 Hammer of Justice A[T24] (a4); 6940 Blessing of Sacrifice A[T158] (a41); 20271 Judgment A[T80]; 26573 Consecration A[T30]; 35395 Crusader Strike A[T75]; 53600 Shield of the Righteous A[T49] (a4) Other D: 212056 Absolution (target 119)
 
 ### Paladin / Protection (66)
 Book: A: 642,853,6940,19750,20271,26573,35395,53600,275779; B: 1044,7328,24275,62124,66235,81297,85673,86704,114919,162056,200654; C: 465,633,1022,5502,10326,13819,23214,31884,32223,34767,34769,69820,69826,73629,73630,76671,114852,114871,121183,161800,183435,190784,200652,205273,209202,270562,270564,290608,353367,363613,391054,453785,1229376; D: —.
 Core: 31935 Avenger's Shield — B [handlers: E2,E30,E6,E68,a27]; 275779 Judgment — A[T34]; 53600 Shield of the Righteous — A[T49] (a4); 53595 Hammer of the Righteous — A[T36] (a269,E3); 26573 Consecration — A[T30]; 31850 Ardent Defender — C (a4,a316); 86659 Guardian of Ancient Kings — C (a4); 642 Divine Shield — A[T7] (a485); 62124 Hand of Reckoning — B [handlers: E114,E6,a11]; 96231 Rebuke — B [handlers: E68].
-Other A: 853 Hammer of Justice A[T24] (a4); 6940 Blessing of Sacrifice A[T150] (a41); 19750 Flash of Light A[T22]; 20271 Judgment A[T80]; 35395 Crusader Strike A[T75]
+Other A: 853 Hammer of Justice A[T24] (a4); 6940 Blessing of Sacrifice A[T158] (a41); 19750 Flash of Light A[T22]; 20271 Judgment A[T80]; 35395 Crusader Strike A[T75]
 
 ### Paladin / Retribution (70)
 Book: A: 642,853,6940,19750,20271,26573,35395,53600,85256; B: 1044,7328,24275,62124,66235,81297,85673,86704,114919,162056,200654,403876; C: 465,633,1022,5502,10326,13819,23214,31884,32223,34767,34769,69820,69826,73629,73630,114852,114871,121183,183435,190784,200652,205273,209202,267316,270562,270564,290608,363613,391054,404752,404834,453785,1229376; D: —.
-Core: 35395 Crusader Strike — A[T75]; 20271 Judgment — A[T80]; 184575 Blade of Justice — A[T35]; 85256 Templar's Verdict — A[T120] (E3); 53385 Divine Storm — C (E3); 255937 Wake of Ashes — C (a345,a537); 31884 Avenging Wrath — C (a4,a262,a334); 642 Divine Shield — A[T7] (a485); 96231 Rebuke — B [handlers: E68].
-Other A: 853 Hammer of Justice A[T24] (a4); 6940 Blessing of Sacrifice A[T150] (a41); 19750 Flash of Light A[T22]; 26573 Consecration A[T30]; 53600 Shield of the Righteous A[T49] (a4)
+Core: 35395 Crusader Strike — A[T75]; 20271 Judgment — A[T80]; 184575 Blade of Justice — A[T35]; 85256 Templar's Verdict — A[T128] (E3); 53385 Divine Storm — C (E3); 255937 Wake of Ashes — C (a345,a537); 31884 Avenging Wrath — C (a4,a262,a334); 642 Divine Shield — A[T7] (a485); 96231 Rebuke — B [handlers: E68].
+Other A: 853 Hammer of Justice A[T24] (a4); 6940 Blessing of Sacrifice A[T158] (a41); 19750 Flash of Light A[T22]; 26573 Consecration A[T30]; 53600 Shield of the Righteous A[T49] (a4)
 
 ### Hunter / Beast Mastery (253)
 Book: A: 883,2641,56641,186265; B: 136,1543,53270,83242,83243,83244,83245,109304,162487,185358,187650,195645,204147,207097,355589,355596; C: 781,982,1462,1515,5384,6991,61648,76657,125050,127933,175686,186257,203415,207068,209997,210000,257284,259398,272651,321297,325028,325037,344572,1229376; D: —.
-Core: 34026 Kill Command — C (E3); 217200 Barbed Shot — C (E3); 193455 Cobra Shot — A[T85] (E3); 2643 Multi-Shot — C (E3); 19574 Bestial Wrath — A[T52] (a226,E3); 193530 Aspect of the Wild — A[T51] (E3); 883 Call Pet 1 — A[T26]; 186265 Aspect of the Turtle — A[T4]; 147362 Counter Shot — B [handlers: E68].
-Other A: 2641 Dismiss Pet A[T26] (missing child 47531); 56641 Steady Shot A[T104] (E3)
+Core: 34026 Kill Command — C (E3); 217200 Barbed Shot — C (E3); 193455 Cobra Shot — A[T93] (E3); 2643 Multi-Shot — C (E3); 19574 Bestial Wrath — A[T52] (a226,E3); 193530 Aspect of the Wild — A[T51] (E3); 883 Call Pet 1 — A[T26]; 186265 Aspect of the Turtle — A[T4]; 147362 Counter Shot — B [handlers: E68].
+Other A: 2641 Dismiss Pet A[T26] (missing child 47531); 56641 Steady Shot A[T112] (E3)
 
 ### Hunter / Marksmanship (254)
 Book: A: 883,2641,56641,186265; B: 136,1543,83242,83243,83244,83245,109304,162487,185358,187650,193468,195645,204147,207097,355589,355596,466904; C: 781,982,1462,1515,5384,6197,6991,61648,125050,127933,175686,186257,203415,207068,209997,210000,257284,257620,259398,272651,325028,325037,344572,1217788,1219616,1229376; D: —.
-Core: 19434 Aimed Shot — C (E3); 257044 Rapid Fire — A[T56] (a226,E3); 56641 Steady Shot — A[T104] (E3); 257620 Multi-Shot — C (E3); 53351 Kill Shot — A[T100]; 288613 Trueshot — C (a4,a148,a286); 186265 Aspect of the Turtle — A[T4]; 147362 Counter Shot — B [handlers: E68].
+Core: 19434 Aimed Shot — C (E3); 257044 Rapid Fire — A[T56] (a226,E3); 56641 Steady Shot — A[T112] (E3); 257620 Multi-Shot — C (E3); 53351 Kill Shot — A[T108]; 288613 Trueshot — C (a4,a148,a286); 186265 Aspect of the Turtle — A[T4]; 147362 Counter Shot — B [handlers: E68].
 Other A: 883 Call Pet 1 A[T26]; 2641 Dismiss Pet A[T26] (missing child 47531)
 
 ### Hunter / Survival (255)
 Book: A: 883,2641,56641,186265; B: 136,1543,83242,83243,83244,83245,109304,162487,185358,187650,190925,193265,195645,204147,207097,355589,355596; C: 781,982,1462,1515,5384,6991,61648,125050,127933,175686,186257,186289,203415,207068,209997,210000,257284,259398,263135,272651,321297,325028,325037,344572,1229376; D: —.
 Core: 259489 Kill Command — A[T63]; 186270 Raptor Strike — B [handlers: E2]; 259495 Wildfire Bomb — A[T64] (E3); 212436 Butchery — A[T44] (E3); 190925 Harpoon — B [handlers: E32,E41,E6,a455]; 186289 Aspect of the Eagle — C (E3); 186265 Aspect of the Turtle — A[T4]; 147362 Counter Shot — B [handlers: E68].
-Other A: 883 Call Pet 1 A[T26]; 2641 Dismiss Pet A[T26] (missing child 47531); 56641 Steady Shot A[T104] (E3)
+Other A: 883 Call Pet 1 A[T26]; 2641 Dismiss Pet A[T26] (missing child 47531); 56641 Steady Shot A[T112] (E3)
 
 ### Rogue / Assassination (259)
 Book: A: 703,1766,1943,2983,5277,32645,51723,196819; B: 1752,1833,2094,2818,3408,6770,8676,22482,31209,31224,76803,113780,185311,185565,212205; C: 408,921,1329,1725,1784,1804,1856,1860,1966,5761,5938,8679,51667,56814,57934,114018,315496,315584,1229376; D: —.
-Core: 1329 Mutilate — C (E3); 703 Garrote — A[T91] (a4); 1943 Rupture — A[T155] (a226,E3); 32645 Envenom — A[T154] (a4); 51723 Fan of Knives — A[T131] (E3); 185565 Poisoned Knife — B [handlers: E2,E30]; 360194 Deathmark — A[T60]; 1766 Kick — A[T165]; 5277 Evasion — A[T9].
+Core: 1329 Mutilate — C (E3); 703 Garrote — A[T99] (a4); 1943 Rupture — A[T163] (a226,E3); 32645 Envenom — A[T162] (a4); 51723 Fan of Knives — A[T139] (E3); 185565 Poisoned Knife — B [handlers: E2,E30]; 360194 Deathmark — A[T60]; 1766 Kick — A[T173]; 5277 Evasion — A[T9].
 Other A: 2983 Sprint A[T18] (a226); 196819 Eviscerate A[T45]
 
 ### Rogue / Outlaw (260)
 Book: A: 1766,2098,2983,5277,13877,193315,196819; B: 1752,1833,2094,2818,3408,6770,8676,22482,31209,31224,113780,185311,185763,212205,315341; C: 408,921,1725,1784,1804,1856,1860,1966,5761,5938,8679,51667,56814,57934,76806,79096,114018,195457,315496,315584,1214909,1229376; D: —.
-Core: 193315 Sinister Strike — A[T40]; 185763 Pistol Shot — B [handlers: E2,E30,E6,a33]; 2098 Dispatch — A[T45]; 315341 Between the Eyes — B [handlers: E2,E6,a108,a218]; 13877 Blade Flurry — A[T29] (a4,missing child 385835,E3); 13750 Adrenaline Rush — C (a226); 1214909 Roll the Bones — C (a4); 195457 Grappling Hook — C (E3); 1766 Kick — A[T165]; 5277 Evasion — A[T9].
+Core: 193315 Sinister Strike — A[T40]; 185763 Pistol Shot — B [handlers: E2,E30,E6,a33]; 2098 Dispatch — A[T45]; 315341 Between the Eyes — B [handlers: E2,E6,a108,a218]; 13877 Blade Flurry — A[T29] (a4,missing child 385835,E3); 13750 Adrenaline Rush — C (a226); 1214909 Roll the Bones — C (a4); 195457 Grappling Hook — C (E3); 1766 Kick — A[T173]; 5277 Evasion — A[T9].
 Other A: 2983 Sprint A[T18] (a226); 196819 Eviscerate A[T45]
 
 ### Rogue / Subtlety (261)
 Book: A: 53,1766,2983,5277,196819,197835,319175; B: 1752,1833,2094,2818,3408,6770,8676,22482,31209,31224,76808,113780,185311,185438,212205; C: 408,921,1725,1784,1804,1856,1860,1966,5761,5938,8679,51667,56814,57934,114014,114018,185313,196912,280719,315496,315584,1229376; D: —.
-Core: 53 Backstab — A[T88] (E3); 185438 Shadowstrike — B [handlers: E2,E30]; 196819 Eviscerate — A[T45]; 1943 Rupture — A[T155] (a226,E3); 319175 Black Powder — A[T152] (E3); 197835 Shuriken Storm — A[T114] (E3); 185313 Shadow Dance — C (a103,a275); 121471 Shadow Blades — C (a4); 1766 Kick — A[T165]; 5277 Evasion — A[T9].
+Core: 53 Backstab — A[T96] (E3); 185438 Shadowstrike — B [handlers: E2,E30]; 196819 Eviscerate — A[T45]; 1943 Rupture — A[T163] (a226,E3); 319175 Black Powder — A[T160] (E3); 197835 Shuriken Storm — A[T122] (E3); 185313 Shadow Dance — C (a103,a275); 121471 Shadow Blades — C (a4); 1766 Kick — A[T173]; 5277 Evasion — A[T9].
 Other A: 2983 Sprint A[T18] (a226)
 
 ### Priest / Discipline (256)
 Book: A: 17,527,589,2061,21562,47540; B: 585,2006,77489,200829,207948; C: 453,1706,2096,45243,161862,205065,207946,208065,215769,271534,440006,1229376; D: 212036.
-Core: 589 Shadow Word: Pain — A[T21] (a269); 585 Smite — B [handlers: E2]; 47540 Penance — A[T146] (a4); 8092 Mind Blast — A[T17] (E3); 17 Power Word: Shield — A[T8]; 194509 Power Word: Radiance — A[T140] (a4,E3); 2061 Flash Heal — A[T166]; 200829 Plea — B [handlers: E10]; 62618 Power Word: Barrier — B [handlers: E179]; 33206 Pain Suppression — B [handlers: E6,a87].
+Core: 589 Shadow Word: Pain — A[T21] (a269); 585 Smite — B [handlers: E2]; 47540 Penance — A[T154] (a4); 8092 Mind Blast — A[T17] (E3); 17 Power Word: Shield — A[T8]; 194509 Power Word: Radiance — A[T148] (a4,E3); 2061 Flash Heal — A[T174]; 200829 Plea — B [handlers: E10]; 62618 Power Word: Barrier — B [handlers: E179]; 33206 Pain Suppression — B [handlers: E6,a87].
 Other A: 527 Purify A[T19]; 21562 Power Word: Fortitude A[T23] (a4) Other D: 212036 Mass Resurrection (target 119)
 
 ### Priest / Holy (257)
 Book: A: 17,527,589,2061,21562; B: 585,2006,77489,207948; C: 453,1706,2096,20711,33076,45243,63733,77485,161862,205065,207946,208065,215769,440006,1229376; D: 212036.
-Core: 2061 Flash Heal — A[T166]; 2060 Heal — B [handlers: E10]; 139 Renew — A[T20]; 33076 Prayer of Mending — C (E3); 2050 Holy Word: Serenity — A[T95]; 34861 Holy Word: Sanctify — A[T135] (E3); 596 Prayer of Healing — A[T93] (E3); 47788 Guardian Spirit — C (a316,E3); 527 Purify — A[T19].
+Core: 2061 Flash Heal — A[T174]; 2060 Heal — B [handlers: E10]; 139 Renew — A[T20]; 33076 Prayer of Mending — C (E3); 2050 Holy Word: Serenity — A[T103]; 34861 Holy Word: Sanctify — A[T143] (E3); 596 Prayer of Healing — A[T101] (E3); 47788 Guardian Spirit — C (a316,E3); 527 Purify — A[T19].
 Other A: 17 Power Word: Shield A[T8]; 589 Shadow Word: Pain A[T21] (a269); 21562 Power Word: Fortitude A[T23] (a4) Other D: 212036 Mass Resurrection (target 119)
 
 ### Priest / Shadow (258)
 Book: A: 17,589,2061,15487,21562; B: 585,2006,77489,207948,232698; C: 453,1706,2096,15286,15407,34914,45243,47585,161862,205065,207946,208065,215769,280752,343690,1229376; D: —.
 Core: 589 Shadow Word: Pain — A[T21] (a269); 34914 Vampiric Touch — C (a4,a53); 8092 Mind Blast — A[T17] (E3); 15407 Mind Flay — C (E3); 32379 Shadow Word: Death — A[T58]; 335467 Shadow Word: Madness — C (a4,a53,E9); 228260 Voidform — A[T43] (a4,a75,a226,a235,E3); 47585 Dispersion — C (a4); 15487 Silence — A[T24].
-Other A: 17 Power Word: Shield A[T8]; 2061 Flash Heal A[T166]; 21562 Power Word: Fortitude A[T23] (a4)
+Other A: 17 Power Word: Shield A[T8]; 2061 Flash Heal A[T174]; 21562 Power Word: Fortitude A[T23] (a4)
 
 ### Death Knight / Blood (250)
 Book: A: 47541,195292; B: 56222,190778,190780,316239; C: 3714,43265,45524,48265,48707,49039,49576,50977,51986,61999,77513,81136,127344,161797,205223,220143,374721,1229376; D: —.
-Core: 49998 Death Strike — C (E3); 206930 Heart Strike — A[T123] (E3); 50842 Blood Boil — B [handlers: E2]; 195292 Death's Caress — A[T108] (a4,a53,a380,a381,a408,E3); 49028 Dancing Rune Weapon — C (a4,missing child 1206,E3); 55233 Vampiric Blood — A[T72] (a422,a443); 48792 Icebound Fortitude — A[T1] (a4); 56222 Dark Command — B [handlers: E114,E6,a11]; 47528 Mind Freeze — B [handlers: E68].
-Other A: 47541 Death Coil A[T83] (E3)
+Core: 49998 Death Strike — C (E3); 206930 Heart Strike — A[T131] (E3); 50842 Blood Boil — A[T82] (a4,a53,a380,a381); 195292 Death's Caress — A[T116] (a4,a53,a380,a381,a408,E3); 49028 Dancing Rune Weapon — C (a4,missing child 1206,E3); 55233 Vampiric Blood — A[T72] (a422,a443); 48792 Icebound Fortitude — A[T1] (a4); 56222 Dark Command — B [handlers: E114,E6,a11]; 47528 Mind Freeze — B [handlers: E68].
+Other A: 47541 Death Coil A[T91] (E3)
 
 ### Death Knight / Frost (251)
 Book: A: 47541,196770; B: 56222,77514,81333,190778,190780,316239; C: 3714,43265,45524,48265,48707,49039,49576,50977,51986,59057,61999,81229,127344,178819,194913,205223,220143,1229376; D: —.
-Core: 49020 Obliterate — A[T28] (E3); 49143 Frost Strike — A[T67] (E3); 49184 Howling Blast — A[T99] (a380,a381,E3); 194913 Glacial Advance — C (E3); 196770 Remorseless Winter — A[T141] (a395,E3); 51271 Pillar of Frost — C (a4); 48792 Icebound Fortitude — A[T1] (a4); 47528 Mind Freeze — B [handlers: E68].
-Other A: 47541 Death Coil A[T83] (E3)
+Core: 49020 Obliterate — A[T28] (E3); 49143 Frost Strike — A[T67] (E3); 49184 Howling Blast — A[T107] (a380,a381,E3); 194913 Glacial Advance — C (E3); 196770 Remorseless Winter — A[T149] (a395,E3); 51271 Pillar of Frost — C (a4); 48792 Icebound Fortitude — A[T1] (a4); 47528 Mind Freeze — B [handlers: E68].
+Other A: 47541 Death Coil A[T91] (E3)
 
 ### Death Knight / Unholy (252)
 Book: A: 47541,207317; B: 56222,190778,190780,316239; C: 3714,43265,45524,46584,48265,48707,49039,49576,50977,51462,51986,61999,77515,85948,127344,178819,205223,220143,1229376; D: —.
-Core: 85948 Festering Strike — C (E3); 55090 Scourge Strike — A[T142] (a380,a381,E3); 47541 Death Coil — A[T83] (E3); 207317 Epidemic — A[T111]; 63560 Dark Transformation — C (a4); 275699 Apocalypse — C (E3); 46584 Raise Dead — C (a4); 48792 Icebound Fortitude — A[T1] (a4); 47528 Mind Freeze — B [handlers: E68].
+Core: 85948 Festering Strike — C (E3); 55090 Scourge Strike — A[T150] (a380,a381,E3); 47541 Death Coil — A[T91] (E3); 207317 Epidemic — A[T119]; 63560 Dark Transformation — C (a4); 275699 Apocalypse — C (E3); 46584 Raise Dead — C (a4); 48792 Icebound Fortitude — A[T1] (a4); 47528 Mind Freeze — B [handlers: E68].
 No additional A/D catalog entries.
 
 ### Shaman / Elemental (262)
 Book: A: 2825,188196; B: 556,2008,8004,25504,32182,33750,73899,114911,210873,211004,211010,211015,269352,277778,277784,309328,320747,327163,328928; C: 546,2484,2645,6196,20608,51490,77756,115356,168534,192106,205495,207778,328930,378776,462854,470411,1229376; D: —.
-Core: 188196 Lightning Bolt — A[T33]; 51505 Lava Burst — A[T112]; 188389 Flame Shock — C (E3); 8042 Earth Shock — B [handlers: E2]; 61882 Earthquake — A[T136] (a226,E3,E77); 188443 Chain Lightning — A[T97] (E3); 191634 Stormkeeper — C (E3); 108271 Astral Shift — A[T10]; 57994 Wind Shear — B [handlers: E68].
+Core: 188196 Lightning Bolt — A[T33]; 51505 Lava Burst — A[T120]; 188389 Flame Shock — C (E3); 8042 Earth Shock — B [handlers: E2]; 61882 Earthquake — A[T144] (a226,E3,E77); 188443 Chain Lightning — A[T105] (E3); 191634 Stormkeeper — C (E3); 108271 Astral Shift — A[T10]; 57994 Wind Shear — B [handlers: E68].
 Other A: 2825 Bloodlust A[T23]
 
 ### Shaman / Enhancement (263)
 Book: A: 2825,188196,196884; B: 556,2008,8004,25504,32182,33750,73899,114911,210873,211004,211010,211015,269352,277778,277784,309328,320747,327163,328928; C: 546,2484,2645,6196,17364,20608,77223,115356,192106,205495,207778,328930,462854,470411,1229376; D: —.
-Core: 17364 Stormstrike — C (a4,E3); 60103 Lava Lash — A[T37] (E3); 187874 Crash Lightning — A[T129] (a4,E3); 188196 Lightning Bolt — A[T33]; 188389 Flame Shock — C (E3); 51533 Feral Spirit — A[T46] (E3,E42,E63); 196884 Feral Lunge — A[T31]; 108271 Astral Shift — A[T10]; 57994 Wind Shear — B [handlers: E68].
+Core: 17364 Stormstrike — C (a4,E3); 60103 Lava Lash — A[T37] (E3); 187874 Crash Lightning — A[T137] (a4,E3); 188196 Lightning Bolt — A[T33]; 188389 Flame Shock — C (E3); 51533 Feral Spirit — A[T46] (E3,E42,E63); 196884 Feral Lunge — A[T31]; 108271 Astral Shift — A[T10]; 57994 Wind Shear — B [handlers: E68].
 Other A: 2825 Bloodlust A[T23]
 
 ### Shaman / Restoration (264)
 Book: A: 2825,77472,188196; B: 556,2008,8004,25504,32182,33750,73899,77130,114911,210873,211004,211010,211015,269352,277778,277784,309328,320747,327163,328928; C: 546,2484,2645,6196,20608,52127,77226,77756,115356,192106,205495,207778,328930,440012,462854,470411,1229376; D: 212048.
-Core: 77472 Healing Wave — A[T76]; 8004 Healing Surge — B [handlers: E10]; 61295 Riptide — A[T81]; 1064 Chain Heal — A[T68]; 73920 Healing Rain — A[T139] (a4,a226); 98008 Spirit Link Totem — C (E3); 108280 Healing Tide Totem — C (a4,a226); 77130 Purify Spirit — B [handlers: E38]; 108271 Astral Shift — A[T10].
+Core: 77472 Healing Wave — A[T76]; 8004 Healing Surge — B [handlers: E10]; 61295 Riptide — A[T81]; 1064 Chain Heal — A[T68]; 73920 Healing Rain — A[T147] (a4,a226); 98008 Spirit Link Totem — C (E3); 108280 Healing Tide Totem — C (a4,a226); 77130 Purify Spirit — B [handlers: E38]; 108271 Astral Shift — A[T10].
 Other A: 2825 Bloodlust A[T23]; 188196 Lightning Bolt A[T33] Other D: 212048 Ancestral Vision (target 119)
 
 ### Mage / Arcane (62)
 Book: A: 116,118,122,1459,30451,44425; B: 120,130,1449,1953,2139,28271,28272,61025,61305,61721,61780,126819,161353,161354,161355,161372,210726,211088,214634,277787,277792,319836,321395,391622,460392; C: 66,3561,3562,3563,3565,3566,3567,10059,11416,11417,11418,11419,11420,32266,32267,32271,32272,33690,33691,35715,35717,49358,49359,49360,49361,53140,53142,56384,79684,80353,88342,88344,88345,88346,120145,120146,131784,132620,132621,132626,132627,176242,176244,176246,176248,190336,190740,193759,194466,210086,211076,224869,224871,224968,281400,281402,281403,281404,344587,344597,395277,395289,446534,446540,1229376,1259190,1259194; D: —.
-Core: 30451 Arcane Blast — A[T73]; 44425 Arcane Barrage — A[T151] (E3); 5143 Arcane Missiles — C (a226); 153626 Arcane Orb — B [handlers: E179,E30]; 365350 Arcane Surge — A[T156] (E3,E137); 12042 Arcane Power — A[T74]; 2139 Counterspell — B [handlers: E68]; 45438 Ice Block — A[T5].
+Core: 30451 Arcane Blast — A[T73]; 44425 Arcane Barrage — A[T159] (E3); 5143 Arcane Missiles — C (a226); 153626 Arcane Orb — B [handlers: E179,E30]; 365350 Arcane Surge — A[T164] (E3,E137); 12042 Arcane Power — A[T74]; 2139 Counterspell — B [handlers: E68]; 45438 Ice Block — A[T5].
 Other A: 116 Frostbolt A[T14]; 118 Polymorph A[T15]; 122 Frost Nova A[T18]; 1459 Arcane Intellect A[T13] (a4)
 
 ### Mage / Fire (63)
 Book: A: 116,118,122,133,1459; B: 120,130,1449,1953,2139,28271,28272,61025,61305,61721,61780,126819,161353,161354,161355,161372,210726,211088,214634,277787,277792,319836,321395,391622,460392; C: 66,3561,3562,3563,3565,3566,3567,10059,11416,11417,11418,11419,11420,12846,32266,32267,32271,32272,33690,33691,35715,35717,49358,49359,49360,49361,53140,53142,56384,80353,88342,88344,88345,88346,120145,120146,131784,132620,132621,132626,132627,176242,176244,176246,176248,190336,193759,194466,195283,210086,211076,224869,224871,224968,281400,281402,281403,281404,344587,344597,395277,395289,446534,446540,1229376,1259190,1259194; D: —.
-Core: 133 Fireball — A[T164]; 108853 Fire Blast — A[T86]; 11366 Pyroblast — B [handlers: E2]; 2948 Scorch — A[T94]; 190319 Combustion — A[T66] (a189,a226); 2120 Flamestrike — C (E3); 2139 Counterspell — B [handlers: E68]; 45438 Ice Block — A[T5].
+Core: 133 Fireball — A[T172]; 108853 Fire Blast — A[T94]; 11366 Pyroblast — B [handlers: E2]; 2948 Scorch — A[T102]; 190319 Combustion — A[T66] (a189,a226); 2120 Flamestrike — C (E3); 2139 Counterspell — B [handlers: E68]; 45438 Ice Block — A[T5].
 Other A: 116 Frostbolt A[T14]; 118 Polymorph A[T15]; 122 Frost Nova A[T18]; 1459 Arcane Intellect A[T13] (a4)
 
 ### Mage / Frost (64)
 Book: A: 116,118,122,1459; B: 120,130,1449,1953,2139,28271,28272,61025,61305,61721,61780,126819,161353,161354,161355,161372,210726,211088,214634,277787,277792,319836,321395,391622,460392,1246752; C: 66,3561,3562,3563,3565,3566,3567,10059,11416,11417,11418,11419,11420,32266,32267,32271,32272,33690,33691,35715,35717,49358,49359,49360,49361,53140,53142,56384,80353,88342,88344,88345,88346,120145,120146,131784,132620,132621,132626,132627,176242,176244,176246,176248,190336,193759,194466,210086,211076,224869,224871,224968,281400,281402,281403,281404,344587,344597,395277,395289,446534,446540,1229376,1246769,1247775,1259190,1259194; D: —.
-Core: 116 Frostbolt — A[T14]; 30455 Ice Lance — A[T115]; 44614 Flurry — C (E3); 84714 Frozen Orb — C (E3); 190356 Blizzard — C (E3); 12472 Icy Veins — B [handlers: E6,a108,a193]; 122 Frost Nova — A[T18]; 2139 Counterspell — B [handlers: E68]; 45438 Ice Block — A[T5].
+Core: 116 Frostbolt — A[T14]; 30455 Ice Lance — A[T123]; 44614 Flurry — C (E3); 84714 Frozen Orb — C (E3); 190356 Blizzard — C (E3); 12472 Icy Veins — B [handlers: E6,a108,a193]; 122 Frost Nova — A[T18]; 2139 Counterspell — B [handlers: E68]; 45438 Ice Block — A[T5].
 Other A: 118 Polymorph A[T15]; 1459 Arcane Intellect A[T13] (a4)
 
 ### Warlock / Affliction (265)
-Book: A: 688,5697,104773; B: 686,702,5784,77215,108366,187394,211715,215279; C: 126,172,698,1098,5782,6201,20707,23161,29893,101508,119898,196586,211714,216698,234153,246985,342601,1229376; D: 691,697,366222.
-Core: 172 Corruption — C (E3); 980 Agony — C (a226); 30108 Unstable Affliction — A[T50] (E3); 324536 Malefic Rapture — A[T113]; 198590 Drain Soul — A[T89]; 27243 Seed of Corruption — C (a4,E3); 205180 Summon Darkglare — C (a4,E3); 104773 Unending Resolve — A[T11] (a285,E129); 688 Summon Imp — A[T167].
-Other A: 5697 Unending Breath A[T25] (a58) Other D: 691 Summon Felhunter (SUMMON_PET56: only Summon Imp supported); 697 Summon Voidwalker (SUMMON_PET56: only Summon Imp supported); 366222 Summon Sayaad (SUMMON_PET56: only Summon Imp supported)
+Book: A: 686,688,5697,104773; B: 702,5784,77215,108366,187394,211715,215279; C: 126,172,698,1098,5782,6201,20707,23161,29893,101508,119898,196586,211714,216698,234153,246985,342601,1229376; D: 691,697,366222.
+Core: 172 Corruption — C (E3); 980 Agony — C (a226); 30108 Unstable Affliction — A[T50] (E3); 324536 Malefic Rapture — A[T121]; 198590 Drain Soul — A[T97]; 27243 Seed of Corruption — C (a4,E3); 205180 Summon Darkglare — C (a4,E3); 104773 Unending Resolve — A[T11] (a285,E129); 688 Summon Imp — A[T175].
+Other A: 686 Shadow Bolt A[T88]; 5697 Unending Breath A[T25] (a58) Other D: 691 Summon Felhunter (SUMMON_PET56: only Summon Imp supported); 697 Summon Voidwalker (SUMMON_PET56: only Summon Imp supported); 366222 Summon Sayaad (SUMMON_PET56: only Summon Imp supported)
 
 ### Warlock / Demonology (266)
-Book: A: 688,5697,104773; B: 686,702,5784,108366,187394,211715,215279; C: 126,172,698,1098,5782,6201,20707,23161,29893,77219,101508,119898,196586,211714,216698,234153,246985,342601,1229376; D: 691,697,366222.
-Core: 686 Shadow Bolt — B [handlers: E2]; 105174 Hand of Gul'dan — A[T32] (E3); 104316 Call Dreadstalkers — C (E3); 264178 Demonbolt — A[T130] (a4,E3); 265187 Summon Demonic Tyrant — C (a4); 196277 Implosion — C (E3); 104773 Unending Resolve — A[T11] (a285,E129); 688 Summon Imp — A[T167].
+Book: A: 686,688,5697,104773; B: 702,5784,108366,187394,211715,215279; C: 126,172,698,1098,5782,6201,20707,23161,29893,77219,101508,119898,196586,211714,216698,234153,246985,342601,1229376; D: 691,697,366222.
+Core: 686 Shadow Bolt — A[T88]; 105174 Hand of Gul'dan — A[T32] (E3); 104316 Call Dreadstalkers — C (E3); 264178 Demonbolt — A[T138] (a4,E3); 265187 Summon Demonic Tyrant — C (a4); 196277 Implosion — C (E3); 104773 Unending Resolve — A[T11] (a285,E129); 688 Summon Imp — A[T175].
 Other A: 5697 Unending Breath A[T25] (a58) Other D: 691 Summon Felhunter (SUMMON_PET56: only Summon Imp supported); 697 Summon Voidwalker (SUMMON_PET56: only Summon Imp supported); 366222 Summon Sayaad (SUMMON_PET56: only Summon Imp supported)
 
 ### Warlock / Destruction (267)
-Book: A: 688,5697,29722,104773; B: 686,702,5784,108366,187394,211715,215279; C: 126,172,348,698,1098,5782,6201,20707,23161,29893,77220,101508,119898,196586,211714,216698,234153,246985,342601,1229376; D: 691,697,366222.
-Core: 348 Immolate — C (E3); 29722 Incinerate — A[T132] (E3); 17962 Conflagrate — B [handlers: E2]; 116858 Chaos Bolt — A[T106] (E3,E137); 5740 Rain of Fire — A[T38] (a4); 80240 Havoc — C (a4); 1122 Summon Infernal — C (a4,E148); 104773 Unending Resolve — A[T11] (a285,E129); 688 Summon Imp — A[T167].
-Other A: 5697 Unending Breath A[T25] (a58) Other D: 691 Summon Felhunter (SUMMON_PET56: only Summon Imp supported); 697 Summon Voidwalker (SUMMON_PET56: only Summon Imp supported); 366222 Summon Sayaad (SUMMON_PET56: only Summon Imp supported)
+Book: A: 686,688,5697,29722,104773; B: 702,5784,108366,187394,211715,215279; C: 126,172,348,698,1098,5782,6201,20707,23161,29893,77220,101508,119898,196586,211714,216698,234153,246985,342601,1229376; D: 691,697,366222.
+Core: 348 Immolate — C (E3); 29722 Incinerate — A[T140] (E3); 17962 Conflagrate — A[T84]; 116858 Chaos Bolt — A[T114] (E3,E137); 5740 Rain of Fire — A[T38] (a4); 80240 Havoc — C (a4); 1122 Summon Infernal — C (a4,E148); 104773 Unending Resolve — A[T11] (a285,E129); 688 Summon Imp — A[T175].
+Other A: 686 Shadow Bolt A[T88]; 5697 Unending Breath A[T25] (a58) Other D: 691 Summon Felhunter (SUMMON_PET56: only Summon Imp supported); 697 Summon Voidwalker (SUMMON_PET56: only Summon Imp supported); 366222 Summon Sayaad (SUMMON_PET56: only Summon Imp supported)
 
 ### Monk / Brewmaster (268)
 Book: A: 100780,100784,115546,116670; B: 115178,119381,205406; C: 8647,101546,109132,115069,117906,117952,125883,126892,169340,209525,216519,245013,322101,322109,322729,1229376; D: —.
-Core: 100780 Tiger Palm — A[T162] (E3); 100784 Blackout Kick — A[T87] (E3); 121253 Keg Smash — A[T116] (a4,E3); 115181 Breath of Fire — A[T128]; 322729 Spinning Crane Kick — C (a4); 119582 Purifying Brew — C (E3); 322507 Celestial Brew — B [handlers: E6,a283,a69]; 115203 Fortifying Brew — A[T6] (a4,a255); 115546 Provoke — A[T133].
-Other A: 116670 Vivify A[T105]
+Core: 100780 Tiger Palm — A[T170] (E3); 100784 Blackout Kick — A[T95] (E3); 121253 Keg Smash — A[T124] (a4,E3); 115181 Breath of Fire — A[T136]; 322729 Spinning Crane Kick — C (a4); 119582 Purifying Brew — C (E3); 322507 Celestial Brew — B [handlers: E6,a283,a69]; 115203 Fortifying Brew — A[T6] (a4,a255); 115546 Provoke — A[T141].
+Other A: 116670 Vivify A[T113]
 
 ### Monk / Windwalker (269)
 Book: A: 100780,100784,115546,116670,122470; B: 115178,119381,205406; C: 8647,101545,101546,109132,115636,116092,117952,125883,126892,169340,209525,322101,322109,1229376; D: —.
-Core: 100780 Tiger Palm — A[T162] (E3); 100784 Blackout Kick — A[T87] (E3); 107428 Rising Sun Kick — A[T70]; 113656 Fists of Fury — C (a4,a226,E3); 101546 Spinning Crane Kick — C (a4); 101545 Flying Serpent Kick — C (a4,a104,a305,a373); 122470 Touch of Karma — A[T69] (a4,E3); 115203 Fortifying Brew — A[T6] (a4,a255); 116705 Spear Hand Strike — B [handlers: E68].
-Other A: 115546 Provoke A[T133]; 116670 Vivify A[T105]
+Core: 100780 Tiger Palm — A[T170] (E3); 100784 Blackout Kick — A[T95] (E3); 107428 Rising Sun Kick — A[T70]; 113656 Fists of Fury — C (a4,a226,E3); 101546 Spinning Crane Kick — C (a4); 101545 Flying Serpent Kick — C (a4,a104,a305,a373); 122470 Touch of Karma — A[T69] (a4,E3); 115203 Fortifying Brew — A[T6] (a4,a255); 116705 Spear Hand Strike — B [handlers: E68].
+Other A: 115546 Provoke A[T141]; 116670 Vivify A[T113]
 
 ### Monk / Mistweaver (270)
 Book: A: 100780,100784,115151,115546,116670; B: 115178,115450,119381,205406,1285660; C: 8647,101546,109132,116645,117907,117952,125883,126892,169340,202577,209525,322101,322109,388023,1229376; D: 212051.
-Core: 115151 Renewing Mist — A[T103] (E3); 116670 Vivify — A[T105]; 124682 Enveloping Mist — B [handlers: E10,E6,a283,a8]; 325197 Invoke Chi-Ji, the Red Crane — C (a4); 115175 Soothing Mist — C (a330); 107428 Rising Sun Kick — A[T70]; 322101 Expel Harm — C (E3); 115450 Detox — B [handlers: E38]; 115203 Fortifying Brew — A[T6] (a4,a255).
-Other A: 100780 Tiger Palm A[T162] (E3); 100784 Blackout Kick A[T87] (E3); 115546 Provoke A[T133] Other D: 212051 Reawaken (target 119)
+Core: 115151 Renewing Mist — A[T111] (E3); 116670 Vivify — A[T113]; 124682 Enveloping Mist — B [handlers: E10,E6,a283,a8]; 325197 Invoke Chi-Ji, the Red Crane — C (a4); 115175 Soothing Mist — C (a330); 107428 Rising Sun Kick — A[T70]; 322101 Expel Harm — C (E3); 115450 Detox — B [handlers: E38]; 115203 Fortifying Brew — A[T6] (a4,a255).
+Other A: 100780 Tiger Palm A[T170] (E3); 100784 Blackout Kick A[T95] (E3); 115546 Provoke A[T141] Other D: 212051 Reawaken (target 119)
 
 ### Druid / Balance (102)
-Book: A: 768,5221,5487,8921,22812,33917,191034; B: 339,1850,5176,6795,8936,50769,77758,190984,210723,231042,393014; C: 783,1126,5215,18960,20484,22568,114282,127757,164812,164815,164862,165962,193753,208253,210053,210722,236716,276012,276029,1229376,1297521; D: —.
-Core: 190984 Wrath — B [handlers: E2,E30]; 194153 Starfire — A[T118] (E3,E77); 78674 Starsurge — B [handlers: E2]; 191034 Starfall — A[T117] (a307,a330,a395,E3); 8921 Moonfire — A[T92] (a269,a537); 93402 Sunfire — A[T119] (a537,E3); 194223 Celestial Alignment — B [handlers: E6,a193]; 22812 Barkskin — A[T145].
-Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5221 Shred A[T39]; 5487 Bear Form A[T27] (a4,a142,a187,a240,a275); 33917 Mangle A[T102] (E3)
+Book: A: 768,5221,5487,8921,8936,22812,33917,191034; B: 339,1850,5176,6795,50769,77758,190984,210723,231042,393014; C: 783,1126,5215,18960,20484,22568,114282,127757,164812,164815,164862,165962,193753,208253,210053,210722,236716,276012,276029,1229376,1297521; D: —.
+Core: 190984 Wrath — B [handlers: E2,E30]; 194153 Starfire — A[T126] (E3,E77); 78674 Starsurge — B [handlers: E2]; 191034 Starfall — A[T125] (a307,a330,a395,E3); 8921 Moonfire — A[T100] (a269,a537); 93402 Sunfire — A[T127] (a537,E3); 194223 Celestial Alignment — B [handlers: E6,a193]; 22812 Barkskin — A[T153].
+Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5221 Shred A[T39]; 5487 Bear Form A[T27] (a4,a142,a187,a240,a275); 8936 Regrowth A[T85]; 33917 Mangle A[T110] (E3)
 
 ### Druid / Feral (103)
-Book: A: 768,5221,5487,8921,22812,33917; B: 339,1850,5176,6795,8936,50769,77758,210723; C: 783,1126,5215,16949,16974,18960,20484,22568,77493,114282,127757,164812,164815,164862,165962,193753,208253,210053,210722,236716,276012,276029,300349,1229376; D: —.
-Core: 5221 Shred — A[T39]; 1822 Rake — A[T48]; 1079 Rip — A[T153] (a4,E3); 22568 Ferocious Bite — C (E62); 106830 Thrash — A[T41]; 106951 Berserk — C (a4); 5217 Tiger's Fury — B [handlers: E30,E6,a108,a344]; 22812 Barkskin — A[T145].
-Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5487 Bear Form A[T27] (a4,a142,a187,a240,a275); 8921 Moonfire A[T92] (a269,a537); 33917 Mangle A[T102] (E3)
+Book: A: 768,5221,5487,8921,8936,22812,33917; B: 339,1850,5176,6795,50769,77758,210723; C: 783,1126,5215,16949,16974,18960,20484,22568,77493,114282,127757,164812,164815,164862,165962,193753,208253,210053,210722,236716,276012,276029,300349,1229376; D: —.
+Core: 5221 Shred — A[T39]; 1822 Rake — A[T48]; 1079 Rip — A[T161] (a4,E3); 22568 Ferocious Bite — C (E62); 106830 Thrash — A[T41]; 106951 Berserk — C (a4); 5217 Tiger's Fury — B [handlers: E30,E6,a108,a344]; 22812 Barkskin — A[T153].
+Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5487 Bear Form A[T27] (a4,a142,a187,a240,a275); 8921 Moonfire A[T100] (a269,a537); 8936 Regrowth A[T85]; 33917 Mangle A[T110] (E3)
 
 ### Druid / Guardian (104)
-Book: A: 768,5221,5487,8921,22812,33917; B: 339,1850,5176,6795,8936,50769,77758,210723; C: 783,1126,5215,18960,20484,22568,114282,127757,155783,164812,164815,164862,165962,193753,208253,210053,210722,231065,236716,276012,276029,300346,1229376; D: —.
-Core: 33917 Mangle — A[T102] (E3); 77758 Thrash — B [handlers: E2,E30]; 6807 Maul — C (E3); 192081 Ironfur — C (a285); 22842 Frenzied Regeneration — C (a145); 61336 Survival Instincts — A[T125] (a4,E3); 5487 Bear Form — A[T27] (a4,a142,a187,a240,a275); 22812 Barkskin — A[T145]; 6795 Growl — B [handlers: E114,E6,a11].
-Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5221 Shred A[T39]; 8921 Moonfire A[T92] (a269,a537)
+Book: A: 768,5221,5487,8921,8936,22812,33917; B: 339,1850,5176,6795,50769,77758,210723; C: 783,1126,5215,18960,20484,22568,114282,127757,155783,164812,164815,164862,165962,193753,208253,210053,210722,231065,236716,276012,276029,300346,1229376; D: —.
+Core: 33917 Mangle — A[T110] (E3); 77758 Thrash — B [handlers: E2,E30]; 6807 Maul — C (E3); 192081 Ironfur — C (a285); 22842 Frenzied Regeneration — C (a145); 61336 Survival Instincts — A[T133] (a4,E3); 5487 Bear Form — A[T27] (a4,a142,a187,a240,a275); 22812 Barkskin — A[T153]; 6795 Growl — B [handlers: E114,E6,a11].
+Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5221 Shred A[T39]; 8921 Moonfire A[T100] (a269,a537); 8936 Regrowth A[T85]
 
 ### Druid / Restoration (105)
-Book: A: 768,5221,5487,8921,22812,33917; B: 339,1850,5176,6795,8936,50769,77758,88423,210723; C: 783,1126,5215,18960,20484,22568,77495,114282,127757,164812,164815,164862,165962,193753,208253,210053,210722,236716,276012,276029,440015,468146,1229376; D: 212040.
-Core: 774 Rejuvenation — B [handlers: E6,a8]; 8936 Regrowth — B [handlers: E10,E6,a8,a87]; 33763 Lifebloom — B [handlers: E6,a8]; 48438 Wild Growth — A[T121]; 18562 Swiftmend — B [handlers: E10]; 740 Tranquility — A[T143] (a4,a147,a470); 102342 Ironbark — B [handlers: E6,a283,a87]; 88423 Nature's Cure — B [handlers: E38]; 22812 Barkskin — A[T145].
-Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5221 Shred A[T39]; 5487 Bear Form A[T27] (a4,a142,a187,a240,a275); 8921 Moonfire A[T92] (a269,a537); 33917 Mangle A[T102] (E3) Other D: 212040 Revitalize (target 119)
+Book: A: 768,5221,5487,8921,8936,22812,33917; B: 339,1850,5176,6795,50769,77758,88423,210723; C: 783,1126,5215,18960,20484,22568,77495,114282,127757,164812,164815,164862,165962,193753,208253,210053,210722,236716,276012,276029,440015,468146,1229376; D: 212040.
+Core: 774 Rejuvenation — B [handlers: E6,a8]; 8936 Regrowth — A[T85]; 33763 Lifebloom — A[T86]; 48438 Wild Growth — A[T129]; 18562 Swiftmend — B [handlers: E10]; 740 Tranquility — A[T151] (a4,a147,a470); 102342 Ironbark — B [handlers: E6,a283,a87]; 88423 Nature's Cure — B [handlers: E38]; 22812 Barkskin — A[T153].
+Other A: 768 Cat Form A[T27] (a4,a153,a226,a275,E3); 5221 Shred A[T39]; 5487 Bear Form A[T27] (a4,a142,a187,a240,a275); 8921 Moonfire A[T100] (a269,a537); 33917 Mangle A[T110] (E3) Other D: 212040 Revitalize (target 119)
 
 ### Demon Hunter / Havoc (577)
 Book: A: 162243,162794,191427,198589,204596,344859,344862; B: 183752,185123,185164,185245,201467,201628,201789,203555,206478,214743,278386; C: 131347,178940,188499,188501,195072,196055,207407,255260,258920,344865,350570,1229376; D: —.
-Core: 162243 Demon's Bite — A[T109] (E3); 162794 Chaos Strike — A[T107]; 188499 Blade Dance — C (a483,E3); 198013 Eye Beam — A[T61] (a4,a85); 195072 Fel Rush — C (E3); 191427 Metamorphosis — A[T62] (a226,a263,a443,a471); 198589 Blur — A[T2]; 183752 Disrupt — B [handlers: E68].
-Other A: 204596 Sigil of Flame A[T71] (a4); 344859 Demon's Bite A[T159] (E3); 344862 Chaos Strike A[T158]
+Core: 162243 Demon's Bite — A[T117] (E3); 162794 Chaos Strike — A[T115]; 188499 Blade Dance — C (a483,E3); 198013 Eye Beam — A[T61] (a4,a85); 195072 Fel Rush — C (E3); 191427 Metamorphosis — A[T62] (a226,a263,a443,a471); 198589 Blur — A[T2]; 183752 Disrupt — B [handlers: E68].
+Other A: 204596 Sigil of Flame A[T71] (a4); 344859 Demon's Bite A[T167] (E3); 344862 Chaos Strike A[T166]
 
 ### Demon Hunter / Vengeance (581)
 Book: A: 187827,191427,203720,204596,263642,344859,344862; B: 183752,185123,185245,201467,201628,201789,203513,204157,214743; C: 131347,188501,189110,196055,202138,203747,204254,207197,207407,228477,255260,258920,320380,344865,350570,1229376; D: —.
-Core: 263642 Fracture — A[T138] (E3); 228477 Soul Cleave — C (E3); 204596 Sigil of Flame — A[T71] (a4); 203782 Shear — B [handlers: E2,E30]; 203720 Demon Spikes — A[T82]; 212084 Fel Devastation — C (a4); 187827 Metamorphosis — A[T138] (a142,a226,a443,a471); 189110 Infernal Strike — C (E3); 183752 Disrupt — B [handlers: E68].
-Other A: 191427 Metamorphosis A[T62] (a226,a263,a443,a471); 344859 Demon's Bite A[T159] (E3); 344862 Chaos Strike A[T158]
+Core: 263642 Fracture — A[T146] (E3); 228477 Soul Cleave — C (E3); 204596 Sigil of Flame — A[T71] (a4); 203782 Shear — B [handlers: E2,E30]; 203720 Demon Spikes — A[T90]; 212084 Fel Devastation — C (a4); 187827 Metamorphosis — A[T146] (a142,a226,a443,a471); 189110 Infernal Strike — C (E3); 183752 Disrupt — B [handlers: E68].
+Other A: 191427 Metamorphosis A[T62] (a226,a263,a443,a471); 344859 Demon's Bite A[T167] (E3); 344862 Chaos Strike A[T166]
 
 ### Demon Hunter / Devourer (1480)
 Book: A: 191427,198589,204596,344859,344862,473662,1226019,1234796; B: 183752,185123,185245,201467,201628,201789,214743,1238855,1277736; C: 131347,188501,196055,207407,255260,258920,344865,350570,1217605,1227619,1229376,1251417,1260008; D: —.
-Core: 473662 Consume — A[T59]; 1226019 Reap — A[T134] (a4); 1217605 Void Metamorphosis — C (a4,a226,a263,a443,E3); 1234796 Shift — A[T144]; 1251417 Spectral Sight — C (a4,a17,a19,a100,a228,E167); 198589 Blur — A[T2].
-Other A: 191427 Metamorphosis A[T62] (a226,a263,a443,a471); 204596 Sigil of Flame A[T71] (a4); 344859 Demon's Bite A[T159] (E3); 344862 Chaos Strike A[T158]
+Core: 473662 Consume — A[T59]; 1226019 Reap — A[T142] (a4); 1217605 Void Metamorphosis — C (a4,a226,a263,a443,E3); 1234796 Shift — A[T152]; 1251417 Spectral Sight — C (a4,a17,a19,a100,a228,E167); 198589 Blur — A[T2].
+Other A: 191427 Metamorphosis A[T62] (a226,a263,a443,a471); 204596 Sigil of Flame A[T71] (a4); 344859 Demon's Bite A[T167] (E3); 344862 Chaos Strike A[T166]
 
 ### Evoker / Devastation (1467)
 Book: A: 355913,356995,361469,362969,400006; B: 361227,381773,390386; C: 357208,357210,358267,362980,364342,368970,396571,1229376; D: —.
-Core: 361469 Living Flame — A[T161]; 362969 Azure Strike — A[T157] (a4); 356995 Disintegrate — A[T110] (a4); 357208 Fire Breath — C (a4,E3); 359073 Eternity Surge — C (a4,E3); 357211 Pyre — A[T84]; 375087 Dragonrage — C (a4,E3); 363916 Obsidian Scales — A[T3] (a4,E3); 351338 Quell — B [handlers: E68].
-Other A: 355913 Emerald Blossom A[T137] (E3); 400006 Energizing Flame A[T160]
+Core: 361469 Living Flame — A[T169]; 362969 Azure Strike — A[T165] (a4); 356995 Disintegrate — A[T118] (a4); 357208 Fire Breath — C (a4,E3); 359073 Eternity Surge — C (a4,E3); 357211 Pyre — A[T92]; 375087 Dragonrage — C (a4,E3); 363916 Obsidian Scales — A[T3] (a4,E3); 351338 Quell — B [handlers: E68].
+Other A: 355913 Emerald Blossom A[T145] (E3); 400006 Energizing Flame A[T168]
 
 ### Evoker / Preservation (1468)
 Book: A: 355913,356995,361469,362969,400006; B: 360823,361227,381773,390386; C: 357208,357210,358267,363510,364342,368970,396571,1229376; D: 361178.
-Core: 361469 Living Flame — A[T161]; 355913 Emerald Blossom — A[T137] (E3); 367226 Spiritbloom — C (a4,E3); 366155 Reversion — C (a504); 357170 Time Dilation — C (a4); 360995 Verdant Embrace — A[T126] (E3); 363534 Rewind — C (E3); 360823 Naturalize — B [handlers: E38]; 363916 Obsidian Scales — A[T3] (a4,E3).
-Other A: 356995 Disintegrate A[T110] (a4); 362969 Azure Strike A[T157] (a4); 400006 Energizing Flame A[T160] Other D: 361178 Mass Return (target 119)
+Core: 361469 Living Flame — A[T169]; 355913 Emerald Blossom — A[T145] (E3); 367226 Spiritbloom — C (a4,E3); 366155 Reversion — C (a504); 357170 Time Dilation — C (a4); 360995 Verdant Embrace — A[T134] (E3); 363534 Rewind — C (E3); 360823 Naturalize — B [handlers: E38]; 363916 Obsidian Scales — A[T3] (a4,E3).
+Other A: 356995 Disintegrate A[T118] (a4); 362969 Azure Strike A[T165] (a4); 400006 Energizing Flame A[T168] Other D: 361178 Mass Return (target 119)
 
 ### Evoker / Augmentation (1473)
 Book: A: 355913,356995,361469,362969,400006; B: 361227,381773,390386; C: 357208,357210,358267,361021,364342,368970,395153,396571,406041,406380,1229376; D: —.
-Core: 361469 Living Flame — A[T161]; 362969 Azure Strike — A[T157] (a4); 395152 Ebon Might — C (a226,a540,E3); 395160 Eruption — A[T98]; 396286 Upheaval — C (a4,E3); 409311 Prescience — C (E3); 403631 Breath of Eons — C (a147,a263,a485,a488,E3); 406732 Spatial Paradox — C (a188,a226,a235,a330,E3); 363916 Obsidian Scales — A[T3] (a4,E3).
-Other A: 355913 Emerald Blossom A[T137] (E3); 356995 Disintegrate A[T110] (a4); 400006 Energizing Flame A[T160]
+Core: 361469 Living Flame — A[T169]; 362969 Azure Strike — A[T165] (a4); 395152 Ebon Might — C (a226,a540,E3); 395160 Eruption — A[T106]; 396286 Upheaval — C (a4,E3); 409311 Prescience — C (E3); 403631 Breath of Eons — C (a147,a263,a485,a488,E3); 406732 Spatial Paradox — C (a188,a226,a235,a330,E3); 363916 Obsidian Scales — A[T3] (a4,E3).
+Other A: 355913 Emerald Blossom A[T145] (E3); 356995 Disintegrate A[T118] (a4); 400006 Energizing Flame A[T168]
 
 ## Positive test citations and proof limits
 
@@ -352,89 +352,97 @@ All paths relative to game-server/crates/server/src. Matrix proof classification
 - **T79** `spell_cast/dummy16_tests.rs:86::dummy16_holy_shock_crusaders_might_reduces_only_running_judgment` — IDs 20473.
 - **T80** `spell_cast/dummy16_tests.rs:134::dummy16_retribution_judgment_generates_named_rank_power_once` — IDs 20271.
 - **T81** `spell_cast/dummy16_tests.rs:310::dummy16_riptide_grants_two_capped_tidal_uses_not_double_cast_speed` — IDs 61295.
-- **T82** `spell_cast/dummy2_tests.rs:465::dummy2_dh_demon_spikes_grants_agility_armor_and_expires` — IDs 203720.
-- **T83** `spell_cast/dummy2_tests.rs:304::dummy2_dk_death_coil_damages_an_enemy_through_47632` — IDs 47541.
-- **T84** `spell_cast/dummy2_tests.rs:186::dummy2_evoker_pyre_explodes_at_target_and_hits_nearby_enemies_only` — IDs 357211.
-- **T85** `spell_cast/dummy2_tests.rs:6::dummy2_hunter_cobra_shot_damages_and_reduces_kill_command_cooldown` — IDs 193455.
-- **T86** `spell_cast/dummy2_tests.rs:287::dummy2_mage_fire_blast_guarantees_a_critical_hit_with_zero_crit_stats` — IDs 108853.
-- **T87** `spell_cast/dummy2_tests.rs:64::dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two` — IDs 100784.
-- **T88** `spell_cast/dummy2_tests.rs:161::dummy2_rogue_backstab_deals_twenty_percent_more_from_behind` — IDs 53.
-- **T89** `spell_cast/dummy2_tests.rs:243::dummy2_warlock_drain_soul_target_death_grants_one_whole_shard` — IDs 198590.
-- **T90** `spell_cast/dummy3_tests.rs:319::dummy3_devastate_rank_chance_resets_shield_slam_and_notifies_owner` — IDs 20243.
-- **T91** `spell_cast/dummy3_tests.rs:171::dummy3_garrote_from_stealth_with_rank_silences_and_reduces_damage_for_five_seconds` — IDs 703.
-- **T92** `spell_cast/dummy3_tests.rs:7::dummy3_moonfire_bridges_direct_damage_and_periodic_damage_without_base_slow` — IDs 8921.
-- **T93** `spell_cast/dummy3_tests.rs:101::dummy3_prayer_heals_primary_and_four_injured_allies_within_catalog_radius` — IDs 596.
-- **T94** `spell_cast/dummy3_tests.rs:31::dummy3_scorch_below_thirty_percent_guarantees_crit` — IDs 2948.
-- **T95** `spell_cast/dummy3_tests.rs:65::dummy3_serenity_flash_heal_reduces_running_recharge_by_six_seconds` — IDs 2050.
-- **T96** `spell_cast/dummy3_tests.rs:151::dummy3_thunder_clap_slows_each_hit_enemy_not_allies_or_far_enemies` — IDs 6343.
-- **T97** `spell_cast/dummy4_tests.rs:214::dummy4_chain_lightning_generates_two_maelstrom_per_hit_with_rank` — IDs 188443.
-- **T98** `spell_cast/dummy4_tests.rs:292::dummy4_eruption_extends_only_owned_active_ebon_might_with_rank` — IDs 395160.
-- **T99** `spell_cast/dummy4_tests.rs:223::dummy4_howling_blast_applies_frost_fever_to_each_hit_enemy` — IDs 49184.
-- **T100** `spell_cast/dummy4_tests.rs:56::dummy4_kill_shot_rejects_twenty_percent_before_spending_focus` — IDs 53351.
-- **T101** `spell_cast/dummy4_tests.rs:19::dummy4_light_of_dawn_heals_only_five_injured_allies_in_radius` — IDs 85222.
-- **T102** `spell_cast/dummy4_tests.rs:105::dummy4_mangle_rank_increases_damage_against_bleeding_target` — IDs 33917.
-- **T103** `spell_cast/dummy4_tests.rs:171::dummy4_renewing_mist_cast_applies_catalog_hot_and_expires` — IDs 115151.
-- **T104** `spell_cast/dummy4_tests.rs:40::dummy4_steady_shot_generates_catalog_twenty_focus` — IDs 56641.
-- **T105** `spell_cast/dummy4_tests.rs:162::dummy4_vivify_rank_heals_owned_renewing_mist_only` — IDs 116670.
-- **T106** `spell_cast/dummy5_tests.rs:128::dummy5_chaos_bolt_always_crits_with_zero_crit_stats` — IDs 116858.
-- **T107** `spell_cast/dummy5_tests.rs:85::dummy5_chaos_strike_refunds_once_at_catalog_chance_endpoint` — IDs 162794.
-- **T108** `spell_cast/dummy5_tests.rs:194::dummy5_deaths_caress_generates_two_bone_shield_stacks` — IDs 195292.
-- **T109** `spell_cast/dummy5_tests.rs:52::dummy5_demons_bite_insatiable_hunger_adds_catalog_fury_range` — IDs 162243.
-- **T110** `spell_cast/dummy5_tests.rs:94::dummy5_disintegrate_applies_three_second_slow_and_ticks` — IDs 356995.
-- **T111** `spell_cast/dummy5_tests.rs:217::dummy5_epidemic_eruptions_require_owned_virulent_plague` — IDs 207317.
-- **T112** `spell_cast/dummy5_tests.rs:283::dummy5_lava_burst_crits_on_flame_shock_and_generates_eight_maelstrom` — IDs 51505.
-- **T113** `spell_cast/dummy5_tests.rs:137::dummy5_rapture_counts_only_owned_damaging_periodic_effects` — IDs 324536.
-- **T114** `spell_cast/dummy5_tests.rs:169::dummy5_shuriken_storm_awards_combo_points_per_enemy_hit` — IDs 197835.
-- **T115** `spell_cast/dummy6_tests.rs:98::dummy6_ice_lance_resolves_named_damage_child` — IDs 30455.
-- **T116** `spell_cast/dummy6_tests.rs:122::dummy6_keg_smash_primary_bonus_keeps_area_damage_and_slow` — IDs 121253.
-- **T117** `spell_cast/dummy6_tests.rs:307::dummy6_starfall_extends_owned_dots_with_aetherial_kindling` — IDs 191034.
-- **T118** `spell_cast/dummy6_tests.rs:106::dummy6_starfire_primary_full_secondary_seventy_percent` — IDs 194153.
-- **T119** `spell_cast/dummy6_tests.rs:79::dummy6_sunfire_base_damage_and_dot_exclude_optional_area` — IDs 93402.
-- **T120** `spell_cast/dummy6_tests.rs:88::dummy6_templars_verdict_resolves_named_damage_child` — IDs 85256.
-- **T121** `spell_cast/dummy6_tests.rs:216::dummy6_wild_growth_caps_injured_allies_not_healthy_units` — IDs 48438.
-- **T122** `spell_cast/dummy7_tests.rs:32::dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage` — IDs 167105.
-- **T123** `spell_cast/dummy7_tests.rs:145::dummy7_heartbreaker_energizes_per_native_chain_target` — IDs 206930.
-- **T124** `spell_cast/dummy7_tests.rs:258::dummy7_raging_blow_rank_success_restores_one_charge_and_notifies_owner` — IDs 85288.
-- **T125** `spell_cast/dummy7_tests.rs:61::dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_child` — IDs 61336.
-- **T126** `spell_cast/dummy7_tests.rs:405::dummy7_verdant_embrace_panacea_heals_caster_not_selected_ally` — IDs 360995.
-- **T127** `spell_cast/dummy7_tests.rs:365::dummy7_whirlwind_rank_generates_per_enemy_rage_up_to_five` — IDs 190411.
-- **T128** `spell_cast/dummy8_tests.rs:233::dummy8_breath_of_fire_burns_only_owned_keg_smash_targets_in_front` — IDs 115181.
-- **T129** `spell_cast/dummy8_tests.rs:213::dummy8_crash_lightning_uses_destination_cone_and_grants_authored_enhancement` — IDs 187874.
-- **T130** `spell_cast/dummy8_tests.rs:203::dummy8_demonbolt_generates_two_whole_shards_once_on_landed_damage` — IDs 264178.
-- **T131** `spell_cast/dummy8_tests.rs:265::dummy8_fan_of_knives_awards_one_combo_point_not_one_per_enemy` — IDs 51723.
-- **T132** `spell_cast/dummy8_tests.rs:322::dummy8_incinerate_generates_authored_base_fragments_once_not_per_area_target` — IDs 29722.
-- **T133** `spell_cast/dummy8_tests.rs:69::dummy8_provoke_changes_victim_equalizes_threat_and_holds_until_expiry` — IDs 115546.
-- **T134** `spell_cast/dummy8_tests.rs:29::dummy8_reap_hits_enemies_along_destination_line_not_single_target_or_radial_area` — IDs 1226019.
-- **T135** `spell_cast/dummy8_tests.rs:287::dummy8_sanctify_caps_five_injured_allies_at_requested_location` — IDs 34861.
-- **T136** `spell_cast/dummy9_tests.rs:94::dummy9_earthquake_pulses_six_times_at_requested_ground_and_excludes_allies` — IDs 61882.
-- **T137** `spell_cast/dummy9_tests.rs:126::dummy9_emerald_blossom_delays_and_heals_three_injured_at_fixed_ally_location` — IDs 355913.
-- **T138** `spell_cast/dummy9_tests.rs:218::dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury` — IDs 187827,263642.
-- **T139** `spell_cast/dummy9_tests.rs:54::dummy9_healing_rain_ticks_at_ground_caps_six_and_stops_at_expiry` — IDs 73920.
-- **T140** `spell_cast/dummy9_tests.rs:288::dummy9_radiance_applies_nine_second_atonement_to_selected_allies_preserves_foreign_mark` — IDs 194509.
-- **T141** `spell_cast/dummy9_tests.rs:151::dummy9_remorseless_winter_hit_applies_slow_and_native_expiry_removes_it` — IDs 196770.
-- **T142** `spell_cast/dummy9_tests.rs:186::dummy9_scourge_strike_applies_base_virulent_plague_without_refreshing_existing_owned_mark` — IDs 55090.
-- **T143** `spell_cast/dummy9_tests.rs:342::dummy9_tranquility_shield_absorbs_sixty_percent_max_health_and_ends_with_channel` — IDs 740.
-- **T144** `spell_cast/dummy9_tests.rs:249::dummy9_void_step_teleports_to_requested_location_preserving_map` — IDs 1234796.
-- **T145** `spell_cast/dummy_tests.rs:108::dummy_druid_barkskin_with_brambles_pulses_catalog_damage_each_second` — IDs 22812.
-- **T146** `spell_cast/dummy_tests.rs:9::dummy_priest_penance_channels_three_damage_bolts` — IDs 47540.
-- **T147** `spell_cast/dummy_tests.rs:263::dummy_warrior_bloodthirst_damages_generates_rage_and_heals_three_percent` — IDs 23881.
-- **T148** `spell_cast/dummy_tests.rs:320::dummy_warrior_rampage_spends_rage_hits_and_enrages` — IDs 184367.
-- **T149** `spell_cast/dummy_tests.rs:236::dummy_warrior_shield_block_applies_six_second_block_aura` — IDs 2565.
-- **T150** `spell_cast/guardian_tests.rs:107::guardians_sacrifice_splits_spell_damage_and_stops_on_native_health_floor` — IDs 6940.
-- **T151** `spell_cast/mechanics_talent_tests.rs:7::spellmech_barrage_charge_damage_and_talented_mana_refund_survive_flight` — IDs 44425.
-- **T152** `spell_cast/mechanics_talent_tests.rs:119::spellmech_black_powder_scales_each_native_area_hit_by_spent_combo` — IDs 319175.
-- **T153** `spell_cast/mechanics_talent_tests.rs:78::spellmech_rip_native_duration_and_optional_cost_use_same_snapshot` — IDs 1079.
-- **T154** `spell_cast/mechanics_tests.rs:49::spellmech_envenom_spends_all_combo_points_and_scales_damage` — IDs 32645.
-- **T155** `spell_cast/mechanics_tests.rs:7::spellmech_optional_combo_cost_snapshots_rupture_duration` — IDs 1943.
-- **T156** `spell_cast/mechanics_tests.rs:38::spellmech_surge_spends_native_optional_current_mana` — IDs 365350.
-- **T157** `spell_cast/new_class_tests.rs:193::azure_strike_hits_the_target_and_one_other_enemy` — IDs 362969.
-- **T158** `spell_cast/new_class_tests.rs:97::chaos_strike_spends_40_fury_and_hits_twice` — IDs 344862.
-- **T159** `spell_cast/new_class_tests.rs:81::demons_bite_generates_fury` — IDs 344859.
-- **T160** `spell_cast/new_class_tests.rs:234::energizing_flame_refunds_most_of_living_flames_mana` — IDs 400006.
-- **T161** `spell_cast/new_class_tests.rs:137::living_flame_casts_for_2_seconds_spends_mana_and_damages_enemy` — IDs 361469.
-- **T162** `spell_cast/new_class_tests.rs:44::tiger_palm_spends_50_energy_and_hits` — IDs 100780.
-- **T163** `spell_cast/queue_tests.rs:55::spellqueue_builder_effect_precedes_real_rage_spender` — IDs 1464.
-- **T164** `spell_cast/tests.rs:150::cast_time_spell_completes_after_its_cast_time` — IDs 133.
-- **T165** `spell_cast/tests.rs:205::kick_interrupts_target_cast_and_locks_its_school_combat_log_metadata` — IDs 1766.
-- **T166** `spell_cast/tests.rs:289::threat_heal_clamps_to_max_and_logs_overheal` — IDs 2061.
-- **T167** `warlock_pet_tests.rs:174::warlock_summon_imp_spawns_owned_pet_and_firebolt_bar` — IDs 688.
+- **T82** `spell_cast/dummy17_tests.rs:184::dummy17_blood_boil_applies_plague_to_hit_enemies_unless_rank_replaces_it` — IDs 50842.
+- **T83** `spell_cast/dummy17_tests.rs:410::dummy17_cenarion_ward_has_native_initial_plus_four_heals_then_expires_without_retriggering` — IDs 102351.
+- **T84** `spell_cast/dummy17_tests.rs:115::dummy17_conflagrate_grants_named_fragments_and_ranked_backdraft_uses` — IDs 17962.
+- **T85** `spell_cast/dummy17_tests.rs:290::dummy17_improved_regrowth_native_bonus_makes_existing_hot_initial_heal_critical` — IDs 8936.
+- **T86** `spell_cast/dummy17_tests.rs:250::dummy17_lifebloom_native_expiry_blooms_once_after_periodic_heals` — IDs 33763.
+- **T87** `spell_cast/dummy17_tests.rs:206::dummy17_marrowrend_generates_three_bone_shield_stacks_up_to_native_cap` — IDs 195182.
+- **T88** `spell_cast/dummy17_tests.rs:88::dummy17_shadow_bolt_grants_one_native_shard_only_in_demonology` — IDs 686.
+- **T89** `spell_cast/dummy17_tests.rs:158::dummy17_soul_fire_grants_named_shard_and_applies_only_selected_dot_variant` — IDs 6353.
+- **T90** `spell_cast/dummy2_tests.rs:465::dummy2_dh_demon_spikes_grants_agility_armor_and_expires` — IDs 203720.
+- **T91** `spell_cast/dummy2_tests.rs:304::dummy2_dk_death_coil_damages_an_enemy_through_47632` — IDs 47541.
+- **T92** `spell_cast/dummy2_tests.rs:186::dummy2_evoker_pyre_explodes_at_target_and_hits_nearby_enemies_only` — IDs 357211.
+- **T93** `spell_cast/dummy2_tests.rs:6::dummy2_hunter_cobra_shot_damages_and_reduces_kill_command_cooldown` — IDs 193455.
+- **T94** `spell_cast/dummy2_tests.rs:287::dummy2_mage_fire_blast_guarantees_a_critical_hit_with_zero_crit_stats` — IDs 108853.
+- **T95** `spell_cast/dummy2_tests.rs:64::dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two` — IDs 100784.
+- **T96** `spell_cast/dummy2_tests.rs:161::dummy2_rogue_backstab_deals_twenty_percent_more_from_behind` — IDs 53.
+- **T97** `spell_cast/dummy2_tests.rs:243::dummy2_warlock_drain_soul_target_death_grants_one_whole_shard` — IDs 198590.
+- **T98** `spell_cast/dummy3_tests.rs:319::dummy3_devastate_rank_chance_resets_shield_slam_and_notifies_owner` — IDs 20243.
+- **T99** `spell_cast/dummy3_tests.rs:171::dummy3_garrote_from_stealth_with_rank_silences_and_reduces_damage_for_five_seconds` — IDs 703.
+- **T100** `spell_cast/dummy3_tests.rs:7::dummy3_moonfire_bridges_direct_damage_and_periodic_damage_without_base_slow` — IDs 8921.
+- **T101** `spell_cast/dummy3_tests.rs:101::dummy3_prayer_heals_primary_and_four_injured_allies_within_catalog_radius` — IDs 596.
+- **T102** `spell_cast/dummy3_tests.rs:31::dummy3_scorch_below_thirty_percent_guarantees_crit` — IDs 2948.
+- **T103** `spell_cast/dummy3_tests.rs:65::dummy3_serenity_flash_heal_reduces_running_recharge_by_six_seconds` — IDs 2050.
+- **T104** `spell_cast/dummy3_tests.rs:151::dummy3_thunder_clap_slows_each_hit_enemy_not_allies_or_far_enemies` — IDs 6343.
+- **T105** `spell_cast/dummy4_tests.rs:214::dummy4_chain_lightning_generates_two_maelstrom_per_hit_with_rank` — IDs 188443.
+- **T106** `spell_cast/dummy4_tests.rs:292::dummy4_eruption_extends_only_owned_active_ebon_might_with_rank` — IDs 395160.
+- **T107** `spell_cast/dummy4_tests.rs:223::dummy4_howling_blast_applies_frost_fever_to_each_hit_enemy` — IDs 49184.
+- **T108** `spell_cast/dummy4_tests.rs:56::dummy4_kill_shot_rejects_twenty_percent_before_spending_focus` — IDs 53351.
+- **T109** `spell_cast/dummy4_tests.rs:19::dummy4_light_of_dawn_heals_only_five_injured_allies_in_radius` — IDs 85222.
+- **T110** `spell_cast/dummy4_tests.rs:105::dummy4_mangle_rank_increases_damage_against_bleeding_target` — IDs 33917.
+- **T111** `spell_cast/dummy4_tests.rs:171::dummy4_renewing_mist_cast_applies_catalog_hot_and_expires` — IDs 115151.
+- **T112** `spell_cast/dummy4_tests.rs:40::dummy4_steady_shot_generates_catalog_twenty_focus` — IDs 56641.
+- **T113** `spell_cast/dummy4_tests.rs:162::dummy4_vivify_rank_heals_owned_renewing_mist_only` — IDs 116670.
+- **T114** `spell_cast/dummy5_tests.rs:128::dummy5_chaos_bolt_always_crits_with_zero_crit_stats` — IDs 116858.
+- **T115** `spell_cast/dummy5_tests.rs:85::dummy5_chaos_strike_refunds_once_at_catalog_chance_endpoint` — IDs 162794.
+- **T116** `spell_cast/dummy5_tests.rs:194::dummy5_deaths_caress_generates_two_bone_shield_stacks` — IDs 195292.
+- **T117** `spell_cast/dummy5_tests.rs:52::dummy5_demons_bite_insatiable_hunger_adds_catalog_fury_range` — IDs 162243.
+- **T118** `spell_cast/dummy5_tests.rs:94::dummy5_disintegrate_applies_three_second_slow_and_ticks` — IDs 356995.
+- **T119** `spell_cast/dummy5_tests.rs:217::dummy5_epidemic_eruptions_require_owned_virulent_plague` — IDs 207317.
+- **T120** `spell_cast/dummy5_tests.rs:283::dummy5_lava_burst_crits_on_flame_shock_and_generates_eight_maelstrom` — IDs 51505.
+- **T121** `spell_cast/dummy5_tests.rs:137::dummy5_rapture_counts_only_owned_damaging_periodic_effects` — IDs 324536.
+- **T122** `spell_cast/dummy5_tests.rs:169::dummy5_shuriken_storm_awards_combo_points_per_enemy_hit` — IDs 197835.
+- **T123** `spell_cast/dummy6_tests.rs:98::dummy6_ice_lance_resolves_named_damage_child` — IDs 30455.
+- **T124** `spell_cast/dummy6_tests.rs:122::dummy6_keg_smash_primary_bonus_keeps_area_damage_and_slow` — IDs 121253.
+- **T125** `spell_cast/dummy6_tests.rs:307::dummy6_starfall_extends_owned_dots_with_aetherial_kindling` — IDs 191034.
+- **T126** `spell_cast/dummy6_tests.rs:106::dummy6_starfire_primary_full_secondary_seventy_percent` — IDs 194153.
+- **T127** `spell_cast/dummy6_tests.rs:79::dummy6_sunfire_base_damage_and_dot_exclude_optional_area` — IDs 93402.
+- **T128** `spell_cast/dummy6_tests.rs:88::dummy6_templars_verdict_resolves_named_damage_child` — IDs 85256.
+- **T129** `spell_cast/dummy6_tests.rs:216::dummy6_wild_growth_caps_injured_allies_not_healthy_units` — IDs 48438.
+- **T130** `spell_cast/dummy7_tests.rs:32::dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage` — IDs 167105.
+- **T131** `spell_cast/dummy7_tests.rs:145::dummy7_heartbreaker_energizes_per_native_chain_target` — IDs 206930.
+- **T132** `spell_cast/dummy7_tests.rs:258::dummy7_raging_blow_rank_success_restores_one_charge_and_notifies_owner` — IDs 85288.
+- **T133** `spell_cast/dummy7_tests.rs:61::dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_child` — IDs 61336.
+- **T134** `spell_cast/dummy7_tests.rs:405::dummy7_verdant_embrace_panacea_heals_caster_not_selected_ally` — IDs 360995.
+- **T135** `spell_cast/dummy7_tests.rs:365::dummy7_whirlwind_rank_generates_per_enemy_rage_up_to_five` — IDs 190411.
+- **T136** `spell_cast/dummy8_tests.rs:233::dummy8_breath_of_fire_burns_only_owned_keg_smash_targets_in_front` — IDs 115181.
+- **T137** `spell_cast/dummy8_tests.rs:213::dummy8_crash_lightning_uses_destination_cone_and_grants_authored_enhancement` — IDs 187874.
+- **T138** `spell_cast/dummy8_tests.rs:203::dummy8_demonbolt_generates_two_whole_shards_once_on_landed_damage` — IDs 264178.
+- **T139** `spell_cast/dummy8_tests.rs:265::dummy8_fan_of_knives_awards_one_combo_point_not_one_per_enemy` — IDs 51723.
+- **T140** `spell_cast/dummy8_tests.rs:322::dummy8_incinerate_generates_authored_base_fragments_once_not_per_area_target` — IDs 29722.
+- **T141** `spell_cast/dummy8_tests.rs:69::dummy8_provoke_changes_victim_equalizes_threat_and_holds_until_expiry` — IDs 115546.
+- **T142** `spell_cast/dummy8_tests.rs:29::dummy8_reap_hits_enemies_along_destination_line_not_single_target_or_radial_area` — IDs 1226019.
+- **T143** `spell_cast/dummy8_tests.rs:287::dummy8_sanctify_caps_five_injured_allies_at_requested_location` — IDs 34861.
+- **T144** `spell_cast/dummy9_tests.rs:94::dummy9_earthquake_pulses_six_times_at_requested_ground_and_excludes_allies` — IDs 61882.
+- **T145** `spell_cast/dummy9_tests.rs:126::dummy9_emerald_blossom_delays_and_heals_three_injured_at_fixed_ally_location` — IDs 355913.
+- **T146** `spell_cast/dummy9_tests.rs:218::dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury` — IDs 187827,263642.
+- **T147** `spell_cast/dummy9_tests.rs:54::dummy9_healing_rain_ticks_at_ground_caps_six_and_stops_at_expiry` — IDs 73920.
+- **T148** `spell_cast/dummy9_tests.rs:288::dummy9_radiance_applies_nine_second_atonement_to_selected_allies_preserves_foreign_mark` — IDs 194509.
+- **T149** `spell_cast/dummy9_tests.rs:151::dummy9_remorseless_winter_hit_applies_slow_and_native_expiry_removes_it` — IDs 196770.
+- **T150** `spell_cast/dummy9_tests.rs:186::dummy9_scourge_strike_applies_base_virulent_plague_without_refreshing_existing_owned_mark` — IDs 55090.
+- **T151** `spell_cast/dummy9_tests.rs:342::dummy9_tranquility_shield_absorbs_sixty_percent_max_health_and_ends_with_channel` — IDs 740.
+- **T152** `spell_cast/dummy9_tests.rs:249::dummy9_void_step_teleports_to_requested_location_preserving_map` — IDs 1234796.
+- **T153** `spell_cast/dummy_tests.rs:108::dummy_druid_barkskin_with_brambles_pulses_catalog_damage_each_second` — IDs 22812.
+- **T154** `spell_cast/dummy_tests.rs:9::dummy_priest_penance_channels_three_damage_bolts` — IDs 47540.
+- **T155** `spell_cast/dummy_tests.rs:263::dummy_warrior_bloodthirst_damages_generates_rage_and_heals_three_percent` — IDs 23881.
+- **T156** `spell_cast/dummy_tests.rs:320::dummy_warrior_rampage_spends_rage_hits_and_enrages` — IDs 184367.
+- **T157** `spell_cast/dummy_tests.rs:236::dummy_warrior_shield_block_applies_six_second_block_aura` — IDs 2565.
+- **T158** `spell_cast/guardian_tests.rs:107::guardians_sacrifice_splits_spell_damage_and_stops_on_native_health_floor` — IDs 6940.
+- **T159** `spell_cast/mechanics_talent_tests.rs:7::spellmech_barrage_charge_damage_and_talented_mana_refund_survive_flight` — IDs 44425.
+- **T160** `spell_cast/mechanics_talent_tests.rs:119::spellmech_black_powder_scales_each_native_area_hit_by_spent_combo` — IDs 319175.
+- **T161** `spell_cast/mechanics_talent_tests.rs:78::spellmech_rip_native_duration_and_optional_cost_use_same_snapshot` — IDs 1079.
+- **T162** `spell_cast/mechanics_tests.rs:49::spellmech_envenom_spends_all_combo_points_and_scales_damage` — IDs 32645.
+- **T163** `spell_cast/mechanics_tests.rs:7::spellmech_optional_combo_cost_snapshots_rupture_duration` — IDs 1943.
+- **T164** `spell_cast/mechanics_tests.rs:38::spellmech_surge_spends_native_optional_current_mana` — IDs 365350.
+- **T165** `spell_cast/new_class_tests.rs:193::azure_strike_hits_the_target_and_one_other_enemy` — IDs 362969.
+- **T166** `spell_cast/new_class_tests.rs:97::chaos_strike_spends_40_fury_and_hits_twice` — IDs 344862.
+- **T167** `spell_cast/new_class_tests.rs:81::demons_bite_generates_fury` — IDs 344859.
+- **T168** `spell_cast/new_class_tests.rs:234::energizing_flame_refunds_most_of_living_flames_mana` — IDs 400006.
+- **T169** `spell_cast/new_class_tests.rs:137::living_flame_casts_for_2_seconds_spends_mana_and_damages_enemy` — IDs 361469.
+- **T170** `spell_cast/new_class_tests.rs:44::tiger_palm_spends_50_energy_and_hits` — IDs 100780.
+- **T171** `spell_cast/queue_tests.rs:55::spellqueue_builder_effect_precedes_real_rage_spender` — IDs 1464.
+- **T172** `spell_cast/tests.rs:150::cast_time_spell_completes_after_its_cast_time` — IDs 133.
+- **T173** `spell_cast/tests.rs:205::kick_interrupts_target_cast_and_locks_its_school_combat_log_metadata` — IDs 1766.
+- **T174** `spell_cast/tests.rs:289::threat_heal_clamps_to_max_and_logs_overheal` — IDs 2061.
+- **T175** `warlock_pet_tests.rs:174::warlock_summon_imp_spawns_owned_pet_and_firebolt_bar` — IDs 688.
