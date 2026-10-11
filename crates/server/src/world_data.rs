@@ -114,7 +114,8 @@ impl CreatureSpawn {
     /// Whether the spawn is part of a copy at `difficulty_id` (`ObjectMgr`'s
     /// `_mapObjectGuidsStore[{map, difficulty}]`).
     pub fn spawns_at(&self, difficulty_id: u32) -> bool {
-        self.spawn_difficulties.contains(&difficulty_id)
+        let population = crate::followers::population_difficulty(difficulty_id);
+        self.spawn_difficulties.contains(&population)
     }
 }
 
@@ -930,6 +931,14 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
     info!("Loaded {} game object spawns", game_objects.0.len());
     commands.insert_resource(game_objects);
+    let gathering = crate::gathering::load_data(&conn)
+        .expect("Failed to load gathering metadata; apply scripts/gathering_metadata.py");
+    info!(
+        "Loaded {} gathering templates and {} skin mappings",
+        gathering.nodes.len(),
+        gathering.skins.len()
+    );
+    commands.insert_resource(gathering);
     commands.insert_resource(
         crate::game_objects::summoned::load_templates(&conn)
             .expect("Failed to load spell-summoned gameobject templates"),
@@ -956,6 +965,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
+    commands
+        .insert_resource(crate::pvp::pvp_talents::Catalog::load(&conn).expect(
+            "Load local PvP catalog; run scripts/import-pvp-progression.py before startup",
+        ));
 }
 
 pub struct WorldDataPlugin;

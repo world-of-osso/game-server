@@ -16,6 +16,73 @@ fn spawns() -> Option<GameObjectSpawns> {
 }
 
 #[test]
+fn core_fragment_authored_normal_copy_replicates_only_to_its_observer() {
+    use crate::interest::{InterestPlugin, NetworkVisibility};
+    use crate::maps::InMap;
+    use crate::networking::PlayerLink;
+    use lightyear::prelude::ReplicationSender;
+    let spawns = spawns().expect("real world game objects");
+    let core = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 179553 && spawn.map_id == 230)
+        .unwrap();
+    let position = game_object_bundle(core).0;
+    // Only the Core Fragment: map 230's gathering nodes need the full WorldData pool state.
+    let spawns = GameObjectSpawns(vec![core.clone()]);
+    let copy = InMap {
+        map_id: 230,
+        instance_id: 1,
+    };
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(InterestPlugin);
+    let player = app.world_mut().spawn((position, copy)).id();
+    let connection = app
+        .world_mut()
+        .spawn((PlayerLink(player), ReplicationSender))
+        .id();
+    let outsider = app
+        .world_mut()
+        .spawn((
+            position,
+            InMap {
+                map_id: 230,
+                instance_id: 2,
+            },
+        ))
+        .id();
+    let other_connection = app
+        .world_mut()
+        .spawn((PlayerLink(outsider), ReplicationSender))
+        .id();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    spawn_map_game_objects(&mut commands, &spawns, copy, 1);
+    queue.apply(app.world_mut());
+    app.world_mut().run_schedule(FixedUpdate);
+    let mut objects = app
+        .world_mut()
+        .query::<(&GameObjectInfo, &InMap, &NetworkVisibility)>();
+    let visible = objects
+        .iter(app.world())
+        .find(|(info, map, _)| info.entry == 179553 && **map == copy)
+        .unwrap()
+        .2;
+    assert!(
+        visible.is_visible(connection),
+        "authored Core Fragment difficulty1 reaches its copy's client"
+    );
+    assert!(
+        !visible.is_visible(other_connection),
+        "same coordinates in another copy do not reveal it"
+    );
+}
+
+#[test]
 fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
     // Stormwind 4, Ironforge 2, Undercity 4, Booty Bay 2 (TrinityCore map 0 type 34).
@@ -43,6 +110,21 @@ fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
 }
 
 #[test]
+fn gathering_nodes_load_authored_herb_and_ore_models() {
+    let spawns = spawns().unwrap();
+    for (entry, name, display) in [(1617, "Silverleaf", 270), (1731, "Copper Vein", 310)] {
+        let node = spawns
+            .0
+            .iter()
+            .find(|spawn| spawn.info.entry == entry && spawn.map_id == 0)
+            .expect("Retail herb and ore nodes must load with authored positions");
+        assert_eq!(node.info.name, name);
+        assert_eq!(node.info.display_id, display);
+        assert_eq!(node.info.go_type, 50);
+    }
+}
+
+#[test]
 #[ignore = "requires DUNGEON_POPULATION_DB pointing to an imported database copy"]
 fn dungeon_population_loads_all_model_bearing_instance_gameobjects() {
     let path = std::env::var("DUNGEON_POPULATION_DB").expect("imported copy path");
@@ -66,6 +148,50 @@ fn dungeon_population_loads_all_model_bearing_instance_gameobjects() {
         let actual = spawns.0.iter().filter(|spawn| spawn.map_id == map).count();
         assert_eq!(actual, expected, "map {map}");
     }
+}
+
+#[test]
+fn follower_normal_population_spawns_normal_gameobjects_in_205_copy() {
+    let normal = GameObjectSpawn {
+        guid: 1,
+        map_id: 2521,
+        info: GameObjectInfo {
+            entry: 206038,
+            go_type: GAMEOBJECT_TYPE_GENERIC,
+            display_id: 200,
+            name: "Small Fire".into(),
+            scale: 0.5,
+        },
+        position: Vec3::new(1386.2, -169.719, 131.0),
+        orientation: 0.0,
+        bounds: GameObjectBounds {
+            min: Vec3::ZERO,
+            max: Vec3::ONE,
+            scale: 0.5,
+            orientation: 0.0,
+        },
+        spawn_difficulties: vec![1, 2, 23],
+        chair: None,
+        quest_object: None,
+    };
+    let mut mythic = normal.clone();
+    mythic.guid = 2;
+    mythic.spawn_difficulties = vec![8, 23];
+    let spawns = GameObjectSpawns(vec![normal, mythic]);
+    let mut world = World::new();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, &world);
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 7,
+    };
+    assert_eq!(spawn_map_game_objects(&mut commands, &spawns, map, 205), 1);
+    queue.apply(&mut world);
+    assert_eq!(world.query::<&GameObjectInfo>().iter(&world).count(), 1);
+    assert_eq!(
+        *world.query::<&crate::maps::InMap>().single(&world).unwrap(),
+        map
+    );
 }
 
 #[test]

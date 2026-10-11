@@ -58,6 +58,7 @@ pub struct MapEntry {
     pub corpse: (f32, f32),
     pub max_players: u32,
     pub wdt_file_data_id: u32,
+    pub expansion_id: u32,
 }
 
 impl MapEntry {
@@ -105,6 +106,8 @@ pub struct MapDifficulty {
     pub reset_interval: ResetInterval,
     pub max_players: u32,
     pub flags: u32,
+    /// Map.Flags_0 FlexibleRaidLocking; not a MapDifficulty flag.
+    pub flexible_locking: bool,
 }
 
 impl MapDifficulty {
@@ -118,10 +121,10 @@ impl MapDifficulty {
         self.flags & MAP_DIFFICULTY_FLAG_ENCOUNTER_LOCKS != 0
     }
 
-    /// `MapDb2Entries::IsInstanceIdBound` (no map is flex-locking among the hosted ones:
-    /// `MapFlags::FlexibleRaidLocking` is a raid flag).
+    /// `MapDb2Entries::IsInstanceIdBound`: flexible raid and loot-based encounter locks
+    /// resume individual progress rather than binding the player to one copy.
     pub fn is_instance_id_bound(&self) -> bool {
-        !self.is_using_encounter_locks()
+        !self.flexible_locking && !self.is_using_encounter_locks()
     }
 
     /// `MapDifficultyEntry::IsExtendable`.
@@ -199,6 +202,10 @@ pub struct DifficultyEntry {
 }
 
 impl DifficultyEntry {
+    pub fn is_legacy(&self) -> bool {
+        self.flags & 0x20 != 0
+    }
+
     pub fn can_select(&self) -> bool {
         self.flags & DIFFICULTY_FLAG_CAN_SELECT != 0
     }
@@ -314,6 +321,8 @@ pub struct MapStore {
     pub difficulty_entries: HashMap<u32, DifficultyEntry>,
     /// `DungeonEncounter.db2` by ID.
     pub dungeon_encounters: HashMap<u32, DungeonEncounter>,
+    /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
+    pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// `graveyard_zone`: ghost zone → WorldSafeLocs ids.
@@ -375,7 +384,7 @@ impl MapStore {
     }
 
     /// `DB2Manager::GetDefaultMapDifficulty` (DB2Stores.cpp:2734-2765).
-    fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
+    pub(crate) fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
         let rows = self.difficulties.get(&map_id)?;
         let known = || {
             rows.iter()
@@ -468,6 +477,7 @@ impl MapStore {
             corpse: (0.0, 0.0),
             max_players: 0,
             wdt_file_data_id,
+            expansion_id: 0,
         };
         Self {
             maps: HashMap::from([
@@ -487,6 +497,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         difficulty_conditions: load_difficulty_conditions(conn)?,
         difficulty_entries: load_difficulty_entries(conn)?,
         dungeon_encounters: load_dungeon_encounters(conn)?,
+        raid_creature_encounters: load_raid_creature_encounters(conn)?,
         area_triggers: load_area_triggers(conn, &safe_locs)?,
         graveyard_zones: load_graveyard_zones(conn)?,
         instance_parents: load_instance_parents(conn)?,
@@ -495,10 +506,29 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     })
 }
 
+fn load_raid_creature_encounters(conn: &Connection) -> rusqlite::Result<HashMap<(u32, u32), u32>> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='raid_encounter_creature')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !exists {
+        warn!(
+            "Raid boss credit catalog absent; prepare/import scripts/raid_encounters.py reference SQL before raid boss credit is available"
+        );
+        return Ok(HashMap::new());
+    }
+    let mut statement =
+        conn.prepare("SELECT map_id, creature_entry, bit FROM raid_encounter_creature")?;
+    statement
+        .query_map([], |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)))?
+        .collect()
+}
+
 fn load_maps(conn: &Connection) -> rusqlite::Result<HashMap<u32, MapEntry>> {
     let mut statement = conn.prepare(
         "SELECT ID, Directory, MapName_lang, InstanceType, AreaTableID, ParentMapID,
-                CorpseMapID, Corpse_0, Corpse_1, MaxPlayers, WdtFileDataID FROM map",
+                CorpseMapID, Corpse_0, Corpse_1, MaxPlayers, WdtFileDataID, ExpansionID FROM map",
     )?;
     let rows = statement.query_map([], map_from_row)?;
     let mut maps = HashMap::new();
@@ -528,13 +558,14 @@ fn map_from_row(row: &Row) -> rusqlite::Result<Option<MapEntry>> {
         corpse: (row.get::<_, f64>(7)? as f32, row.get::<_, f64>(8)? as f32),
         max_players: row.get(9)?,
         wdt_file_data_id: row.get(10)?,
+        expansion_id: row.get(11)?,
     }))
 }
 
 fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<MapDifficulty>>> {
     let mut statement = conn.prepare(
-        "SELECT ID, MapID, DifficultyID, LockID, ResetInterval, MaxPlayers, Flags
-         FROM map_difficulty ORDER BY ID",
+        "SELECT d.ID, d.MapID, d.DifficultyID, d.LockID, d.ResetInterval, d.MaxPlayers, d.Flags, m.Flags_0
+         FROM map_difficulty d JOIN map m ON m.ID=d.MapID ORDER BY d.ID",
     )?;
     let mut difficulties: HashMap<u32, Vec<MapDifficulty>> = HashMap::new();
     let rows = statement.query_map([], |row| {
@@ -546,6 +577,7 @@ fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<Map
             reset_interval: ResetInterval::from_db2(row.get(4)?),
             max_players: row.get(5)?,
             flags: row.get(6)?,
+            flexible_locking: (row.get::<_, i64>(7)? as u32) & 0x8000 != 0,
         })
     })?;
     for row in rows {

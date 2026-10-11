@@ -1,3 +1,6 @@
+#[path = "follower_tests.rs"]
+mod follower_tests;
+
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
@@ -606,6 +609,7 @@ fn online(names: &[&str]) -> OnlineView {
                     level: 10,
                     portrait: Default::default(),
                     dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                    raid_difficulty: crate::maps::RaidDifficulty::default(),
                 },
             )
         })

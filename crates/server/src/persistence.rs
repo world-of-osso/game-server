@@ -631,19 +631,53 @@ pub fn save_reputation(db: &Database, character_id: u64, reputation: &CharacterR
 }
 
 pub fn load_currencies(db: &Database, character_id: u64) -> shared::currency::CurrencyWallet {
-    let txn = db.begin_read().expect("Failed to begin read txn");
-    let table = txn
-        .open_table(CURRENCIES)
-        .expect("Failed to open currencies table");
-    match table.get(character_id).expect("Failed to read currencies") {
-        Some(guard) => serde_json::from_slice::<shared::currency::CurrencyWallet>(guard.value())
-            .expect("decode currencies"),
-        None => {
-            let wallet = shared::currency::CurrencyWallet::default();
-            save_currencies(db, character_id, &wallet);
-            wallet
-        }
+    let mut wallet = {
+        let txn = db.begin_read().expect("Failed to begin currency read");
+        let table = txn
+            .open_table(CURRENCIES)
+            .expect("Failed to open currencies table");
+        table
+            .get(character_id)
+            .expect("Failed to read currencies")
+            .map(|guard| {
+                serde_json::from_slice::<shared::currency::CurrencyWallet>(guard.value())
+                    .expect("decode currencies")
+            })
+            .unwrap_or_default()
+    };
+    if migrate_pvp_currency_ids(&mut wallet) {
+        save_currencies(db, character_id, &wallet);
     }
+    wallet
+}
+
+/// One-way storage conversion: obsolete internal IDs are never alternate API IDs.
+fn migrate_pvp_currency_ids(wallet: &mut shared::currency::CurrencyWallet) -> bool {
+    let mut changed = false;
+    for (old, current) in [
+        (1, shared::currency::HONOR_CURRENCY_ID),
+        (2, shared::currency::CONQUEST_CURRENCY_ID),
+    ] {
+        let Some(index) = wallet.entries.iter().position(|entry| entry.id == old) else {
+            continue;
+        };
+        let mut legacy = wallet.entries.remove(index);
+        if let Some(entry) = wallet.entries.iter_mut().find(|entry| entry.id == current) {
+            entry.amount = entry
+                .amount
+                .checked_add(legacy.amount)
+                .expect("PvP balance migration overflow");
+            entry.week_earned = entry
+                .week_earned
+                .checked_add(legacy.week_earned)
+                .expect("PvP weekly-earned migration overflow");
+        } else {
+            legacy.id = current;
+            wallet.entries.push(legacy);
+        }
+        changed = true;
+    }
+    changed
 }
 
 pub fn save_currencies(

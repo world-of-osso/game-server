@@ -47,20 +47,39 @@ const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 
 /// Spells the player knows, in learn order. Cast validation reads this.
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
-pub struct KnownSpells(Vec<u32>);
+pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>);
 
 impl KnownSpells {
+    pub(crate) fn pvp_grants(&self) -> &[(u32, u32)] {
+        &self.1
+    }
+    pub(crate) fn set_pvp_grants(&mut self, mut grants: Vec<(u32, u32)>) {
+        grants.sort_unstable();
+        grants.dedup();
+        self.1 = grants;
+    }
+
     #[cfg(test)]
     pub(crate) fn fixture(spells: Vec<u32>) -> Self {
-        Self(spells)
+        Self(spells, Vec::new())
     }
 
     pub fn contains(&self, spell_id: u32) -> bool {
-        self.0.contains(&spell_id)
+        self.iter().any(|id| id == spell_id)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = u32> + '_ {
-        self.0.iter().copied()
+        let baseline = self
+            .0
+            .iter()
+            .copied()
+            .filter(|id| !self.1.iter().any(|&(_, base)| base == *id));
+        let grants = self
+            .1
+            .iter()
+            .map(|&(spell, _)| spell)
+            .filter(|id| !self.0.contains(id) || self.1.iter().any(|&(_, base)| base == *id));
+        baseline.chain(grants)
     }
 }
 
@@ -70,6 +89,25 @@ pub use shared::components::ActiveSpec;
 /// Occupied action bar slots.
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ActionBar(BTreeMap<u8, ActionRef>);
+
+impl ActionBar {
+    pub(crate) fn update_pvp_overrides(
+        &mut self,
+        previous: &[(u32, u32)],
+        current: &[(u32, u32)],
+        known: &KnownSpells,
+    ) -> Option<ActionBarSnapshot> {
+        let map = |grants: &[(u32, u32)]| {
+            grants
+                .iter()
+                .filter(|&&(_, base)| base != 0)
+                .map(|&(spell, base)| (base, spell))
+                .collect::<Vec<_>>()
+        };
+        let changed = apply_spell_overrides(&mut self.0, &map(previous), &map(current), known);
+        changed.then(|| bar_snapshot(self))
+    }
+}
 
 /// Validated trait config of the active spec (granted entries included),
 /// its unspent points and the spells it applies.
@@ -567,7 +605,10 @@ fn init_player_progression(
         if evaluated.traits_reset {
             save_trait_config(&db.db, client_id.0, spec.0, Vec::new());
         }
-        let mut known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+        let mut known = KnownSpells(
+            evaluated.known.iter().map(|spell| spell.spell_id).collect(),
+            Vec::new(),
+        );
         merge_learned_spells(&mut known, professions);
         let mut bar = ActionBar(match &stored {
             Some(data) => data
@@ -650,8 +691,14 @@ fn refresh_player(
     senders: &mut ProgressionSenders,
 ) {
     let new_spec = evaluated.spec;
-    let mut new_known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+    let mut new_known = KnownSpells(
+        evaluated.known.iter().map(|spell| spell.spell_id).collect(),
+        Vec::new(),
+    );
     merge_learned_spells(&mut new_known, professions);
+    if *spec == new_spec {
+        new_known.1 = known.1.clone();
+    }
     let spec_changed = *spec != new_spec;
     if spec_changed {
         *spec = new_spec;
@@ -669,8 +716,10 @@ fn refresh_player(
     if evaluated.traits_reset {
         save_trait_config(&db.db, client_id.0, new_spec.0, Vec::new());
     }
-    let unlearned = spells_missing_from(&known.0, &new_known.0);
-    let learned = spells_missing_from(&new_known.0, &known.0);
+    let old_ids: Vec<_> = known.iter().collect();
+    let new_ids: Vec<_> = new_known.iter().collect();
+    let unlearned = spells_missing_from(&old_ids, &new_ids);
+    let learned = spells_missing_from(&new_ids, &old_ids);
     if !unlearned.is_empty() {
         send(
             &mut senders.unlearned,

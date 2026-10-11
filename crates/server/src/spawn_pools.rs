@@ -110,6 +110,8 @@ pub struct SpawnedPoolData {
 pub struct PoolChanges {
     pub despawned: Vec<u32>,
     pub spawned: Vec<u32>,
+    pub gameobjects_despawned: Vec<u32>,
+    pub gameobjects_spawned: Vec<u32>,
 }
 
 /// One `content_pool_members` row with the map of its spawn (none for a child pool).
@@ -296,6 +298,34 @@ impl SpawnPools {
         self.search[Kind::Creature as usize].get(&guid).copied()
     }
 
+    pub fn gameobject_pool(&self, guid: u32) -> Option<u32> {
+        self.search[Kind::GameObject as usize].get(&guid).copied()
+    }
+
+    pub fn respawn_gameobject(
+        &self,
+        spawns: &mut SpawnedPoolData,
+        guid: u32,
+        rng: &mut impl Rng,
+    ) -> PoolChanges {
+        let mut changes = PoolChanges::default();
+        let pool = self.gameobject_pool(guid).expect("pooled gameobject");
+        match self.search[Kind::Pool as usize].get(&pool) {
+            Some(&mother) => {
+                self.spawn_group(Kind::Pool, spawns, mother, Some(pool), &mut changes, rng)
+            }
+            None => self.spawn_group(
+                Kind::GameObject,
+                spawns,
+                pool,
+                Some(guid),
+                &mut changes,
+                rng,
+            ),
+        }
+        changes
+    }
+
     /// `PoolMgr::InitPoolsForMap`: a new copy of `map` with its pools spawned; returns
     /// the creature spawns picked.
     pub fn init_map(&self, map: u16, rng: &mut impl Rng) -> (SpawnedPoolData, Vec<u32>) {
@@ -398,7 +428,7 @@ impl SpawnPools {
             spawns.add(kind, object.id, pool);
             match kind {
                 Kind::Creature => changes.spawned.push(object.id),
-                Kind::GameObject => {}
+                Kind::GameObject => changes.gameobjects_spawned.push(object.id),
                 Kind::Pool => self.spawn_pool(spawns, object.id, changes, rng),
             }
         }
@@ -418,7 +448,7 @@ impl SpawnPools {
         }
         match kind {
             Kind::Creature => changes.despawned.push(id),
-            Kind::GameObject => {}
+            Kind::GameObject => changes.gameobjects_despawned.push(id),
             Kind::Pool => self.despawn_pool(spawns, id, changes),
         }
         spawns.remove(kind, id, pool);
@@ -438,6 +468,10 @@ impl SpawnPools {
 }
 
 impl SpawnedPoolData {
+    pub fn gameobject_spawned(&self, guid: u32) -> bool {
+        self.gameobjects.contains(&guid)
+    }
+
     /// `SpawnedPoolData::GetSpawnedObjects`.
     fn spawned_in(&self, pool: u32) -> u32 {
         self.pools.get(&pool).copied().unwrap_or(0)
@@ -525,6 +559,7 @@ pub struct PooledSpawn(pub u32);
 pub(crate) struct MapPools {
     pub spawns: SpawnedPoolData,
     pub entities: HashMap<u32, Entity>,
+    pub gameobjects: HashMap<u32, Entity>,
     pub difficulty_id: u32,
     pub replicate: bool,
 }
@@ -552,22 +587,86 @@ pub(crate) fn respawn_pooled(world: &mut World, entity: Entity) {
             world_data
                 .pools
                 .respawn_creature(&mut map_pools.spawns, guid, &mut rand::thread_rng());
-        for despawned in &changes.despawned {
-            if let Some(entity) = map_pools.entities.remove(despawned) {
-                world.entity_mut(entity).despawn();
-            }
-        }
-        let mut queue = CommandQueue::default();
-        let mut commands = Commands::new(&mut queue, world);
-        let spawned = crate::zones::spawn_pooled_creatures(
-            &mut commands,
-            &world_data,
-            map,
-            &map_pools,
-            &changes.spawned,
-        );
-        queue.apply(world);
-        map_pools.entities.extend(spawned);
+        apply_pool_changes(world, &world_data, map, &mut map_pools, &changes);
     });
     world.resource_mut::<PoolSpawns>().0.insert(map, map_pools);
+}
+
+pub(crate) fn respawn_gameobject(
+    world: &mut World,
+    spawn: &crate::game_objects::GameObjectSpawn,
+    map: InMap,
+) {
+    if world
+        .resource::<WorldData>()
+        .pools
+        .gameobject_pool(spawn.guid)
+        .is_none()
+    {
+        if let Err(gap) = crate::gathering::spawn_node(world, spawn, map) {
+            warn!("{gap}");
+        }
+        return;
+    }
+    let mut map_pools = world
+        .resource_mut::<PoolSpawns>()
+        .0
+        .remove(&map)
+        .expect("pooled node map state");
+    world.resource_scope(|world, world_data: Mut<WorldData>| {
+        let changes = world_data.pools.respawn_gameobject(
+            &mut map_pools.spawns,
+            spawn.guid,
+            &mut rand::thread_rng(),
+        );
+        apply_pool_changes(world, &world_data, map, &mut map_pools, &changes);
+    });
+    world.resource_mut::<PoolSpawns>().0.insert(map, map_pools);
+}
+
+fn apply_pool_changes(
+    world: &mut World,
+    world_data: &WorldData,
+    map: InMap,
+    map_pools: &mut MapPools,
+    changes: &PoolChanges,
+) {
+    for guid in &changes.gameobjects_despawned {
+        if let Some(entity) = map_pools.gameobjects.remove(guid)
+            && world.get_entity(entity).is_ok()
+        {
+            world.entity_mut(entity).despawn();
+        }
+    }
+    let nodes = world
+        .resource::<crate::game_objects::GameObjectSpawns>()
+        .0
+        .iter()
+        .filter(|spawn| changes.gameobjects_spawned.contains(&spawn.guid))
+        .cloned()
+        .collect::<Vec<_>>();
+    for spawn in nodes {
+        match crate::gathering::spawn_node(world, &spawn, map) {
+            Ok(entity) => {
+                map_pools.gameobjects.insert(spawn.guid, entity);
+            }
+            Err(gap) => warn!("{gap}"),
+        }
+    }
+    for guid in &changes.despawned {
+        if let Some(entity) = map_pools.entities.remove(guid) {
+            world.entity_mut(entity).despawn();
+        }
+    }
+    let mut queue = CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, world);
+    let spawned = crate::zones::spawn_pooled_creatures(
+        &mut commands,
+        world_data,
+        map,
+        map_pools,
+        &changes.spawned,
+    );
+    queue.apply(world);
+    map_pools.entities.extend(spawned);
 }

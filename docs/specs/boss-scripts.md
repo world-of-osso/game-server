@@ -23,7 +23,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] A casting creature neither chases (if movement interrupts the cast) nor swings; a stunned unit does not swing; stunned/rooted creatures do not chase and chase speed follows speed auras.
 - [x] A creature's melee-class spell misses hostile units by 5% − MOD_HIT_CHANCE.
 - [x] Effects/targets added: 27 PERSISTENT_AREA_AURA (dynamic object; enemies inside carry the aura with the object's expiry and tick phase, leavers lose it), 252 TELEPORT_UNITS, targets 28 DEST_DYNOBJ_ENEMY, 65 DEST_TARGET_BACK, 77 UNIT_CHANNEL_TARGET.
-- [x] Auras added: 18 MOD_INVISIBILITY (hidden from every client, no valid target), 93 MOD_UNATTACKABLE (`NON_ATTACKABLE_2`, attack stopped in a dungeon), 54 MOD_HIT_CHANCE, 252 MOD_SPEED_SLOW_ALL (attack and cast time ×(100−amount)/100).
+- [x] Auras added: 18 MOD_INVISIBILITY (hidden from observers without matching [typed detection](invisibility-detection.md)), 93 MOD_UNATTACKABLE (`NON_ATTACKABLE_2`, attack stopped in a dungeon), 54 MOD_HIT_CHANCE, 252 MOD_SPEED_SLOW_ALL (attack and cast time ×(100−amount)/100).
 
 ### SmartAI combat casts
 - [x] `SMART_EVENT_UPDATE_IC` advances initial and repeat min/max timers only while engaged; a due cast waits for any active cast to finish.
@@ -33,7 +33,8 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 ### Wailing Caverns — bounded Cobrahn slice
 - [x] Lord Cobrahn3669 (map43, Normal1, encounter586, instance data0 from local SmartAI death action34) participates in copy-scoped encounter start/end and boss frames through the existing `BossAi` machinery. Evade fails the encounter; death succeeds.
 - [x] Its abilities are loaded, not hardcoded: SmartAI row2 casts Lightning Bolt20805 at its victim, initial0ms/repeat6000–8000ms. AGGRO4 / TALK1 speaks source group0.
-- [ ] Remaining WC bosses, Naralex escort, door progression and unsupported SmartAI events/actions are not covered. No absent C++ mechanics or coefficients are inferred.
+- [x] Remaining authentically bound WC bosses receive the data-selected lifecycle below.
+- [ ] Naralex escort, door progression and unsupported SmartAI events/actions remain gaps. No absent C++ mechanics or coefficients are inferred.
 - [ ] Full playable both-skin acceptance remains blocked: native entry/pull/death/credit/frame clearing observed in both skins, but display4213 has no imported appearance and the population copy loses its authored Normal loot binding. Population/gate dependency belongs to `dungeon-population`; no DB writes or fabricated bindings. Normal has no scheduled lockout; existing encounter credit/loot paths are reused.
 
 ### The Stockade
@@ -92,3 +93,15 @@ Own server :5085 (world.db = `world-stockadebosses-20260927.db`, copied game.red
 - Lord Overheat: pull yell, Fireball chain, Overheat, Rain of Fire's dynamic object at the player, mana 4177/4313 on his boss frame (`11`-`13`); leaving reset him, a new pull and his death gave "FIRE... EXTINGUISHED!" and DONE (`14`).
 - Randolph Moloch: pull yell, Sweep and Wildly Stabbing (`20`, `21`); a hit to 70% gave "Randolph Moloch vanishes!", he left the client, Shadowstep brought him back beside the player (`22`, `23`); death yell, DONE, Mortimer walked to him, yelled and collapsed (`24`-`26`).
 - Not shown live: the second vanish, Rain of Fire's radius against a second player (unit tests cover both).
+
+## Authentic data registration — 2026-10-11
+
+- Every unambiguous single-creature JournalEncounter/JournalEncounterCreature binding in the imported catalog automatically receives copy-scoped BossAi start/end, boss frames, evade/repull, kill credit and existing lock saving. Registration must not require a per-dungeon Rust module or known ScriptName.
+- A bound creature with authored SmartAI rows keeps their timers, spells and targets; a bound creature without rows adds only lifecycle to existing melee. Existing authored Stockade Rust mechanics remain unchanged.
+- Stockade, Grim Batol and Cobrahn saved boss ordinals remain compatible. Compatibility bindings are inspectable authored data, not alternate runtime registration code.
+- Import preparation includes dungeons and raids, accepts only unique same-map creature/display joins, and records ambiguous/multi-actor gaps without fabricating completion rules. Publication of prepared SQL remains separate from this feature.
+- Report per-bound-creature full/partial/none SmartAI coverage. Full means all authored entry-keyed rows are within current event/action/target/flag support, not complete Retail encounter mechanics or spell-effect/numeric parity. None means no authored cast rows; existing Stockade script mechanics are the explicit preservation exception.
+
+Proof: targeted legacy regressions plus real spawn/pull/evade/repull/ability/death/save fixtures; private both-skin Skum3674/encounter589 lifecycle captures at UDP5830. Controlled admin damage exercises production damage/death boundaries, not ordinary solo balance. Skum display4203 remains outside imported appearance coverage; no replacement model or mechanics are introduced.
+
+- Existing BossAi summon ownership hooks are preserved: JustSummoned tracks owned summons; evade/death cleanup despawns them, and SummonedCreatureDespawn removes ownership. This adds no summon ability.
