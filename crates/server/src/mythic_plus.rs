@@ -12,6 +12,9 @@ use shared::components::{Health, Npc, Position};
 use shared::protocol::*;
 use std::collections::HashMap;
 
+#[path = "mythic_mentor.rs"]
+mod mentor;
+
 const KEYS: TableDefinition<u64, &[u8]> = TableDefinition::new("mythic_keystones");
 const HISTORY: TableDefinition<u64, &[u8]> = TableDefinition::new("mythic_run_history");
 pub(crate) const KEYSTONE_ITEM: u32 = 180653;
@@ -34,8 +37,9 @@ pub struct MythicPlusPlugin;
 impl Plugin for MythicPlusPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Challenges>()
+            .init_resource::<mentor::PublishedKeys>()
             .add_systems(PostStartup, load_startup)
-            .add_systems(Update, update);
+            .add_systems(Update, (update, mentor::send_changed_party_keys).chain());
     }
 }
 fn now_ms(world: &World) -> u64 {
