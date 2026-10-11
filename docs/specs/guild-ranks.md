@@ -18,7 +18,9 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.
 - [x] Chat membership decisions use authoritative persisted guild IDs when components are stale.
 - [ ] Invitations, MOTD, guild information and officer-note editing/viewing require their rank flags.
-- [ ] Remove-member permission is stored with the rank; no player member-removal action currently exists.
+- [x] Leave removes a non-master's membership; a Guild Master receives ERR_GUILD_LEADER_LEAVE.
+- [x] Remove-member requires the removal flag and a strictly lower-ranked same-guild target.
+- [x] Removal atomically deletes membership, guild-local rank, note and pending invitation; daily bank usage remains. Online player components and recipient rosters refresh, including the removed member's empty roster. Rejoining starts at the lowest rank.
 
 ### Bank permissions
 - [x] Tab view/deposit and stacks/day are per rank/tab. Zero denies withdrawals; rank 0 alone is unlimited.
