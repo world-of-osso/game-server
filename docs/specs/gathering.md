@@ -11,7 +11,7 @@ Retail Mainline governs Mining, Herbalism and Skinning. Forever changes art only
 
 ## Server/client boundary
 
-`GatherableResource.parent_skill` identifies a node or fully looted corpse for native tracking and interaction. A corpse becomes eligible only after its normal loot roll has completed and all slots are empty; a completed zero-drop roll is distinct from loot not yet generated. `UseGameObject` requests gathering for those replicated resources; the server selects an authored gathering spell for a learned skill, then uses the normal cast/interrupt pipeline. Resource loot uses the existing personal loot window and reference/group roller. Authored per-player claims, depletion delay and pool respawn prevent repeat collection of one node. Profession progression reuses changed-state persistence/snapshots.
+`GatherableResource.parent_skill` identifies a node or fully looted corpse for native tracking and interaction. A corpse becomes eligible only after its normal loot roll has completed and all personal/shared slots and group rolls are resolved; a completed zero-drop roll is distinct from loot not yet generated. `UseGameObject` requests gathering for those replicated resources; the server selects an authored gathering spell for a learned skill, then uses the normal cast/interrupt pipeline. Resource loot uses the existing personal loot window and reference/group roller. Authored per-player claims, depletion delay and pool respawn prevent repeat collection of one node. Profession progression reuses changed-state persistence/snapshots.
 
 Current source implementation is not yet runtime acceptance. Missing PlayerCondition mappings and nonpositive respawn timers are explicit gaps; they are not replaced with invented behavior.
 
