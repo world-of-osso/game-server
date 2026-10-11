@@ -55,12 +55,22 @@ class InstancePopulationTest(unittest.TestCase):
                 outside = "map NOT IN (SELECT map FROM tdb_instance_template)"
                 before = conn.execute(f"SELECT * FROM content_creature WHERE {outside} ORDER BY guid").fetchall()
                 before_objects = conn.execute(f"SELECT * FROM content_gameobject WHERE {outside} ORDER BY guid").fetchall()
-                before_loot = conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 ORDER BY entry").fetchall()
+                before_loot = conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 AND entry NOT IN (SELECT id FROM tdb_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry").fetchall()
             importer.import_database(destination)
             with closing(sqlite3.connect(destination)) as conn:
                 self.assertEqual(before, conn.execute(f"SELECT * FROM content_creature WHERE {outside} ORDER BY guid").fetchall())
                 self.assertEqual(before_objects, conn.execute(f"SELECT * FROM content_gameobject WHERE {outside} ORDER BY guid").fetchall())
-                self.assertEqual(before_loot, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 ORDER BY entry").fetchall())
+                self.assertEqual(before_loot, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE lootid>=20000000 AND entry NOT IN (SELECT id FROM tdb_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry").fetchall())
+                self.assertEqual((20003669, 87, 168), conn.execute(
+                    "SELECT lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry=3669 AND DifficultyID=1").fetchone())
+                # Every spawned difficulty uses its authored resolved row, including gold-only creatures.
+                importer.select_instance_spawns(conn)
+                importer.retail.create_difficulty_table(conn, map_list=importer.MAPS, base_phase=importer.BASE_PHASE)
+                expected = conn.execute("SELECT s.entry,s.difficulty,CASE WHEN d.LootID=0 THEN 0 ELSE d.LootID+20000000 END,d.GoldMin,d.GoldMax FROM temp.spawn_row s JOIN tdb_creature_template_difficulty d ON d.Entry=s.entry AND d.DifficultyID=s.row_difficulty WHERE s.difficulty>0 ORDER BY s.entry,s.difficulty").fetchall()
+                self.assertEqual(expected, conn.execute("SELECT entry,DifficultyID,lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry IN (SELECT entry FROM temp.spawn_row) ORDER BY entry,DifficultyID").fetchall())
+                expected_base = conn.execute("SELECT Entry,CASE WHEN LootID=0 THEN 0 ELSE LootID+20000000 END,GoldMin,GoldMax FROM temp.tdb_difficulty WHERE Entry IN (SELECT id1 FROM temp.instance_creature) ORDER BY Entry").fetchall()
+                self.assertEqual(expected_base, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE entry IN (SELECT id1 FROM temp.instance_creature) ORDER BY entry").fetchall())
+                self.assertEqual([(1179,), (2589,), (2592,), (4537,), (6460,), (6465,), (9738,), (10410,)], conn.execute("SELECT Item FROM content_creature_loot_template WHERE Entry=20003669 ORDER BY Item").fetchall())
                 entries = "SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)"
                 self.assertEqual(conn.execute(f"SELECT entry,name FROM tdb_creature_template WHERE entry IN ({entries}) ORDER BY entry").fetchall(), conn.execute(f"SELECT entry,name FROM content_creature_template WHERE entry IN ({entries}) ORDER BY entry").fetchall())
                 self.assertEqual(conn.execute(f"SELECT * FROM tdb_creature_template_model WHERE CreatureID IN ({entries}) ORDER BY CreatureID,Idx").fetchall(), conn.execute(f"SELECT * FROM content_creature_template_model WHERE CreatureID IN ({entries}) ORDER BY CreatureID,Idx").fetchall())
@@ -76,6 +86,8 @@ class InstancePopulationTest(unittest.TestCase):
             importer.import_database(destination)
             with closing(sqlite3.connect(destination)) as conn:
                 self.assertEqual(421, conn.execute("SELECT count(*) FROM content_creature WHERE map=36").fetchone()[0])
+                self.assertEqual(expected, conn.execute("SELECT entry,DifficultyID,lootid,mingold,maxgold FROM content_creature_template_difficulty WHERE entry IN (SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry,DifficultyID").fetchall())
+                self.assertEqual(expected_base, conn.execute("SELECT entry,lootid,mingold,maxgold FROM content_creature_template WHERE entry IN (SELECT DISTINCT id1 FROM content_creature WHERE map IN (SELECT map FROM tdb_instance_template)) ORDER BY entry").fetchall())
                 before_failed_import = conn.execute("SELECT * FROM content_creature WHERE map=36 ORDER BY guid").fetchall()
                 conn.execute("DROP TABLE tdb_creature_template_model")
             with self.assertRaises(sqlite3.OperationalError):
