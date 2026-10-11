@@ -151,6 +151,7 @@ struct Inbox {
     ends: Vec<EncounterEnd>,
     engages: Vec<EncounterEngageUnit>,
     disengages: Vec<EncounterDisengageUnit>,
+    timeline: Vec<shared::protocol::EncounterTimelineEvent>,
     log: Vec<CombatLogEvent>,
 }
 
@@ -263,6 +264,8 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
             (
                 MessageSender::<ChatMessage>::default(),
                 MessageReceiver::<ChatMessage>::default(),
+                MessageSender::<shared::protocol::EncounterTimelineEvent>::default(),
+                MessageReceiver::<shared::protocol::EncounterTimelineEvent>::default(),
                 MessageSender::<EncounterStart>::default(),
                 MessageReceiver::<EncounterStart>::default(),
                 MessageSender::<EncounterEnd>::default(),
@@ -353,6 +356,12 @@ impl Harness {
                     .starts
                     .extend(drain::<EncounterStart>(world, *connection));
                 inbox.ends.extend(drain::<EncounterEnd>(world, *connection));
+                inbox
+                    .timeline
+                    .extend(drain::<shared::protocol::EncounterTimelineEvent>(
+                        world,
+                        *connection,
+                    ));
                 inbox
                     .engages
                     .extend(drain::<EncounterEngageUnit>(world, *connection));
@@ -609,6 +618,33 @@ fn hogger_casts_maddening_call_then_vicious_slice_at_their_timers() {
             && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
     });
     assert!(slice_hit);
+}
+
+#[test]
+fn boss_timeline_script_events_publish_actual_selected_deadlines() {
+    use shared::protocol::EncounterTimelineEvent;
+    let (mut h, boss) = Harness::new(NPC_HOGGER, &[]).unwrap();
+    h.engage(boss);
+    h.advance(0.1);
+    let events = std::mem::take(&mut h.players[0].2.timeline);
+    let timers = events
+        .iter()
+        .find_map(|event| match event {
+            EncounterTimelineEvent::Timers { caster, timers, .. }
+                if *caster == boss.to_bits() && !timers.is_empty() =>
+            {
+                Some(timers)
+            }
+            _ => None,
+        })
+        .expect("script schedule must expose selected EventMap deadlines");
+    let call = timers.iter().find(|t| t.spell_id == 86620).unwrap();
+    let slice = timers.iter().find(|t| t.spell_id == 86604).unwrap();
+    assert!((900..=2000).contains(&call.remaining_ms));
+    assert!((2900..=4000).contains(&slice.remaining_ms));
+    h.advance(call.remaining_ms as f32 / 1000.0 + 0.1);
+    assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
+        EncounterTimelineEvent::Cast { spell_id, .. } if *spell_id == 86620)));
 }
 
 #[test]
