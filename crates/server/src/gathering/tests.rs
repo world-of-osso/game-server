@@ -365,3 +365,41 @@ fn gathering_depletes_then_respawns_at_the_authored_timer_and_position() {
         .collect::<Vec<_>>();
     assert_eq!(nodes, vec![(position, InMap::continent(0))]);
 }
+
+#[test]
+fn gathering_authored_pool_selection_and_repick_respect_member_limits() {
+    use rand::{SeedableRng, rngs::StdRng};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let pools = crate::spawn_pools::SpawnPools::load(&conn).unwrap();
+    let mut rng = StdRng::seed_from_u64(5720);
+    let (mut selected, _) = pools.init_map(0, &mut rng);
+    let members=conn.prepare("SELECT p.spawnId,p.poolSpawnId,t.max_limit FROM content_pool_members p JOIN content_gameobject g ON g.guid=p.spawnId JOIN content_pool_template t ON t.entry=p.poolSpawnId WHERE p.type=1 AND g.map=0 ORDER BY p.poolSpawnId,p.spawnId").unwrap()
+        .query_map([],|row|Ok((row.get::<_,u32>(0)?,row.get::<_,u32>(1)?,row.get::<_,usize>(2)?))).unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>().unwrap();
+    let (guid, pool, limit) = members
+        .iter()
+        .copied()
+        .find(|(guid, _, _)| selected.gameobject_spawned(*guid))
+        .expect("authored map0 resource pool must select a live member");
+    let count = |state: &crate::spawn_pools::SpawnedPoolData| {
+        members
+            .iter()
+            .filter(|(guid, owner, _)| *owner == pool && state.gameobject_spawned(*guid))
+            .count()
+    };
+    assert!(count(&selected) > 0 && count(&selected) <= limit);
+    let changes = pools.respawn_gameobject(&mut selected, guid, &mut rng);
+    assert!(changes.gameobjects_despawned.contains(&guid));
+    assert!(!changes.gameobjects_spawned.is_empty());
+    assert!(
+        changes
+            .gameobjects_spawned
+            .iter()
+            .all(|guid| selected.gameobject_spawned(*guid))
+    );
+    assert!(count(&selected) <= limit);
+}
