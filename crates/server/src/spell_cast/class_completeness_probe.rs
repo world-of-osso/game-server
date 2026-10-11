@@ -251,6 +251,8 @@ fn census_harness(class: u8) -> Harness {
         .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
     h.app.init_resource::<crate::maps::InstanceManager>();
     h.app.init_resource::<crate::group::GroupRegistry>();
+    h.app
+        .insert_resource(crate::conditions::load_spell_target_conditions(&data.powers_db).unwrap());
     h
 }
 

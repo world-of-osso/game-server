@@ -21,6 +21,9 @@ fn class_completeness_native_mass_resurrection_offers_to_group_corpse_not_ghost_
     use shared::protocol::{ResurrectionOffer, ResurrectionResponse};
 
     let mut h = harness(Vec::new(), &[212036], 5).unwrap();
+    h.app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&world_db().unwrap().powers_db).unwrap(),
+    );
     h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
     let target = spawn_player(&mut h.app, 5, 200.0);
     let stranger = spawn_player(&mut h.app, 5, 3.0);
