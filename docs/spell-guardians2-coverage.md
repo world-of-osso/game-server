@@ -30,26 +30,26 @@ Existing guardian_spells import is already present; no new creature-spell rows a
 
 ## Census and proof
 
-Frozen615fb90 baseline exactly reproduced **164 roots,93 reviewed/71 underived**. Aftera053c9f: **164 roots,94 reviewed/70 underived**; Darkglare moves to reviewed/partial, **no whole Dummy root closes**. E3 **115 IDs/123 memberships**, aura4 **67/75**, aura226 **18/19** unchanged. Scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships unchanged.
+Initial frozen615fb90 baseline exactly reproduced **164 roots,93 reviewed/71 underived**. Aftera053c9f: **164 roots,94 reviewed/70 underived**; Darkglare moves to reviewed/partial, **no whole Dummy root closes**. E3 **115 IDs/123 memberships**, aura4 **67/75**, aura226 **18/19** unchanged. Scope13 classes/40 specs,630 book IDs/1551 memberships,302 core IDs/355 memberships unchanged.
 
-All40 baseline script/A ID sets match the previous batch exactly. Only Affliction core script presence increases3→4 for the named205180 binding; root A remains5. No generic guardian handler inflated into named-script coverage.
+Final origin/master809b61e integration at25bc1fc includes batch15 and petbattle-effects3. Its baseline exactly reproduces **163 roots,98 reviewed/65 underived**; combined guardian result **163 roots,99 reviewed/64 underived**. E3 **114/122**, aura4 **66/74**, aura226 **18/19** unchanged by this follow-up. All40 batch15 baseline script/A ID sets match exactly; only Affliction core script presence3→4 for205180, root A remains5. No generic handler inflated into named-script coverage. Integrated generators/receipts live under evidence `integrated/`.
 
 Proof ledger: importer initial0/3 reflects absent CLI, not complete semantic RED. First GREEN1/3 exposed a missing retail-map prerequisite; correctedc9d2bee **3/3** (native template/model, idempotence, missing-model rollback, live-DB refusal). Actor RED1/3: two Darkglare failures reproduce absent cast/damage; unbound-Wild-Imp negative already passes. a053c9f focused **3/3**, warning-free. Native Eye Beam variance alone is pinned0 in tests for exact damage731→1461 when owner SP changes1000→2000. Native cast time, coefficient, summon entry/model/lifetime and target ownership remain real. No live/network/full-rotation or new inheritance/melee parity claim.
 
-Integrated origin/master at6ea07e4 (only wiki-index conflict; both guardian and toy9 entries preserved). Requested `cargo test -p server --bin game-server spell_cast` ran **once:352/352**, warning-free. Format/check passed. Later7f1bd32 is test-fixture-only: prepared DB now drops after loading instead of leaking a static TempDir; current affected Darkglare **2/2** and final fmt check pass. No repeated broad gate or fresh352/352 claim at7f1bd32. Production cargo-check proof at6ea07e4 remains valid. Scoped existing-pet-slot fixture at48cead4 verifies the same pet survives summon and expiry. Four old owned fixture copies removed; no pending jobs. Manual changed-Rust readability audit; metric CLI absent. Existing initialize length and explicit test-fixture orchestration retained, no warning suppression or unrelated redesign.
+Integrated origin/master at6ea07e4 (only wiki-index conflict; both guardian and toy9 entries preserved). Requested `cargo test -p server --bin game-server spell_cast` ran **once:352/352**, warning-free. Format/check passed. Later7f1bd32 is test-fixture-only: prepared DB now drops after loading instead of leaking a static TempDir; current affected Darkglare **2/2** and final fmt check pass. No repeated broad gate or fresh352/352 claim at7f1bd32. Production cargo-check proof at6ea07e4 remains valid. Scoped existing-pet-slot fixture at48cead4 verifies the same pet survives summon and expiry. Four old owned fixture copies removed. origin/master advanced afterward:25bc1fc integrates batch15/petbattle-effects3, preserving its newer coverage matrix. Bounded guardian plus batch15 tests **22/22**, warning-free; fmt/check pass at25bc1fc. Broad spell_cast was not repeated; its352/352 proof belongs to6ea07e4, not the later integration. No fresh363/363 claim. Manual changed-Rust readability audit; metric CLI absent. Existing initialize length and explicit test-fixture orchestration retained, no warning suppression or unrelated redesign.
 
 Durable evidence: `game-engine/data/diagnostics/spell-guardians2-2026-10-10/` — source_audit.py,183-row source-receipts.json, archive-bindings.json, pet-base-stats.json, frozen before/after sources, census/all40 generators and logs. Parent owns independent integration acceptance; no live/full-crate/rotation proof.
 
 ## All40-spec preference table
 
-Counts mean bounded named-script presence, not full ability parity. Darkglare proof invokes native effect28 directly, so root A is unchanged.
+Final integrated batch15 baseline→guardian follow-up. Counts mean bounded named-script presence, not full ability parity. Darkglare proof invokes native effect28 directly, so root A is unchanged.
 
 | Spec | Book script roots before→after | Core script roots before→after | Core A before→after |
 |---|---:|---:|---:|
 | Mage Arcane (62) | 2→2 | 2→2 | 3→3 |
-| Mage Fire (63) | 1→1 | 2→2 | 4→4 |
+| Mage Fire (63) | 1→1 | 3→3 | 5→5 |
 | Mage Frost (64) | 1→1 | 4→4 | 4→4 |
-| Paladin Holy (65) | 3→3 | 2→2 | 4→4 |
+| Paladin Holy (65) | 4→4 | 3→3 | 5→5 |
 | Paladin Protection (66) | 4→4 | 4→4 | 5→5 |
 | Paladin Retribution (70) | 4→4 | 2→2 | 3→3 |
 | Warrior Arms (71) | 2→2 | 4→4 | 7→7 |
@@ -59,8 +59,8 @@ Counts mean bounded named-script presence, not full ability parity. Darkglare pr
 | Druid Feral (103) | 4→4 | 4→4 | 5→5 |
 | Druid Guardian (104) | 4→4 | 3→3 | 4→4 |
 | Druid Restoration (105) | 4→4 | 3→3 | 3→3 |
-| Death Knight Blood (250) | 2→2 | 2→2 | 3→3 |
-| Death Knight Frost (251) | 2→2 | 2→2 | 4→4 |
+| Death Knight Blood (250) | 2→2 | 3→3 | 4→4 |
+| Death Knight Frost (251) | 2→2 | 3→3 | 5→5 |
 | Death Knight Unholy (252) | 2→2 | 3→3 | 4→4 |
 | Hunter Beast Mastery (253) | 2→2 | 4→4 | 5→5 |
 | Hunter Marksmanship (254) | 2→2 | 4→4 | 4→4 |
@@ -78,11 +78,11 @@ Counts mean bounded named-script presence, not full ability parity. Darkglare pr
 | Warlock Demonology (266) | 0→0 | 2→2 | 4→4 |
 | Warlock Destruction (267) | 1→1 | 3→3 | 5→5 |
 | Monk Brewmaster (268) | 3→3 | 5→5 | 6→6 |
-| Monk Windwalker (269) | 3→3 | 2→2 | 3→3 |
-| Monk Mistweaver (270) | 4→4 | 3→3 | 3→3 |
-| Demon Hunter Havoc (577) | 5→5 | 4→4 | 5→5 |
-| Demon Hunter Vengeance (581) | 4→4 | 3→3 | 3→3 |
+| Monk Windwalker (269) | 4→4 | 4→4 | 5→5 |
+| Monk Mistweaver (270) | 4→4 | 4→4 | 4→4 |
+| Demon Hunter Havoc (577) | 6→6 | 4→4 | 5→5 |
+| Demon Hunter Vengeance (581) | 5→5 | 4→4 | 4→4 |
 | Evoker Devastation (1467) | 4→4 | 4→4 | 5→5 |
 | Evoker Preservation (1468) | 4→4 | 3→3 | 4→4 |
 | Evoker Augmentation (1473) | 6→6 | 3→3 | 4→4 |
-| Demon Hunter Devourer (1480) | 6→6 | 3→3 | 4→4 |
+| Demon Hunter Devourer (1480) | 7→7 | 3→3 | 4→4 |
