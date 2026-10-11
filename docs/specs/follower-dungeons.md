@@ -1,6 +1,6 @@
 # Follower dungeons and NPC companions
 
-Retail follower dungeons must group a solo player with four role-aware NPCs and complete the instance using authentic NPC spell kits. This cycle prepares reference data in [`scripts/follower_import.py`](../../scripts/follower_import.py); it does not implement the queue or combat AI. [Local data audit and lead-only import](../wiki/investigations/follower-data.md).
+Retail follower dungeons must group a solo player with four role-aware NPCs and complete an authored instance. User-approved workaround (2026-10-11): no authored NPC combat kits exist locally; followers use their labelled spec's real player spells through the existing executor. Spell coefficients, templates and displays remain authored. This is a bridge, not an NPC-kit authenticity claim; retire it when sourced NPC kits become available. [Local data audit and lead-only import](../wiki/investigations/follower-data.md).
 
 ## What it must do
 
@@ -13,8 +13,8 @@ Retail follower dungeons must group a solo player with four role-aware NPCs and 
 
 ### Gameplay (user requirement; not implemented)
 - [ ] Solo follower queue creates a five-member party, fills tank/healer/DPS roles, enters an instance with canonical authored spawns, follows/regroups and finishes the dungeon.
-- [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use authored rotations. All roles reuse server spell execution, navigation and relevant interrupts/defensives/ground-effect avoidance.
-- [ ] Extend to all13 classes/specs only where authentic companion data exists; missing class/spec kits remain explicit gaps, never guessed player-spell substitutions.
+- [ ] Tanks manage threat/positioning; healers prioritize injured party members; DPS use bounded spec-spell priorities. All roles reuse server spell execution and navigation.
+- [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
 - [ ] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
 
 ## How it works
@@ -28,11 +28,11 @@ Retail follower dungeons must group a solo player with four role-aware NPCs and 
 - `scripts/tests/test_follower_import.py` — source binary to SQLite round-trip, exact authentic spell rows, reapplication/preservation, invalid layout/source, read-only audit and database output rejection.
 
 ## Known gaps (current cycle)
-- [ ] Authentic dungeon NPC→class/spec→combat spell assignments: none proved for the37 local Expedition Escort templates. All13 class/spec dungeon kits remain unproved.
+- [ ] Authored NPC combat kits are absent. The approved player-spec bridge does not establish full player rotation, pet, interrupt, defensive or ground-avoidance parity.
 - [ ] Queue/group NPC identity and instance entry; combat AI and class coverage.
 - [ ] Promote selected TDB dungeon spawns/templates into runtime content through the content policy, then apply via the lead. Reference-table presence is not runtime spawn proof.
 - [ ] Private live fighting proof and both-skin PNGs; no captures claimed.
 
 ## Out of scope
 - Agent writes to canonical world.db or UDP5000 operations: lead-only.
-- Guessed spells, NPC IDs, roles from unit_class, coefficients or garrison-mission ability IDs treated as combat spells: explicitly prohibited.
+- Invented spell IDs/coefficients, roles inferred from creature unit_class and garrison-mission abilities treated as combat spells remain prohibited. Player-spec assignments are permitted solely by the approved workaround.
