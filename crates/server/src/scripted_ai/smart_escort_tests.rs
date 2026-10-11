@@ -675,6 +675,7 @@ fn smartai_coverage_party_targets_include_same_map_members_once() {
                 level: 10,
                 portrait: Default::default(),
                 dungeon_difficulty: 1,
+                raid_difficulty: Default::default(),
             },
         );
         members.push(entity);
