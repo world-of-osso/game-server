@@ -46,6 +46,10 @@ pub(in crate::spell_cast) fn empower_gargoyles(
     if spent <= 0.0 || !crate::auras::has_aura(world, owner, GARGOYLE_TALENT) {
         return;
     }
+    let actors = owned_gargoyles(world, owner);
+    if actors.is_empty() {
+        return;
+    }
     let display = world
         .resource::<spell_cast::powers::PowerTypeTable>()
         .get(PowerType::RunicPower)
@@ -54,15 +58,23 @@ pub(in crate::spell_cast) fn empower_gargoyles(
     let points = script_effect_value(world, owner, SUMMON_GARGOYLE, 3);
     let percent = script_effect_value(world, owner, GARGOYLE_POWER, 0);
     let increase = spent / display / points * percent;
-    let actors: Vec<_> = world
-        .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
-        .iter(world)
-        .filter(|(_, summon)| summon.owner == owner && summon.spell_id == SUMMON_GARGOYLE)
-        .map(|(actor, _)| actor)
-        .collect();
     for actor in actors {
         apply_gargoyle_power(world, owner, actor, increase);
     }
+}
+
+fn owned_gargoyles(world: &mut World, owner: Entity) -> Vec<Entity> {
+    world
+        .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .filter(|(actor, summon)| {
+            summon.owner == owner
+                && summon.spell_id == SUMMON_GARGOYLE
+                && targets::is_alive(world, *actor)
+                && world.get::<crate::maps::InMap>(*actor) == world.get::<crate::maps::InMap>(owner)
+        })
+        .map(|(actor, _)| actor)
+        .collect()
 }
 
 fn apply_gargoyle_power(world: &mut World, owner: Entity, actor: Entity, increase: f32) {
