@@ -4,6 +4,8 @@ The Transmogrifier service resolves eligible collected Retail appearance sources
 
 ## Service and validation
 
+The workspace consumes published shared-protocol d867b80 rather than overriding it with the canonical sibling checkout. This keeps branch compilation independent of a temporary leased-slot patch; unrelated vendor patches remain unchanged.
+
 Merged Retail NPC flags survive zone import. Hashom's authored gossip menu21043 option0 opens the Transmogrifier role, not a vendor. Requests require the active in-range interaction and current equipped GUIDs. Every slot/source/cost is validated before mutation; invalid batches preserve the whole record.
 
 Sources use ItemModifiedAppearance/ItemAppearance rather than treating collection visual IDs as display IDs. Eligibility covers supported slot aliases, armor/weapon groups, source class/race/level masks and zero PlayerCondition. The contract records remaining collection-source and conditional/artifact policy gaps.
