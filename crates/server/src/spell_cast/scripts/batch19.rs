@@ -7,6 +7,10 @@ pub(super) const FLURRY: u32 = 44614;
 const MUTILATE_OFFHAND: u32 = 27576;
 const DISPERSION: u32 = 47585;
 const INTANGIBILITY: u32 = 288733;
+const HAVOC: u32 = 80240;
+const VAMPIRIC_TOUCH: u32 = 34914;
+const VAMPIRIC_HORROR: u32 = 87204;
+const EXTRA_INITIAL_PERIOD: u32 = 0x200;
 
 ///44614s1 names three equal228596 triggers, rather than all four catalog slots.
 pub(in crate::spell_cast) fn effect_enabled(
@@ -65,8 +69,9 @@ pub(crate) fn dispersion_tick(
         .find(|e| e.index == index)
         .expect("Dispersion health effect")
         .aura_period_ms as f32;
-    let initial =
-        u32::from(spell.misc.as_ref().expect("Dispersion misc").attributes[5] & 0x200 != 0) as f32;
+    let initial = u32::from(
+        spell.misc.as_ref().expect("Dispersion misc").attributes[5] & EXTRA_INITIAL_PERIOD != 0,
+    ) as f32;
     let ticks = (duration / period).floor() + initial;
     let additional = if crate::auras::has_aura(world, caster, INTANGIBILITY) {
         script_effect_value(world, caster, INTANGIBILITY, 1)
@@ -82,13 +87,13 @@ pub(crate) fn on_dispelled(
     dispeller: Entity,
     aura: &crate::auras::AuraInstance,
 ) {
-    if aura.spell_id == 34914 {
+    if aura.spell_id == VAMPIRIC_TOUCH {
         crate::auras::apply_aura(
             world,
             &crate::auras::AuraApplication {
                 caster: aura.caster,
                 target: dispeller,
-                spell_id: 87204,
+                spell_id: VAMPIRIC_HORROR,
                 effect_mask: u32::MAX,
                 source: crate::auras::AuraSource::Cast,
             },
@@ -96,7 +101,7 @@ pub(crate) fn on_dispelled(
     }
 }
 
-///80240 has one owned victim, like other explicitly single owned marks.
+///80240 has native Attributes_5=32 (single-target aura); preserve foreign owners.
 pub(crate) fn replace_havoc(world: &mut World, unit: Entity, aura: &crate::auras::AuraInstance) {
     let old: Vec<_> = world
         .query::<(Entity, &crate::auras::ActiveAuras)>()
@@ -105,7 +110,7 @@ pub(crate) fn replace_havoc(world: &mut World, unit: Entity, aura: &crate::auras
         .flat_map(|(target, marks)| {
             marks
                 .iter()
-                .filter(|mark| mark.spell_id == 80240 && mark.caster == aura.caster)
+                .filter(|mark| mark.spell_id == HAVOC && mark.caster == aura.caster)
                 .map(move |mark| (target, mark.instance_id))
         })
         .collect();
@@ -128,44 +133,57 @@ pub(crate) fn copy_havoc(
     primary: Entity,
     effective: f32,
 ) {
-    let family = ctx
-        .spell
+    if !is_havoc_single_target(world, ctx.spell) {
+        return;
+    }
+    let copies = collect_havoc_marks(world, ctx.caster, primary);
+    for (target, percent) in copies {
+        crate::spell_cast::effects::deal_copied_damage(
+            world,
+            ctx,
+            target,
+            effective * percent / 100.0,
+        );
+    }
+}
+
+fn is_havoc_single_target(world: &World, spell: &SpellInfo) -> bool {
+    let family = spell
         .class_options
         .as_ref()
         .map(|options| options.spell_class_set);
     let havoc_family = world
         .resource::<crate::spell_info::SpellStore>()
-        .get(80240)
+        .get(HAVOC)
         .and_then(|spell| spell.class_options.as_ref())
         .map(|options| options.spell_class_set);
     if family.is_none() || family != havoc_family {
-        return;
+        return false;
     }
-    let damage: Vec<_> = ctx
-        .spell
+    let damage: Vec<_> = spell
         .effects
         .iter()
         .filter(|effect| matches!(effect.effect, 2 | 9 | 31 | 58 | 121))
         .collect();
-    if damage.is_empty()
-        || damage
+    !damage.is_empty()
+        && damage
             .iter()
-            .any(|effect| effect.implicit_targets != [6, 0] || effect.chain_targets > 1)
-    {
-        return;
-    }
-    let copies: Vec<_> = world
+            .all(|effect| effect.implicit_targets == [6, 0] && effect.chain_targets <= 1)
+}
+
+fn collect_havoc_marks(world: &mut World, caster: Entity, primary: Entity) -> Vec<(Entity, f32)> {
+    world
         .query::<(Entity, &crate::auras::ActiveAuras)>()
         .iter(world)
         .filter(|(target, _)| {
             *target != primary
                 && world.get::<crate::maps::InMap>(*target)
-                    == world.get::<crate::maps::InMap>(ctx.caster)
+                    == world.get::<crate::maps::InMap>(caster)
         })
         .flat_map(|(target, marks)| {
             marks
                 .iter()
-                .filter(|mark| mark.spell_id == 80240 && mark.caster == ctx.caster)
+                .filter(|mark| mark.spell_id == HAVOC && mark.caster == caster)
                 .map(move |mark| {
                     (
                         target,
@@ -177,13 +195,5 @@ pub(crate) fn copy_havoc(
                     )
                 })
         })
-        .collect();
-    for (target, percent) in copies {
-        crate::spell_cast::effects::deal_copied_damage(
-            world,
-            ctx,
-            target,
-            effective * percent / 100.0,
-        );
-    }
+        .collect()
 }
