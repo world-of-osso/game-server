@@ -191,6 +191,81 @@ fn quest_objectives_event_spell_credit_matches_each_trial_and_error_wand() {
     assert!(load_quest_log(db(&app), client.character_id).is_rewarded(10566));
 }
 
+fn bag_location(app: &App, client: &Client, item: u32) -> shared::protocol::ItemLocation {
+    let model = crate::inventory::load_model(
+        db(app),
+        app.world().resource::<ItemTemplates>(),
+        client.character_id,
+    )
+    .unwrap();
+    let bags = model.inventory_snapshot();
+    bags.bags
+        .iter()
+        .find_map(|bag| {
+            bag.items
+                .iter()
+                .find(|slot| slot.item.item_id == item)
+                .map(|slot| shared::protocol::ItemLocation::Bag {
+                    bag: bag.bag,
+                    slot: slot.slot,
+                })
+        })
+        .expect("authored quest item in bags")
+}
+
+#[test]
+fn quest_objectives_go_lock_requires_the_authored_power_source() {
+    let mut app = object_app();
+    let client = object_client(&mut app);
+    app.world_mut()
+        .get_mut::<Player>(client.player)
+        .unwrap()
+        .race = 10;
+    let giver = spawn_npc(&mut app, 15924, 0.0);
+    accept(&mut app, &client, giver, 8889); // Deactivating the Spire
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    let first = real_object(&mut app, 180916);
+    request(
+        &mut app,
+        &client,
+        UseGameObject {
+            object: first.to_bits(),
+        },
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(8889)
+            .unwrap()
+            .counts[0],
+        1
+    );
+    let source = bag_location(&app, &client, 24337);
+    request(
+        &mut app,
+        &client,
+        DestroyItem {
+            location: source,
+            count: 1,
+        },
+    );
+    let second = real_object(&mut app, 180919);
+    request(
+        &mut app,
+        &client,
+        UseGameObject {
+            object: second.to_bits(),
+        },
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(8889)
+            .unwrap()
+            .counts[1],
+        0,
+        "without the Deactivating Jewel the second spire cannot award credit"
+    );
+}
+
 fn add_object_plugins(app: &mut App) {
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
     app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);

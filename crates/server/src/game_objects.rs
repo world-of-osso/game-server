@@ -15,6 +15,7 @@
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
+mod locks;
 pub(crate) mod quest_object;
 pub(crate) mod summoned;
 
@@ -32,6 +33,9 @@ use shared::protocol::{
 
 use crate::interest::NetworkVisibility;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
+
+pub(crate) const GAMEOBJECT_TYPE_CHEST: u8 = 3;
+pub(crate) const GAMEOBJECT_TYPE_GOOBER: u8 = 10;
 
 /// Retail interaction distance around the model box (yd).
 pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
@@ -85,7 +89,7 @@ impl GameObjectBounds {
 #[derive(Resource, Debug, Default, Clone)]
 pub struct GameObjectSpawns(pub Vec<GameObjectSpawn>);
 
-fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
+fn spawn_from_row(row: &Row, locks: &locks::LockDb) -> rusqlite::Result<GameObjectSpawn> {
     let scale: f64 = row.get(9)?;
     let geo = |index: usize| -> rusqlite::Result<f32> { Ok(row.get::<_, f64>(index)? as f32) };
     Ok(GameObjectSpawn {
@@ -115,7 +119,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
                 Ok(crate::chair::Chair::new(row.get(18)?, row.get(19)?))
             })
             .transpose()?,
-        quest_object: quest_object::QuestObject::from_row(row)?,
+        quest_object: quest_object::QuestObject::from_row(row, locks)?,
         spawn_difficulties: row
             .get::<_, String>(17)?
             .split(',')
@@ -130,6 +134,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
 }
 
 pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObjectSpawns> {
+    let locks = locks::load_locks(conn.path().ok_or(rusqlite::Error::InvalidQuery)?)?;
     let mut statement = conn.prepare(SPAWN_QUERY)?;
     let rows = statement.query_map(
         [
@@ -140,7 +145,7 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
             GAMEOBJECT_TYPE_SPELL_FOCUS,
             GAMEOBJECT_TYPE_CHAIR,
         ],
-        spawn_from_row,
+        |row| spawn_from_row(row, &locks),
     )?;
     Ok(GameObjectSpawns(rows.collect::<rusqlite::Result<_>>()?))
 }

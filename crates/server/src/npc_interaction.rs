@@ -178,7 +178,8 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
-            3 | 10 => ObjectUse::QuestObject,
+            crate::game_objects::GAMEOBJECT_TYPE_CHEST
+            | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self
