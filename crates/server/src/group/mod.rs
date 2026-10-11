@@ -11,11 +11,12 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{EquipmentAppearance, EquipmentVisualSlot, Player, UnitLevel};
 use shared::protocol::{
-    ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
-    GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupPortraitAppearance,
-    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, MinimapPing, MinimapPingRequest,
-    PromoteGroupLeader, RaidTargetIcons, ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck,
-    SetGroupLootMethod, SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
+    ConvertGroupToParty, ConvertGroupToRaid, GroupAssistants, GroupChannel, GroupCommandResponse,
+    GroupCountdownRequest, GroupCountdownUpdate, GroupInviteCancelled, GroupInviteIntent,
+    GroupInvitePrompt, GroupPortraitAppearance, GroupRosterSnapshot, GroupUninviteIntent,
+    LeaveGroup, MinimapPing, MinimapPingRequest, PromoteGroupLeader, RaidTargetIcons,
+    ReadyCheckUpdate, RespondGroupInvite, RespondReadyCheck, SetGroupAssistant, SetGroupLootMethod,
+    SetGroupRole, SetRaidSubgroup, SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -56,9 +57,11 @@ struct GroupCommandReceivers<'w, 's> {
     party_converts: Receivers<'w, 's, ConvertGroupToParty>,
     subgroups: Receivers<'w, 's, SetRaidSubgroup>,
     roles: Receivers<'w, 's, SetGroupRole>,
+    assistants: Receivers<'w, 's, SetGroupAssistant>,
     loot: Receivers<'w, 's, SetGroupLootMethod>,
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
+    countdowns: Receivers<'w, 's, GroupCountdownRequest>,
     raid_targets: Receivers<'w, 's, SetRaidTarget>,
     minimap_pings: Receivers<'w, 's, MinimapPingRequest>,
 }
@@ -71,6 +74,8 @@ struct GroupSenders<'w, 's> {
     prompts: Query<'w, 's, &'static mut MessageSender<GroupInvitePrompt>>,
     cancelled_invites: Query<'w, 's, &'static mut MessageSender<GroupInviteCancelled>>,
     ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
+    countdowns: Query<'w, 's, &'static mut MessageSender<GroupCountdownUpdate>>,
+    assistants: Query<'w, 's, &'static mut MessageSender<GroupAssistants>>,
     raid_targets: Query<'w, 's, &'static mut MessageSender<RaidTargetIcons>>,
     minimap_pings: Query<'w, 's, &'static mut MessageSender<MinimapPing>>,
 }
@@ -204,6 +209,9 @@ fn apply_commands(
     for (from, msg) in drain(&mut rx.subgroups, players) {
         effects.extend(registry.set_subgroup(from, &msg.name, msg.subgroup));
     }
+    for (from, msg) in drain(&mut rx.assistants, players) {
+        effects.extend(registry.set_assistant(from, &msg.name, msg.assistant));
+    }
     for (from, msg) in drain(&mut rx.roles, players) {
         effects.extend(registry.set_role(from, &msg.name, msg.role));
     }
@@ -215,6 +223,13 @@ fn apply_commands(
     }
     for (from, msg) in drain(&mut rx.ready_answers, players) {
         effects.extend(registry.respond_ready_check(from, msg.ready));
+    }
+    for (from, msg) in drain(&mut rx.countdowns, players) {
+        let now_unix_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("server wall clock predates Unix epoch")
+            .as_millis() as u64;
+        effects.extend(registry.set_countdown(from, msg.seconds, now_unix_ms));
     }
     for (from, msg) in drain(&mut rx.raid_targets, players) {
         effects.extend(registry.set_raid_target(from, msg.target, msg.icon));
@@ -266,15 +281,25 @@ fn deliver_effects(
                 // HandleRequestPartyJoinUpdates → SendTargetIconList: a roster change
                 // (join, relog) brings the member the group's icons.
                 send_group_target_icons(registry, *group_id, connections, senders);
+                send_group_assistants(registry, *group_id, connections, senders);
             }
             GroupEffect::ClearRoster(to) => {
                 send_to(&mut senders.rosters, connections, *to, empty_roster());
+                send_to(
+                    &mut senders.assistants,
+                    connections,
+                    *to,
+                    GroupAssistants::default(),
+                );
                 send_to(
                     &mut senders.raid_targets,
                     connections,
                     *to,
                     RaidTargetIcons::default(),
                 );
+            }
+            GroupEffect::Assistants(group_id) => {
+                send_group_assistants(registry, *group_id, connections, senders);
             }
             GroupEffect::TargetIcons(group_id) => {
                 send_group_target_icons(registry, *group_id, connections, senders)
@@ -305,6 +330,9 @@ fn deliver_effects(
             GroupEffect::MinimapPing { to, ping } => {
                 send_to(&mut senders.minimap_pings, connections, *to, ping.clone())
             }
+            GroupEffect::Countdown { to, update } => {
+                send_to(&mut senders.countdowns, connections, *to, update.clone());
+            }
             // Applied to the player by maps::difficulty (DifficultyChanges).
             GroupEffect::DungeonDifficulty { .. } => {}
             GroupEffect::ReadyCheck(group_id) => {
@@ -321,6 +349,23 @@ fn deliver_effects(
                 }
             }
         }
+    }
+}
+
+fn send_group_assistants(
+    registry: &GroupRegistry,
+    group_id: GroupId,
+    connections: &HashMap<CharacterId, Entity>,
+    senders: &mut GroupSenders,
+) {
+    let assistants = registry.build_assistants(group_id);
+    for member in registry.roster_members(group_id) {
+        send_to(
+            &mut senders.assistants,
+            connections,
+            member,
+            assistants.clone(),
+        );
     }
 }
 
