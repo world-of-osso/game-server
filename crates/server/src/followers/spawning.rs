@@ -61,8 +61,6 @@ pub(super) fn initialize(
             crate::creature_ai::FollowOwner::new(owner),
         ));
     crate::auras::sync_passives(world, unit, crate::auras::AuraSource::KnownSpell, &passives);
-    crate::spell_cast::creature_cast(world, unit, 458324, Some(unit), true)
-        .map_err(|error| format!("authored Follower aura failed: {error:?}"))?;
     if form != 0 {
         crate::spell_cast::creature_cast(world, unit, form, Some(unit), true)
             .map_err(|error| format!("follower preparation spell {form} failed: {error:?}"))?;

@@ -240,7 +240,7 @@ fn follower_combat_ownership_allows_ruby_faction_to_retaliate() {
 }
 
 #[test]
-fn follower_initialization_applies_authored_aura_and_native_class_level_stats() {
+fn follower_initialization_uses_native_stats_without_unassigned_follower_aura() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[458324], 8).unwrap();
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -255,7 +255,7 @@ fn follower_initialization_applies_authored_aura_and_native_class_level_stats() 
         .0;
     let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
     super::spawning::initialize(h.app.world_mut(), h.caster, unit, kit).unwrap();
-    assert!(crate::auras::has_aura(h.app.world(), unit, 458324));
+    assert!(!crate::auras::has_aura(h.app.world(), unit, 458324));
     assert_eq!(
         h.app
             .world()
