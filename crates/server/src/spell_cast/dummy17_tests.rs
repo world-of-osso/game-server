@@ -1,7 +1,7 @@
 //! Eight bounded Mainline contracts. Every child is loaded from the real store.
 use super::test_harness::*;
 use bevy::prelude::*;
-use shared::components::{ActiveSpec, Health, PowerType, UnitFactionTemplate};
+use shared::components::{ActiveSpec, Health, PowerType};
 use shared::protocol::CombatLogKind;
 
 fn fixture(ids: &[u32], roots: &[u32], class: u8) -> Harness {
@@ -50,11 +50,18 @@ fn stack_count(h: &Harness, id: u32) -> u32 {
         .map_or(0, |a| u32::from(a.stacks))
 }
 fn incoming(h: &mut Harness, target: Entity) {
-    let attacker = spawn_player(&mut h.app, 8, 3.0);
-    h.app
-        .world_mut()
-        .entity_mut(attacker)
-        .insert(UnitFactionTemplate(25));
+    let attacker = h.npc;
+    h.app.world_mut().entity_mut(attacker).insert((
+        shared::components::Mana {
+            current: 10000.0,
+            max: 10000.0,
+        },
+        crate::stats::CharacterStats {
+            spell_power: 100.0,
+            base_mana: 10000.0,
+            ..default()
+        },
+    ));
     let spell = world_db().unwrap().store.get(133).unwrap();
     super::execute_cast(h.app.world_mut(), attacker, spell, Some(target)).unwrap();
     h.advance(15);
@@ -149,11 +156,13 @@ fn dummy17_soul_fire_grants_named_shard_and_applies_only_selected_dot_variant() 
 #[test]
 fn dummy17_blood_boil_applies_plague_to_hit_enemies_unless_rank_replaces_it() {
     for replaced in [false, true] {
-        let mut h = fixture(&[50842, 55078, 212744], &[50842], 6);
+        let roots = if replaced {
+            vec![50842, 212744]
+        } else {
+            vec![50842]
+        };
+        let mut h = fixture(&[50842, 55078], &roots, 6);
         let caster = h.caster;
-        if replaced {
-            apply(&mut h, caster, caster, 212744, u32::MAX);
-        }
         let near = spawn_npc(&mut h.app, 5.0);
         let far = spawn_npc(&mut h.app, 50.0);
         let ally = spawn_player(&mut h.app, 6, 4.0);
@@ -278,6 +287,15 @@ fn dummy17_improved_regrowth_native_bonus_makes_existing_hot_initial_heal_critic
                 .unwrap()
                 .crit_pct = 60.0;
         }
+        let base = h
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct;
+        let chance =
+            super::scripts::crit_chance(h.app.world(), caster, caster, 8936).unwrap_or(base);
+        assert_eq!(chance, if ranked && hot { 100.0 } else { 0.0 });
         h.app.world_mut().get_mut::<Health>(caster).unwrap().current = 1.0;
         execute(&mut h, 8936, Some(caster));
         h.advance(1);
