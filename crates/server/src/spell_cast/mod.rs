@@ -12,6 +12,8 @@
 //! `crate::auras::apply_aura`.
 //! See `docs/wiki/systems/spell-casting.md`.
 
+#[cfg(test)]
+mod achievement_healing_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
