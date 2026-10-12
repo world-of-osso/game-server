@@ -38,7 +38,7 @@ Neighborhood2735/2736 and interior2783 use their real WDT/ADT and placed WMO col
 python3 scripts/extract_ground.py --world-db <housing-world.db> --cache <private-housing-assets> --engine <game-engine-checkout> --casc-local <asset-resolver>/target/debug/casc-local --failed <private-housing-assets>/ground-failed.tsv --map 2735 --map 2736 --map 2783
 ```
 
-Opt-in `housing_ground_ -- --ignored --nocapture` with `GAME_SERVER_GROUND_DIR=<private-housing-assets>` checks complete root/obj0/WMO geometry, actual210/225/25WDT roots and real support at Founder's authored entry/cornerstone/plot teleport. Client textures/M2 receipts, LOS bake and both-skin rendered admission remain separate proof gates. Map bytes alone do not grant exterior or interior components.
+Opt-in `housing_ground_ -- --ignored --nocapture` with `GAME_SERVER_GROUND_DIR=<private-housing-assets>` checks complete root/obj0/WMO geometry, actual210/225/25WDT roots and real support at Founder's authored entry/cornerstone/plot teleport. Client textures/M2 receipts, LOS bake and both-skin rendered admission remain separate proof gates. `scripts/build-host.py --bin los-bake --features bake` builds the existing geometry baker through the maintained host helper; default server-tool builds do not include it. Bake each selected map privately with `los-bake --data <private-housing-assets> --world-db <housing-world.db> --out <private-housing-assets>/los --map <2735|2736|2783> --all --no-eyes`; this preserves existing player-eye data and does not publish to canonical assets. Map bytes alone do not grant exterior or interior components.
 
 ## Authenticated cornerstones
 
