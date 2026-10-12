@@ -1053,6 +1053,66 @@ fn encounter_coverage_lucres_call_removes_real_molten_aura_only_in_its_copy() {
 }
 
 #[test]
+fn encounter_coverage_gold_luster_uses_real_nearby_entry_condition() {
+    let (mut h, gold, player, center, map) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    let remote = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135322,
+        [center.x, -center.z, center.y, 0.0],
+    )
+    .unwrap();
+    h.app.world_mut().entity_mut(remote).insert(InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    });
+    // A nearer unrelated player must not crowd out the valid entry.
+    h.app.world_mut().entity_mut(player).insert(center);
+    h.app.world_mut().entity_mut(boss).insert(Position {
+        x: center.x + 3.0,
+        ..center
+    });
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), gold, 265991, None, true)
+        .expect("real Luster target38 admission");
+    h.advance(0.1);
+    assert!(
+        h.has_aura(boss, 265991),
+        "authored entry135322 condition selects the primary"
+    );
+    assert!(!h.has_aura(gold, 265991));
+    assert!(!h.has_aura(player, 265991));
+    assert!(
+        !h.has_aura(remote, 265991),
+        "nearby lookup cannot cross map copies"
+    );
+}
+
+#[test]
+fn encounter_coverage_source_conditions_preserve_legacy_and_current_object_types() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    let conditions = crate::conditions::load_spell_target_conditions(&world_db_path()).unwrap();
+    let player = h.player();
+    assert!(conditions.target_meets(h.app.world(), 265991, 0, boss));
+    assert!(!conditions.target_meets(h.app.world(), 265991, 0, player));
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Npc>(boss)
+        .unwrap()
+        .template_id = 15263;
+    // Actual retained TDB3730 row is legacy31/type3/entry15263.
+    assert!(conditions.target_meets(h.app.world(), 3730, 0, boss));
+    assert!(!conditions.target_meets(h.app.world(), 3730, 0, player));
+    assert!(!conditions.target_meets(h.app.world(), 265991, 0, boss));
+}
+
+#[test]
 fn encounter_coverage_spit_gold_summons_only_on_expiry_or_target_death() {
     let (mut h, boss, map) = bound_boss(135322, 1762, 0);
     let player = h.player();
