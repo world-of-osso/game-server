@@ -78,6 +78,8 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+#[cfg(test)]
+mod fount_strength_tests;
 mod guardian;
 #[cfg(test)]
 mod guardian_tests;
