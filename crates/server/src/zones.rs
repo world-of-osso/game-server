@@ -75,15 +75,14 @@ pub(crate) fn spawn_map_creatures(
     replicate: bool,
 ) -> u32 {
     let map = content.map;
-    let Some(indices) = world_data.spawns_by_map.get(&(map.map_id as u16)) else {
-        return 0;
-    };
+    let indices = world_data.spawns_by_map.get(&(map.map_id as u16));
     let (pool_spawns, picked) = world_data
         .pools
         .init_map(map.map_id as u16, &mut rand::thread_rng());
     let picked: HashSet<u32> = picked.into_iter().collect();
     let spawns = indices
-        .iter()
+        .into_iter()
+        .flatten()
         .map(|&idx| &world_data.spawns[idx])
         .filter(|spawn| {
             (world_data.pools.creature_pool(spawn.guid).is_none() || picked.contains(&spawn.guid))
