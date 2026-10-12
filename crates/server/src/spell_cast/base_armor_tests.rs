@@ -67,7 +67,12 @@ fn apply_scales(h: &mut Harness) {
 #[test]
 fn class_completeness_native_base_armor_percent_changes_pet_physical_spell_damage() {
     let mut h = armor_harness(true);
-    assert!((spell_loss(&mut h) - expected_damage(ARMOR)).abs() <= 1.0);
+    let baseline = spell_loss(&mut h);
+    assert!(
+        (baseline - expected_damage(ARMOR)).abs() <= 1.0,
+        "baseline{baseline}, expected{}",
+        expected_damage(ARMOR)
+    );
     apply_scales(&mut h);
     let native = world_db()
         .unwrap()
@@ -88,5 +93,10 @@ fn class_completeness_native_base_armor_percent_changes_pet_physical_spell_damag
 fn class_completeness_native_base_armor_percent_does_not_change_ordinary_npc_armor() {
     let mut h = armor_harness(false);
     apply_scales(&mut h);
-    assert!((spell_loss(&mut h) - expected_damage(ARMOR)).abs() <= 1.0);
+    let dealt = spell_loss(&mut h);
+    assert!(
+        (dealt - expected_damage(ARMOR)).abs() <= 1.0,
+        "ordinary NPC{dealt}, expected{}",
+        expected_damage(ARMOR)
+    );
 }
