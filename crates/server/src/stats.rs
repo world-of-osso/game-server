@@ -319,7 +319,7 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
         Some(PrimaryStat::Intellect) => primary.intellect,
         None => 0.0,
     };
-    ((explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0).floor()
+    (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
 /// Retail stats for `input`, with aura `mods` folded in. `None` for a class

@@ -211,13 +211,13 @@ fn class_completeness_native_bonus_armor_negative_factor_expires_at_native_durat
     let mut h = bonus_armor_harness();
     let baseline = calculate_armor(&h).armor;
     apply_native_armor(&mut h, ARMOR_DEBUFF);
-    let protected = calculate_armor(&h);
+    let modified = calculate_armor(&h);
     assert_eq!(
-        protected.armor,
+        modified.armor,
         (baseline * native_factor(ARMOR_DEBUFF)).floor()
     );
-    let armor = protected.armor;
-    let loss = physical_loss(&mut h, protected);
+    let armor = modified.armor;
+    let loss = physical_loss(&mut h, modified);
     let expected_damage = DAMAGE * ARMOR_CONSTANT / (armor + ARMOR_CONSTANT);
     assert!(
         (loss - expected_damage).abs() <= 1.0,
