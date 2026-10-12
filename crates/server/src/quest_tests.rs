@@ -516,6 +516,7 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
             .counts[0],
         1
     );
+    app.world_mut().entity_mut(client.player).insert(origin());
     kill(&mut app, &client, BLACKROCK_WORG, 5);
     assert!(
         load_quest_log(db(&app), client.character_id)
@@ -582,6 +583,11 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
             .active(BEATING_THEM_BACK)
             .is_none()
     );
+    app.world_mut().entity_mut(client.player).insert(Position {
+        x: 15.,
+        y: 100.,
+        z: -15.,
+    });
     app.world_mut()
         .resource_mut::<crate::maps::difficulty::ServerClock>()
         .fixed_unix = Some(1100);

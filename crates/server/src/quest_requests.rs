@@ -307,11 +307,9 @@ impl<'a> QuestSession<'a, '_, '_> {
                 }
                 self.save_log(&log);
             }
-            if inside
-                && is_complete_in_log(self.quests, &log, quest_id, |id| {
-                    bag_count(self.db, &inventory, id)
-                })
-            {
+            if is_complete_in_log(self.quests, &log, quest_id, |id| {
+                bag_count(self.db, &inventory, id)
+            }) {
                 if let Err(error) = self.choose_reward(0, quest_id, None) {
                     send(
                         &mut self.io.senders.failed,
@@ -332,8 +330,12 @@ impl<'a> QuestSession<'a, '_, '_> {
             QuestRequest::Hello(hello) => self.hello(hello.npc),
             QuestRequest::Query(query) => self.query(query.npc, query.quest_id),
             QuestRequest::Accept(accept) => self.accept(accept.npc, accept.quest_id),
-            QuestRequest::Complete(complete) => self.complete(complete.npc, complete.quest_id),
+            QuestRequest::Complete(complete) => {
+                self.require_giver_quest(complete.quest_id)?;
+                self.complete(complete.npc, complete.quest_id)
+            }
             QuestRequest::Choose(choose) => {
+                self.require_giver_quest(choose.quest_id)?;
                 self.choose_reward(choose.npc, choose.quest_id, choose.choice_index)
             }
             QuestRequest::Abandon(abandon) => self.abandon(abandon.quest_id),
@@ -347,6 +349,13 @@ impl<'a> QuestSession<'a, '_, '_> {
                 Ok(())
             }
         }
+    }
+
+    fn require_giver_quest(&self, quest_id: u32) -> QuestResult {
+        if self.quest(quest_id)?.quest_info_modifiers & 0x100 != 0 {
+            return Err(failed(quest_id, QuestFailedReason::NotAvailable));
+        }
+        Ok(())
     }
 
     fn push_result(

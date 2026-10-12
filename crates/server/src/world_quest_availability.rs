@@ -76,7 +76,10 @@ fn snapshot(
             x: (area.vertices.iter().map(|p| p.0).sum::<f32>() / count) as i32,
             y: (area.vertices.iter().map(|p| p.1).sum::<f32>() / count) as i32,
         };
-        let data = quests.world_quest_rewards.get(&quest.id);
+        let data = quests
+            .world_quest_rewards
+            .get(&quest.id)
+            .expect("imported world quest reward metadata");
         active.push(AvailableWorldQuest {
             quest_id: quest.id,
             title: quest.title.clone(),
@@ -87,8 +90,8 @@ fn snapshot(
             expires_at: window.expires_at,
             rewards: crate::quest_view::quest_rewards(quests, quest, player),
             xp: crate::world_quest_rewards::xp(quests, quest, player.level),
-            currencies: data.map(|data| data.currencies.clone()).unwrap_or_default(),
-            reputation: data.map(|data| data.reputation.clone()).unwrap_or_default(),
+            currencies: data.currencies.clone(),
+            reputation: data.reputation.clone(),
         });
     }
     WorldQuestAvailability {
