@@ -796,6 +796,7 @@ fn vendor() -> VendorInventory {
             name: "Linen".into(),
             quality: 1,
             price: 10,
+            extra_costs: Vec::new(),
             stack_count: 2,
             max_stack: 20,
             num_available: Some(10),
