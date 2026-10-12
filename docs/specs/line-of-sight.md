@@ -22,7 +22,7 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 
 ## M2 ground companion
 - `los-bake` also writes `los/<map>/m2/<row>_<col>.los` from dedicated M2 bounding collision arrays, including placed active WMO doodad sets. `--m2-only` rebakes just this companion, without altering visible LOS geometry or navigation.
-- GroundMap and native client movement use the same companion with shared walkable-normal, step-up and height-search rules. These hulls have no LOS thickness or material exclusions; they are not substituted for the visible LOS bake.
+- GroundMap and native client movement use the same companion with shared walkable-normal, step-up and height-search rules. Floor faces are admitted by authored collision normals rotated into world space (upward within the shared slope limit), without LOS thickness or material exclusions; they are not substituted for the visible LOS bake.
 - Ground support contract: [M2 floor collision](../../../game-engine/docs/specs/m2-floor-collision.md).
 
 ## Eye point
