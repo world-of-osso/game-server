@@ -2999,6 +2999,8 @@ fn toyfx14_area_cosmetics_preserve_authored_recipients_and_lifetimes() {
         h.app
             .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
         h.app.insert_resource(store.clone());
+        h.app
+            .insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
         let origin = *h.app.world().get::<Position>(h.caster).unwrap();
         let map = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
         let faction = *h.app.world().get::<UnitFactionTemplate>(h.caster).unwrap();
