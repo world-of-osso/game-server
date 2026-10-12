@@ -305,6 +305,7 @@ pub(crate) fn snapshot(
     Ok(HousingState {
         build_key: state.build_key,
         neighborhood_id: actor.neighborhood_id,
+        opened_cornerstone: None,
         plots: Vec::new(),
         owned_houses,
         stored,

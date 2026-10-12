@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use rusqlite::Connection;
 use std::collections::BTreeMap;
 
-pub(crate) const CORNERSTONE_TYPE: u8 = 48;
+use shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT;
 
 pub(super) fn read_cornerstones(
     db: &Connection,
@@ -39,7 +39,7 @@ fn read_cornerstone(
 ) -> Result<GameObjectSpawn, String> {
     let owner: u32 = number(fields, "OwnerID")?;
     let go_type: u8 = number(fields, "TypeID")?;
-    if owner != map_id || go_type != CORNERSTONE_TYPE {
+    if owner != map_id || go_type != GAMEOBJECT_TYPE_HOUSING_PLOT {
         return Err(format!(
             "GameObjects{object_id} is not a cornerstone on map{map_id}."
         ));

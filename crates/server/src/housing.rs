@@ -294,6 +294,66 @@ fn purchase_plot(
     Ok(())
 }
 
+pub(crate) fn open_cornerstone(
+    world: &mut World,
+    connection: Entity,
+    player: Entity,
+    object: Entity,
+) -> Result<(), shared::protocol::InteractionError> {
+    use shared::protocol::InteractionError;
+    let actor = authenticate_cornerstone_actor(world, connection, player, object)?;
+    let info = world
+        .get::<shared::protocol::GameObjectInfo>(object)
+        .ok_or(InteractionError::InvalidTarget)?;
+    let plot_id = catalog(world)
+        .map_err(|_| InteractionError::InvalidTarget)?
+        .cornerstone_plot(info.entry)
+        .ok_or(InteractionError::InvalidTarget)?;
+    require_cornerstone_reach(world, player, plot_id).map_err(|_| InteractionError::TooFarAway)?;
+    let mut state =
+        read_snapshot(world, actor, None, None).map_err(|_| InteractionError::InvalidTarget)?;
+    state.opened_cornerstone = Some(plot_id);
+    let mut sender = world
+        .get_mut::<MessageSender<HousingReply>>(connection)
+        .ok_or(InteractionError::InvalidTarget)?;
+    sender.send::<HousingChannel>(HousingReply {
+        request_id: 0,
+        state,
+        error: None,
+    });
+    Ok(())
+}
+
+fn authenticate_cornerstone_actor(
+    world: &World,
+    connection: Entity,
+    player: Entity,
+    object: Entity,
+) -> Result<Actor, shared::protocol::InteractionError> {
+    use shared::protocol::InteractionError;
+    let entered = world
+        .get::<InWorld>(connection)
+        .ok_or(InteractionError::InvalidTarget)?;
+    let auth = world
+        .get::<Authenticated>(connection)
+        .ok_or(InteractionError::InvalidTarget)?;
+    let link = world
+        .get::<PlayerLink>(connection)
+        .ok_or(InteractionError::InvalidTarget)?;
+    let map = world
+        .get::<InMap>(player)
+        .ok_or(InteractionError::InvalidTarget)?;
+    if link.0 != player || world.get::<InMap>(object) != Some(map) {
+        return Err(InteractionError::InvalidTarget);
+    }
+    Ok(Actor {
+        connection,
+        player,
+        account: auth.account_id,
+        character: entered.character_id,
+    })
+}
+
 fn require_cornerstone_reach(
     world: &mut World,
     player: Entity,
