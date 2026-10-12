@@ -31,6 +31,7 @@ pub(crate) enum CriteriaEvent {
     KnowSkillLineSpells(u32, u32),
     KnowPetCreature(u32),
     WinPetBattle,
+    CaptureBattlePet,
     Login,
     ExploreAreaBit(u32),
     TriggerGameEvent(u32),
@@ -60,6 +61,7 @@ impl CriteriaEvent {
             Self::KnowSkillLineSpells(_, _) => 75,
             Self::KnowPetCreature(_) => 96,
             Self::WinPetBattle => 158,
+            Self::CaptureBattlePet => 157,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
             Self::TriggerGameEvent(_) => 73,
@@ -82,7 +84,10 @@ impl CriteriaEvent {
         match self {
             Self::ReachLevel(_) => true,
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
-            Self::WinPetBattle | Self::Login | Self::WinAnyBattleground => criteria.asset == 0,
+            Self::WinPetBattle
+            | Self::CaptureBattlePet
+            | Self::Login
+            | Self::WinAnyBattleground => criteria.asset == 0,
             Self::CompleteMythicPlus(completion) => criteria
                 .mythic
                 .is_some_and(|requirements| requirements.matches(completion)),
@@ -435,6 +440,7 @@ impl AchievementCatalog {
                             | 73
                             | 74
                             | 130
+                            | 157
                             | 158
                             | 165
                             | 216
@@ -703,7 +709,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
-                        || (matches!(kind, 74 | 130 | 158) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 74 | 130 | 157 | 158) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
