@@ -388,6 +388,19 @@ fn class_completeness_native_water_elemental_recall_dismiss_and_record_reopen() 
             .template_id,
         78116
     );
+    let dead = h.pet().unwrap();
+    h.h.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
+    h.advance(6);
+    assert!(
+        h.pet().is_none(),
+        "non-hunter corpse removed, record retained"
+    );
+    h.advance(310);
+    h.h.cast(31687, None);
+    h.advance(130);
+    assert!(h.h.inbox.failed.is_empty(), "{:?}", h.h.inbox.failed);
+    assert_ne!(h.pet(), Some(dead));
+    assert!(h.h.health(h.pet().unwrap()) > 0.0);
 }
 
 #[test]
