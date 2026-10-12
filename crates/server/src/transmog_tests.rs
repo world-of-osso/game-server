@@ -24,6 +24,7 @@ fn application_harness_db(db: redb::Database) -> Harness {
         app.insert_resource(GameDatabase { db });
         add_inbox::<TransmogFailed>(app);
         add_inbox::<TransmogState>(app);
+        add_inbox::<shared::protocol::TransmogOutfitFailed>(app);
         let path = crate::test_data::world_db_path();
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         app.insert_resource(crate::transmog::TransmogCatalog::load(&conn).unwrap());
@@ -80,10 +81,91 @@ fn application_harness_db(db: redb::Database) -> Harness {
         InWorld { character_id },
         Authenticated { account_id: 1 },
         pair::<ApplyTransmog>(),
+        pair::<shared::protocol::SaveTransmogOutfit>(),
+        pair::<shared::protocol::TransmogOutfitFailed>(),
         pair::<TransmogState>(),
         pair::<TransmogFailed>(),
     ));
     h
+}
+
+#[test]
+fn transmog_outfit_save_is_durable_account_scoped_and_never_charges_apply() {
+    use shared::protocol::{
+        SaveTransmogOutfit, TransmogOutfit, TransmogOutfitChoice, TransmogOutfitIllusion,
+    };
+    let mut h = application_harness();
+    let npc = open_service(&mut h);
+    let outfit = TransmogOutfit {
+        id: 2,
+        name: "Gladius".into(),
+        choices: vec![TransmogOutfitChoice {
+            slot: EquipmentSlot::MainHand,
+            choice: TransmogChoice::Source(SOURCE),
+        }],
+        illusions: vec![TransmogOutfitIllusion {
+            slot: EquipmentSlot::MainHand,
+            illusion_id: 3,
+        }],
+    };
+    h.send::<_, TransmogChannel>(SaveTransmogOutfit {
+        npc: npc.to_bits(),
+        outfit: outfit.clone(),
+    });
+    let state = h
+        .app
+        .world()
+        .resource::<Inbox<TransmogState>>()
+        .0
+        .last()
+        .unwrap();
+    assert_eq!(state.outfits, vec![outfit]);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let record = persistence::inventory_store::load_inventory_record(db, character_id(&h)).unwrap();
+    assert_eq!(record.inventory.gold, 5000);
+    assert!(record.transmogs.is_empty());
+    assert!(
+        !record
+            .instances
+            .get(&TARGET_GUID)
+            .is_some_and(|item| item.soulbound)
+    );
+    // A fresh connection receives saved state; another authenticated account does not.
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<ActiveInteraction>();
+    open_service(&mut h);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<Inbox<TransmogState>>()
+            .0
+            .last()
+            .unwrap()
+            .outfits
+            .len(),
+        1
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(Authenticated { account_id: 2 });
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<ActiveInteraction>();
+    open_service(&mut h);
+    assert!(
+        h.app
+            .world()
+            .resource::<Inbox<TransmogState>>()
+            .0
+            .last()
+            .unwrap()
+            .outfits
+            .is_empty()
+    );
 }
 
 fn apply(h: &mut Harness, npc: Entity, source: u32) {
