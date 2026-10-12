@@ -24,6 +24,7 @@ fn application_harness_db(db: redb::Database) -> Harness {
         app.insert_resource(GameDatabase { db });
         add_inbox::<TransmogFailed>(app);
         add_inbox::<TransmogState>(app);
+        add_inbox::<shared::protocol::TransmogOutfitFailed>(app);
         let path = crate::test_data::world_db_path();
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         app.insert_resource(crate::transmog::TransmogCatalog::load(&conn).unwrap());
@@ -80,10 +81,207 @@ fn application_harness_db(db: redb::Database) -> Harness {
         InWorld { character_id },
         Authenticated { account_id: 1 },
         pair::<ApplyTransmog>(),
+        pair::<shared::protocol::SaveTransmogOutfit>(),
+        pair::<shared::protocol::SaveTransmogCustomSet>(),
+        pair::<shared::protocol::TransmogOutfitFailed>(),
         pair::<TransmogState>(),
         pair::<TransmogFailed>(),
     ));
     h
+}
+
+#[test]
+fn transmog_outfit_save_is_durable_account_scoped_and_never_charges_apply() {
+    use shared::protocol::{
+        SaveTransmogOutfit, TransmogOutfit, TransmogOutfitChoice, TransmogOutfitIllusion,
+    };
+    let mut h = application_harness();
+    let npc = open_service(&mut h);
+    let outfit = TransmogOutfit {
+        id: 2,
+        name: "Gladius".into(),
+        icon_fdid: 135274,
+        choices: vec![TransmogOutfitChoice {
+            slot: EquipmentSlot::MainHand,
+            choice: TransmogChoice::Source(SOURCE),
+        }],
+        illusions: vec![TransmogOutfitIllusion {
+            slot: EquipmentSlot::MainHand,
+            illusion_id: 3,
+        }],
+    };
+    h.send::<_, TransmogChannel>(SaveTransmogOutfit {
+        npc: npc.to_bits(),
+        outfit: outfit.clone(),
+    });
+    let state = h
+        .app
+        .world()
+        .resource::<Inbox<TransmogState>>()
+        .0
+        .last()
+        .unwrap();
+    assert_eq!(state.outfits, vec![outfit]);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let record = persistence::inventory_store::load_inventory_record(db, character_id(&h)).unwrap();
+    assert_eq!(record.inventory.gold, 5000);
+    assert!(record.transmogs.is_empty());
+    assert!(
+        !record
+            .instances
+            .get(&TARGET_GUID)
+            .is_some_and(|item| item.soulbound)
+    );
+    // A fresh connection receives saved state; another authenticated account does not.
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<ActiveInteraction>();
+    open_service(&mut h);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<Inbox<TransmogState>>()
+            .0
+            .last()
+            .unwrap()
+            .outfits
+            .len(),
+        1
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(Authenticated { account_id: 2 });
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<ActiveInteraction>();
+    open_service(&mut h);
+    assert!(
+        h.app
+            .world()
+            .resource::<Inbox<TransmogState>>()
+            .0
+            .last()
+            .unwrap()
+            .outfits
+            .is_empty()
+    );
+}
+
+#[test]
+fn transmog_custom_set_save_allocates_real_owned_id_and_keeps_outfits_separate() {
+    use shared::protocol::{SaveTransmogCustomSet, TransmogOutfitChoice};
+    let mut h = application_harness();
+    let npc = open_service(&mut h);
+    let choices = vec![TransmogOutfitChoice {
+        slot: EquipmentSlot::MainHand,
+        choice: TransmogChoice::Source(SOURCE),
+    }];
+    h.send::<_, TransmogChannel>(SaveTransmogCustomSet {
+        npc: npc.to_bits(),
+        id: None,
+        name: "Gladius".into(),
+        choices: choices.clone(),
+    });
+    let state = h
+        .app
+        .world()
+        .resource::<Inbox<TransmogState>>()
+        .0
+        .last()
+        .unwrap();
+    assert_eq!(state.custom_sets.len(), 1);
+    assert!(state.outfits.is_empty());
+    let id = state.custom_sets[0].id;
+    assert!(id > 0);
+    assert_eq!(state.custom_sets[0].choices, choices);
+    h.send::<_, TransmogChannel>(SaveTransmogCustomSet {
+        npc: npc.to_bits(),
+        id: Some(id),
+        name: "Sword".into(),
+        choices,
+    });
+    let state = h
+        .app
+        .world()
+        .resource::<Inbox<TransmogState>>()
+        .0
+        .last()
+        .unwrap();
+    assert_eq!(state.custom_sets.len(), 1);
+    assert_eq!(
+        (state.custom_sets[0].id, state.custom_sets[0].name.as_str()),
+        (id, "Sword")
+    );
+    assert_eq!(
+        persistence::load_inventory(
+            &h.app.world().resource::<GameDatabase>().db,
+            character_id(&h)
+        )
+        .gold,
+        5000
+    );
+}
+
+#[test]
+fn transmog_outfit_refusals_preserve_saved_configuration_and_gold() {
+    use shared::protocol::{
+        SaveTransmogOutfit, TransmogOutfit, TransmogOutfitChoice, TransmogOutfitError,
+        TransmogOutfitFailed, TransmogOutfitIllusion,
+    };
+    for (id, name, choice, illusion, error) in [
+        (4, "Sword", SOURCE, 3, TransmogOutfitError::EntryUnavailable),
+        (2, "  ", SOURCE, 3, TransmogOutfitError::InvalidName),
+        (2, "Sword", 730, 3, TransmogOutfitError::InvalidChoice),
+        (2, "Sword", SOURCE, 2, TransmogOutfitError::InvalidChoice),
+    ] {
+        let mut h = application_harness();
+        let npc = open_service(&mut h);
+        h.send::<_, TransmogChannel>(SaveTransmogOutfit {
+            npc: npc.to_bits(),
+            outfit: TransmogOutfit {
+                id,
+                name: name.into(),
+                icon_fdid: 135274,
+                choices: vec![TransmogOutfitChoice {
+                    slot: EquipmentSlot::MainHand,
+                    choice: TransmogChoice::Source(choice),
+                }],
+                illusions: vec![TransmogOutfitIllusion {
+                    slot: EquipmentSlot::MainHand,
+                    illusion_id: illusion,
+                }],
+            },
+        });
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<Inbox<TransmogOutfitFailed>>()
+                .0
+                .last()
+                .unwrap()
+                .error,
+            error
+        );
+        let state = h
+            .app
+            .world()
+            .resource::<Inbox<TransmogState>>()
+            .0
+            .last()
+            .unwrap();
+        assert!(state.outfits.is_empty());
+        assert_eq!(
+            persistence::load_inventory(
+                &h.app.world().resource::<GameDatabase>().db,
+                character_id(&h)
+            )
+            .gold,
+            5000
+        );
+    }
 }
 
 fn apply(h: &mut Harness, npc: Entity, source: u32) {
@@ -95,6 +293,111 @@ fn apply(h: &mut Harness, npc: Entity, source: u32) {
             choice: TransmogChoice::Source(source),
         }],
     });
+}
+
+#[test]
+fn transmog_set_reports_one_primary_appearance_per_slot_including_unequipped_slots() {
+    use shared::protocol::TransmogCollectionState;
+    let mut h = application_harness();
+    // Breastplate of Wrath7030 -> ItemAppearance5089, a TransmogSet852 member.
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut collection = persistence::appearance_store::load_account_appearances(db, 1);
+    collection.learn(5089);
+    persistence::appearance_store::save_account_appearances(db, 1, &collection);
+    open_service(&mut h);
+    let states = &h.app.world().resource::<Inbox<TransmogState>>().0;
+    let state = states.last().unwrap();
+    let set = state
+        .sets
+        .iter()
+        .find(|set| set.set_id == 852)
+        .expect("started Warrior set Battlegear of Wrath");
+    assert_eq!(set.name, "Battlegear of Wrath");
+    let pieces: Vec<_> = set
+        .primary_appearances
+        .iter()
+        .map(|piece| {
+            (
+                piece.slots.clone(),
+                piece.source.source_id,
+                piece.collection,
+            )
+        })
+        .collect();
+    use EquipmentSlot::*;
+    use TransmogCollectionState::*;
+    assert_eq!(
+        pieces,
+        vec![
+            (vec![Head], 7027, Uncollected),
+            (vec![Shoulder], 7025, Uncollected),
+            (vec![Chest], 7030, Collected),
+            (vec![Waist], 7024, Uncollected),
+            (vec![Legs], 7026, Uncollected),
+            (vec![Feet], 7029, Uncollected),
+            (vec![Wrist], 7023, Uncollected),
+            (vec![Hands], 7028, Uncollected),
+        ]
+    );
+    assert!(
+        state.sets.iter().all(|set| set
+            .primary_appearances
+            .iter()
+            .any(|piece| piece.collection == Collected)),
+        "only started sets are available"
+    );
+}
+
+#[test]
+fn transmog_state_exposes_authored_outfits_illusions_and_paid_choices() {
+    let mut h = application_harness();
+    open_service(&mut h);
+    let states = &h.app.world().resource::<Inbox<TransmogState>>().0;
+    let state = states.last().unwrap();
+    let outfit = state
+        .outfit_entries
+        .iter()
+        .find(|entry| entry.id == 2)
+        .unwrap();
+    assert_eq!(
+        (outfit.name.as_str(), outfit.flags, outfit.cost),
+        ("Outfit 1", 35, 0)
+    );
+    let illusion = state.illusions.iter().find(|entry| entry.id == 3).unwrap();
+    assert_eq!(
+        (illusion.enchantment_id, illusion.cost, illusion.collected),
+        (1898, 10000, true)
+    );
+    assert_eq!(
+        (illusion.name.as_str(), illusion.icon_fdid),
+        ("Lifestealing", 136130)
+    );
+    assert!(
+        state.outfit_slots.iter().any(|entry| entry.id == 13
+            && entry.slot == EquipmentSlot::MainHand
+            && entry.flags == 3)
+    );
+    assert!(state.outfit_options.iter().any(|entry| entry.id == 1
+        && entry.slot_info_id == 13
+        && entry.name == "One Handed Weapon"));
+    assert!(!state.slots[0].sources.is_empty());
+    assert_eq!(
+        state.slots[0]
+            .sources
+            .iter()
+            .find(|source| source.source_id == SOURCE)
+            .unwrap()
+            .source_type,
+        3,
+        "Gladius keeps Enum.TransmogSource.Vendor from DB2"
+    );
+    assert!(
+        state.slots[0]
+            .sources
+            .iter()
+            .all(|source| source.appearance_id == 154),
+        "paid choices stay within the collected visual, including its alternate sources"
+    );
 }
 
 #[test]
