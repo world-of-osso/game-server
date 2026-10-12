@@ -16,9 +16,17 @@ Quest metadata classifies TDB reward currency slots by their profession TraitCur
 
 Queries/commits are received only from authenticated InWorld connections and their PlayerLink. Node snapshots include purchased/granted/max ranks, costs, ProfTrait linkage and a tentative-next-purchase error. Perks expose a path node only when their Granted conditions uniquely reference a known ProfTrait path; unresolved ownership stays0, never every path in the tree. Authored Type0 visual edges are sent but do not gate availability. CurrencyTypes IDs and TraitCurrency IDs are both exposed; they are not interchangeable. Retail background art is selected by the client's source `Professions.GetProfessionSpecializationBackgroundAtlas`, not invented from tree IDs.
 
+## Sourced descriptions and perk flags — verified 2026-10-11
+
+`ProfessionSpecPerk.is_major_bonus` reads ProfTraitPerkNode Flags bit2 independently of `unlocks_subpath` bit1 (Retail ProfessionSpecConstantsDocumentation.lua). Root tree350 tests distinguish major node28535 from subpath node28533.
+
+Descriptions join TraitDefinition→ProfessionTrait→ProfessionTraitXEffect→ProfessionEffect→ProfessionEffectType.EnumID. Numbered effect tokens use the imported zero-based effect slot; amounts are imported float32 values, names are the localized type text, not crafting calculations. Definition36464/root knowledge36327 resolves to “Improve at making leather armor, gaining +1 Skill per point in this Specialization.” Source spell-name references resolve through SpellName. Identical bindings are deduplicated; missing, ambiguous or unsupported variables produce explicit unavailable text rather than guessed values or raw placeholders. Definition129480 has multiple distinct effects in slot0 but its authored text uses a spell-name reference, so no effect is arbitrarily chosen.
+
+The ignored `seed_private_crafting_joint_fixture` acceptance setup requires the exact private diagnostic redb/world paths and refuses an existing redb. It primes accounts, professions, achievement15876 and knowledge2025; this is not earned-acquisition evidence. The private world receipt records Clerk Gretal's fixture relocation to open-world map0 and the unchanged Northshire mailbox. Native proof results belong in the joint handoff until independently observed.
+
 ## Explicit boundaries
 
-Numeric quality/concentration and unresolved profession effect/description bindings stay gaps. Learning a quality recipe is not permission to craft it. Server cast validation must refuse unsupported effect288/297 before consuming reagents; the order backend owns those cast hooks. Recrafting requires source item lineage/modification evaluation, not a new fixed CREATE_ITEM output.
+Numeric quality/concentration and unresolved profession operation bindings stay gaps. Learning a quality recipe is not permission to craft it. Server cast validation must refuse unsupported effect288/297 before consuming reagents; the order backend owns those cast hooks. Recrafting requires source item lineage/modification evaluation, not a new fixed CREATE_ITEM output.
 
 The canonical world database is never mutated by this work. Production loading requires the source import into the lead's explicitly selected database; the [reference command](../reference/profession-reference-import.md#sources-and-staging-interface) is the handoff. Private fixtures may stage the references on an isolated copy.
 
