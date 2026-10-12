@@ -293,3 +293,7 @@ pub(crate) fn push_pipe_player(world: &mut World, player: Entity, spout: Entity)
         error!("Dalaran pipe push on {player:?}: {error}");
     }
 }
+
+#[cfg(test)]
+#[path = "pvp_arena_dalaran_tests.rs"]
+mod tests;

@@ -103,6 +103,15 @@ impl GroundMap {
     /// A map 0 holding only `terrain` for `tile`, without WMOs or lazy loading.
     #[cfg(test)]
     pub(crate) fn with_terrain(tile: (u32, u32), terrain: TerrainHeightMap) -> Self {
+        Self::with_terrain_on(0, tile, terrain)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_terrain_on(
+        map_id: u32,
+        tile: (u32, u32),
+        terrain: TerrainHeightMap,
+    ) -> Self {
         let mut map = MapGround::default();
         map.tiles.insert(
             tile,
@@ -113,7 +122,7 @@ impl GroundMap {
             }),
         );
         Self {
-            maps: HashMap::from([(0, Some(map))]),
+            maps: HashMap::from([(map_id, Some(map))]),
             ..default()
         }
     }
