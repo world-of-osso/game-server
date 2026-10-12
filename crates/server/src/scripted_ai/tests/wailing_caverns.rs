@@ -13,6 +13,10 @@ const WC_OTHER: InMap = InMap {
 };
 
 fn cobrahn() -> (Harness, Entity) {
+    cobrahn_with_events(Vec::new())
+}
+
+fn cobrahn_with_events(extra_events: Vec<smart_ai::SmartEvent>) -> (Harness, Entity) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     let path = world_db_path();
@@ -55,6 +59,7 @@ fn cobrahn() -> (Harness, Entity) {
             event.chance = 100;
         }
     }
+    std::sync::Arc::make_mut(scripts.0.get_mut(&COBRAHN).unwrap()).extend(extra_events);
     app.insert_resource(scripts);
     let spawn = conn.query_row(
         "SELECT guid, position_x, position_y, position_z, orientation, spawntimesecs FROM content_creature WHERE id1 = 3669 AND map = 43 ORDER BY guid LIMIT 1",
@@ -118,6 +123,110 @@ fn cobrahn() -> (Harness, Entity) {
     };
     h.advance(0.05);
     (h, boss)
+}
+
+fn timeline(h: &mut Harness, player: usize) -> Vec<shared::protocol::EncounterTimelineEvent> {
+    std::mem::take(&mut h.players[player].2.timeline)
+}
+
+#[test]
+fn boss_timeline_phase_changes_follow_active_encounter_not_spawn_or_evade_reset() {
+    use shared::protocol::EncounterTimelineEvent;
+    // Generic phase lifecycle fixture, NOT invented Cobrahn mechanics. Cast
+    // rows/timers stay authentic; only reset/aggro phase actions are added.
+    let phase_event = |id, event_type, phase| smart_ai::SmartEvent {
+        id,
+        link: 0,
+        event_type,
+        phase_mask: 0,
+        chance: 100,
+        flags: 0,
+        event_params: [0; 5],
+        action_type: 22,
+        action_params: [phase, 0, 0, 0, 0, 0, 0],
+        target_type: 0,
+    };
+    let (mut h, boss) =
+        cobrahn_with_events(vec![phase_event(1001, 25, 1), phase_event(1002, 4, 2)]);
+    assert!(
+        !timeline(&mut h, 0)
+            .iter()
+            .any(|event| matches!(event, EncounterTimelineEvent::Phase { .. })),
+        "spawn/reset outside an encounter must not warn"
+    );
+    h.engage(boss);
+    h.advance(0.1);
+    assert!(
+        timeline(&mut h, 0)
+            .iter()
+            .any(|event| matches!(event, EncounterTimelineEvent::Phase { phase: 2, .. }))
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.1);
+    assert!(!h.inbox(0).ends.last().unwrap().success);
+    assert!(
+        !timeline(&mut h, 0)
+            .iter()
+            .any(|event| matches!(event, EncounterTimelineEvent::Phase { .. })),
+        "reset must not recreate a warning after EncounterEnd"
+    );
+}
+
+#[test]
+fn cobrahn_timeline_uses_selected_timer_and_warns_only_on_real_cast() {
+    use shared::protocol::EncounterTimelineEvent;
+    let (mut h, boss) = cobrahn();
+    h.engage(boss);
+    h.advance(0.1);
+    let events = timeline(&mut h, 0);
+    assert!(events.iter().any(|e| matches!(e, EncounterTimelineEvent::Cast { caster, spell_id: LIGHTNING_BOLT, .. } if *caster == boss.to_bits())), "accepted Cobrahn cast must warn: {events:?}");
+    let timer = events
+        .iter()
+        .rev()
+        .find_map(|e| match e {
+            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
+                timers
+                    .iter()
+                    .find(|t| t.spell_id == LIGHTNING_BOLT)
+                    .cloned()
+            }
+            _ => None,
+        })
+        .expect("actual randomized repeat deadline");
+    assert!((5800..=8000).contains(&timer.remaining_ms), "{timer:?}");
+    assert!((6000..=8000).contains(&timer.duration_ms));
+    assert!(
+        timeline(&mut h, 1).is_empty(),
+        "other dungeon copy must not receive timers"
+    );
+    h.advance(3.2);
+    timeline(&mut h, 0);
+    let before_due = timer.remaining_ms as f32 / 1000.0 - 3.5;
+    h.advance(before_due.max(0.0));
+    assert!(
+        !timeline(&mut h, 0)
+            .iter()
+            .any(|e| matches!(e, EncounterTimelineEvent::Cast { .. })),
+        "no second warning before selected deadline"
+    );
+    h.advance(0.5);
+    assert!(
+        timeline(&mut h, 0).iter().any(|e| matches!(
+            e,
+            EncounterTimelineEvent::Cast {
+                spell_id: LIGHTNING_BOLT,
+                ..
+            }
+        )),
+        "selected timer must drive the actual next cast"
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.1);
+    assert!(
+        timeline(&mut h, 0).iter().any(
+            |e| matches!(e, EncounterTimelineEvent::Timers { timers, .. } if timers.is_empty())
+        )
+    );
 }
 
 fn assert_authored_cobrahn_loot(path: &std::path::Path) {

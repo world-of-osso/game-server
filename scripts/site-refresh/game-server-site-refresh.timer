@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh World of Osso public Armory every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=game-server-site-refresh.service
+
+[Install]
+WantedBy=timers.target
