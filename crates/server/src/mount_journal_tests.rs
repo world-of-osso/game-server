@@ -55,8 +55,16 @@ fn mount_journal_auth_entry_after_update_sync_loads_account_before_publish() {
         .add_systems(Update, enter_after_mount_update.after(sync_accounts));
     h.advance(1);
     assert!(h.app.world().get::<AccountMounts>(player).is_some());
-    h.advance(3);
-    assert!(!drain::<MountJournalUpdate>(&mut h.app, connection).is_empty());
+    let mut updates = Vec::new();
+    for _ in 0..4 {
+        h.advance(1);
+        updates.extend(drain::<MountJournalUpdate>(&mut h.app, connection));
+    }
+    assert!(
+        updates
+            .iter()
+            .any(|update| update.mounts.iter().any(|mount| mount.mount_id == 18))
+    );
 }
 
 #[test]
