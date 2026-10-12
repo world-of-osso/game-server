@@ -29,6 +29,10 @@ fn load_catalog(mut commands: Commands) {
         toy_catalog::load(&conn).expect("load Toy catalog; run scripts/import-toys.py first");
     info!("Loaded {} Toy.db2 entries", catalog.0.len());
     commands.insert_resource(catalog);
+    commands.insert_resource(
+        crate::spell_cast::toy_scripts::load_dice_texts(&conn)
+            .expect("load authored dice BroadcastText rows"),
+    );
 }
 
 pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
@@ -224,6 +228,17 @@ pub(crate) fn use_toy(
         return Err(reason);
     }
     check_item_requirements(world, player, item_id)?;
+    if toy.snapshot.spell_id == Some(16739) {
+        let native = world
+            .get::<shared::components::Player>(player)
+            .ok_or("player missing")?;
+        if crate::auras::orb_deception_display(native.race, native.appearance.sex).is_none() {
+            return Err(format!(
+                "Orb of Deception has no source display mapping for race {}",
+                native.race
+            ));
+        }
+    }
     let target = world
         .get::<crate::networking::CombatTarget>(player)
         .and_then(|target| target.0);
