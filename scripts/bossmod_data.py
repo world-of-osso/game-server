@@ -347,6 +347,9 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
                 continue
             spell, default, action, severity, key = definition
             if action == 'timer':
+                if spell is None:
+                    issue(result, node, 'DBM timer has no statically known spellId: ' + expression(node))
+                    continue
                 delay = static_value(args[0], bindings, context) if args else default
                 if type(delay) not in (int, float) or delay <= 0:
                     issue(result, node, 'nonliteral DBM timer: ' + expression(node))
@@ -482,10 +485,17 @@ def extract_dbm(source, file, addon, version):
         ctor = method_name(call) or ''
         if not ctor.startswith('New') or not isinstance(node.targets[0], lua.Name):
             continue
-        if 'Timer' in ctor and len(call.args) >= 2:
-            delay, spell = static_number(call.args[0]), static_number(call.args[1])
+        if 'Timer' in ctor and call.args:
+            # DBM Timer.lua:1192: custom NewTimer's second arg is a name;
+            # its explicit spellId is arg14. Typed NewCD/Next timers use arg2.
+            spell_index = 13 if ctor == 'NewTimer' else 1
+            delay = static_number(call.args[0])
+            spell = static_number(call.args[spell_index]) if len(call.args) > spell_index else None
             if spell and spell > 0:
                 variables[node.targets[0].id] = (int(spell), delay, 'timer', None, None)
+            else:
+                variables[node.targets[0].id] = (None, delay, 'timer', None, None)
+                issue(result, call, 'timer constructor lacks statically known spellId: ' + expression(call))
         elif 'Announce' in ctor or 'SpecialWarning' in ctor:
             spell = static_number(call.args[0]) if call.args else None
             if spell and spell > 0:
