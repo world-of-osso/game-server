@@ -15,6 +15,8 @@ struct EnteredMatch {
 fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
+    } else if template.map_id == 727 {
+        crate::game_objects::GameObjectSpawns::default()
     } else {
         source_battleground_objects(template.map_id)
     };
@@ -24,6 +26,9 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
     let mut h = harness_with(|app| {
         app.insert_resource(crate::persistence::GameDatabase { db });
         app.insert_resource(objects);
+        if template.map_id == 727 {
+            app.insert_resource(silvershard_source_world());
+        }
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.add_plugins((
             crate::pvp::PvpPlugin,
@@ -355,6 +360,91 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     }
     h.walk_to(actor, Vec3::new(1783.41, 1333.56, 6.0));
     h.advance(1300);
+    win_leave_and_return(&mut entered, 1500);
+}
+
+fn silvershard_source_world() -> crate::world_data::WorldData {
+    let copy = tempfile::NamedTempFile::new().unwrap();
+    std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
+    let conn = Connection::open(copy.path()).unwrap();
+    conn.execute_batch("CREATE TABLE IF NOT EXISTS tdb_npc_spellclick_spells (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER,PRIMARY KEY(npc_entry,spell_id));
+        INSERT OR REPLACE INTO tdb_npc_spellclick_spells VALUES (60283,124491,1,0);").unwrap();
+    drop(conn);
+    let output = std::process::Command::new("python3")
+        .args(["../../scripts/add_battleground_summon_templates.py", "--db"])
+        .arg(copy.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    crate::world_data::load_world_data(copy.path())
+}
+
+fn carts_in(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
+    let world = h.app.world_mut();
+    let mut query = world.query::<(Entity, &shared::components::Npc, &InMap, &Position)>();
+    query
+        .iter(world)
+        .filter(|(_, npc, map, _)| npc.template_id == 60140 && **map == copy)
+        .map(|(entity, _, _, position)| (entity, wow(position)))
+        .collect()
+}
+
+#[test]
+fn silvershard_channel_real_npc_carts_control_delivery_respawn_victory_and_origin_return() {
+    let template = shared::battleground::silvershard_mines();
+    let mut entered = enter_source_match(&template, shared::battleground::SILVERSHARD_STARTS);
+    let alliance: Vec<_> = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .filter(|(_, team)| **team == BgTeam::A)
+        .map(|(who, _)| who)
+        .collect();
+    let (h, copy) = (&mut entered.h, entered.copy);
+    use_second_frames(h);
+    let initial = carts_in(h, copy);
+    assert_eq!(initial.len(), 3);
+    for (entity, _) in &initial {
+        assert!(h.app.world().get::<Replicate>(*entity).is_some());
+    }
+    let mut delivered = false;
+    let mut respawned = false;
+    for _ in 0..3000 {
+        let carts = carts_in(h, copy);
+        for (who, (_, position)) in alliance.iter().zip(&carts) {
+            h.app
+                .world_mut()
+                .entity_mut(who.player)
+                .insert(bevy(*position));
+        }
+        h.advance(1);
+        let current = carts_in(h, copy);
+        delivered |= current.len() < 3;
+        respawned |= delivered && current.len() == 3;
+        if battleground(h, alliance[0]).phase == BgPhase::Ended {
+            break;
+        }
+    }
+    assert!(
+        delivered && respawned,
+        "source depot disappearance and five-second replacement"
+    );
+    let result = battleground(h, alliance[0]);
+    assert!(
+        result
+            .players
+            .iter()
+            .filter(|row| row.team == BgTeam::A)
+            .all(|row| row
+                .objective_scores
+                .iter()
+                .any(|(id, value)| *id == 428 && *value > 0))
+    );
+    assert!(result.world_states.contains(&(6437, 1500)));
     win_leave_and_return(&mut entered, 1500);
 }
 
