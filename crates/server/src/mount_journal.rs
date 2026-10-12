@@ -207,7 +207,7 @@ fn broadcast_account(world: &mut World, account: u64) {
     }
 }
 
-fn requests<M: Message>(world: &mut World) -> Vec<(Entity, u64, Entity, M)> {
+fn requests<M: lightyear::prelude::Message>(world: &mut World) -> Vec<(Entity, u64, Entity, M)> {
     let mut query = world.query_filtered::<(Entity,&Authenticated,&PlayerLink,&mut MessageReceiver<M>),With<InWorld>>();
     query
         .iter_mut(world)
