@@ -106,6 +106,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             flags: Default::default(),
             nodes: None,
             eye: None,
+            kotmogu: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },
