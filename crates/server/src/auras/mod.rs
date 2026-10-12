@@ -1503,10 +1503,7 @@ fn queue_passive_sync(
 }
 
 fn sync_passive_auras(world: &mut World) {
-    let mut units = std::mem::take(&mut world.resource_mut::<PendingPassiveSync>().0);
-    // Several spellbook changes can queue the same unit before a fixed tick.
-    units.sort_unstable();
-    units.dedup();
+    let units = std::mem::take(&mut world.resource_mut::<PendingPassiveSync>().0);
     for unit in units {
         let Some(known) = world.get::<KnownSpells>(unit) else {
             continue;

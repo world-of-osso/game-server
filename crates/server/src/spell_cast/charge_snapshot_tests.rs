@@ -1,20 +1,15 @@
 use super::test_harness::*;
-use bevy::prelude::DetectChangesMut;
 
 #[test]
 fn cooldown_assist_known_charge_spell_publishes_full_category_before_first_cast() {
     let mut h = harness(Vec::new(), &[108853], 8).unwrap();
     // Character progression supplies ClientId and KnownSpells on world entry.
-    // Publish only after that spellbook's passives have been synchronized.
+    // The harness already queued its initial spellbook for passive sync. Supply
+    // the persisted identity before that first fixed tick, as progression does.
     h.app
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::persistence::ClientId(1));
-    h.app
-        .world_mut()
-        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
-        .unwrap()
-        .set_changed();
     h.advance(4);
     let update = h
         .inbox
@@ -42,11 +37,6 @@ fn cooldown_assist_spellbook_snapshot_deduplicates_shared_category_after_passive
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::persistence::ClientId(1));
-    h.app
-        .world_mut()
-        .get_mut::<crate::class_progression::KnownSpells>(h.caster)
-        .unwrap()
-        .set_changed();
     h.advance(4);
     let charges: Vec<_> = h
         .inbox
