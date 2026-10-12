@@ -115,6 +115,7 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
             name,
         },
         UnitFactionTemplate(faction),
+        crate::maps::InMap::continent(0),
         UnitLevel(10),
         ModelDisplay {
             display_id: WOLF_DISPLAY,
@@ -409,6 +410,7 @@ fn stable_master_hunter(path: &Path) -> Harness {
         },
         NpcFlags(NpcFlags::GOSSIP | NpcFlags::STABLEMASTER),
         UnitFactionTemplate(1),
+        crate::maps::InMap::continent(0),
         at,
     ));
     h.app.world_mut().entity_mut(h.connection).insert((

@@ -257,6 +257,8 @@ struct LootStore<'w> {
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
     gold: ResMut<'w, GoldUpdateQueue>,
+    quests: Option<Res<'w, QuestDb>>,
+    quest_dirty: Option<ResMut<'w, crate::quest::QuestDirty>>,
 }
 
 impl LootStore<'_> {
@@ -289,8 +291,43 @@ impl LootStore<'_> {
         Ok(())
     }
 
+    fn persist_bound_item_credit(
+        &mut self,
+        character_id: u64,
+        item_id: u32,
+        count: u32,
+    ) -> Result<bool, LootError> {
+        let Some(quests) = self.quests.as_deref() else {
+            return Ok(false);
+        };
+        let (db, templates) = self.get().ok_or(LootError::NoPermission)?;
+        if templates
+            .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+            .is_none()
+        {
+            return Err(LootError::NoPermission);
+        }
+        let mut log = load_quest_log(db, character_id);
+        let (changed, suppress_item) =
+            crate::quest_rules::credit_bound_item(quests, &mut log, item_id, count);
+        if changed {
+            crate::persistence::quest_store::save_quest_log(db, character_id, &log);
+            self.quest_dirty
+                .as_mut()
+                .expect("quest credit requires QuestPlugin")
+                .0
+                .insert(character_id);
+        }
+        Ok(suppress_item)
+    }
+
     /// Store one slot's content for `character_id`.
     fn take(&mut self, character_id: u64, content: &LootContent) -> Result<(), LootError> {
+        if let LootContent::Item { item_id, count, .. } = content {
+            if self.persist_bound_item_credit(character_id, *item_id, *count)? {
+                return Ok(());
+            }
+        }
         let (db, templates) = self.get().ok_or(LootError::NoPermission)?;
         let mut model =
             load_model(db, templates, character_id).map_err(|_| LootError::NoPermission)?;

@@ -43,6 +43,10 @@ pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
                 entry.learned = toys.contains_key(&entry.item_id);
                 entry.favourite = toys.get(&entry.item_id).copied().unwrap_or(false);
                 entry.unavailable_reason = toy_catalog::unavailable(toy, world);
+                entry.requires_target_witness = entry
+                    .spell_id
+                    .and_then(|id| world.resource::<crate::spell_info::SpellStore>().get(id))
+                    .is_some_and(crate::spell_cast::requires_target_witness);
                 entry
             })
             .collect(),
@@ -155,17 +159,18 @@ fn receive_use(world: &mut World) {
             let (account, player) = (auth.account_id, link.0);
             receiver
                 .receive()
-                .map(move |request| (connection, account, player, request.item_id))
+                .map(move |request| (connection, account, player, request))
                 .collect::<Vec<_>>()
         })
         .collect();
-    for (connection, account, player, item_id) in requests {
+    for (connection, account, player, request) in requests {
+        let item_id = request.item_id;
         let spell_id = world
             .resource::<ToyCatalog>()
             .0
             .get(&item_id)
             .and_then(|toy| toy.snapshot.spell_id);
-        let outcome = use_toy(world, account, player, item_id);
+        let outcome = use_toy(world, account, player, &request);
         result(
             world,
             connection,
@@ -202,8 +207,9 @@ pub(crate) fn use_toy(
     world: &mut World,
     account: u64,
     player: Entity,
-    item_id: u32,
+    request: &UseToy,
 ) -> Result<(), String> {
+    let item_id = request.item_id;
     let toy = world
         .resource::<ToyCatalog>()
         .0
@@ -228,7 +234,7 @@ pub(crate) fn use_toy(
                 .retail[&item_id]
                 .scaling,
         );
-    crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level)
+    crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level, request)
         .map_err(|failure| format!("{failure:?}"))
 }
 

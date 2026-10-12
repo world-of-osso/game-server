@@ -100,6 +100,7 @@ const ACTION_REMOVE_NPC_FLAG: u32 = 83;
 const TARGET_NONE: u32 = 0;
 const TARGET_SELF: u32 = 1;
 const TARGET_VICTIM: u32 = 2;
+const TARGET_HOSTILE_RANDOM: u32 = 5;
 const TARGET_ACTION_INVOKER: u32 = 7;
 const TARGET_STORED: u32 = 12;
 const TARGET_INVOKER_PARTY: u32 = 16;
@@ -276,6 +277,7 @@ fn supports_target(kind: u32) -> bool {
         TARGET_NONE
             | TARGET_SELF
             | TARGET_VICTIM
+            | TARGET_HOSTILE_RANDOM
             | TARGET_ACTION_INVOKER
             | TARGET_STORED
             | TARGET_INVOKER_PARTY
@@ -336,7 +338,6 @@ pub(crate) fn has_script(world: &World, entry: u32) -> bool {
 #[derive(Debug, Clone, Default)]
 struct EventState {
     timer_ms: u32,
-    duration_ms: u32,
     active: bool,
     run_once: bool,
     ignore_chance_roll: bool,
@@ -346,8 +347,6 @@ pub(crate) struct SmartAi {
     events: Arc<Vec<SmartEvent>>,
     states: Vec<EventState>,
     phase: u32,
-    timeline_dirty: bool,
-    timeline_age_ms: u32,
     boss: Option<super::boss_ai::BossAi>,
     stored_targets: HashMap<u32, Vec<Entity>>,
     timed_list: Option<TimedList>,
@@ -382,8 +381,6 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         events,
         states,
         phase: 0,
-        timeline_dirty: true,
-        timeline_age_ms: 0,
         boss,
         stored_targets: HashMap::new(),
         timed_list: None,
@@ -395,51 +392,6 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
 }
 
 impl SmartAi {
-    /// Project the scheduler's already-selected timers. HAS_AURA/linked events
-    /// have no known cast deadline and are deliberately absent.
-    fn publish_timers(&mut self, ctx: &mut Ctx, force: bool) {
-        if self.boss.is_none() || (!force && !self.timeline_dirty && self.timeline_age_ms < 1000) {
-            return;
-        }
-        let Some(map) = ctx.map() else {
-            return;
-        };
-        let timers = if ctx.is_engaged() {
-            self.events
-                .iter()
-                .zip(&self.states)
-                .filter(|(event, state)| {
-                    event.event_type == EVENT_UPDATE_IC
-                        && event.action_type == ACTION_CAST
-                        && self.in_phase(event.phase_mask)
-                        && !(event.flags & EVENT_FLAG_NOT_REPEATABLE != 0 && state.run_once)
-                })
-                .map(|(event, state)| shared::protocol::EncounterTimer {
-                    event_id: event.id,
-                    spell_id: event.action_params[0],
-                    remaining_ms: state.timer_ms,
-                    duration_ms: state.duration_ms,
-                    conditional: event.chance < 100
-                        || event.phase_mask != 0
-                        || event.target_type != TARGET_SELF,
-                })
-                .collect()
-        } else {
-            Vec::new()
-        };
-        super::instance_script::send_to_players(
-            ctx.world,
-            map,
-            shared::protocol::EncounterTimelineEvent::Timers {
-                caster: ctx.me.to_bits(),
-                sample_unix_ms: shared::protocol::read_encounter_unix_ms(),
-                timers,
-            },
-        );
-        self.timeline_dirty = false;
-        self.timeline_age_ms = 0;
-    }
-
     /// `SmartScript::ProcessAction(SMART_ACTION_CAST)`, SmartScript.cpp:565-637.
     /// Failed CMC casts restore combat movement; accepted casts stop it.
     fn cast_targets(ctx: &mut Ctx, event: &SmartEvent, targets: Vec<Entity>) -> bool {
@@ -493,9 +445,7 @@ impl SmartAi {
             min
         };
         self.states[index].timer_ms = timer;
-        self.states[index].duration_ms = timer;
         self.states[index].active = timer == 0;
-        self.timeline_dirty = true;
     }
 
     /// `SmartScript::ProcessEventsFor(type)`; link events run only through their source.
@@ -626,6 +576,11 @@ impl SmartAi {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
+            TARGET_HOSTILE_RANDOM => {
+                targets::random_hostile(ctx.world, ctx.me, event.target_params)
+                    .into_iter()
+                    .collect()
+            }
             TARGET_ACTION_INVOKER => invoker.into_iter().collect(),
             TARGET_INVOKER_PARTY => {
                 invoker.map_or_else(Vec::new, |player| targets::party_targets(ctx.world, player))
@@ -669,26 +624,7 @@ impl SmartAi {
             ACTION_CAST => {
                 return Self::cast_targets(ctx, event, targets);
             }
-            ACTION_SET_EVENT_PHASE => {
-                let phase = event.action_params[0];
-                if self.phase != phase {
-                    self.phase = phase;
-                    self.timeline_dirty = true;
-                    if self.boss.is_some()
-                        && let Some(map) = ctx.map()
-                        && super::instance_script::is_active_boss(ctx.world, map, ctx.me)
-                    {
-                        super::instance_script::send_to_players(
-                            ctx.world,
-                            map,
-                            shared::protocol::EncounterTimelineEvent::Phase {
-                                caster: ctx.me.to_bits(),
-                                phase,
-                            },
-                        );
-                    }
-                }
-            }
+            ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
             ACTION_FAIL_QUEST | ACTION_COMPLETE_QUEST => {
                 for target in targets {
                     crate::quest::persist_scripted_quest_result(
@@ -967,7 +903,6 @@ impl CreatureAi for SmartAi {
             }
         }
         self.process_events_for(ctx, EVENT_RESET, None, 0);
-        self.publish_timers(ctx, true);
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, who: Entity) {
@@ -975,7 +910,6 @@ impl CreatureAi for SmartAi {
             boss.just_engaged_with(ctx);
         }
         self.process_events_for(ctx, EVENT_AGGRO, Some(who), 0);
-        self.publish_timers(ctx, true);
     }
 
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
@@ -1057,9 +991,6 @@ impl CreatureAi for SmartAi {
     /// events (SmartScript.cpp:3777-3850), after refreshing the victim.
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         ctx.update_victim();
-        if ctx.is_engaged() {
-            self.timeline_age_ms = self.timeline_age_ms.saturating_add(diff_ms);
-        }
         if self.fail_out_of_range_escort(ctx, diff_ms) {
             return;
         }
@@ -1092,6 +1023,5 @@ impl CreatureAi for SmartAi {
             self.states[index].active = true;
             self.process_event(ctx, index, None, 0);
         }
-        self.publish_timers(ctx, false);
     }
 }
