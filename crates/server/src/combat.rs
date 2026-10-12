@@ -223,6 +223,7 @@ struct AttackRules<'w, 's> {
     maps: Query<'w, 's, &'static crate::maps::InMap>,
     summon_owners: Query<'w, 's, &'static shared::components::UnitSummonedBy>,
     unit_flags: Query<'w, 's, &'static shared::components::UnitFlags>,
+    stealth: crate::auras::stealth::DetectionUnits<'w, 's>,
     templates: Res<'w, FactionTemplates>,
 }
 
@@ -289,7 +290,8 @@ impl AttackRules<'_, '_> {
                     }
             }
         };
-        attacker != victim && !self.dead(victim) && !blocked_by_flags && permitted
+        let detected = crate::auras::stealth::query_can_detect(&self.stealth, attacker, victim);
+        attacker != victim && !self.dead(victim) && !blocked_by_flags && permitted && detected
     }
 }
 
@@ -512,6 +514,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     scaling: Query<'w, 's, ScalingItem<'static>>,
     sight: SwingSight<'w, 's>,
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
+    stealth: crate::auras::stealth::DetectionUnits<'w, 's>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
@@ -550,7 +553,13 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             .get(target_entity)
             .cloned()
             .unwrap_or_default();
-        if !observer.detects(&target) {
+        if !observer.detects(&target)
+            || !crate::auras::stealth::query_can_detect(
+                &params.stealth,
+                attacker_entity,
+                target_entity,
+            )
+        {
             continue;
         }
         let attacker = Attacker {

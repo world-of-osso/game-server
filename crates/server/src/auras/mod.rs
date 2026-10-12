@@ -28,6 +28,7 @@ pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
+pub(crate) mod stealth;
 mod unit_state;
 pub use invisibility::Invisibility;
 

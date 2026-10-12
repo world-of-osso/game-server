@@ -210,6 +210,12 @@ pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
     let arena = crate::pvp::arena_combat::relation(world, caster, target);
+    if caster == target {
+        return relation != Relation::Enemy;
+    }
+    if !crate::auras::invisibility::can_detect(world, caster, target) {
+        return false;
+    }
     if relation == Relation::Any {
         return !matches!(
             arena,
@@ -218,12 +224,6 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
                     | crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: false }
             )
         );
-    }
-    if caster == target {
-        return relation == Relation::Ally;
-    }
-    if !crate::auras::invisibility::can_detect(world, caster, target) {
-        return false;
     }
     // WorldObject::IsValidAttackTarget / IsValidAssistTarget (Object.cpp:2374, 2538): an
     // uninteractible unit is neither attacked nor assisted.
