@@ -20,6 +20,11 @@ mod access;
 #[path = "persistence_housing_migration.rs"]
 mod migration;
 use crate::group::GroupRegistry;
+#[path = "persistence_housing_dyes.rs"]
+mod dyes;
+pub(crate) use dyes::{commit_dyes, preview_dyes};
+#[path = "persistence_housing_variants.rs"]
+mod variants;
 use access::require_visit;
 const NEIGHBORHOOD_LOCATIONS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("housing_neighborhood_locations");
@@ -73,6 +78,7 @@ struct State {
     next_instance_id: u64,
     houses: BTreeMap<u64, OwnedHouse>,
     storage: BTreeMap<u64, BTreeMap<u32, u32>>,
+    storage_variants: BTreeMap<u64, Vec<shared::protocol::StoredDecorVariant>>,
 }
 
 impl State {
@@ -84,6 +90,7 @@ impl State {
             next_instance_id: 1,
             houses: BTreeMap::new(),
             storage: BTreeMap::new(),
+            storage_variants: BTreeMap::new(),
         }
     }
 }
@@ -404,6 +411,12 @@ pub(crate) fn snapshot(
         plots: Vec::new(),
         owned_houses,
         stored,
+        stored_variants: state
+            .storage_variants
+            .get(&actor.account_id)
+            .cloned()
+            .unwrap_or_default(),
+        dye_preview: None,
         placed: placed
             .into_iter()
             .map(|(decor_id, quantity)| StoredDecor { decor_id, quantity })
@@ -548,12 +561,17 @@ pub(crate) fn edit(db: &Database, actor: Actor, command: &HousingCommand) -> Res
     let house_id = edit_house_id(command)?;
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let mut state = read_in(&txn)?;
-    require_owner(&state, actor, house_id)?;
+    require_house_editor(&state, actor, house_id)?;
+    apply_edit(&mut state, actor.account_id, house_id, command)?;
+    commit(txn, &state)
+}
+
+fn require_house_editor(state: &State, actor: Actor, house_id: u64) -> Result<(), String> {
+    require_owner(state, actor, house_id)?;
     if actor.inside_house != Some(house_id) {
         return Err("Enter your house before editing decor.".into());
     }
-    apply_edit(&mut state, actor.account_id, house_id, command)?;
-    commit(txn, &state)
+    Ok(())
 }
 
 fn find_decor(
@@ -580,10 +598,12 @@ fn apply_edit(
     match command {
         HousingCommand::PlaceDecor {
             decor_id,
+            variant_id,
             transform,
             ..
         } => {
             validate_transform(transform)?;
+            let dyes = variants::take_variant(state, account, *decor_id, *variant_id)?;
             let storage = state
                 .storage
                 .get_mut(&account)
@@ -610,6 +630,7 @@ fn apply_edit(
                     instance_id,
                     decor_id: *decor_id,
                     transform: *transform,
+                    dyes,
                 });
         }
         HousingCommand::MoveDecor {
@@ -644,6 +665,7 @@ fn apply_edit(
                 .position(|decor| decor.instance_id == *instance_id)
                 .ok_or("Placed decor not found in this house.")?;
             let decor = house.decor.remove(index);
+            variants::store_variant(state, account, &decor)?;
             let quantity = state
                 .storage
                 .entry(account)

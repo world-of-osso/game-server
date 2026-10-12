@@ -24,13 +24,23 @@ pub(crate) mod pvp_talents;
 #[path = "pvp_war_mode.rs"]
 mod pvp_war_mode;
 
+#[path = "pvp_deephaul.rs"]
+mod pvp_deephaul;
 #[path = "pvp_entry.rs"]
 mod pvp_entry;
 #[path = "pvp_invites.rs"]
 mod pvp_invites;
+#[path = "pvp_objects.rs"]
+mod pvp_objects;
+#[path = "pvp_seething.rs"]
+mod pvp_seething;
 #[path = "pvp_silvershard.rs"]
 mod pvp_silvershard;
 use pvp_invites::process_battleground_invitation_responses;
+#[cfg(test)]
+pub(crate) use pvp_objects::BattlegroundObjectTemplates;
+pub(crate) use pvp_objects::load_battleground_objects;
+pub(crate) use pvp_seething::{capture_azerite, check_azerite_target};
 pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_leave.rs"]
@@ -129,6 +139,8 @@ struct InvitedBattleground {
     eye: Option<shared::battleground::EyeBattle>,
     kotmogu: Option<shared::battleground::KotmoguBattle>,
     silvershard: Option<pvp_silvershard::CartRuntime>,
+    seething: Option<pvp_seething::SeethingRuntime>,
+    deephaul: Option<pvp_deephaul::DeephaulRuntime>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
@@ -151,6 +163,12 @@ impl InvitedBattleground {
         }
         if let Some(carts) = &self.silvershard {
             return carts.battle.world_states(&self.instance);
+        }
+        if let Some(deephaul) = &self.deephaul {
+            return deephaul.battle.world_states(&self.instance);
+        }
+        if let Some(azerite) = &self.seething {
+            return azerite.battle.world_states(&self.instance);
         }
         if let Some(orbs) = &self.kotmogu {
             return orbs.world_states(&self.instance);
@@ -190,6 +208,8 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
                 .map(shared::battleground::EyeBattle::new),
             kotmogu: (template.map_id == 998).then(shared::battleground::KotmoguBattle::new),
             silvershard: None,
+            seething: None,
+            deephaul: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },
