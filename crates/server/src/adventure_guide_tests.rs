@@ -1,6 +1,284 @@
 use super::*;
+use chrono::{TimeZone, Utc};
 use lightyear::prelude::{MessageReceiver, MessageSender};
-use shared::protocol::{AdventureGuideRequest, AdventureGuideSnapshot, InstanceChannel};
+use rusqlite::{Connection, OpenFlags};
+use shared::protocol::{
+    AdventureGuideRequest, AdventureGuideSnapshot, InstanceChannel, PerksActivityProgress,
+};
+
+fn attach_requests(h: &mut crate::bank_test_harness::Harness) {
+    AdventureGuidePlugin.build(&mut h.app);
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<AdventureGuideRequest>::default(),
+        MessageReceiver::<AdventureGuideRequest>::default(),
+        MessageSender::<AdventureGuideSnapshot>::default(),
+        MessageReceiver::<AdventureGuideSnapshot>::default(),
+    ));
+}
+fn request(
+    h: &mut crate::bank_test_harness::Harness,
+    request: AdventureGuideRequest,
+) -> AdventureGuideSnapshot {
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<AdventureGuideRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(request);
+    let mut replies = Vec::new();
+    for _ in 0..10 {
+        h.app.update();
+        replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<AdventureGuideSnapshot>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    replies.pop().expect("authoritative journal reply")
+}
+fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
+    let path = std::env::var_os("ADVENTURE_GUIDE_WORLD_COPY")
+        .expect("explicit private prepared world copy");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
+    let catalog = load_catalog(&conn, &criteria);
+    assert!(matches!(catalog, AdventureCatalog::Ready(_)));
+    h.app.insert_resource(criteria);
+    h.app.insert_resource(catalog);
+    h.app.insert_resource(crate::maps::ServerClock {
+        fixed_unix: Some(now),
+        offset_secs: 0,
+    });
+    h.app
+        .insert_resource(crate::guild_bank::DailyReset { hour_utc: 15 });
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(shared::components::Level(80));
+}
+
+#[test]
+fn adventure_guide_month_utc_boundary_and_leap_year_follow_reset_hour() {
+    let at = |y, m, d, h| {
+        Utc.with_ymd_and_hms(y, m, d, h, 0, 0)
+            .single()
+            .unwrap()
+            .timestamp()
+    };
+    assert_eq!(month::month_at(at(2026, 11, 1, 14), 15, 0).month, 10);
+    let november = month::month_at(at(2026, 11, 1, 15), 15, 0);
+    assert_eq!(
+        (november.month, november.start_unix, november.end_unix),
+        (11, at(2026, 11, 1, 15), at(2026, 12, 1, 15))
+    );
+    let february = month::month_at(at(2024, 2, 29, 16), 15, 0);
+    assert_eq!(february.end_unix - february.start_unix, 29 * 86400);
+    assert_eq!(month::month_at(at(2027, 1, 1, 14), 15, 0).year, 2026);
+}
+
+#[test]
+fn adventure_guide_real_rows_unavailable_census_tracking_and_monthly_persistence() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let now = Utc
+        .with_ymd_and_hms(2026, 10, 11, 16, 0, 0)
+        .single()
+        .unwrap()
+        .timestamp();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalrealm").unwrap();
+    attach_requests(&mut h);
+    prepare_real_catalog(&mut h, now);
+    let snapshot = request(&mut h, AdventureGuideRequest::Query);
+    assert!(snapshot.source_error.is_none());
+    assert_eq!(snapshot.activities.len(), 945);
+    assert_eq!(snapshot.month.month, 10);
+    let quests = snapshot.activities.iter().find(|a| a.id == 3).unwrap();
+    assert_eq!((&*quests.name, quests.points), ("Complete 30 Quests", 200));
+    assert!(matches!(
+        quests.progress,
+        PerksActivityProgress::Unavailable { .. }
+    ));
+    let census = &snapshot.suggestion_census;
+    assert_eq!(census.source_rows, 698);
+    assert_eq!(
+        census.source_rows,
+        census.unsupported_conditions
+            + census.failed_conditions
+            + census.unsupported_actions
+            + snapshot.suggestions.len() as u32
+    );
+    assert!(census.unsupported_conditions > 0);
+    assert!(
+        snapshot
+            .suggestions
+            .iter()
+            .all(|row| row.button_text.is_empty())
+    );
+    let tracked = request(
+        &mut h,
+        AdventureGuideRequest::TrackActivity {
+            activity_id: 3,
+            tracked: true,
+        },
+    );
+    assert!(
+        tracked
+            .activities
+            .iter()
+            .find(|a| a.id == 3)
+            .unwrap()
+            .tracked
+    );
+    let character = h.character_id;
+    drop(h);
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalalt").unwrap();
+    h.play_as(character);
+    assert_eq!(h.character_id, character);
+    attach_requests(&mut h);
+    prepare_real_catalog(&mut h, now);
+    assert!(
+        request(&mut h, AdventureGuideRequest::Query)
+            .activities
+            .iter()
+            .find(|a| a.id == 3)
+            .unwrap()
+            .tracked
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(
+        Utc.with_ymd_and_hms(2026, 11, 1, 15, 0, 0)
+            .single()
+            .unwrap()
+            .timestamp(),
+    );
+    let reset = request(&mut h, AdventureGuideRequest::Query);
+    assert_eq!(reset.month.month, 11);
+    assert!(reset.activities.iter().find(|a| a.id == 3).unwrap().tracked);
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .monthly
+            .as_ref()
+            .unwrap()
+            .counters
+            .is_empty()
+    );
+}
+
+#[test]
+fn adventure_guide_actual_creature_credit_is_once_persistent_and_reset_by_month() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let now = Utc
+        .with_ymd_and_hms(2026, 10, 11, 16, 0, 0)
+        .single()
+        .unwrap()
+        .timestamp();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalhunter").unwrap();
+    attach_requests(&mut h);
+    prepare_real_catalog(&mut h, now);
+    request(&mut h, AdventureGuideRequest::Query);
+    let source = Connection::open_with_flags(
+        std::env::var_os("ADVENTURE_GUIDE_WORLD_COPY").unwrap(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let trees = h
+        .app
+        .world()
+        .resource::<AchievementCatalog>()
+        .criterion_tree_ids(151404);
+    let (criterion,asset)=trees.iter().find_map(|id| source.query_row("SELECT c.ID,c.Asset FROM criteria_tree t JOIN criteria c ON c.ID=t.CriteriaID WHERE t.ID=?1 AND c.Type=0",[id],|r|Ok((r.get::<_,u32>(0)?,r.get::<_,u32>(1)?))).ok()).expect("authentic Colossus kill criterion");
+    let name: String = source
+        .query_row(
+            "SELECT name FROM creature_template WHERE entry=?1",
+            [asset],
+            |r| r.get(0),
+        )
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(crate::maps::InMap::continent(1));
+    let creature = h
+        .app
+        .world_mut()
+        .spawn((
+            shared::components::Npc {
+                template_id: asset,
+                name,
+            },
+            crate::maps::InMap::continent(1),
+        ))
+        .id();
+    crate::achievement::record_creature_death(h.app.world_mut(), creature, Some(h.player));
+    let snapshot = request(&mut h, AdventureGuideRequest::Query);
+    let colossus = snapshot.activities.iter().find(|a| a.id == 498).unwrap();
+    assert!(matches!(
+        colossus.progress,
+        PerksActivityProgress::Available {
+            current: 1,
+            completed: true,
+            ..
+        }
+    ));
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.player)
+        .unwrap();
+    assert_eq!(
+        state.monthly.as_ref().unwrap().counters[&criterion],
+        1,
+        "shared criteria across activities must not double credit one death"
+    );
+    let character = h.character_id;
+    drop(h);
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalhunteralt").unwrap();
+    h.play_as(character);
+    attach_requests(&mut h);
+    prepare_real_catalog(&mut h, now);
+    let restored = request(&mut h, AdventureGuideRequest::Query);
+    assert!(matches!(
+        restored
+            .activities
+            .iter()
+            .find(|a| a.id == 498)
+            .unwrap()
+            .progress,
+        PerksActivityProgress::Available {
+            current: 1,
+            completed: true,
+            ..
+        }
+    ));
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(
+        Utc.with_ymd_and_hms(2026, 11, 1, 15, 0, 0)
+            .single()
+            .unwrap()
+            .timestamp(),
+    );
+    let reset = request(&mut h, AdventureGuideRequest::Query);
+    assert!(matches!(
+        reset
+            .activities
+            .iter()
+            .find(|a| a.id == 498)
+            .unwrap()
+            .progress,
+        PerksActivityProgress::Available {
+            current: 0,
+            completed: false,
+            ..
+        }
+    ));
+}
 
 #[test]
 fn adventure_guide_query_replies_instead_of_inventing_missing_catalog_content() {

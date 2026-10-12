@@ -295,7 +295,7 @@ fn monthly_projection(
         state.account = None;
         state.monthly = None;
     }
-    let mut aggregate = criteria.aggregate(contributions);
+    let mut aggregate = criteria.aggregate(contributions.into_iter());
     if let Some(account) = &current.account {
         aggregate.account = Some(Box::new(PlayerAchievementState {
             earned_ids: account
