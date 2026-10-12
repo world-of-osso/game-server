@@ -162,7 +162,7 @@ class NativeClassSummonImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             copied = Path(temporary) / "world.copy.db"
             with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as native:
-                with sqlite3.connect(copied) as conn:
+                with closing(sqlite3.connect(copied)) as conn, conn:
                     native.backup(conn)
                     # Reproduce the old import even when the caller already applied the fix.
                     conn.execute("DELETE FROM content_creature_template WHERE entry IN (63508,258584)")
@@ -176,7 +176,7 @@ class NativeClassSummonImportTests(unittest.TestCase):
                     after = {row[0]: row for row in conn.execute("SELECT * FROM content_creature_template")}
                     self.assertEqual({entry: after[entry] for entry in before}, before)
                     self.assertEqual(conn.execute("SELECT count(*) FROM content_creature").fetchone()[0], spawns)
-            with sqlite3.connect(copied) as conn:
+            with closing(sqlite3.connect(copied)) as conn, conn:
                 self.assertEqual(add_class_summon_templates.add_class_summon_templates(conn), [])
                 self.assertEqual(conn.execute("SELECT count(*) FROM content_creature_template").fetchone()[0], len(after))
 
