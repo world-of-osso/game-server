@@ -129,20 +129,10 @@ impl LineOfSight {
     /// The first of `target`'s eyes, chest and feet a clear ray from `watcher`'s eyes
     /// reaches on map `map`.
     pub fn witness(&self, map: InMap, watcher: &Body, target: &Body) -> Option<Vec3> {
-        let found = target
+        target
             .aim_points()
             .into_iter()
-            .find(|&end| self.clear(map, watcher.eyes, end));
-        let aims = target.aim_points();
-        // The search stops at the first clear aim point.
-        let rays = found.map_or(aims.len(), |end| {
-            aims.iter()
-                .position(|&aim| aim == end)
-                .map_or(aims.len(), |i| i + 1)
-        });
-        // clear() counts each tested segment, including live GO blockers.
-        debug_assert!(rays <= aims.len());
-        found
+            .find(|&end| self.clear(map, watcher.eyes, end))
     }
 
     /// Segments tested against the bake so far (read by the tick-cost probe).
@@ -161,7 +151,7 @@ impl LineOfSight {
         self.live_hulls = hulls;
     }
 
-    fn live_clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
+    pub(crate) fn live_clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
         self.live_hulls
             .get(&map)
             .into_iter()
