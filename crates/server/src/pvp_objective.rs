@@ -47,42 +47,44 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
     }
 }
 
+/// TC Battleground::EndBattleground (Battleground.cpp:751,779): every accepted player
+/// still in the copy participates; the winning roster also wins. Draws have no winner.
 fn credit_completed_match(world: &mut World, match_id: u64) {
     use shared::battleground::BgOutcome;
-    let (map, winners) = {
+    let (map, roster, winners) = {
         let state = world.resource::<PvpServerState>();
         let matched = &state.battleground_matches[&match_id];
         if matched.instance.phase != BgPhase::Ended {
             return;
         }
-        let Some(BgOutcome::Winner(team)) = matched.instance.outcome else {
+        let (Some(outcome), Some(map)) = (matched.instance.outcome, matched.map) else {
             return;
         };
-        let Some(map) = matched.map else {
-            return;
+        let instance = &matched.instance;
+        let winners = match outcome {
+            BgOutcome::Winner(BgTeam::A) => instance.team_a_players.clone(),
+            BgOutcome::Winner(BgTeam::B) => instance.team_b_players.clone(),
+            BgOutcome::Draw => Vec::new(),
         };
-        let roster = if team == BgTeam::A {
-            &matched.instance.team_a_players
-        } else {
-            &matched.instance.team_b_players
-        };
-        let winners: Vec<_> = roster
+        let roster: Vec<_> = instance
+            .team_a_players
             .iter()
+            .chain(&instance.team_b_players)
             .filter(|id| matched.accepted.contains(id))
             .copied()
             .collect();
-        (map, winners)
+        (map, roster, winners)
     };
     let players: Vec<_> = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()
         .iter(world)
         .filter(|(_, link, owner)| {
-            winners.contains(&owner.character_id) && world.get::<InMap>(link.0) == Some(&map)
+            roster.contains(&owner.character_id) && world.get::<InMap>(link.0) == Some(&map)
         })
-        .map(|(_, link, _)| link.0)
+        .map(|(_, link, owner)| (link.0, winners.contains(&owner.character_id)))
         .collect();
-    for player in players {
-        crate::achievement::record_battleground_win(world, player, map.map_id);
+    for (player, won) in players {
+        crate::achievement::record_battleground_end(world, player, map.map_id, won);
     }
 }
 

@@ -307,7 +307,7 @@ fn new_pvp_progress_does_not_invent_rated_or_season_cap_numbers() {
 }
 
 #[test]
-fn achievements_criteria_native_flag_capture_credits_only_present_winners_once() {
+fn achievements_criteria_native_flag_capture_credits_present_participants_and_winners_once() {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     use crate::auth::{Authenticated, InWorld};
     use crate::game_objects::{GameObjectBounds, GameObjectSpawn, GameObjectSpawns};
@@ -449,7 +449,20 @@ fn achievements_criteria_native_flag_capture_credits_only_present_winners_once()
                 .contains_key(&45085)
         );
     }
+    // ParticipateInBattleground45067 ("Warsong Gulch battles"): present winner and loser.
+    let battles = |world: &World, i: usize| {
+        world
+            .get::<PlayerAchievementState>(players[i].1)
+            .unwrap()
+            .criteria_progress
+            .get(&45067)
+            .copied()
+    };
+    assert_eq!(battles(&world, 0), Some(1));
+    assert_eq!(battles(&world, 1), Some(1));
+    assert_eq!(battles(&world, 8), None, "left the copy before the end");
     pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(battles(&world, 1), Some(1));
     assert_eq!(
         world
             .get::<PlayerAchievementState>(players[0].1)
