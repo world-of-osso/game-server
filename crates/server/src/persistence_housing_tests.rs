@@ -52,7 +52,16 @@ fn housing_access_settings_survive_reopen_and_check_owner_friends_not_visitor_cl
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("access.redb");
     let db = fixture(&path);
-    let owner = actor(1, 30);
+    let (owner_id, _) = crate::persistence::create_character(&db, 1, "Accessowner", 1, 2).unwrap();
+    crate::persistence::save_inventory(
+        &db,
+        owner_id,
+        &InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let owner = actor(1, owner_id);
     let visitor = actor(2, 31);
     let property = purchase(&db, owner, &plot()).unwrap();
     let (friend_id, _) =
@@ -67,7 +76,18 @@ fn housing_access_settings_survive_reopen_and_check_owner_friends_not_visitor_cl
     assert!(house(&db, friend, property.house_id, None).is_err());
     crate::persistence::save_friends(
         &db,
-        30,
+        friend_id,
+        &crate::friends::PlayerFriendsState {
+            entries: vec![crate::friends::FriendRecord {
+                name: "Accessowner".into(),
+                note: String::new(),
+            }],
+        },
+    );
+    assert!(house(&db, friend, property.house_id, None).is_err());
+    crate::persistence::save_friends(
+        &db,
+        owner_id,
         &crate::friends::PlayerFriendsState {
             entries: vec![crate::friends::FriendRecord {
                 name: "Accessfriend".into(),
@@ -89,7 +109,11 @@ fn housing_access_settings_survive_reopen_and_check_owner_friends_not_visitor_cl
         load_house_location(&db, friend_id, None).unwrap().house_id,
         property.house_id
     );
-    crate::persistence::save_friends(&db, 30, &crate::friends::PlayerFriendsState::default());
+    crate::persistence::save_friends(
+        &db,
+        owner_id,
+        &crate::friends::PlayerFriendsState::default(),
+    );
     assert!(load_house_location(&db, friend_id, None).is_err());
     set_access(&db, owner, property.house_id, HouseAccess::default()).unwrap();
     assert!(house(&db, friend, property.house_id, None).is_err());
