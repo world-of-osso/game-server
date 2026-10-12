@@ -70,14 +70,6 @@ fn fill_pools(h: &mut Harness) {
     }
 }
 
-fn ensure_spell_hit(h: &mut Harness) {
-    h.app
-        .world_mut()
-        .get_mut::<crate::auras::AuraStatMods>(h.caster)
-        .unwrap()
-        .spell_hit_chance_pct = 100.0;
-}
-
 fn cast_regrowth(h: &mut Harness) {
     fill_pools(h);
     h.cast_and_deliver(REGROWTH, Some(h.caster));
@@ -121,7 +113,6 @@ fn class_completeness_native_blooming_infusion_delayed_wrath_keeps_consumed_dama
         OFFENSIVE_INFUSION
     ));
     h.inbox.log.clear();
-    ensure_spell_hit(&mut h);
     h.cast_and_deliver(WRATH, Some(h.npc));
     assert!(
         !h.inbox
@@ -162,7 +153,6 @@ fn class_completeness_native_blooming_new_buff_does_not_change_already_launched_
     let mut h = infusion_harness();
     h.inbox.go.clear();
     h.inbox.log.clear();
-    ensure_spell_hit(&mut h);
     h.cast(WRATH, Some(h.npc));
     for _ in 0..100 {
         h.advance(1);
@@ -247,7 +237,6 @@ fn class_completeness_native_blooming_starsurges_grant_one_instant_regrowth_use(
     let mut h = infusion_harness();
     for i in 1..=native_cast_count() {
         fill_pools(&mut h);
-        ensure_spell_hit(&mut h);
         h.cast_and_deliver(STARSURGE, Some(h.npc));
         h.advance(45);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
