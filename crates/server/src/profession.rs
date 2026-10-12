@@ -15,6 +15,7 @@
 
 mod data;
 mod gathering;
+pub(crate) mod specializations;
 mod trainer;
 pub(crate) use gathering::GatherProgress;
 
@@ -285,7 +286,7 @@ pub struct ProfessionPlugin;
 
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(TrainerPlugin)
+        app.add_plugins((TrainerPlugin, specializations::SpecializationsPlugin))
             .add_systems(Update, receive_craft_requests)
             .add_systems(
                 FixedUpdate,

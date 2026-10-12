@@ -871,3 +871,7 @@ Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reus
 ## 2026-10-11 — additional profession references
 
 Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [receipt](reference/profession-reference-import.md) separates concrete data from unresolved quality/concentration/recraft formulas. No canonical DB mutation or runtime acceptance claim.
+
+## 2026-10-11 — profession specialization runtime
+
+Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.

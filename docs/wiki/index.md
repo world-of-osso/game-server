@@ -76,6 +76,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Profession specializations](systems/profession-specializations.md) — source-earned knowledge, irreversible trait spending, atomic wallet/recipe persistence and owner snapshots; native/request acceptance remains open.
+
 - [Gathering](systems/gathering.md) — authored GO50/skin metadata, normal and shared loot readiness, casts/progression, pool timers/persistence; twelve scoped gathering tests and linked integrated both-skin native baseline proof.
 - [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
 
