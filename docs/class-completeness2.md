@@ -139,6 +139,14 @@ At `0a862575` / shared`00d33e7`, eight native controls pass: both counters, real
 
 Native474750 names474754's10%/8% transfer fields and474760 heal child, but its tooltip does not settle raw versus effective healing. The fetched pinned TC a352b1fa `src/server/scripts/Spells/spell_druid.cpp` contains no474750/Symbiotic handler. The lead has no retained basis evidence: `HealInfo::GetHeal()` would mean raw, `GetEffectiveHeal()` effective. No basis chosen and no transfer implemented. Owned receipt: `data/diagnostics/class-completeness4-2026-10-12/symbiotic-source-gap.txt` and pinned `spell_druid.cpp`.
 
+## Bonus-stat negation — batch21
+
+Native aura467 modifies bonus stats without erasing create/base stats. Pinned TC a352b1fa Unit.cpp9882–9895 applies its additive percentage to TOTAL_VALUE, then the ordinary total-stat percentage; SpellAuraEffects.cpp3981–3995 validates Stats indices0–4. StatModifiers now retains a separate primary_bonus_pct vector. Existing spec-based gear selection is unchanged; the new field modifies selected gear plus flat aura bonuses before adding base stats and applying primary_pct.
+
+Native162697/162698/162699/162701/162702/162700 cover Agility DPS, Strength DPS, Intellect DPS, Intellect healer, Strength tank and Agility tank. They suppress authored off-stat bonuses while preserving base stats and the replicated UnitStats sheet. Native13365/13366/13372 provide real five-point flat buffs, not invented coefficients.
+
+`5c8f9734` genuine RED2: Hunter strength102 versus97 and intellect135 versus130. `b56afb05` fixes the shared stat fold. At `2fa57f74`, four controls pass, including all six native spec categories, removal, gear/flat/total-percent ordering and unselected/spirit fields; adjacent stats/itemstats21/21 and summon-damage4/4 pass. Pure calculator cases use explicit fixture operands, not additional production coefficients. Logs: `bonus-stat-{red,green}.log`, `bonus-stat-adjacent-*.log`. No new live or legal-build certificate.
+
 ## Retained boundaries
 
 At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. The earlier Monk evidence is retained in the completed representative gate above; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
