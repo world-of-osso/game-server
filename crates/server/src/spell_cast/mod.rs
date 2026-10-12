@@ -140,6 +140,8 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 const POWER_HEALTH: i32 = -2;
 
 mod assisted_costs;
+#[cfg(test)]
+mod charge_snapshot_tests;
 pub(crate) mod homebind;
 pub(crate) mod teleport;
 mod teleport_positions;
@@ -400,19 +402,35 @@ fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     crate::auras::charge_mods(world, caster, category)
 }
 
-/// Running charge clocks follow haste/aura changes even without another cast.
+/// Publish known full categories before the first cast, and keep all charge clocks
+/// and maxima current when haste/aura changes without another cast.
 fn sync_charge_recovery(world: &mut World) {
-    let pending: Vec<(Entity, u32)> = world
+    let mut pending: Vec<(Entity, u32)> = world
         .query::<(Entity, &SpellHistory)>()
         .iter(world)
         .flat_map(|(unit, history)| {
             history
                 .charges
                 .values()
-                .filter(|state| state.used > 0)
                 .map(move |state| (unit, state.spell_id))
         })
         .collect();
+    let known: Vec<_> = world
+        .query_filtered::<(Entity, &KnownSpells), With<Player>>()
+        .iter(world)
+        .flat_map(|(unit, known)| known.iter().map(move |id| (unit, id)))
+        .collect();
+    pending.extend(known.into_iter().filter(|(_, id)| {
+        world
+            .resource::<SpellStore>()
+            .get(*id)
+            .and_then(|spell| spell.categories.as_ref())
+            .is_some_and(|categories| {
+                categories.charge_category != 0 && categories.max_charges != 0
+            })
+    }));
+    pending.sort_unstable();
+    pending.dedup();
     for (unit, spell_id) in pending {
         refresh_charge_recovery(world, unit, spell_id);
     }
@@ -427,10 +445,13 @@ fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
     let category = spell.categories.as_ref().unwrap().charge_category;
     let mods = charge_mods(world, unit, &spell);
     let now = now(world);
+    if world.get::<SpellHistory>(unit).is_none() {
+        world.entity_mut(unit).insert(SpellHistory::default());
+    }
     let mut history = world.get_mut::<SpellHistory>(unit).unwrap();
-    let before = history.charges[&category];
+    let before = history.charges.get(&category).copied();
     let after = *history.charges_mut(&spell, now, mods).unwrap();
-    if before.used != after.used || before.recharge_secs != after.recharge_secs {
+    if before != Some(after) {
         send_charges(world, unit, &after, now);
     }
 }
