@@ -242,6 +242,35 @@ fn query_event_recipients(
     ))
 }
 
+/// Combat owns death emission; never accept a client-provided PvP credit request.
+pub(crate) fn record_player_kill(world: &mut World, killer: Entity, victim: Entity) {
+    if killer == victim {
+        return;
+    }
+    let (Some(killer_player), Some(victim_player), Some(character)) = (
+        world.get::<Player>(killer),
+        world.get::<Player>(victim),
+        world.get::<ClientId>(killer),
+    ) else {
+        return;
+    };
+    let character = character.0;
+    let same_team = crate::taxi::team_for_race(killer_player.race)
+        .zip(crate::taxi::team_for_race(victim_player.race))
+        .is_some_and(|(killer, victim)| killer == victim);
+    let (Some(db), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut log = load_quest_log(&db.db, character);
+    if crate::quest_rules::credit_player_kill(quests, &mut log, same_team) {
+        save_quest_log(&db.db, character, &log);
+        world.resource_mut::<QuestDirty>().0.insert(character);
+    }
+}
+
 /// Spell/script event credit; personal events do not award nearby party members.
 pub(crate) fn event_credit(
     world: &mut World,
