@@ -1,7 +1,7 @@
 //! Lazy, atomic account migration. Character rows remain authoritative contributions;
 //! retained contributions keep earned account progress when a character is deleted.
 use super::*;
-use redb::{ReadableTable, TableDefinition};
+use redb::{ReadableDatabase, ReadableTable, TableDefinition};
 
 const ACCOUNTS: TableDefinition<u64, &[u8]> = TableDefinition::new("account_achievements_v1");
 
