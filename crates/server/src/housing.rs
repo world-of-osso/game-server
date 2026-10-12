@@ -38,7 +38,7 @@ fn load_catalog(mut commands: Commands) {
     let (loaded, collection) = match connection {
         Ok(db) => (
             HousingCatalog::read(&db),
-            crate::housing_acquisition::read_bookcase_rule(&db),
+            crate::housing_acquisition::read_collection_rules(&db),
         ),
         Err(error) => {
             let message = format!("Open housing catalog: {error}");
@@ -49,7 +49,7 @@ fn load_catalog(mut commands: Commands) {
         warn!("Housing unavailable: {message}");
     }
     commands.insert_resource(HousingAvailability(loaded));
-    commands.insert_resource(crate::housing_acquisition::HousingCollectionRule(
+    commands.insert_resource(crate::housing_acquisition::HousingCollectionRules(
         collection,
     ));
 }
@@ -233,9 +233,8 @@ fn apply_house_command(
 
 fn collect_decor(world: &mut World, actor: Actor, guid: u64) -> Result<(), String> {
     catalog(world)?;
-    crate::housing_acquisition::require_item_eligibility(world, actor.player)?;
     let context = actor_context(world, actor)?;
-    crate::housing_acquisition::redeem(world, context, guid)
+    crate::housing_acquisition::redeem(world, context, actor.player, guid)
 }
 
 pub(crate) fn collect_authenticated_item(
