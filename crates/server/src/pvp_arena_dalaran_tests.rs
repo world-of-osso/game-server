@@ -75,6 +75,30 @@ fn object_collision(h: &mut Harness, entry: u32) -> bool {
 }
 
 #[test]
+fn arena_dalaran_static_water_collision_has_no_unsupported_animation_contract() {
+    let mut h = source_harness([1333.3334, 833.3334], 7.19796);
+    let mut clock = Clock::default();
+    for (elapsed, active) in [(0.0, false), (30.0, false), (35.0, true), (65.0, false)] {
+        update_running(h.app.world_mut(), COPY, elapsed, &mut clock);
+        let mut query = h.app.world_mut().query::<(
+            &InMap,
+            &GameObjectInfo,
+            &GameObjectCollision,
+            Option<&GameObjectAnimation>,
+        )>();
+        let (_, _, collision, animation) = query
+            .iter(h.app.world())
+            .find(|(map, info, ..)| **map == COPY && info.entry == WATER_COLLISION)
+            .unwrap();
+        assert_eq!(collision.0, active);
+        assert_eq!(
+            animation, None,
+            "display8592/FDID252201 is a static collision mesh, not the animated waterfall"
+        );
+    }
+}
+
+#[test]
 fn arena_dalaran_source_spouts_water_cycle_center_push_and_end_cleanup_are_real() {
     let mut h = source_harness([1333.3334, 833.3334], 7.19796);
     let center = spouts_on(h.app.world_mut(), COPY, WaterSpout::Center)[0];

@@ -179,13 +179,12 @@ fn update_center_pushes(
 
 fn set_water_object(world: &mut World, map: InMap, entry: u32, active: bool) {
     // Source spawns start ACTIVE0 (off). UseDoor toggles them to READY1 (on).
-    let desired = (
-        GameObjectAnimation {
-            animation_id: if active { 147 } else { 148 },
-            looping: false,
-        },
-        GameObjectCollision(active),
-    );
+    // Display8592/FDID252201 is static: only the visual waterfall has door clips.
+    let desired_animation = (entry == WATERFALL).then_some(GameObjectAnimation {
+        animation_id: if active { 147 } else { 148 },
+        looping: false,
+    });
+    let desired_collision = GameObjectCollision(active);
     let changes: Vec<_> = world
         .query::<(
             Entity,
@@ -198,12 +197,19 @@ fn set_water_object(world: &mut World, map: InMap, entry: u32, active: bool) {
         .filter(|(_, copy, info, animation, collision)| {
             **copy == map
                 && info.entry == entry
-                && (*animation != Some(&desired.0) || *collision != Some(&desired.1))
+                && (*animation != desired_animation.as_ref()
+                    || *collision != Some(&desired_collision))
         })
         .map(|(entity, ..)| entity)
         .collect();
     for entity in changes {
-        world.entity_mut(entity).insert(desired);
+        let mut object = world.entity_mut(entity);
+        object.insert(desired_collision);
+        if let Some(animation) = desired_animation {
+            object.insert(animation);
+        } else {
+            object.remove::<GameObjectAnimation>();
+        }
     }
 }
 
