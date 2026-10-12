@@ -68,6 +68,7 @@ mod melee;
 mod merchant;
 mod messaging;
 mod mirror_timers;
+mod mount_journal;
 mod mythic_plus;
 mod navigation;
 mod networking;

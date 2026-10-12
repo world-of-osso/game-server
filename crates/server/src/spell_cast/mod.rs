@@ -1032,6 +1032,7 @@ fn start_queued_casts(world: &mut World) {
 /// casters are exempt.
 pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool {
     if world.get::<Npc>(caster).is_some()
+        || crate::mount_journal::knows_spell(world, caster, spell_id)
         || world
             .get::<crate::profession::PlayerProfessions>(caster)
             .is_some_and(|professions| professions.knows(spell_id))

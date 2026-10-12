@@ -310,7 +310,7 @@ fn mark_dirty(world: &World, unit: Entity) {
 }
 
 /// The rider state `GetMountCapability` reads, handed to `read`.
-fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Rider) -> R) -> R {
+pub(crate) fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Rider) -> R) -> R {
     let swimming = world
         .get::<PlayerMotion>(unit)
         .is_some_and(|motion| motion.contains(PlayerMotion::SWIMMING));
