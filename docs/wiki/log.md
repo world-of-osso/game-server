@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Chrono Flames continuation](../class-completeness2.md#chrono-flames-partial-mechanic-follow-up): native replacement/child-impact history, ownership/window/cap/healing/missing-record controls and explicit Retail timing limits; remaining class/talent/live acceptance stays open.
+
 - 2026-10-11 — [Class completeness continuation](../class-completeness2.md): native ground/rectangle selectors, retail ritual metadata, controlled elemental lifecycle and persisted owned-item unlocks; batch12 receipts and source/threshold limits recorded. Whole13-class/40-spec and remaining-class live acceptance stay open.
 
 - 2026-10-11 — [Level80 class completeness](systems/spell-casting.md#level80-class-completeness):7827 native memberships/all13/all40 build-union cast/passive receipts;2841 working-boundary/4607 partial/379 broken. Source-derived537 owner/label,457 category charge haste/progress,416 masked truncated cooldowns; signed Rune/Runic generation and full/partial-school miss cost boundaries. Real-row RED/GREEN, targeted resource controls, no full suite/DB write/master merge/UDP5000. [Contract](../specs/class-completeness.md) and [proof limits](../class-completeness.md) retain legal-build, missing-data and underivable mechanic gaps.
