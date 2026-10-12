@@ -3,7 +3,7 @@ use crate::persistence::GameDatabase;
 use crate::pvp::pvp_support::build_pvp_snapshot;
 use shared::currency::{CurrencyWallet, currency_by_id};
 use shared::protocol::CurrencyStateUpdate;
-use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
+use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot, QueueForRatedPvp};
 
 #[test]
 fn arena_skirmish_pairing_requires_four_or_six_unique_eligible_players() {
@@ -336,6 +336,35 @@ fn arena_rating_reference_uses_pinned_tc_formula_not_the_retired_elo_simulation(
 }
 
 #[test]
+fn arena_rated_pairing_uses_source_mmr_window_and_discard_age() {
+    let team = |leader, mmr, queued_at| arena_rating::QueuedTeam {
+        leader,
+        members: vec![leader, leader + 1],
+        levels: vec![90, 90],
+        mmr,
+        queued_at,
+    };
+    let queue = vec![team(1, 1500, 0.0), team(3, 1700, 600.001)];
+    assert_eq!(
+        arena_rating::find_pair(&queue, 600.001, Some(1700)),
+        Some((0, 1))
+    );
+    assert_eq!(arena_rating::find_pair(&queue, 600.0, None), None);
+    assert_eq!(
+        arena_rating::find_pair(&[team(1, 1500, 0.0), team(3, 1650, 0.0)], 1.0, None),
+        Some((0, 1))
+    );
+    assert_eq!(
+        arena_rating::find_pair(&[team(1, 1500, 0.0), team(3, 1651, 0.0)], 1.0, None),
+        None
+    );
+    assert_eq!(
+        arena_rating::find_pair(&[team(1, 1500, 0.0)], 1.0, None),
+        None
+    );
+}
+
+#[test]
 fn queue_for_battleground_sets_queue_state() {
     let mut player_state = PlayerPvpState::default();
     let mut state = PvpServerState::default();
@@ -463,27 +492,23 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
 }
 
 #[test]
-fn queue_for_rated_bracket_blocks_double_queue() {
-    let mut player_state = PlayerPvpState::default();
+fn rated_modes_cannot_bypass_full_group_queue_through_solo_skirmish_message() {
+    let db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
+    let catalog = arena::Catalog::load(&db).unwrap();
+    let mut player = PlayerPvpState::default();
     let mut state = PvpServerState::default();
-
-    queue_for_rated_bracket(
-        &mut player_state,
-        &mut state,
-        44,
-        PvpBracketSnapshot::Arena2v2,
-    )
-    .expect("first queue succeeds");
-
-    let error = queue_for_rated_bracket(
-        &mut player_state,
-        &mut state,
-        44,
-        PvpBracketSnapshot::Arena3v3,
-    )
-    .expect_err("second queue must fail");
-
-    assert!(error.contains("already queued"));
+    for mode in [
+        shared::protocol::ArenaQueueMode::Rated2v2,
+        shared::protocol::ArenaQueueMode::Rated3v3,
+    ] {
+        assert!(
+            arena::queue_player(&mut player, &mut state, &catalog, 44, 90, mode)
+                .unwrap_err()
+                .contains("full group")
+        );
+    }
+    assert!(player.queue.is_none());
 }
 
 #[test]
@@ -594,8 +619,8 @@ fn rated_pairing_never_manufactures_a_result_or_currency() {
             "pairing is not a played arena"
         );
         assert!(
-            state.queue.is_some(),
-            "queue remains pending real match lifecycle"
+            state.queue.is_none(),
+            "ungrouped rated request cannot manufacture a team"
         );
         assert!(
             app.world()

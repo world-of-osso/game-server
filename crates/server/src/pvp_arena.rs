@@ -48,6 +48,7 @@ pub(super) struct MatchState {
     pub preparation_started: Option<f64>,
     pub started: Option<f64>,
     pub snapshot: ArenaMatchSnapshot,
+    pub rated: Option<super::arena_rating::RatedMatch>,
 }
 impl MatchState {
     pub fn template(&self) -> BgTemplate {
@@ -65,7 +66,7 @@ impl MatchState {
         }
     }
 }
-fn team_size(mode: ArenaQueueMode) -> Option<u8> {
+pub(super) fn team_size(mode: ArenaQueueMode) -> Option<u8> {
     match mode {
         ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Rated2v2 => Some(2),
         ArenaQueueMode::Skirmish3v3 | ArenaQueueMode::Rated3v3 => Some(3),
@@ -121,21 +122,41 @@ pub(super) fn form_match(
     mode: ArenaQueueMode,
 ) -> Option<u64> {
     let size = usize::from(team_size(mode)?);
-    let queue = state.arena_queues.get_mut(&mode)?;
+    let queue = state.arena_queues.get(&mode)?;
     if queue.len() < size * 2 {
         return None;
     }
-    let roster = &queue[..size * 2];
+    let participants: Vec<_> = queue[..size * 2].iter().map(|(id, _)| *id).collect();
+    let levels: Vec<_> = queue[..size * 2].iter().map(|(_, level)| *level).collect();
+    let teams = [
+        participants.iter().step_by(2).copied().collect(),
+        participants.iter().skip(1).step_by(2).copied().collect(),
+    ];
+    let id = create_match(state, catalog, mode, teams, &levels)?;
+    state
+        .arena_queues
+        .get_mut(&mode)
+        .expect("queued mode")
+        .drain(..size * 2);
+    Some(id)
+}
+pub(super) fn create_match(
+    state: &mut PvpServerState,
+    catalog: &Catalog,
+    mode: ArenaQueueMode,
+    teams: [Vec<u64>; 2],
+    levels: &[u8],
+) -> Option<u64> {
     let maps: Vec<_> = catalog
         .0
         .iter()
-        .filter(|map| map.weight > 0 && roster.iter().all(|(_, level)| map.levels.contains(*level)))
+        .filter(|map| map.weight > 0 && levels.iter().all(|level| map.levels.contains(*level)))
         .collect();
     let weight: u32 = maps.iter().map(|map| map.weight).sum();
     if weight == 0 {
         return None;
     }
-    let mut roll = rand::random::<u32>() % weight;
+    let mut roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..weight);
     let source = maps
         .into_iter()
         .find(|map| {
@@ -147,12 +168,12 @@ pub(super) fn form_match(
             }
         })?
         .clone();
-    let participants: Vec<_> = queue.drain(..size * 2).map(|(id, _)| id).collect();
     let arena = MatchState {
         source,
         mode,
         preparation_started: None,
         started: None,
+        rated: None,
         snapshot: ArenaMatchSnapshot {
             mode,
             preparation_remaining_secs: None,
@@ -164,8 +185,8 @@ pub(super) fn form_match(
     let template = arena.template();
     let matched = BgMatch {
         bg_id: template.id,
-        team_a: participants.iter().step_by(2).copied().collect(),
-        team_b: participants.iter().skip(1).step_by(2).copied().collect(),
+        team_a: teams[0].clone(),
+        team_b: teams[1].clone(),
     };
     state.next_battleground_match += 1;
     let id = state.next_battleground_match;
@@ -229,7 +250,7 @@ pub(super) fn receive_queue_requests(world: &mut World) {
         }
     }
 }
-fn publish_invitation(world: &mut World, match_id: u64) {
+pub(super) fn publish_invitation(world: &mut World, match_id: u64) {
     let snapshots = {
         let matched = &world.resource::<PvpServerState>().battleground_matches[&match_id];
         let arena = matched.arena.as_ref().expect("formed arena");
