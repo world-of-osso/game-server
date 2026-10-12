@@ -379,6 +379,18 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
             .unwrap(),
         )));
     h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![
+            crate::spell_info::SpellInfo {
+                id: 1238340,
+                effects: vec![crate::spell_info::SpellEffect {
+                    effect: 324,
+                    misc_values: [1693, 0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        ]));
+    h.app
         .add_systems(Update, crate::inventory::process_use_requests);
     let owner = h.spawn(character_id, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
     h.app.world_mut().entity_mut(owner.connection).insert((
