@@ -227,9 +227,7 @@ pub(crate) fn use_toy(
         let native = world
             .get::<shared::components::Player>(player)
             .ok_or("player missing")?;
-        if crate::auras::unit_state::orb_deception_display(native.race, native.appearance.sex)
-            .is_none()
-        {
+        if crate::auras::orb_deception_display(native.race, native.appearance.sex).is_none() {
             return Err(format!(
                 "Orb of Deception has no source display mapping for race {}",
                 native.race
