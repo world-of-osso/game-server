@@ -758,6 +758,10 @@ fn check_spawned_ground(
 mod tests;
 
 #[cfg(test)]
+#[path = "ground_private_runs_tests.rs"]
+mod private_runs_tests;
+
+#[cfg(test)]
 #[path = "stv_ground_tests.rs"]
 mod stv_tests;
 
