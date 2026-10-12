@@ -7,6 +7,8 @@ use super::chunks::{Result, f32_at, f32x3_at, find_reversed, u16_at, u32_at, u32
 use crate::TILE_SIZE;
 
 const MAID_ENTRY_SIZE: usize = 32;
+const MAIN_ENTRY_SIZE: usize = 8;
+const MAIN_FLAG_HAS_ADT: u8 = 0x1;
 const MPHD_FLAG_GLOBAL_WMO: u32 = 0x1;
 const MDDF_ENTRY_SIZE: usize = 36;
 /// MDDF flag: `nameId` is a FileDataID, not an MMID index.
@@ -50,14 +52,14 @@ pub fn wdt_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
 
 fn terrainless_legacy_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
     let main = find_reversed(wdt, b"MAIN").ok_or("WDT has no MAIN or MAID")?;
-    if main.len() != 64 * 64 * 8 {
+    if main.len() != 64 * 64 * MAIN_ENTRY_SIZE {
         return Err("WDT MAIN has invalid size".into());
     }
     let has_terrain = main
-        .as_chunks::<8>()
+        .as_chunks::<MAIN_ENTRY_SIZE>()
         .0
         .iter()
-        .any(|entry| entry[0] & 1 != 0);
+        .any(|entry| entry[0] & MAIN_FLAG_HAS_ADT != 0);
     if has_terrain {
         return Err("WDT has active terrain but no MAID".into());
     }
