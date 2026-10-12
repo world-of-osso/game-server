@@ -3,7 +3,8 @@ use super::test_harness::*;
 use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::components::PowerType;
-use shared::protocol::{CastFailReason, CombatLogKind};
+use shared::protocol::CombatLogKind;
+use shared::spell_data::CastFailReason;
 
 const GRACE: u32 = 79_206;
 const LIGHTNING_BOLT: u32 = 188_196;
