@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import sqlite3
+import struct
 import subprocess
 import sys
 import tempfile
@@ -20,7 +21,7 @@ class VehicleGroundFilesTest(unittest.TestCase):
         self.db = sqlite3.connect(self.world)
         self.addCleanup(self.db.close)
         self.db.executescript("""
-            CREATE TABLE map (ID INTEGER, WdtFileDataID INTEGER);
+            CREATE TABLE map (ID INTEGER, WdtFileDataID INTEGER, InstanceType INTEGER);
             CREATE TABLE content_creature (map INTEGER);
             CREATE TABLE content_gameobject (map INTEGER);
             CREATE TABLE mount (ID INTEGER, SourceSpellID INTEGER);
@@ -58,6 +59,27 @@ class VehicleGroundFilesTest(unittest.TestCase):
     def test_unspawned_passenger_model_ships_once_without_driver_only_models(self):
         (self.cache / "models/234720.m2").write_bytes(b"mount bind pose")
         self.assertEqual(self.list_files(), ["models/234720.m2"])
+
+    def test_spawnless_housing_ground_and_passenger_bind_pose_ship_through_deploy_cli(self):
+        maps = [(2735, 5660542, 8), (2736, 5660543, 8), (2783, 5890928, 7)]
+        self.db.executemany("INSERT INTO map VALUES (?, ?, ?)", maps)
+        self.db.commit()
+        (self.cache / "terrain").mkdir()
+        (self.cache / "models/234720.m2").write_bytes(b"mount bind pose")
+        expected = {"models/234720.m2"}
+        for map_id, wdt, _kind in maps:
+            root, obj0 = 8000000 + map_id, 9000000 + map_id
+            maid = struct.pack("<II", root, obj0) + bytes(24)
+            (self.cache / f"terrain/{wdt}.wdt").write_bytes(
+                b"DIAM" + struct.pack("<I", len(maid)) + maid
+            )
+            for fdid in (root, obj0):
+                (self.cache / f"terrain/{fdid}.adt").write_bytes(
+                    b"REVM" + struct.pack("<II", 4, 18)
+                )
+            expected.update((f"terrain/{wdt}.wdt", f"terrain/{root}.adt", f"terrain/{obj0}.adt"))
+        self.assertEqual(set(self.list_files()), expected)
+        self.assertFalse(any(self.list_files("--missing")))
 
     def test_missing_passenger_model_is_reported_with_vehicle_id(self):
         self.assertEqual(self.list_files("--missing"), ["vehicle 312\tmodels/234720.m2"])

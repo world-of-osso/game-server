@@ -33,6 +33,8 @@ The server reads build-qualified NeighborhoodMap entries and NeighborhoodPlot co
 
 ## Authored map ground
 
+Deployment ground selection includes spawned maps, registered runtime HOSTED_CONTINENTS and Map.db2 House/Neighborhood types7/8 even without creature/gameobject spawns. The continent IDs come directly from the runtime registry in `crates/server/src/maps/instances.rs`; housing IDs come from the same map rows/type authority used by housing admission. No second housing/continent ID list exists in deploy.sh. Explicit-map and all-registered extraction keep their existing scope; missing ground remains visible in the file collector's report.
+
 Neighborhood2735/2736 and interior2783 use their real WDT/ADT and placed WMO collision. No generated flat floor substitutes for a missing map or house grant. Explicit registered-map extraction uses the existing local-CASC ground walker, including maps with no NPC spawns:
 
 ```text
