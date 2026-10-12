@@ -718,20 +718,28 @@ fn deal_damage_and_report(
         return 0.0;
     };
     let before = health.current;
+    let incoming_loss = health_loss(training_dummy, scaled_loss);
+    let scripted_loss = crate::scripted_ai::limit_scripted_loss(
+        world.get::<crate::scripted_ai::CreatureScriptName>(target),
+        before,
+        incoming_loss,
+    );
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel.as_ref(),
         ctx.caster,
         before,
         crate::combat::limit_unkillable_loss(
             before,
-            health_loss(training_dummy, scaled_loss),
+            scripted_loss,
             world.get::<crate::combat::Unkillable>(target).is_some() && ctx.caster != target,
         ),
     );
+    if incoming_loss > 0.0 {
+        crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, incoming_loss);
+    }
     let lethal = crate::auras::apply_attack_damage(world, target, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
-        crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, loss);
     }
     if duel_defeated {
         world.entity_mut(target).insert(crate::duel::DuelDefeated);
