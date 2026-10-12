@@ -82,6 +82,7 @@ fn application_harness_db(db: redb::Database) -> Harness {
         Authenticated { account_id: 1 },
         pair::<ApplyTransmog>(),
         pair::<shared::protocol::SaveTransmogOutfit>(),
+        pair::<shared::protocol::SaveTransmogCustomSet>(),
         pair::<shared::protocol::TransmogOutfitFailed>(),
         pair::<TransmogState>(),
         pair::<TransmogFailed>(),
@@ -166,6 +167,119 @@ fn transmog_outfit_save_is_durable_account_scoped_and_never_charges_apply() {
             .outfits
             .is_empty()
     );
+}
+
+#[test]
+fn transmog_custom_set_save_allocates_real_owned_id_and_keeps_outfits_separate() {
+    use shared::protocol::{SaveTransmogCustomSet, TransmogOutfitChoice};
+    let mut h = application_harness();
+    let npc = open_service(&mut h);
+    let choices = vec![TransmogOutfitChoice {
+        slot: EquipmentSlot::MainHand,
+        choice: TransmogChoice::Source(SOURCE),
+    }];
+    h.send::<_, TransmogChannel>(SaveTransmogCustomSet {
+        npc: npc.to_bits(),
+        id: None,
+        name: "Gladius".into(),
+        choices: choices.clone(),
+    });
+    let state = h
+        .app
+        .world()
+        .resource::<Inbox<TransmogState>>()
+        .0
+        .last()
+        .unwrap();
+    assert_eq!(state.custom_sets.len(), 1);
+    assert!(state.outfits.is_empty());
+    let id = state.custom_sets[0].id;
+    assert!(id > 0);
+    assert_eq!(state.custom_sets[0].choices, choices);
+    h.send::<_, TransmogChannel>(SaveTransmogCustomSet {
+        npc: npc.to_bits(),
+        id: Some(id),
+        name: "Sword".into(),
+        choices,
+    });
+    let state = h
+        .app
+        .world()
+        .resource::<Inbox<TransmogState>>()
+        .0
+        .last()
+        .unwrap();
+    assert_eq!(state.custom_sets.len(), 1);
+    assert_eq!(
+        (state.custom_sets[0].id, state.custom_sets[0].name.as_str()),
+        (id, "Sword")
+    );
+    assert_eq!(
+        persistence::load_inventory(
+            &h.app.world().resource::<GameDatabase>().db,
+            character_id(&h)
+        )
+        .gold,
+        5000
+    );
+}
+
+#[test]
+fn transmog_outfit_refusals_preserve_saved_configuration_and_gold() {
+    use shared::protocol::{
+        SaveTransmogOutfit, TransmogOutfit, TransmogOutfitChoice, TransmogOutfitError,
+        TransmogOutfitFailed, TransmogOutfitIllusion,
+    };
+    for (id, name, choice, illusion, error) in [
+        (4, "Sword", SOURCE, 3, TransmogOutfitError::EntryUnavailable),
+        (2, "  ", SOURCE, 3, TransmogOutfitError::InvalidName),
+        (2, "Sword", 730, 3, TransmogOutfitError::InvalidChoice),
+        (2, "Sword", SOURCE, 2, TransmogOutfitError::InvalidChoice),
+    ] {
+        let mut h = application_harness();
+        let npc = open_service(&mut h);
+        h.send::<_, TransmogChannel>(SaveTransmogOutfit {
+            npc: npc.to_bits(),
+            outfit: TransmogOutfit {
+                id,
+                name: name.into(),
+                choices: vec![TransmogOutfitChoice {
+                    slot: EquipmentSlot::MainHand,
+                    choice: TransmogChoice::Source(choice),
+                }],
+                illusions: vec![TransmogOutfitIllusion {
+                    slot: EquipmentSlot::MainHand,
+                    illusion_id: illusion,
+                }],
+            },
+        });
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<Inbox<TransmogOutfitFailed>>()
+                .0
+                .last()
+                .unwrap()
+                .error,
+            error
+        );
+        let state = h
+            .app
+            .world()
+            .resource::<Inbox<TransmogState>>()
+            .0
+            .last()
+            .unwrap();
+        assert!(state.outfits.is_empty());
+        assert_eq!(
+            persistence::load_inventory(
+                &h.app.world().resource::<GameDatabase>().db,
+                character_id(&h)
+            )
+            .gold,
+            5000
+        );
+    }
 }
 
 fn apply(h: &mut Harness, npc: Entity, source: u32) {
