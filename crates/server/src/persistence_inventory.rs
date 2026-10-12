@@ -67,7 +67,7 @@ pub(crate) fn is_item_unlocked(db: &Database, guid: u64) -> bool {
     table.get(guid).expect("read item unlock state").is_some()
 }
 
-pub(crate) fn unlock_item(db: &Database, guid: u64) -> anyhow::Result<()> {
+pub(crate) fn unlock_item(db: &Database, guid: u64) -> Result<(), Box<dyn std::error::Error>> {
     let txn = db.begin_write()?;
     txn.open_table(ITEM_UNLOCKED)?.insert(guid, 1)?;
     txn.commit()?;

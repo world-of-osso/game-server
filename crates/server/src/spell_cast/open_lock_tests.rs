@@ -19,7 +19,7 @@ fn fixture(item_id: u32) -> (Harness, tempfile::TempDir, u64) {
         .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
     h.app.init_resource::<crate::gold::GoldUpdateQueue>();
     h.app
-        .insert_resource(super::open_lock::load_data(&path).unwrap());
+        .insert_resource(super::open_lock::load_data(path.to_str().unwrap()).unwrap());
     let directory = tempfile::tempdir().unwrap();
     let db = redb::Database::create(directory.path().join("lockbox.redb")).unwrap();
     persistence::create_tables(&db);
