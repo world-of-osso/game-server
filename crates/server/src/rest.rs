@@ -478,6 +478,7 @@ mod tests {
             unit_flags: 0,
             models: vec![CreatureModelInfo {
                 display_id: 1,
+                display_scale: 1.0,
                 probability: 1.0,
                 is_trigger: false,
             }],
