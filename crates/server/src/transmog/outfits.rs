@@ -1,6 +1,6 @@
 //! Account-scoped saved configurations; never invokes paid equipment application.
 use super::*;
-use redb::{ReadableDatabase, TableDefinition};
+use redb::{ReadableDatabase, ReadableTable, TableDefinition};
 
 const ACCOUNT_OUTFITS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("transmog_account_outfits");
