@@ -2,6 +2,144 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_comparison_reads_target_account_and_character_without_mutating_viewer() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut world = World::new();
+    world.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let viewer = world.spawn(PlayerAchievementState::default()).id();
+    let mut state = PlayerAchievementState::default();
+    state.earned_ids.insert(633);
+    state.earned_at.insert(633, 1_791_244_800);
+    let mut account = PlayerAchievementState::default();
+    account.earned_ids.insert(4899);
+    state.account = Some(Box::new(account));
+    let target = world
+        .spawn((
+            Player {
+                name: "Otherplayer".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            state,
+        ))
+        .id();
+    let connection = world
+        .spawn((
+            Authenticated { account_id: 41 },
+            PlayerLink(target),
+            InWorld { character_id: 51 },
+        ))
+        .id();
+    let page = comparison_page(
+        &mut world,
+        viewer,
+        target.to_bits(),
+        QueryAchievementCatalog::Achievement {
+            achievement_id: 633,
+        },
+    );
+    let AchievementCatalogPage::Comparison {
+        target_name,
+        page: Some(page),
+        error: None,
+        ..
+    } = page
+    else {
+        panic!("comparison reply");
+    };
+    assert_eq!(target_name, "Otherplayer");
+    let AchievementCatalogPage::Achievement {
+        entry: Some(row), ..
+    } = *page
+    else {
+        panic!("comparison details");
+    };
+    assert!(row.earned);
+    assert_eq!(row.earned_at, Some(1_791_244_800));
+    let page = comparison_page(
+        &mut world,
+        viewer,
+        target.to_bits(),
+        QueryAchievementCatalog::Summary {
+            scope: shared::protocol::AchievementScope::All,
+        },
+    );
+    let AchievementCatalogPage::Comparison {
+        page: Some(page), ..
+    } = page
+    else {
+        panic!("comparison summary");
+    };
+    let AchievementCatalogPage::Summary(summary) = *page else {
+        panic!("summary");
+    };
+    assert_eq!(summary.completed, 2);
+    assert_eq!(summary.points, 20);
+    assert!(
+        world
+            .get::<PlayerAchievementState>(viewer)
+            .unwrap()
+            .earned_ids
+            .is_empty()
+    );
+    for target_bits in [viewer.to_bits(), u64::MAX] {
+        let reply = comparison_page(
+            &mut world,
+            viewer,
+            target_bits,
+            QueryAchievementCatalog::Summary {
+                scope: shared::protocol::AchievementScope::All,
+            },
+        );
+        assert!(matches!(
+            reply,
+            AchievementCatalogPage::Comparison {
+                page: None,
+                error: Some(_),
+                ..
+            }
+        ));
+    }
+    let reply = comparison_page(
+        &mut world,
+        viewer,
+        target.to_bits(),
+        QueryAchievementCatalog::Comparison {
+            target_entity: viewer.to_bits(),
+            query: Box::new(QueryAchievementCatalog::Summary {
+                scope: shared::protocol::AchievementScope::All,
+            }),
+        },
+    );
+    assert!(matches!(
+        reply,
+        AchievementCatalogPage::Comparison {
+            page: None,
+            error: Some(_),
+            ..
+        }
+    ));
+    world.entity_mut(connection).remove::<InWorld>();
+    let reply = comparison_page(
+        &mut world,
+        viewer,
+        target.to_bits(),
+        QueryAchievementCatalog::Achievement {
+            achievement_id: 633,
+        },
+    );
+    assert!(matches!(
+        reply,
+        AchievementCatalogPage::Comparison {
+            page: None,
+            error: Some(_),
+            ..
+        }
+    ));
+}
+
+#[test]
 fn achievements_criteria_exploration_uses_real_terrain_and_survives_reopen() {
     use shared::components::{CharacterAppearance, Position};
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();

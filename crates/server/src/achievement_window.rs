@@ -146,6 +146,14 @@ impl AchievementCatalog {
         race: u8,
     ) -> AchievementCatalogPage {
         match request {
+            QueryAchievementCatalog::Comparison { target_entity, .. } => {
+                AchievementCatalogPage::Comparison {
+                    target_entity,
+                    target_name: String::new(),
+                    page: None,
+                    error: Some("comparison requires an authenticated online target".into()),
+                }
+            }
             QueryAchievementCatalog::Statistics {
                 category_id,
                 after_id,

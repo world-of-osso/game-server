@@ -561,12 +561,74 @@ fn send_requested_catalog_pages(world: &mut World) {
         let Some(owner) = world.get::<Player>(player) else {
             continue;
         };
-        let page = catalog.page(state, request, owner.race);
+        let page = match request {
+            QueryAchievementCatalog::Comparison {
+                target_entity,
+                query,
+            } => comparison_page(world, player, target_entity, *query),
+            request => catalog.page(state, request, owner.race),
+        };
         if let Some(mut sender) = world.get_mut::<MessageSender<AchievementCatalogPage>>(connection)
         {
             sender.send::<AchievementChannel>(page);
         }
     }
+}
+
+fn comparison_page(
+    world: &mut World,
+    viewer: Entity,
+    target_entity: u64,
+    query: QueryAchievementCatalog,
+) -> AchievementCatalogPage {
+    let result = query_comparison_target(world, viewer, target_entity, query);
+    match result {
+        Ok((target_name, page)) => AchievementCatalogPage::Comparison {
+            target_entity,
+            target_name,
+            page: Some(Box::new(page)),
+            error: None,
+        },
+        Err(error) => AchievementCatalogPage::Comparison {
+            target_entity,
+            target_name: String::new(),
+            page: None,
+            error: Some(error.into()),
+        },
+    }
+}
+
+fn query_comparison_target(
+    world: &mut World,
+    viewer: Entity,
+    target_bits: u64,
+    query: QueryAchievementCatalog,
+) -> Result<(String, AchievementCatalogPage), &'static str> {
+    if matches!(query, QueryAchievementCatalog::Comparison { .. }) {
+        return Err("nested achievement comparison is invalid");
+    }
+    let target = Entity::try_from_bits(target_bits).map_err(|_| "invalid comparison target")?;
+    if target == viewer {
+        return Err("comparison target must be another player");
+    }
+    let online = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .any(|(_, link, _)| link.0 == target);
+    if !online {
+        return Err("comparison target is not an online player");
+    }
+    let player = world
+        .get::<Player>(target)
+        .ok_or("comparison target is not a player")?;
+    let state = world
+        .get::<PlayerAchievementState>(target)
+        .ok_or("comparison progress unavailable")?;
+    let catalog = world
+        .get_resource::<AchievementCatalog>()
+        .ok_or("achievement catalog unavailable")?;
+    let name = catalog::bound_text(&player.name, shared::protocol::ACHIEVEMENT_NAME_MAX_BYTES);
+    Ok((name, catalog.page(state, query, player.race)))
 }
 
 #[cfg(test)]

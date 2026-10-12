@@ -2,6 +2,14 @@ use super::*;
 use shared::protocol::{AchievementCatalogPage, QueryAchievementCatalog};
 
 #[test]
+fn achievements_comparison_request_carries_an_authentic_target_and_bounded_catalog_cursor() {
+    let wire = serde_json::json!({"Comparison": {"target_entity": 42, "query": {"Category": {"category_id": 92, "after_id": 633}}}});
+    let request: QueryAchievementCatalog =
+        serde_json::from_value(wire.clone()).expect("authoritative comparison request");
+    assert_eq!(serde_json::to_value(request).unwrap(), wire);
+}
+
+#[test]
 fn achievements_summary_counts_full_catalog_and_account_scope_not_loaded_pages() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
