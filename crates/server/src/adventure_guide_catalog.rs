@@ -31,8 +31,6 @@ struct Suggestion {
     description: String,
     #[serde(rename = "RewardDescription_lang")]
     reward: String,
-    #[serde(rename = "ButtonText_lang")]
-    button: String,
     #[serde(rename = "TextureFileDataID")]
     texture: u32,
     #[serde(rename = "PlayerConditionID")]
@@ -209,10 +207,10 @@ impl CatalogData {
                 census.failed_conditions += 1;
                 continue;
             }
-            // Source action0 is display-only. No inferred Quest/RPE/LFG activation.
+            // Keep the authored eligible card, but never infer Quest/RPE/LFG activation.
+            // Unsupported actions count a subset of visible cards, not discarded rows.
             if row.action != 0 {
                 census.unsupported_actions += 1;
-                continue;
             }
             visible.push(AdventureSuggestion {
                 id: row.id,
@@ -220,7 +218,7 @@ impl CatalogData {
                 description: row.description.clone(),
                 reward_description: row.reward.clone(),
                 texture_fdid: row.texture,
-                button_text: row.button.clone(),
+                button_text: String::new(),
             });
         }
         (visible, census)
@@ -239,7 +237,7 @@ mod tests {
             suggestions: vec![Suggestion {
                 id: 7, name: "Hillsbrad Foothills".into(),
                 description: "Join the Forsaken war machine as it marches on Hillsbrad Foothills for the Horde!".into(),
-                reward: String::new(), button: "Start Quest".into(), texture: 236779,
+                reward: String::new(), texture: 236779,
                 condition: 33200, bonus0: 33600, bonus1: 33200, action: 3, flags: 0, priority: 250,
             }],
             tags: vec![], activity_tags: BTreeMap::new(),

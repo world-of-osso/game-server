@@ -99,15 +99,19 @@ fn adventure_guide_real_rows_unavailable_census_tracking_and_monthly_persistence
         PerksActivityProgress::Unavailable { .. }
     ));
     let census = &snapshot.suggestion_census;
+    println!(
+        "suggestion census {census:?}; visible {}",
+        snapshot.suggestions.len()
+    );
     assert_eq!(census.source_rows, 698);
     assert_eq!(
         census.source_rows,
         census.unsupported_conditions
             + census.failed_conditions
-            + census.unsupported_actions
             + snapshot.suggestions.len() as u32
     );
     assert!(census.unsupported_conditions > 0);
+    assert!(census.unsupported_actions <= snapshot.suggestions.len() as u32);
     assert!(
         snapshot
             .suggestions
