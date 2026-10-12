@@ -14,6 +14,10 @@ Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes 
 | c9d545a7 / shared6ba2f5cd | 2854 | 4720 | 253 | All 7827 memberships, exit0, 789.23s |
 | c63bbbdd / shared6ba2f5cd | 2854 | 4774 | 199 | All 7827 memberships, exit0, 810.59s |
 | cbe56541 / shared6ba2f5cd | 2854 | 4776 | 197 | All 7827 memberships, owned prepared snapshot, exit0, 568.84s |
+| 479cc6f4 / shared6ba2f5cd | 2854 | 4779 | 194 | All 7827 memberships, exit0, 474.79s |
+| b6886dec / shared6ba2f5cd | 2854 | 4781 | 192 | All 7827 memberships, exit0 |
+| 7c1e1b33 / shared6ba2f5cd | 2854 | 4787 | 186 | All 7827 memberships, exit0, 560.59s |
+| 96e4cb20 / shared6ba2f5cd | 2854 | 4788 | 185 | All 7827 memberships, exit0, 556.76s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -32,6 +36,19 @@ First census resolves target24 for native117418 in three specs; integrated maste
 - Native63508 Xuen and258584 Imp Lord existed in TDB but the importer retained only world-spawn/transform/toy templates. Class/spec/talent declared-child closure now retains authentic templates/models/addons without creating world spawns. Native import REDebea74cb ->51bc8993 GREEN; prepared copy runtime at1763eab4 spawns both owned actors on the correct random rings. Native import controls2/2 include existing-row preservation and repeat application. No guardian AI/stat-inheritance certification follows.
 
 `python3 scripts/add_class_summon_templates.py --db <prepared-copy>` applies the same rule additively; it rejects the canonical `world.db` basename. Fixtures snapshot the native database read-only, apply the producer to their owned copy, then load production WorldData. Canonical data remains untouched.
+
+## Native ground, rectangle, ritual and controlled-pet follow-up
+
+- Native196718 target62 uses ground height beneath the caster, not airborne caster height: RED98922823 -> GREEN64f216e8. Native197214/392983 target129 uses authored caster-facing Width/radius: RED61e7d171 -> GREENb6886dec, with front/back/ally/range controls. Darkness avoidance and combat-reach expansion remain uncertified.
+- Native698/342601 rituals use TDB Data1 participant counts3/5 and native completion IDs62330/342607, not legacy18541: metadata RED -> GREEN7c1e1b33 plus19 meeting-stone controls. Persistent Doomguard/sacrifice behavior remains open.
+- Native31687 summons creature78116 (Effect21314), not historical510. Controlled-pet recall, persistence/reopen, dismissal and death/resummon have native targeted proof through96e4cb20;9 pet controls pass. Mana uses native class-level/template values. School-specific spell-power inheritance and complete pet stats/AI remain uncertified.
+- Native1804 exposes the general RealPointsPerLevel omission: REDa35cdb30 zero versus14 at level28 -> GREENe9b7b565, including levels29/80. General value calculation follows pinned SpellInfo.cpp::CalcValue and its expected-stat exclusions.
+
+### Item-target lock boundary
+
+Effect33/target26 resolves an owned bag GUID, reads native ItemSparse.LockID and ordered Lock.db2 alternatives, and persists UNLOCKED separately by GUID without consuming the item or inventing loot. Missing/foreign/unlocked/non-lock templates reject; eligibility is rechecked at completion before the success receipt. Stored unlock state survives reopen and owner transfers without changing existing item-row encoding.
+
+**Reference limit:** pinned TC CanOpenLock calls CalcValueAsInt without a caster; its GetSkillValue(SKILL_NONE) returns0. That code cannot certify Retail level-based lockpick thresholds. This implementation uses the normal caster-aware native effect value (RealPointsPerLevel1, SpellLevel14 for1804), not a guessed multiplier. Level29 versus native Lock3240.Skill15 is a source-derived implementation test, **not independently verified Retail threshold parity**. No trade-slot, cast-item-key, non-lockpicking item-type, game-object lockpicking or lockbox-loot certificate follows. The native missing-item corpus remains conditional/partial, not a whole-ability success.
 
 ## Retained boundaries
 
