@@ -122,7 +122,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
     .expect("game_object_locks.json beside world.db; run scripts/import_game_object_locks.py");
     let target = Connection::open(dir.path().join("world.db")).unwrap();
     target.execute_batch("CREATE TABLE arena_map(map_id INTEGER);
-        CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
+        CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER,state INTEGER);
         CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
         CREATE TABLE game_object_display_info (ID INTEGER PRIMARY KEY,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
     target
@@ -130,7 +130,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
         .unwrap();
     let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
-        g.spawntimesecs,t.Data3,t.Data5,t.Data6
+        g.spawntimesecs,t.Data3,t.Data5,t.Data6,g.state
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
         JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=? ORDER BY g.guid").unwrap();
     let mut rows = query.query([map_id]).unwrap();
@@ -140,12 +140,13 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
             continue;
         }
         let values: Vec<rusqlite::types::Value> =
-            (0..24).map(|index| row.get(index).unwrap()).collect();
+            (0..25).map(|index| row.get(index).unwrap()).collect();
         let mut spawn = values[..8].to_vec();
         spawn.push(values[20].clone());
+        spawn.push(values[24].clone());
         target
             .execute(
-                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&spawn),
             )
             .unwrap();
@@ -1155,6 +1156,13 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             .iter()
             .find(|(source, _, _)| source == entry)
             .unwrap();
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::protocol::GameObjectCollision>(*gate),
+            Some(&shared::protocol::GameObjectCollision(true)),
+            "source gates and collision walls block during preparation"
+        );
         if action == "delete" {
             continue; // Empyrean collision walls exist without a door-animation contract.
         }
@@ -1237,6 +1245,13 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
                 "map{map_id} source wall removed at start"
             );
         } else {
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<shared::protocol::GameObjectCollision>(*gate),
+                Some(&shared::protocol::GameObjectCollision(false)),
+                "source open gate disables model collision"
+            );
             assert_eq!(
                 h.app
                     .world()

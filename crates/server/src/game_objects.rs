@@ -45,7 +45,7 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs \
+     g.spawnDifficulties, t.Data0, t.Data1, t.Data3, t.Data5, t.Data6, g.spawntimesecs, g.state \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
@@ -61,6 +61,8 @@ pub struct GameObjectSpawn {
     /// WoW coordinates.
     pub position: Vec3,
     pub orientation: f32,
+    /// Authored gameobject.state: GO_STATE_READY1 has model collision.
+    pub initial_state: u8,
     pub bounds: GameObjectBounds,
     /// `gameobject.spawnDifficulties`: the copy difficulties it spawns in (0 on a
     /// continent).
@@ -112,6 +114,7 @@ fn spawn_from_row(row: &Row, locks: &locks::LockDb) -> rusqlite::Result<GameObje
             row.get::<_, f64>(4)? as f32,
         ),
         orientation: row.get::<_, f64>(5)? as f32,
+        initial_state: row.get(24)?,
         bounds: GameObjectBounds {
             min: Vec3::new(geo(10)?, geo(11)?, geo(12)?),
             max: Vec3::new(geo(13)?, geo(14)?, geo(15)?),
@@ -172,7 +175,13 @@ pub(crate) fn wow_position(position: &Position) -> Vec3 {
 
 pub(crate) fn game_object_bundle(
     spawn: &GameObjectSpawn,
-) -> (Position, Rotation, GameObjectInfo, GameObjectBounds) {
+) -> (
+    Position,
+    Rotation,
+    GameObjectInfo,
+    GameObjectBounds,
+    shared::protocol::GameObjectCollision,
+) {
     (
         bevy_position(spawn.position),
         // Same facing convention as creature spawns (`zones::creature_bundle`).
@@ -183,6 +192,7 @@ pub(crate) fn game_object_bundle(
         },
         spawn.info.clone(),
         spawn.bounds,
+        shared::protocol::GameObjectCollision(spawn.initial_state == 1),
     )
 }
 

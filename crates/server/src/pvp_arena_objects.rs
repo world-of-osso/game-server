@@ -5,7 +5,7 @@ pub(crate) use super::arena_sight::{SightCatalog, SightTimers};
 use crate::maps::InMap;
 use bevy::prelude::*;
 use rusqlite::Connection;
-use shared::protocol::{GameObjectAnimation, GameObjectInfo};
+use shared::protocol::{GameObjectAnimation, GameObjectCollision, GameObjectInfo};
 use std::collections::BTreeMap;
 const CLOSED_ANIMATION: u16 = 147;
 const OPEN_ANIMATION: u16 = 148;
@@ -52,10 +52,13 @@ pub(super) fn prepare_map(world: &mut World, map: InMap) {
         .map(|(entity, _, _)| entity)
         .collect();
     for entity in doors {
-        world.entity_mut(entity).insert(GameObjectAnimation {
-            animation_id: CLOSED_ANIMATION,
-            looping: true,
-        });
+        world.entity_mut(entity).insert((
+            GameObjectAnimation {
+                animation_id: CLOSED_ANIMATION,
+                looping: true,
+            },
+            GameObjectCollision(true),
+        ));
     }
 }
 
@@ -75,10 +78,11 @@ pub(super) fn update_gates(world: &mut World, now: f64) {
         &InMap,
         &GameObjectInfo,
         Option<&GameObjectAnimation>,
+        Option<&GameObjectCollision>,
     )>();
     let changes: Vec<_> = query
         .iter(world)
-        .filter_map(|(entity, map, info, animation)| {
+        .filter_map(|(entity, map, info, animation, collision)| {
             let started = maps.get(map)?;
             let source = gates.get(&(map.map_id, info.entry))?;
             let remove = started.is_some_and(|start| {
@@ -96,14 +100,16 @@ pub(super) fn update_gates(world: &mut World, now: f64) {
                 },
                 looping: started.is_none(),
             };
-            (remove || animation != Some(&desired)).then_some((entity, remove, desired))
+            let desired_collision = GameObjectCollision(started.is_none());
+            (remove || animation != Some(&desired) || collision != Some(&desired_collision))
+                .then_some((entity, remove, desired, desired_collision))
         })
         .collect();
-    for (entity, remove, animation) in changes {
+    for (entity, remove, animation, collision) in changes {
         if remove {
             world.despawn(entity);
         } else {
-            world.entity_mut(entity).insert(animation);
+            world.entity_mut(entity).insert((animation, collision));
         }
     }
 }
