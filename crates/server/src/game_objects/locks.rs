@@ -7,6 +7,7 @@ use serde::Deserialize;
 const LOCK_LAYOUT: u32 = 0xDA418152;
 const LOCK_KEY_ITEM: u8 = 1;
 const LOCK_KEY_SKILL: u8 = 2;
+const LOCK_KEY_SPELL: u8 = 3;
 /// TC a352b1fa LockType: open, close, quick open/close, tinkering, kneeling, attacking.
 /// Profession, aura-specific and spell-key alternatives require their own cast path.
 const INTERACTION_LOCK_TYPES: [u32; 7] = [5, 8, 10, 11, 12, 13, 14];
@@ -72,12 +73,15 @@ impl LockDb {
                         LockCastResult::LowSkill
                     });
                 }
-                3 if entry.index == spell_id => return Ok(LockCastResult::Allowed),
+                LOCK_KEY_SPELL if entry.index == spell_id => return Ok(LockCastResult::Allowed),
                 _ => {}
             }
         }
         Ok(
-            if requirements.iter().any(|entry| matches!(entry.kind, 1..=3)) {
+            if requirements
+                .iter()
+                .any(|entry| matches!(entry.kind, LOCK_KEY_ITEM | LOCK_KEY_SKILL | LOCK_KEY_SPELL))
+            {
                 LockCastResult::InvalidTarget
             } else {
                 LockCastResult::Allowed
