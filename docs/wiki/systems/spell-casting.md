@@ -20,6 +20,8 @@ The continuation also records [current-owner summon damage/raw mastery](../../cl
 
 [Native form admission](../../class-completeness6.md#native-form-admission--batch28) adds64-bit required/excluded masks, authored form flags and recipient aura275 family-mask bypass. Ten native lifecycle/cast controls pass. Census now retains32 genuine form prerequisites rather than silently casting unshifted; thirteen275 memberships improve. [Lead fixture diagnoses](../../class-completeness6.md#lead-gate-fixture-diagnoses) distinguish dead cone targets, native Arcane level scaling and destination87 placement input from ground-selector regressions.
 
+[Native casting restrictions](../../class-completeness6.md#native-casting-restrictions--batch29) add player-only263 checks at admission/completion, native flag exemptions and caster-class/parent-spell family intersections. Thirteen controls distinguish parent flags from effect masks and preserve264/E78 action gaps. [Cooking-focus integration](../../class-completeness6.md#cooking-focus-and-spellcaster-integration) retains both focus and spellcaster payloads with separate availability rules and consistent SELECT indices; twenty merged behavior controls pass.
+
 ## Twenty-third batch: authored combo builders and Rune Weapon parry
 
 [Contract](../../specs/spell-dummy-scripts.md#twenty-third-batch-authored-combo-builders-and-rune-weapon-parry), [source/census/proof](../../spell-dummy23-coverage.md). `scripts/batch5.rs::shuriken_storm` applies active121471's native100-percent effect3 to197835's scripted per-enemy combo grant. Native Backstab energize already matches121471's modifier masks; the scripted Storm effect does not. This named correction does not double native builders twice or invent a Shadow-damage copy.

@@ -14,6 +14,18 @@ Census at db430013/sharedcc75a86: all7827 cases, exit0,590.95sec. **2981working 
 
 Revalidated authentic missing-store inputs:37 IDs/170 memberships still have no canonical imported SpellName rows. Four Mage fixed-position IDs retain their explicit missing-source boundary; no positions invented. Representative13-class/26-PNG both-skin gate remains closed from prior receipts, not newly rerun. Full class/talent goal remains open; new native process proof and integration checks remain separate gates.
 
+## Native casting restrictions — batch29
+
+Native263 is checked for players at admission and completion. Pinned TC `Spell.cpp:5767–5772` exempts UsesRangedSlot0x2, EffectAttack78 and Attr12IgnoreCastingDisabled0x200. `Unit.cpp:766–772` compares the aura parent spell's family name against caster `ChrClasses.SpellClassSet`, then intersects parent and cast spell family flags. It does not use the effect mask or require the cast spell's family name to equal the caster class. ClassInfo now retains native SpellClassSet; NPC and triggered casts remain exempt. Rejections use appended CantDoThatRightNow, with an explicit source-name native UI mapping rather than invented localized text.
+
+Server7466a2db genuineRED3→6c6152bdGREEN4; expanded9971606b controls13/13 GREEN. ae3dc5fe splits metadata reads from pure flag matching without changing behavior. Source tests cover actual Mortal Strike damage; unmatched Taunt/foreign magic; native removal/expiry; midcast gain/removal and no payment on completion refusal; real Auto Shot/Speed Buff flag exceptions; native Attack admission with its E78 action gap retained; caster-class versus cast-family identity; recipient ownership; triggered damage and NPC resource payment. Bladestorm's parent and effect masks differ in native data; the pinned parent-mask rule is preserved, not reinterpreted as a Retail exception policy. Aura264 and whole Bladestorm/flight/movement behavior remain separate gaps. Fresh batch29 census pending.
+
+## Cooking-focus and spellcaster integration
+
+Server2593c772 integrates origin/master405bf0c9, preserving cooking focus, identity conditions, public lock access and spellcaster behavior. Transmitted-template SELECT keeps common columns0–15, spellcaster Data0/1/2/5/8 at16–20, and cooking extra-payload boolean at21; type8 loading and both independent availability checks remain. Casting completion performs both263 admission checks and master's cooking-focus checks before payment. Ground destination still resolves before script relocation. Protocol23ed2d3 merges092d34a cleanly; enginee4dfa9e2b merges18c430187 with the maintained wiki union tool. Owned-slot leases remain unchanged.
+
+Merged native behavior20/20 GREEN:13casting restrictions,4native portal access/identity controls, Goblin Gumbo placement and2cooking spawn/reagent tests. Requested exact broad gate plus explicit toy/cooking filter runs are tracked separately; no current-head landable claim until they finish. Earlier926-test proof remains scoped to the earlier milestone, not the changed integration.
+
 ## Lead gate fixture diagnoses
 
 Lead's three failures reproduced together before changes in `lead-gate-red.log`.
