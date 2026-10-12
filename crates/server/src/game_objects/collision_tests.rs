@@ -153,14 +153,50 @@ fn arena_live_walls_follow_waterfall_state_and_empyrean_despawn_per_copy() {
 }
 
 #[test]
-#[ignore = "explicit full-arena live collision measurement"]
-fn arena_live_collision_full_six_player_tick_benchmark() {
+fn arena_live_imported_objects_require_unphased_source_until_real_phasing_exists() {
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        data.join("diagnostics/arena-coverage-2026-10-12/canonical-proof-data/world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let total: u32 = db
+        .query_row(
+            "SELECT COUNT(*) FROM content_gameobject WHERE map IN (SELECT map_id FROM arena_map)",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let phased: Vec<(u32,u32,u32)> = db.prepare("SELECT guid,map,phaseMask FROM content_gameobject WHERE map IN (SELECT map_id FROM arena_map) AND phaseMask <> 1 ORDER BY guid").unwrap()
+        .query_map([], |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?))).unwrap().collect::<Result<_,_>>().unwrap();
+    assert!(
+        total >= 383,
+        "proof must include the full arena import, not empty data"
+    );
+    assert!(
+        phased.is_empty(),
+        "collision cannot accept phased arena content until production phasing exists: {phased:?}"
+    );
+}
+
+#[test]
+#[ignore = "explicit full-arena collision query microbenchmark"]
+fn arena_live_collision_six_position_query_microbenchmark() {
     for map_id in [2759, 617, 2373] {
         let (mut app, objects) = arena_app(map_id);
         let map = InMap {
             map_id,
             instance_id: 786,
         };
+        // Include the active-waterfall worst case, not only source-initial inactive state.
+        for (entity, spawn) in &objects {
+            if spawn.info.entry == 194395 {
+                app.world_mut()
+                    .entity_mut(*entity)
+                    .insert(GameObjectCollision(true));
+            }
+        }
+        app.world_mut().run_schedule(FixedUpdate);
         let feet: Vec<_> = objects
             .iter()
             .filter(|(_, spawn)| matches!(spawn.info.go_type, 0 | 5 | 35))
@@ -198,7 +234,7 @@ fn arena_live_collision_full_six_player_tick_benchmark() {
         }
         samples.sort_by(f64::total_cmp);
         println!(
-            "arena_live_collision map={map_id} players=6 objects={} active_hulls={count} ticks=1200 floor_queries_per_tick=12 wall_movements_per_tick=6 p50_us={:.3} p95_us={:.3} p99_us={:.3} max_us={:.3} observed_hits={hits}",
+            "arena_live_collision_query_microbenchmark map={map_id} simulated_positions=6 objects={} active_hulls={count} warmup=all_static_feet samples=1200 floor_queries_per_sample=12 wall_movements_per_sample=6 p50_us={:.3} p95_us={:.3} p99_us={:.3} max_us={:.3} observed_hits={hits}",
             objects.len(),
             samples[600],
             samples[1140],
@@ -207,7 +243,7 @@ fn arena_live_collision_full_six_player_tick_benchmark() {
         );
         assert!(
             samples[1140] < 16666.0,
-            "live/static six-player query+sync p95 must fit one 60Hz frame"
+            "live/static six-position query+sync microbenchmark p95 must fit a 16.666ms query budget; not whole-frame/tick proof"
         );
     }
 }

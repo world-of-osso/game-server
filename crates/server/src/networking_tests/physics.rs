@@ -105,6 +105,70 @@ fn arena_live_trapdoor_authoritatively_supports_then_opening_drops_player() {
 }
 
 #[test]
+fn arena_live_collision_leaves_unrelated_map_input_and_gravity_unchanged() {
+    use super::client_height::{flat_app, flat_spot, tick};
+    use shared::protocol::{GameObjectCollision, GameObjectInfo};
+    use std::path::PathBuf;
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        data.join("diagnostics/arena-coverage-2026-10-12/canonical-proof-data/world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let start = flat_spot(50.0);
+    let (mut app, player, connection) = flat_app(50.0);
+    app.insert_resource(crate::pvp::arena::Catalog::load(&db).unwrap());
+    app.add_systems(
+        FixedUpdate,
+        crate::game_objects::collision::sync_live_objects
+            .before(process_player_inputs)
+            .before(apply_terrain_gravity),
+    );
+    app.world_mut().spawn((
+        InMap::continent(0),
+        Position {
+            x: start.x + 0.2919,
+            y: 50.0,
+            z: start.z + 2.7317,
+        },
+        Rotation {
+            x: 0.0,
+            y: 1.5708 + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+        GameObjectInfo {
+            entry: 505683,
+            go_type: 35,
+            display_id: 99831,
+            name: "Non-arena regression hull".into(),
+            scale: 1.0,
+        },
+        GameObjectCollision(true),
+    ));
+    tick(
+        &mut app,
+        connection,
+        vec![PlayerInput {
+            position: [start.x + 0.35, start.y, start.z],
+            ..make_input(1.0, 0.0, 0.0)
+        }],
+    );
+    for _ in 0..30 {
+        tick(&mut app, connection, vec![]);
+    }
+    let actual = app.world().get::<Position>(player).unwrap();
+    assert!(
+        actual.x > start.x + 0.3,
+        "normal unrelated-map network report must move"
+    );
+    assert!(
+        (actual.y - 50.0).abs() < 0.001,
+        "unrelated-map gravity must stay on its static terrain: {actual:?}"
+    );
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+}
+
+#[test]
 fn speed_recalculates_when_aura_removed() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
