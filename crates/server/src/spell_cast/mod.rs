@@ -22,6 +22,7 @@ mod chrono_flame_tests;
 mod class_completeness_probe;
 #[cfg(test)]
 mod class_completeness_tests;
+pub(crate) mod control_dream;
 #[cfg(test)]
 mod control_dream_tests;
 pub(crate) mod cosmetic;
@@ -317,12 +318,17 @@ struct ChargeState {
     recharge_secs: f64,
     /// When the next used charge returns (valid while `used > 0`).
     next_ready_at: f64,
+    /// Exact time the last missing charge returned, not the next observed frame.
+    fully_ready_at: f64,
 }
 
 impl ChargeState {
     fn refresh(&mut self, now: f64) {
         while self.used > 0 && now >= self.next_ready_at {
             self.used -= 1;
+            if self.used == 0 {
+                self.fully_ready_at = self.next_ready_at;
+            }
             self.next_ready_at += self.recharge_secs;
         }
     }
@@ -399,6 +405,7 @@ impl SpellHistory {
                 used: 0,
                 recharge_secs: 0.0,
                 next_ready_at: 0.0,
+                fully_ready_at: 0.0,
             });
         state.max = max;
         state.refresh(now);
@@ -2240,6 +2247,7 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let now = now(world);
+    let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
     let (base_recovery_ms, base_category_ms) = spell
         .cooldowns
         .as_ref()
@@ -2253,7 +2261,8 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .max(0.0)
             .round() as u32
     };
-    let (recovery_ms, category_ms) = (cooldown(base_recovery_ms), cooldown(base_category_ms));
+    let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
+    let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
@@ -2271,7 +2280,8 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     let charges = history.charges_mut(spell, now, mods).map(|charges| {
         if charges.used == 0 {
-            charges.next_ready_at = now + charges.recharge_secs;
+            let recovery = charges.recharge_secs - f64::from(ready_credit) / 1000.0;
+            charges.next_ready_at = now + recovery.max(0.0);
         }
         charges.used = (charges.used + 1).min(charges.max);
         charges.spell_id = spell.id;
@@ -2327,6 +2337,9 @@ pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: 
         return;
     }
     charges.used = charges.used.saturating_sub(count);
+    if charges.used == 0 {
+        charges.fully_ready_at = now;
+    }
     let charges = *charges;
     send_charges(world, unit, &charges, now);
 }
