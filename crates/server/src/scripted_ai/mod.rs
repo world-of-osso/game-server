@@ -68,6 +68,9 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
+                    kings_rest::update_molten_gold_areas
+                        .after(update_creature_ai)
+                        .after(crate::combat::auto_attack_system),
                 ),
             );
     }
