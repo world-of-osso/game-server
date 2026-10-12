@@ -66,11 +66,13 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         return;
     };
     let visibility = super::Invisibility::from_auras(auras);
+    let preparing = has_type(auras, super::handlers::ARENA_PREPARATION);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
     let flight = super::mount::flight(auras);
     let feather_fall =
         shared::components::FeatherFall(has_type(auras, super::handlers::FEATHER_FALL));
+    reconcile_preparation(world, unit, preparing);
     reconcile_scale(world, unit);
     reconcile_feather_fall(world, unit, feather_fall);
     if world.get::<super::Invisibility>(unit) != Some(&visibility) {
@@ -86,6 +88,22 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     super::mount::reconcile_can_fly(world, unit, flight);
     reconcile_display(world, unit);
     super::shapeshift::reconcile_display_power(world, unit);
+}
+
+fn reconcile_preparation(world: &mut World, unit: Entity, preparing: bool) {
+    let previous = world.get::<UnitFlags>(unit).copied().unwrap_or_default();
+    let mut flags = previous;
+    if preparing {
+        flags.0 |= UnitFlags::ARENA_PREPARATION;
+    } else {
+        flags.0 &= !UnitFlags::ARENA_PREPARATION;
+    }
+    if flags != previous {
+        world.entity_mut(unit).insert(flags);
+        if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+            dirty.mark(unit);
+        }
+    }
 }
 
 fn reconcile_scale(world: &mut World, unit: Entity) {

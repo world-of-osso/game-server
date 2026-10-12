@@ -43,6 +43,10 @@ pub enum AuraKind {
     HitDefense,
     /// Read by cast selection and included in aura replication.
     Override,
+    /// School/power-mask percentage read by SpellInfo::CalcPowerCost.
+    PowerCost,
+    /// Permission read by PvP talent selection, including arena preparation.
+    TalentSwap,
     /// Trigger a summon on application and remove it with its aura.
     LinkedSummon,
 }
@@ -58,6 +62,9 @@ pub const PERIODIC_LEECH: u32 = 53;
 pub const MOD_THREAT: u32 = 10;
 pub const MOD_TAUNT: u32 = 11;
 pub const MOD_STUN: u32 = 12;
+pub const MOD_POWER_COST_SCHOOL_PCT: u32 = 72;
+pub const ALLOW_TALENT_SWAPPING: u32 = 158;
+pub const ARENA_PREPARATION: u32 = 215;
 pub const MOD_INVISIBILITY: u32 = 18;
 pub const MOD_INVISIBILITY_DETECT: u32 = 19;
 pub const DETECT_VISIBLE_WHILE_INVISIBLE: u32 = 335;
@@ -244,6 +251,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | ARENA_PREPARATION
         | MOD_INVISIBILITY_DETECT
         | DETECT_VISIBLE_WHILE_INVISIBLE
         | MOD_SCALE
@@ -262,6 +270,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
         | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
+        MOD_POWER_COST_SCHOOL_PCT => PowerCost,
+        ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY => MechanicImmunity,
