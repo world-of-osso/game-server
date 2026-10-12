@@ -27,7 +27,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::casting::CastState;
-use shared::components::{Health, Npc, PowerType};
+use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 use shared::spell_data::CastFailReason;
 
@@ -387,6 +387,63 @@ pub(crate) fn spell_scaling_value(spell: &SpellInfo, effect: &SpellEffect, level
     }
 }
 
+///TC a352b1fa SpellInfo.cpp869-956: whether the effect uses an expected-stat
+///budget, which excludes the separate RealPointsPerLevel branch.
+fn uses_expected_stat(effect: &SpellEffect) -> bool {
+    match effect.effect {
+        2 | 7 | 8 | 9 | 10 | 17 | 58 | 75 => true,
+        30 | 62 => effect.misc_values[0] == 0,
+        6 | 27 | 35 | 65 | 119 | 128 | 129 | 143 | 174 | 202 | 271 => match effect.aura {
+            24 | 35 | 73 | 85 | 162 | 418 => effect.misc_values[0] == 0,
+            3 | 8 | 13 | 14 | 15 | 22 | 29 | 34 | 43 | 53 | 59 | 62 | 64 | 69 | 83 | 84 | 97
+            | 99 | 102 | 115 | 123 | 124 | 131 | 135 | 161 | 180 | 189 | 230 | 250 | 301 | 465 => {
+                true
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+///Native CalcValue: clamp caster level to MaxLevel, subtract max(BaseLevel,
+///SpellLevel), then add the authored per-level points before point modifiers.
+fn level_scaled_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
+    if effect.coefficient != 0.0
+        || uses_expected_stat(effect)
+        || effect.real_points_per_level == 0.0
+    {
+        return 0.0;
+    }
+    let level = if world.get::<Player>(caster).is_some() {
+        world
+            .get::<shared::components::Level>(caster)
+            .map(|level| u32::from(level.0))
+    } else {
+        world
+            .get::<shared::components::UnitLevel>(caster)
+            .map(|level| u32::from(level.0))
+    };
+    let Some(level) = level else {
+        return 0.0;
+    }; // Non-unit casters have no level contribution.
+    let maximum = spell.levels.as_ref().map_or(0, |levels| levels.max_level);
+    let capped = if maximum > 0 {
+        level.min(maximum)
+    } else {
+        level
+    };
+    let baseline = spell
+        .levels
+        .as_ref()
+        .map_or(0, |levels| levels.base_level.max(levels.spell_level));
+    capped.saturating_sub(baseline) as f32 * effect.real_points_per_level
+}
+
 /// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
 pub(crate) fn modded_base_points(
     world: &World,
@@ -394,7 +451,8 @@ pub(crate) fn modded_base_points(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let base_points = calc_base_value(world, caster, spell, effect);
+    let base_points = calc_base_value(world, caster, spell, effect)
+        + level_scaled_points(world, caster, spell, effect);
     let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
     match SpellModOp::points_index(effect.index) {
         Some(op) => spell_mods::modify(world, caster, spell, op, base),
