@@ -1222,6 +1222,105 @@ fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credi
 }
 
 #[test]
+fn encounter_coverage_gold_follow_checks_source_three_dimensional_reach() {
+    let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        y: center.y + 8.01,
+        ..center
+    });
+    cast_real_lucre(&mut h, boss);
+    h.advance(3.3);
+    assert_ne!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id,
+        11686,
+        "horizontal overlap cannot absorb outside source reach1+5+2 in3D"
+    );
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        y: center.y + 7.99,
+        ..center
+    });
+    h.advance(0.1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id,
+        11686,
+        "source100ms position check informs once inside3D reach"
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_follow_repaths_subyard_primary_displacement() {
+    let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| crate::ground::ground_data_dir().join("navmesh"));
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        x: center.x - 25.0,
+        ..center
+    });
+    cast_real_lucre(&mut h, boss);
+    h.advance(4.0);
+    let displaced = Position {
+        x: center.x + 0.5,
+        ..center
+    };
+    h.app.world_mut().entity_mut(boss).insert(displaced);
+    let mut absorbed_at = None;
+    for _ in 0..200 {
+        h.advance(0.1);
+        if h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id
+            == 11686
+        {
+            absorbed_at = h.app.world().get::<Position>(gold).copied();
+            break;
+        }
+    }
+    let absorbed_at = absorbed_at.expect("subyard displacement retains actual follow arrival");
+    let separation = (displaced.x - absorbed_at.x).abs();
+    assert!(
+        separation <= 8.02,
+        "chase's1yard route tolerance must not end follow at stale8.5yard endpoint: {separation}"
+    );
+}
+
+#[test]
+fn encounter_coverage_golden_absorption_announcement_is_once_until_source_reset() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    for _ in 0..2 {
+        super::super::dispatch(h.app.world_mut(), boss, super::super::Hook::DoAction(1));
+    }
+    h.advance(0.1);
+    let announcements = |h: &Harness| {
+        h.players[0]
+            .2
+            .chat
+            .iter()
+            .filter(|message| message.content.contains("absorbs an Animated Gold"))
+            .count()
+    };
+    assert_eq!(announcements(&h), 1);
+    super::super::dispatch(h.app.world_mut(), boss, super::super::Hook::Reset);
+    super::super::dispatch(h.app.world_mut(), boss, super::super::Hook::DoAction(1));
+    h.advance(0.1);
+    assert_eq!(announcements(&h), 2);
+}
+
+#[test]
 fn encounter_coverage_gold_luster_uses_real_nearby_entry_condition() {
     let (mut h, gold, player, center, map) = molten_gold_fixture();
     let boss = h.creatures_of(135322)[0];
