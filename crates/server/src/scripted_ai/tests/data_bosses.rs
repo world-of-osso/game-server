@@ -443,8 +443,35 @@ fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
         },
         crate::combat::AutoAttack::new(gold),
     ));
-    h.advance(0.2);
-    assert_eq!(h.health(gold).current, 1.0);
+    // CharacterStats makes melee use the native hit table: the first swing may
+    // miss or be avoided. Require an observed landed hit, not a lucky first roll.
+    let mut landed = false;
+    for _ in 0..32 {
+        let location = *h.app.world().get::<Position>(gold).unwrap();
+        h.app.world_mut().entity_mut(player).insert(location);
+        h.advance(0.2);
+        landed = h.inbox(0).log.iter().any(|event| {
+            event.source == Some(player.to_bits())
+                && event.target == Some(gold.to_bits())
+                && event.spell_id.is_none()
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        });
+        if landed {
+            break;
+        }
+        h.advance(1.8); // Keep the native two-second weapon cadence between attempts.
+    }
+    let receipts: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(player.to_bits()) && event.target == Some(gold.to_bits())
+        })
+        .collect();
+    assert!(landed, "no landed melee hit: {receipts:?}");
+    assert_eq!(h.health(gold).current, 1.0, "{receipts:?}");
     assert!(h.has_aura(gold, 265915));
     assert!(
         h.app
