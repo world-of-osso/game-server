@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Minimum-speed floors](../class-completeness2.md#minimum-speed-floors--batch23): native305 player speed floor after normalization/slows; RED2→six lifecycle/recipient controls and twelve adjacent movement/mount controls. Non-player template-relative rates and whole-dash parity remain uncertified.
+
 - 2026-10-12 — [Representative class gate](../class-completeness2.md#representative-both-skin-class-gate--2026-10-12): all13 both-skin representatives and26 inspected PNGs, authentic private datasets/assets, no shared-realm changes. Full spell/talent goal remains2889 working-boundary/4756 partial/182 broken; no legal-build/rotation certificate.
 
 - 2026-10-12 — [AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229): native Feint RED1000vs600, five school/stacking/expiry/sibling/periodic controls; batch16 census2878/4767/182 recovered, fresh private DB snapshot, Stealth source-row mismatch and Lycara mastery gap preserved.
