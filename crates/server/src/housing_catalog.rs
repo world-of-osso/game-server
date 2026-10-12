@@ -11,6 +11,9 @@ type Fields = BTreeMap<String, String>;
 
 #[path = "housing_cornerstones.rs"]
 mod cornerstones;
+#[path = "housing_dye_catalog.rs"]
+mod dyes;
+pub(crate) use dyes::DyeCatalog;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Neighborhood {
@@ -26,6 +29,7 @@ pub(crate) struct HousingCatalog {
     bulletin_boards: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
     home_entry: Option<WorldLocation>,
     decor_scales: BTreeMap<u32, (u32, f32)>,
+    pub(crate) dyes: DyeCatalog,
 }
 
 impl HousingCatalog {
@@ -51,6 +55,7 @@ impl HousingCatalog {
             plots,
             cornerstones: BTreeMap::new(),
             bulletin_boards: BTreeMap::new(),
+            dyes: DyeCatalog::read(db)?,
             decor_scales: read_rows(db, "HouseDecor")?
                 .into_iter()
                 .map(|(id, fields)| {
