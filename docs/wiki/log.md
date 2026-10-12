@@ -1,5 +1,6 @@
 # Wiki Log
 
+- 2026-10-11 — [Adventure Guide](../specs/adventure-guide.md): copy-only catalogs, signed priorities, current-month account contributions and query/tracking. Five scoped service tests pass; both-skin persisted Track and authored display-only TrainingGrounds852 rendered. Check/fmt pass; unsupported gates/criteria/month/reward bindings remain explicit.
 - 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
 
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
