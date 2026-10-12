@@ -175,6 +175,7 @@ impl Harness {
                     name,
                 },
                 NpcFlags::from_azerothcore(npcflag),
+                crate::maps::InMap::continent(0),
                 bevy(DUNGAR_AT),
                 Health {
                     current: 100.0,
@@ -277,6 +278,91 @@ impl Harness {
             .get::<MovementControl>(self.player)
             .unwrap()
     }
+}
+
+#[test]
+#[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
+fn zone_population_flight_master_discovers_opens_and_flies_on_its_own_map() {
+    const MAP: u32 = 1643;
+    const ANNA_RIDGELEY: u32 = 129984;
+    let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy");
+    let content = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut h = harness().expect("authentic taxi network");
+    h.app.insert_resource(load_taxi_network(&content).unwrap());
+    let (name, faction, flags, x, y, z): (String, u32, u32, f32, f32, f32) = content
+        .query_row(
+            "SELECT t.name,t.faction,t.npcflag,c.position_x,c.position_y,c.position_z
+             FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1
+             WHERE c.map=?1 AND c.id1=?2 LIMIT 1",
+            [MAP, ANNA_RIDGELEY],
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ))
+            },
+        )
+        .unwrap();
+    let at = bevy((x, y, z));
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert((at, crate::maps::InMap::continent(MAP)));
+    let npc = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: ANNA_RIDGELEY,
+                name,
+            },
+            NpcFlags::from_azerothcore(flags),
+            at,
+            crate::maps::InMap::continent(MAP),
+            UnitFactionTemplate(faction),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    assert_eq!(
+        h.take::<InteractionOpened>()[0].kind,
+        InteractionKind::Role(NpcRole::FlightMaster)
+    );
+    let maps = h.take::<TaxiMap>();
+    assert_eq!(maps.len(), 1);
+    assert_eq!(maps[0].continent, MAP);
+    let current = maps[0]
+        .nodes
+        .iter()
+        .find(|n| n.state == TaxiNodeState::Current)
+        .unwrap()
+        .node;
+    assert_eq!(h.known(), BTreeSet::from([current]));
+    let network = h.app.world().resource::<TaxiNetwork>();
+    let known: BTreeSet<_> = network
+        .map_nodes(MAP, Team::Alliance)
+        .map(|(id, _)| id)
+        .collect();
+    let destination = known
+        .iter()
+        .copied()
+        .find(|&id| network.route(current, id, &known, Team::Alliance).is_some())
+        .expect("authored route");
+    h.learn(&known.iter().copied().collect::<Vec<_>>());
+    h.set_gold(1_000_000);
+    h.fly_to(npc, destination);
+    let failures = h.failures();
+    assert!(failures.is_empty(), "taxi failures: {failures:?}");
+    assert!(h.app.world().get::<TaxiFlight>(h.player).is_some());
+    assert!(h.control().controlled);
+    assert!(h.gold() < 1_000_000);
 }
 
 fn state_of(map: &TaxiMap, node: u32) -> TaxiNodeState {

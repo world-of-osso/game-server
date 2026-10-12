@@ -22,6 +22,7 @@ class VehicleGroundFilesTest(unittest.TestCase):
         self.db.executescript("""
             CREATE TABLE map (ID INTEGER, WdtFileDataID INTEGER);
             CREATE TABLE content_creature (map INTEGER);
+            CREATE TABLE content_gameobject (map INTEGER);
             CREATE TABLE mount (ID INTEGER, SourceSpellID INTEGER);
             CREATE TABLE mount_x_display (MountID INTEGER, CreatureDisplayInfoID INTEGER);
             CREATE TABLE spell_effect (SpellID INTEGER, EffectMiscValue_0 INTEGER,

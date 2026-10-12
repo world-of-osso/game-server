@@ -1126,6 +1126,31 @@ mod tests {
 
     #[test]
     #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
+    fn zone_population_quest_ender_keeps_authored_player_immunity() {
+        const LORD_AUTUMNVALE: u32 = 127080;
+        const AUTHORED_FLAGS: u32 = 320;
+        let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
+        let data = crate::world_data::load_world_data(std::path::Path::new(&path));
+        let mut world = World::new();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, &world);
+        spawn_map_creatures(&mut commands, &data, MapContent::continent(1643), false);
+        queue.apply(&mut world);
+        let mut query = world.query::<(&Npc, &UnitFlags)>();
+        let (_, flags) = query
+            .iter(&world)
+            .find(|(npc, _)| npc.template_id == LORD_AUTUMNVALE)
+            .expect("authentic quest ender");
+        assert_eq!(flags.0, AUTHORED_FLAGS);
+        assert_ne!(
+            flags.0 & 0x100,
+            0,
+            "authored player immunity survives loading"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
     fn world_population_real_copy_spawns_living_expansion_creatures() {
         let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
         let data = crate::world_data::load_world_data(std::path::Path::new(&path));
