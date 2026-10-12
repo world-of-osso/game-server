@@ -2722,7 +2722,13 @@ fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
                 None,
                 "item {item},sex {sex}"
             );
-            h.advance(80);
+            if spell == 42365 {
+                assert!(
+                    !h.inbox.go.iter().any(|go| go.spell_id == spell),
+                    "Murloc's authored6000ms cast must finish first"
+                );
+            }
+            h.advance(140);
             assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
             assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
             let display = if sex == 1 { female } else { male };
