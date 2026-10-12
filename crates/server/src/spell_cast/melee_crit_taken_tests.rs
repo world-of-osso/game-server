@@ -25,6 +25,7 @@ fn protected_target() -> Harness {
             389590,
             454788,
             269360,
+            9483,
         ],
         1,
     )
@@ -117,6 +118,45 @@ fn class_completeness_native_hardened_battlelynx_prevents_auto_attack_crit() {
     let protected = damage_events(&h);
     assert!(protected.len() >= 12, "{:?}", h.inbox.log);
     assert!(protected.iter().all(|event| !event.crit), "{protected:?}");
+}
+
+#[test]
+fn class_completeness_native_boulder_uses_melee_crit_taken_despite_ranged_defense() {
+    let mut h = protected_target();
+    for _ in 0..24 {
+        h.cast_and_deliver(9483, Some(h.npc));
+        h.advance(200);
+    }
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let damage = damage_events(&h);
+    assert!(damage.len() >= 24, "{:?}", h.inbox.log);
+    assert!(damage.iter().all(|event| !event.crit), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_shred_script_crit_precedes_victim_reduction() {
+    let mut h = harness(
+        Vec::new(),
+        &[5221, 768, 5215, 343232, HARDENED_BATTLELYNX],
+        11,
+    )
+    .unwrap();
+    let caster = h.caster;
+    let npc = h.npc;
+    apply_native(&mut h, caster, 768, 0);
+    apply_native(&mut h, caster, 5215, 0);
+    apply_native(&mut h, npc, HARDENED_BATTLELYNX, 2);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 80.0;
+    h.cast_and_deliver(5221, Some(npc));
+    h.advance(3);
+    let damage = damage_events(&h);
+    assert!(!damage.is_empty(), "{:?}", h.inbox.log);
+    // Native Shred doubles80 first:160 minus native60 yields100, not40.
+    assert!(damage.iter().all(|event| event.crit), "{damage:?}");
 }
 
 #[test]
