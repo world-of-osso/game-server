@@ -28,13 +28,18 @@ pub struct MountJournalPlugin;
 impl Plugin for MountJournalPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_catalog)
-            .add_systems(
-                Update,
-                (receive_favourites, receive_summons, receive_dismissals).chain(),
-            )
-            // Auth world entry applies deferred PlayerLink/InWorld during Update.
-            .add_systems(PostUpdate, (sync_accounts, publish_mount_changes).chain());
+            .add_systems(Update, update_mount_journal);
     }
+}
+
+// Auth may enter world before or after this exclusive step. Every reader sees
+// account state initialized first; replies are queued before Lightyear's send cycle.
+fn update_mount_journal(world: &mut World) {
+    sync_accounts(world);
+    publish_mount_changes(world);
+    receive_favourites(world);
+    receive_summons(world);
+    receive_dismissals(world);
 }
 
 fn load_catalog(mut commands: Commands) {
@@ -169,7 +174,7 @@ fn learned_mount_ids(world: &World, player: Entity) -> BTreeSet<u32> {
 }
 
 fn sync_accounts(world: &mut World) {
-    for (connection, account, player) in connections(world) {
+    for (_, account, player) in connections(world) {
         let initial = world.get::<AccountMounts>(player).is_none();
         if initial {
             let owned = mount_store::load(&world.resource::<GameDatabase>().db, account);
@@ -187,8 +192,6 @@ fn sync_accounts(world: &mut World) {
                 &newly_learned,
             );
             broadcast_account(world, account);
-        } else if initial {
-            send_snapshot(world, connection, player, None);
         }
     }
 }
