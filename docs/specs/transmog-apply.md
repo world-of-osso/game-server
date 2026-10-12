@@ -12,6 +12,8 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - [ ] Permit hide options only for Retail-supported slots; illusions require authentic local data.
 - [x] Account-scoped saved outfits use authored automatically awarded entries2/3. Save validates appearance choices against the existing paid slot list and illusions against authored weapon slots/collected choices, but never changes gold, binding or equipped visuals. Loading stages choices; paid Apply remains the unchanged application path.
 
+- [x] Available sets are class-usable, condition-free sets with a collected member; each carries one primary appearance per transmog slot (collected member first; TrinityCore CollectionMgr::IsSetCompleted grouping). Members missing from world.db content_item are omitted, never invented.
+
 - [x] Custom Sets are separate account-scoped player presets with server-allocated persisted IDs. Saving/updating validates the same eligible choices and never charges or applies equipment.
 
 ## How it works

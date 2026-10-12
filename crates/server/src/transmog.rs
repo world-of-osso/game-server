@@ -44,6 +44,8 @@ pub(crate) struct TransmogCatalog {
     by_appearance: HashMap<u32, Vec<u32>>,
     prices: HashMap<(ItemDefinitionSource, u32), u64>,
     catalogue: Vec<Source>,
+    /// ItemModifiedAppearance.ID -> index into `catalogue`.
+    catalogue_index: HashMap<u32, usize>,
     wardrobe: data::Wardrobe,
 }
 
@@ -64,6 +66,9 @@ impl TransmogCatalog {
         )?;
         for row in stmt.query_map([], source_from_row)? {
             let source = row?;
+            catalog
+                .catalogue_index
+                .insert(source.view.source_id, catalog.catalogue.len());
             catalog.catalogue.push(source.clone());
             if !source.offer {
                 continue;
@@ -142,17 +147,68 @@ impl TransmogCatalog {
                 if eligible.is_empty() {
                     return None;
                 }
-                let collection = if !source.collectable {
-                    TransmogCollectionState::NonCollectable
-                } else if collection.has(source.view.appearance_id) {
-                    TransmogCollectionState::Collected
-                } else {
-                    TransmogCollectionState::Uncollected
-                };
                 Some(TransmogCatalogueSource {
                     source: source.view.clone(),
-                    collection,
+                    collection: collection_state(source, collection),
                     slots: eligible,
+                })
+            })
+            .collect()
+    }
+
+    /// Sets the account has started. TrinityCore a352b1fa CollectionMgr::IsSetCompleted:
+    /// members group by transmog slot and a slot is known when any member is collected.
+    /// Members absent from world.db content_item are unknown here and omitted.
+    fn available_sets(
+        &self,
+        class: u8,
+        collection: &shared::transmog::AppearanceCollection,
+    ) -> Vec<TransmogSet> {
+        self.wardrobe
+            .sets()
+            .iter()
+            .filter(|set| set.usable_by(class))
+            .filter_map(|set| {
+                let mut pieces = std::collections::BTreeMap::new();
+                for id in &set.source_ids {
+                    let Some(source) = self.catalogue_index.get(id).map(|&i| &self.catalogue[i])
+                    else {
+                        continue;
+                    };
+                    let Some(slot) = EquipmentSlot::for_inventory_type(source.view.inventory_type)
+                        .iter()
+                        .copied()
+                        .find(|slot| slot.visual_slot().is_some())
+                    else {
+                        continue;
+                    };
+                    let state = collection_state(source, collection);
+                    let known = pieces
+                        .get(&slot)
+                        .is_some_and(|piece: &TransmogCatalogueSource| {
+                            piece.collection == TransmogCollectionState::Collected
+                                || state != TransmogCollectionState::Collected
+                        });
+                    if !known {
+                        pieces.insert(
+                            slot,
+                            TransmogCatalogueSource {
+                                source: source.view.clone(),
+                                collection: state,
+                                slots: vec![slot],
+                            },
+                        );
+                    }
+                }
+                let started = pieces
+                    .values()
+                    .any(|piece| piece.collection == TransmogCollectionState::Collected);
+                started.then(|| TransmogSet {
+                    set_id: set.set_id,
+                    parent_set_id: set.parent_set_id,
+                    name: set.name.clone(),
+                    source_ids: set.source_ids.clone(),
+                    primary_appearances: pieces.into_values().collect(),
                 })
             })
             .collect()
@@ -206,8 +262,22 @@ impl TransmogCatalog {
         };
         state.catalogue =
             self.catalogue_sources(&state.slots, templates, &record.character, collection);
-        self.wardrobe.populate(&mut state, record.character.class);
+        state.sets = self.available_sets(record.character.class, collection);
+        self.wardrobe.populate(&mut state);
         state
+    }
+}
+
+fn collection_state(
+    source: &Source,
+    collection: &shared::transmog::AppearanceCollection,
+) -> TransmogCollectionState {
+    if !source.collectable {
+        TransmogCollectionState::NonCollectable
+    } else if collection.has(source.view.appearance_id) {
+        TransmogCollectionState::Collected
+    } else {
+        TransmogCollectionState::Uncollected
     }
 }
 

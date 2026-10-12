@@ -294,6 +294,59 @@ fn apply(h: &mut Harness, npc: Entity, source: u32) {
 }
 
 #[test]
+fn transmog_set_reports_one_primary_appearance_per_slot_including_unequipped_slots() {
+    use shared::protocol::TransmogCollectionState;
+    let mut h = application_harness();
+    // Breastplate of Wrath7030 -> ItemAppearance5089, a TransmogSet852 member.
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut collection = persistence::appearance_store::load_account_appearances(db, 1);
+    collection.learn(5089);
+    persistence::appearance_store::save_account_appearances(db, 1, &collection);
+    open_service(&mut h);
+    let states = &h.app.world().resource::<Inbox<TransmogState>>().0;
+    let state = states.last().unwrap();
+    let set = state
+        .sets
+        .iter()
+        .find(|set| set.set_id == 852)
+        .expect("started Warrior set Battlegear of Wrath");
+    assert_eq!(set.name, "Battlegear of Wrath");
+    let pieces: Vec<_> = set
+        .primary_appearances
+        .iter()
+        .map(|piece| {
+            (
+                piece.slots.clone(),
+                piece.source.source_id,
+                piece.collection,
+            )
+        })
+        .collect();
+    use EquipmentSlot::*;
+    use TransmogCollectionState::*;
+    assert_eq!(
+        pieces,
+        vec![
+            (vec![Head], 7027, Uncollected),
+            (vec![Shoulder], 7025, Uncollected),
+            (vec![Chest], 7030, Collected),
+            (vec![Waist], 7024, Uncollected),
+            (vec![Legs], 7026, Uncollected),
+            (vec![Feet], 7029, Uncollected),
+            (vec![Wrist], 7023, Uncollected),
+            (vec![Hands], 7028, Uncollected),
+        ]
+    );
+    assert!(
+        state.sets.iter().all(|set| set
+            .primary_appearances
+            .iter()
+            .any(|piece| piece.collection == Collected)),
+        "only started sets are available"
+    );
+}
+
+#[test]
 fn transmog_catalogue_exposes_authored_sets_outfits_illusions_and_ownership() {
     use shared::protocol::TransmogCollectionState;
     let mut h = application_harness();
@@ -345,7 +398,6 @@ fn transmog_catalogue_exposes_authored_sets_outfits_illusions_and_ownership() {
     assert!(state.outfit_options.iter().any(|entry| entry.id == 1
         && entry.slot_info_id == 13
         && entry.name == "One Handed Weapon"));
-    assert!(state.sets.iter().any(|entry| !entry.source_ids.is_empty()));
     assert!(!state.slots[0].sources.is_empty());
     assert!(
         state.slots[0]
