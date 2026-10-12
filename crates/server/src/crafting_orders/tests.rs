@@ -192,6 +192,16 @@ fn complete_order(kind: u8) {
         "cast admission is not fulfillment"
     );
     h.advance(400);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        orders::all(db).unwrap()[0].status,
+        2,
+        "native settlement committed"
+    );
+    let delivery = persistence::mail_store::load_mailbox(db, h.character_id);
+    assert_eq!(delivery.len(), 1);
+    assert_eq!(delivery[0].items[0].item.item_id, OUTPUT);
+    assert_eq!(delivery[0].items[0].item.stack_count, 1);
     assert_eq!(
         h.app
             .world()
@@ -227,14 +237,9 @@ fn complete_order(kind: u8) {
             .contains_key(&56767),
         "customer did not fulfill the order"
     );
-    let customer = persistence::mail_store::load_mailbox(db, h.character_id);
-    assert_eq!(customer.len(), 1);
-    assert_eq!(customer[0].items[0].item.item_id, OUTPUT);
-    assert_eq!(customer[0].items[0].item.stack_count, 1);
     let payment = persistence::mail_store::load_mailbox(db, worker_id);
     assert_eq!(payment.len(), 1);
     assert_eq!(payment[0].money, 1000);
-    assert_eq!(orders::all(db).unwrap()[0].status, 2);
     assert!(persistence::load_inventory(db, worker_id).items.is_empty());
     assert!(orders::begin_fulfill(h.app.world_mut(), worker, id, now).is_err());
     h.advance(3);
