@@ -212,6 +212,7 @@ struct InteractionWorld<'w, 's> {
         ),
     >,
     npcs: Query<'w, 's, NpcView<'static>>,
+    maps: Query<'w, 's, &'static crate::maps::InMap>,
     objects: Query<
         'w,
         's,
@@ -375,7 +376,21 @@ fn process_interact_requests(
             }
             current = Some(interaction.0.npc);
             senders.opened(connection, interaction.0.npc, interaction.1);
+            let player = link.0;
+            let npc = interaction.0.npc;
+            let entry = interaction.2;
             commands.entity(connection).insert(interaction.0);
+            commands.queue(move |world: &mut World| {
+                // Player::TalkedToCreature: only the actor receives TALKTO credit.
+                crate::quest::event_credit(
+                    world,
+                    player,
+                    npc,
+                    crate::quest_data::ObjectiveKind::TalkTo,
+                    entry,
+                    false,
+                );
+            });
         }
     }
 }
@@ -483,13 +498,25 @@ fn open_interaction(
     world: &InteractionWorld,
     player: Entity,
     npc: Entity,
-) -> Result<(ActiveInteraction, InteractionKind), InteractionError> {
+) -> Result<(ActiveInteraction, InteractionKind, u32), InteractionError> {
+    let player_map = world
+        .maps
+        .get(player)
+        .map_err(|_| InteractionError::InvalidTarget)?;
+    let npc_map = world
+        .maps
+        .get(npc)
+        .map_err(|_| InteractionError::InvalidTarget)?;
+    if player_map != npc_map {
+        return Err(InteractionError::InvalidTarget);
+    }
     let (npc_data, flags, ..) = world.interactable(player, npc)?;
     let opening = world
         .catalog
         .open(npc_data.template_id, *flags)
         .ok_or(InteractionError::InvalidTarget)?;
-    Ok(apply_opening(world, npc, opening))
+    let (interaction, kind) = apply_opening(world, npc, opening);
+    Ok((interaction, kind, npc_data.template_id))
 }
 
 fn apply_opening(

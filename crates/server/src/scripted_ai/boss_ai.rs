@@ -40,18 +40,12 @@ pub struct BossAi {
     pub boss_id: u32,
     pub events: EventMap,
     pub summons: SummonList,
-    timeline_revision: u64,
-    timeline_age_ms: u32,
 }
 
 /// A boss script: its `BossAI` and `ExecuteEvent`.
 pub trait BossScript {
     fn boss_ai(&mut self) -> &mut BossAi;
     fn execute_event(&mut self, ctx: &mut Ctx, event_id: u32);
-    /// The script's literal event→spell binding; speech/movement events return None.
-    fn timeline_spell(&self, _event_id: u32) -> Option<u32> {
-        None
-    }
 }
 
 impl BossAi {
@@ -60,8 +54,6 @@ impl BossAi {
             boss_id,
             events: EventMap::default(),
             summons: SummonList::default(),
-            timeline_revision: u64::MAX,
-            timeline_age_ms: 0,
         }
     }
 
@@ -129,54 +121,17 @@ impl BossAi {
 }
 
 /// `BossAI::UpdateAI`: events tick only while the boss has a victim, and wait
-/// while it casts.
-fn publish_script_timers<S: BossScript>(script: &mut S, ctx: &mut Ctx) {
-    let boss = script.boss_ai();
-    if boss.timeline_revision == boss.events.revision() && boss.timeline_age_ms < 1000 {
-        return;
-    }
-    let selected = boss.events.timers();
-    boss.timeline_revision = boss.events.revision();
-    boss.timeline_age_ms = 0;
-    let timers = selected
-        .into_iter()
-        .filter_map(|(event_id, remaining_ms, duration_ms)| {
-            Some(shared::protocol::EncounterTimer {
-                event_id,
-                spell_id: script.timeline_spell(event_id)?,
-                remaining_ms,
-                duration_ms,
-                conditional: true,
-            })
-        })
-        .collect();
-    if let Some(map) = ctx.map() {
-        instance_script::send_to_players(
-            ctx.world,
-            map,
-            shared::protocol::EncounterTimelineEvent::Timers {
-                caster: ctx.me.to_bits(),
-                sample_unix_ms: shared::protocol::read_encounter_unix_ms(),
-                timers,
-            },
-        );
-    }
-}
-
+/// while it casts. Alert schedules live separately in the boss-mod catalog.
 pub fn boss_update_ai<S: BossScript>(script: &mut S, ctx: &mut Ctx, diff_ms: u32) {
     if !ctx.update_victim() {
         return;
     }
     script.boss_ai().events.update(u64::from(diff_ms));
-    let boss = script.boss_ai();
-    boss.timeline_age_ms = boss.timeline_age_ms.saturating_add(diff_ms);
-    publish_script_timers(script, ctx);
     if ctx.is_casting() {
         return;
     }
     while let Some(event_id) = script.boss_ai().events.execute_event() {
         script.execute_event(ctx, event_id);
-        publish_script_timers(script, ctx);
         if ctx.is_casting() {
             return;
         }
