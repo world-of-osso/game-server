@@ -384,3 +384,7 @@ pub(crate) fn learn_item(
     broadcast_account(world, account);
     Ok(true)
 }
+
+#[cfg(test)]
+#[path = "mount_journal_tests.rs"]
+mod tests;
