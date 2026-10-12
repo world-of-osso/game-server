@@ -6,13 +6,13 @@ Unknown durations use the explicit World of Osso policy; never Retail claims.
 import argparse
 import csv
 import json
+import math
 from collections import defaultdict
 import sqlite3
 from contextlib import closing
 from pathlib import Path
 
-from retail_content import QUEST_COLUMNS, map_quest_objectives
-from content_common import Report
+from retail_content import QUEST_COLUMNS
 
 WORLD_QUEST_MODIFIER = 0x100
 
@@ -50,13 +50,15 @@ def polygon_areas(poi):
 
 
 def supported_objectives(conn, quest):
-    rows = conn.execute('SELECT Type,ObjectID,Amount FROM tdb_quest_objectives WHERE QuestID=?', (quest,)).fetchall()
-    counts = defaultdict(int)
-    for kind, object_id, amount in rows:
-        if kind not in (0, 1, 2) or amount <= 0 or object_id <= 0:
+    rows = conn.execute('SELECT Type,ObjectID,Amount,Flags,ProgressBarWeight FROM tdb_quest_objectives WHERE QuestID=?', (quest,)).fetchall()
+    for kind, object_id, amount, flags, weight in rows:
+        if kind not in (0, 1, 2, 15) or amount <= 0 or (kind != 15 and object_id <= 0):
             return False
-        counts[kind] += 1
-    return bool(rows) and counts[0] + counts[2] <= 4 and counts[1] <= 6
+        if not math.isfinite(weight) or weight < 0:
+            raise ValueError(f'quest {quest}: invalid authenticated objective weight')
+    if any(row[0] == 15 for row in rows) and not any(row[3] & 64 and row[4] > 0 for row in rows):
+        return False
+    return bool(rows)
 
 
 def select_definitions(conn, receipt, areas, policy_duration):
@@ -89,13 +91,15 @@ def insert_templates(conn, quests):
         COALESCE(CAST({difficulty} * q.RewardMoneyMultiplier AS INTEGER),0)
         FROM tdb_quest_template q LEFT JOIN content_tuning_level l ON l.ID=q.ContentTuningID
         LEFT JOIN quest_money_reward m ON m.ID=l.maxlevel WHERE q.ID IN ({quests})""")
-    report = Report()
-    map_quest_objectives(conn, quests, report)
-    if report.rows:
-        raise ValueError(f"world quest has unsupported objectives: {report.rows}")
-    for quest, name in conn.execute(f"""SELECT o.QuestID,t.name FROM tdb_quest_objectives o
-        JOIN tdb_creature_template t ON t.entry=o.ObjectID WHERE o.Type=0 AND o.QuestID IN ({quests})"""):
-        conn.execute("UPDATE content_quest_template SET ObjectiveText1=? WHERE ID=? AND ObjectiveText1=''", (f"{name} slain",quest))
+    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_objective (quest_id INTEGER, objective_id INTEGER, ordinal INTEGER, kind INTEGER, object_id INTEGER, amount INTEGER, flags INTEGER, weight REAL, description TEXT)')
+    conn.execute('DELETE FROM content_world_quest_objective')
+    rows = conn.execute(f'''SELECT QuestID,ID,Type,ObjectID,Amount,Flags,ProgressBarWeight,Description
+        FROM tdb_quest_objectives WHERE QuestID IN ({quests}) ORDER BY QuestID,"Order",StorageIndex,ID''').fetchall()
+    ordinals = defaultdict(int)
+    for quest, objective, kind, object_id, amount, flags, weight, description in rows:
+        conn.execute('INSERT INTO content_world_quest_objective VALUES (?,?,?,?,?,?,?,?,?)',
+                     (quest,objective,ordinals[quest],kind,object_id,amount,flags,weight,description or ''))
+        ordinals[quest] += 1
 
 
 def insert_pins(conn, quests):

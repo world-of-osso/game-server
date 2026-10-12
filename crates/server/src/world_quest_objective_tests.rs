@@ -102,6 +102,37 @@ fn world_quest_weighted_progress_uses_hidden_counts_and_optional_rows_never_bloc
 }
 
 #[test]
+fn world_quest_dynamic_objective_load_preserves_order_flags_names_and_weights() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest (quest_id INTEGER);INSERT INTO content_world_quest VALUES(76587);
+        CREATE TABLE content_world_quest_objective (quest_id INTEGER,objective_id INTEGER,ordinal INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,weight REAL,description TEXT);
+        INSERT INTO content_world_quest_objective VALUES (76587,1,1,15,0,1,2,0,'Close Time Rifts'),(76587,2,0,0,207974,12,92,9,'');
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT);INSERT INTO tdb_creature_template VALUES(207974,'Time Rift Invader');
+        CREATE TABLE content_item(ID INTEGER,name TEXT);").unwrap();
+    let mut db = crate::quest_data::QuestDb::default();
+    db.quests.insert(
+        76587,
+        QuestTemplate {
+            id: 76587,
+            ..Default::default()
+        },
+    );
+    crate::world_quest_objectives::load(&conn, &mut db).unwrap();
+    let quest = &db.quests[&76587];
+    assert_eq!(quest.objectives.len(), 2);
+    assert_eq!(quest.objectives[0].text, "Time Rift Invader slain");
+    assert_eq!(quest.objectives[1].kind, ObjectiveKind::ProgressBar);
+    assert_eq!(quest.objectives[1].required, 100);
+    assert_eq!(
+        quest.world_objective_rules.as_ref().unwrap()[0],
+        ObjectiveRule {
+            flags: 92,
+            weight: 9.
+        }
+    );
+}
+
+#[test]
 fn world_quest_hidden_mandatory_requirement_still_blocks_completion() {
     let quest = QuestTemplate {
         id: 1,

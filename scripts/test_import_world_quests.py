@@ -30,8 +30,8 @@ def fixture(conn):
         INSERT INTO content_tuning_level VALUES (464,10,50);
         CREATE TABLE quest_money_reward (ID INTEGER, Difficulty_0 INTEGER);
         INSERT INTO quest_money_reward VALUES (50,0);
-        CREATE TABLE tdb_quest_objectives (QuestID INTEGER, ID INTEGER, Type INTEGER, ObjectID INTEGER, Amount INTEGER, Description TEXT, "Order" INTEGER, StorageIndex INTEGER);
-        INSERT INTO tdb_quest_objectives VALUES (52847,340072,0,138122,1,'',0,0);
+        CREATE TABLE tdb_quest_objectives (QuestID INTEGER, ID INTEGER, Type INTEGER, ObjectID INTEGER, Amount INTEGER, Description TEXT, "Order" INTEGER, StorageIndex INTEGER, Flags INTEGER DEFAULT 0, ProgressBarWeight REAL DEFAULT 0);
+        INSERT INTO tdb_quest_objectives VALUES (52847,340072,0,138122,1,'',0,0,0,0);
         CREATE TABLE tdb_creature_template (entry INTEGER, name TEXT);
         INSERT INTO tdb_creature_template VALUES (138122,'Doom''s Howl');
         CREATE TABLE tdb_quest_poi (QuestID INTEGER, Idx1 INTEGER, BlobIndex INTEGER, ObjectiveIndex INTEGER, MapID INTEGER, UiMapID INTEGER, Priority INTEGER, Flags INTEGER, VerifiedBuild INTEGER);
@@ -71,16 +71,29 @@ class WorldQuestImportTests(unittest.TestCase):
             poi['blobs'].append({'ID': 99, 'QuestID': 999, 'MapID': 0, 'UiMapID': 14, 'NumPoints': 1})
             poi["blobs"][0]["QuestID"] = 52848
             poi["blobs"][1]["QuestID"] = 52847
-            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52848,340073,0,138122,1,'',0,0)")
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52848,340073,0,138122,1,'',0,0,0,0)")
             self.assertEqual(import_definitions(conn, receipt(), poi, 172800), [52848])
             self.assertEqual(conn.execute("SELECT duration_seconds,duration_source FROM content_world_quest").fetchall(), [(172800, 'policy')])
             self.assertEqual(conn.execute("SELECT map_id,ui_map_id,x,y FROM content_world_quest_area ORDER BY point_index").fetchall(),
                              [(0,14,-1065,-2486),(0,14,-1057,-2486),(0,14,-1057,-2478),(0,14,-1065,-2478)])
 
+    def test_variable_objective_rows_preserve_authentic_optional_weighted_metadata(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            conn.execute('DELETE FROM tdb_quest_objectives')
+            conn.executemany('INSERT INTO tdb_quest_objectives VALUES (?,?,?,?,?,?,?,?,?,?)',
+                             [(52847,340072+n,0,138122+n,12,'Contributor',n,n,92,9.) for n in range(7)])
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340090,15,0,1,'Progress',7,7,2,0)")
+            self.assertEqual(import_definitions(conn,receipt(),areas()),[52847])
+            rows=conn.execute('SELECT kind,object_id,amount,flags,weight FROM content_world_quest_objective ORDER BY ordinal').fetchall()
+            self.assertEqual(len(rows),8)
+            self.assertEqual(rows[0],(0,138122,12,92,9.))
+            self.assertEqual(rows[-1],(15,0,1,2,0.))
+
     def test_unsupported_objective_is_excluded_not_silently_completed(self):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)
-            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340073,99,138122,1,'',1,1)")
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340073,99,138122,1,'',1,1,0,0)")
             self.assertEqual(import_definitions(conn, receipt(), areas()), [])
             self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template").fetchone()[0], 0)
 
@@ -89,8 +102,9 @@ class WorldQuestImportTests(unittest.TestCase):
             fixture(conn)
             self.assertEqual(import_definitions(conn, receipt(), areas()), [52847])
             self.assertEqual(conn.execute("SELECT quest_id,zone_id,duration_seconds FROM content_world_quest").fetchall(), [(52847,9734,604800)])
-            row = conn.execute("SELECT ID,LogTitle,MinLevel,RequiredNpcOrGo1,RequiredNpcOrGoCount1,AllowableRaces FROM content_quest_template").fetchone()
-            self.assertEqual(row, (52847,"Doom's Howl",10,138122,1,6130900294268439629))
+            row = conn.execute("SELECT ID,LogTitle,MinLevel,AllowableRaces FROM content_quest_template").fetchone()
+            self.assertEqual(row, (52847,"Doom's Howl",10,6130900294268439629))
+            self.assertEqual(conn.execute('SELECT kind,object_id,amount FROM content_world_quest_objective').fetchall(),[(0,138122,1)])
             source = json.loads(conn.execute("SELECT source_template_json FROM content_world_quest").fetchone()[0])
             self.assertEqual((source["RewardCurrencyID1"],source["RewardCurrencyQty1"]),(1717,1))
             self.assertEqual((source["RewardFactionID1"],source["RewardFactionOverride1"],source["RewardFactionCapIn1"]),(2159,7500,7))
