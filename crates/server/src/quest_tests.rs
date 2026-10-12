@@ -411,9 +411,13 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         quest.reward_money = 125;
         quest.money_scaling = None;
         quest.captured_reward_xp = Some(0);
+        quest.reward_xp_difficulty = 5;
+        quest.reward_items = vec![(117, 2)];
+        quests.world_quest_xp.insert((30, 5), 1234);
         quests.world_quest_rewards.insert(
             BEATING_THEM_BACK,
             crate::world_quest_rewards::Rewards {
+                xp_multiplier: 1.,
                 currencies: vec![shared::protocol::WorldQuestNumericReward {
                     id: shared::currency::HONOR_CURRENCY_ID,
                     amount: 7,
@@ -476,6 +480,11 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     });
     app.update();
     let gold = persistence::load_inventory(db(&app), client.character_id).gold;
+    let food_before = crate::quest_view::bag_count(
+        db(&app),
+        &persistence::load_inventory(db(&app), client.character_id),
+        117,
+    );
     let reputation_before =
         persistence::load_reputation(db(&app), client.character_id, Default::default).get_value(72);
     kill(&mut app, &client, BLACKROCK_WORG, 1);
@@ -497,6 +506,23 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         gold + 125
     );
     assert_eq!(
+        crate::quest_view::bag_count(
+            db(&app),
+            &persistence::load_inventory(db(&app), client.character_id),
+            117
+        ),
+        food_before + 2
+    );
+    let gains = received::<LogXpGain>(&mut app, &client);
+    assert_eq!(
+        gains
+            .iter()
+            .filter(|gain| gain.reason == XpGainReason::Quest)
+            .map(|gain| gain.amount)
+            .collect::<Vec<_>>(),
+        vec![1234]
+    );
+    assert_eq!(
         persistence::load_currencies(db(&app), client.character_id)
             .get(shared::currency::HONOR_CURRENCY_ID),
         7
@@ -506,6 +532,19 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         reputation_before + 75
     );
     app.update();
+    assert!(
+        received::<LogXpGain>(&mut app, &client)
+            .iter()
+            .all(|gain| gain.reason != XpGainReason::Quest)
+    );
+    assert_eq!(
+        crate::quest_view::bag_count(
+            db(&app),
+            &persistence::load_inventory(db(&app), client.character_id),
+            117
+        ),
+        food_before + 2
+    );
     assert_eq!(
         persistence::load_currencies(db(&app), client.character_id)
             .get(shared::currency::HONOR_CURRENCY_ID),
