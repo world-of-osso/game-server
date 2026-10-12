@@ -131,7 +131,7 @@ fn world_quest_definition_loading_never_supplies_a_guessed_duration() {
             .is_empty()
     );
     conn.execute_batch("CREATE TABLE content_world_quest (quest_id INTEGER,zone_id INTEGER,duration_seconds INTEGER);
-        INSERT INTO content_world_quest VALUES (52847,9734,604800),(54895,10288,604800);").unwrap();
+        INSERT INTO content_world_quest VALUES (52847,9734,604800),(54895,-656,604800);").unwrap();
     assert_eq!(
         crate::world_quests::load_definitions(&conn).unwrap(),
         vec![
@@ -142,7 +142,7 @@ fn world_quest_definition_loading_never_supplies_a_guessed_duration() {
             },
             Definition {
                 quest_id: 54895,
-                zone_id: 10288,
+                zone_id: -656,
                 duration: 604800
             },
         ]

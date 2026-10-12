@@ -5,7 +5,8 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Definition {
     pub quest_id: u32,
-    pub zone_id: u32,
+    /// Signed QuestSortID: positive AreaTable zone, negative quest category.
+    pub zone_id: i32,
     /// Authentic DB2 duration or explicitly imported realm policy duration.
     pub duration: u32,
 }
@@ -114,7 +115,7 @@ impl Rotation {
         if now < self.epoch {
             return Vec::new();
         }
-        let mut zones: BTreeMap<u32, Vec<Definition>> = BTreeMap::new();
+        let mut zones: BTreeMap<i32, Vec<Definition>> = BTreeMap::new();
         for &definition in definitions {
             zones
                 .entry(definition.zone_id)
