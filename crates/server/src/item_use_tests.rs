@@ -220,6 +220,57 @@ fn achievements_criteria_item_use_delayed_cast_credits_only_execution() {
     );
 }
 
+#[test]
+fn achievements_criteria_mount_item_use_learns_authored_spell_and_completes() {
+    let mut eater = eater_with_spells(&[44226], 1, &[55884, 60116], MAGE)
+        .expect("authentic armored bear item/spells");
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    eater
+        .h
+        .app
+        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    bevy::app::Plugin::build(
+        &crate::class_progression::ClassProgressionPlugin,
+        &mut eater.h.app,
+    );
+    let player = eater.h.caster;
+    eater.h.app.world_mut().entity_mut(player).insert((
+        crate::persistence::ClientId(eater.character_id),
+        crate::profession::PlayerProfessions::default(),
+        crate::achievement::PlayerAchievementState::default(),
+        crate::class_progression::KnownSpells::fixture(vec![]),
+    ));
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, 44226), 0);
+    assert!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(player)
+            .unwrap()
+            .contains(60116)
+    );
+    assert!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .account
+            .as_ref()
+            .unwrap()
+            .earned_ids
+            .contains(&2076)
+    );
+}
+
 struct Eater {
     h: Harness,
     character_id: u64,
