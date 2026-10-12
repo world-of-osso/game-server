@@ -155,6 +155,7 @@ impl Nibbles {
         crate::spell_cast::cancel_cast(ctx.world, me);
         super::attack_stop(ctx.world, me);
         ctx.world.entity_mut(me).insert((
+            super::ScriptedVictimUpdatePaused,
             UnitFactionTemplate(FACTION_FRIENDLY),
             ModelDisplay {
                 display_id: DISPLAY_FRIENDLY,
@@ -194,6 +195,7 @@ impl CreatureAi for Nibbles {
         self.events.reset();
         ctx.world
             .entity_mut(ctx.me)
+            .remove::<super::ScriptedVictimUpdatePaused>()
             .insert(crate::combat::Unkillable);
     }
 
