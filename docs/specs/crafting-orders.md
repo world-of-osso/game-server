@@ -2,6 +2,8 @@
 
 Server lifecycle in `crates/server/src/crafting_orders/`, using imported Retail CraftingOrder rows and the existing effect24 cast pipeline. [Implementation and provenance](../wiki/systems/crafting-orders.md).
 
+Order catalog/filter skill_line uses authored SkillLineAbility.SkillupSkillLineID when nonzero, otherwise SkillLine, matching the client's selected profession tier.
+
 ## Customer service integration
 
 - [ ] Source TDB brokers route menu30243/OptionNpc50 through normal InteractionOpened/Closed; retain their full64-bit NPC flags.
