@@ -160,6 +160,12 @@ fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_
         },
         UnitFactionTemplate(2),
     ));
+    app.world_mut()
+        .entity_mut(player)
+        .insert(crate::duel::DuelOpponent(target));
+    app.world_mut()
+        .entity_mut(target)
+        .insert(crate::duel::DuelOpponent(player));
     let apply = |app: &mut App, unit, spell_id| {
         apply_aura(
             app.world_mut(),
