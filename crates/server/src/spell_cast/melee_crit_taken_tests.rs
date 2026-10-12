@@ -123,6 +123,7 @@ fn class_completeness_native_hardened_battlelynx_prevents_auto_attack_crit() {
 #[test]
 fn class_completeness_native_boulder_uses_melee_crit_taken_despite_ranged_defense() {
     let mut h = protected_target();
+    charge_range(&mut h);
     for _ in 0..24 {
         h.cast_and_deliver(9483, Some(h.npc));
         h.advance(200);
