@@ -85,9 +85,12 @@ pub(crate) fn record(world: &mut World, event: &CombatLogEvent) {
         return;
     };
     match event.kind {
-        CombatLogKind::Damage => score.damage_done += u64::from(event.amount),
+        CombatLogKind::Damage => {
+            score.damage_done += u64::try_from(event.amount).expect("nonnegative arena damage")
+        }
         CombatLogKind::Heal => {
-            score.healing_done += u64::from(event.amount.saturating_sub(event.overflow))
+            score.healing_done += u64::try_from(event.amount.saturating_sub(event.overflow))
+                .expect("nonnegative effective arena healing")
         }
         CombatLogKind::Death if source != target => score.killing_blows += 1,
         _ => return,
