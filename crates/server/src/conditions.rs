@@ -37,6 +37,8 @@ enum Check {
 
 #[derive(Debug, Clone, PartialEq)]
 struct Condition {
+    /// The authored shared-list identity, not just equal condition values.
+    effect_mask: u32,
     else_group: u32,
     check: Check,
     negative: bool,
@@ -47,6 +49,10 @@ struct Condition {
 pub(crate) struct SpellTargetConditions(HashMap<(u32, u8), Vec<Condition>>);
 
 impl SpellTargetConditions {
+    pub(crate) fn share_targets(&self, spell: u32, first: u8, second: u8) -> bool {
+        self.0.get(&(spell, first)) == self.0.get(&(spell, second))
+    }
+
     /// `ConditionMgr::IsObjectMeetToConditions` for `unit` as the target of effect
     /// `effect_index` of `spell_id`.
     pub(crate) fn target_meets(
@@ -137,6 +143,7 @@ pub(crate) fn load_spell_target_conditions(path: &Path) -> rusqlite::Result<Spel
                 .entry((spell, effect_index))
                 .or_default()
                 .push(Condition {
+                    effect_mask,
                     else_group,
                     check: check.clone(),
                     negative,

@@ -1068,7 +1068,10 @@ fn encounter_coverage_gold_luster_uses_real_nearby_entry_condition() {
         ..map
     });
     // A nearer unrelated player must not crowd out the valid entry.
-    h.app.world_mut().entity_mut(player).insert(center);
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 1.0,
+        ..center
+    });
     h.app.world_mut().entity_mut(boss).insert(Position {
         x: center.x + 3.0,
         ..center
@@ -1081,12 +1084,48 @@ fn encounter_coverage_gold_luster_uses_real_nearby_entry_condition() {
     );
     crate::spell_cast::creature_cast(h.app.world_mut(), gold, 265991, None, true)
         .expect("real Luster target38 admission");
-    h.advance(0.1);
+    // Actual Speed18, minimum missile distance5: primary hit lands after278ms.
+    h.advance(0.4);
     assert!(
         h.has_aura(boss, 265991),
         "authored entry135322 condition selects the primary"
     );
-    assert!(!h.has_aura(gold, 265991));
+    assert!(
+        h.has_aura(gold, 265991),
+        "unconditioned effect2 selects the nearby caster separately"
+    );
+    let primary_aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(boss)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 265991)
+        .unwrap();
+    assert_eq!(
+        primary_aura
+            .effects
+            .iter()
+            .map(|effect| effect.aura_type)
+            .collect::<Vec<_>>(),
+        vec![69, 79]
+    );
+    let gold_aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(gold)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 265991)
+        .unwrap();
+    assert_eq!(
+        gold_aura
+            .effects
+            .iter()
+            .map(|effect| effect.aura_type)
+            .collect::<Vec<_>>(),
+        vec![4]
+    );
     assert!(!h.has_aura(player, 265991));
     assert!(
         !h.has_aura(remote, 265991),
