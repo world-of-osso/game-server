@@ -66,6 +66,18 @@ TABLES = (
          ('InventoryIconFileID', 'INTEGER'), ('MaxQty', 'INTEGER'),
          ('MaxEarnablePerWeek', 'INTEGER'), ('AwardConditionID', 'INTEGER'),
          ('MaxQtyWorldStateID', 'INTEGER'), ('Flags_0', 'INTEGER'), ('Flags_1', 'INTEGER'))),
+    SourceTable(Table('profession_trait', '4505298.db2', 0x306455FE, 6993,
+        '2cdf52fe511e2a84ac63bad3ff6d28abd25394446ae6122db2c1d6284466a002'), 6993,
+        columns('ID TraitDefinitionID')),
+    SourceTable(Table('profession_trait_x_effect', '4505494.db2', 0x97A0A286, 6001,
+        '549e49cc7225bae399aa351333c8efe2f81c0ba2e1fafd21341a3e3cf0334f86'), 6001,
+        columns('ID ProfessionTraitID ProfessionEffectID Field_10_0_0_44649_003')),
+    SourceTable(Table('profession_effect', '4505297.db2', 0x04C16FA9, 382,
+        '52e95370f604f53f41b377ab125df931e9d2df0ae2c4e6be408a38e6bf95fd25'), 249,
+        columns('ID ProfessionEffectTypeEnumID Amount ModifiedCraftingReagentSlotID', ('Amount',))),
+    SourceTable(Table('profession_effect_type', '4556715.db2', 0x39C33588, 31,
+        'f7f084e015edc86f8543502a3d502b2f699d5980adca8cc931fd97a975e7f6f0'), 31,
+        (('ID', 'INTEGER'), ('Name_lang', 'TEXT'), ('EnumID', 'INTEGER'))),
 )
 
 
@@ -81,11 +93,17 @@ def decode_source(table, path):
     header = db2_casc.read_header(raw)
     if header['layout_hash'] != pin.layout or header['record_count'] != table.record_count:
         raise ValueError(f'{path}: incompatible layout or record count')
-    _, decoded = db2_casc.decode(raw)
+    text_columns = frozenset(i for i, (_, kind) in enumerate(table.columns) if kind == 'TEXT')
+    _, decoded = db2_casc.decode(raw, text_columns)
     if len(decoded) != pin.count:
         raise ValueError(f'{path}: decoded {len(decoded)} rows, expected {pin.count}')
     rows = []
     for record_id, values in sorted(decoded.items()):
+        if pin.name == 'profession_trait_x_effect':
+            # DBD97A0A286 stores the parent inline and in the relationship map.
+            if len(values) != len(table.columns) + 1 or values[-1] != values[1]:
+                raise ValueError(f'{path}: ID {record_id} has inconsistent relationship parent')
+            values = values[:-1]
         if len(values) != len(table.columns) or values[0] != record_id:
             raise ValueError(f'{path}: ID {record_id} has invalid record width or identity')
         rows.append([db2_casc.typed(value, kind) for value, (_, kind) in zip(values, table.columns)])
