@@ -21,10 +21,15 @@ Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred S
 
 - `scripts/bossmod_data.py`: non-executing AST extraction, pinned spell validation and SQLite copy import.
 - `scripts/tests/test_bossmod_data.py`: concrete Lua fixtures and database preservation tests.
+- `crates/server/src/scripted_ai/bossmod.rs`: imported authority catalog, independent alert clocks and actual cast/health event reconciliation.
+- `crates/server/src/scripted_ai/tests/bossmod_diremaul.sql`: source-pinned Hydrospawn/Zevrim schedule fixtures.
+- `crates/server/src/scripted_ai/tests/data_bosses.rs`: real creature/combat/copy-isolation acceptance tests.
 
 ## Tests asserting this spec
 
 - `scripts/tests/test_bossmod_data.py`.
+- `crates/server/src/scripted_ai/bossmod.rs` scheduler tests.
+- `crates/server/src/scripted_ai/tests/data_bosses.rs` imported encounter reconciliation test.
 
 ## Known gaps (current cycle)
 
