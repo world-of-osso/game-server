@@ -33,8 +33,8 @@ Implementation: `scripts/world_population.py` reuses the [instance import functi
 - [x] Read-only census ranks each hosted continent's zones using AreaTable/UiMap, distinguishes declared/inferred/unassigned placements, and counts TDB versus content creatures, gameobjects, quests and giver/ender identities.
 - [x] The existing world-promote/instance importer promotes authentic source rows on an unlinked copy, retaining effective source unit flags, overlays and unrelated content; reports per-table before/after/added/removed row counts.
 - [x] Missing zone quests use existing Retail converters. Unsupported objective kinds or slot overflow exclude the whole new quest; no synthetic placements, relations or quest objectives. Item-only vendors, source trainer tables and DB2 taxi data supply services, including authored taxi mount models without world spawns.
-- [ ] Ground/deploy-file and navmesh inventories cover every hosted map; missing assets/bakes and unsupported surfaces remain explicit data boundaries, not claimed as working navigation.
-- [ ] Private UDP5916 native proof visits at least three newly populated zones, accepts/rewards one authentic quest each and uses a flight master in both skins. Canonical writes, UDP5000, fabricated quest credit and full suites are excluded.
+- [x] Ground/deploy-file and navmesh inventories cover every hosted map; missing assets/bakes and unsupported surfaces remain explicit data boundaries, not claimed as working navigation.
+- [x] Private UDP5916 native proof visits at least three newly populated zones, accepts/rewards one authentic quest each and uses a flight master in both skins. Canonical writes, UDP5000, fabricated quest credit and full suites are excluded.
 
 [Ranked census, copy command and evidence](../zone-population-counts.md) own measured coverage. Template/player-immunity flags must remain effective on the client interaction path, so neutral immune quest enders are spoken to rather than auto-attacked.
 
