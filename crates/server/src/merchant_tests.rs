@@ -134,6 +134,7 @@ fn harness() -> Option<Harness> {
                 max: 100.0,
             },
             UnitFactionTemplate(HUMAN_TEMPLATE),
+            crate::maps::InMap::continent(0),
         ))
         .id();
     let connection = app
@@ -197,6 +198,7 @@ impl Harness {
                     max: 100.0,
                 },
                 UnitFactionTemplate(faction),
+                crate::maps::InMap::continent(0),
             ))
             .id()
     }
