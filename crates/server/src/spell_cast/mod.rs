@@ -89,6 +89,8 @@ mod open_lock_tests;
 #[cfg(test)]
 mod portal_tests;
 pub mod powers;
+#[cfg(test)]
+mod protective_growth_tests;
 mod reflect;
 mod resources;
 pub mod runes;
