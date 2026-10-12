@@ -402,6 +402,18 @@ pub(crate) fn record_quest_reward(
     }
 }
 
+/// Pinned CriteriaType245/246 and Retail CraftingOrderType enum: completed delivery only.
+pub(crate) fn record_order_fulfillment(world: &mut World, player: Entity, kind: u8) {
+    record_criteria_events(
+        world,
+        player,
+        &[
+            CriteriaEvent::FulfillAnyCraftingOrder,
+            CriteriaEvent::FulfillCraftingOrderType(kind),
+        ],
+    );
+}
+
 /// Committed credit for the in-world player of `character`; offline characters get none.
 pub(crate) fn record_character_event(world: &mut World, character: u64, event: CriteriaEvent) {
     let player = world

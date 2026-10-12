@@ -148,6 +148,7 @@ fn complete(
     world
         .resource_mut::<crate::gold::GoldUpdateQueue>()
         .record_items(crafter);
+    crate::achievement::record_order_fulfillment(world, player, before.kind);
     super::runtime::mail_changed(world, before.customer);
     super::runtime::mail_changed(world, crafter);
     Ok(())
