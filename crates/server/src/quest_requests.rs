@@ -271,6 +271,9 @@ fn resolve_requester(units: &QuestUnits, connection: Entity) -> Option<Requester
 
 impl<'a> QuestSession<'a, '_, '_> {
     fn visit_world_quests(&mut self, map_id: u32) {
+        let position = self.requester.position;
+        let (world_x, world_y, _) =
+            crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
         let windows: Vec<_> = self.quests.world_quest_windows.values().copied().collect();
         for window in windows {
             let quest_id = window.quest_id;
@@ -279,9 +282,9 @@ impl<'a> QuestSession<'a, '_, '_> {
                 .world_quest_areas
                 .get(&quest_id)
                 .is_some_and(|areas| {
-                    areas.iter().any(|area| {
-                        area.contains(map_id, self.requester.position.x, self.requester.position.y)
-                    })
+                    areas
+                        .iter()
+                        .any(|area| area.contains(map_id, world_x, world_y))
                 });
             let (mut log, mut inventory) = self.load();
             if log.active(quest_id).is_none() {
