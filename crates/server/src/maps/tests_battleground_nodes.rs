@@ -16,6 +16,13 @@ fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match(&template, [611, 610]);
     assert_eq!(entered.players.len(), 20);
+    let victim = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .find(|(_, team)| **team == BgTeam::B)
+        .unwrap()
+        .0;
     let actor = &entered.players[0];
     let h = &mut entered.h;
     use_second_frames(h);
@@ -23,6 +30,19 @@ fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return
     assert_eq!(battleground(h, actor).score_b, 700);
     let (banner, at) = objects_in(h, entered.copy, 178946)[0];
     h.walk_to(actor, at);
+    let other_copy = InMap {
+        instance_id: entered.copy.instance_id + 1,
+        ..entered.copy
+    };
+    h.app.world_mut().entity_mut(banner).insert(other_copy);
+    use_object(h, actor, banner);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    h.app.world_mut().entity_mut(banner).insert(entered.copy);
     use_object(h, actor, banner);
     assert!(
         h.app
@@ -51,9 +71,37 @@ fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return
     h.advance(20);
     assert_eq!(battleground(h, actor).score_b, 625);
     assert!(objects_in(h, entered.copy, 178940).is_empty());
+    crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim.player, 1000.0);
+    h.advance(2);
+    assert_eq!(battleground(h, actor).score_b, 624);
+    h.app
+        .world_mut()
+        .write_message(crate::death::PlayerDeathTransition {
+            player: victim.player,
+        });
+    h.advance(2);
+    assert_eq!(battleground(h, actor).score_b, 624);
+    assert_eq!(
+        battleground(h, actor)
+            .players
+            .iter()
+            .find(|row| row.character_id == h.app.world().get::<ClientId>(victim.player).unwrap().0)
+            .unwrap()
+            .deaths,
+        1
+    );
+    let (other_captain, _) = find_alterac_source_npc(h, entered.copy, 11949);
+    h.app
+        .world_mut()
+        .entity_mut(other_captain)
+        .insert(other_copy);
+    kill_alterac_source_npc(h, actor, other_copy, 11949);
+    h.receive_pvp_updates(5);
+    assert_eq!(battleground(h, actor).score_a, 700);
+    assert!(battleground(h, actor).world_states.contains(&(1351, 1)));
     kill_alterac_source_npc(h, actor, entered.copy, 11947);
     h.receive_pvp_updates(5);
-    assert_eq!(battleground(h, actor).score_b, 525);
+    assert_eq!(battleground(h, actor).score_b, 524);
     assert!(battleground(h, actor).world_states.contains(&(1352, 0)));
     kill_alterac_source_npc(h, actor, entered.copy, 11946);
     h.receive_pvp_updates(5);
@@ -68,16 +116,20 @@ fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return
 }
 
 fn kill_alterac_source_npc(h: &mut Harness, actor: &Traveler, copy: InMap, entry: u32) {
+    let (victim, health) = find_alterac_source_npc(h, copy, entry);
+    crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim, health + 1.0);
+}
+
+fn find_alterac_source_npc(h: &mut Harness, copy: InMap, entry: u32) -> (Entity, f32) {
     let world = h.app.world_mut();
     let mut query = world.query::<(Entity, &shared::components::Npc, &InMap, &Health)>();
-    let (victim, health) = query
+    query
         .iter(world)
         .find(|(_, npc, map, health)| {
             npc.template_id == entry && **map == copy && health.current > 0.0
         })
         .map(|(entity, _, _, health)| (entity, health.current))
-        .expect("authored living objective NPC");
-    crate::combat::deal_direct_damage(world, actor.player, victim, health + 1.0);
+        .expect("authored living objective NPC")
 }
 
 #[test]
@@ -432,7 +484,11 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
                 data.store.get(21651).unwrap().clone(),
             ]));
             app.insert_resource(crate::spell_cast::test_harness::power_table(data));
-            app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
+            app.add_plugins((
+                crate::spell_cast::SpellCastPlugin,
+                crate::auras::AuraPlugin,
+                crate::death::DeathPlugin,
+            ));
         }
         if template.map_id == 2656 {
             let (world_data, templates) = deephaul_source_world();
