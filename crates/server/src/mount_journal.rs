@@ -5,11 +5,14 @@ use crate::persistence::{GameDatabase, mount_store};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use rand::seq::SliceRandom;
+use shared::protocol::mount_journal_types as types;
 use shared::protocol::{
     CollectionChannel, DismissMount, ItemLocation, MountJournalEntry, MountJournalUpdate,
     SetMountFavourite, SummonMount, SummonRandomFavouriteMount,
 };
 use std::collections::{BTreeMap, BTreeSet};
+const CAPABILITY_GROUND: u32 = 0x1;
+const CAPABILITY_FLYING: u32 = 0x2;
 
 #[derive(Resource, Default)]
 pub(crate) struct MountCatalog {
@@ -47,7 +50,7 @@ pub(crate) fn load(conn: &rusqlite::Connection) -> rusqlite::Result<MountCatalog
     let mut catalog = MountCatalog::default();
     let mut query = conn.prepare("SELECT m.ID,m.SourceSpellID,m.Name_lang,m.Description_lang,m.SourceText_lang,m.SourceTypeEnum,
         COALESCE((SELECT s.SpellIconFileDataID FROM spell_misc s WHERE s.SpellID=m.SourceSpellID AND s.DifficultyID=0 LIMIT 1),0),
-        COALESCE((SELECT d.CreatureDisplayInfoID FROM mount_x_display d WHERE d.MountID=m.ID ORDER BY d.PlayerConditionID,d.ID LIMIT 1),0)
+        COALESCE((SELECT d.CreatureDisplayInfoID FROM mount_x_display d WHERE d.MountID=m.ID ORDER BY d.PlayerConditionID,d.ID LIMIT 1),0),m.Flags
         FROM mount m ORDER BY m.ID")?;
     for row in query.query_map([], |row| {
         Ok(MountJournalEntry {
@@ -60,6 +63,8 @@ pub(crate) fn load(conn: &rusqlite::Connection) -> rusqlite::Result<MountCatalog
             icon_file_data_id: row.get(6)?,
             display_id: row.get(7)?,
             capability_flags: 0,
+            journal_types: 0,
+            flags: row.get(8)?,
             collected: false,
             favourite: false,
             usable: false,
@@ -67,11 +72,14 @@ pub(crate) fn load(conn: &rusqlite::Connection) -> rusqlite::Result<MountCatalog
         })
     })? {
         let entry = row?;
-        catalog.by_spell.insert(entry.spell_id, entry.mount_id);
+        if entry.spell_id != 0 {
+            catalog.by_spell.insert(entry.spell_id, entry.mount_id);
+        }
         catalog.entries.insert(entry.mount_id, entry);
     }
     load_capabilities(conn, &mut catalog)?;
-    let mut query = conn.prepare("SELECT x.ItemID,m.ID FROM item_x_item_effect x JOIN item_effect e ON e.ID=x.ItemEffectID JOIN mount m ON m.SourceSpellID=e.SpellID WHERE e.TriggerType=6 ORDER BY e.ID")?;
+    load_ride_along_types(conn, &mut catalog)?;
+    let mut query = conn.prepare("SELECT x.ItemID,m.ID FROM item_x_item_effect x JOIN item_effect e ON e.ID=x.ItemEffectID JOIN mount m ON m.SourceSpellID=e.SpellID WHERE e.TriggerType=6 AND m.SourceSpellID<>0 ORDER BY e.ID")?;
     for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
         let (item, mount) = row?;
         catalog.learn_items.insert(item, mount);
@@ -83,14 +91,55 @@ fn load_capabilities(
     conn: &rusqlite::Connection,
     catalog: &mut MountCatalog,
 ) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT m.ID,c.Flags FROM mount m JOIN mount_type_x_capability x ON x.MountTypeID=m.MountTypeID JOIN mount_capability c ON c.ID=x.MountCapabilityID")?;
-    for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
-        let (id, flags) = row?;
+    let mut query = conn.prepare("SELECT m.ID,c.Flags,c.FlightCapabilityID,
+        EXISTS(SELECT 1 FROM spell_effect e WHERE e.SpellID=c.ModSpellAuraID AND e.DifficultyID=0 AND e.EffectAura=58 AND e.EffectBasePointsF>0)
+        FROM mount m JOIN mount_type_x_capability x ON x.MountTypeID=m.MountTypeID JOIN mount_capability c ON c.ID=x.MountCapabilityID")?;
+    for row in query.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            row.get::<_, u32>(2)?,
+            row.get::<_, bool>(3)?,
+        ))
+    })? {
+        let (id, flags, flight, swim) = row?;
+        let entry = catalog.entries.get_mut(&id).expect("catalog Mount row");
+        entry.capability_flags |= flags;
+        if flags & CAPABILITY_FLYING != 0 {
+            entry.journal_types |= types::FLYING;
+        }
+        if flight != 0 {
+            entry.journal_types |= types::SKYRIDING;
+        }
+        if swim {
+            entry.journal_types |= types::AQUATIC;
+        }
+    }
+    for entry in catalog.entries.values_mut() {
+        if entry.journal_types == 0 && entry.capability_flags & CAPABILITY_GROUND != 0 {
+            entry.journal_types = types::GROUND;
+        }
+    }
+    Ok(())
+}
+
+fn load_ride_along_types(
+    conn: &rusqlite::Connection,
+    catalog: &mut MountCatalog,
+) -> rusqlite::Result<()> {
+    // Same authentic mount/vehicle/enter-exit seat join as scripts/vehicle_models.sql.
+    let mut query=conn.prepare("SELECT DISTINCT m.ID FROM mount m
+        JOIN spell_effect e ON e.SpellID=m.SourceSpellID
+        JOIN creature_template c ON c.entry=e.EffectMiscValue_0
+        JOIN vehicle v ON v.ID=c.VehicleId
+        JOIN vehicle_seat s ON s.ID IN(v.SeatID_0,v.SeatID_1,v.SeatID_2,v.SeatID_3,v.SeatID_4,v.SeatID_5,v.SeatID_6,v.SeatID_7)
+        WHERE e.EffectAura=78 AND e.DifficultyID=0 AND s.ID<>0 AND (s.Flags & 33554432)<>0 AND (s.Flags & 2048)=0")?;
+    for row in query.query_map([], |row| row.get::<_, u32>(0))? {
         catalog
             .entries
-            .get_mut(&id)
+            .get_mut(&row?)
             .expect("catalog Mount row")
-            .capability_flags |= flags;
+            .journal_types |= types::RIDE_ALONG;
     }
     Ok(())
 }

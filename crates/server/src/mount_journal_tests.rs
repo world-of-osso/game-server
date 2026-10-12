@@ -36,6 +36,27 @@ fn setup() -> Harness {
     h.advance(2);
     h
 }
+#[test]
+fn mount_journal_real_capability_types_distinguish_ground_flight_aquatic_and_passenger() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let catalog = load(&conn).unwrap();
+    assert_eq!(catalog.entries[&18].journal_types, types::GROUND);
+    assert_eq!(
+        catalog.entries[&129].journal_types,
+        types::FLYING | types::SKYRIDING
+    );
+    assert_eq!(catalog.entries[&373].journal_types, types::AQUATIC);
+    assert_eq!(
+        catalog.entries[&275].journal_types,
+        types::GROUND | types::RIDE_ALONG
+    );
+    assert_eq!(catalog.entries[&2716].flags & 0x40, 0x40);
+}
+
 #[derive(Resource)]
 struct LateEntry(Entity);
 
