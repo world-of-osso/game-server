@@ -34,13 +34,12 @@ struct Participant {
 
 pub(super) fn update_battleground_objectives(world: &mut World) {
     let actors = read_participants(world);
-    let sources = world.resource::<GameObjectSpawns>().clone();
     let changed = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
         state
             .battleground_matches
             .iter_mut()
             .filter_map(|(match_id, matched)| {
-                update_match(world, matched, &actors, &sources).then_some(*match_id)
+                update_match(world, matched, &actors).then_some(*match_id)
             })
             .collect::<Vec<_>>()
     });
@@ -73,7 +72,6 @@ fn update_match(
     world: &mut World,
     matched: &mut InvitedBattleground,
     actors: &BTreeMap<u64, Participant>,
-    sources: &GameObjectSpawns,
 ) -> bool {
     let Some(map) = matched.map else { return false };
     let template =
@@ -107,7 +105,8 @@ fn update_match(
     if matched.instance.phase != BgPhase::InProgress {
         return true;
     }
-    let Some(homes) = flag_homes(sources, map) else {
+    // Only flag maps need two authored homes; preserve master's catalog-clone removal.
+    let Some(homes) = flag_homes(world.resource::<GameObjectSpawns>(), map) else {
         return changed;
     };
     for team in [BgTeam::A, BgTeam::B] {

@@ -10,8 +10,7 @@ pub struct EventMap {
     /// `_time`, ms.
     time: u64,
     /// `_eventMap`: (due time ms, event id), sorted by due time, stable.
-    events: Vec<(u64, u32, u64)>,
-    revision: u64,
+    events: Vec<(u64, u32)>,
     /// `_lastEvent`: what `repeat` schedules again.
     last_event: u32,
 }
@@ -27,11 +26,7 @@ pub fn rand_ms(min_ms: u64, max_ms: u64) -> u64 {
 impl EventMap {
     /// `EventMap::Reset`: no events, the clock back at zero.
     pub fn reset(&mut self) {
-        let revision = self.revision.wrapping_add(1);
-        *self = Self {
-            revision,
-            ..Self::default()
-        };
+        *self = Self::default();
     }
 
     /// `EventMap::Update`.
@@ -40,10 +35,8 @@ impl EventMap {
     }
 
     fn insert(&mut self, due: u64, event_id: u32) {
-        let at = self.events.partition_point(|&(time, _, _)| time <= due);
-        self.events
-            .insert(at, (due, event_id, due.saturating_sub(self.time)));
-        self.revision = self.revision.wrapping_add(1);
+        let at = self.events.partition_point(|&(time, _)| time <= due);
+        self.events.insert(at, (due, event_id));
     }
 
     /// `ScheduleEvent(eventId, time)`.
@@ -69,37 +62,18 @@ impl EventMap {
     /// `ExecuteEvent`: the first due event, removed; `None` (TrinityCore 0) when
     /// none is due.
     pub fn execute_event(&mut self) -> Option<u32> {
-        let &(due, event_id, _) = self.events.first()?;
+        let &(due, event_id) = self.events.first()?;
         if due > self.time {
             return None;
         }
         self.events.remove(0);
-        self.revision = self.revision.wrapping_add(1);
         self.last_event = event_id;
         Some(event_id)
-    }
-
-    pub fn revision(&self) -> u64 {
-        self.revision
-    }
-
-    /// Actual selected schedule: event id, remaining ms and selected duration.
-    pub fn timers(&self) -> Vec<(u32, u32, u32)> {
-        self.events
-            .iter()
-            .map(|&(due, id, duration)| {
-                (
-                    id,
-                    due.saturating_sub(self.time).min(u64::from(u32::MAX)) as u32,
-                    duration.min(u64::from(u32::MAX)) as u32,
-                )
-            })
-            .collect()
     }
 
     /// Scheduled event ids in due order (tests).
     #[cfg(test)]
     pub fn pending(&self) -> Vec<u32> {
-        self.events.iter().map(|&(_, id, _)| id).collect()
+        self.events.iter().map(|&(_, id)| id).collect()
     }
 }

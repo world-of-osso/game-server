@@ -165,6 +165,8 @@ INSERT INTO "content_item" VALUES(187760,'Mage''s Sash',1,1,0,12,2,1,1,0,4,1,6,2
 INSERT INTO "content_item" VALUES(187761,'Mage''s Robes',1,1,0,12,2,1,1,0,4,1,5,2,0,0.0,-1,-1,-1,0,0,0,0,0,8192,8388608,0,0,191556,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,NULL);
 INSERT INTO "content_item" VALUES(187762,'Mage''s Mitts',1,1,0,12,2,1,1,0,4,1,10,2,0,0.0,-1,-1,-1,0,0,0,0,0,8192,8388608,0,0,191561,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,NULL);
 CREATE TABLE content_npc_vendor (entry INTEGER,slot INTEGER,item INTEGER,maxcount INTEGER,incrtime INTEGER,ExtendedCost INTEGER);
+CREATE TABLE tdb_npc_vendor (entry INTEGER NOT NULL DEFAULT 0,slot INTEGER NOT NULL DEFAULT 0,item INTEGER NOT NULL DEFAULT 0,maxcount INTEGER NOT NULL DEFAULT 0,incrtime INTEGER NOT NULL DEFAULT 0,ExtendedCost INTEGER NOT NULL DEFAULT 0,type INTEGER NOT NULL DEFAULT 1,BonusListIDs TEXT,PlayerConditionID INTEGER NOT NULL DEFAULT 0,IgnoreFiltering INTEGER NOT NULL DEFAULT 0,VerifiedBuild INTEGER NOT NULL DEFAULT 0,PRIMARY KEY (entry, item, ExtendedCost, type));
+CREATE TABLE "currency_types" ("ID" INTEGER PRIMARY KEY, "Name_lang" TEXT NOT NULL, "Description_lang" TEXT NOT NULL, "InventoryIconFileID" INTEGER NOT NULL, "MaxQty" INTEGER NOT NULL, "MaxEarnablePerWeek" INTEGER NOT NULL, "AwardConditionID" INTEGER NOT NULL, "MaxQtyWorldStateID" INTEGER NOT NULL, "Flags_0" INTEGER NOT NULL, "Flags_1" INTEGER NOT NULL);
 CREATE TABLE db2_row_source (
     table_name TEXT NOT NULL, row_id INTEGER NOT NULL, build TEXT NOT NULL,
     file_data_id INTEGER NOT NULL, layout_hash TEXT NOT NULL, sha256 TEXT NOT NULL,
@@ -625,6 +627,21 @@ INSERT INTO "item_x_item_effect" VALUES(43,5,159);
 INSERT INTO "item_x_item_effect" VALUES(467,429,4536);
 INSERT INTO "item_x_item_effect" VALUES(471,433,4540);
 INSERT INTO "item_x_item_effect" VALUES(869,834,6948);
+CREATE TABLE mount (
+  Name_lang TEXT NOT NULL DEFAULT '',
+  SourceText_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  MountTypeID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  SourceTypeEnum INTEGER NOT NULL DEFAULT 0,
+  SourceSpellID INTEGER NOT NULL DEFAULT 0,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  MountFlyRideHeight REAL NOT NULL DEFAULT 0,
+  UiModelSceneID INTEGER NOT NULL DEFAULT 0,
+  MountSpecialRiderAnimKitID INTEGER NOT NULL DEFAULT 0,
+  MountSpecialSpellVisualKitID INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE skyborne_content_item(
   ID INT,
   Name TEXT,
@@ -1343,6 +1360,7 @@ CREATE TABLE tdb_playercreateinfo_item (
 CREATE INDEX spell_effect_spell_id ON spell_effect(SpellID);
 CREATE INDEX spell_equipped_items_spell_id ON spell_equipped_items(SpellID);
 CREATE INDEX item_modified_appearance_item_id ON item_modified_appearance(ItemID);
+CREATE INDEX mount_source_spell_id ON mount(SourceSpellID);
 CREATE UNIQUE INDEX content_item_id ON content_item(ID);
 CREATE UNIQUE INDEX skyborne_content_item_id ON skyborne_content_item(ID);
 COMMIT;
