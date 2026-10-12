@@ -40,6 +40,7 @@ const QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT: u32 = 0x2;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ObjectiveKind {
     Monster,
+    ProgressBar,
     GameObject,
     Item,
     /// Set by entering one of the quest's `areatrigger_involvedrelation` triggers.
@@ -50,6 +51,7 @@ impl ObjectiveKind {
     pub fn protocol(self) -> Option<QuestObjectiveKind> {
         match self {
             Self::Monster => Some(QuestObjectiveKind::Monster),
+            Self::ProgressBar => Some(QuestObjectiveKind::ProgressBar),
             Self::GameObject => Some(QuestObjectiveKind::GameObject),
             Self::Item => Some(QuestObjectiveKind::Item),
             Self::ExplorationOrEvent => None,
@@ -124,6 +126,7 @@ pub(crate) struct QuestTemplate {
     pub reward_items: Vec<(u32, u32)>,
     pub choice_items: Vec<(u32, u32)>,
     pub objectives: Vec<ObjectiveDef>,
+    pub world_objective_rules: Option<Vec<crate::world_quest_objectives::ObjectiveRule>>,
     pub description: String,
     pub objectives_text: String,
     pub completion_log: String,
@@ -367,6 +370,7 @@ fn quest_from_row(
         reward_items: item_pairs(row, "RewardItem", "RewardAmount", 4)?,
         choice_items: item_pairs(row, "RewardChoiceItemID", "RewardChoiceItemQuantity", 6)?,
         objectives: objectives_from_row(row, names)?,
+        world_objective_rules: None,
         description: text(row, "QuestDescription")?,
         objectives_text: text(row, "LogDescription")?,
         completion_log: text(row, "QuestCompletionLog")?,

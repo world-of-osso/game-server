@@ -69,17 +69,25 @@ pub(crate) fn grant_item(
 
 /// The objectives the protocol has a kind for; the exploration/event requirement only
 /// shows through the entry's `completed`.
-fn objective_snapshots(quest: &QuestTemplate, counts: &[u32]) -> Vec<QuestObjectiveSnapshot> {
+pub(crate) fn objective_snapshots(
+    quest: &QuestTemplate,
+    counts: &[u32],
+) -> Vec<QuestObjectiveSnapshot> {
     quest
         .objectives
         .iter()
         .zip(counts)
-        .filter_map(|(objective, &current)| {
+        .enumerate()
+        .filter_map(|(index, (objective, &current))| {
+            if !crate::world_quest_objectives::visible(quest, counts, index) {
+                return None;
+            }
             Some(QuestObjectiveSnapshot {
                 text: objective.text.clone(),
                 current,
                 required: objective.required,
                 completed: current >= objective.required,
+                optional: crate::world_quest_objectives::rule(quest, index).optional(),
                 kind: objective.kind.protocol()?,
                 object_id: objective.object_id,
             })
