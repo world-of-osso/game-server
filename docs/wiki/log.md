@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229): native Feint RED1000vs600, five school/stacking/expiry/sibling/periodic controls; batch16 census2878/4767/182 recovered, fresh private DB snapshot, Stealth source-row mismatch and Lycara mastery gap preserved.
+
 - 2026-10-11 — [Chrono Flames continuation](../class-completeness2.md#chrono-flames-partial-mechanic-follow-up): native replacement/child-impact history, ownership/window/cap/healing/missing-record controls and explicit Retail timing limits; remaining class/talent/live acceptance stays open.
 
 - 2026-10-11 — [Class completeness continuation](../class-completeness2.md): native ground/rectangle selectors, retail ritual metadata, controlled elemental lifecycle and persisted owned-item unlocks; batch12 receipts and source/threshold limits recorded. Whole13-class/40-spec and remaining-class live acceptance stay open.
