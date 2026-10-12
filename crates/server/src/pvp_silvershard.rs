@@ -1,5 +1,5 @@
 //! TC a352b1fa Silvershard: real template60140 NPCs driven by the shared source paths.
-use bevy::ecs::system::CommandQueue;
+use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
 use shared::battleground::{
     BgInstance, BgTemplate, CartEvent, CartPaths, SILVERSHARD_CARTS, SilvershardBattle,
