@@ -102,6 +102,8 @@ pub mod scripts;
 pub mod summon;
 #[cfg(test)]
 mod summon_at_tests;
+#[cfg(test)]
+mod summon_damage_tests;
 pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
