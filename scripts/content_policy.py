@@ -467,7 +467,9 @@ def main():
             parser.error("world-census requires explicit hosted --maps")
         maps = [int(value) for value in args.maps.split(",")]
         with sqlite3.connect(f"file:{args.db}?mode=ro", uri=True) as conn:
-            world_population.validate_maps(conn, maps)
+            for map_id in maps:
+                if conn.execute("SELECT InstanceType FROM map WHERE ID=?", (map_id,)).fetchone() != (0,):
+                    parser.error(f"census map {map_id} is not a registered open world")
             result = world_population.zone_census(conn, maps, args.csv_root)
         world_population.write_report(args.report, result)
         print(f"Read-only census: {len(result)} zone rows; report: {args.report}")
