@@ -21,6 +21,7 @@ pub mod creature_text;
 pub mod event_map;
 pub mod instance_script;
 pub mod movement;
+pub mod murder_row;
 pub mod smart_ai;
 pub mod the_stockade;
 
@@ -42,10 +43,12 @@ pub struct ScriptedAiPlugin;
 
 impl Plugin for ScriptedAiPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<instance_script::InstanceScripts>()
+        app.init_resource::<crate::auras::scripts::AuraScripts>()
+            .init_resource::<instance_script::InstanceScripts>()
             .add_systems(Startup, creature_text::load_creature_texts_startup)
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
+            .add_systems(Startup, murder_row::register_aura_scripts)
             .add_systems(
                 FixedUpdate,
                 (
@@ -74,6 +77,11 @@ impl Plugin for ScriptedAiPlugin {
 #[derive(Component, Debug, Clone)]
 pub struct CreatureScriptName(pub String);
 
+/// A scripted phase does not call TC UpdateVictim; the pre-AI generic updater
+/// must not refresh/evade that actor until the script resumes combat updates.
+#[derive(Component)]
+pub(crate) struct ScriptedVictimUpdatePaused;
+
 /// `ReactStates`: a passive creature neither attacks on sight nor picks a victim
 /// (`CreatureAI::UpdateVictim` stops its attack); an aggressive one does both.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -94,6 +102,10 @@ pub enum MotionType {
 #[derive(Debug, Clone, Copy)]
 pub enum Hook {
     Reset,
+    JustAppeared,
+    ChannelFinished {
+        spell_id: u32,
+    },
     JustEngagedWith(Entity),
     JustDied(Option<Entity>),
     /// `DamageTaken(attacker, damage)` with the health the damage was taken from.
@@ -127,6 +139,8 @@ pub enum Hook {
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
     fn reset(&mut self, _ctx: &mut Ctx) {}
+    fn just_appeared(&mut self, _ctx: &mut Ctx) {}
+    fn channel_finished(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
     fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {}
     fn just_died(&mut self, _ctx: &mut Ctx, _killer: Option<Entity>) {}
     fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, _damage: DamageTaken) {}
@@ -181,6 +195,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }
+    if murder_row::is_creature_script(script_name) {
+        return murder_row::creature_ai(world, creature, script_name);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -192,7 +209,9 @@ const SMART_AI: &str = "SmartAI";
 /// (`Creature::AIM_Initialize` at `AddToMap`; `FactorySelector::SelectAI` prefers the
 /// ScriptName).
 pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
-    let script_name = if the_stockade::is_creature_script(script_name) {
+    let script_name = if the_stockade::is_creature_script(script_name)
+        || murder_row::is_creature_script(script_name)
+    {
         Some(script_name.to_owned())
     } else {
         None
@@ -255,7 +274,12 @@ fn initialize_ai(world: &mut World, creature: Entity) {
             ai: Some(ai),
             pending: VecDeque::new(),
         });
-    dispatch(world, creature, Hook::Reset);
+    // SmartAI initializes event timers in its constructor and dispatches RESET
+    // after RESPAWN in JustAppeared. Other CreatureAI implementations reset here.
+    if name != SMART_AI && !name.is_empty() {
+        dispatch(world, creature, Hook::Reset);
+    }
+    dispatch(world, creature, Hook::JustAppeared);
 }
 
 /// `Creature::Respawn`: the creature starts over with a new AI.
@@ -309,6 +333,8 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
     let mut ctx = Ctx { world, me };
     match hook {
         Hook::Reset => ai.reset(&mut ctx),
+        Hook::JustAppeared => ai.just_appeared(&mut ctx),
+        Hook::ChannelFinished { spell_id } => ai.channel_finished(&mut ctx, spell_id),
         Hook::JustEngagedWith(who) => ai.just_engaged_with(&mut ctx, who),
         Hook::JustDied(killer) => ai.just_died(&mut ctx, killer),
         Hook::DamageTaken {

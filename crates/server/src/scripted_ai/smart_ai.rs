@@ -63,6 +63,9 @@ const EVENT_JUST_SUMMONED: u32 = 54;
 const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
+const EVENT_RESPAWN: u32 = 11;
+const RESPAWN_CONDITION_MAP: u32 = 1;
+const RESPAWN_CONDITION_AREA: u32 = 2;
 const EVENT_LINK: u32 = 61;
 const EVENT_ACCEPTED_QUEST: u32 = 19;
 const EVENT_REWARD_QUEST: u32 = 20;
@@ -230,6 +233,7 @@ fn supports_event(kind: u32) -> bool {
             | EVENT_SPELLHIT
             | EVENT_HAS_AURA
             | EVENT_RESET
+            | EVENT_RESPAWN
             | EVENT_LINK
             | EVENT_ACCEPTED_QUEST
             | EVENT_REWARD_QUEST
@@ -377,7 +381,7 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
     // A bound boss without authored rows intentionally has lifecycle and melee only.
     let events = rows.cloned().unwrap_or_default();
     let states = vec![EventState::default(); events.len()];
-    Some(Box::new(SmartAi {
+    let mut ai = SmartAi {
         events,
         states,
         phase: 0,
@@ -388,7 +392,13 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         escort: None,
         path_event_id: None,
         follow: None,
-    }))
+    };
+    // TC OnInitialize initializes holders without firing RESET events. Appearance
+    // then runs RESPAWN before OnReset (SmartAI.cpp:494–519).
+    for index in 0..ai.events.len() {
+        ai.init_timer(index);
+    }
+    Some(Box::new(ai))
 }
 
 impl SmartAi {
@@ -482,6 +492,21 @@ impl SmartAi {
             | EVENT_FOLLOW_COMPLETED
             | EVENT_JUST_SUMMONED
             | EVENT_EVADE => self.process_action(ctx, index, invoker),
+            EVENT_RESPAWN => {
+                let applies = match event.event_params[0] {
+                    RESPAWN_CONDITION_MAP => ctx
+                        .map()
+                        .is_some_and(|map| map.map_id == event.event_params[1]),
+                    RESPAWN_CONDITION_AREA => ctx
+                        .world
+                        .get::<shared::components::Zone>(ctx.me)
+                        .is_some_and(|zone| zone.id == event.event_params[2]),
+                    _ => true,
+                };
+                if applies {
+                    self.process_action(ctx, index, invoker);
+                }
+            }
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
@@ -892,6 +917,15 @@ impl SmartAi {
 }
 
 impl CreatureAi for SmartAi {
+    /// TC SmartAI::JustAppeared: RESPawn11 precedes OnReset; evade never emits11.
+    fn just_appeared(&mut self, ctx: &mut Ctx) {
+        if !crate::spell_cast::targets::is_alive(ctx.world, ctx.me) {
+            return;
+        }
+        self.process_events_for(ctx, EVENT_RESPAWN, None, 0);
+        self.reset(ctx);
+    }
+
     /// `SmartScript::OnReset` (SmartScript.cpp:196-215).
     fn reset(&mut self, ctx: &mut Ctx) {
         if let Some(boss) = &mut self.boss {
