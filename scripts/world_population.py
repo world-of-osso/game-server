@@ -1,11 +1,13 @@
 """Explicit-map TDB1210 open-world promotion; no full policy/overlay rebuild."""
 from contextlib import closing
+from collections import Counter
 import json
 from pathlib import Path
 import sqlite3
 
 import import_instance_population as population
 import retail_content as retail
+from zone_census import zone_census
 
 # PhasingHandler::InitDbPhaseShift (TrinityCore a352b1fa): no conditional or
 # inverse phases without a phase runtime. Only unflagged default phases here.
@@ -48,7 +50,13 @@ def restore_rows(conn, snapshots):
 def protect_unrelated_dependencies(conn, map_list):
     for kind in ("creature", "gameobject"):
         conn.execute(f"CREATE TEMP TABLE world_owned_{kind}_guid AS SELECT guid+{population.OFFSET} AS guid FROM tdb_{kind} WHERE map IN ({map_list})")
-        conn.execute(f"CREATE TEMP TABLE world_overlay_{kind} AS SELECT * FROM content_{kind} WHERE map IN ({map_list}) AND guid NOT IN (SELECT guid FROM temp.world_owned_{kind}_guid)")
+        entry = "id1" if kind == "creature" else "id"
+        legacy = f"""SELECT 1 FROM {kind} a WHERE a.guid=c.guid AND a.map=c.map
+            AND a.{entry}=c.{entry} AND a.position_x=c.position_x
+            AND a.position_y=c.position_y AND a.position_z=c.position_z"""
+        conn.execute(f"""CREATE TEMP TABLE world_overlay_{kind} AS SELECT c.* FROM content_{kind} c
+            WHERE map IN ({map_list}) AND guid NOT IN (SELECT guid FROM temp.world_owned_{kind}_guid)
+              AND NOT EXISTS ({legacy})""")
     conn.execute(f"CREATE TEMP TABLE world_shared_creature AS SELECT DISTINCT id1 AS entry FROM content_creature WHERE map NOT IN ({map_list}) UNION SELECT id1 FROM temp.world_overlay_creature")
     conn.execute(f"CREATE TEMP TABLE world_shared_object AS SELECT DISTINCT id AS entry FROM content_gameobject WHERE map NOT IN ({map_list}) UNION SELECT id FROM temp.world_overlay_gameobject")
     shared = "SELECT entry FROM temp.world_shared_creature"
@@ -103,7 +111,7 @@ def promote_zone_services(conn, report, map_list):
         WHERE q.ID IN (SELECT ID FROM quest_v2)
           AND q.ID NOT IN (SELECT ID FROM content_quest_template)
           AND NOT EXISTS (SELECT 1 FROM tdb_quest_objectives o WHERE o.QuestID=q.ID
-              AND o.Type NOT IN (0,1,2,6,10))
+              AND o.Type NOT IN (0,1,2,10))
           AND (SELECT count(*) FROM tdb_quest_objectives WHERE QuestID=q.ID AND Type IN(0,2))<=4
           AND (SELECT count(*) FROM tdb_quest_objectives WHERE QuestID=q.ID AND Type=1)<=6""")
     for (quest,) in conn.execute("""SELECT ID FROM temp.zone_quest_candidate
@@ -128,16 +136,32 @@ def promote_zone_services(conn, report, map_list):
         conn.execute(f"DROP TABLE temp.{table}")
 
 
+def snapshot_content(conn):
+    tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'content_%' ORDER BY name")]
+    return {table: Counter(conn.execute(f'SELECT * FROM "{table}"')) for table in tables}
+
+
+def diff_content(conn, before):
+    result = {}
+    for table, rows in before.items():
+        after = Counter(conn.execute(f'SELECT * FROM "{table}"'))
+        result[table] = dict(before=rows.total(), after=after.total(),
+                             added=(after-rows).total(), removed=(rows-after).total())
+    return result
+
+
 def import_database(path, maps):
     path = population.validate_copy(path)
     report = population.ImportReport()
     with closing(sqlite3.connect(path)) as conn:
         with conn:
             conn.execute("BEGIN IMMEDIATE")
+            before = snapshot_content(conn)
             maps = apply_population(conn, report, maps)
+            row_diff = diff_content(conn, before)
             counts = {str(m): {t: conn.execute(f"SELECT count(*) FROM content_{t} WHERE map=?", (m,)).fetchone()[0]
                               for t in ("creature", "gameobject")} for m in maps}
-    return {"target_maps": list(maps), "counts": counts, "drops": report.drops}
+    return {"target_maps": list(maps), "counts": counts, "row_diff": row_diff, "drops": report.drops}
 
 
 def write_report(path, result):
