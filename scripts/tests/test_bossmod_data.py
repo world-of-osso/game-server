@@ -58,6 +58,17 @@ end
         result = bm.extract_bigwigs(bw, 'Cookie.lua', 'LittleWigs', 'pinned')
         self.assertEqual(result['rules'][0]['delay_ms'], 2400)
 
+    def test_duration_tables_preserve_lookup_path_without_inventing_cooldowns(self):
+        source = SOURCE + '''do
+ local timers = { [6306] = { [1] = { [40] = 31 }, [2] = { [49.5] = 80 } } }
+end
+'''
+        result = bm.extract_bigwigs(source, 'Cookie.lua', 'BigWigs', 'pinned')
+        self.assertEqual(result['timer_tables'], [dict(name='timers', source_line=19,
+            values=[dict(lookup_path=[6306, 1, 40], seconds=31),
+                    dict(lookup_path=[6306, 2, 49.5], seconds=80)])])
+        self.assertEqual(len([r for r in result['rules'] if r['action'] == 'timer']), 2)
+
     def test_unreachable_dynamic_timers_are_audited_not_scheduled(self):
         source = SOURCE + '''function mod:Dynamic(eventInfo)
  self:Bar(6306, eventInfo.duration)
