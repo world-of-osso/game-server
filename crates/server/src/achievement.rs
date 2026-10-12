@@ -294,6 +294,11 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     }
 }
 
+/// TC Spell.cpp3543-3546 credits the casting Retail item after successful cast checks.
+pub(crate) fn record_item_use(world: &mut World, player: Entity, item: u32) {
+    record_criteria_event(world, player, CriteriaEvent::UseItem(item));
+}
+
 /// TC GameObject::Use credits a validated successful use by authored entry, not entity ID.
 pub(crate) fn record_game_object_use(world: &mut World, player: Entity, entry: u32) {
     record_criteria_event(world, player, CriteriaEvent::UseGameObject(entry));
