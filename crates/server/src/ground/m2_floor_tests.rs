@@ -63,6 +63,18 @@ fn m2_floor_eots_real_alliance_start_is_supported() {
 }
 
 #[test]
+fn m2_floor_eots_real_horde_start_is_supported() {
+    let (_dir, mut ground) = real_floor_map(566, 788893, 789000, 193193, 995856);
+    let feet = Vec3::new(1803.02, 1249.19, -1539.97);
+    match ground.ground_at(566, feet) {
+        GroundProbe::Supported(height) => {
+            assert!((height - 1249.19).abs() < 1.0, "Horde start: {height}")
+        }
+        other => panic!("Horde start unsupported: {other:?}"),
+    }
+}
+
+#[test]
 fn m2_floor_northshire_real_stonepyre_top_is_supported() {
     let (_dir, mut ground) = real_floor_map(0, 775971, 778028, 198581, 10325);
     let feet = Vec3::new(-8922.681, 100.0, 139.566);

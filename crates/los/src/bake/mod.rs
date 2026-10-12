@@ -182,8 +182,13 @@ impl Baker {
             adt::placement_rotation(placement.rotation),
             position,
         );
+        let triangles = if self.m2_only {
+            self.global_m2_triangles(&model.root, &placement, world)
+        } else {
+            transformed(&model.geometry.triangles, world).collect()
+        };
         let mut tiles = std::collections::BTreeSet::new();
-        for tri in transformed(&model.geometry.triangles, world) {
+        for tri in triangles {
             let min = tri[0].min(tri[1]).min(tri[2]);
             let max = tri[0].max(tri[1]).max(tri[2]);
             let (r0, c1) = tile_of(min.x, min.z);
@@ -213,6 +218,21 @@ impl Baker {
             ));
         }
         Ok(Some(geometry))
+    }
+
+    fn global_m2_triangles(
+        &mut self,
+        root: &wmo::WmoRoot,
+        placement: &Placement,
+        world: Affine3A,
+    ) -> Vec<[Vec3; 3]> {
+        let mut triangles = Vec::new();
+        for doodad in placed_wmo_doodads(root, placement, world) {
+            if let Some(model) = self.m2(doodad.fdid) {
+                triangles.extend(transformed(&model.triangles, doodad.world));
+            }
+        }
+        triangles
     }
 
     /// Authored terrain-water quads, using the same MH2O parser as runtime ground.
@@ -448,26 +468,8 @@ impl Baker {
             build.stats.wmo_triangles += build.add(&model.geometry.triangles, world);
             build.stats.alpha_or_blended_triangles += model.geometry.dropped_triangles;
         }
-        // WMO file space -> WMO-local Bevy space: (x, y, z) -> (x, z, -y).
-        let file_to_bevy = Affine3A::from_cols_array(&[
-            1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-        ]);
-        for doodad in model.root.doodads(placement.doodad_set) {
-            let local = file_to_bevy
-                * Affine3A::from_scale_rotation_translation(
-                    Vec3::splat(doodad.scale),
-                    glam::Quat::from_array(doodad.rotation).normalize(),
-                    Vec3::from(doodad.position),
-                )
-                * file_to_bevy.inverse();
-            // WMO doodads have no unique id of their own: the report keys them by the WMO's.
-            let placed = PlacedDoodad {
-                fdid: doodad.fdid,
-                unique_id: placement.unique_id,
-                scale: doodad.scale * placement.scale,
-                world: world * local,
-            };
-            self.place_doodad(&placed, build);
+        for doodad in placed_wmo_doodads(&model.root, placement, world) {
+            self.place_doodad(&doodad, build);
         }
     }
 
@@ -593,6 +595,31 @@ struct PlacedDoodad {
     unique_id: u32,
     scale: f32,
     world: Affine3A,
+}
+
+/// WMO file space -> local engine axes, composed with its parent placement.
+fn placed_wmo_doodads<'a>(
+    root: &'a wmo::WmoRoot,
+    placement: &'a Placement,
+    world: Affine3A,
+) -> impl Iterator<Item = PlacedDoodad> + 'a {
+    let file_to_bevy =
+        Affine3A::from_cols_array(&[1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
+    root.doodads(placement.doodad_set).map(move |doodad| {
+        let file_local = Affine3A::from_scale_rotation_translation(
+            Vec3::splat(doodad.scale),
+            glam::Quat::from_array(doodad.rotation).normalize(),
+            Vec3::from(doodad.position),
+        );
+        let local = file_to_bevy * file_local * file_to_bevy.inverse();
+        PlacedDoodad {
+            fdid: doodad.fdid,
+            // A WMO doodad's report key uses its parent placement's unique id.
+            unique_id: placement.unique_id,
+            scale: doodad.scale * placement.scale,
+            world: world * local,
+        }
+    })
 }
 
 /// The triangles one tile keeps and its counts.
