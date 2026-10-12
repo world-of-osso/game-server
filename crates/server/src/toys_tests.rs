@@ -3450,7 +3450,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
             scale
         );
         // A real scale aura must compose with display scale, not overwrite it.
-        let growth = store.get(62736).unwrap(); // Elixir of Giant Growth: +30% object scale.
+        let growth = store.get(156132).unwrap(); // World Shrinker: authored +100% object scale.
         assert_eq!(growth.effects[0].aura, crate::auras::handlers::MOD_SCALE);
         let effect = &growth.effects[0];
         crate::auras::apply_aura(
@@ -3458,7 +3458,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
             &crate::auras::AuraApplication {
                 caster: h.caster,
                 target: actor,
-                spell_id: 62736,
+                spell_id: 156132,
                 effect_mask: 1,
                 source: crate::auras::AuraSource::Cast,
             },
@@ -3469,7 +3469,7 @@ fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale()
                 < 0.00001
         );
         crate::auras::remove_auras(world, actor, crate::auras::RemoveReason::Cancelled, |a| {
-            a.spell_id == 62736
+            a.spell_id == 156132
         });
         assert_eq!(world.get::<UnitScale>(actor).unwrap().0, scale);
     }
