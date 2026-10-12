@@ -534,6 +534,10 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
         fixed_unix: Some(SUNDAY_NOON),
     });
     app.init_resource::<GroupRegistry>();
+    app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&crate::test_data::world_db_path())
+            .expect("authored conditions in map-lifetime fixture"),
+    );
     setup(&mut app);
     app.finish();
     app.cleanup();
@@ -960,6 +964,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
         app.add_plugins((
             crate::pvp::PvpPlugin,
+            crate::spell_cast::SpellCastPlugin,
             crate::auras::AuraPlugin,
             crate::combat::CombatPlugin,
             crate::death::DeathPlugin,
