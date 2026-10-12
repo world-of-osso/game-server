@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; [baseline](../class-completeness.md), [continuation](../class-completeness2.md): authored census startup, native cone24 and raid corpse119; whole spell/talent coverage remains open.
+- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; [baseline](../class-completeness.md), [continuation](../class-completeness2.md): authored census startup, native selectors/portals/rituals, controlled elemental lifecycle and persisted item-target unlocks; whole spell/talent coverage remains open.
 - [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.

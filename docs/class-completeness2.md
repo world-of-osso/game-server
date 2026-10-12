@@ -18,6 +18,7 @@ Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes 
 | b6886dec / shared6ba2f5cd | 2854 | 4781 | 192 | All 7827 memberships, exit0 |
 | 7c1e1b33 / shared6ba2f5cd | 2854 | 4787 | 186 | All 7827 memberships, exit0, 560.59s |
 | 96e4cb20 / shared6ba2f5cd | 2854 | 4788 | 185 | All 7827 memberships, exit0, 556.76s |
+| 9f2c5cbd / shared6ba2f5cd | 2854 | 4791 | 182 | All 7827 memberships, exit0, 603.33s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -48,7 +49,7 @@ First census resolves target24 for native117418 in three specs; integrated maste
 
 Effect33/target26 resolves an owned bag GUID, reads native ItemSparse.LockID and ordered Lock.db2 alternatives, and persists UNLOCKED separately by GUID without consuming the item or inventing loot. Missing/foreign/unlocked/non-lock templates reject; eligibility is rechecked at completion before the success receipt. Stored unlock state survives reopen and owner transfers without changing existing item-row encoding.
 
-**Reference limit:** pinned TC CanOpenLock calls CalcValueAsInt without a caster; its GetSkillValue(SKILL_NONE) returns0. That code cannot certify Retail level-based lockpick thresholds. This implementation uses the normal caster-aware native effect value (RealPointsPerLevel1, SpellLevel14 for1804), not a guessed multiplier. Level29 versus native Lock3240.Skill15 is a source-derived implementation test, **not independently verified Retail threshold parity**. No trade-slot, cast-item-key, non-lockpicking item-type, game-object lockpicking or lockbox-loot certificate follows. The native missing-item corpus remains conditional/partial, not a whole-ability success.
+**Reference limit:** pinned TC CanOpenLock calls CalcValueAsInt without a caster. That code cannot certify Retail level-based lockpick thresholds. This implementation uses the normal caster-aware native effect value (RealPointsPerLevel1, SpellLevel14 for1804), not a guessed multiplier. Level29 versus native Lock3240.Skill15 is a source-derived implementation test, **not independently verified Retail threshold parity**. No trade-slot, cast-item-key, non-lockpicking item-type, game-object lockpicking or lockbox-loot certificate follows. Native1804 item-target RED55466315 -> GREEN9f2c5cbd: four controls prove accepted/unconsumed4638, reopen/recast rejection, level28 versus15 native skill threshold, foreign/missing/LockID0 rejection, and removal during the real1.5sec cast. Adjacent gathering10/10 and Disenchant8/8 remain GREEN. The native missing-item corpus remains conditional/partial, not a whole-ability success.
 
 ## Retained boundaries
 
