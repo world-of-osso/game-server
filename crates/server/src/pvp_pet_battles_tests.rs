@@ -323,7 +323,7 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
     use shared::components::{CharacterAppearance, Player};
     let mut app = app();
     crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
-    for (account, name) in [(1, "Petwinner"), (2, "Petloser")] {
+    let characters = [(41, "Petwinner"), (42, "Petloser")].map(|(account, name)| {
         crate::persistence::create_character(
             &app.world().resource::<GameDatabase>().db,
             account,
@@ -331,12 +331,20 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
             1,
             1,
         )
-        .unwrap();
-    }
+        .unwrap()
+        .0
+    });
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.init_resource::<crate::maps::ServerClock>();
     let [a, b] = matched(&mut app);
+    for (owner, character) in [a, b].into_iter().zip(characters) {
+        let connection = connection(app.world_mut(), owner).unwrap();
+        app.world_mut()
+            .get_mut::<InWorld>(connection)
+            .unwrap()
+            .character_id = character;
+    }
     for (owner, name) in [(a, "Petwinner"), (b, "Petloser")] {
         app.world_mut().entity_mut(owner).insert((
             Player {
@@ -417,9 +425,12 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
             .contains_key(&19724)
     );
     assert_eq!(
-        crate::persistence::load_achievements(&app.world().resource::<GameDatabase>().db, 1)
-            .criteria_progress
-            .get(&19724),
+        crate::persistence::load_achievements(
+            &app.world().resource::<GameDatabase>().db,
+            characters[0]
+        )
+        .criteria_progress
+        .get(&19724),
         Some(&10)
     );
     app.update();
