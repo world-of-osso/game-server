@@ -212,20 +212,7 @@ impl Plugin for CollectionPlugin {
 
 pub fn default_collection_state() -> PlayerCollectionState {
     PlayerCollectionState {
-        mounts: vec![
-            CollectionMount {
-                mount_id: 101,
-                name: "Swift Brown Steed".into(),
-                known: true,
-                active: false,
-            },
-            CollectionMount {
-                mount_id: 102,
-                name: "Black War Wolf".into(),
-                known: false,
-                active: false,
-            },
-        ],
+        mounts: vec![],
         pets: vec![],
     }
 }
