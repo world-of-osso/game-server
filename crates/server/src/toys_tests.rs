@@ -3176,6 +3176,79 @@ fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
 }
 
 #[test]
+fn toyfx14_target_and_sound_cosmetics_preserve_source_ownership() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, duration) in [(122120, 179869, 60000), (168824, 298869, 180000)] {
+        let (mut h, character) = setup(&directory.path().join(format!("target-sound-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(store.clone());
+        let target = if item == 122120 { h.npc } else { h.caster };
+        let other = if item == 122120 { h.caster } else { h.npc };
+        h.app
+            .world_mut()
+            .get_mut::<crate::networking::CombatTarget>(h.caster)
+            .unwrap()
+            .0 = Some(h.npc);
+        let health = *h.app.world().get::<Health>(target).unwrap();
+        let model = h.app.world().get::<ModelDisplay>(target).cloned();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(50);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, duration);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(other)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert_eq!(*h.app.world().get::<Health>(target).unwrap(), health);
+        assert_eq!(h.app.world().get::<ModelDisplay>(target), model.as_ref());
+    }
+}
+
+#[test]
+fn toyfx14_target_and_sound_cosmetics_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_SOUND_CENSUS_REPORT");
+    for item in [122120, 168824] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
