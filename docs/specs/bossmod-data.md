@@ -1,0 +1,37 @@
+# Boss-mod alert data
+
+Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred SmartAI cooldowns. Source Lua is parsed as data only. [Import and runtime notes](../wiki/systems/bossmod-data.md).
+
+## What it must do
+
+- [x] Preserve Retail initial and cast-triggered repeat delays, warning keys/severity, encounter/NPC identity and addon/version/file/line provenance.
+- [x] Extract literal health thresholds and stage changes without inventing an initial timer.
+- [x] Record unsupported conditions rather than executing Lua or treating them as unconditional.
+- [x] Require Spell and SpellName rows stamped `12.1.0.69933`; reject unvalidated spell IDs.
+- [x] Import into a new copy of the input world database, never modify the input or overwrite an existing output.
+- [ ] Server bars follow imported schedules; actual cast events reset/advance timers using the authored event boundary.
+- [ ] Boss warnings use the same source authority as timers; lifecycle, phase and health transitions clear/restart the appropriate timers.
+- [ ] Private UDP5906 proof: at least two hosted encounters, Modern and Forever skins, addon-sourced bars and accepted-cast warnings.
+
+## How it works
+
+- [Static extraction and copy-only lead command](../wiki/systems/bossmod-data.md).
+
+## Implementation inventory
+
+- `scripts/bossmod_data.py`: non-executing AST extraction, pinned spell validation and SQLite copy import.
+- `scripts/tests/test_bossmod_data.py`: concrete Lua fixtures and database preservation tests.
+
+## Tests asserting this spec
+
+- `scripts/tests/test_bossmod_data.py`.
+
+## Known gaps (current cycle)
+
+- [ ] Dynamic Blizzard timeline callbacks, observed duration classification and variable/count-indexed timer arrays need their real triggering data; they cannot be substituted with invented intervals.
+- [ ] Complete server/client integration and native acceptance.
+- [ ] DBM/BigWigs extraction coverage beyond literal supported constructs.
+
+## Out of scope
+
+Canonical database writes and running addon Lua are prohibited by the feature goal.
