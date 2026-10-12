@@ -81,9 +81,12 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
     assert_eq!(
         h.housing_request(
             &owner,
-            HousingCommand::SetHouseAccessAnyone {
+            HousingCommand::SaveHouseAccess {
                 house_id,
-                allowed: true
+                access: shared::protocol::HouseAccess {
+                    anyone: true,
+                    ..Default::default()
+                }
             }
         )
         .error,

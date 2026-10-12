@@ -1317,6 +1317,7 @@ fn validate_start(
     shapeshift::check_cast(world, caster, spell)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
+    crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
     if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
@@ -1793,6 +1794,7 @@ pub(crate) fn execute_cast(
         return Err(CastFailure::CasterDead);
     }
     casting_restriction::check_cast(world, caster, spell)?;
+    crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
     blooming_infusion::check_children(world, caster, spell)?;
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
