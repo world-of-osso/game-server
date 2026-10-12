@@ -1089,7 +1089,14 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
                 z: 0.0,
             });
         learn_effect_toy(&mut h, character, item);
-        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        // Banner62736 is target87: the clicked point, not the caster's feet.
+        // Chair42766/MOLL-E54710 remain target47's authored forward offsets.
+        let destination = (item == 45011).then_some([4.0, 0.0, -3.0]);
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "toy {item}"
+        );
         h.advance(100); // includes real cast time for MOLL-E.
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
@@ -1107,8 +1114,9 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
             (go_type, display, scale)
         );
         let pos = world.get::<shared::components::Position>(*object).unwrap();
-        assert!((pos.x - offset).abs() < 0.001, "{pos:?}");
-        assert_eq!((pos.y, pos.z), (0.0, 0.0));
+        let expected = destination.unwrap_or([offset, 0.0, 0.0]);
+        assert!((pos.x - expected[0]).abs() < 0.001, "{pos:?}");
+        assert_eq!((pos.y, pos.z), (expected[1], expected[2]));
         assert_eq!(
             world.get::<crate::maps::InMap>(*object),
             world.get::<crate::maps::InMap>(h.caster)
@@ -1703,7 +1711,17 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         learn_effect_toy(&mut h, character, item);
         let caster_position = *h.app.world().get::<Position>(h.caster).unwrap();
-        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        // Both source effects use target87, requiring the actual clicked destination.
+        let placed = Position {
+            x: caster_position.x + 2.0,
+            y: caster_position.y,
+            z: caster_position.z + 1.0,
+        };
+        assert_eq!(
+            activate_at(&mut h, item, Some([placed.x, placed.y, placed.z]))[0].error,
+            None,
+            "item {item}"
+        );
         h.advance(10);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
@@ -1721,7 +1739,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
             world.get::<UnitSummonedBy>(summon).unwrap().0,
             h.caster.to_bits()
         );
-        assert_eq!(world.get::<Position>(summon), Some(&caster_position));
+        assert_eq!(world.get::<Position>(summon), Some(&placed));
         assert_eq!(
             world.get::<crate::maps::InMap>(summon),
             world.get::<crate::maps::InMap>(h.caster)
@@ -1737,10 +1755,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
         );
         world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
         h.advance(lifetime_frames - 30);
-        assert_eq!(
-            h.app.world().get::<Position>(summon),
-            Some(&caster_position)
-        );
+        assert_eq!(h.app.world().get::<Position>(summon), Some(&placed));
         h.advance(40);
         assert!(
             h.app.world().get_entity(summon).is_err(),
