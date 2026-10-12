@@ -9,10 +9,10 @@
 //! 0 = every phase) and not a spent `NOT_REPEATABLE` one; its action then runs, and its
 //! `link` event right after with the same invoker.
 //!
-//! Modelled: events UPDATE_IC, AGGRO, RESET, HAS_AURA, SPELLHIT, LINK; actions TALK,
-//! CAST, SET_EVENT_PHASE,
-//! CALL_KILLEDMONSTER, DIE; targets NONE, SELF, ACTION_INVOKER. Other event types never
-//! run and other actions or targets do nothing (counted when loaded).
+//! Quest accept/reward can invoke timed action lists and authored TDB waypoint
+//! paths. Reached/pause/resume events, stored invokers and quest event credit are
+//! interpreted generically. Unsupported event/action/target kinds are diagnosed
+//! once per kind at startup, including rows outside the loaded creature subset.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -24,24 +24,87 @@ use rusqlite::{Connection, OpenFlags};
 
 use super::{CreatureAi, Ctx};
 
+#[path = "smart_paths.rs"]
+mod paths;
+
+#[path = "smart_timed.rs"]
+mod timed;
+
+#[path = "smart_escort.rs"]
+mod escort;
+#[path = "smart_pose.rs"]
+mod pose;
+
+#[path = "smart_targets.rs"]
+mod targets;
+
+#[path = "smart_lifetimes.rs"]
+pub(super) mod lifetimes;
+
+#[path = "smart_summons.rs"]
+mod summons;
+
+#[path = "smart_follow.rs"]
+mod follow;
+
+#[cfg(test)]
+#[path = "smart_escort_tests.rs"]
+mod escort_tests;
+
 // `SMART_EVENT` (SmartScriptMgr.h).
 const EVENT_UPDATE_IC: u32 = 0;
+const EVENT_FOLLOW_COMPLETED: u32 = 65;
 const EVENT_AGGRO: u32 = 4;
+const EVENT_DEATH: u32 = 6;
+const EVENT_EVADE: u32 = 7;
+const EVENT_SUMMONED_UNIT: u32 = 17;
+const EVENT_SUMMON_DESPAWNED: u32 = 35;
+const EVENT_JUST_SUMMONED: u32 = 54;
 const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
 const EVENT_LINK: u32 = 61;
+const EVENT_ACCEPTED_QUEST: u32 = 19;
+const EVENT_REWARD_QUEST: u32 = 20;
+const EVENT_WAYPOINT_REACHED: u32 = 40;
+const EVENT_WAYPOINT_PAUSED: u32 = 55;
+const EVENT_WAYPOINT_RESUMED: u32 = 56;
+const EVENT_WAYPOINT_STOPPED: u32 = 57;
+const EVENT_WAYPOINT_ENDED: u32 = 58;
 // `SMART_ACTION`.
 const ACTION_TALK: u32 = 1;
+const ACTION_SET_EMOTE_STATE: u32 = 17;
+const ACTION_SET_ORIENTATION: u32 = 66;
+const ACTION_SET_FACTION: u32 = 2;
+const ACTION_FAIL_QUEST: u32 = 6;
+const ACTION_COMPLETE_QUEST: u32 = 152;
 const ACTION_CAST: u32 = 11;
+const ACTION_SUMMON_CREATURE: u32 = 12;
+const ACTION_SUMMON_CREATURE_GROUP: u32 = 107;
+const ACTION_FOLLOW: u32 = 29;
 const ACTION_SET_EVENT_PHASE: u32 = 22;
 const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_DIE: u32 = 37;
+const ACTION_FORCE_DESPAWN: u32 = 41;
+const ACTION_WP_START: u32 = 53;
+const ACTION_WP_PAUSE: u32 = 54;
+const ACTION_WP_STOP: u32 = 55;
+const ACTION_SET_RUN: u32 = 59;
+const ACTION_SET_NPC_FLAG: u32 = 81;
+const ACTION_ADD_NPC_FLAG: u32 = 82;
+const ACTION_WP_RESUME: u32 = 65;
+const ACTION_STORE_TARGET_LIST: u32 = 64;
+const ACTION_CALL_TIMED_ACTION_LIST: u32 = 80;
+const ACTION_REMOVE_NPC_FLAG: u32 = 83;
 // `SMART_TARGET`.
 const TARGET_NONE: u32 = 0;
 const TARGET_SELF: u32 = 1;
 const TARGET_VICTIM: u32 = 2;
 const TARGET_ACTION_INVOKER: u32 = 7;
+const TARGET_STORED: u32 = 12;
+const TARGET_INVOKER_PARTY: u32 = 16;
+const TARGET_CLOSEST_CREATURE: u32 = 19;
+const TARGET_POSITION: u32 = 8;
 // `SMART_EVENT_FLAG_*`, `SMARTCAST_*`.
 const EVENT_FLAG_NOT_REPEATABLE: u32 = 0x001;
 const EVENT_FLAG_DONT_RESET: u32 = 0x100;
@@ -66,27 +129,38 @@ pub(crate) struct SmartEvent {
     pub action_type: u32,
     pub action_params: [u32; 7],
     pub target_type: u32,
+    pub target_params: [u32; 4],
+    pub target_position: [f32; 4],
 }
 
 /// Creature entry -> its SmartAI rows, by id.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct SmartScripts(pub HashMap<u32, Arc<Vec<SmartEvent>>>);
+pub(crate) struct SmartScripts(
+    pub HashMap<u32, Arc<Vec<SmartEvent>>>,
+    HashMap<u32, Arc<Vec<SmartEvent>>>,
+    HashMap<u32, Arc<paths::WaypointPath>>,
+    HashMap<(u32, u32), Vec<summons::GroupMember>>,
+);
 
 const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.event_phase_mask, \
      s.event_chance, s.event_flags, s.event_param1, s.event_param2, s.event_param3, s.event_param4, \
      s.event_param5, s.action_type, s.action_param1, s.action_param2, s.action_param3, \
-     s.action_param4, s.action_param5, s.action_param6, s.action_param7, s.target_type \
-     FROM tdb_smart_scripts s \
-     JOIN content_creature_template t ON t.entry = s.entryorguid AND t.AIName = 'SmartAI' \
-     WHERE s.source_type = 0 AND s.entryorguid > 0 ORDER BY s.entryorguid, s.id";
+     s.action_param4, s.action_param5, s.action_param6, s.action_param7, s.target_type, \
+     s.source_type, s.target_param1, s.target_param2, s.target_param3, s.target_param4, \
+     s.target_x, s.target_y, s.target_z, s.target_o FROM tdb_smart_scripts s \
+     WHERE s.source_type = 9 OR (s.source_type = 0 AND s.entryorguid > 0 AND EXISTS \
+     (SELECT 1 FROM content_creature_template t WHERE t.entry=s.entryorguid AND t.AIName='SmartAI')) \
+     ORDER BY s.entryorguid, s.id";
 
 pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    log_unsupported_types(&conn)?;
     let mut statement = conn.prepare(SMART_QUERY)?;
     let rows = statement.query_map([], |row| {
         let int = |index: usize| row.get::<_, u32>(index);
         Ok((
             int(0)?,
+            int(21)?,
             SmartEvent {
                 id: int(1)?,
                 link: int(2)?,
@@ -106,48 +180,137 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
                     int(19)?,
                 ],
                 target_type: int(20)?,
+                target_params: [int(22)?, int(23)?, int(24)?, int(25)?],
+                target_position: [row.get(26)?, row.get(27)?, row.get(28)?, row.get(29)?],
             },
         ))
     })?;
     let mut scripts: HashMap<u32, Vec<SmartEvent>> = HashMap::new();
+    let mut lists: HashMap<u32, Vec<SmartEvent>> = HashMap::new();
     for row in rows {
-        let (entry, event) = row?;
-        scripts.entry(entry).or_default().push(event);
+        let (entry, source, event) = row?;
+        let destination = if source == 9 {
+            &mut lists
+        } else {
+            &mut scripts
+        };
+        destination.entry(entry).or_default().push(event);
     }
-    let rows: Vec<&SmartEvent> = scripts.values().flatten().collect();
-    let unmodelled = rows
-        .iter()
-        .filter(|event| {
-            !matches!(
-                event.event_type,
-                EVENT_UPDATE_IC
-                    | EVENT_AGGRO
-                    | EVENT_SPELLHIT
-                    | EVENT_HAS_AURA
-                    | EVENT_RESET
-                    | EVENT_LINK
-            ) || !matches!(
-                event.action_type,
-                ACTION_TALK
-                    | ACTION_CAST
-                    | ACTION_SET_EVENT_PHASE
-                    | ACTION_CALL_KILLEDMONSTER
-                    | ACTION_DIE
-            )
-        })
-        .count();
     info!(
-        "Loaded SmartAI scripts of {} creatures ({} of {} rows use unmodelled events or actions)",
+        "Loaded SmartAI scripts for {} creatures and {} timed lists",
         scripts.len(),
-        unmodelled,
-        rows.len()
+        lists.len()
     );
     Ok(SmartScripts(
         scripts
             .into_iter()
             .map(|(entry, events)| (entry, Arc::new(events)))
             .collect(),
+        lists
+            .into_iter()
+            .map(|(entry, events)| (entry, Arc::new(events)))
+            .collect(),
+        paths::load_waypoint_paths(&conn)?,
+        summons::load_summon_groups(&conn)?,
     ))
+}
+
+fn supports_event(kind: u32) -> bool {
+    matches!(
+        kind,
+        EVENT_UPDATE_IC
+            | EVENT_AGGRO
+            | EVENT_DEATH
+            | EVENT_FOLLOW_COMPLETED
+            | EVENT_SUMMONED_UNIT
+            | EVENT_SUMMON_DESPAWNED
+            | EVENT_JUST_SUMMONED
+            | EVENT_EVADE
+            | EVENT_SPELLHIT
+            | EVENT_HAS_AURA
+            | EVENT_RESET
+            | EVENT_LINK
+            | EVENT_ACCEPTED_QUEST
+            | EVENT_REWARD_QUEST
+            | EVENT_WAYPOINT_REACHED
+            | EVENT_WAYPOINT_PAUSED
+            | EVENT_WAYPOINT_RESUMED
+            | EVENT_WAYPOINT_STOPPED
+            | EVENT_WAYPOINT_ENDED
+    )
+}
+
+fn supports_action(kind: u32) -> bool {
+    matches!(
+        kind,
+        ACTION_TALK
+            | ACTION_CAST
+            | ACTION_SUMMON_CREATURE
+            | ACTION_SUMMON_CREATURE_GROUP
+            | ACTION_FOLLOW
+            | ACTION_SET_EMOTE_STATE
+            | ACTION_SET_ORIENTATION
+            | ACTION_SET_EVENT_PHASE
+            | ACTION_CALL_KILLEDMONSTER
+            | ACTION_DIE
+            | ACTION_FORCE_DESPAWN
+            | ACTION_FAIL_QUEST
+            | ACTION_COMPLETE_QUEST
+            | ACTION_WP_START
+            | ACTION_WP_PAUSE
+            | ACTION_WP_RESUME
+            | ACTION_STORE_TARGET_LIST
+            | ACTION_CALL_TIMED_ACTION_LIST
+            | ACTION_REMOVE_NPC_FLAG
+            | ACTION_SET_FACTION
+            | ACTION_WP_STOP
+            | ACTION_SET_RUN
+            | ACTION_SET_NPC_FLAG
+            | ACTION_ADD_NPC_FLAG
+    )
+}
+
+fn supports_target(kind: u32) -> bool {
+    matches!(
+        kind,
+        TARGET_NONE
+            | TARGET_SELF
+            | TARGET_VICTIM
+            | TARGET_ACTION_INVOKER
+            | TARGET_STORED
+            | TARGET_INVOKER_PARTY
+            | TARGET_CLOSEST_CREATURE
+            | TARGET_POSITION
+    )
+}
+
+fn log_unsupported_types(conn: &Connection) -> rusqlite::Result<()> {
+    let mut query = conn.prepare("SELECT event_type,action_type,target_type,COUNT(*) FROM tdb_smart_scripts GROUP BY event_type,action_type,target_type")?;
+    let rows = query.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            row.get::<_, u32>(2)?,
+            row.get::<_, u64>(3)?,
+        ))
+    })?;
+    let mut unsupported = std::collections::BTreeMap::new();
+    for row in rows {
+        let (event, action, target, count) = row?;
+        for (dimension, kind, supported) in [
+            ("event", event, supports_event(event)),
+            ("action", action, supports_action(action)),
+            ("target", target, supports_target(target)),
+        ] {
+            if !supported {
+                *unsupported.entry((dimension, kind)).or_insert(0_u64) += count;
+            }
+        }
+    }
+    for ((dimension, kind), count) in unsupported {
+        warn!("SmartAI unsupported {dimension} type {kind}: {count} TDB rows");
+    }
+    Ok(())
 }
 
 pub(crate) fn startup_load_smart_scripts(mut commands: Commands) {
@@ -186,6 +349,20 @@ pub(crate) struct SmartAi {
     timeline_dirty: bool,
     timeline_age_ms: u32,
     boss: Option<super::boss_ai::BossAi>,
+    stored_targets: HashMap<u32, Vec<Entity>>,
+    timed_list: Option<TimedList>,
+    processing_timed_list: bool,
+    escort: Option<paths::EscortPath>,
+    path_event_id: Option<u32>,
+    follow: Option<follow::Follow>,
+}
+
+struct TimedList {
+    events: Arc<Vec<SmartEvent>>,
+    index: usize,
+    timer_ms: u32,
+    invoker: Option<Entity>,
+    timer_type: u32,
 }
 
 /// The SmartAI of a creature of `entry`, if it has rows.
@@ -208,6 +385,12 @@ pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn Cre
         timeline_dirty: true,
         timeline_age_ms: 0,
         boss,
+        stored_targets: HashMap::new(),
+        timed_list: None,
+        processing_timed_list: false,
+        escort: None,
+        path_event_id: None,
+        follow: None,
     }))
 }
 
@@ -342,10 +525,50 @@ impl SmartAi {
             return;
         }
         match event.event_type {
-            EVENT_LINK | EVENT_RESET | EVENT_AGGRO => self.process_action(ctx, index, invoker),
+            EVENT_LINK
+            | EVENT_RESET
+            | EVENT_AGGRO
+            | EVENT_DEATH
+            | EVENT_FOLLOW_COMPLETED
+            | EVENT_JUST_SUMMONED
+            | EVENT_EVADE => self.process_action(ctx, index, invoker),
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
                     self.recalc_timer(index, event.event_params[2], event.event_params[3]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_SUMMONED_UNIT | EVENT_SUMMON_DESPAWNED => {
+                if invoker
+                    .and_then(|unit| ctx.world.get::<shared::components::Npc>(unit))
+                    .is_some_and(|npc| {
+                        event.event_params[0] == 0 || event.event_params[0] == npc.template_id
+                    })
+                {
+                    self.recalc_timer(index, event.event_params[1], event.event_params[2]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_ACCEPTED_QUEST | EVENT_REWARD_QUEST => {
+                if event.event_params[0] == 0 || event.event_params[0] == spell {
+                    self.recalc_timer(index, event.event_params[1], event.event_params[2]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
+            EVENT_WAYPOINT_REACHED
+            | EVENT_WAYPOINT_PAUSED
+            | EVENT_WAYPOINT_RESUMED
+            | EVENT_WAYPOINT_STOPPED
+            | EVENT_WAYPOINT_ENDED => {
+                let path_id = self
+                    .escort
+                    .as_ref()
+                    .map(|escort| escort.path_id)
+                    .or(self.path_event_id)
+                    .unwrap_or(0);
+                if (event.event_params[0] == u32::MAX || event.event_params[0] == spell)
+                    && (event.event_params[1] == 0 || event.event_params[1] == path_id)
+                {
                     self.process_action(ctx, index, invoker);
                 }
             }
@@ -381,22 +604,70 @@ impl SmartAi {
             return;
         }
         self.states[index].ignore_chance_roll = false;
+        if !self.execute_action(ctx, &event, invoker) {
+            self.recalc_timer(index, 1, 1);
+            self.states[index].run_once = false;
+            self.states[index].ignore_chance_roll = true;
+            return;
+        }
+        if event.link != 0 && event.link != event.id {
+            if let Some(linked) = self.events.iter().position(|e| e.id == event.link) {
+                self.process_event(ctx, linked, invoker, 0);
+            }
+        }
+    }
+
+    fn execute_action(
+        &mut self,
+        ctx: &mut Ctx,
+        event: &SmartEvent,
+        invoker: Option<Entity>,
+    ) -> bool {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
             TARGET_ACTION_INVOKER => invoker.into_iter().collect(),
+            TARGET_INVOKER_PARTY => {
+                invoker.map_or_else(Vec::new, |player| targets::party_targets(ctx.world, player))
+            }
+            TARGET_CLOSEST_CREATURE => {
+                let [entry, distance, alive, ..] = event.target_params;
+                let radius = if distance == 0 {
+                    100.0
+                } else {
+                    distance as f32
+                };
+                targets::nearest_creature(ctx.world, ctx.me, entry, radius, alive)
+                    .into_iter()
+                    .collect()
+            }
+            TARGET_STORED => self
+                .stored_targets
+                .get(&event.target_params[0])
+                .cloned()
+                .unwrap_or_default(),
             _ => Vec::new(),
         };
         match event.action_type {
-            ACTION_TALK => ctx.talk(event.action_params[0] as u8),
-            ACTION_CAST => {
-                if !Self::cast_targets(ctx, &event, targets) {
-                    // `SmartScript::RetryLater`: retry next tick, retaining the chance roll.
-                    self.recalc_timer(index, 1, 1);
-                    self.states[index].run_once = false;
-                    self.states[index].ignore_chance_roll = true;
-                    return;
+            ACTION_TALK => {
+                let speaker = targets
+                    .iter()
+                    .copied()
+                    .find(|&entity| ctx.world.get::<shared::components::Npc>(entity).is_some())
+                    .unwrap_or(ctx.me);
+                Ctx {
+                    world: ctx.world,
+                    me: speaker,
                 }
+                .talk(event.action_params[0] as u8);
+            }
+            ACTION_SUMMON_CREATURE => self.summon_action(ctx, event, &targets, invoker),
+            ACTION_SUMMON_CREATURE_GROUP => self.summon_group(ctx, event, invoker),
+            ACTION_FOLLOW => self.set_follow(ctx, event, &targets),
+            ACTION_SET_EMOTE_STATE => Self::set_emote_state(ctx, &targets, event.action_params[0]),
+            ACTION_SET_ORIENTATION => Self::set_orientation(ctx, event, &targets),
+            ACTION_CAST => {
+                return Self::cast_targets(ctx, event, targets);
             }
             ACTION_SET_EVENT_PHASE => {
                 let phase = event.action_params[0];
@@ -418,6 +689,16 @@ impl SmartAi {
                     }
                 }
             }
+            ACTION_FAIL_QUEST | ACTION_COMPLETE_QUEST => {
+                for target in targets {
+                    crate::quest::persist_scripted_quest_result(
+                        ctx.world,
+                        target,
+                        event.action_params[0],
+                        event.action_type == ACTION_FAIL_QUEST,
+                    );
+                }
+            }
             ACTION_CALL_KILLEDMONSTER => {
                 let entry = event.action_params[0];
                 if matches!(event.target_type, TARGET_NONE | TARGET_SELF) {
@@ -428,18 +709,249 @@ impl SmartAi {
                     }
                 }
             }
+            ACTION_FORCE_DESPAWN => {
+                for target in targets {
+                    if ctx.world.get::<shared::components::Npc>(target).is_some() {
+                        lifetimes::schedule_despawn(
+                            ctx.world,
+                            target,
+                            event.action_params[0],
+                            event.action_params[1],
+                            false,
+                        );
+                    }
+                }
+            }
             ACTION_DIE => {
                 if ctx.is_alive() {
                     ctx.kill_self();
                 }
             }
+            ACTION_STORE_TARGET_LIST => {
+                self.stored_targets.insert(event.action_params[0], targets);
+            }
+            ACTION_CALL_TIMED_ACTION_LIST => self.start_timed_list(ctx, event, invoker),
+            ACTION_SET_FACTION => Self::set_faction(ctx, &targets, event.action_params[0]),
+            ACTION_SET_NPC_FLAG | ACTION_ADD_NPC_FLAG | ACTION_REMOVE_NPC_FLAG => {
+                Self::change_npc_flags(ctx, &targets, event);
+            }
+            ACTION_SET_RUN => {
+                let walk = event.action_params[0] == 0;
+                if let Some(escort) = &mut self.escort {
+                    escort.walk = walk;
+                }
+                ctx.set_walk(ctx.me, walk);
+            }
+            ACTION_WP_STOP => {
+                if let Some(escort) = &mut self.escort {
+                    if event.action_params[1] != 0 {
+                        escort.quest_id = event.action_params[1];
+                    }
+                    escort.despawn_ms = event.action_params[0];
+                }
+                if self.escort.is_none()
+                    && event.action_params[2] == 0
+                    && event.action_params[0] > 0
+                {
+                    lifetimes::schedule_despawn(ctx.world, ctx.me, event.action_params[0], 0, true);
+                }
+                self.stop_path(ctx, event.action_params[2] != 0);
+            }
+            ACTION_WP_START => self.start_path(ctx, event, invoker, targets),
+            ACTION_WP_PAUSE => self.pause_path(ctx, event.action_params[0]),
+            ACTION_WP_RESUME => {
+                if let Some(escort) = &mut self.escort
+                    && escort.pause_ms.is_some()
+                {
+                    escort.pause_ms = Some(1);
+                }
+            }
             _ => {}
         }
-        if event.link != 0 && event.link != event.id {
-            if let Some(linked) = self.events.iter().position(|e| e.id == event.link) {
-                self.process_event(ctx, linked, invoker, 0);
+        true
+    }
+
+    fn start_path(
+        &mut self,
+        ctx: &mut Ctx,
+        event: &SmartEvent,
+        invoker: Option<Entity>,
+        targets: Vec<Entity>,
+    ) {
+        let path_id = event.action_params[1];
+        let path = ctx
+            .world
+            .resource::<SmartScripts>()
+            .2
+            .get(&path_id)
+            .cloned();
+        let Some(path) = path else {
+            warn!(path_id, "SmartAI waypoint path is absent");
+            return;
+        };
+        self.escort = Some(paths::EscortPath {
+            path_id,
+            path: path.clone(),
+            index: 0,
+            pause_ms: None,
+            reached: false,
+            walk: path.walk,
+            repeat: event.action_params[2] != 0,
+            quest_id: event.action_params[3],
+            targets: targets
+                .into_iter()
+                .filter(|&entity| {
+                    ctx.world
+                        .get::<shared::components::Player>(entity)
+                        .is_some()
+                })
+                .collect(),
+            npc_flags: ctx
+                .world
+                .get::<shared::protocol::NpcFlags>(ctx.me)
+                .map_or(0, |flags| flags.0),
+            despawn_ms: event.action_params[4],
+            node_delay_ms: None,
+            range_check_ms: 1000,
+        });
+        super::movement::retain_path_home(ctx.world, ctx.me);
+        self.move_to_waypoint(ctx);
+        if invoker.is_some_and(|entity| {
+            ctx.world
+                .get::<shared::components::Player>(entity)
+                .is_some()
+        }) {
+            if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(ctx.me) {
+                flags.0 = 0;
             }
         }
+    }
+
+    fn set_faction(ctx: &mut Ctx, targets: &[Entity], requested: u32) {
+        for &target in targets {
+            let faction = if requested == 0 {
+                let Some(entry) = ctx
+                    .world
+                    .get::<shared::components::Npc>(target)
+                    .map(|npc| npc.template_id)
+                else {
+                    continue;
+                };
+                let Some(template) = ctx
+                    .world
+                    .resource::<crate::world_data::WorldData>()
+                    .templates
+                    .get(&entry)
+                else {
+                    continue;
+                };
+                u32::from(template.faction)
+            } else {
+                requested
+            };
+            ctx.world
+                .entity_mut(target)
+                .insert(shared::components::UnitFactionTemplate(faction));
+        }
+    }
+
+    fn change_npc_flags(ctx: &mut Ctx, targets: &[Entity], event: &SmartEvent) {
+        for &target in targets {
+            if let Some(mut flags) = ctx.world.get_mut::<shared::protocol::NpcFlags>(target) {
+                let mask = u64::from(event.action_params[0]);
+                flags.0 = match event.action_type {
+                    ACTION_SET_NPC_FLAG => mask,
+                    ACTION_ADD_NPC_FLAG => flags.0 | mask,
+                    ACTION_REMOVE_NPC_FLAG => flags.0 & !mask,
+                    _ => unreachable!(),
+                };
+            }
+        }
+    }
+
+    fn stop_path(&mut self, ctx: &mut Ctx, failed: bool) {
+        let Some(escort) = &self.escort else {
+            return;
+        };
+        let node_id = escort.path.nodes[escort.index].id;
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<super::movement::PointMovement>();
+        self.process_events_for(ctx, EVENT_WAYPOINT_STOPPED, None, node_id);
+        self.finish_path(ctx, failed);
+    }
+
+    fn pause_path(&mut self, ctx: &mut Ctx, duration_ms: u32) {
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        if escort.pause_ms.is_some() {
+            return;
+        }
+        escort.pause_ms = Some(duration_ms);
+        let node_id = escort.path.nodes[escort.index].id;
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<super::movement::PointMovement>();
+        self.process_events_for(ctx, EVENT_WAYPOINT_PAUSED, None, node_id);
+    }
+
+    fn update_path(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        if self.update_node_delay(ctx, diff_ms) {
+            return;
+        }
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        let Some(timer) = escort.pause_ms else {
+            return;
+        };
+        if timer == 0 || ctx.is_engaged() {
+            return;
+        }
+        if timer > diff_ms {
+            escort.pause_ms = Some(timer - diff_ms);
+            return;
+        }
+        escort.pause_ms = None;
+        let node_id = escort.path.nodes[escort.index].id;
+        let reached = escort.reached;
+        self.process_events_for(ctx, EVENT_WAYPOINT_RESUMED, None, node_id);
+        if reached {
+            if self
+                .escort
+                .as_ref()
+                .is_some_and(|escort| escort.node_delay_ms.is_none())
+            {
+                self.advance_waypoint(ctx);
+            }
+        } else {
+            self.move_to_waypoint(ctx);
+        }
+    }
+
+    fn advance_waypoint(&mut self, ctx: &mut Ctx) {
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        if escort.index + 1 >= escort.path.nodes.len() {
+            self.finish_path(ctx, false);
+            return;
+        }
+        escort.index += 1;
+        escort.reached = false;
+        self.move_to_waypoint(ctx);
+    }
+
+    fn move_to_waypoint(&self, ctx: &mut Ctx) {
+        let Some(escort) = &self.escort else {
+            return;
+        };
+        let Some(node) = escort.path.nodes.get(escort.index) else {
+            return;
+        };
+        ctx.set_walk(ctx.me, escort.walk);
+        ctx.move_point(ctx.me, node.id, node.position);
     }
 }
 
@@ -466,9 +978,10 @@ impl CreatureAi for SmartAi {
         self.publish_timers(ctx, true);
     }
 
-    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
-        if let Some(boss) = &mut self.boss {
-            boss.just_died(ctx);
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        self.process_events_for(ctx, EVENT_EVADE, None, 0);
+        if self.escort.is_none() {
+            self.reset(ctx);
         }
     }
 
@@ -476,12 +989,64 @@ impl CreatureAi for SmartAi {
         if let Some(boss) = &mut self.boss {
             boss.just_summoned(ctx, summon);
         }
+        self.process_events_for(ctx, EVENT_SUMMONED_UNIT, Some(summon), 0);
     }
 
-    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+    fn is_summoned_by(&mut self, ctx: &mut Ctx, summoner: Entity) {
+        self.process_events_for(ctx, EVENT_JUST_SUMMONED, Some(summoner), 0);
+    }
+
+    fn summoned_creature_despawn(&mut self, ctx: &mut Ctx, summon: Entity) {
         if let Some(boss) = &mut self.boss {
             boss.summoned_creature_despawn(summon);
         }
+        self.process_events_for(ctx, EVENT_SUMMON_DESPAWNED, Some(summon), 0);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, killer: Option<Entity>) {
+        bevy::log::debug!(creature = ?ctx.me, ?killer, position = ?ctx.position(), path = ?self.escort.as_ref().map(|path| path.path_id), driver = "escort_death", "creature died");
+        if let Some(boss) = &mut self.boss {
+            boss.just_died(ctx);
+        }
+        self.finish_path(ctx, true);
+        self.process_events_for(ctx, EVENT_DEATH, killer, 0);
+    }
+
+    fn movement_inform(&mut self, ctx: &mut Ctx, kind: super::MotionType, node_id: u32) {
+        if kind != super::MotionType::Point {
+            return;
+        }
+        let Some(escort) = &mut self.escort else {
+            return;
+        };
+        if escort.path.nodes[escort.index].id != node_id {
+            return;
+        }
+        escort.reached = true;
+        let node = &escort.path.nodes[escort.index];
+        escort.node_delay_ms = (node.delay_ms > 0).then_some(node.delay_ms);
+        if let Some(orientation) = node.orientation {
+            if let Some(mut rotation) = ctx.world.get_mut::<shared::components::Rotation>(ctx.me) {
+                rotation.y = orientation + std::f32::consts::FRAC_PI_2;
+            }
+        }
+        self.process_events_for(ctx, EVENT_WAYPOINT_REACHED, None, node_id);
+        self.update_timed_list(ctx, 0);
+        if self
+            .escort
+            .as_ref()
+            .is_some_and(|escort| escort.pause_ms.is_none() && escort.node_delay_ms.is_none())
+        {
+            self.advance_waypoint(ctx);
+        }
+    }
+
+    fn quest_accepted(&mut self, ctx: &mut Ctx, player: Entity, quest_id: u32) {
+        self.process_events_for(ctx, EVENT_ACCEPTED_QUEST, Some(player), quest_id);
+    }
+
+    fn quest_rewarded(&mut self, ctx: &mut Ctx, player: Entity, quest_id: u32) {
+        self.process_events_for(ctx, EVENT_REWARD_QUEST, Some(player), quest_id);
     }
 
     fn spell_hit(&mut self, ctx: &mut Ctx, caster: Entity, spell_id: u32) {
@@ -495,7 +1060,16 @@ impl CreatureAi for SmartAi {
         if ctx.is_engaged() {
             self.timeline_age_ms = self.timeline_age_ms.saturating_add(diff_ms);
         }
+        if self.fail_out_of_range_escort(ctx, diff_ms) {
+            return;
+        }
+        self.update_path(ctx, diff_ms);
+        self.update_follow(ctx, diff_ms);
+        self.update_timed_list(ctx, diff_ms);
         for index in 0..self.events.len() {
+            if self.tick_summon_hook_cooldown(index, diff_ms) {
+                continue;
+            }
             let event = &self.events[index];
             if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
                 || !self.in_phase(event.phase_mask)

@@ -18,6 +18,19 @@ const BASE_RUN_SPEED: f32 = 7.0;
 #[derive(Component, Debug, Clone, Copy)]
 pub struct Walking;
 
+/// An escort owns idle movement even while its point generator is paused.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct ScriptedPath {
+    pub home: Position,
+}
+
+pub(crate) fn retain_path_home(world: &mut World, creature: Entity) {
+    let Some(home) = world.get::<Position>(creature).copied() else {
+        return;
+    };
+    world.entity_mut(creature).insert(ScriptedPath { home });
+}
+
 /// A running `PointMovementGenerator`.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct PointMovement {
@@ -54,24 +67,50 @@ pub(crate) fn point_movement_system(world: &mut World) {
         &mut Position,
         &PointMovement,
         &SpawnPoint,
+        Option<&crate::creature_ai::CreatureState>,
+        Option<&mut ScriptedPath>,
         Has<Walking>,
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
         Option<&mut MovementSpeed>,
     ), Without<DeathState>>();
-    for (entity, mut position, movement, spawn, walking, rotation, motion, replicated_speed) in
-        movers.iter_mut(world)
+    for (
+        entity,
+        mut position,
+        movement,
+        spawn,
+        state,
+        escort,
+        walking,
+        rotation,
+        motion,
+        replicated_speed,
+    ) in movers.iter_mut(world)
     {
+        if escort.is_some() && state.is_some_and(|state| !state.is_idle()) {
+            bevy::log::debug!(
+                ?entity,
+                ?state,
+                ?movement,
+                driver = "point_suspended",
+                "combat or home movement owns the tick"
+            );
+            continue;
+        }
         let (speed, gait) = if walking {
             (spawn.speed_walk * BASE_WALK_SPEED, CreatureMotion::Walk)
         } else {
             (spawn.speed_run * BASE_RUN_SPEED, CreatureMotion::Run)
         };
         let (next, reached) = step_toward(*position, movement.target, speed * dt);
+        bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, ?state, reached, driver = "point", "scripted movement");
         let facing = crate::creature_ai::facing_along(next.x - position.x, next.z - position.z);
         if *position != next {
             *position = next;
             moved.push(entity);
+        }
+        if let Some(mut escort) = escort {
+            escort.home = next;
         }
         if reached {
             arrived.push((entity, movement.id));
