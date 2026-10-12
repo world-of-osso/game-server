@@ -131,7 +131,7 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 4511);
+    assert_eq!(union.len(), 4515);
 }
 
 #[test]
@@ -321,4 +321,27 @@ fn dungeonach_criteria_progress_persists_across_database_reopen() {
     let (again, migrated) = crate::achievement::decode_saved_achievement_state(&bytes);
     assert!(!migrated);
     assert_eq!(again, old);
+}
+
+#[test]
+fn achievements_criteria_pet_battle_points_sum_earned_category_achievements_to_a_fixed_point() {
+    let catalog = catalog();
+    let mut account = PlayerAchievementState::default();
+    // Nineteen real 10-point Pet Battles achievements plus Master Pet Battler6462 (5):
+    // 195 points; Level 10 (6, General) is outside the category.
+    account.earned_ids.extend([
+        15, 1017, 1248, 1250, 2516, 5875, 5876, 5877, 6560, 6570, 6582, 6583, 6590, 6592, 6599,
+        6607, 6608, 6610, 6611, 6462, 6,
+    ]);
+    catalog.grant_completed(&mut account, None, 1, true);
+    // Trainer Extraordinaire7482 (100) adds its own 5 points: 200 earns Battle Master7483,
+    // whose 5 more make 205; Ultimate Trainer6600 (300) stays open.
+    assert!(account.earned_ids.contains(&7482));
+    assert!(account.earned_ids.contains(&7483));
+    assert!(!account.earned_ids.contains(&6600));
+    assert_eq!(account.criteria_progress.get(&21256), Some(&205));
+    let mut fresh = PlayerAchievementState::default();
+    fresh.earned_ids.insert(6);
+    catalog.grant_completed(&mut fresh, None, 1, true);
+    assert_eq!(fresh.criteria_progress.get(&21256), None);
 }
