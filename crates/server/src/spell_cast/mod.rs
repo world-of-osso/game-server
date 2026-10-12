@@ -1312,6 +1312,13 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    if spell.id == shared::battleground::ALTERAC_OPENING_SPELL
+        && explicit.is_some_and(|target| crate::pvp::is_alterac_banner(world, target))
+    {
+        let target = explicit.expect("Alterac Opening has an explicit banner");
+        crate::pvp::check_banner_target(world, caster, target)?;
+        return Ok(Some(target));
+    }
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         crate::pvp::check_azerite_target(world, caster, target)?;
