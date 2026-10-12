@@ -907,3 +907,5 @@ Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [
 ## 2026-10-11 — profession specialization runtime
 
 Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.
+
+- 2026-10-12: [Release tick profiling](investigations/server-tick-lag.md#release-catalog-copy-regression-2026-10-12): idle objective tick copied the full gameobject catalog; restrict reads to mapped match flag homes, preserving gameplay.
