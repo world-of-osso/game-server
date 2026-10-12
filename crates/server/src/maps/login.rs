@@ -25,6 +25,8 @@ pub(crate) struct LoginMaps<'w> {
     clock: Option<Res<'w, super::ServerClock>>,
     world_data: Option<Res<'w, WorldData>>,
     objects: Option<Res<'w, GameObjectSpawns>>,
+    housing: Option<Res<'w, crate::housing::HousingAvailability>>,
+    database: Option<Res<'w, crate::persistence::GameDatabase>>,
 }
 
 /// Where a character enters the world.
@@ -49,6 +51,7 @@ impl LoginMaps<'_> {
         map_id: u32,
         position: Position,
     ) -> Option<LoginPlace> {
+        self.restore_housing_admission(map_id, character_id)?;
         let entrant: InstanceEntrant = super::transfer::entrant_for(
             self.groups.as_deref(),
             character_id,
@@ -78,6 +81,63 @@ impl LoginMaps<'_> {
                 self.place(resolved.map, back.bevy_position())
             }
         }
+    }
+
+    fn restore_housing_admission(&mut self, map_id: u32, character_id: u64) -> Option<()> {
+        if self
+            .store
+            .map(map_id)
+            .is_some_and(|entry| entry.instance_type == super::store::InstanceType::House)
+        {
+            let database = self.database.as_ref()?;
+            let location = match crate::persistence::housing_store::load_house_location(
+                &database.db,
+                character_id,
+            ) {
+                Ok(location) => location,
+                Err(message) => {
+                    error!("Restore character {character_id} visited house: {message}");
+                    return None;
+                }
+            };
+            self.instances
+                .authorize_housing_entry(&self.store, map_id, location.house_id, character_id)
+                .ok()?;
+            return Some(());
+        }
+        let housing = self
+            .store
+            .map(map_id)
+            .is_some_and(|entry| entry.instance_type == super::store::InstanceType::Neighborhood);
+        if !housing {
+            return Some(());
+        }
+        let database = self.database.as_ref()?;
+        let location = match crate::persistence::housing_store::load_neighborhood_location(
+            &database.db,
+            character_id,
+        ) {
+            Ok(Some(location)) if location.map_id == map_id => location,
+            Ok(_) => {
+                warn!(
+                    "Character {character_id} has no persisted admission to neighborhood map {map_id}"
+                );
+                return None;
+            }
+            Err(message) => {
+                error!("Restore character {character_id} housing admission: {message}");
+                return None;
+            }
+        };
+        self.instances
+            .authorize_housing_entry(
+                &self.store,
+                map_id,
+                u64::from(location.neighborhood_id),
+                character_id,
+            )
+            .ok()?;
+        Some(())
     }
 
     fn is_dungeon(&self, map_id: u32) -> bool {
@@ -112,6 +172,9 @@ impl LoginMaps<'_> {
             self.objects.as_deref(),
             content,
         );
+        if let Some(housing) = &self.housing {
+            crate::housing::spawn_neighborhood_objects(commands, housing, resolved.map);
+        }
     }
 
     fn place(&self, map: InMap, position: Position) -> Option<LoginPlace> {

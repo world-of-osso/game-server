@@ -121,6 +121,7 @@ struct Shop<'w, 's> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
+    quests: Option<Res<'w, crate::quest_data::QuestDb>>,
     economy_config: Option<Res<'w, crate::economy::Config>>,
     economy: Option<ResMut<'w, crate::economy::Economy>>,
     stock: ResMut<'w, VendorStock>,
@@ -548,6 +549,13 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
         mount_costs::persist_purchase(shop, customer, model, wallet);
     } else {
         shop.save(customer.character_id, model);
+    }
+    if let Some(quests) = &shop.quests {
+        let mut log =
+            crate::persistence::quest_store::load_quest_log(shop.db(), customer.character_id);
+        if crate::housing_quests::credit_acquired_item(quests, &mut log, slot.item_id, items) {
+            crate::persistence::quest_store::save_quest_log(shop.db(), customer.character_id, &log);
+        }
     }
     if slot.maxcount > 0 {
         shop.stock
