@@ -156,18 +156,29 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
         roll: -0.4,
         scale: 1.25,
     };
-    let updated = h.housing_request(
-        &owner,
-        HousingCommand::TransformDecor {
-            house_id,
-            instance_id,
-            transform,
-        },
-    );
-    assert_eq!(updated.error, None);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<HousingRequest>>(owner.connection)
+        .unwrap()
+        .send::<HousingChannel>(HousingRequest {
+            request_id: 42,
+            command: HousingCommand::TransformDecor {
+                house_id,
+                instance_id,
+                transform,
+            },
+        });
+    let mut updated = Vec::new();
     let mut observed = Vec::new();
     for _ in 0..6 {
         h.advance(1);
+        updated.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<HousingReply>>(owner.connection)
+                .unwrap()
+                .receive(),
+        );
         observed.extend(
             h.app
                 .world_mut()
@@ -176,6 +187,8 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
                 .receive(),
         );
     }
+    assert_eq!(updated.len(), 1);
+    assert_eq!(updated[0].error, None);
     assert_eq!(observed.len(), 1);
     assert_eq!(
         observed[0].state.layout.as_ref().unwrap().decor[0].transform,
