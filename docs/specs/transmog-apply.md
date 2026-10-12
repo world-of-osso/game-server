@@ -10,6 +10,7 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - [x] Charge authentic locally derivable target cost atomically with per-item appearance modifiers and binding; original appearance restoration is free.
 - [x] Replicate self/observer equipment appearance and preserve through relog and gear swaps.
 - [ ] Permit hide options only for Retail-supported slots; every-slot hide policy is not certified by the bounded weapon/set fixture.
+- [x] Account outfit icons persist the player's IconSelector FileDataID on save/edit. `transmog_account_outfits_schema` version 1 atomically migrates all unversioned JSON rows, preserving names, choices and illusions with explicitly empty icon 0. Unknown versions fail; no serde-default or guessed icon fallback.
 - [x] Account-scoped saved outfits use authored automatically awarded entries2/3. Save validates appearance choices against the existing paid slot list and illusions against authored weapon slots/collected choices, but never changes gold, binding or equipped visuals. Loading stages choices; paid Apply remains the unchanged application path.
 
 - [x] Available sets are class-usable, condition-free sets with a collected member; each carries one primary appearance per transmog slot (collected member first; TrinityCore CollectionMgr::IsSetCompleted grouping). Members missing from world.db content_item are omitted, never invented.
