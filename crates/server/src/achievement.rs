@@ -417,6 +417,15 @@ pub(crate) fn record_player_death(world: &mut World, player: Entity) {
     );
 }
 
+/// TC Player::EnvironmentalDamage credits the actual lethal environmental type.
+pub(crate) fn record_environmental_death(world: &mut World, player: Entity, kind: u32) {
+    record_criteria_event(
+        world,
+        player,
+        CriteriaEvent::DieFromEnvironmentalDamage(kind),
+    );
+}
+
 /// TC Unit::Kill uses the actual lethal unit, not a previous nonlethal LastDamager.
 pub(crate) fn record_player_killed_by(world: &mut World, player: Entity, killer: Entity) {
     if world.get::<Player>(player).is_none() {
