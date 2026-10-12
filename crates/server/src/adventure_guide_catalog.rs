@@ -19,7 +19,7 @@ pub(crate) struct Activity {
     #[serde(rename = "Supersedes")]
     pub supersedes: u32,
     #[serde(rename = "Priority")]
-    pub priority: u32,
+    pub priority: i32,
 }
 #[derive(Debug, Deserialize)]
 struct Suggestion {
