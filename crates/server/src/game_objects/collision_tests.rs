@@ -83,6 +83,11 @@ fn arena_live_walls_follow_waterfall_state_and_empyrean_despawn_per_copy() {
             map_id,
             instance_id: 787,
         };
+        // Dalaran's source spawn is initially inactive; activate its hazard collision.
+        app.world_mut()
+            .entity_mut(*entity)
+            .insert(GameObjectCollision(true));
+        app.world_mut().run_schedule(FixedUpdate);
         let data = app.world().resource::<GroundMap>().data_dir().to_path_buf();
         let (start, end) = wall_segment(spawn, &data);
         assert!(
