@@ -99,7 +99,7 @@ pub(super) fn refresh_amounts(world: &mut World) {
                 .expect("collected mastery aura effect")
                 .amount = update.amount;
         }
-        super::stat_mods::recompute(world, unit);
+        super::auras_changed(world, unit);
         crate::spell_cast::mark_dirty(world, unit);
     }
 }

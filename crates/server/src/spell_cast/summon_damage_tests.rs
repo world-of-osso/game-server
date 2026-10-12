@@ -156,7 +156,8 @@ fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
 
 #[test]
 fn class_completeness_native_mastery_summon_bonus_tracks_real_owner_stat_changes() {
-    let mut h = damage_harness(&[BEAST_MASTERY, FIREBALL], 3, true);
+    const ELEMENTAL_BLAST_MASTERY: u32 = 173_184;
+    let mut h = damage_harness(&[BEAST_MASTERY, FIREBALL, ELEMENTAL_BLAST_MASTERY], 3, true);
     let source = world_db().unwrap();
     let conn = rusqlite::Connection::open_with_flags(
         &source.powers_db,
@@ -180,14 +181,15 @@ fn class_completeness_native_mastery_summon_bonus_tracks_real_owner_stat_changes
     let expected = (DAMAGE * (1.0 + stats.mastery_pct / 100.0)).round();
     assert!(expected > DAMAGE);
     assert_eq!(spell_loss(&mut h, pet, false), expected);
-    let mut modifiers = h
-        .app
-        .world()
-        .get::<crate::stats::StatModifiers>(owner)
-        .cloned()
-        .unwrap_or_default();
-    modifiers.mastery_points += 4.0;
-    h.app.world_mut().entity_mut(owner).insert(modifiers);
+    // This native318 child explicitly multiplies its points by a mastery coefficient
+    // in its tooltip; no Lycara points/percent conversion is inferred.
+    super::cast_triggered(
+        h.app.world_mut(),
+        owner,
+        ELEMENTAL_BLAST_MASTERY,
+        Some(owner),
+        0,
+    );
     h.advance(4);
     let stats = h
         .app
