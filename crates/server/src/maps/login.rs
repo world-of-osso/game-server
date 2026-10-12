@@ -173,7 +173,7 @@ impl LoginMaps<'_> {
             content,
         );
         if let Some(housing) = &self.housing {
-            crate::housing::spawn_cornerstones(commands, housing, resolved.map);
+            crate::housing::spawn_neighborhood_objects(commands, housing, resolved.map);
         }
     }
 

@@ -23,6 +23,7 @@ pub(crate) struct HousingCatalog {
     neighborhoods: BTreeMap<u32, Neighborhood>,
     plots: BTreeMap<u32, HousingPlot>,
     cornerstones: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
+    bulletin_boards: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
     home_entry: Option<WorldLocation>,
 }
 
@@ -48,6 +49,7 @@ impl HousingCatalog {
             neighborhoods,
             plots,
             cornerstones: BTreeMap::new(),
+            bulletin_boards: BTreeMap::new(),
             home_entry: read_rows(db, "NeighborhoodMap")?
                 .into_iter()
                 .find(|(id, _)| *id == 7)
@@ -60,7 +62,9 @@ impl HousingCatalog {
                 })
                 .transpose()?,
         };
-        catalog.cornerstones = cornerstones::read_cornerstones(db, &catalog)?;
+        let objects = cornerstones::read_objects(db)?;
+        catalog.cornerstones = cornerstones::read_cornerstones(db, &catalog, &objects)?;
+        catalog.bulletin_boards = cornerstones::read_bulletin_boards(db, &catalog, &objects)?;
         Ok(catalog)
     }
 
@@ -122,6 +126,21 @@ impl HousingCatalog {
 
     pub(crate) fn cornerstone_plot(&self, entry: u32) -> Option<u32> {
         self.cornerstones.get(&entry).map(|(plot, _)| *plot)
+    }
+
+    /// Cornerstones and bulletin boards spawned in every neighborhood copy.
+    pub(crate) fn neighborhood_objects(&self) -> Vec<crate::game_objects::GameObjectSpawn> {
+        self.cornerstones
+            .values()
+            .chain(self.bulletin_boards.values())
+            .map(|(_, spawn)| spawn.clone())
+            .collect()
+    }
+
+    pub(crate) fn bulletin_board_neighborhood(&self, entry: u32) -> Option<u32> {
+        self.bulletin_boards
+            .get(&entry)
+            .map(|(neighborhood, _)| *neighborhood)
     }
 
     pub(crate) fn neighborhood(&self, id: u32) -> Result<&Neighborhood, String> {
