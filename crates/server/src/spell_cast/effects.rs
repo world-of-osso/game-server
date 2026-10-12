@@ -593,7 +593,7 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         effect.variance,
     ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
-    deal_damage(world, ctx, target, amount, crit, false);
+    deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
@@ -602,7 +602,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let base =
         (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
-    deal_damage(world, ctx, target, amount, crit, false);
+    deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 /// 31 WEAPON_PERCENT_DAMAGE: BasePoints% of a weapon hit.
@@ -610,7 +610,7 @@ fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
     let base =
         weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
-    deal_damage(world, ctx, target, amount, crit, false);
+    deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLogEvent {
@@ -671,7 +671,42 @@ pub fn deal_damage(
     crit: bool,
     periodic: bool,
 ) {
-    deal_damage_and_report(world, ctx, target, amount, crit, periodic, false);
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source: false,
+        effect: None,
+    };
+    deal_damage_and_report(world, ctx, target, damage);
+}
+
+pub(crate) fn deal_effect_damage(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+) {
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source: false,
+        effect: Some(effect),
+    };
+    deal_damage_and_report(world, ctx, target, damage);
+}
+
+struct DamageInput<'a> {
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+    resolved_source: bool,
+    /// Authored effect for native damage; script/copy amounts carry no effect selector.
+    effect: Option<&'a SpellEffect>,
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
@@ -679,15 +714,22 @@ pub fn deal_damage(
 pub(crate) fn deal_leech(
     world: &mut World,
     ctx: &EffectCtx,
+    effect: &SpellEffect,
     target: Entity,
     amount: f32,
-    multiplier: f32,
     crit: bool,
     periodic: bool,
 ) {
-    let dealt = deal_damage_and_report(world, ctx, target, amount, crit, periodic, false);
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source: false,
+        effect: Some(effect),
+    };
+    let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
-        let healing = (dealt * multiplier).max(0.0).round();
+        let healing = (dealt * effect.amplitude).max(0.0).round();
         apply_resolved_heal(world, ctx, ctx.caster, healing, false, periodic);
     }
 }
@@ -698,23 +740,34 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
         effect.variance,
     ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
-    deal_leech(world, ctx, target, amount, effect.amplitude, crit, false);
+    deal_leech(world, ctx, effect, target, amount, crit, false);
 }
 
 /// A named copy has already consumed the source's damage modifiers and crit.
 pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
-    deal_damage_and_report(world, ctx, target, amount, false, false, true);
+    let damage = DamageInput {
+        amount,
+        crit: false,
+        periodic: false,
+        resolved_source: true,
+        effect: None,
+    };
+    deal_damage_and_report(world, ctx, target, damage);
 }
 
 fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
-    amount: f32,
-    crit: bool,
-    periodic: bool,
-    resolved_source: bool,
+    damage: DamageInput,
 ) -> f32 {
+    let DamageInput {
+        amount,
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+    } = damage;
     if !super::targets::is_alive(world, target) {
         return 0.0;
     }
@@ -746,8 +799,18 @@ fn deal_damage_and_report(
         * taken)
         .max(0.0)
         .round();
+    let amount = if periodic {
+        amount
+    } else {
+        crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
+    };
     let amount = if reduced_by_armor(ctx.spell) {
         armor_reduced(world, ctx.caster, target, amount)
+    } else {
+        amount
+    };
+    let amount = if periodic {
+        crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
         amount
     };

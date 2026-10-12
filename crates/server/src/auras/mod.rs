@@ -14,6 +14,7 @@
 //! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
+pub(crate) mod area_avoidance;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
