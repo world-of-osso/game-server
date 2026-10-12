@@ -605,10 +605,17 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
         if logged.0.insert((aura.spell_id, effect.aura_type)) {
-            warn!(
-                "Spell {}: aura type {} has no handler; tracked only",
-                aura.spell_id, effect.aura_type
-            );
+            if linked::is_linked(effect.aura_type) {
+                warn!(
+                    "Spell {}: aura type {} nonzero linked amount {} for child {} remains a source gap; tracked only",
+                    aura.spell_id, effect.aura_type, effect.amount, effect.trigger_spell
+                );
+            } else {
+                warn!(
+                    "Spell {}: aura type {} has no handler; tracked only",
+                    aura.spell_id, effect.aura_type
+                );
+            }
         }
     }
 }
