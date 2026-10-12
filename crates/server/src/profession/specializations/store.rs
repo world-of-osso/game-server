@@ -1,5 +1,5 @@
 use super::{SpecializationCommit, SpecializationState};
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
 
 const STATES: TableDefinition<u64, &[u8]> = TableDefinition::new("profession_specializations");
 
