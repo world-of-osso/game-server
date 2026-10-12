@@ -3950,7 +3950,15 @@ fn toyfx16_no_trap_cooking_fires_spawn_with_authored_identity_and_expiry() {
         let lifetime = world.get::<SummonedObject>(*object).unwrap();
         assert_eq!(lifetime.owner, h.caster);
         assert_eq!(lifetime.spell_id, spell);
-        let source_duration = store.get(spell).unwrap().duration.unwrap().duration_ms;
+        let source_duration = store
+            .get(spell)
+            .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
+            .duration
+            .unwrap()
+            .duration_ms;
         assert!(source_duration > 0);
         let remaining = lifetime.expires_at.unwrap() - crate::spell_cast::now(world);
         assert!(remaining > f64::from(source_duration / 1000) - 10.0);
