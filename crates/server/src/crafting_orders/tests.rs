@@ -143,8 +143,13 @@ fn complete_order(kind: u8) {
         req.recipient = Some("Worker".into());
     }
     let id = orders::place(h.app.world_mut(), h.player, req, now).unwrap();
-    assert_eq!(
+    assert!(
         orders::browse(h.app.world(), worker, 197, kind, false, now)
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        orders::browse(h.app.world(), worker, 2540, kind, false, now)
             .unwrap()
             .len(),
         1
@@ -180,7 +185,7 @@ fn crafting_orders_guild_and_personal_browse_and_claim_restrict_identity() {
     persistence::set_character_guild_by_id(db, worker_id, 7, "Guild").unwrap();
     let id = orders::place(h.app.world_mut(), h.player, request(1), now).unwrap();
     assert!(
-        orders::browse(h.app.world(), outsider, 197, 1, false, now)
+        orders::browse(h.app.world(), outsider, 2540, 1, false, now)
             .unwrap()
             .is_empty()
     );
@@ -204,12 +209,12 @@ fn crafting_orders_guild_and_personal_browse_and_claim_restrict_identity() {
     req.recipient = Some("wOrKeR".into());
     let personal = orders::place(h.app.world_mut(), h.player, req, now).unwrap();
     assert!(
-        orders::browse(h.app.world(), outsider, 197, 2, false, now)
+        orders::browse(h.app.world(), outsider, 2540, 2, false, now)
             .unwrap()
             .is_empty()
     );
     assert_eq!(
-        orders::browse(h.app.world(), worker, 197, 2, false, now)
+        orders::browse(h.app.world(), worker, 2540, 2, false, now)
             .unwrap()
             .len(),
         1
