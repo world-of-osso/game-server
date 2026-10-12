@@ -27,6 +27,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | a5de3082 / shared00d33e7 | 2897 | 4748 | 182 | Native aura429/raw mastery, all7827 memberships, exit0, 745.53s |
 | 578c18d7 / shared00d33e7 | 2901 | 4744 | 182 | Native434249 ready-time credit, all7827 memberships, exit0, 716.33s |
 | 36758fce / shared00d33e7 | 2905 | 4740 | 182 | Native429433 counters/charged missile modifiers, all7827 memberships, exit0, 602.80s |
+| 116d3eff / shared00d33e7 | 2911 | 4734 | 182 | Native467 bonus-stat negation, all7827 memberships, exit0, 606.66s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -145,7 +146,7 @@ Native aura467 modifies bonus stats without erasing create/base stats. Pinned TC
 
 Native162697/162698/162699/162701/162702/162700 cover Agility DPS, Strength DPS, Intellect DPS, Intellect healer, Strength tank and Agility tank. They suppress authored off-stat bonuses while preserving base stats and the replicated UnitStats sheet. Native13365/13366/13372 provide real five-point flat buffs, not invented coefficients.
 
-`5c8f9734` genuine RED2: Hunter strength102 versus97 and intellect135 versus130. `b56afb05` fixes the shared stat fold. At `2fa57f74`, four controls pass, including all six native spec categories, removal, gear/flat/total-percent ordering and unselected/spirit fields; adjacent stats/itemstats21/21 and summon-damage4/4 pass. Pure calculator cases use explicit fixture operands, not additional production coefficients. Logs: `bonus-stat-{red,green}.log`, `bonus-stat-adjacent-*.log`. No new live or legal-build certificate.
+`5c8f9734` genuine RED2: Hunter strength102 versus97 and intellect135 versus130. `b56afb05` fixes the shared stat fold. At `2fa57f74`, four controls pass, including all six native spec categories, removal, gear/flat/total-percent ordering and unselected/spirit fields; adjacent stats/itemstats21/21 and summon-damage4/4 pass. Pure calculator cases use explicit fixture operands, not additional production coefficients. Logs: `bonus-stat-{red,green}.log`, `bonus-stat-adjacent-*.log`. No new live or legal-build certificate. Batch21 census at `116d3eff` records all7827 memberships:2911 working/4734 partial/182 broken. Thirty-seven memberships gain the467 behavior; six tank memberships move to working, while31 DPS/healer memberships retain the separate466 bonus-armor gap.
 
 ## Retained boundaries
 
