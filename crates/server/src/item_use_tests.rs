@@ -137,6 +137,89 @@ fn achievements_criteria_item_use_counts_accepted_native_uses_not_refusals() {
     );
 }
 
+#[test]
+fn achievements_criteria_item_use_delayed_cast_credits_only_execution() {
+    let mut eater = eater(&[WATER], 2).expect("real water data");
+    let mut spell = eater
+        .h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(WATER_DRINK)
+        .unwrap()
+        .clone();
+    // Explicit timing fixture exercises a queued item cast with an authentic item/criterion.
+    spell.misc.as_mut().unwrap().cast_time = Some(crate::spell_info::SpellCastTime {
+        base_ms: 1000,
+        minimum_ms: 1000,
+    });
+    eater
+        .h
+        .app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    let player = eater.h.caster;
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 1);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    crate::spell_cast::cancel_cast(eater.h.app.world_mut(), player);
+    eater.h.advance(40);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 0);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    eater.h.advance(30);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+}
+
 struct Eater {
     h: Harness,
     character_id: u64,
