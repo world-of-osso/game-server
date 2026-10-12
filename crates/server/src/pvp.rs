@@ -28,14 +28,17 @@ mod pvp_war_mode;
 mod pvp_entry;
 #[path = "pvp_invites.rs"]
 mod pvp_invites;
+#[path = "pvp_silvershard.rs"]
+mod pvp_silvershard;
 use pvp_invites::process_battleground_invitation_responses;
+pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
 use pvp_leave::process_battleground_leave_requests;
 #[path = "pvp_objective.rs"]
 mod pvp_objective;
-pub(crate) use pvp_objective::use_battleground_flag;
+pub(crate) use pvp_objective::use_battleground_object;
 
 const HONOR_CAP: u32 = 15_000;
 
@@ -121,9 +124,42 @@ struct InvitedBattleground {
     accepted: BTreeSet<u64>,
     map: Option<crate::maps::InMap>,
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
-    flags: shared::battleground::FlagObjective,
+    flags: Option<shared::battleground::FlagBattle>,
+    nodes: Option<shared::battleground::NodeBattle>,
+    eye: Option<shared::battleground::EyeBattle>,
+    kotmogu: Option<shared::battleground::KotmoguBattle>,
+    silvershard: Option<pvp_silvershard::CartRuntime>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
+}
+
+impl InvitedBattleground {
+    fn flag_objective(&self) -> shared::battleground::FlagObjective {
+        self.flags
+            .as_ref()
+            .map(|battle| battle.flags.clone())
+            .unwrap_or_default()
+    }
+
+    fn world_states(&self) -> Vec<(u32, i32)> {
+        if let Some(nodes) = &self.nodes {
+            return nodes.world_states(&self.instance);
+        }
+        if let Some(eye) = &self.eye {
+            return eye.world_states(&self.instance);
+        }
+        if let Some(carts) = &self.silvershard {
+            return carts.battle.world_states(&self.instance);
+        }
+        if let Some(orbs) = &self.kotmogu {
+            return orbs.world_states(&self.instance);
+        }
+        self.flags
+            .as_ref()
+            .map(|battle| battle.world_states(&self.instance))
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Resource, Default)]
@@ -146,7 +182,14 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
-            flags: Default::default(),
+            flags: shared::battleground::flag_rules(template.map_id)
+                .map(shared::battleground::FlagBattle::new),
+            nodes: shared::battleground::node_rules(template.map_id)
+                .map(shared::battleground::NodeBattle::new),
+            eye: shared::battleground::eye_rules(template.map_id)
+                .map(shared::battleground::EyeBattle::new),
+            kotmogu: (template.map_id == 998).then(shared::battleground::KotmoguBattle::new),
+            silvershard: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },
@@ -562,7 +605,8 @@ fn resolve_battleground_matches(
                 invitation_time_left_secs: None,
                 score_a: invitation.instance.score_a.score,
                 score_b: invitation.instance.score_b.score,
-                flags: invitation.flags.clone(),
+                flags: invitation.flag_objective(),
+                world_states: invitation.world_states(),
                 outcome: invitation.instance.outcome,
                 players: invitation.scoreboard.clone(),
                 honor_reward: None,

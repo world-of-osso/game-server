@@ -71,6 +71,20 @@ def execute(context, checkout_key, project_name, cargo_args, host, **kwargs):
 
 
 class BuildHostTests(unittest.TestCase):
+    def test_los_bake_build_is_explicit_and_does_not_change_default_server_tools(self):
+        result = self.invoke("--bin", "los-bake", "--features", "bake")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        request = json.loads(self.record.read_text())
+        self.assertEqual(request["binary"], "los-bake")
+        self.assertIn("los", request["cargo_args"])
+        self.assertIn("bake", request["cargo_args"])
+        self.assertFalse(request["ran"])
+        result = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        request = json.loads(self.record.read_text())
+        self.assertNotIn("los-bake", request["cargo_args"])
+        self.assertIn("game-server", request["cargo_args"])
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
