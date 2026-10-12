@@ -32,6 +32,8 @@ pub const GEOSET_GROUP_EYES: u16 = 17;
 /// `aliasNext`.
 const SEQUENCE_IN_FILE: u32 = 0x20;
 const SEQUENCE_ALIAS: u32 = 0x40;
+const MD20_COLLISION_INDICES: usize = 0xD8;
+const MD20_COLLISION_NORMALS: usize = 0xE8;
 
 /// The MD20 blob and the chunks around it.
 pub struct M2File<'a> {
@@ -63,7 +65,12 @@ impl<'a> M2File<'a> {
     /// MD20 bounding triangles/vertices (0xD8/0xE0), the authored static collision hull.
     /// No render-mesh substitution: an empty hull does not collide.
     pub fn collision_triangles(&self) -> Result<Vec<[Vec3; 3]>> {
-        let indices = records(self.md20, array_at(self.md20, 0xD8)?, 2, u16_at)?;
+        let indices = records(
+            self.md20,
+            array_at(self.md20, MD20_COLLISION_INDICES)?,
+            2,
+            u16_at,
+        )?;
         let vertices = records(self.md20, array_at(self.md20, 0xE0)?, 12, f32x3_at)?;
         indices
             .as_chunks::<3>()
@@ -83,6 +90,34 @@ impl<'a> M2File<'a> {
                         })
                 };
                 Ok([corner(tri[0])?, corner(tri[1])?, corner(tri[2])?])
+            })
+            .collect()
+    }
+
+    /// Authored collision face normals (MD20 +0xE8), one per bounding triangle.
+    /// Movement uses these placed normals, not render normals or two-sided camera policy.
+    pub fn collision_normals(&self) -> Result<Vec<Vec3>> {
+        let (indices, _) = array_at(self.md20, MD20_COLLISION_INDICES)?;
+        let normals = records(
+            self.md20,
+            array_at(self.md20, MD20_COLLISION_NORMALS)?,
+            12,
+            f32x3_at,
+        )?;
+        if !indices.is_multiple_of(3) || normals.len() != indices / 3 {
+            return Err(format!(
+                "M2 collision has {indices} indices and {} face normals",
+                normals.len()
+            ));
+        }
+        normals
+            .into_iter()
+            .map(|normal| {
+                let normal = super::adt::file_to_bevy(normal);
+                if !normal.is_finite() {
+                    return Err("M2 collision normal is not finite".into());
+                }
+                Ok(normal)
             })
             .collect()
     }
