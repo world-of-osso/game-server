@@ -140,14 +140,36 @@ fn send_initial_achievement_snapshot(world: &mut World) {
 fn load_login_events(world: &World, character: u64, level: u8) -> Vec<CriteriaEvent> {
     let mut events = vec![CriteriaEvent::Login, CriteriaEvent::ReachLevel(level)];
     if let Some(db) = world.get_resource::<GameDatabase>() {
-        events.extend(
-            persistence::quest_store::load_quest_log(&db.db, character)
-                .rewarded
-                .into_iter()
-                .map(CriteriaEvent::CompleteQuest),
-        );
+        let rewarded = persistence::quest_store::load_quest_log(&db.db, character).rewarded;
+        events.extend(rewarded_quest_facts(world, &rewarded, true));
+        events.extend(rewarded.into_iter().map(CriteriaEvent::CompleteQuest));
     }
     events
+}
+
+/// TC GetRewardedQuestCount and the CompleteQuestsInZone login case (CriteriaHandler.cpp
+/// 627-629, 666-678) count only quests that increase rewarded counters.
+fn rewarded_quest_facts(world: &World, rewarded: &[u32], zones: bool) -> Vec<CriteriaEvent> {
+    let Some(quests) = world.get_resource::<crate::quest_data::QuestDb>() else {
+        return Vec::new();
+    };
+    let counted: Vec<_> = rewarded
+        .iter()
+        .filter_map(|id| quests.quests.get(id))
+        .filter(|quest| quest.increases_rewarded_counters())
+        .collect();
+    let mut by_zone = BTreeMap::<u32, u32>::new();
+    for quest in counted.iter().filter(|quest| quest.sort_id > 0 && zones) {
+        *by_zone.entry(quest.sort_id as u32).or_default() += 1;
+    }
+    let count = u32::try_from(counted.len()).expect("rewarded quest count fits u32");
+    std::iter::once(CriteriaEvent::RewardedQuestCount(count))
+        .chain(
+            by_zone
+                .into_iter()
+                .map(|(zone, count)| CriteriaEvent::RewardedQuestsInZone(zone, count)),
+        )
+        .collect()
 }
 
 fn process_level_achievement_updates(world: &mut World) {
@@ -302,7 +324,13 @@ fn detect_explorable_area_bit(world: &mut World, player: Entity) -> Option<u32> 
 
 /// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
 /// never reach this boundary; login reconstructs missed credit from rewarded quests.
-pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32, daily: bool) {
+pub(crate) fn record_quest_reward(
+    world: &mut World,
+    character: u64,
+    quest: u32,
+    daily: bool,
+    money: i32,
+) {
     let owner = world
         .query_filtered::<(Entity, &PlayerLink, &InWorld), With<Authenticated>>()
         .iter(world)
@@ -316,12 +344,38 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32,
     if daily {
         events.push(CriteriaEvent::CompleteDailyQuest);
     }
+    // TC Player.cpp:15211-15216 and 15274-15276.
+    if money > 0 {
+        events.push(CriteriaEvent::MoneyEarnedFromQuesting(money as u64));
+    }
+    let sort = world
+        .get_resource::<crate::quest_data::QuestDb>()
+        .and_then(|quests| quests.quests.get(&quest))
+        .map_or(0, |quest| quest.sort_id);
+    if sort > 0 {
+        events.push(CriteriaEvent::CompleteQuestInZone(sort as u32));
+    }
+    if let Some(db) = world.get_resource::<GameDatabase>() {
+        let rewarded = persistence::quest_store::load_quest_log(&db.db, character).rewarded;
+        events.extend(rewarded_quest_facts(world, &rewarded, false));
+    }
     for &event in &events {
         scenario::record(world, player, event);
         crate::adventure_guide::record(world, player, event);
     }
     if let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) {
         send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+/// Committed credit for the in-world player of `character`; offline characters get none.
+pub(crate) fn record_character_event(world: &mut World, character: u64, event: CriteriaEvent) {
+    let player = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .find_map(|(link, in_world)| (in_world.character_id == character).then_some(link.0));
+    if let Some(player) = player {
+        record_criteria_event(world, player, event);
     }
 }
 
