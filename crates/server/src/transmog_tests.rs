@@ -98,6 +98,62 @@ fn apply(h: &mut Harness, npc: Entity, source: u32) {
 }
 
 #[test]
+fn transmog_catalogue_exposes_authored_sets_outfits_illusions_and_ownership() {
+    use shared::protocol::TransmogCollectionState;
+    let mut h = application_harness();
+    open_service(&mut h);
+    let states = &h.app.world().resource::<Inbox<TransmogState>>().0;
+    let state = states.last().unwrap();
+    let collected = state
+        .catalogue
+        .iter()
+        .find(|entry| entry.source.source_id == SOURCE)
+        .unwrap();
+    assert_eq!(collected.collection, TransmogCollectionState::Collected);
+    assert!(collected.slots.contains(&EquipmentSlot::MainHand));
+    assert!(
+        state
+            .catalogue
+            .iter()
+            .any(|entry| entry.collection == TransmogCollectionState::Uncollected)
+    );
+    assert!(
+        state
+            .catalogue
+            .iter()
+            .any(|entry| entry.collection == TransmogCollectionState::NonCollectable)
+    );
+    let outfit = state
+        .outfit_entries
+        .iter()
+        .find(|entry| entry.id == 2)
+        .unwrap();
+    assert_eq!(
+        (outfit.name.as_str(), outfit.flags, outfit.cost),
+        ("Outfit 1", 35, 0)
+    );
+    let illusion = state.illusions.iter().find(|entry| entry.id == 3).unwrap();
+    assert_eq!(
+        (illusion.enchantment_id, illusion.cost, illusion.collected),
+        (1898, 10000, true)
+    );
+    assert!(
+        state.outfit_slots.iter().any(|entry| entry.id == 13
+            && entry.slot == EquipmentSlot::MainHand
+            && entry.flags == 3)
+    );
+    assert!(state.outfit_options.iter().any(|entry| entry.id == 1
+        && entry.slot_info_id == 13
+        && entry.name == "One Handed Weapon"));
+    assert!(state.sets.iter().any(|entry| !entry.source_ids.is_empty()));
+    assert_eq!(
+        state.slots[0].sources.len(),
+        1,
+        "paid choices stay collected-only"
+    );
+}
+
+#[test]
 fn transmog_apply_authored_service_updates_display_and_gold_atomically() {
     let mut h = application_harness();
     let npc = h.spawn_real_npc(54442, 3.0);

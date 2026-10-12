@@ -1,4 +1,5 @@
 //! Retail application at an authenticated Transmogrifier. See specs/transmog-apply.md.
+mod data;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use rusqlite::Connection;
@@ -31,6 +32,8 @@ const FISHING_POLE: u8 = 20;
 struct Source {
     view: TransmogSource,
     template: ItemTemplate,
+    collectable: bool,
+    offer: bool,
 }
 
 #[derive(Resource, Default)]
@@ -38,22 +41,31 @@ pub(crate) struct TransmogCatalog {
     sources: HashMap<u32, Source>,
     by_appearance: HashMap<u32, Vec<u32>>,
     prices: HashMap<(ItemDefinitionSource, u32), u64>,
+    catalogue: Vec<Source>,
+    wardrobe: data::Wardrobe,
 }
 
 impl TransmogCatalog {
     pub(crate) fn load(conn: &Connection) -> rusqlite::Result<Self> {
-        let mut catalog = Self::default();
+        let mut catalog = Self {
+            wardrobe: data::Wardrobe::load_embedded(),
+            ..Default::default()
+        };
         let mut stmt = conn.prepare(
             "SELECT m.ID, m.ItemAppearanceID, i.ID, a.ItemDisplayInfoID, i.Name,
              i.InventoryType, i.ClassID, i.SubclassID, i.RequiredLevel, i.AllowableClass,
-             i.AllowableRaces_0, i.AllowableRaces_1, i.Flags_1, a.DefaultIconFileDataID
+             i.AllowableRaces_0, i.AllowableRaces_1, i.Flags_1, a.DefaultIconFileDataID,
+             i.Quality, m.TransmogSourceTypeEnum, a.TransmogPlayerConditionID
              FROM item_modified_appearance m JOIN item_appearance a ON a.ID=m.ItemAppearanceID
              JOIN content_item i ON i.ID=m.ItemID
-             WHERE a.ItemDisplayInfoID>0 AND a.TransmogPlayerConditionID=0
-             AND (i.Flags_1 & 4194304)=0 AND i.Quality<>6 ORDER BY m.ID",
+             WHERE a.ItemDisplayInfoID>0 ORDER BY m.ID",
         )?;
         for row in stmt.query_map([], source_from_row)? {
             let source = row?;
+            catalog.catalogue.push(source.clone());
+            if !source.offer {
+                continue;
+            }
             catalog
                 .by_appearance
                 .entry(source.view.appearance_id)
@@ -100,6 +112,50 @@ impl TransmogCatalog {
         sources
     }
 
+    fn catalogue_sources(
+        &self,
+        slots: &[TransmogSlot],
+        templates: &ItemTemplates,
+        character: &crate::persistence::CharacterData,
+        collection: &shared::transmog::AppearanceCollection,
+    ) -> Vec<TransmogCatalogueSource> {
+        self.catalogue
+            .iter()
+            .filter_map(|source| {
+                if !source.template.allows(character.class, character.race) {
+                    return None;
+                }
+                let eligible: Vec<_> = slots
+                    .iter()
+                    .filter(|slot| {
+                        slot.definition_source == ItemDefinitionSource::Retail
+                            && templates
+                                .get(slot.definition_source, slot.item_id)
+                                .is_some_and(|target| {
+                                    catalogue_compatible(target, &source.template)
+                                })
+                    })
+                    .map(|slot| slot.slot)
+                    .collect();
+                if eligible.is_empty() {
+                    return None;
+                }
+                let collection = if !source.collectable {
+                    TransmogCollectionState::NonCollectable
+                } else if collection.has(source.view.appearance_id) {
+                    TransmogCollectionState::Collected
+                } else {
+                    TransmogCollectionState::Uncollected
+                };
+                Some(TransmogCatalogueSource {
+                    source: source.view.clone(),
+                    collection,
+                    slots: eligible,
+                })
+            })
+            .collect()
+    }
+
     fn state(
         &self,
         npc: u64,
@@ -141,7 +197,15 @@ impl TransmogCatalog {
                 })
             })
             .collect();
-        TransmogState { npc, slots }
+        let mut state = TransmogState {
+            npc,
+            slots,
+            ..Default::default()
+        };
+        state.catalogue =
+            self.catalogue_sources(&state.slots, templates, &record.character, collection);
+        self.wardrobe.populate(&mut state, record.character.class);
+        state
     }
 }
 
@@ -161,7 +225,13 @@ fn source_from_row(row: &rusqlite::Row) -> rusqlite::Result<Source> {
         },
         ..Default::default()
     };
+    let quality: u8 = row.get(14)?;
+    let source_type: u8 = row.get(15)?;
+    let condition: u32 = row.get(16)?;
+    let source_visual = template.scaling.flags2 & NO_SOURCE_VISUAL == 0 && quality != 6;
     Ok(Source {
+        collectable: source_visual && !matches!(source_type, 6 | 9),
+        offer: source_visual && condition == 0,
         view: TransmogSource {
             source_id: row.get(0)?,
             appearance_id: row.get(1)?,
@@ -197,6 +267,22 @@ fn compatible(target: &ItemTemplate, source: &ItemTemplate) -> bool {
             || weapon_group(target.scaling.subclass_id)
                 .is_some_and(|group| Some(group) == weapon_group(source.scaling.subclass_id));
     }
+    compatible_slot_types(target, source)
+}
+
+fn catalogue_compatible(target: &ItemTemplate, source: &ItemTemplate) -> bool {
+    if target.scaling.class_id != source.scaling.class_id {
+        return false;
+    }
+    if target.scaling.class_id == WEAPON {
+        return target.scaling.subclass_id == source.scaling.subclass_id
+            || weapon_group(target.scaling.subclass_id)
+                .is_some_and(|group| Some(group) == weapon_group(source.scaling.subclass_id));
+    }
+    compatible_slot_types(target, source)
+}
+
+fn compatible_slot_types(target: &ItemTemplate, source: &ItemTemplate) -> bool {
     let target_slots = EquipmentSlot::for_inventory_type(target.inventory_type);
     let source_slots = EquipmentSlot::for_inventory_type(source.inventory_type);
     target_slots == source_slots
