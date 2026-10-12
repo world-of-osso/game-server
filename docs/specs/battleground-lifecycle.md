@@ -2,7 +2,7 @@
 
 ## Contract
 
-Finish one Retail Mainline match: queue → invite/accept → isolated map entry → map objective → scoreboard → sourced honor → return to origin. Extend `pvp.rs` and shared `battleground*.rs`; Modern and Forever share behavior. No synthetic identifiers, timings or rewards; no agent world.db writes.
+Finish one Retail Mainline match: queue → invite/accept → isolated map entry → map objective → scoreboard → sourced honor → return to origin. Extend `pvp.rs` and shared `battleground*.rs`; Modern and Forever share behavior. No synthetic identifiers, timings or rewards; no agent world.db writes. Final leave/decline must retire the copy only after that frame's corpse-loot writes settle, including NPC deaths concurrent with all-player departure; no despawn errors may be suppressed.
 
 ## Kotmogu continuation — active 2026-10-12
 
