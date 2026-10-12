@@ -57,6 +57,8 @@ enum Selector {
     /// Area center = explicit target (DEST_TARGET_*).
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
+    EntryAreaSource,
+    EntryAreaDestination,
     AreaAroundDest(Relation),
     /// Area center = the explicit target's position, the radius behind it.
     DestTargetBack,
@@ -99,6 +101,8 @@ fn selector(id: u32) -> Option<Selector> {
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
         63 => Selector::CenterExplicit(Any),
+        7 => Selector::EntryAreaSource,
+        8 => Selector::EntryAreaDestination,
         15 | 151 => Selector::AreaAroundSrc(Enemy),
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
@@ -408,6 +412,15 @@ pub fn select_targets(
                     max_targets,
                 )?);
             }
+            Selector::EntryAreaSource | Selector::EntryAreaDestination => {
+                selected_any = true;
+                let origin = if matches!(selector, Selector::EntryAreaDestination) {
+                    center.ok_or(id)?
+                } else {
+                    center.unwrap_or(caster_pos)
+                };
+                units.extend(entry_area_units(world, caster, spell, effect, origin, radius(effect, slot)));
+            }
             Selector::ConeEntry => {
                 selected_any = true;
                 units.extend(cone_entry_units(
@@ -509,6 +522,18 @@ fn within_directed_shape(
     } else {
         across.atan2(along) <= half_arc
     }
+}
+
+/// Source7/8: spherical same-copy area with authored entry conditions, not faction substitution.
+fn entry_area_units(world: &mut World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect, origin: Vec3, radius: f32) -> Vec<Entity> {
+    let map = world.get::<crate::maps::InMap>(caster).copied();
+    let targets: Vec<_> = world.query::<(Entity, &Position, &Health, &crate::maps::InMap)>().iter(world)
+        .filter(|(_, position, health, copy)| {
+            let position = Vec3::new(position.x, position.y, position.z);
+            health.current > 0.0 && Some(**copy) == map && position.distance_squared(origin) <= radius * radius
+        }).map(|(entity, ..)| entity).collect();
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    targets.into_iter().filter(|&target| conditions.target_meets(world, spell.id, effect.index, target)).collect()
 }
 
 /// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):

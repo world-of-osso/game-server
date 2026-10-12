@@ -110,7 +110,7 @@ const COLLISION_SEARCH_STEPS: usize = 16;
 
 /// Stop before the first blocking triangle using the same baked LOS query as casts.
 /// Prefix queries are monotonic even when the endpoint is beyond a thin wall.
-fn clamp_to_wall(
+pub(crate) fn clamp_to_wall(
     los: &crate::line_of_sight::LineOfSight,
     map: InMap,
     start: Vec3,

@@ -111,6 +111,7 @@ mod stats;
 mod system_timings;
 mod tame;
 mod taxi;
+mod knockback;
 mod teleport;
 mod terrain_height;
 #[cfg(test)]
