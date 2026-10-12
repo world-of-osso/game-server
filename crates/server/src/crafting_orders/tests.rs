@@ -9,7 +9,11 @@ fn order_harness() -> Harness {
 }
 
 fn order_harness_in(path: Option<&std::path::Path>) -> Harness {
-    let mut h = harness(80).unwrap();
+    order_harness_with(path, |_| {})
+}
+
+fn order_harness_with(path: Option<&std::path::Path>, extra: impl FnOnce(&mut App)) -> Harness {
+    let mut h = harness_with(80, extra).unwrap();
     if let Some(path) = path {
         h.app.world_mut().remove_resource::<GameDatabase>();
         let db = redb::Database::create(path).unwrap();
@@ -124,16 +128,33 @@ fn crafter(h: &mut Harness, name: &str) -> (Entity, u64) {
 }
 
 #[test]
-fn crafting_orders_all_types_claim_fulfil_uses_cast_and_delivers_mail() {
+fn achievements_criteria_crafting_orders_all_types_credit_only_committed_fulfillment() {
     for kind in [0, 1, 2] {
         complete_order(kind);
     }
 }
 
 fn complete_order(kind: u8) {
-    let mut h = order_harness();
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut h = order_harness_with(None, |app| {
+        app.add_plugins(AchievementPlugin);
+    });
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
     let now = crate::mail::unix_now();
     let (worker, worker_id) = crafter(&mut h, "Worker");
+    h.app
+        .world_mut()
+        .entity_mut(worker)
+        .insert(PlayerAchievementState::default());
+    h.app.world_mut().spawn((
+        Authenticated { account_id: 2 },
+        PlayerLink(worker),
+        InWorld {
+            character_id: worker_id,
+        },
+    ));
+    h.app.update();
     let mut req = request(kind);
     if kind == 1 {
         let db = &h.app.world().resource::<GameDatabase>().db;
@@ -161,8 +182,51 @@ fn complete_order(kind: u8) {
     assert!(h.app.world().get::<CastState>(worker).is_some());
     let db = &h.app.world().resource::<GameDatabase>().db;
     assert!(persistence::mail_store::load_mailbox(db, h.character_id).is_empty());
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(worker)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&56767),
+        "cast admission is not fulfillment"
+    );
     h.advance(400);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(worker)
+            .unwrap()
+            .criteria_progress
+            .get(&56767),
+        Some(&1)
+    );
+    let typed = [56768, 56769, 56770];
+    for (index, criterion) in typed.into_iter().enumerate() {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(worker)
+                .unwrap()
+                .criteria_progress
+                .get(&criterion)
+                .copied(),
+            (index == usize::from(kind)).then_some(1)
+        );
+    }
     let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_achievements(db, worker_id)
+            .criteria_progress
+            .get(&56767),
+        Some(&1)
+    );
+    assert!(
+        !persistence::load_achievements(db, h.character_id)
+            .criteria_progress
+            .contains_key(&56767),
+        "customer did not fulfill the order"
+    );
     let customer = persistence::mail_store::load_mailbox(db, h.character_id);
     assert_eq!(customer.len(), 1);
     assert_eq!(customer[0].items[0].item.item_id, OUTPUT);
@@ -173,6 +237,16 @@ fn complete_order(kind: u8) {
     assert_eq!(orders::all(db).unwrap()[0].status, 2);
     assert!(persistence::load_inventory(db, worker_id).items.is_empty());
     assert!(orders::begin_fulfill(h.app.world_mut(), worker, id, now).is_err());
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(worker)
+            .unwrap()
+            .criteria_progress
+            .get(&56767),
+        Some(&1)
+    );
 }
 
 #[test]
