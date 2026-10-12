@@ -19,6 +19,7 @@ const EVENT_FEL_NOVA: u32 = 3;
 const SPELL_CHAOS_BARRAGE: u32 = 1230298;
 const SPELL_MIRROR_IMAGES: u32 = 1264095;
 pub(crate) const SPELL_MIRROR_IMAGE: u32 = 1264098;
+const SPELL_FELSTORM: u32 = 1264106;
 pub(crate) const SPELL_FEL_NOVA_SELECTOR: u32 = 474240;
 pub(crate) const SPELL_BLINK: u32 = 474183;
 const SPELL_FEL_NOVA: u32 = 1223906;
@@ -129,6 +130,13 @@ pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::A
         },
     );
     scripts.0.insert(
+        SPELL_FELSTORM,
+        AuraScript {
+            on_remove: Some(retire_felstorm_actor),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         SPELL_LIGHT_INFUSION,
         AuraScript {
             on_apply: Some(apply_destabilized),
@@ -158,6 +166,21 @@ fn cast_mirror_image(
         })
     {
         cast_ignoring_in_progress(world, target, target, SPELL_MIRROR_IMAGE);
+    }
+}
+
+/// TC Felstorm effect0/aura23 AfterEffectRemove calls DespawnOrUnsummon(1ms).
+fn retire_felstorm_actor(
+    world: &mut World,
+    target: Entity,
+    aura: &crate::auras::AuraInstance,
+    _reason: crate::auras::RemoveReason,
+) {
+    let has_periodic_effect = aura.effects.iter().any(|effect| {
+        effect.index == 0 && effect.aura_type == crate::auras::handlers::PERIODIC_TRIGGER_SPELL
+    });
+    if has_periodic_effect && world.get::<Npc>(target).is_some() {
+        super::smart_ai::lifetimes::schedule_despawn(world, target, 1, 0, false);
     }
 }
 

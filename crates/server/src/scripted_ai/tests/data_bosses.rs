@@ -222,20 +222,61 @@ fn encounter_coverage_mirror_respawn_cast_is_not_an_ordinary_reset_cast() {
         h.has_aura(mirror, 1264106),
         "appearance must run sourced Respawn11 cast"
     );
+    let original_expiry = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(mirror)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1264106)
+        .unwrap()
+        .expires_at;
+    h.advance(1.1);
+    super::super::dispatch(h.app.world_mut(), mirror, Hook::Reset);
+    h.advance(0.1);
+    let expiry_after_reset = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(mirror)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1264106)
+        .unwrap()
+        .expires_at;
+    assert_eq!(
+        original_expiry, expiry_after_reset,
+        "ordinary reset must not refresh Respawn11 Felstorm"
+    );
+}
+
+#[test]
+fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let mirror = crate::zones::summon_creature(
+        h.app.world_mut(),
+        kystia,
+        255050,
+        [8860.0, -4840.0, 13.0, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    assert!(h.has_aura(mirror, 1264106));
     crate::auras::remove_auras(
         h.app.world_mut(),
         mirror,
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == 1264106,
     );
-    super::super::dispatch(h.app.world_mut(), mirror, Hook::Reset);
     h.advance(0.1);
     assert!(
-        !h.has_aura(mirror, 1264106),
-        "ordinary reset must not replay Respawn11"
+        h.app.world().get_entity(mirror).is_err(),
+        "TC Felstorm OnRemove must DespawnOrUnsummon after1ms"
     );
-    // A TempSummon is removed, not respawned. Reinitializing only its AI would
-    // leave cast/cooldown state intact and is not Creature::Respawn.
+    assert_eq!(
+        super::super::instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::NotStarted)
+    );
+    assert!(h.app.world().get_entity(kystia).is_ok());
 }
 
 #[test]
