@@ -145,9 +145,9 @@ fn boss_timeline_data_bound_skum_has_no_smartai_alert_fallback() {
 #[test]
 fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_warnings() {
     use shared::protocol::{EncounterSeverity, EncounterTimelineEvent};
-    for (entry, encounter, bit, spell, initial, repeat) in [
-        (13280, 344, 1, 22419, 6900, 6100),
-        (11492, 346, 3, 22662, 900, 7300),
+    for (entry, encounter, bit, spell, initial, repeat, severity) in [
+        (13280, 344, 1, 22419, 6900, 6100, EncounterSeverity::High),
+        (11490, 343, 0, 22478, 3700, 8500, EncounterSeverity::Medium),
     ] {
         let catalog_db = Connection::open_in_memory().unwrap();
         catalog_db
@@ -181,15 +181,15 @@ fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_
         );
         h.advance(16.0);
         assert!(
-            h.inbox(0)
-                .log
-                .iter()
-                .any(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(spell)),
-            "entry {entry} spell {spell}: actual spell damage must resolve, not an injected warning"
+            h.inbox(0).log.iter().any(|event| matches!(
+                event.kind,
+                CombatLogKind::Damage | CombatLogKind::AuraApplied
+            ) && event.spell_id == Some(spell)),
+            "entry {entry} spell {spell}: actual spell effect must resolve, not an injected warning"
         );
         assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
-            EncounterTimelineEvent::Cast { caster, spell_id, severity:EncounterSeverity::High }
-            if *caster == boss.to_bits() && *spell_id == spell)));
+            EncounterTimelineEvent::Cast { caster, spell_id, severity:alert_severity }
+            if *caster == boss.to_bits() && *spell_id == spell && *alert_severity == severity)));
         assert!(
             h.inbox(0).timeline.iter().any(|event| match event {
                 EncounterTimelineEvent::Timers { timers, .. } => timers
