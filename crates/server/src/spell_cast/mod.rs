@@ -96,6 +96,8 @@ mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+#[cfg(test)]
+mod minimum_speed_tests;
 mod missiles;
 mod open_lock;
 #[cfg(test)]
