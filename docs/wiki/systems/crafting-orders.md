@@ -1,6 +1,6 @@
 # Fixed-output crafting orders
 
-Server slice, verified source2026-10-11. [Contract and current gaps](../../specs/crafting-orders.md); no live/deployed claim.
+Verified source/private integration2026-10-11. [Contract and current gaps](../../specs/crafting-orders.md); no production deployment claim.
 
 ## Catalog import
 
@@ -27,7 +27,15 @@ Appending the third bitcode MailSender variant changes enum packing. `character_
 
 ## Proof
 
-RED importer stubs failed expected counts; RED lifecycle stubs rejected placement; old-mail reopen RED failed with `invalid packing`, demonstrating migration necessity. Post-master server e4603dd6/protocol86dcd21:17 affected crafting tests (including10 order tests),10 existing mail regressions and2 Python importer tests pass; `cargo check --locked -p server` and `cargo fmt --all -- --check` pass without warnings. Targeted GREEN/check/fmt ledger: `/home/osso/.worktrees/handoff-crafting-orders-srv.md`. Persistent artifacts: canonical engine `data/diagnostics/crafting-orders-srv-2026-10-11/`. Native/live proof is outside this server slice.
+RED importer stubs failed expected counts; RED lifecycle stubs rejected placement; old-mail reopen RED failed with `invalid packing`, demonstrating migration necessity. Post-master server e4603dd6/protocol86dcd21:17 affected crafting tests (including10 order tests),10 existing mail regressions and2 Python importer tests pass; `cargo check --locked -p server` and `cargo fmt --all -- --check` pass without warnings. Targeted GREEN/check/fmt ledger: `/home/osso/.worktrees/handoff-crafting-orders-srv.md`. Persistent artifacts: canonical engine `data/diagnostics/crafting-orders-srv-2026-10-11/`. Later integrating native proof follows.
+
+## Integrated private proof — 2026-10-11
+
+Customer `Query{skill_line:0,mine:true}` now returns source recipes and owned rows across profession tiers while retaining kind/identity filters; native customer callers require no learned profession. A wire RED reproduced the empty catalog caused by exact-zero filtering; the corrected test covers catalog, placement gate, owned query and cancellation. Tier-filter tests use authored Classic Tailoring2540 rather than parent197, with parent197 explicitly empty.
+
+One private UDP5871 instance hosted Modern/Forever knowledge staging/Undo/Apply (rank0→1, wallet25→24) and public Glacial Cloak28208→22658 orders, four fully supplied source slots, 10000-copper escrow, actual effect24 completion, customer attachment receipt and worker commission receipt. Accounts/professions/knowledge/achievement were acceptance-fixture grants, not acquisition proof. Clerk Gretal215258/display117678/menu30243 was privately relocated to Northshire map0; mailbox202578 retained its real location. Its local-CASC authored profile and full164-asset closure were staged only in a private cache:28 material textures freshly extracted,79 missing receipt identities added after85 duplicate hashes matched existing receipts. No unrelated model substitution or canonical cache/world replacement.
+
+Crafter Public browse removes completed rows; native completion is status plus row removal and actual mail, not a retained Completed detail row. Evidence logs/PNGs: canonical engine `data/diagnostics/crafting-ui-2026-10-11/live/`; server/source/asset ledgers: `data/diagnostics/crafting-2026-10-11/`. Owned server stopped after proof; UDP5000 excluded throughout. Final code121866d4/protocol2a48bdc:19 crafting +6 specialization tests,4 profession importer +2 order importer tests,1730 full protocol tests, and both repositories' check/fmt pass. The ignored explicit private seeder is not counted as a passing regression test.
 
 ## Sources
 

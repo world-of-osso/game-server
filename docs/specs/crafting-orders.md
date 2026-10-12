@@ -6,8 +6,8 @@ Order catalog/filter skill_line uses authored SkillLineAbility.SkillupSkillLineI
 
 ## Customer service integration
 
-- [ ] Source TDB brokers route menu30243/OptionNpc50 through normal InteractionOpened/Closed; retain their full64-bit NPC flags.
-- [ ] Place/cancel require an active customer-broker interaction and repeat life/faction/combat/range checks before modifying escrow.
+- [x] Source TDB brokers route menu30243/OptionNpc50 through normal InteractionOpened/Closed; retain their full64-bit NPC flags.
+- [x] Place/cancel require an active customer-broker interaction and repeat life/faction/combat/range checks before modifying escrow.
 
 ## What it must do
 
@@ -41,7 +41,7 @@ Order catalog/filter skill_line uses authored SkillLineAbility.SkillupSkillLineI
 
 - [ ] Fees, Retail duration presets, claim lease durations and order quotas are not authored by this DB2. No guessed fees/presets/claim timers: this bounded implementation escrows commission only and uses an explicit positive duration supplied by the requester; this is not proven Retail duration policy.
 - [ ] Only13 of89 output definitions are currently published in the supplied world DB. The89-row catalog remains visible; placement fails explicitly for missing output definitions.
-- [ ] Native customer NPC service and both-skin UI proof belong to the integrating agents, not this server slice.
+- [x] Private Modern/Forever customer broker→public escrow→normal cast→customer item/worker commission mail proof. Accounts/professions/materials are fixture grants; authentic broker privately relocated to open-world map0. This is not production deployment or native guild/personal proof.
 
 ## Out of scope
 

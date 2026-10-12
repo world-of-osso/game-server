@@ -1,6 +1,6 @@
 # Profession specializations
 
-Source-grounded profession configurations are separate from class talent purchases but use the shared trait validator. [Contract](../../specs/profession-specializations.md); [source import and unresolved operation fields](../reference/profession-reference-import.md). Native/request acceptance remains open until the current proof ledger says otherwise.
+Source-grounded profession configurations are separate from class talent purchases but use the shared trait validator. [Contract](../../specs/profession-specializations.md); [source import and unresolved operation fields](../reference/profession-reference-import.md). Private native spending/request proof is recorded below; earned acquisition and full operation evaluation remain distinct gates.
 
 ## Representation and spending
 
@@ -22,7 +22,7 @@ Queries/commits are received only from authenticated InWorld connections and the
 
 Descriptions join TraitDefinition→ProfessionTrait→ProfessionTraitXEffect→ProfessionEffect→ProfessionEffectType.EnumID. Numbered effect tokens use the imported zero-based effect slot; amounts are imported float32 values, names are the localized type text, not crafting calculations. Definition36464/root knowledge36327 resolves to “Improve at making leather armor, gaining +1 Skill per point in this Specialization.” Source spell-name references resolve through SpellName. Identical bindings are deduplicated; missing, ambiguous or unsupported variables produce explicit unavailable text rather than guessed values or raw placeholders. Definition129480 has multiple distinct effects in slot0 but its authored text uses a spell-name reference, so no effect is arbitrarily chosen.
 
-The ignored `seed_private_crafting_joint_fixture` acceptance setup requires the exact private diagnostic redb/world paths and refuses an existing redb. It primes accounts, professions, achievement15876 and knowledge2025; this is not earned-acquisition evidence. The private world receipt records Clerk Gretal's fixture relocation to open-world map0 and the unchanged Northshire mailbox. Native proof results belong in the joint handoff until independently observed.
+The ignored `seed_private_crafting_joint_fixture` acceptance setup requires the exact private diagnostic redb/world paths and refuses an existing redb. It primes accounts, professions, achievement15876 and knowledge2025; this is not earned-acquisition evidence. The private world receipt records Clerk Gretal's fixture relocation to open-world map0 and the unchanged Northshire mailbox. Private Modern/Forever native logs and PNGs independently show staged spend/Undo, authoritative root rank0→1/30, knowledge25→24 and resolved +1Skill tooltip. This does not prove actual quest-earned acquisition or numeric quality crafting. [Integrated proof and evidence](crafting-orders.md#integrated-private-proof--2026-10-11).
 
 ## Explicit boundaries
 
