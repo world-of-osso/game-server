@@ -275,6 +275,8 @@ fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
         .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
+    h.app
+        .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     let maps = crate::maps::store::load_map_store(&conn).unwrap();
     h.app.insert_resource(crate::ground::GroundMap::new(
         &crate::ground::ground_data_dir(),
