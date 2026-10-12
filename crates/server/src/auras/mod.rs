@@ -1477,16 +1477,15 @@ pub fn interrupt_auras(
 // --- Systems ---
 
 /// Every unit (player or NPC) carries `ActiveAuras`, `UnitAuras` and `AuraStatMods`.
-fn init_unit_auras(
-    mut commands: Commands,
-    units: Query<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>,
-) {
-    for unit in &units {
-        commands.entity(unit).insert((
-            ActiveAuras::default(),
-            UnitAuras::default(),
-            AuraStatMods::default(),
-        ));
+fn init_unit_auras(world: &mut World) {
+    let units: Vec<Entity> = world
+        .query_filtered::<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>()
+        .iter(world)
+        .collect();
+    // Casts and summon cleanup mutate units immediately. Deferred defaults can
+    // overwrite a freshly applied aura or insert into a unit already despawned.
+    for unit in units {
+        ensure_aura_components(world, unit);
     }
 }
 
