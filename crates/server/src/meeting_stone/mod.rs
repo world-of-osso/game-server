@@ -77,7 +77,7 @@ const STONE_LEVEL_QUERY: &str = "SELECT t.entry, l.maxlevel \
 
 const RITUAL_QUERY: &str = "SELECT t.entry, t.displayId, t.name, t.size, t.Data0, t.Data1, \
      t.Data6, d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5 \
-     FROM content_gameobject_template t \
+     FROM tdb_gameobject_template t \
      JOIN game_object_display_info d ON d.ID = t.displayId \
      WHERE t.type = ?1";
 
@@ -96,7 +96,7 @@ fn ritual_from_row(row: &Row) -> rusqlite::Result<(u32, RitualTemplate)> {
         max: Vec3::new(geo(10)?, geo(11)?, geo(12)?),
         casters: row.get(4)?,
         spell: row.get(5)?,
-        grouped: row.get::<_, u32>(6)? != 0,
+        grouped: row.get::<_, i64>(6)? != 0,
     };
     Ok((entry, template))
 }

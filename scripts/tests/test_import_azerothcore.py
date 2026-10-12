@@ -155,6 +155,50 @@ def run_db2_import(csv_root, db_path):
     )
 
 
+class NativeClassSummonImportTests(unittest.TestCase):
+    def test_prepared_class_import_preserves_existing_rows_and_repeats_without_changes(self):
+        import add_class_summon_templates
+        source = SCRIPTS.parent / "data/world.db"
+        with tempfile.TemporaryDirectory() as temporary:
+            copied = Path(temporary) / "world.copy.db"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as native:
+                with closing(sqlite3.connect(copied)) as conn, conn:
+                    native.backup(conn)
+                    # Reproduce the old import even when the caller already applied the fix.
+                    conn.execute("DELETE FROM content_creature_template WHERE entry IN (63508,258584)")
+                    conn.execute("DELETE FROM content_creature_template_model WHERE CreatureID IN (63508,258584)")
+                    conn.execute("DELETE FROM content_creature_template_addon WHERE entry IN (63508,258584)")
+                    before = {row[0]: row for row in conn.execute("SELECT * FROM content_creature_template")}
+                    spawns = conn.execute("SELECT count(*) FROM content_creature").fetchone()[0]
+                    added = add_class_summon_templates.add_class_summon_templates(conn)
+                    self.assertIn(63508, added)
+                    self.assertIn(258584, added)
+                    after = {row[0]: row for row in conn.execute("SELECT * FROM content_creature_template")}
+                    self.assertEqual({entry: after[entry] for entry in before}, before)
+                    self.assertEqual(conn.execute("SELECT count(*) FROM content_creature").fetchone()[0], spawns)
+            with closing(sqlite3.connect(copied)) as conn, conn:
+                self.assertEqual(add_class_summon_templates.add_class_summon_templates(conn), [])
+                self.assertEqual(conn.execute("SELECT count(*) FROM content_creature_template").fetchone()[0], len(after))
+
+    def test_native_class_talent_templates_are_imported_without_creature_spawns(self):
+        source = SCRIPTS.parent / "data/world.db"
+        with tempfile.TemporaryDirectory() as temporary:
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as native:
+                with closing(sqlite3.connect(Path(temporary) / "world.copy.db")) as conn:
+                    native.backup(conn)
+                    report = content_policy.Report()
+                    retail_content.create_retail_map_table(conn)
+                    content_policy.build_creature_models(conn, {}, report)
+                    retail_content.build_creatures(conn, report)
+                    self.assertEqual(conn.execute(
+                        "SELECT entry,name FROM content_creature_template WHERE entry IN (63508,258584) ORDER BY entry"
+                    ).fetchall(), [(63508, "Xuen"), (258584, "Imp Lord")])
+                    self.assertEqual(conn.execute(
+                        "SELECT CreatureID,CreatureDisplayID FROM content_creature_template_model WHERE CreatureID IN (63508,258584) ORDER BY CreatureID"
+                    ).fetchall(), [(63508, 45042), (258584, 141129)])
+                    self.assertEqual(conn.execute("SELECT count(*) FROM content_creature WHERE id1 IN (63508,258584)").fetchone()[0], 0)
+
+
 class SpellTargetPositionImportTests(unittest.TestCase):
     def test_tdb_excerpt_preserves_destination_order_and_nullable_facing(self):
         # Exact TDB1210.26091 Orgrimmar teleport row; import the real excerpt.
