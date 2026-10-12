@@ -3902,6 +3902,63 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
 }
 
 #[test]
+fn toyfx17_cozy_fire_adds_source_versatility_rating_and_restores_it() {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+    use shared::components::{CombatRatings, Position};
+    let mut h = harness_with(Vec::new(), &[7353], 8, true).unwrap();
+    h.advance(2);
+    let before = *h.app.world().get::<CombatRatings>(h.caster).unwrap();
+    // TC creates the linked trap without an owner: its caster is the GO, not the player.
+    let trap = h
+        .app
+        .world_mut()
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: trap,
+            target: h.caster,
+            spell_id: 7353,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(2);
+    let aura = h
+        .app
+        .world()
+        .get::<ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 7353)
+        .unwrap();
+    assert_eq!(aura.effects[0].misc_values[0], 0x7000_0000);
+    assert_eq!(
+        aura.effects[0].amount, 1.0,
+        "source scaling max level1/coefficient.8"
+    );
+    let after = *h.app.world().get::<CombatRatings>(h.caster).unwrap();
+    assert_eq!(after.versatility, before.versatility + 1.0);
+    assert_eq!(after.crit, before.crit);
+    assert_eq!(after.haste, before.haste);
+    assert_eq!(after.mastery, before.mastery);
+    crate::auras::remove_spell(h.app.world_mut(), h.caster, 7353, RemoveReason::Cancelled);
+    h.advance(2);
+    assert_eq!(
+        *h.app.world().get::<CombatRatings>(h.caster).unwrap(),
+        before
+    );
+}
+
+#[test]
 fn toyfx16_no_trap_cooking_fires_spawn_with_authored_identity_and_expiry() {
     use crate::game_objects::summoned::SummonedObject;
     use shared::components::{Position, Rotation};
