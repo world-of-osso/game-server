@@ -80,6 +80,8 @@ enum Selector {
     ConeEntry,
     ///24: hostile cone along the caster's facing, using native ConeDegrees.
     ConeEnemy,
+    ///129: hostile rectangle along caster facing, using native Width/CalcRadius.
+    CasterLine,
     ///104: hostile cone aimed from the caster toward the selected destination.
     ConeToDest,
     ///134: hostile line aimed toward the destination, to the effect radius.
@@ -121,6 +123,7 @@ fn selector(id: u32) -> Option<Selector> {
         24 => Selector::ConeEnemy,
         60 => Selector::ConeEntry,
         104 => Selector::ConeToDest,
+        129 => Selector::CasterLine,
         134 => Selector::LineToDest,
         _ => return None,
     })
@@ -393,9 +396,13 @@ pub fn select_targets(
                     max_targets,
                 ));
             }
-            Selector::ConeEnemy | Selector::ConeToDest | Selector::LineToDest => {
+            Selector::ConeEnemy
+            | Selector::CasterLine
+            | Selector::ConeToDest
+            | Selector::LineToDest => {
                 selected_any = true;
-                let destination = if selector == Selector::ConeEnemy {
+                let destination = if matches!(selector, Selector::ConeEnemy | Selector::CasterLine)
+                {
                     None
                 } else {
                     spell
@@ -502,7 +509,8 @@ fn raid_corpses(
     bodies.into_iter().map(|(_, unit)| unit).collect()
 }
 
-///24 uses caster facing; 104/134 use the caster-to-destination direction.
+///24/129 use caster facing; 104/134 use the caster-to-destination direction.
+///129: SpellInfo.cpp377; SpellMgr.cpp3244-3245 marks native Width as CONE_LINE.
 ///TC a352b1fa Spell.cpp:1273-1324 selects 24 with native ConeAngle/CalcRadius.
 ///The line uses catalog Width, not a radial explosion or a target-only hit.
 ///Unit-center geometry; combat-reach boundary expansion is not modelled.
@@ -536,7 +544,7 @@ fn directed_units(
         within_directed_shape(
             offset,
             forward,
-            effect.implicit_targets[slot] == 134,
+            matches!(effect.implicit_targets[slot], 129 | 134),
             width,
             half_arc,
         )
@@ -879,6 +887,7 @@ pub fn selects_area(effect: &SpellEffect) -> bool {
                     | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
                     | Selector::ConeEnemy
+                    | Selector::CasterLine
                     | Selector::ConeToDest
                     | Selector::LineToDest
             )
