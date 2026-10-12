@@ -77,9 +77,32 @@ fn load_creature_cast(
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
-    let needs_unit = targets::explicit_requirement(handled_effects(&spell)).is_some();
-    let explicit = target.or_else(|| needs_unit.then(|| victim(world, caster)).flatten());
+    let requirement = targets::explicit_requirement(handled_effects(&spell));
+    let explicit = target.or_else(|| default_scripted_target(world, caster, &spell, requirement));
     Ok((spell, explicit))
+}
+
+/// TC Spell.cpp621–664 InitExplicitTargets: player selection / creature victim,
+/// then caster for a non-enemy unit requirement. Explicit requests are unchanged.
+fn default_scripted_target(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    requirement: Option<targets::Relation>,
+) -> Option<Entity> {
+    let relation = requirement?;
+    let selected = if world.get::<shared::components::Player>(caster).is_some() {
+        world
+            .get::<crate::networking::CombatTarget>(caster)
+            .and_then(|target| target.0)
+            .filter(|&target| {
+                targets::relation_matches(world, caster, target, relation)
+                    && targets::creature_type_allowed(world, spell, target)
+            })
+    } else {
+        victim(world, caster)
+    };
+    selected.or_else(|| (relation != targets::Relation::Enemy).then_some(caster))
 }
 
 /// `AISpellInfoType::target` (`UnitAI::FillAISpellInfo`), which `DoCast(spellId)`
