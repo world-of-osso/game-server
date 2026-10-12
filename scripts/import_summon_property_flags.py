@@ -6,6 +6,7 @@ columns ID/Control/Faction/Title/Slot/Flags1/Flags2. Three encrypted records
 are omitted by db2_casc, never synthesized. Run canonical imports only as lead.
 """
 import argparse
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 
@@ -81,7 +82,7 @@ def main():
     args = parser.parse_args()
     if not args.db.is_file():
         parser.error(f'database not found: {args.db}')
-    with sqlite3.connect(args.db) as conn:
+    with closing(sqlite3.connect(args.db)) as conn:
         count = import_flags(conn, args.db2.read_bytes())
     print(f'Imported sourced flags for {count} existing SummonProperties rows')
 
