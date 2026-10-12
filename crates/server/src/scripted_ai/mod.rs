@@ -68,6 +68,9 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
+                    kings_rest::update_gold_follows
+                        .after(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
                     kings_rest::update_molten_gold_areas
                         .after(update_creature_ai)
                         .after(crate::combat::auto_attack_system),
@@ -101,6 +104,8 @@ pub enum ReactState {
 pub enum MotionType {
     /// `POINT_MOTION_TYPE`.
     Point,
+    /// `FOLLOW_MOTION_TYPE`.
+    Follow,
 }
 
 /// A `CreatureAI` hook with its arguments.
@@ -125,6 +130,7 @@ pub enum Hook {
     IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
+    DoAction(i32),
     UpdateAi(u32),
     QuestAccepted {
         player: Entity,
@@ -163,6 +169,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
+    fn do_action(&mut self, _ctx: &mut Ctx, _action: i32) {}
     fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
@@ -372,6 +379,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
+        Hook::DoAction(action) => ai.do_action(&mut ctx, action),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),

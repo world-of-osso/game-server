@@ -84,6 +84,7 @@ fn bound_boss_in_state(
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
+    app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
@@ -1049,6 +1050,161 @@ fn encounter_coverage_lucres_call_removes_real_molten_aura_only_in_its_copy() {
     assert!(
         h.has_aura(remote, 265915),
         "source area selection cannot cross copies"
+    );
+}
+
+fn cast_real_lucre(h: &mut Harness, boss: Entity) {
+    let cast_ms = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(265923)
+        .unwrap()
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.cast_time)
+        .map_or(0, |time| time.base_ms);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 265923, None, false)
+        .expect("real Lucre cast");
+    h.advance(cast_ms as f32 / 1000.0 + 0.1);
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_delays_walk_and_rearms_molten_after_three_seconds() {
+    let (mut h, gold, _, center, _) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        x: center.x + 25.0,
+        ..center
+    });
+    let waiting_position = *h.app.world().get::<Position>(gold).unwrap();
+    cast_real_lucre(&mut h, boss);
+    assert!(!h.has_aura(gold, 265915));
+    h.advance(2.7);
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::movement::Walking>(gold)
+            .is_none()
+    );
+    h.advance(0.3);
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::movement::Walking>(gold)
+            .is_some(),
+        "source task sets walk after3s, not when Lucre first hits"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        waiting_position,
+        "missing bake must not grant straight-line movement"
+    );
+    let loss = h.health(gold).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, loss);
+    assert!(
+        h.has_aura(gold, 265915),
+        "source task rearms the first-lethal Molten cast"
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_task_checks_molten_at_callback_not_at_hit() {
+    let (mut h, gold, _, _, _) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    cast_real_lucre(&mut h, boss);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: gold,
+            target: gold,
+            spell_id: 265915,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(3.1);
+    assert!(h.has_aura(gold, 265915));
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::movement::Walking>(gold)
+            .is_none(),
+        "restored Molten blocks the delayed source task"
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credit() {
+    let (mut h, gold, _, center, map) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| crate::ground::ground_data_dir().join("navmesh"));
+    assert!(
+        nav_dir.join("1762").read_dir().unwrap().any(|entry| entry
+            .unwrap()
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "nav")),
+        "real Kings' Rest bake is required for this integration boundary"
+    );
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+    let start = Position {
+        x: center.x + 25.0,
+        ..center
+    };
+    h.app.world_mut().entity_mut(gold).insert(start);
+    cast_real_lucre(&mut h, boss);
+    h.advance(2.7);
+    assert_eq!(*h.app.world().get::<Position>(gold).unwrap(), start);
+    h.advance(0.5);
+    let moving = *h.app.world().get::<Position>(gold).unwrap();
+    assert_ne!(
+        moving, start,
+        "source task starts actual walking over baked navigation"
+    );
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+    let mut absorbed = false;
+    for _ in 0..200 {
+        h.advance(0.1);
+        if h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id
+            == 11686
+        {
+            absorbed = true;
+            break;
+        }
+    }
+    assert!(absorbed, "real nav arrival must run Follow MovementInform");
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Still
+    );
+    assert_ne!(
+        h.app.world().get::<UnitFlags>(gold).unwrap().0 & UnitFlags::NOT_SELECTABLE,
+        0
+    );
+    let stopped = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(3.8);
+    assert!(h.app.world().get_entity(gold).is_ok());
+    assert_eq!(*h.app.world().get::<Position>(gold).unwrap(), stopped);
+    assert!(
+        h.has_aura(boss, 265991),
+        "actual triggered Luster lands on the source primary"
+    );
+    h.advance(0.3);
+    assert!(h.app.world().get_entity(gold).is_err());
+    assert_ne!(
+        get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::Done)
     );
 }
 

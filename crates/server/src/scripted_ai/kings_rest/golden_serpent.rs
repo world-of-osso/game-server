@@ -6,7 +6,9 @@ use crate::scripted_ai::{CreatureAi, Ctx};
 use bevy::prelude::*;
 use shared::components::{Position, Rotation, UnitFactionTemplate, UnitFlags};
 
+pub(super) const ENTRY: u32 = 135322;
 const BOSS_ID: u32 = 0;
+pub(super) const ACTION_ANNOUNCE_ABSORB: i32 = 1;
 const SPIT_GOLD: u32 = 265773;
 const SERPENTINE_GUST: u32 = 265781;
 const TAIL_THRASH: u32 = 265910;
@@ -32,11 +34,15 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
         );
         return None;
     }
-    Some(Box::new(GoldenSerpent { boss }))
+    Some(Box::new(GoldenSerpent {
+        boss,
+        announced_luster: false,
+    }))
 }
 
 struct GoldenSerpent {
     boss: BossAi,
+    announced_luster: bool,
 }
 
 impl GoldenSerpent {
@@ -66,7 +72,7 @@ impl BossScript for GoldenSerpent {
             }
             EVENT_LUCRES_CALL => {
                 ctx.do_cast_self(LUCRES_CALL);
-                // Absorption announcements / DoAction are not ported yet.
+                self.announced_luster = false;
                 self.boss.events.schedule(EVENT_LUCRES_CALL, 41_500);
             }
             _ => {}
@@ -75,6 +81,17 @@ impl BossScript for GoldenSerpent {
 }
 
 impl CreatureAi for GoldenSerpent {
+    fn reset(&mut self, _ctx: &mut Ctx) {
+        self.announced_luster = false;
+    }
+
+    fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
+        if action == ACTION_ANNOUNCE_ABSORB && !self.announced_luster {
+            ctx.talk(0);
+            self.announced_luster = true;
+        }
+    }
+
     fn initialize_ai(&mut self, ctx: &mut Ctx) {
         let map = ctx.map().expect("Golden Serpent instance map");
         let state = instance_script::get_boss_state(ctx.world, map, BOSS_ID)
