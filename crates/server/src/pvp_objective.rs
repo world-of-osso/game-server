@@ -43,7 +43,47 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             .collect::<Vec<_>>()
     });
     for match_id in changed {
+        credit_completed_match(world, match_id);
         send_match_snapshot(world, match_id);
+    }
+}
+
+fn credit_completed_match(world: &mut World, match_id: u64) {
+    use shared::battleground::BgOutcome;
+    let (map, winners) = {
+        let state = world.resource::<PvpServerState>();
+        let matched = &state.battleground_matches[&match_id];
+        if matched.instance.phase != BgPhase::Ended {
+            return;
+        }
+        let Some(BgOutcome::Winner(team)) = matched.instance.outcome else {
+            return;
+        };
+        let Some(map) = matched.map else {
+            return;
+        };
+        let roster = if team == BgTeam::A {
+            &matched.instance.team_a_players
+        } else {
+            &matched.instance.team_b_players
+        };
+        let winners: Vec<_> = roster
+            .iter()
+            .filter(|id| matched.accepted.contains(id))
+            .copied()
+            .collect();
+        (map, winners)
+    };
+    let players: Vec<_> = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .filter(|(_, link, owner)| {
+            winners.contains(&owner.character_id) && world.get::<InMap>(link.0) == Some(&map)
+        })
+        .map(|(_, link, _)| link.0)
+        .collect();
+    for player in players {
+        crate::achievement::record_battleground_win(world, player, map.map_id);
     }
 }
 

@@ -320,6 +320,19 @@ fn find_mythic_finishers(world: &mut World, run: &ChallengeRun) -> Vec<(Entity, 
         .collect()
 }
 
+/// TC Battleground::EndBattleground credits winning participants with MapID.
+pub(crate) fn record_battleground_win(world: &mut World, player: Entity, map: u32) {
+    let events = [
+        CriteriaEvent::WinBattleground(map),
+        CriteriaEvent::WinAnyBattleground,
+    ];
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
+        && let Some(connection) = connection_for_player(world, player)
+    {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
 /// Terminal authoritative winner only; conditional PvP/streak rows remain unevaluated.
 pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
