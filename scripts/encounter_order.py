@@ -5,13 +5,14 @@ from db2_casc import decode, read_header
 DISPLAY_SEASON = 37
 JOURNAL_TIER = 505
 AVAILABILITY = 156363
+CURRENT_ROSTER = {2993, 2813, 2825, 2859, 2923, 1762, 2521, 1877, 3004}
 LAYOUTS = {4521365: 0x03958F0D, 1285009: 0xBFCBF1F0,
            1361033: 0x34B02DE8, 801709: 0xAAC13A73, 4279827: 0x95C01F30}
 
 
 def build_order(maps, tracked, challenges, tiers, journal_maps, lfg, tuning):
     order = {mid: dict(tier=3, sort=[3, -row['ExpansionID'], mid],
-                      reason='newest expansion first; no current-season relation/leveling tuning')
+                      reason='remaining hosted instance; newest expansion first')
              for mid, row in maps.items()}
     challenge_maps = {r[1]: r[2] & 0xFFFF for r in challenges}
     season_maps = {challenge_maps[r[1]]: (r[0], r[1]) for r in tracked
@@ -32,7 +33,7 @@ def build_order(maps, tracked, challenges, tiers, journal_maps, lfg, tuning):
         if row[1] != JOURNAL_TIER or row[4] != AVAILABILITY:
             continue
         mid = journal_maps.get(row[2])
-        if mid not in maps:
+        if mid not in maps or mid not in CURRENT_ROSTER:
             continue
         is_raid = maps[mid]['InstanceType'] == 2
         if not is_raid and mid not in season_maps:
