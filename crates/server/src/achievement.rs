@@ -32,6 +32,8 @@ pub struct PlayerAchievementState {
     pub criteria_progress: BTreeMap<u32, u64>,
     #[serde(default)]
     pub earned_at: BTreeMap<u32, i64>,
+    #[serde(default)]
+    pub(crate) monthly: Option<crate::adventure_guide::MonthlyCriteriaState>,
     /// Presentation-only aggregate; never serialized into character contributions.
     #[serde(skip)]
     pub account: Option<Box<PlayerAchievementState>>,
@@ -98,9 +100,14 @@ fn send_initial_achievement_snapshot(world: &mut World) {
             continue;
         };
         let events = load_login_events(world, character, level);
-        let Some((snapshot, _)) = update_player_events(world, player, &events, None) else {
+        let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) else {
             continue;
         };
+        crate::adventure_guide::ignore_login_achievements(
+            world,
+            player,
+            toasts.iter().map(|toast| toast.achievement_id),
+        );
         send_updates(world, connection, snapshot, Vec::new());
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
@@ -134,6 +141,7 @@ fn process_level_achievement_updates(world: &mut World) {
         else {
             continue;
         };
+        crate::adventure_guide::record(world, player, CriteriaEvent::ReachLevel(level));
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
         });
@@ -168,6 +176,7 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
         return;
     };
     scenario::record(world, player, CriteriaEvent::CompleteQuest(quest));
+    crate::adventure_guide::record(world, player, CriteriaEvent::CompleteQuest(quest));
     if let Some((snapshot, toasts)) =
         update_player_events(world, player, &[CriteriaEvent::CompleteQuest(quest)], None)
     {
@@ -187,6 +196,7 @@ pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32)
 
 fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     scenario::record(world, player, event);
+    crate::adventure_guide::record(world, player, event);
     if !world
         .get_resource::<AchievementCatalog>()
         .is_some_and(|catalog| catalog.tracks(event))
@@ -255,12 +265,28 @@ fn update_player_events(
     })
 }
 
+pub(crate) fn save_monthly_contribution(
+    db: &redb::Database,
+    account: u64,
+    character: u64,
+    state: &PlayerAchievementState,
+) {
+    account_store::save_monthly_contribution(db, account, character, state);
+}
+pub(crate) fn monthly_contributions(
+    db: &redb::Database,
+    account: u64,
+) -> Vec<PlayerAchievementState> {
+    account_store::monthly_contributions(db, account)
+}
+
 fn send_updates(
     world: &mut World,
     connection: Entity,
     snapshot: AchievementSnapshot,
     toasts: Vec<AchievementToastSnapshot>,
 ) {
+    crate::adventure_guide::refresh_for_connection(world, connection);
     let Some(mut sender) = world.get_mut::<MessageSender<AchievementStateUpdate>>(connection)
     else {
         return;
@@ -327,6 +353,9 @@ pub(crate) fn record_encounter_defeat(
         scenario::record_map(world, map, event);
     }
     for player in crate::scripted_ai::instance_script::players_in_map(world, map) {
+        for &event in &events {
+            crate::adventure_guide::record(world, player, event);
+        }
         let Some((snapshot, toasts)) =
             update_player_events(world, player, &events, complete.then_some(map.map_id))
         else {
@@ -359,6 +388,7 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity, killer:
         return;
     }
     scenario::record(world, killer, CriteriaEvent::KillCreature(entry));
+    crate::adventure_guide::record(world, killer, CriteriaEvent::KillCreature(entry));
     let Some((snapshot, toasts)) =
         update_player_events(world, killer, &[CriteriaEvent::KillCreature(entry)], None)
     else {
