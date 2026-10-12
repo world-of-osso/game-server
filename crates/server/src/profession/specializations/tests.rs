@@ -7,59 +7,7 @@ use std::collections::BTreeSet;
 
 fn source_connection() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
-    let world = crate::test_data::world_db_path();
-    let reference = world
-        .parent()
-        .unwrap()
-        .join("diagnostics/crafting-2026-10-11/reference.sqlite");
-    conn.execute(
-        "ATTACH DATABASE ?1 AS world",
-        [format!("file:{}?mode=ro", world.display())],
-    )
-    .unwrap();
-    conn.execute(
-        "ATTACH DATABASE ?1 AS reference",
-        [format!("file:{}?mode=ro", reference.display())],
-    )
-    .unwrap();
-    let mut tables: Vec<String> = conn
-        .prepare("SELECT name FROM world.sqlite_master WHERE type='table' AND name LIKE 'trait_%'")
-        .unwrap()
-        .query_map([], |row| row.get(0))
-        .unwrap()
-        .map(Result::unwrap)
-        .collect();
-    tables.extend(
-        [
-            "skill_line_x_trait_tree",
-            "skill_line",
-            "spec_set_member",
-            "spell_misc",
-            "spell_name",
-            "tdb_quest_template",
-        ]
-        .into_iter()
-        .map(String::from),
-    );
-    for table in tables {
-        conn.execute_batch(&format!(
-            "CREATE TEMP VIEW {table} AS SELECT * FROM world.{table}"
-        ))
-        .unwrap();
-    }
-    let tables: Vec<String> = conn
-        .prepare("SELECT name FROM reference.sqlite_master WHERE type='table'")
-        .unwrap()
-        .query_map([], |row| row.get(0))
-        .unwrap()
-        .map(Result::unwrap)
-        .collect();
-    for table in tables {
-        conn.execute_batch(&format!(
-            "CREATE TEMP VIEW {table} AS SELECT * FROM reference.{table}"
-        ))
-        .unwrap();
-    }
+    conn.execute_batch(include_str!("fixture.sql")).unwrap();
     conn
 }
 
