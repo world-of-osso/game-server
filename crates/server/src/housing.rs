@@ -31,16 +31,27 @@ impl Plugin for HousingPlugin {
 }
 
 fn load_catalog(mut commands: Commands) {
-    let loaded = rusqlite::Connection::open_with_flags(
+    let connection = rusqlite::Connection::open_with_flags(
         crate::spell_info::WORLD_DB_PATH,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .map_err(|error| format!("Open housing catalog: {error}"))
-    .and_then(|db| HousingCatalog::read(&db));
+    );
+    let (loaded, collection) = match connection {
+        Ok(db) => (
+            HousingCatalog::read(&db),
+            crate::housing_acquisition::read_bookcase_rule(&db),
+        ),
+        Err(error) => {
+            let message = format!("Open housing catalog: {error}");
+            (Err(message.clone()), Err(message))
+        }
+    };
     if let Err(message) = &loaded {
         warn!("Housing unavailable: {message}");
     }
     commands.insert_resource(HousingAvailability(loaded));
+    commands.insert_resource(crate::housing_acquisition::HousingCollectionRule(
+        collection,
+    ));
 }
 
 fn catalog(world: &World) -> Result<&HousingCatalog, String> {
@@ -149,20 +160,61 @@ fn apply_house_command(
 ) -> Result<(), String> {
     match command {
         HousingCommand::PurchasePlot { plot_id } => purchase_plot(world, actor, context, *plot_id)?,
-        HousingCommand::EnterHouse { house_id } => refuse_unavailable_house_entry(world, context, *house_id)?,
+        HousingCommand::EnterHouse { house_id } => {
+            refuse_unavailable_house_entry(world, context, *house_id)?
+        }
         HousingCommand::LeaveHouse => return Err("House entry is not yet supported.".into()),
         HousingCommand::SetHouseAccessAnyone { house_id, allowed } => {
-            store::set_access(&world.resource::<GameDatabase>().db, context, *house_id, *allowed)?;
+            store::set_access(
+                &world.resource::<GameDatabase>().db,
+                context,
+                *house_id,
+                *allowed,
+            )?;
         }
-        HousingCommand::RedeemDecor { .. } => return Err("Use the authenticated vendor item collection path; redemption integration is not yet supported.".into()),
-        HousingCommand::PlaceDecor { .. } | HousingCommand::MoveDecor { .. } | HousingCommand::RotateDecor { .. } | HousingCommand::RemoveDecor { .. } => {
+        HousingCommand::RedeemDecor { item_guid } => collect_decor(world, actor, *item_guid)?,
+        HousingCommand::PlaceDecor { .. }
+        | HousingCommand::MoveDecor { .. }
+        | HousingCommand::RotateDecor { .. }
+        | HousingCommand::RemoveDecor { .. } => {
             store::edit(&world.resource::<GameDatabase>().db, context, command)?;
         }
         HousingCommand::ReloadLayout { house_id } => {
             store::house(&world.resource::<GameDatabase>().db, context, *house_id)?;
         }
-        HousingCommand::ListPlots { .. } | HousingCommand::EnterNeighborhood { .. } => unreachable!("neighborhood commands handled before house operations"),
+        HousingCommand::ListPlots { .. } | HousingCommand::EnterNeighborhood { .. } => {
+            unreachable!("neighborhood commands handled before house operations")
+        }
     }
+    Ok(())
+}
+
+fn collect_decor(world: &mut World, actor: Actor, guid: u64) -> Result<(), String> {
+    catalog(world)?;
+    crate::housing_acquisition::require_item_eligibility(world, actor.player)?;
+    let context = actor_context(world, actor)?;
+    crate::housing_acquisition::redeem(world, context, guid)
+}
+
+pub(crate) fn collect_authenticated_item(
+    world: &mut World,
+    character: u64,
+    player: Entity,
+    guid: u64,
+) -> Result<(), String> {
+    let mut query = world.query::<(Entity, &Authenticated, &PlayerLink, &InWorld)>();
+    let actor = query
+        .iter(world)
+        .find(|(_, _, link, entered)| link.0 == player && entered.character_id == character)
+        .map(|(connection, auth, _, _)| Actor {
+            connection,
+            account: auth.account_id,
+            character,
+            player,
+        })
+        .ok_or("Housing collection requires an authenticated character.")?;
+    collect_decor(world, actor, guid)?;
+    send_snapshot(world, actor, 0, None, None, None);
     Ok(())
 }
 
