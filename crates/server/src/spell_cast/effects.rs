@@ -58,7 +58,8 @@ pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const EFFECT_FORCE_CAST: u32 = 140;
-/// TC a352b1fa SharedDefines.h:1549; SpellEffects.cpp:295 uses EffectRemoveAura.
+/// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
+pub const EFFECT_REMOVE_AURA: u32 = 164;
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
 pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
@@ -107,7 +108,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
-        EFFECT_REMOVE_AURA_2 => remove_aura,
+        EFFECT_REMOVE_AURA | EFFECT_REMOVE_AURA_2 => remove_aura,
         EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
         EFFECT_ATTACK_ME => attack_me,
@@ -983,7 +984,7 @@ fn dispel(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Enti
     crate::auras::dispel(world, &event, dispel_type, count);
 }
 
-/// 203 REMOVE_AURA_2 (`Spell::EffectRemoveAura`, TC a352b1fa
+/// 164 REMOVE_AURA / 203 REMOVE_AURA_2 (`Spell::EffectRemoveAura`, TC a352b1fa
 /// SpellEffects.cpp:5154-5163): remove all target auras of `TriggerSpell`,
 /// regardless of their caster (`RemoveAurasDueToSpell`'s default remove mode).
 fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {

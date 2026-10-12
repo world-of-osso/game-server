@@ -82,6 +82,7 @@ fn bound_boss_in_state(
         .as_ref()
         .map_or_else(world_db_path, |(_, path)| path.clone());
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
@@ -1005,6 +1006,49 @@ fn encounter_coverage_molten_gold_source_reach_scales_and_actor_retirement_exits
     assert!(
         !h.has_aura(player, 265914),
         "removing the aura target exits its area members"
+    );
+}
+
+#[test]
+fn encounter_coverage_lucres_call_removes_real_molten_aura_only_in_its_copy() {
+    let (mut h, gold, _, _, map) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    let position = h.wow_position(gold);
+    let remote = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.app.world_mut().entity_mut(remote).insert(InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    });
+    h.advance(0.1);
+    let loss = h.health(remote).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), remote, remote, loss);
+    assert!(h.has_aura(remote, 265915));
+    let cast_ms = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(265923)
+        .unwrap()
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.cast_time)
+        .map_or(0, |time| time.base_ms);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 265923, None, false)
+        .expect("real local Lucre effect164 and target8 must be admitted");
+    h.advance(cast_ms as f32 / 1000.0 + 0.1);
+    assert!(
+        !h.has_aura(gold, 265915),
+        "source effect164 removes TriggerSpell265915"
+    );
+    assert!(
+        h.has_aura(remote, 265915),
+        "source area selection cannot cross copies"
     );
 }
 
