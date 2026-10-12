@@ -103,6 +103,8 @@ mod hit;
 #[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
+mod mechanic_duration_tests;
+#[cfg(test)]
 mod minimum_speed_tests;
 mod missiles;
 mod open_lock;
