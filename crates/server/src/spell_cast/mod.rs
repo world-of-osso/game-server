@@ -402,10 +402,10 @@ fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     crate::auras::charge_mods(world, caster, category)
 }
 
-/// Publish known full categories before the first cast, and keep all charge clocks
-/// and maxima current when haste/aura changes without another cast.
+/// Refresh existing category clocks/maxima, never discover known spells here.
+/// Initial full states belong to the character spellbook snapshot, not recovery.
 fn sync_charge_recovery(world: &mut World) {
-    let mut pending: Vec<(Entity, u32)> = world
+    let pending: Vec<(Entity, u32)> = world
         .query::<(Entity, &SpellHistory)>()
         .iter(world)
         .flat_map(|(unit, history)| {
@@ -415,25 +415,50 @@ fn sync_charge_recovery(world: &mut World) {
                 .map(move |state| (unit, state.spell_id))
         })
         .collect();
-    let known: Vec<_> = world
-        .query_filtered::<(Entity, &KnownSpells), With<Player>>()
-        .iter(world)
-        .flat_map(|(unit, known)| known.iter().map(move |id| (unit, id)))
-        .collect();
-    pending.extend(known.into_iter().filter(|(_, id)| {
-        world
-            .resource::<SpellStore>()
-            .get(*id)
-            .and_then(|spell| spell.categories.as_ref())
-            .is_some_and(|categories| {
-                categories.charge_category != 0 && categories.max_charges != 0
-            })
-    }));
-    pending.sort_unstable();
-    pending.dedup();
     for (unit, spell_id) in pending {
         refresh_charge_recovery(world, unit, spell_id);
     }
+}
+
+/// World-entry/learned-spell publication after passive synchronization. TC
+/// SpellHistory::WritePacket(SendSpellCharges) is separate from recovery updates;
+/// our owner snapshot also supplies full-category maxima for Cooldown Manager.
+/// ClientId identifies a persisted character whose spellbook has been initialized.
+pub(crate) fn publish_known_charge_snapshot(world: &mut World, unit: Entity) {
+    if world.get::<crate::persistence::ClientId>(unit).is_none() {
+        return;
+    }
+    let spells = known_charge_categories(world, unit);
+    let now = now(world);
+    for spell in spells.into_values() {
+        let mods = charge_mods(world, unit, &spell);
+        let charges = *world
+            .entity_mut(unit)
+            .entry::<SpellHistory>()
+            .or_default()
+            .get_mut()
+            .charges_mut(&spell, now, mods)
+            .unwrap();
+        send_charges(world, unit, &charges, now);
+    }
+}
+
+fn known_charge_categories(
+    world: &World,
+    unit: Entity,
+) -> std::collections::BTreeMap<u32, SpellInfo> {
+    let store = world.resource::<SpellStore>();
+    world
+        .get::<KnownSpells>(unit)
+        .expect("charge snapshot follows spellbook initialization")
+        .iter()
+        .filter_map(|id| store.get(id))
+        .filter_map(|spell| {
+            let categories = spell.categories.as_ref()?;
+            let has_charges = categories.charge_category != 0 && categories.max_charges != 0;
+            has_charges.then(|| (categories.charge_category, spell.clone()))
+        })
+        .collect()
 }
 
 fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
@@ -2253,7 +2278,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 fn send_charges(world: &mut World, unit: Entity, charges: &ChargeState, now: f64) {
-    let remaining = ((charges.next_ready_at - now).max(0.0) * 1000.0) as u32;
+    // TC SendSetSpellCharges leaves NextRecoveryTime zero for an empty queue.
+    let remaining = if charges.used > 0 {
+        ((charges.next_ready_at - now).max(0.0) * 1000.0) as u32
+    } else {
+        0
+    };
     send_to_owner(
         world,
         unit,

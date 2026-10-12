@@ -1510,6 +1510,7 @@ fn sync_passive_auras(world: &mut World) {
         };
         let spells: Vec<u32> = known.iter().collect();
         sync_passives(world, unit, AuraSource::KnownSpell, &spells);
+        crate::spell_cast::publish_known_charge_snapshot(world, unit);
     }
 }
 
