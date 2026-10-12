@@ -28,10 +28,14 @@ struct ObjectTemplate {
     scripted: bool,
     cooking_focus: Option<(u32, f32)>,
     extra_focus_payload: bool,
+    linked_trap: u32,
 }
 
 #[derive(Resource, Debug, Default)]
-pub(crate) struct SummonedObjectTemplates(HashMap<u32, ObjectTemplate>);
+pub(crate) struct SummonedObjectTemplates(
+    HashMap<u32, ObjectTemplate>,
+    Option<super::cooking_traps::TrapTemplate>,
+);
 
 /// Owner and spell remain distinct from a ritual's channel-held ownership.
 #[derive(Component, Debug)]
@@ -78,26 +82,30 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
                 .then(|| -> rusqlite::Result<_> { Ok((row.get(5)?, geo(6)?)) })
                 .transpose()?,
             extra_focus_payload: row.get(16)?,
+            linked_trap: row.get(17)?,
         },
     ))
 }
 
 pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObjectTemplates> {
-    let additional_focus_fields = (2..=34)
+    let additional_focus_fields = (3..=34)
         .map(|index| format!("t.Data{index}"))
         .collect::<Vec<_>>()
         .join(" | ");
     let focus_type = GAMEOBJECT_TYPE_SPELL_FOCUS;
     let sql = format!("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
         d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
-        t.type={focus_type} AND ({additional_focus_fields})<>0
+        t.type={focus_type} AND ({additional_focus_fields})<>0, t.Data2
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
         WHERE t.type={focus_type} OR t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)");
     let mut query = conn.prepare(&sql)?;
     let templates = query
         .query_map([], template_from_row)?
         .collect::<rusqlite::Result<_>>()?;
-    Ok(SummonedObjectTemplates(templates))
+    Ok(SummonedObjectTemplates(
+        templates,
+        super::cooking_traps::load_template(conn)?,
+    ))
 }
 
 pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<String> {
@@ -133,6 +141,17 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
         template.info.go_type,
         GAMEOBJECT_TYPE_GENERIC | GAMEOBJECT_TYPE_CHAIR | GAMEOBJECT_TYPE_MAILBOX
     );
+    if cooking_only && template.linked_trap != 0 {
+        let trap_supported = template.linked_trap == super::cooking_traps::BASIC_CAMPFIRE_TRAP
+            && world.resource::<SummonedObjectTemplates>().1.is_some()
+            && super::cooking_traps::spell_supported(world);
+        if !trap_supported {
+            return Some(format!(
+                "gameobject {entry} requires unsupported linked cooking trap {}",
+                template.linked_trap
+            ));
+        }
+    }
     if !ordinary_object && !cooking_only {
         return Some(format!(
             "gameobject {entry} type {} requires interaction runtime",
@@ -202,6 +221,9 @@ fn spawn_object(
             .bounds
             .expect("supported template has display bounds")
     };
+    let linked_trap = (template.linked_trap != 0 && template.cooking_focus.is_some())
+        .then(|| world.resource::<SummonedObjectTemplates>().1.clone())
+        .flatten();
     let mut object = world.spawn((
         Position {
             x: dest.position.x,
@@ -227,6 +249,10 @@ fn spawn_object(
     if let Some(chair) = template.chair {
         object.insert(chair);
     }
+    let parent = object.id();
+    if let Some(trap) = linked_trap {
+        super::cooking_traps::spawn(world, parent, trap);
+    }
 }
 
 pub(crate) fn expire_objects(world: &mut World) {
@@ -241,4 +267,5 @@ pub(crate) fn expire_objects(world: &mut World) {
         debug!("Spell {spell_id}: object {entity} owned by {owner} expired");
         world.despawn(entity);
     }
+    super::cooking_traps::update(world);
 }
