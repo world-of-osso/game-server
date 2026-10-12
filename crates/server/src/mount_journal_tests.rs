@@ -32,20 +32,33 @@ fn setup() -> Harness {
         .entity_mut(h.caster)
         .insert(crate::class_progression::KnownSpells::fixture(vec![]));
     install_connection(h.app.world_mut(), h.connection);
-    h.app.add_systems(
-        Update,
-        (
-            sync_accounts,
-            receive_favourites,
-            receive_summons,
-            receive_dismissals,
-        )
-            .chain(),
-    );
-    h.app.add_systems(PostUpdate, publish_mount_changes);
+    Plugin::build(&MountJournalPlugin, &mut h.app);
     h.advance(2);
     h
 }
+#[derive(Resource)]
+struct LateEntry(Entity);
+
+fn enter_after_mount_update(mut commands: Commands, entry: Res<LateEntry>) {
+    commands.entity(entry.0).insert(InWorld { character_id: 2 });
+}
+
+#[test]
+fn mount_journal_auth_entry_after_update_sync_loads_account_before_publish() {
+    let mut h = setup();
+    let player = spawn_player(&mut h.app, 1, 0.0);
+    let connection = spawn_peer_connection(&mut h.app, player, 2);
+    h.app.world_mut().entity_mut(connection).remove::<InWorld>();
+    install_connection(h.app.world_mut(), connection);
+    h.app.insert_resource(LateEntry(connection));
+    h.app
+        .add_systems(Update, enter_after_mount_update.after(sync_accounts));
+    h.advance(1);
+    assert!(h.app.world().get::<AccountMounts>(player).is_some());
+    h.advance(3);
+    assert!(!drain::<MountJournalUpdate>(&mut h.app, connection).is_empty());
+}
+
 #[test]
 fn mount_journal_random_favourite_uses_real_spell_and_rejects_combat_and_unowned_mounts() {
     let mut h = setup();
