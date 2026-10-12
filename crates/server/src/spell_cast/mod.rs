@@ -1810,6 +1810,12 @@ fn resolve_effects(
             }
             continue;
         }
+        // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
+        // Unit-targeted events use the normal hit/immunity boundary below.
+        if effect.effect == effects::EFFECT_SEND_EVENT && effect.implicit_targets == [0, 0] {
+            effects::send_game_event(world, &ctx, effect, caster);
+            continue;
+        }
         if let Some(handler) = scripts::cast_effect(spell.id, effect.index)
             .or_else(|| effects::cast_handler(effect.effect))
         {

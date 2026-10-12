@@ -180,6 +180,90 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_game_event_credits_authentic_send_event_caster_only() {
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[1217323],
+        1,
+        false,
+        |app| {
+            app.add_plugins(AchievementPlugin);
+        },
+    )
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Eventproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(PlayerAchievementState::default());
+    h.app.update();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 1217323, None, u8::MAX);
+    h.app.update();
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&102782)
+    );
+    // The Hataclysm's real spell1217323 sends event95324 with no unit target.
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 1217323, None, 0);
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&102782),
+        Some(&1)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.npc)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&102782)
+    );
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&102782),
+        Some(&1)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&102782),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cast_never() {
     use crate::class_progression::{ClassProgressionPlugin, KnownSpells};
     use crate::profession::PlayerProfessions;
@@ -779,31 +863,6 @@ fn achievements_criteria_reputation_rejects_unmigrated_unsigned_counter() {
             .criteria_progress
             .contains_key(&2011)
     );
-}
-
-fn assert_unsupported_achievement(id: u32, criterion: u32, counter: u64) {
-    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
-    let catalog = load_achievement_catalog(&conn).unwrap();
-    let mut state = PlayerAchievementState::default();
-    state.criteria_progress.insert(criterion, counter);
-    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
-    assert!(!state.earned_ids.contains(&id));
-    let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
-        &state,
-        QueryAchievementCatalog::Criteria {
-            achievement_id: id,
-            after_id: 0,
-        },
-        1,
-    ) else {
-        panic!("criteria page")
-    };
-    let row = criteria
-        .iter()
-        .find(|row| row.criteria_id == criterion)
-        .unwrap();
-    assert!(!row.progress_supported);
-    assert!(!row.completed);
 }
 
 #[path = "achievement_normal_lock_tests.rs"]

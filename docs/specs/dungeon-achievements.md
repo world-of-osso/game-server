@@ -69,3 +69,9 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 - ModifierTree, timed, world-state and unsupported/inverse criteria; their achievements remain disabled rather than partially evaluated.
 - Exploration43 uses pinned local WorldMapOverlay→AreaTable.AreaBit joins and authoritative living, non-taxi terrain exploration, persisted per character; overlay IDs are never treated as AreaIDs. Reputation46 uses signed Retail standing and the recoverable-delta migration documented below; never compare legacy unsigned63000 to Retail42000.
 - Additional criteria types beyond 0/5/7/8/27/28/29/165. Target hits credit each distinct recipient once after defense/missile filtering, including triggered spells, not the caster. Skill rows require an authored local SkillLine; loaded and changed nonzero ranks set numeric progress, never use maximum rank or increment it. Cast rows require a local spell and no DB2 conditions; TDB1210 holiday404 criteria11118–11127 remain disabled.
+
+### Continued source-backed coverage
+
+- Type43: pinned WorldMapOverlay areas, Retail AreaBit persistence and actual living/non-taxi terrain discovery; no overlay/area ID substitution.
+- Type73: authoritative successful spell effect61 sends its authored MiscValue to the player caster. Targetless effects execute once; unit-target effects use the hit/immunity boundary. Timers, fail-event conditions, unknown modifiers and absent scripted producers remain unevaluated.
+- Type39 rated arena remains unsupported: no rating producer exists. Never seed a rating to claim support.

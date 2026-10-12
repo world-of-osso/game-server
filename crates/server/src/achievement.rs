@@ -260,6 +260,13 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     }
 }
 
+/// TC GameEventSender.cpp:43-58 credits the player source, never an NPC/target.
+pub(crate) fn record_player_game_event(world: &mut World, source: Entity, event: u32) {
+    if event != 0 && world.get::<Player>(source).is_some() {
+        record_criteria_event(world, source, CriteriaEvent::TriggerGameEvent(event));
+    }
+}
+
 /// TC a352b1fa Spell.cpp:3541-3550: successful regular and triggered casts.
 pub(crate) fn record_spell_cast(world: &mut World, caster: Entity, spell: u32) {
     record_criteria_event(world, caster, CriteriaEvent::CastSpell(spell));

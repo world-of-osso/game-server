@@ -28,6 +28,7 @@ pub(crate) enum CriteriaEvent {
     WinPetBattle,
     Login,
     ExploreAreaBit(u32),
+    TriggerGameEvent(u32),
     CompleteMythicPlus(MythicCompletion),
     CompleteQuest(u32),
     CastSpell(u32),
@@ -48,6 +49,7 @@ impl CriteriaEvent {
             Self::WinPetBattle => 158,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
+            Self::TriggerGameEvent(_) => 73,
             Self::CompleteMythicPlus(_) => 216,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
@@ -77,6 +79,7 @@ impl CriteriaEvent {
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
             | Self::LearnSpell(asset)
+            | Self::TriggerGameEvent(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -365,7 +368,7 @@ impl AchievementCatalog {
                 }
                 let counter = aggregate.criteria_progress.entry(id).or_default();
                 *counter = if self.criteria.get(&id).is_some_and(|row| {
-                    matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 74 | 158 | 165 | 216)
+                    matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 73 | 74 | 158 | 165 | 216)
                 }) {
                     counter.saturating_add(value)
                 } else {
@@ -612,7 +615,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
-                    || ((matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
+                    || ((matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 73 | 165)
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (matches!(kind, 74 | 158) && row.get::<_, i32>(2)? == 0)
                         || (kind == 7 && row.get::<_, bool>(9)?)
