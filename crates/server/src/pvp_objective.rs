@@ -119,7 +119,7 @@ fn update_match(
             continue;
         };
         matched.flag_positions[team_index(enemy)] = Some(actor.position);
-        // Capture triggers30/31 sit exactly on the authored flag homes (TDB areatrigger).
+        // Capture triggers 30/31 sit exactly on the authored flag homes (TDB areatrigger).
         if actor.position.distance(homes[team_index(team)].position) <= CAPTURE_RADIUS
             && battle.capture(team, carrier, &mut matched.instance, &template)
         {
