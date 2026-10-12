@@ -244,6 +244,8 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, error: O
             row
         })
         .collect();
+    let mounts: Vec<MountJournalEntry> = mounts;
+    info!(?connection, count = mounts.len(), mare = ?mounts.iter().find(|mount| mount.mount_id == 18).map(|mount| (mount.collected, mount.favourite, mount.active)), ?error, "MOUNT_JOURNAL_SENT");
     if let Some(mut sender) = world.get_mut::<MessageSender<MountJournalUpdate>>(connection) {
         sender.send::<CollectionChannel>(MountJournalUpdate { mounts, error });
     }
