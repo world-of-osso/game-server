@@ -3928,6 +3928,20 @@ fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
     let rotation = h.app.world().get::<Rotation>(h.caster).unwrap();
     let source_orientation = rotation.y - std::f32::consts::FRAC_PI_2;
     assert!((0.0..=std::f32::consts::TAU).contains(&source_orientation));
+    let correction = h
+        .app
+        .world()
+        .get::<shared::components::ForcedFacing>(h.caster)
+        .unwrap();
+    assert_eq!(correction.yaw, rotation.y);
+    assert_eq!(
+        correction.epoch,
+        h.app
+            .world()
+            .get::<shared::components::MovementControl>(h.caster)
+            .unwrap()
+            .epoch
+    );
     assert_eq!((rotation.x, rotation.z), (0.0, 0.0));
     assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
     assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
@@ -3946,7 +3960,14 @@ fn toyfx18_compass_refuses_missing_rotation_or_changed_source_payload() {
     )
     .unwrap();
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for missing in ["rotation", "amount", "trigger", "target", "extra effect"] {
+    for missing in [
+        "rotation",
+        "control",
+        "amount",
+        "trigger",
+        "target",
+        "extra effect",
+    ] {
         let directory = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&directory.path().join("compass-refusal.redb"));
         h.app.world_mut().entity_mut(h.caster).insert(Rotation {
@@ -3958,6 +3979,12 @@ fn toyfx18_compass_refuses_missing_rotation_or_changed_source_payload() {
         match missing {
             "rotation" => {
                 h.app.world_mut().entity_mut(h.caster).remove::<Rotation>();
+            }
+            "control" => {
+                h.app
+                    .world_mut()
+                    .entity_mut(h.caster)
+                    .remove::<shared::components::MovementControl>();
             }
             "amount" => spell.effects[0].base_points = 1.0,
             "trigger" => spell.effects[0].trigger_spell = 116,

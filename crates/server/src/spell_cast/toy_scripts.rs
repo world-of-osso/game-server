@@ -115,13 +115,7 @@ pub(crate) fn check_cast(
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
     if spell.id == UNUSUAL_COMPASS {
-        if let Some(reason) = unsupported(world, spell) {
-            return Err(CastFailure::Unsupported(reason));
-        }
-        return world
-            .get::<Rotation>(caster)
-            .map(|_| ())
-            .ok_or(CastFailure::InvalidTarget);
+        return check_compass_cast(world, caster, spell);
     }
     if dice_plan(spell.id).is_none() {
         return Ok(());
@@ -148,12 +142,25 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<CastEffectHandler> {
         .then_some(emit_dice_emote_and_rolls as CastEffectHandler)
 }
 
+fn check_compass_cast(world: &World, caster: Entity, spell: &SpellInfo) -> Result<(), CastFailure> {
+    if let Some(reason) = unsupported(world, spell) {
+        return Err(CastFailure::Unsupported(reason));
+    }
+    let can_adopt_facing = world.get::<Rotation>(caster).is_some()
+        && world
+            .get::<shared::components::MovementControl>(caster)
+            .is_some();
+    if can_adopt_facing {
+        Ok(())
+    } else {
+        Err(CastFailure::InvalidTarget)
+    }
+}
+
 fn turn_compass_caster_randomly(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
     let orientation = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..=std::f32::consts::TAU);
-    world
-        .get_mut::<Rotation>(ctx.caster)
-        .expect("validated compass rotation")
-        .y = orientation + std::f32::consts::FRAC_PI_2;
+    let yaw = orientation + std::f32::consts::FRAC_PI_2;
+    crate::networking::face_player(world, ctx.caster, yaw);
 }
 
 fn emit_dice_emote_and_rolls(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
