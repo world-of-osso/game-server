@@ -924,3 +924,5 @@ Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [
 Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.
 
 - 2026-10-12: [Release tick profiling](investigations/server-tick-lag.md#release-catalog-copy-regression-2026-10-12): idle objective tick copied the full gameobject catalog; restrict reads to mapped match flag homes, preserving gameplay.
+
+- 2026-10-12: [Class cast-state continuation](../class-completeness2.md#blooming-infusion-and-consumed-missile-modifiers--batch20): current-owner summon/raw-mastery controls, native unused-ready cooldown credit and Blooming Infusion counters; consumed charged modifiers retain launched damage without altering old missiles with new buffs. Native RED/GREEN and scoped adjacency retained; Symbiotic raw/effective basis remains source-blocked, full goal open.

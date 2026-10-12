@@ -2,7 +2,7 @@
 
 - [Shared AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229) — native per-effect229 school/multiplicative reduction; five damage/lifecycle controls, flag/leech and class-wide proof limits.
 
-- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; [baseline](../class-completeness.md), [continuation](../class-completeness2.md): authored census startup, native selectors/portals/rituals, controlled elemental lifecycle and persisted item-target unlocks; whole spell/talent coverage remains open.
+- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native census; [continuation](../class-completeness2.md): native selectors/lifecycles, owner summon damage/raw mastery, ready-time credit and charged missile modifiers; representative live gate closed, whole spell/talent coverage open.
 - [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations and real witnesses, recipient-safe typing and explicit native/data coverage boundaries.
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
