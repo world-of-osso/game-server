@@ -125,7 +125,7 @@ def top_constants(block):
             bind_assignment(node, bindings, {})
     # A counter/table assigned by any handler is not a constant across calls.
     for node in all_nodes(block):
-        if isinstance(node, lua.Assign):
+        if isinstance(node, lua.Assign) and not isinstance(node, lua.LocalAssign):
             for target in node.targets:
                 root = target
                 while isinstance(root, lua.Index):
