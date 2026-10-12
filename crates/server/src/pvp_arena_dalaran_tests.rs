@@ -170,7 +170,8 @@ fn arena_dalaran_source_pipe_force_cast_uses_thirty_nineteen_impulse_and_periodi
                 .total_cmp(&h.app.world().get::<Position>(**b).unwrap().x)
         })
         .unwrap();
-    let point = crate::game_objects::wow_position(h.app.world().get::<Position>(pipe).unwrap());
+    let pipe_origin = *h.app.world().get::<Position>(pipe).unwrap();
+    let point = crate::game_objects::wow_position(&pipe_origin);
     place_player(&mut h, point - Vec3::X);
     let initial = *h.app.world().get::<Position>(h.caster).unwrap();
     let mut clock = Clock::default();
@@ -185,6 +186,11 @@ fn arena_dalaran_source_pipe_force_cast_uses_thirty_nineteen_impulse_and_periodi
     update_running(h.app.world_mut(), COPY, 6.0, &mut clock);
     h.advance(1);
     let pushed = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert_eq!(
+        *h.app.world().get::<Position>(pipe).unwrap(),
+        pipe_origin,
+        "source ExcludeCaster attribute prevents the spout from knocking itself away"
+    );
     assert!(
         h.app
             .world()

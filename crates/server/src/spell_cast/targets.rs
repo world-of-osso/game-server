@@ -31,6 +31,8 @@ use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 use crate::spell_info::{SpellEffect, SpellInfo};
 
 const MELEE_RANGE: f32 = 5.0;
+/// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
+const SPELL_ATTR1_EXCLUDE_CASTER: u32 = 0x0008_0000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Relation {
@@ -457,6 +459,13 @@ pub fn select_targets(
     }
     if !selected_any && effect.implicit_targets == [0, 0] {
         units.push(explicit.unwrap_or(caster));
+    }
+    if spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[1] & SPELL_ATTR1_EXCLUDE_CASTER != 0)
+    {
+        units.retain(|unit| *unit != caster);
     }
     units.dedup();
     Ok(units)
