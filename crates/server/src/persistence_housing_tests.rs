@@ -129,6 +129,9 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
             transform: DecorTransform {
                 position: [1.25, 2.0, -3.0],
                 yaw: 0.0,
+                pitch: 0.0,
+                roll: 0.0,
+                scale: 1.0,
             },
         },
     )
@@ -152,7 +155,10 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
                 decor_id: 1693,
                 transform: DecorTransform {
                     position: [0.0; 3],
-                    yaw: 0.0
+                    yaw: 0.0,
+                    pitch: 0.0,
+                    roll: 0.0,
+                    scale: 1.0,
                 }
             }
         )
@@ -262,4 +268,148 @@ fn housing_competing_accounts_cannot_both_purchase_one_plot() {
         .map(|character| crate::persistence::load_inventory(&db, character).gold)
         .sum::<u64>();
     assert_eq!(paid, 30_000_000);
+}
+
+#[test]
+fn housing_precision_migration_is_atomic_sourced_and_survives_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("housing.redb");
+    let db = fixture(&path);
+    let source = crate::housing_catalog::tests::catalog_fixture();
+    source.execute("INSERT INTO housing_catalog_record VALUES (?, 'HouseDecor', 1693, ?)", rusqlite::params![BUILD_KEY, r#"{"InitialRotation_0":"0.0","InitialRotation_1":"0.0","InitialRotation_2":"0.0","InitialScale":"1.0"}"#]).unwrap();
+    // Actual pre-precision schema and paid plot/account identities. No newly
+    // initialized typed State can stand in for this on-disk migration boundary.
+    let legacy = serde_json::json!({
+        "build_key": BUILD_KEY, "next_house_id":2, "next_instance_id":8,
+        "houses":{"1":{"house_id":1,"account_id":1,"owner_character_id":30,
+            "neighborhood_id":1,"plot_id":417,"access_anyone":true,
+            "decor":[{"instance_id":7,"decor_id":1693,"transform":{"position":[1.25,-2.0,3.0],"yaw":0.5}}]}},
+        "storage":{"1":{"2330":1}}
+    });
+    let bytes = serde_json::to_vec(&legacy).unwrap();
+    let txn = db.begin_write().unwrap();
+    txn.open_table(STATE)
+        .unwrap()
+        .insert(STATE_ROW, bytes.as_slice())
+        .unwrap();
+    txn.commit().unwrap();
+    source
+        .execute(
+            "DELETE FROM housing_catalog_record WHERE table_name='HouseDecor'",
+            [],
+        )
+        .unwrap();
+    let txn = db.begin_write().unwrap();
+    assert!(migration::migrate(&txn, &source).is_err());
+    drop(txn);
+    assert_eq!(
+        db.begin_read()
+            .unwrap()
+            .open_table(STATE)
+            .unwrap()
+            .get(STATE_ROW)
+            .unwrap()
+            .unwrap()
+            .value(),
+        bytes
+    );
+    source.execute("INSERT INTO housing_catalog_record VALUES (?, 'HouseDecor', 1693, ?)", rusqlite::params![BUILD_KEY, r#"{"InitialRotation_0":"0.0","InitialRotation_1":"0.0","InitialRotation_2":"0.0","InitialScale":"1.0"}"#]).unwrap();
+    let txn = db.begin_write().unwrap();
+    migration::migrate(&txn, &source).unwrap();
+    txn.commit().unwrap();
+    drop(db);
+    let db = Database::open(&path).unwrap();
+    let owner = Actor {
+        inside_house: Some(1),
+        ..actor(1, 30)
+    };
+    let state = snapshot(&db, owner, Some(1)).unwrap();
+    assert_eq!(
+        state.stored,
+        vec![StoredDecor {
+            decor_id: 2330,
+            quantity: 1
+        }]
+    );
+    assert_eq!(
+        state.placed,
+        vec![StoredDecor {
+            decor_id: 1693,
+            quantity: 1
+        }]
+    );
+    let decor = &state.layout.unwrap().decor[0];
+    assert_eq!(decor.instance_id, 7);
+    assert_eq!(
+        decor.transform,
+        DecorTransform {
+            position: [1.25, -2.0, 3.0],
+            yaw: 0.5,
+            pitch: 0.0,
+            roll: -0.0,
+            scale: 1.0
+        }
+    );
+    let transform = DecorTransform {
+        position: [4.0, -1.5, 7.0],
+        yaw: 0.75,
+        pitch: 0.25,
+        roll: -0.4,
+        scale: 1.25,
+    };
+    edit(
+        &db,
+        owner,
+        &HousingCommand::TransformDecor {
+            house_id: 1,
+            instance_id: 7,
+            transform,
+        },
+    )
+    .unwrap();
+    let visitor = Actor {
+        inside_house: Some(1),
+        ..actor(2, 31)
+    };
+    assert!(
+        edit(
+            &db,
+            visitor,
+            &HousingCommand::TransformDecor {
+                house_id: 1,
+                instance_id: 7,
+                transform
+            }
+        )
+        .is_err()
+    );
+    let invalid = DecorTransform {
+        scale: 0.0,
+        ..transform
+    };
+    assert!(
+        edit(
+            &db,
+            owner,
+            &HousingCommand::TransformDecor {
+                house_id: 1,
+                instance_id: 7,
+                transform: invalid
+            }
+        )
+        .is_err()
+    );
+    drop(db);
+    let db = Database::open(&path).unwrap();
+    assert_eq!(
+        snapshot(&db, owner, Some(1)).unwrap().layout.unwrap().decor[0].transform,
+        transform
+    );
+    let txn = db.begin_write().unwrap();
+    migration::migrate(&txn, &source).unwrap();
+    txn.commit().unwrap();
+    assert_eq!(
+        snapshot(&db, owner, Some(1)).unwrap().layout.unwrap().decor[0].transform,
+        transform
+    );
 }

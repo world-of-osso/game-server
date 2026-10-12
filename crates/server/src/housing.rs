@@ -107,6 +107,7 @@ pub(crate) fn process_requests(world: &mut World) {
                 HousingCommand::PlaceDecor { .. }
                     | HousingCommand::MoveDecor { .. }
                     | HousingCommand::RotateDecor { .. }
+                    | HousingCommand::TransformDecor { .. }
                     | HousingCommand::RemoveDecor { .. }
             )
         {
@@ -215,8 +216,35 @@ fn apply_house_command(
             )?;
         }
         HousingCommand::RedeemDecor { item_guid } => collect_decor(world, actor, *item_guid)?,
-        HousingCommand::PlaceDecor { .. }
-        | HousingCommand::MoveDecor { .. }
+        HousingCommand::PlaceDecor {
+            decor_id,
+            transform,
+            ..
+        } => {
+            catalog(world)?.validate_decor_scale(*decor_id, transform.scale)?;
+            store::edit(&world.resource::<GameDatabase>().db, context, command)?;
+        }
+        HousingCommand::TransformDecor {
+            house_id,
+            instance_id,
+            transform,
+        } => {
+            let layout = store::snapshot(
+                &world.resource::<GameDatabase>().db,
+                context,
+                Some(*house_id),
+            )?
+            .layout
+            .ok_or("House layout is unavailable.")?;
+            let decor = layout
+                .decor
+                .iter()
+                .find(|decor| decor.instance_id == *instance_id)
+                .ok_or("Placed decor not found in this house.")?;
+            catalog(world)?.validate_decor_scale(decor.decor_id, transform.scale)?;
+            store::edit(&world.resource::<GameDatabase>().db, context, command)?;
+        }
+        HousingCommand::MoveDecor { .. }
         | HousingCommand::RotateDecor { .. }
         | HousingCommand::RemoveDecor { .. } => {
             store::edit(&world.resource::<GameDatabase>().db, context, command)?;

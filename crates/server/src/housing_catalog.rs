@@ -25,6 +25,7 @@ pub(crate) struct HousingCatalog {
     cornerstones: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
     bulletin_boards: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
     home_entry: Option<WorldLocation>,
+    decor_scales: BTreeMap<u32, (u32, f32)>,
 }
 
 impl HousingCatalog {
@@ -50,6 +51,18 @@ impl HousingCatalog {
             plots,
             cornerstones: BTreeMap::new(),
             bulletin_boards: BTreeMap::new(),
+            decor_scales: read_rows(db, "HouseDecor")?
+                .into_iter()
+                .map(|(id, fields)| {
+                    Ok((
+                        id,
+                        (
+                            number(&fields, "ModelType")?,
+                            number(&fields, "InitialScale")?,
+                        ),
+                    ))
+                })
+                .collect::<Result<_, String>>()?,
             home_entry: read_rows(db, "NeighborhoodMap")?
                 .into_iter()
                 .find(|(id, _)| *id == 7)
@@ -109,6 +122,17 @@ impl HousingCatalog {
             }
         }
         Ok(plots)
+    }
+
+    pub(crate) fn validate_decor_scale(&self, decor_id: u32, scale: f32) -> Result<(), String> {
+        let (model_type, initial_scale) = self
+            .decor_scales
+            .get(&decor_id)
+            .ok_or_else(|| format!("Decor {decor_id} has no authenticated scale source."))?;
+        if *model_type != 1 && scale != *initial_scale {
+            return Err("Retail expert mode cannot scale WMO decor.".into());
+        }
+        Ok(())
     }
 
     pub(crate) fn home_entry(&self) -> Result<WorldLocation, String> {
