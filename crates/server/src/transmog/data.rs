@@ -2,14 +2,23 @@
 //! scripts/import_transmog_catalogue.py; world.db is never modified.
 use serde::Deserialize;
 use shared::protocol::*;
-use std::collections::HashSet;
 
 #[derive(Deserialize)]
 pub(super) struct AuthoredSet {
-    #[serde(flatten)]
-    pub view: TransmogSet,
+    pub set_id: u32,
+    pub parent_set_id: u32,
+    pub name: String,
+    pub source_ids: Vec<u32>,
     pub class_mask: u32,
     pub condition_id: u32,
+}
+
+impl AuthoredSet {
+    /// Class-usable and without an unevaluated PlayerCondition.
+    pub fn usable_by(&self, class: u8) -> bool {
+        let class_mask = 1u32 << (class - 1);
+        (self.class_mask == 0 || self.class_mask & class_mask != 0) && self.condition_id == 0
+    }
 }
 
 #[derive(Deserialize)]
@@ -37,25 +46,11 @@ impl Wardrobe {
         .expect("decode pinned Retail transmog catalogue")
     }
 
-    pub fn populate(&self, state: &mut TransmogState, class: u8) {
-        let ids: HashSet<_> = state
-            .catalogue
-            .iter()
-            .map(|entry| entry.source.source_id)
-            .collect();
-        let class_mask = 1u32 << (class - 1);
-        state.sets = self
-            .sets
-            .iter()
-            .filter(|entry| {
-                let matches_class = entry.class_mask == 0 || entry.class_mask & class_mask != 0;
-                let readable_condition = entry.condition_id == 0;
-                matches_class
-                    && readable_condition
-                    && entry.view.source_ids.iter().any(|id| ids.contains(id))
-            })
-            .map(|entry| entry.view.clone())
-            .collect();
+    pub fn sets(&self) -> &[AuthoredSet] {
+        &self.sets
+    }
+
+    pub fn populate(&self, state: &mut TransmogState) {
         state.outfit_entries = self.outfit_entries.clone();
         state.illusions = self.illusions.clone();
         // TrinityCore a352b1fa CollectionMgr::LoadAccountTransmogIllusions
