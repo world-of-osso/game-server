@@ -843,7 +843,11 @@ fn six_arena_players_complete_rated_three_v_three_and_persist_played_results() {
 fn exercise_arena_channel(mode: ArenaQueueMode) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
-    let team_size = usize::from(crate::pvp::arena::team_size(mode).unwrap());
+    let team_size = match mode {
+        ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Rated2v2 => 2,
+        ArenaQueueMode::Skirmish3v3 | ArenaQueueMode::Rated3v3 => 3,
+        ArenaQueueMode::SoloShuffle => panic!("fixture requires a sourced arena bracket"),
+    };
     let bracket = if team_size == 2 {
         PvpBracketSnapshot::Arena2v2
     } else {
