@@ -96,6 +96,8 @@ pub const MECHANIC_IMMUNITY: u32 = 77;
 pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
 pub const MOD_ATTACKER_RANGED_HIT_CHANCE: u32 = 185;
 pub const MOD_ATTACKER_SPELL_HIT_CHANCE: u32 = 186;
+/// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
+pub const MOD_ATTACKER_MELEE_CRIT_CHANCE: u32 = 187;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
@@ -311,6 +313,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_ATTACKER_MELEE_HIT_CHANCE
         | MOD_ATTACKER_RANGED_HIT_CHANCE
         | MOD_ATTACKER_SPELL_HIT_CHANCE
+        | MOD_ATTACKER_MELEE_CRIT_CHANCE
         | DEFLECT_SPELLS
         | IGNORE_HIT_DIRECTION => HitDefense,
         _ => return None,

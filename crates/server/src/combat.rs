@@ -861,6 +861,10 @@ fn roll_outcome(
         attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
     };
     chances.miss = (base_miss - player_hit_modifier - hit_modifier).clamp(0.0, 100.0);
+    let crit_modifier = target_auras.map_or(0.0, |auras| {
+        auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
+    });
+    chances.crit = (chances.crit + crit_modifier).max(0.0);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
