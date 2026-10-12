@@ -335,6 +335,21 @@ fn housing_dye_schema2_migration_preserves_existing_undyed_counts_and_permission
     let path = dir.path().join("schema2.redb");
     let db = fixture(&path);
     let (owner, house_id) = placed_shelf(&db);
+    let mut inventory = crate::persistence::load_inventory(&db, 30);
+    inventory.items.push(dye_item(101, 245384, 2));
+    crate::persistence::save_inventory(&db, 30, &inventory);
+    for _ in 0..2 {
+        redeem(
+            &db,
+            owner,
+            101,
+            &RedemptionRule {
+                item_id: 245384,
+                decor_id: 374,
+            },
+        )
+        .unwrap();
+    }
     set_access(
         &db,
         owner,
@@ -346,6 +361,13 @@ fn housing_dye_schema2_migration_preserves_existing_undyed_counts_and_permission
     )
     .unwrap();
     let before = snapshot(&db, owner, Some(house_id), None).unwrap();
+    assert_eq!(
+        before.stored,
+        vec![StoredDecor {
+            decor_id: 374,
+            quantity: 2
+        }]
+    );
     let txn = db.begin_write().unwrap();
     let mut value = {
         let table = txn.open_table(STATE).unwrap();
@@ -382,7 +404,7 @@ fn housing_dye_schema2_migration_preserves_existing_undyed_counts_and_permission
         stored.stored,
         vec![StoredDecor {
             decor_id: 374,
-            quantity: 1
+            quantity: 3
         }]
     );
     assert!(stored.stored_variants.is_empty());
