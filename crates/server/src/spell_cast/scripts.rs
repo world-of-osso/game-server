@@ -28,7 +28,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
     if (spell, index) == (crate::scripted_ai::murder_row::SPELL_FEL_CRAZED, 1) {
         return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
     }
-    batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
+    super::toy_scripts::cast_effect(spell, index)
+        .or_else(|| batch14::cast_effect(spell, index))
+        .or_else(|| batch9::cast_effect(spell, index))
 }
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;

@@ -118,6 +118,9 @@ fn classify(
         reasons.insert("missing spell".into());
         return;
     };
+    if let Some(reason) = crate::spell_cast::toy_scripts::unsupported(world, spell) {
+        reasons.insert(reason);
+    }
     if spell.effects.is_empty() {
         reasons.insert("missing effects".into());
     }
@@ -234,6 +237,7 @@ fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
                 .any(|radius| radius.radius > 0.0 || radius.radius_max > 0.0);
     }
     crate::spell_cast::effects::is_handled(effect)
+        || crate::spell_cast::toy_scripts::supports_effect(spell_id, effect)
 }
 
 pub(crate) fn unavailable(toy: &Toy, world: &World) -> Option<String> {

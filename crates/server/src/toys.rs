@@ -29,6 +29,10 @@ fn load_catalog(mut commands: Commands) {
         toy_catalog::load(&conn).expect("load Toy catalog; run scripts/import-toys.py first");
     info!("Loaded {} Toy.db2 entries", catalog.0.len());
     commands.insert_resource(catalog);
+    commands.insert_resource(
+        crate::spell_cast::toy_scripts::load_dice_texts(&conn)
+            .expect("load authored dice BroadcastText rows"),
+    );
 }
 
 pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
