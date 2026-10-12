@@ -405,7 +405,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         team_a: players.iter().step_by(2).map(|p| p.0).collect(),
         team_b: players.iter().skip(1).step_by(2).map(|p| p.0).collect(),
     };
-    let mut invitation = InvitedBattleground {
+    let invitation = InvitedBattleground {
         instance: BgInstance::from_match(&matched, &template),
         accepted: players.iter().map(|p| p.0).collect(),
         map: Some(map),
@@ -419,19 +419,25 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         scoreboard: Vec::new(),
         flag_positions: [None, None],
     };
-    assert!(invitation.instance.start());
-    invitation.instance.add_score(BgTeam::A, 2, &template);
-    assert!(
-        invitation
-            .flags
-            .as_mut()
-            .unwrap()
-            .flags
-            .pickup(BgTeam::A, players[0].0)
-    );
     let mut state = PvpServerState::default();
     state.battleground_matches.insert(17, invitation);
     world.insert_resource(state);
+    // Native readiness starts the match and builds its authored scoreboard columns.
+    pvp_objective::update_battleground_objectives(&mut world);
+    {
+        let mut state = world.resource_mut::<PvpServerState>();
+        let invitation = state.battleground_matches.get_mut(&17).unwrap();
+        assert_eq!(invitation.instance.phase, BgPhase::InProgress);
+        invitation.instance.add_score(BgTeam::A, 2, &template);
+        assert!(
+            invitation
+                .flags
+                .as_mut()
+                .unwrap()
+                .flags
+                .pickup(BgTeam::A, players[0].0)
+        );
+    }
     // A winning roster member who already left the copy must not receive completion.
     world.entity_mut(players[8].1).insert(InMap::continent(0));
     pvp_objective::update_battleground_objectives(&mut world);
