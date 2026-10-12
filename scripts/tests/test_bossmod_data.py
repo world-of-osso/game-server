@@ -37,7 +37,7 @@ mod:SetCreatureID(11490)
 mod:SetZone(429)
 local initial = 3.7
 local timers = { [1] = { [22478] = 8.5 } }
-local timerPain = mod:NewTimer(12, 22478)
+local timerPain = mod:NewTimer(12, "Pain", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 22478)
 function mod:OnCombatStart()
  timerPain:Start(initial)
 end
@@ -112,6 +112,17 @@ end
         self.assertEqual(bm.locale_literals(source, 'L')['L.warn'], 'US English')
         default = 'L.warn="English"\nif GetLocale()=="deDE" then L.warn="Deutsch" end'
         self.assertEqual(bm.locale_literals(default, 'L')['L.warn'], 'English')
+
+    def test_custom_dbm_timer_name_is_not_a_spell_identity(self):
+        source = '''local mod=DBM:NewMod(1,"DBM",1)
+mod:SetEncounterID(343)
+mod:SetCreatureID(11490)
+local timer = mod:NewTimer(12,22478)
+function mod:OnCombatStart() timer:Start() end
+'''
+        result = bm.extract_dbm(source, 'Custom.lua', 'DBM', 'pinned')
+        self.assertFalse(any(r['action']=='timer' for r in result['rules']))
+        self.assertTrue(any('spellId' in g['reason'] for g in result['issues']))
 
     def test_unreachable_dynamic_timers_are_audited_not_scheduled(self):
         source = SOURCE + '''function mod:Dynamic(eventInfo)
