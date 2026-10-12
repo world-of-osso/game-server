@@ -8,7 +8,11 @@ Toy membership was excluded from ordinary Retail item selection. Additive prepar
 
 Actual source-bound fixture:64646 Bones of Transformation→91760, native creature41979/display32473,120000ms aura; cancellation restores original model. Item source/rebuild fixtures include109183 (World Shrinker, engineering2501/rank1 restriction retained),113542 (Whispers of Rai'Vosh,level10 retained), and unresolved72231 (not synthesized).
 
-RED: actual importer misses843 source-resolved items; actual physical64646 cannot learn; copied census remains136 and reports missing content_item64646. GREEN and live proof pending. Evidence at engine `data/diagnostics/toy-effects14-2026-10-11/`.
+RED: actual importer misses843 source-resolved items; actual physical64646 cannot learn; copied census remains136 and reports missing content_item64646. GREEN: importer/source equality/idempotency/rebuild/rollback4/4; real physical learn/UseToy/display/cancel test and copied census2/2. Prepared census136→292 (+156,zero removals); canonical unchanged136. Live proof pending. Evidence at engine `data/diagnostics/toy-effects14-2026-10-11/`.
+
+## Batch2: source-defined zero-entry costumes
+
+Pinned local TC a352b1fa `SpellAuraEffects.cpp:2090-2242` defines Murloc42365→21723, Gnomeregan75531→male31654/female31655, Darkspear75532→male31737/female31738. Retail69933 SpellEffect confirms transform56/misc0 for all3. Native sex determines Pride appearance; existing transform ownership/restoration machinery remains authoritative. All five display identities exist in local CreatureDisplayInfo. No inferred random-costume table, race mapping, model substitution or zero-entry no-op. RED actual33079 UseToy refused aura56. GREEN/live/census pending.
 
 ## Remaining mechanic incidence
 

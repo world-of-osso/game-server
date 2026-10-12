@@ -2686,6 +2686,90 @@ fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
 }
 
 #[test]
+fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
+    use shared::components::{ModelDisplay, Player, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    for (item, spell, race, male, female) in [
+        (33079, 42365, 1, 21723, 21723),
+        (54651, 75531, 1, 31654, 31655),
+        (54653, 75532, 2, 31737, 31738),
+    ] {
+        for sex in [0, 1] {
+            let (mut h, character) = setup_for_race(
+                &directory.path().join(format!("costume-{item}-{sex}.redb")),
+                race,
+            );
+            h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+            h.app
+                .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+            h.app
+                .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+            h.app
+                .world_mut()
+                .get_mut::<Player>(h.caster)
+                .unwrap()
+                .appearance
+                .sex = sex;
+            let before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+            let other_before = h.app.world().get::<ModelDisplay>(h.npc).cloned();
+            learn_effect_toy(&mut h, character, item);
+            assert_eq!(
+                activate(&mut h, item)[0].error,
+                None,
+                "item {item},sex {sex}"
+            );
+            h.advance(80);
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+            let display = if sex == 1 { female } else { male };
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<ModelDisplay>(h.caster)
+                    .unwrap()
+                    .display_id,
+                display
+            );
+            assert_eq!(
+                h.app.world().get::<ModelDisplay>(h.npc),
+                other_before.as_ref()
+            );
+            assert!(
+                h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == spell)
+            );
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+                .unwrap()
+                .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                    spell_id: spell,
+                });
+            h.advance(5);
+            assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), before.as_ref());
+            assert!(
+                !h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == spell)
+            );
+        }
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }

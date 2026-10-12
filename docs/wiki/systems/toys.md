@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Toy-effects14 zero-entry costumes (2026-10-11)
+
+TC a352b1fa `HandleAuraTransform` supplies explicit mappings, not creature-entry joins, for Murloc42365/display21723, Gnomeregan75531/displays31654–31655 and Darkspear75532/displays31737–31738. The native player sex selects the two Pride displays even while another transform is active. Existing transform precedence and native-display restoration apply. Toy preflight accepts only those implemented zero-entry cases; other zero-entry costumes remain explicit refusals. [Source and proof](../../toy-effects14-coverage.md).
+
 ## Toy-effects14 item selection (2026-10-11)
 
 Toy.db2 membership was absent from the general item-selection union, so 843 source-resolved toy items never reached `content_item`. Of these,156 already pass spell-graph preflight; that is not native-effect certification. General content rebuilding now retains source-resolved Toy members. The additive `scripts/add_toy_summon_templates.py` uses the same `content_policy.ITEM_COLUMNS` conversion, preserves existing runtime rows and still refuses missing required scenery sources. Unresolved Item/ItemSparse rows remain unresolved. No spell, script, payload or coordinate is manufactured.
