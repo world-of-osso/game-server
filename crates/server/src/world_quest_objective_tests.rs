@@ -171,6 +171,68 @@ fn world_quest_sequence_and_contributor_bar_prerequisites_block_premature_credit
 }
 
 #[test]
+fn world_quest_sequence_advances_after_a_derived_bar_completes() {
+    let quest = QuestTemplate {
+        id: 1,
+        objectives: vec![
+            ObjectiveDef {
+                kind: ObjectiveKind::ProgressBar,
+                object_id: 0,
+                required: 100,
+                text: "Bar".into(),
+            },
+            ObjectiveDef {
+                kind: ObjectiveKind::Monster,
+                object_id: 42,
+                required: 10,
+                text: "Contributor".into(),
+            },
+            ObjectiveDef {
+                kind: ObjectiveKind::Monster,
+                object_id: 43,
+                required: 1,
+                text: "Next phase".into(),
+            },
+        ],
+        world_objective_rules: Some(vec![
+            ObjectiveRule {
+                flags: 2,
+                ..Default::default()
+            },
+            ObjectiveRule {
+                flags: 64,
+                weight: 10.,
+                ..Default::default()
+            },
+            ObjectiveRule {
+                flags: 2,
+                ..Default::default()
+            },
+        ]),
+        ..Default::default()
+    };
+    let mut db = crate::quest_data::QuestDb::default();
+    db.quests.insert(1, quest);
+    let mut log = crate::persistence::quest_store::QuestLogData {
+        active: vec![ActiveQuestData {
+            quest_id: 1,
+            counts: vec![0; 3],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    assert!(!crate::quest_rules::credit_kill(&db, &mut log, 43));
+    for _ in 0..10 {
+        assert!(crate::quest_rules::credit_kill(&db, &mut log, 42));
+    }
+    assert!(crate::quest_rules::credit_kill(&db, &mut log, 43));
+    assert!(objectives_done(
+        &db.quests[&1],
+        &objective_counts(&db.quests[&1], log.active(1).unwrap(), |_| 0)
+    ));
+}
+
+#[test]
 fn world_quest_dynamic_objective_load_preserves_order_flags_names_and_weights() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_world_quest (quest_id INTEGER);INSERT INTO content_world_quest VALUES(76587);

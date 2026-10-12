@@ -161,7 +161,12 @@ pub(crate) fn creditable(quest: &QuestTemplate, counts: &[u32], index: usize) ->
     let mut sequence_satisfied = true;
     for before in (0..index).rev() {
         let previous = rule(quest, before);
-        let complete = counts[before] >= quest.objectives[before].required;
+        let current = if quest.objectives[before].kind == ObjectiveKind::ProgressBar {
+            weighted_percent(quest, counts).floor() as u32
+        } else {
+            counts[before]
+        };
+        let complete = current >= quest.objectives[before].required;
         if previous.flags & SEQUENCED != 0 {
             return if metadata.flags & SEQUENCED != 0 {
                 complete && sequence_satisfied
