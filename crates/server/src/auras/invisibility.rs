@@ -196,14 +196,15 @@ mod tests {
 
 pub fn can_detect(world: &World, observer: Entity, target: Entity) -> bool {
     observer == target
-        || world
-            .get::<Invisibility>(observer)
-            .cloned()
-            .unwrap_or_default()
-            .detects(
-                &world
-                    .get::<Invisibility>(target)
-                    .cloned()
-                    .unwrap_or_default(),
-            )
+        || (super::stealth::can_detect(world, observer, target)
+            && world
+                .get::<Invisibility>(observer)
+                .cloned()
+                .unwrap_or_default()
+                .detects(
+                    &world
+                        .get::<Invisibility>(target)
+                        .cloned()
+                        .unwrap_or_default(),
+                ))
 }

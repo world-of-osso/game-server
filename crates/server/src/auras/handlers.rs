@@ -62,6 +62,10 @@ pub const PERIODIC_LEECH: u32 = 53;
 pub const MOD_THREAT: u32 = 10;
 pub const MOD_TAUNT: u32 = 11;
 pub const MOD_STUN: u32 = 12;
+pub const MOD_STEALTH: u32 = 16;
+pub const MOD_STEALTH_DETECT: u32 = 17;
+pub const MOD_STEALTH_LEVEL: u32 = 154;
+pub const DETECT_STEALTH: u32 = 228;
 pub const MOD_POWER_COST_SCHOOL_PCT: u32 = 72;
 pub const ALLOW_TALENT_SWAPPING: u32 = 158;
 pub const ARENA_PREPARATION: u32 = 215;
@@ -251,6 +255,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
+        | MOD_STEALTH
+        | MOD_STEALTH_LEVEL
+        | MOD_STEALTH_DETECT
+        | DETECT_STEALTH
         | ARENA_PREPARATION
         | MOD_INVISIBILITY_DETECT
         | DETECT_VISIBLE_WHILE_INVISIBLE

@@ -66,6 +66,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         return;
     };
     let visibility = super::Invisibility::from_auras(auras);
+    let stealth = super::stealth::Stealth::from_auras(auras);
     let preparing = has_type(auras, super::handlers::ARENA_PREPARATION);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
@@ -78,6 +79,10 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     if world.get::<super::Invisibility>(unit) != Some(&visibility) {
         world.entity_mut(unit).insert(visibility.clone());
         crate::interest::set_invisibility(world, unit, visibility);
+    }
+    if world.get::<super::stealth::Stealth>(unit) != Some(&stealth) {
+        world.entity_mut(unit).insert(stealth.clone());
+        crate::interest::set_stealth(world, unit, stealth);
     }
     if unattackable != world.get::<Unattackable>(unit).is_some() {
         reconcile_unattackable(world, unit, unattackable);
