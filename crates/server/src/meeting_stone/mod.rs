@@ -96,7 +96,7 @@ fn ritual_from_row(row: &Row) -> rusqlite::Result<(u32, RitualTemplate)> {
         max: Vec3::new(geo(10)?, geo(11)?, geo(12)?),
         casters: row.get(4)?,
         spell: row.get(5)?,
-        grouped: row.get::<_, u32>(6)? != 0,
+        grouped: row.get::<_, i64>(6)? != 0,
     };
     Ok((entry, template))
 }
