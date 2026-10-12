@@ -380,7 +380,12 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
     let (mut h, boss, _) =
         bound_boss_in_state(135322, 1762, 0, 1, None, EncounterState::InProgress);
     let expected = Vec3::new(-1058.8403, 2615.1667, 810.1519);
-    assert!(h.wow_position(boss).distance(expected) < 0.001);
+    assert!(
+        h.wow_position(boss).distance(expected) < 0.001,
+        "position {:?}, state {:?}",
+        h.wow_position(boss),
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+    );
     let player = h.player();
     let boss_position = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert((
@@ -505,7 +510,10 @@ fn encounter_coverage_golden_serpent_evade_retires_and_respawns_without_credit()
     assert!(
         h.wow_position(boss)
             .distance(Vec3::new(-1058.8403, 2615.1667, 810.1519))
-            < 0.001
+            < 0.001,
+        "position {:?}, state {:?}",
+        h.wow_position(boss),
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss)
     );
     assert_eq!(
         h.app
