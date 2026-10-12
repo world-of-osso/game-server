@@ -16,7 +16,7 @@ use super::PlayerAchievementState;
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74, 76, 77, 107, 108,
-    109, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220,
+    109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -85,6 +85,7 @@ pub(crate) enum CriteriaEvent {
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
+    LandTargetedSpell(u32),
     LearnSpell(u32),
     DefeatEncounter(u32),
 }
@@ -145,6 +146,7 @@ impl CriteriaEvent {
             Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
+            Self::LandTargetedSpell(_) => 110,
             Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
         }
@@ -198,6 +200,7 @@ impl CriteriaEvent {
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
+            | Self::LandTargetedSpell(asset)
             | Self::LearnSpell(asset)
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
@@ -925,7 +928,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                             && catalog
                                 .pet_creatures
                                 .contains(&(row.get::<_, i32>(2)? as u32)))
-                        || (matches!(kind, 28 | 34 | 69) && row.get::<_, bool>(8)?)
+                        || (matches!(kind, 28 | 34 | 69 | 110) && row.get::<_, bool>(8)?)
                         || (kind == 29
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))

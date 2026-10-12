@@ -488,9 +488,15 @@ pub(crate) fn record_spell_cast(world: &mut World, caster: Entity, spell: u32) {
     record_criteria_event(world, caster, CriteriaEvent::CastSpell(spell));
 }
 
-/// TC a352b1fa Spell.cpp:2876-2880 credits the targeted player, not caster.
-pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32) {
+/// TC a352b1fa Spell::PreprocessSpellHit credits the recipient28 and caster110.
+pub(crate) fn record_targeted_spell_hit(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
+    record_criteria_event(world, caster, CriteriaEvent::LandTargetedSpell(spell));
 }
 
 /// Called only after durable M+ settlement; players must belong to the finished copy.
