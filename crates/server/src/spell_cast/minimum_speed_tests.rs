@@ -90,6 +90,8 @@ fn class_completeness_native_minimum_speed_expiry_restores_weaker_floor() {
         .get(CHI_TORPEDO)
         .unwrap()
         .misc
+        .as_ref()
+        .unwrap()
         .duration
         .unwrap()
         .duration_ms;
