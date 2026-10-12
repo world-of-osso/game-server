@@ -41,12 +41,13 @@ fn achievements_criteria_pages_normalize_zero_quantity_boolean_progress() {
         1,
     );
     let after = rows(&state);
-    let learned = after.iter().find(|row| row.criteria_id == 7368).unwrap();
+    // Authenticated Alliance60114 is criterion7369; Horde60116 is7368.
+    let learned = after.iter().find(|row| row.criteria_id == 7369).unwrap();
     assert_eq!(
         (learned.current, learned.required, learned.completed),
         (1, 1, true)
     );
-    let other = after.iter().find(|row| row.criteria_id == 7369).unwrap();
+    let other = after.iter().find(|row| row.criteria_id == 7368).unwrap();
     assert_eq!(
         (other.current, other.required, other.completed),
         (0, 1, false)
