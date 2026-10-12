@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Class completeness continuation](../class-completeness2.md): native ground/rectangle selectors, retail ritual metadata, controlled elemental lifecycle and persisted owned-item unlocks; batch12 receipts and source/threshold limits recorded. Whole13-class/40-spec and remaining-class live acceptance stay open.
+
 - 2026-10-11 — [Level80 class completeness](systems/spell-casting.md#level80-class-completeness):7827 native memberships/all13/all40 build-union cast/passive receipts;2841 working-boundary/4607 partial/379 broken. Source-derived537 owner/label,457 category charge haste/progress,416 masked truncated cooldowns; signed Rune/Runic generation and full/partial-school miss cost boundaries. Real-row RED/GREEN, targeted resource controls, no full suite/DB write/master merge/UDP5000. [Contract](../specs/class-completeness.md) and [proof limits](../class-completeness.md) retain legal-build, missing-data and underivable mechanic gaps.
 - 2026-10-11 — [Follower spec bridge](investigations/follower-data.md): user-approved player-spell workaround, eleven sourced profiles/authentic templates, ordinary executor/passives/costs and aura458324, companion identity/presence/health and native LFG transport. Role/catalog7/7, party loopback1/1, profile SQL2/2 and native2/2 bounded proofs; server check/fmt pass. Canonical population is now present, but exact205-tagged maps have no authored entrance and Ruby's entrance has no205 population. Full TDB/location audit retained; no invented remap, canonical writes, private5750 combat or PNG claim.
 
