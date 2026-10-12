@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Zero-amount linked auras](../class-completeness2.md#zero-amount-linked-auras--batch25): native284/285 child ownership/application/removal, stack clocks and trigger depth; RED3→seven controls,37 adjacent controls. Nonzero amounts remain named source gaps; no invented sign or magnitude conversion.
+
 - 2026-10-12 — [Final armor factors](../class-completeness2.md#final-armor-factors--batch24): native466 final player multiplier, preserved fractional stat armor, native zero class fields; six arithmetic/damage/lifecycle controls and34 adjacent stat/armor/summon controls. Pet inheritance and non-player parity remain uncertified.
 
 - 2026-10-12 — [Minimum-speed floors](../class-completeness2.md#minimum-speed-floors--batch23): native305 player speed floor after normalization/slows; RED2→six lifecycle/recipient controls and twelve adjacent movement/mount controls. Non-player template-relative rates and whole-dash parity remain uncertified.
