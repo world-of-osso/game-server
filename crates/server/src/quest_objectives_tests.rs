@@ -1,6 +1,9 @@
 //! Authored game-object and spell-credit objectives through server requests.
 // TC a352b1fa SpellEffects.cpp: EffectKillCreditPersonal (90), EffectKillCredit (134).
 use super::*;
+
+#[path = "world_quest_talk_tests.rs"]
+mod world_quest_talk_tests;
 use shared::components::{Health, UnitFactionTemplate};
 use shared::protocol::{
     CloseInteraction, InteractNpc, InteractionClosed, InteractionFailed, InteractionOpened,
