@@ -73,6 +73,10 @@ fn achievements_criteria_loot_money_counts_committed_coins_not_refusals_or_retak
     let player = h.looter.player;
     h.app
         .world_mut()
+        .entity_mut(h.looter.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    h.app
+        .world_mut()
         .entity_mut(player)
         .insert(crate::achievement::PlayerAchievementState::default());
     let corpse = h.kill_kobold();
