@@ -70,6 +70,13 @@ fn native_factor(spell: u32) -> f32 {
 }
 
 fn calculate_armor(h: &Harness) -> crate::stats::CharacterStats {
+    calculate_armor_with_stat_percent(h, 100.0)
+}
+
+fn calculate_armor_with_stat_percent(
+    h: &Harness,
+    stat_percent: f32,
+) -> crate::stats::CharacterStats {
     let input = StatInputs {
         class: 8,
         race: 1,
@@ -90,7 +97,7 @@ fn calculate_armor(h: &Harness) -> crate::stats::CharacterStats {
         .get::<StatModifiers>(h.caster)
         .copied()
         .unwrap_or_default();
-    mods.armor_from_primary_stat_pct = 100.0;
+    mods.armor_from_primary_stat_pct = stat_percent;
     compute_character_stats(&input, Some(&mods)).unwrap()
 }
 
@@ -137,6 +144,27 @@ fn class_completeness_native_bonus_armor_multiplies_base_and_stat_armor() {
 }
 
 #[test]
+fn class_completeness_native_bonus_armor_rounds_only_after_the_final_multiplier() {
+    let mut h = bonus_armor_harness();
+    apply_native_armor(&mut h, ARMOR_BUFF);
+    // Explicit fixture percentage isolates the fractional stat-armor boundary.
+    let stat_percent = 75.0;
+    let result = calculate_armor_with_stat_percent(&h, stat_percent);
+    let scales = world_db()
+        .unwrap()
+        .store
+        .get(TEMPERED_SCALES)
+        .unwrap()
+        .effects[0]
+        .base_points;
+    let base = 100.0 * (1.0 + scales / 100.0);
+    let expected = ((base + result.primary.intellect * stat_percent / 100.0)
+        * native_factor(ARMOR_BUFF))
+    .floor();
+    assert_eq!(result.armor, expected);
+}
+
+#[test]
 fn class_completeness_native_bonus_armor_independent_factors_multiply() {
     let mut h = bonus_armor_harness();
     let baseline = calculate_armor(&h);
@@ -150,4 +178,70 @@ fn class_completeness_native_bonus_armor_independent_factors_multiply() {
         * native_factor(ARMOR_DEBUFF))
     .floor();
     assert_eq!(after.armor, expected);
+}
+
+#[test]
+fn class_completeness_native_bonus_armor_removal_restores_remaining_factor() {
+    let mut h = bonus_armor_harness();
+    let baseline = calculate_armor(&h).armor;
+    apply_native_armor(&mut h, ARMOR_BUFF);
+    apply_native_armor(&mut h, SECOND_BUFF);
+    let caster = h.caster;
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == ARMOR_BUFF,
+    );
+    assert_eq!(
+        calculate_armor(&h).armor,
+        (baseline * native_factor(SECOND_BUFF)).floor()
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == SECOND_BUFF,
+    );
+    assert_eq!(calculate_armor(&h).armor, baseline);
+}
+
+#[test]
+fn class_completeness_native_bonus_armor_negative_factor_expires_at_native_duration() {
+    let mut h = bonus_armor_harness();
+    let baseline = calculate_armor(&h).armor;
+    apply_native_armor(&mut h, ARMOR_DEBUFF);
+    let protected = calculate_armor(&h);
+    assert_eq!(
+        protected.armor,
+        (baseline * native_factor(ARMOR_DEBUFF)).floor()
+    );
+    let armor = protected.armor;
+    let loss = physical_loss(&mut h, protected);
+    let expected_damage = DAMAGE * ARMOR_CONSTANT / (armor + ARMOR_CONSTANT);
+    assert!(
+        (loss - expected_damage).abs() <= 1.0,
+        "hit{loss} expected{expected_damage}"
+    );
+    let native = world_db().unwrap().store.get(ARMOR_DEBUFF).unwrap();
+    let duration = native.misc.as_ref().unwrap().duration.unwrap().duration_ms;
+    assert!(duration > 0);
+    h.advance(duration as usize / 50 + 4);
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        ARMOR_DEBUFF
+    ));
+    assert_eq!(calculate_armor(&h).armor, baseline);
+}
+
+#[test]
+fn class_completeness_native_bonus_armor_zero_class_fields_do_not_invent_a_bonus() {
+    let mut h = bonus_armor_harness();
+    let baseline = calculate_armor(&h).armor;
+    for spell in NEGATIONS {
+        assert_eq!(native_factor(spell), 1.0);
+        apply_native_armor(&mut h, spell);
+        assert_eq!(calculate_armor(&h).armor, baseline);
+    }
 }
