@@ -26,6 +26,7 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
+    UseGameObject(u32),
     WinPetBattle,
     Login,
     ExploreAreaBit(u32),
@@ -51,6 +52,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
+            Self::UseGameObject(_) => 68,
             Self::WinPetBattle => 158,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
@@ -91,6 +93,7 @@ impl CriteriaEvent {
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
             | Self::WinBattleground(asset)
+            | Self::UseGameObject(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -381,7 +384,7 @@ impl AchievementCatalog {
                 *counter = if self.criteria.get(&id).is_some_and(|row| {
                     matches!(
                         row.kind,
-                        0 | 1 | 12 | 28 | 29 | 36 | 42 | 69 | 73 | 74 | 130 | 158 | 165 | 216
+                        0 | 1 | 12 | 28 | 29 | 36 | 42 | 68 | 69 | 73 | 74 | 130 | 158 | 165 | 216
                     )
                 }) {
                     counter.saturating_add(value)
@@ -629,7 +632,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
-                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 73 | 165)
+                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 68 | 73 | 165)
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (matches!(kind, 74 | 130 | 158) && row.get::<_, i32>(2)? == 0)
                         || (kind == 7 && row.get::<_, bool>(9)?)

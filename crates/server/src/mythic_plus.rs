@@ -488,6 +488,11 @@ pub(crate) fn open_font(world: &mut World, connection: Entity, font: Entity) {
             .resource_mut::<Challenges>()
             .fonts
             .insert(connection, font);
+        let entry = world
+            .get::<GameObjectInfo>(font)
+            .expect("validated Font of Power")
+            .entry;
+        crate::achievement::record_game_object_use(world, player, entry);
         Ok::<(), String>(())
     })();
     send_snapshot(world, connection, result.err());
@@ -599,6 +604,27 @@ mod tests {
                 },
             ))
             .id();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x = 100.0;
+        open_font(h.app.world_mut(), connection, font);
+        assert!(
+            !h.app
+                .world()
+                .get::<crate::achievement::PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&104970)
+        );
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
+        open_font(h.app.world_mut(), connection, font);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::achievement::PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&104970),
+            Some(&1)
+        );
         assert!(slot(h.app.world_mut(), connection, font.to_bits(), 999).is_err());
         slot(h.app.world_mut(), connection, font.to_bits(), 4242).unwrap();
         let peer = h.create_alt("Keypeer");
