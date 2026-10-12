@@ -779,6 +779,61 @@ fn swap_within_backpack_moves_item_and_emits_delta() {
 }
 
 #[test]
+fn achievements_criteria_equipped_retail_item_is_actual_wear_not_bag_ownership_or_rejected_move() {
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut app = setup_app_with(persistence::temp_database(), |app| {
+        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.insert_resource(
+            crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap(),
+        );
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    });
+    let client = spawn_client(&mut app, 1, "Tabardproof");
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    grant_bag_item(&app, client.character_id, 20132, "Arathor Battle Tabard");
+    enter_world(&mut app, &client);
+    assert!(
+        !persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .contains_key(&2335)
+    );
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: ItemLocation::Equipment(EquipmentSlot::Head),
+        },
+    );
+    assert!(!received::<InventoryError>(&mut app, &client).is_empty());
+    app.update();
+    assert!(
+        !persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .contains_key(&2335)
+    );
+    request(&mut app, &client, EquipItem { from: bag(3) });
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    app.update();
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&2335),
+        Some(&1)
+    );
+    request(&mut app, &client, EquipItem { from: bag(3) });
+    app.update();
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&2335),
+        Some(&1)
+    );
+}
+
+#[test]
 fn equipping_weapon_into_main_hand_updates_equipment_appearance() {
     let mut app = setup_app(persistence::temp_database());
     let client = spawn_client(&mut app, 1, "Bagger");

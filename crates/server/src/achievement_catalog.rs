@@ -28,6 +28,7 @@ pub(crate) enum CriteriaEvent {
     LootItem(u32, u32),
     LootMoney(u64),
     UseItem(u32),
+    EquipItem(u32),
     UseGameObject(u32),
     KnowSkillLineSpells(u32, u32),
     LearnTradeskillSkillLine(u32, u32),
@@ -66,6 +67,7 @@ impl CriteriaEvent {
             Self::LootItem(_, _) => 42,
             Self::LootMoney(_) => 67,
             Self::UseItem(_) => 41,
+            Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
             Self::KnowSkillLineSpells(_, _) => 75,
             Self::LearnTradeskillSkillLine(_, _) => 112,
@@ -130,6 +132,7 @@ impl CriteriaEvent {
             | Self::GainAura(asset)
             | Self::WinBattleground(asset)
             | Self::UseItem(asset)
+            | Self::EquipItem(asset)
             | Self::UseGameObject(asset)
             | Self::KnowPetCreature(asset)
             | Self::LearnToy(asset)
@@ -514,7 +517,8 @@ impl AchievementCatalog {
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
             | CriteriaEvent::KnowPetCreature(_)
-            | CriteriaEvent::LearnToy(_) => 1,
+            | CriteriaEvent::LearnToy(_)
+            | CriteriaEvent::EquipItem(_) => 1,
             CriteriaEvent::KnowSkillLineSpells(_, count)
             | CriteriaEvent::LearnTradeskillSkillLine(_, count)
             | CriteriaEvent::OwnUniquePets(count)
@@ -801,7 +805,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
-                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 68 | 73 | 165)
+                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
