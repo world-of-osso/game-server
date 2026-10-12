@@ -416,7 +416,14 @@ fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
             }],
         },
     );
-    assert_eq!(learn(h, 0)[0].error, None);
+    let results = learn(h, 0);
+    assert!(
+        results
+            .iter()
+            .any(|result| result.operation == ToyOperation::Learn && result.error.is_none()),
+        "physical toy {item_id} did not learn: {results:?}; errors: {:?}",
+        drain::<InventoryError>(&mut h.app, h.connection)
+    );
 }
 
 #[test]
@@ -2593,6 +2600,87 @@ fn toyfx11_prepared_census_keeps_unbound_controls_and_actions_blocked() {
         assert!(
             !toy["unavailable"].is_null(),
             "unbound control/interaction must remain blocked: {toy}"
+        );
+    }
+}
+
+#[test]
+fn toyfx14_source_item_preparation_enables_real_transform_learning_use_and_restore() {
+    use shared::components::{ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("transform.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+    learn_effect_toy(&mut h, character, 64646); // Bones of Transformation.
+    assert_eq!(activate(&mut h, 64646)[0].error, None);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 91760));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(h.caster)
+            .unwrap()
+            .display_id,
+        32473
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 91760)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 91760 });
+    h.advance(5);
+    assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), before.as_ref());
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 91760)
+    );
+}
+
+#[test]
+fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_CENSUS_REPORT");
+    for item in [64646, 109183, 113542] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [37710, 198156, 71259, 72231] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["item_id"] == item)
+            .unwrap();
+        assert!(
+            !toy["unavailable"].is_null(),
+            "unbound remote control/wormhole/narrative/metadata: {toy}"
         );
     }
 }
