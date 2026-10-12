@@ -51,12 +51,13 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
 
 #[test]
 fn class_completeness_native_random_summons_use_authored_caster_or_target_ring() {
+    let prepared = prepare_class_world();
     for (spell_id, class, entry, effect_index) in [(1276452, 9, 258584, 1), (123904, 10, 63508, 0)]
     {
         let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
         let data = world_db().unwrap();
         h.app
-            .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+            .insert_resource(crate::world_data::load_world_data(&prepared.path()));
         let conn = rusqlite::Connection::open_with_flags(
             &data.powers_db,
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
