@@ -71,7 +71,7 @@ impl CartRuntime {
                 (None, Some(at)) => {
                     self.entities[index] = Some(spawn_cart(world, map, index, at));
                 }
-                (Some(entity), Some(at)) => move_cart(world, entity, at),
+                (Some(entity), Some(at)) => move_source_cart(world, entity, at, 2.0),
                 (None, None) => {}
             }
         }
@@ -140,17 +140,26 @@ pub(crate) fn change_track(world: &mut World, caster: Entity, target: Entity, _d
 }
 
 fn spawn_cart(world: &mut World, map: InMap, index: usize, at: [f32; 3]) -> Entity {
-    let definition = &SILVERSHARD_CARTS[index];
+    spawn_source_cart(world, map, 60140, at, SILVERSHARD_CARTS[index].orientation)
+}
+
+pub(super) fn spawn_source_cart(
+    world: &mut World,
+    map: InMap,
+    entry: u32,
+    at: [f32; 3],
+    orientation: f32,
+) -> Entity {
     // Script summon, not an invented static source placement.
     let spawn = CreatureSpawn {
         guid: 0,
-        template_entry: 60140,
-        map: 727,
+        template_entry: entry,
+        map: map.map_id as u16,
         zone_id: 0,
         position_x: at[0],
         position_y: at[1],
         position_z: at[2],
-        orientation: definition.orientation,
+        orientation,
         wander_distance: 0.0,
         movement_type: 0,
         spawntimesecs: 0,
@@ -166,7 +175,7 @@ fn spawn_cart(world: &mut World, map: InMap, index: usize, at: [f32; 3]) -> Enti
         crate::zones::spawn_creature(
             &mut commands,
             data,
-            &data.templates[&60140],
+            &data.templates[&entry],
             map,
             true,
             &spawn,
@@ -177,7 +186,7 @@ fn spawn_cart(world: &mut World, map: InMap, index: usize, at: [f32; 3]) -> Enti
     entity
 }
 
-fn move_cart(world: &mut World, entity: Entity, at: [f32; 3]) {
+pub(super) fn move_source_cart(world: &mut World, entity: Entity, at: [f32; 3], speed: f32) {
     let (x, y, z) = crate::terrain_height::wow_to_bevy(at[0], at[1], at[2]);
     let next = Position { x, y, z };
     let old = *world.get::<Position>(entity).expect("live cart position");
@@ -192,7 +201,7 @@ fn move_cart(world: &mut World, entity: Entity, at: [f32; 3]) {
             y: bearing,
             z: 0.0,
         },
-        shared::components::MovementSpeed(2.0),
+        shared::components::MovementSpeed(speed),
         shared::components::CreatureMotion::Walk,
     ));
     crate::interest::mark_interest_position_changed(

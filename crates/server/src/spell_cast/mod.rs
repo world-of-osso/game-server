@@ -1322,6 +1322,11 @@ fn validate_target(
     if explicit == Some(caster) && targets::excludes_caster(spell) {
         return Err(CastFailure::InvalidTarget);
     }
+    if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        let target = explicit.ok_or(CastFailure::NoTarget)?;
+        crate::pvp::check_azerite_target(world, caster, target)?;
+        return Ok(Some(target));
+    }
     if crate::gathering::is_gathering(spell) {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         crate::gathering::check_target(world, caster, spell, target)?;
