@@ -3950,7 +3950,12 @@ fn toyfx17_cozy_fire_adds_source_versatility_rating_and_restores_it() {
     assert_eq!(after.crit, before.crit);
     assert_eq!(after.haste, before.haste);
     assert_eq!(after.mastery, before.mastery);
-    crate::auras::remove_spell(h.app.world_mut(), h.caster, 7353, RemoveReason::Cancelled);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 7353,
+    );
     h.advance(2);
     assert_eq!(
         *h.app.world().get::<CombatRatings>(h.caster).unwrap(),
