@@ -20,7 +20,7 @@ Verified2026-10-11: durable account/item tests and five journal transport/cast/b
 
 Detached inventory/wallet copies stage payment before delivery. One redb write commits gold, consumed items, delivered items and currency; only then does the server replace PlayerCurrencies and enqueue gold/bag/currency updates. Mount ItemSparse reputation requirements use CharacterReputation standing for listing usability and purchase rejection. Existing faction filtering remains. No serialized character fields, global currency definitions or reputation discounts change.
 
-Targeted HostClient tests: `merchant_mount_cost_tests.rs`; original gold-only purchase→learn/no-transmog test remains in `merchant_tests.rs`. Native client and integration acceptance belong to the main Mount Journal goal.
+Targeted HostClient tests: eight `merchant_mount_cost_tests.rs` tests passed at e94f73a3; original gold-only purchase→learn/no-transmog passed at bf0ad0c5. [Proof and unrelated fixture gap](../../mount-vendor-costs.md#development-proof). Native client and integration acceptance belong to the main Mount Journal goal.
 
 ### Data
 

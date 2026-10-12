@@ -22,6 +22,14 @@ python3 scripts/export_mount_vendor_costs.py --world data/world.db --db2 /home/o
 
 ## Data boundary
 
-CurrencyTypes392 and3252 are absent in this Retail metadata. Their costs remain recorded in the CSV; runtime omits affected offers and reports each missing identifier once per catalog load. It never invents metadata, substitutes IDs or drops only the missing part of a price. Non-mount ExtendedCost behavior remains unchanged. Vendor PlayerCondition/arena/guild/achievement evaluation and reputation discounts are not added.
+CurrencyTypes392 and3252 are absent in this Retail metadata (77 offers). Item124669 has ItemSparse/name and Item/icon rows but no content_item/template row (cost6130, Darkwater Skate142398 at vendor55103: one offer). All remain recorded in the CSV; runtime omits these78 offers and reports each missing identifier once per catalog load. The other121 ExtendedCost mount offers have complete cost metadata. It never invents metadata, substitutes IDs or drops only the missing part of a price. Non-mount ExtendedCost behavior remains unchanged. Vendor PlayerCondition/arena/guild/achievement evaluation and reputation discounts are not added.
+
+## Development proof
+
+`81a38b41`: six HostClient tests RED for omitted costs/absent reputation. `bf0ad0c5`:43 merchant regressions passed, including original gold-only purchase→learn/no-transmog; two new currency fixtures needed their authored Stormwind Exalted requirement. `e94f73a3`: eight `merchant::tests::mount_costs::mount_costs_` tests GREEN: multiplied item/currency/gold payment, insufficient payment/full-bag rollback, database reopen, minimum reputation boundary, faction rejection, two-token rollback and no legacy currency alias/free missing-cost offer.
+
+Runner: `agent-run mount-vendor-costs python3 /home/osso/.worktrees/game-engine-s11/scripts/desktop-server-build.py --root /home/osso/.worktrees/game-server-s11 --test -p server --bin game-server mount_costs_`, with `DEPOT_SIBLING_SHARED_PROTOCOL=/home/osso/.worktrees/shared-protocol-s9`. No check/lint/broad/final acceptance gate.
+
+Existing `owned_commerce_sources_buyback_keeps_both_catalogs_across_vendor_and_storage_reopen` fails before merchant setup: `owned_commerce_source_tests.rs:31` loads a snapshot without `mount`, already required by item_templates at base89847221 (query introduced4fc0598d). Outside this slice's owned files; main owns fixture reconciliation and integration.
 
 Concrete fixtures: cost5976 =15 Mark of Honor137642/icon1322720;1647 =70 Halaa Battle Token26045 +15 Halaa Research Token26044;2671 =5 Champion's Seal241/icon236246 +5,000,000 copper. Reputation:29227 requires Kurenai978 Exalted7;29102 requires Mag'har941 Exalted7.
