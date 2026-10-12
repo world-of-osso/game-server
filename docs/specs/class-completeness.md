@@ -22,7 +22,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Native targets72/86/91 use random directions and authored radii around the caster or prior destination.
 - [x] Unspawned class/spec/talent summon templates/models/addons are retained from authentic TDB rows without creating world spawns.
 - [x] Native spellcaster portals restrict party access and apply authored class/race conditions before casting their destination chain.
-- [ ] Finite harmful auras apply the receiver's native232/234 duration rule to the spell/category and actually applied effect mechanics: min(sum232, strongest negative234), with native integer AddPct. Positive/permanent auras and NoTargetDurationMod remain unchanged; positive-only232 fields remain named partials without an invented extension rule.
+- [x] Finite harmful auras apply the receiver's native232/234 duration rule to the spell/category and actually applied effect mechanics: min(sum232, strongest negative234), with native integer AddPct. Positive/permanent auras and NoTargetDurationMod remain unchanged; positive-only232 fields and selectors outside the pinned mechanic mask remain named partials without invented extension or selector interpretations.
 - [x] Native330 permits matching-family casts and channels while moving; native Attr13 prevents that aura exception without changing intrinsically mobile spells. Gain/removal/expiry updates existing casts and the replicated permission; unrelated families remain restricted. This does not certify unrelated charged-buff or empower behavior.
 - [ ] Aura305 applies the strongest positive authored minimum-speed percentage after normalization and slows, for run/flight/swim rates. It does not override rooting/stunning; removal/expiry restores ordinary rates and independent floors do not multiply.
 - [ ] Native aura142's physical-school percentage multiplies player gear/base armor and pet base armor, not armor contributed afterward by stats. Independent aura factors multiply; removal/expiry restores armor, ordinary NPCs do not gain base armor, and physical spell/melee damage use the same live pet modifier. Nonphysical base-resistance modeling remains separate.
@@ -55,6 +55,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/spell_cast/class_completeness_probe.rs`: executed membership receipts (manifest supplied explicitly).
 - `crates/server/src/spell_cast/bonus_armor_tests.rs`: native466 factors, actual physical damage, removal/expiry, zero class fields and final rounding.
 - `crates/server/src/spell_cast/cast_while_moving_tests.rs`: native330 masks, real cast/channel damage, live cast permission gain/removal/expiry and metadata veto controls.
+- `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
 
 ## Known gaps (current cycle)

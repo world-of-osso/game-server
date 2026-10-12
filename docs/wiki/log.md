@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Receiver mechanic durations](../class-completeness2.md#receiver-mechanic-durations--batch27): native232/234 stronger-negative matching, integer AddPct, applied-effect masks and finite/harmful exemptions; RED5→twelve controls and35 adjacent controls. Positive-only Oppressing Roar and invalid selector1825 remain explicit source gaps.
+
 - 2026-10-12 — [Masked moving casts/channels](../class-completeness2.md#masked-moving-casts-and-channels--batch26): native330 admission and dynamic CastState permission, family/recipient masks and native Attr13 veto; RED4→eight controls and22 adjacent controls. Full Hover, empowerment and client/live movement remain uncertified.
 
 - 2026-10-12 — [Zero-amount linked auras](../class-completeness2.md#zero-amount-linked-auras--batch25): native284/285 child ownership/application/removal, stack clocks and trigger depth; RED3→seven controls,37 adjacent controls. Nonzero amounts remain named source gaps; no invented sign or magnitude conversion.
