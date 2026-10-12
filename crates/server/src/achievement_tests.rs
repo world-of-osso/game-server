@@ -609,6 +609,16 @@ fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
             .contains_key(&61577)
     );
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    // Authored speed15 delays the hit; launching alone cannot credit type110.
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&61577)
+    );
+    h.advance(20);
     assert!(
         h.app
             .world()
@@ -645,6 +655,7 @@ fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
         Some(&1)
     );
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    h.advance(20);
     assert_eq!(
         h.app
             .world()
