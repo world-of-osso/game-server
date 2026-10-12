@@ -50,6 +50,65 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
 }
 
 #[test]
+fn class_completeness_native_darkness_ground_destination_snaps_to_authored_terrain() {
+    let mut h = harness(Vec::new(), &[196718], 12).unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (x, y, z): (f32, f32, f32) = conn.query_row("SELECT position_x,position_y,position_z FROM tdb_playercreateinfo WHERE race=1 AND class=1", [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    let standing = Vec3::new(x, y, z);
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        maps.maps
+            .values()
+            .map(|map| (map.id, map.wdt_file_data_id))
+            .collect(),
+    );
+    let crate::ground::GroundProbe::Supported(height) =
+        ground.ground_at(0, standing + Vec3::Y * 2.0)
+    else {
+        panic!("native start terrain required");
+    };
+    h.app.insert_resource(ground);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .x = standing.x;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .z = standing.z;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .y = height + 2.0;
+    let spell = world_db().unwrap().store.get(196718).unwrap().clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native caster-ground target62");
+    let world = h.app.world_mut();
+    let areas: Vec<_> = world
+        .query::<(
+            &super::area_trigger::SpellAreaTrigger,
+            &shared::components::Position,
+        )>()
+        .iter(world)
+        .filter(|(area, _)| area.spell_id == 196718)
+        .collect();
+    assert_eq!(areas.len(), 1);
+    assert!(
+        (areas[0].1.y - height).abs() < 0.01,
+        "area rests on native ground, not airborne caster"
+    );
+}
+
+#[test]
 fn class_completeness_native_random_summons_use_authored_caster_or_target_ring() {
     let prepared = prepare_class_world();
     for (spell_id, class, entry, effect_index) in [(1276452, 9, 258584, 1), (123904, 10, 63508, 0)]
