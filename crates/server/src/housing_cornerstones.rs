@@ -103,6 +103,8 @@ fn read_ui_link(
         },
         position: Vec3::from_array(vector(fields, "Pos")?),
         orientation,
+        // TC GameObject::Create defaults script-created objects to GO_STATE_READY.
+        initial_state: 1,
         bounds,
         // Housing has no MapDifficulty: 0 selects non-dungeon content only.
         spawn_difficulties: vec![0],

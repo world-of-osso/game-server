@@ -222,6 +222,7 @@ fn arena_player_state(
             score_a: 0,
             score_b: 0,
             flags: Default::default(),
+            world_states: Vec::new(),
             outcome: None,
             players: Vec::new(),
             honor_reward: None,
