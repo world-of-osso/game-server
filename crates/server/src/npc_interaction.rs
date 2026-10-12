@@ -254,6 +254,7 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_GUILD_BANK => ObjectUse::Role(NpcRole::GuildBanker),
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
+            crate::game_objects::spellcaster::GAMEOBJECT_TYPE_SPELLCASTER => ObjectUse::Spellcaster,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
             shared::protocol::GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE => ObjectUse::Challenge,
             shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingUiLink,
@@ -304,6 +305,7 @@ impl InteractionWorld<'_, '_> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ObjectUse {
     QuestObject,
+    Spellcaster,
     /// Opens a role frame.
     Role(NpcRole),
     /// Casts the object's spell (`meeting_stone::use_object`).
@@ -468,6 +470,22 @@ fn process_game_object_uses(
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::meeting_stone::use_object(world, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::Spellcaster)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) =
+                            crate::game_objects::spellcaster::use_object(world, player, object)
+                            && let Some(mut sender) =
+                                world.get_mut::<MessageSender<InteractionFailed>>(connection)
+                        {
+                            sender.send::<InteractionChannel>(InteractionFailed {
+                                npc: object.to_bits(),
+                                error,
+                            });
+                        }
                     });
                     continue;
                 }

@@ -133,32 +133,23 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         chain_multiplier: 1.0,
     };
     let max_health = world.get::<Health>(unit).map_or(0.0, |health| health.max);
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == tick.effect_index)
+        .expect("periodic effect belongs to its spell");
     match tick.aura_type {
         PERIODIC_DAMAGE => {
-            effects::deal_damage(world, &ctx, unit, tick.amount, false, true);
+            effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
             if spell.id == crate::spell_cast::scripts::DEATHMARK && tick.effect_index == 0 {
                 crate::spell_cast::scripts::deathmark_energy(world, tick.caster, spell);
             }
         }
-        PERIODIC_LEECH => {
-            let effect = spell
-                .effects
-                .iter()
-                .find(|effect| effect.index == tick.effect_index)
-                .expect("periodic effect belongs to its spell");
-            effects::deal_leech(
-                world,
-                &ctx,
-                unit,
-                tick.amount,
-                effect.amplitude,
-                false,
-                true,
-            );
-        }
-        PERIODIC_DAMAGE_PERCENT => effects::deal_damage(
+        PERIODIC_LEECH => effects::deal_leech(world, &ctx, effect, unit, tick.amount, false, true),
+        PERIODIC_DAMAGE_PERCENT => effects::deal_effect_damage(
             world,
             &ctx,
+            effect,
             unit,
             max_health * tick.amount / 100.0,
             false,
