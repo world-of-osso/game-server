@@ -1324,6 +1324,60 @@ fn arena_alive_forfeits_end_the_match_without_fabricating_scoreboard_deaths() {
 }
 
 #[test]
+fn arena_authored_cage_gate_is_visible_immediately_after_worldport_without_movement() {
+    let mut h = harness_with_content_and(|app| {
+        app.add_plugins(crate::interest::InterestPlugin);
+    })
+    .unwrap();
+    let actor = h.spawn_at_level(1, 90, STORMWIND, STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(crate::interest::NetworkVisibility::default());
+    let copy = h
+        .app
+        .world_mut()
+        .resource_scope(|world, mut manager: Mut<InstanceManager>| {
+            manager.create_battleground_map(
+                world.resource::<MapStore>(),
+                2759,
+                &[1, 2, 3, 4],
+                4,
+                at(0.0),
+            )
+        })
+        .unwrap();
+    super::transfer::spawn_map_content(h.app.world_mut(), copy);
+    let destination = h.app.world().resource::<MapStore>().safe_locs[&100101];
+    assert!(teleport_to(
+        h.app.world_mut(),
+        actor.player,
+        destination,
+        TeleportOptions::default()
+    ));
+    h.new_worlds(&actor).pop().expect("source Cage NewWorld");
+    h.ack(&actor);
+    let mut query = h.app.world_mut().query::<(
+        &InMap,
+        &GameObjectInfo,
+        &crate::interest::NetworkVisibility,
+        &GameObjectCollision,
+    )>();
+    let gate = query
+        .iter(h.app.world())
+        .find(|(map, info, ..)| **map == copy && info.entry == 505683)
+        .unwrap();
+    assert!(
+        gate.2.is_visible(actor.connection),
+        "source nearby trapdoor must be shown without waiting for opening"
+    );
+    assert!(
+        gate.3.0,
+        "source READY1 collision must be present during preparation"
+    );
+}
+
+#[test]
 fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_return() {
     let source = Connection::open_with_flags(
         crate::test_data::world_db_path(),
