@@ -43,7 +43,8 @@ pub struct ScriptedAiPlugin;
 
 impl Plugin for ScriptedAiPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<instance_script::InstanceScripts>()
+        app.init_resource::<crate::auras::scripts::AuraScripts>()
+            .init_resource::<instance_script::InstanceScripts>()
             .add_systems(Startup, creature_text::load_creature_texts_startup)
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
