@@ -27,7 +27,18 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
         app.insert_resource(crate::persistence::GameDatabase { db });
         app.insert_resource(objects);
         if template.map_id == 727 {
-            app.insert_resource(silvershard_source_world());
+            let (world_data, spellclick) = silvershard_source_world();
+            app.insert_resource(world_data);
+            app.insert_resource(spellclick);
+            let data = crate::spell_cast::test_harness::world_db().unwrap();
+            app.insert_resource(crate::spell_info::SpellStore::fixture(
+                [124491, 124492, 97372]
+                    .into_iter()
+                    .map(|id| data.store.get(id).unwrap().clone())
+                    .collect(),
+            ));
+            app.insert_resource(crate::spell_cast::test_harness::power_table(data));
+            app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
         }
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.add_plugins((
@@ -52,6 +63,8 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
             pair::<RespondToBattlegroundInvite>(),
             pair::<LeaveBattleground>(),
             pair::<UseGameObject>(),
+            pair::<shared::protocol::InteractNpc>(),
+            pair::<shared::protocol::InteractionFailed>(),
             pair::<PvpStateUpdate>(),
         ));
         h.app
@@ -367,7 +380,10 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     win_leave_and_return(&mut entered, 1500);
 }
 
-fn silvershard_source_world() -> crate::world_data::WorldData {
+fn silvershard_source_world() -> (
+    crate::world_data::WorldData,
+    crate::npc_interaction::SpellClickCatalog,
+) {
     let copy = tempfile::NamedTempFile::new().unwrap();
     std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
     let conn = Connection::open(copy.path()).unwrap();
@@ -384,7 +400,74 @@ fn silvershard_source_world() -> crate::world_data::WorldData {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    crate::world_data::load_world_data(copy.path())
+    let conn = Connection::open(copy.path()).unwrap();
+    let catalog = crate::npc_interaction::load_spellclick_catalog(&conn).unwrap();
+    (crate::world_data::load_world_data(copy.path()), catalog)
+}
+
+#[test]
+fn silvershard_channel_spellclick_waits_three_seconds_then_switches_only_its_copy() {
+    let template = shared::battleground::silvershard_mines();
+    let mut entered = enter_source_match(&template, shared::battleground::SILVERSHARD_STARTS);
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    // TDB source4000143, same source template/flags as the runtime population.
+    let at = Vec3::new(715.642, 100.165, 320.284);
+    let switch = h
+        .app
+        .world_mut()
+        .spawn((
+            shared::components::Npc {
+                template_id: 60283,
+                name: "Track Switch".into(),
+            },
+            shared::protocol::NpcFlags(16777216),
+            bevy(at),
+            entered.copy,
+            crate::pvp::TrackSwitch(6467),
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::UnitFactionTemplate(35),
+        ))
+        .id();
+    h.walk_to(actor, at);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: switch.to_bits(),
+        });
+    h.receive_pvp_updates(3);
+    let cast = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(actor.player)
+        .expect("source124492 cast bar");
+    assert_eq!(cast.spell_id, 124492);
+    assert_eq!(cast.duration, 3.0);
+    assert!(
+        battleground(h, actor).world_states.contains(&(6467, 2)),
+        "not instant"
+    );
+    h.advance(40);
+    assert!(
+        battleground(h, actor).world_states.contains(&(6467, 2)),
+        "still casting at2s"
+    );
+    h.advance(24);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    assert!(
+        battleground(h, actor).world_states.contains(&(6467, 1)),
+        "97372 selects and changes eastern switch"
+    );
 }
 
 fn carts_in(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
