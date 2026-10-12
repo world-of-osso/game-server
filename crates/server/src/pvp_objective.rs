@@ -101,6 +101,10 @@ fn update_match(
     if matched.silvershard.is_some() {
         return update_silvershard(world, matched, actors, map, &template, delta_ms) || changed;
     }
+    if matched.seething.is_some() {
+        super::pvp_seething::update_seething(world, matched, map, delta_ms);
+        return changed;
+    }
     let Some(battle) = matched.flags.as_mut() else {
         return changed;
     };
@@ -282,7 +286,7 @@ fn update_silvershard(
     before != carts.battle.world_states(&matched.instance)
 }
 
-fn credit(
+pub(super) fn credit(
     scoreboard: &mut [BattlegroundPlayerScoreSnapshot],
     character_id: u64,
     stat: u32,
@@ -393,6 +397,11 @@ pub(crate) fn use_battleground_object(
     player: Entity,
     object: Entity,
 ) {
+    if super::pvp_seething::is_azerite_object(world, object) {
+        let result = super::pvp_seething::begin_gathering(world, player, object);
+        super::pvp_invites::send_response(world, connection, player, result);
+        return;
+    }
     let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
         if world
             .get::<GameObjectInfo>(object)
@@ -416,7 +425,7 @@ pub(crate) fn use_battleground_object(
 }
 
 /// The user's team and character in its accepted, in-progress match on the object's map.
-fn active_match<'a>(
+pub(super) fn active_match<'a>(
     world: &World,
     state: &'a mut PvpServerState,
     player: Entity,

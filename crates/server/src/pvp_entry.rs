@@ -55,6 +55,7 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
         .or_else(|| shared::battleground::eye_rules(invitation.map_id).map(|rules| rules.starts))
         .or_else(|| (invitation.map_id == 998).then_some(shared::battleground::KOTMOGU_STARTS))
         .or_else(|| (invitation.map_id == 727).then_some(shared::battleground::SILVERSHARD_STARTS))
+        .or_else(|| (invitation.map_id == 1803).then_some(shared::battleground::SEETHING_STARTS))
         .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
@@ -79,7 +80,9 @@ fn authored_object_entries(map_id: u32) -> Result<Vec<u32>, String> {
     if !shared::battleground::has_implemented_objectives(map_id) {
         return Err("this battleground has no implemented objectives".into());
     }
-    Ok(entries)
+    // Seething objects are dynamic summons; its source catalog validates templates
+    // and twelve fissure/ADT areas before reserving a copy, not static GO placements.
+    Ok(if map_id == 1803 { Vec::new() } else { entries })
 }
 
 fn create_match_map(
@@ -112,6 +115,11 @@ fn create_match_map(
     } else {
         None
     };
+    let seething = if template.map_id == 1803 {
+        Some(super::pvp_seething::SeethingRuntime::from_source(world)?)
+    } else {
+        None
+    };
     let capacity = u32::from(template.team_size) * 2;
     let now = crate::maps::difficulty::now(world);
     let map = world
@@ -130,6 +138,11 @@ fn create_match_map(
         .get_mut(&match_id)
         .expect("validated match")
         .map = Some(map);
+    state
+        .battleground_matches
+        .get_mut(&match_id)
+        .expect("validated match")
+        .seething = seething;
     crate::maps::transfer::spawn_map_content(world, map);
     if let Some(mut carts) = carts {
         carts.synchronize(world, map);

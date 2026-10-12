@@ -123,6 +123,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             eye: None,
             kotmogu: None,
             silvershard: None,
+            seething: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },
