@@ -77,7 +77,14 @@ fn map_store() -> Option<&'static MapStore> {
         .as_ref()
 }
 
+#[path = "tests_battleground_nodes.rs"]
+mod battleground_nodes;
+
 fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
+    source_battleground_objects(2106)
+}
+
+fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSpawns {
     let source = Connection::open_with_flags(
         crate::test_data::world_db_path(),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -99,8 +106,8 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
         g.spawntimesecs,t.Data3,t.Data5,t.Data6
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
-        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=2106 AND g.id IN (227740,227741) ORDER BY g.guid").unwrap();
-    let mut rows = query.query([]).unwrap();
+        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=?1 AND t.type IN (36,42) ORDER BY g.guid").unwrap();
+    let mut rows = query.query([map_id]).unwrap();
     while let Some(row) = rows.next().unwrap() {
         let values: Vec<rusqlite::types::Value> =
             (0..24).map(|index| row.get(index).unwrap()).collect();
@@ -141,6 +148,15 @@ fn authored_warsong_new_flags_are_loaded_as_usable_world_objects() {
         assert!(flag.info.is_usable());
         assert_eq!(flag.map_id, 2106);
     }
+}
+
+#[test]
+fn arathi_authored_capture_points_are_loadable_and_usable() {
+    let points = source_battleground_objects(2107);
+    let mut entries: Vec<_> = points.0.iter().map(|point| point.info.entry).collect();
+    entries.sort_unstable();
+    assert_eq!(entries, [227420, 227522, 227536, 227538, 227544]);
+    assert!(points.0.iter().all(|point| point.info.is_usable()));
 }
 
 fn close(a: Vec3, b: Vec3) -> bool {

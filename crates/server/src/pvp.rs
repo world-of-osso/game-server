@@ -35,7 +35,7 @@ mod pvp_leave;
 use pvp_leave::process_battleground_leave_requests;
 #[path = "pvp_objective.rs"]
 mod pvp_objective;
-pub(crate) use pvp_objective::use_battleground_flag;
+pub(crate) use pvp_objective::use_battleground_object;
 
 const HONOR_CAP: u32 = 15_000;
 
@@ -122,6 +122,7 @@ struct InvitedBattleground {
     map: Option<crate::maps::InMap>,
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
     flags: shared::battleground::FlagObjective,
+    nodes: Option<shared::battleground::NodeBattle>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     flag_positions: [Option<Vec3>; 2],
 }
@@ -147,6 +148,8 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             map: None,
             origins: BTreeMap::new(),
             flags: Default::default(),
+            nodes: shared::battleground::node_rules(template.map_id)
+                .map(shared::battleground::NodeBattle::new),
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },
@@ -563,6 +566,11 @@ fn resolve_battleground_matches(
                 score_a: invitation.instance.score_a.score,
                 score_b: invitation.instance.score_b.score,
                 flags: invitation.flags.clone(),
+                world_states: invitation
+                    .nodes
+                    .as_ref()
+                    .map(|nodes| nodes.world_states(&invitation.instance))
+                    .unwrap_or_default(),
                 outcome: invitation.instance.outcome,
                 players: invitation.scoreboard.clone(),
                 honor_reward: None,
