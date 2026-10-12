@@ -59,7 +59,7 @@ fn read_displays(data: &Path) -> Result<HashMap<u32, u32>, String> {
         .filter(|line| !line.is_empty())
         .map(|line| {
             let row: Vec<_> = line.split(',').collect();
-            let number = |index| {
+            let number = |index: usize| {
                 row.get(index)
                     .ok_or_else(|| format!("incomplete display row: {line}"))?
                     .parse::<u32>()
@@ -70,8 +70,48 @@ fn read_displays(data: &Path) -> Result<HashMap<u32, u32>, String> {
         .collect()
 }
 
+fn place_hull(triangles: &[[Vec3; 3]], placement: &Placement) -> LosTile {
+    // Native GameObjectModel has -pi/2 yaw inside the replicated GO transform.
+    let transform = Affine3A::from_scale_rotation_translation(
+        Vec3::splat(placement.scale),
+        Quat::from_rotation_y(placement.yaw - std::f32::consts::FRAC_PI_2),
+        placement.position,
+    );
+    let vertices = triangles
+        .iter()
+        .flatten()
+        .map(|point| transform.transform_point3(*point))
+        .collect();
+    let indices = (0..triangles.len() as u32)
+        .map(|i| [3 * i, 3 * i + 1, 3 * i + 2])
+        .collect();
+    LosTile::build(0, 0, vertices, indices)
+}
+
 impl HullCache {
-    fn hull(
+    fn load_triangles(&mut self, data: &Path, display: u32) -> Result<&[[Vec3; 3]], String> {
+        if self.displays.is_none() {
+            self.displays = Some(read_displays(data)?);
+        }
+        let fdid = *self
+            .displays
+            .as_ref()
+            .unwrap()
+            .get(&display)
+            .ok_or_else(|| format!("display {display} has no FileDataID"))?;
+        self.models
+            .entry(fdid)
+            .or_insert_with(|| {
+                let path = data.join(format!("models/{fdid}.m2"));
+                let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+                los::bake::m2::M2File::parse(&bytes)?.collision_triangles()
+            })
+            .as_ref()
+            .map(Vec::as_slice)
+            .map_err(Clone::clone)
+    }
+
+    fn load_placed_hull(
         &mut self,
         data: &Path,
         entity: Entity,
@@ -82,40 +122,8 @@ impl HullCache {
         {
             return Ok(Arc::clone(hull));
         }
-        if self.displays.is_none() {
-            self.displays = Some(read_displays(data)?);
-        }
-        let fdid = *self
-            .displays
-            .as_ref()
-            .unwrap()
-            .get(&placement.display)
-            .ok_or_else(|| format!("display {} has no FileDataID", placement.display))?;
-        let triangles = self
-            .models
-            .entry(fdid)
-            .or_insert_with(|| {
-                let path = data.join(format!("models/{fdid}.m2"));
-                let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-                los::bake::m2::M2File::parse(&bytes)?.collision_triangles()
-            })
-            .as_ref()
-            .map_err(Clone::clone)?;
-        // Native GameObjectModel has -pi/2 yaw inside the replicated GO transform.
-        let transform = Affine3A::from_scale_rotation_translation(
-            Vec3::splat(placement.scale),
-            Quat::from_rotation_y(placement.yaw - std::f32::consts::FRAC_PI_2),
-            placement.position,
-        );
-        let vertices: Vec<_> = triangles
-            .iter()
-            .flatten()
-            .map(|point| transform.transform_point3(*point))
-            .collect();
-        let indices = (0..triangles.len() as u32)
-            .map(|i| [3 * i, 3 * i + 1, 3 * i + 2])
-            .collect();
-        let hull = Arc::new(LosTile::build(0, 0, vertices, indices));
+        let triangles = self.load_triangles(data, placement.display)?;
+        let hull = Arc::new(place_hull(triangles, &placement));
         self.placed.insert(entity, (placement, Arc::clone(&hull)));
         Ok(hull)
     }
@@ -135,13 +143,12 @@ pub(crate) fn sync_live_objects(
     let mut active = LiveHulls::new();
     cache.placed.retain(|entity, _| objects.contains(*entity));
     for (entity, map, position, rotation, info, collision, visible) in &objects {
-        if !catalog
+        let arena = catalog
             .as_ref()
-            .is_some_and(|catalog| catalog.contains_map(map.map_id))
-            || !matches!(info.go_type, 0 | 5 | 6 | 35)
-            || !collision.0
-            || visible.is_some_and(|v| !v.0)
-        {
+            .is_some_and(|catalog| catalog.contains_map(map.map_id));
+        let has_model_collision = matches!(info.go_type, 0 | 5 | 6 | 35);
+        let enabled = collision.0 && visible.is_none_or(|v| v.0);
+        if !(arena && has_model_collision && enabled) {
             continue;
         }
         let placement = Placement {
@@ -150,7 +157,7 @@ pub(crate) fn sync_live_objects(
             yaw: rotation.y,
             scale: info.scale,
         };
-        match cache.hull(ground.data_dir(), entity, placement) {
+        match cache.load_placed_hull(ground.data_dir(), entity, placement) {
             Ok(hull) => active.entry(*map).or_default().push(hull),
             Err(error) => panic!(
                 "Arena GO {} (entity {entity}, map {map:?}) collision unavailable: {error}",

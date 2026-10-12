@@ -7,6 +7,7 @@ use shared::skyriding::{SKYRIDING, impulse_bound, max_climb, speed_after};
 use super::FallTracker;
 use crate::auras::AuraStatMods;
 use crate::ground::{GroundMap, GroundProbe};
+use crate::maps::InMap;
 
 pub(super) const DEFAULT_RUN_SPEED: f32 = 7.0;
 pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
