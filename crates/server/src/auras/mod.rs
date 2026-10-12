@@ -1066,7 +1066,11 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         return;
     };
     auras.dirty = true;
-    let (stats, combat) = stat_mods::compute(&auras);
+    let (stats, mut combat) = stat_mods::compute(&auras);
+    let growth = scripts::protective_growth_multiplier(unit, &auras);
+    for multiplier in &mut combat.damage_taken_mult {
+        *multiplier *= growth;
+    }
     if let Some(mut stored) = world.get_mut::<AuraStatMods>(unit)
         && *stored != combat
     {
