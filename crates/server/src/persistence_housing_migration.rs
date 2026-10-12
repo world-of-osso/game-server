@@ -1,10 +1,10 @@
-//! One-time schema0 (position/yaw) -> schema1 precision migration. No legacy runtime reader.
+//! One-time precision/access migrations. No legacy runtime reader.
 use super::{BUILD_KEY, STATE, STATE_ROW};
 use redb::{ReadableTable, WriteTransaction};
 use rusqlite::Connection;
 use serde_json::Value;
 
-pub(super) const SCHEMA_VERSION: u64 = 1;
+pub(super) const SCHEMA_VERSION: u64 = 3;
 
 pub(super) fn version(bytes: &[u8]) -> Result<u64, String> {
     let state: Value =
@@ -25,36 +25,70 @@ pub(super) fn migrate(txn: &WriteTransaction, source: &Connection) -> Result<(),
         .ok_or("Missing housing state.")?
         .value()
         .to_vec();
-    match version(&bytes)? {
+    let version = version(&bytes)?;
+    match version {
         SCHEMA_VERSION => return Ok(()),
-        0 => {}
+        0 | 1 | 2 => {}
         version => return Err(format!("Unsupported housing schema {version}.")),
     }
     let mut state: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     if state["build_key"].as_str() != Some(BUILD_KEY) {
         return Err("Housing migration requires the authenticated Retail build.".into());
     }
-    let build: String = source
-        .query_row(
-            "SELECT build FROM housing_catalog_build WHERE build_key=?",
-            [BUILD_KEY],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Housing migration source: {e}"))?;
-    if build != "12.1.0.69933" {
-        return Err("Housing migration source build differs.".into());
+    if version == 0 {
+        let build: String = source
+            .query_row(
+                "SELECT build FROM housing_catalog_build WHERE build_key=?",
+                [BUILD_KEY],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Housing migration source: {e}"))?;
+        if build != "12.1.0.69933" {
+            return Err("Housing migration source build differs.".into());
+        }
     }
     let houses = state["houses"]
         .as_object_mut()
         .ok_or("Missing housing houses.")?;
     for house in houses.values_mut() {
+        if version == 0 {
+            let decor = house["decor"]
+                .as_array_mut()
+                .ok_or("Missing house decor.")?;
+            for placed in decor {
+                source_missing_axes(source, placed)?;
+            }
+        }
         let decor = house["decor"]
             .as_array_mut()
             .ok_or("Missing house decor.")?;
         for placed in decor {
-            source_missing_axes(source, placed)?;
+            placed
+                .as_object_mut()
+                .ok_or("Invalid placed decor.")?
+                .insert("dyes".into(), serde_json::json!([]));
+        }
+        if version < 2 {
+            let object = house.as_object_mut().ok_or("Invalid house record.")?;
+            let previous = object
+                .remove("access_anyone")
+                .ok_or("Missing previous house permission.")?;
+            let access = match previous {
+                Value::Null => Value::Null,
+                Value::Bool(allowed) => serde_json::to_value(shared::protocol::HouseAccess {
+                    anyone: allowed,
+                    neighbors: allowed,
+                    guild: allowed,
+                    friends: allowed,
+                    party: allowed,
+                })
+                .map_err(|e| e.to_string())?,
+                _ => return Err("Invalid previous house permission.".into()),
+            };
+            object.insert("house_access".into(), access);
         }
     }
+    state["storage_variants"] = serde_json::json!({});
     state["schema_version"] = Value::from(SCHEMA_VERSION);
     // Validate the complete new representation before atomically replacing the row.
     let migrated: super::State = serde_json::from_value(state)

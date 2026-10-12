@@ -6,7 +6,8 @@ use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTran
 use serde::{Deserialize, Serialize};
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::{
-    HouseLayout, HousingCommand, HousingHouse, HousingPlot, HousingState, PlacedDecor, StoredDecor,
+    HouseAccess, HouseLayout, HousingCommand, HousingHouse, HousingPlot, HousingState, PlacedDecor,
+    StoredDecor,
 };
 
 use super::{INVENTORIES, InventoryData, inventory_store};
@@ -14,8 +15,17 @@ use super::{INVENTORIES, InventoryData, inventory_store};
 pub(crate) const BUILD_KEY: &str = "dcfc90fffd79ba00406ae46f5f657592";
 const STATE: TableDefinition<u8, &[u8]> = TableDefinition::new("housing_state");
 const STATE_ROW: u8 = 0;
+#[path = "persistence_housing_access.rs"]
+mod access;
 #[path = "persistence_housing_migration.rs"]
 mod migration;
+use crate::group::GroupRegistry;
+#[path = "persistence_housing_dyes.rs"]
+mod dyes;
+pub(crate) use dyes::{commit_dyes, preview_dyes};
+#[path = "persistence_housing_variants.rs"]
+mod variants;
+use access::require_visit;
 const NEIGHBORHOOD_LOCATIONS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("housing_neighborhood_locations");
 
@@ -56,7 +66,7 @@ struct OwnedHouse {
     owner_character_id: u64,
     neighborhood_id: u32,
     plot_id: u32,
-    access_anyone: Option<bool>,
+    house_access: Option<HouseAccess>,
     decor: Vec<PlacedDecor>,
 }
 
@@ -68,6 +78,7 @@ struct State {
     next_instance_id: u64,
     houses: BTreeMap<u64, OwnedHouse>,
     storage: BTreeMap<u64, BTreeMap<u32, u32>>,
+    storage_variants: BTreeMap<u64, Vec<shared::protocol::StoredDecorVariant>>,
 }
 
 impl State {
@@ -79,6 +90,7 @@ impl State {
             next_instance_id: 1,
             houses: BTreeMap::new(),
             storage: BTreeMap::new(),
+            storage_variants: BTreeMap::new(),
         }
     }
 }
@@ -118,10 +130,11 @@ pub(crate) fn save_house_location(
     db: &Database,
     actor: Actor,
     house_id: u64,
+    groups: Option<&GroupRegistry>,
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let state = read_in(&txn)?;
-    require_visit(&state, actor, house_id)?;
+    require_visit(db, &state, actor, house_id, groups)?;
     let bytes = serde_json::to_vec(&HouseLocation {
         house_id,
         account_id: actor.account_id,
@@ -138,6 +151,7 @@ pub(crate) fn save_house_location(
 pub(crate) fn load_house_location(
     db: &Database,
     character_id: u64,
+    groups: Option<&GroupRegistry>,
 ) -> Result<HouseLocation, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
@@ -151,6 +165,7 @@ pub(crate) fn load_house_location(
     let location: HouseLocation = serde_json::from_slice(row.value())
         .map_err(|error| format!("Decode visited house: {error}"))?;
     require_visit(
+        db,
         &state,
         Actor {
             account_id: location.account_id,
@@ -159,6 +174,7 @@ pub(crate) fn load_house_location(
             inside_house: None,
         },
         location.house_id,
+        groups,
     )?;
     Ok(location)
 }
@@ -268,7 +284,7 @@ fn house_view(house: &OwnedHouse, actor: Actor) -> HousingHouse {
         plot_id: house.plot_id,
         owner_character_id: house.owner_character_id,
         can_edit: house.account_id == actor.account_id,
-        house_access_anyone: house.access_anyone,
+        house_access: house.house_access,
         exterior_grant_available: false,
         interior_grant_available: false,
     }
@@ -311,7 +327,7 @@ pub(crate) fn purchase(
         owner_character_id: actor.character_id,
         neighborhood_id: plot.neighborhood_id,
         plot_id: plot.plot_id,
-        access_anyone: None,
+        house_access: None,
         decor: Vec::new(),
     };
     let reply = house_view(&house, actor);
@@ -329,19 +345,11 @@ fn require_owner(state: &State, actor: Actor, house_id: u64) -> Result<(), Strin
     Ok(())
 }
 
-fn require_visit(state: &State, actor: Actor, house_id: u64) -> Result<(), String> {
-    let house = state.houses.get(&house_id).ok_or("House not found.")?;
-    if house.account_id != actor.account_id && house.access_anyone != Some(true) {
-        return Err("The owner has not allowed you to visit this house.".into());
-    }
-    Ok(())
-}
-
 pub(crate) fn set_access(
     db: &Database,
     actor: Actor,
     house_id: u64,
-    allowed: bool,
+    access: HouseAccess,
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let mut state = read_in(&txn)?;
@@ -350,7 +358,7 @@ pub(crate) fn set_access(
         .houses
         .get_mut(&house_id)
         .expect("validated house")
-        .access_anyone = Some(allowed);
+        .house_access = Some(access);
     commit(txn, &state)
 }
 
@@ -358,11 +366,12 @@ pub(crate) fn snapshot(
     db: &Database,
     actor: Actor,
     house_id: Option<u64>,
+    groups: Option<&GroupRegistry>,
 ) -> Result<HousingState, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
     let layout = if let Some(house_id) = house_id {
-        require_visit(&state, actor, house_id)?;
+        require_visit(db, &state, actor, house_id, groups)?;
         let house = &state.houses[&house_id];
         Some(HouseLayout {
             house_id,
@@ -402,6 +411,12 @@ pub(crate) fn snapshot(
         plots: Vec::new(),
         owned_houses,
         stored,
+        stored_variants: state
+            .storage_variants
+            .get(&actor.account_id)
+            .cloned()
+            .unwrap_or_default(),
+        dye_preview: None,
         placed: placed
             .into_iter()
             .map(|(decor_id, quantity)| StoredDecor { decor_id, quantity })
@@ -424,10 +439,15 @@ pub(crate) fn populate_plots(db: &Database, plots: &mut [HousingPlot]) -> Result
     Ok(())
 }
 
-pub(crate) fn house(db: &Database, actor: Actor, house_id: u64) -> Result<HousingHouse, String> {
+pub(crate) fn house(
+    db: &Database,
+    actor: Actor,
+    house_id: u64,
+    groups: Option<&GroupRegistry>,
+) -> Result<HousingHouse, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
-    require_visit(&state, actor, house_id)?;
+    require_visit(db, &state, actor, house_id, groups)?;
     Ok(house_view(&state.houses[&house_id], actor))
 }
 
@@ -541,12 +561,17 @@ pub(crate) fn edit(db: &Database, actor: Actor, command: &HousingCommand) -> Res
     let house_id = edit_house_id(command)?;
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let mut state = read_in(&txn)?;
-    require_owner(&state, actor, house_id)?;
+    require_house_editor(&state, actor, house_id)?;
+    apply_edit(&mut state, actor.account_id, house_id, command)?;
+    commit(txn, &state)
+}
+
+fn require_house_editor(state: &State, actor: Actor, house_id: u64) -> Result<(), String> {
+    require_owner(state, actor, house_id)?;
     if actor.inside_house != Some(house_id) {
         return Err("Enter your house before editing decor.".into());
     }
-    apply_edit(&mut state, actor.account_id, house_id, command)?;
-    commit(txn, &state)
+    Ok(())
 }
 
 fn find_decor(
@@ -573,10 +598,12 @@ fn apply_edit(
     match command {
         HousingCommand::PlaceDecor {
             decor_id,
+            variant_id,
             transform,
             ..
         } => {
             validate_transform(transform)?;
+            let dyes = variants::take_variant(state, account, *decor_id, *variant_id)?;
             let storage = state
                 .storage
                 .get_mut(&account)
@@ -603,6 +630,7 @@ fn apply_edit(
                     instance_id,
                     decor_id: *decor_id,
                     transform: *transform,
+                    dyes,
                 });
         }
         HousingCommand::MoveDecor {
@@ -637,6 +665,7 @@ fn apply_edit(
                 .position(|decor| decor.instance_id == *instance_id)
                 .ok_or("Placed decor not found in this house.")?;
             let decor = house.decor.remove(index);
+            variants::store_variant(state, account, &decor)?;
             let quantity = state
                 .storage
                 .entry(account)
