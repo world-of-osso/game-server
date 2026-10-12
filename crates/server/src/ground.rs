@@ -85,6 +85,8 @@ pub struct GroundMap {
     wdts: HashMap<u32, u32>,
     /// `None`: the map's WDT is not available.
     maps: HashMap<u32, Option<MapGround>>,
+    /// Dedicated authored M2 hull bake, cached independently of ADT/WMO ground.
+    m2_floors: HashMap<u32, los::LosMap>,
 }
 
 impl GroundMap {
@@ -94,6 +96,7 @@ impl GroundMap {
             data_dir: data_dir.to_path_buf(),
             wdts,
             maps: HashMap::new(),
+            m2_floors: HashMap::new(),
         }
     }
 
@@ -139,9 +142,26 @@ impl GroundMap {
             let loaded = self.open_map(map_id);
             self.maps.insert(map_id, loaded);
         }
-        match self.maps.get_mut(&map_id) {
+        let base = match self.maps.get_mut(&map_id) {
             Some(Some(map)) => map.ground_at(feet),
             _ => GroundProbe::Unloaded,
+        };
+        let m2 = self
+            .m2_floors
+            .entry(map_id)
+            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))));
+        match m2.floor_height(feet) {
+            Ok(Some(height)) => match base {
+                GroundProbe::Supported(base_height) => {
+                    GroundProbe::Supported(height.max(base_height))
+                }
+                _ => GroundProbe::Supported(height),
+            },
+            Ok(None) => base,
+            Err(error) => {
+                error!("M2 floor query on map {map_id}: {error}");
+                GroundProbe::Unsupported
+            }
         }
     }
 
@@ -754,6 +774,10 @@ fn check_spawned_ground(
 }
 
 #[cfg(test)]
+#[path = "ground/m2_floor_tests.rs"]
+mod m2_floor_tests;
+
+#[cfg(test)]
 #[path = "ground_tests.rs"]
 mod tests;
 
@@ -768,3 +792,7 @@ mod stv_tests;
 #[cfg(test)]
 #[path = "zephras_ground_tests.rs"]
 mod zephras_tests;
+
+#[cfg(test)]
+#[path = "housing_ground_tests.rs"]
+mod housing_tests;

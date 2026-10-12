@@ -47,8 +47,8 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub(crate) use unit_state::supports_zero_entry_costume;
 pub use unit_state::{Confused, is_polymorphed};
+pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
@@ -1511,6 +1511,7 @@ fn sync_passive_auras(world: &mut World) {
         };
         let spells: Vec<u32> = known.iter().collect();
         sync_passives(world, unit, AuraSource::KnownSpell, &spells);
+        crate::spell_cast::publish_known_charge_snapshot(world, unit);
     }
 }
 

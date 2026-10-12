@@ -32,6 +32,8 @@ use crate::game_objects::{GAME_OBJECT_INTERACT_DISTANCE, GameObjectBounds, wow_p
 use crate::networking::PlayerLink;
 
 mod gossip;
+mod spellclick;
+pub(crate) use spellclick::{SpellClickCatalog, load_spellclick_catalog};
 
 use gossip::{GossipAction, Opening};
 pub use gossip::{GossipCatalog, load_gossip_catalog};
@@ -76,6 +78,7 @@ pub struct NpcInteractionPlugin;
 impl Plugin for NpcInteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GossipCatalog>();
+        app.init_resource::<SpellClickCatalog>();
         app.add_systems(
             Update,
             (
@@ -253,7 +256,13 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
             shared::protocol::GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE => ObjectUse::Challenge,
-            _ if info.is_battleground_flag() => ObjectUse::BattlegroundFlag,
+            shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingUiLink,
+            _ if info.is_battleground_flag()
+                || info.is_battleground_orb()
+                || info.is_battleground_capture_point() =>
+            {
+                ObjectUse::BattlegroundFlag
+            }
             crate::game_objects::GAMEOBJECT_TYPE_CHEST
             | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
             _ => return Err(InteractionError::InvalidTarget),
@@ -304,6 +313,7 @@ enum ObjectUse {
     /// Retail GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE.
     Challenge,
     BattlegroundFlag,
+    HousingUiLink,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -361,6 +371,29 @@ fn process_interact_requests(
     for (connection, link, current, mut receiver) in &mut receivers {
         let mut current = current.map(|interaction| interaction.npc);
         for request in receiver.receive() {
+            if let Some(npc) = Entity::try_from_bits(request.npc)
+                && let Ok(view) = world.npcs.get(npc)
+                && view.1.contains(NpcFlags::SPELLCLICK)
+            {
+                let result = world.interactable(link.0, npc).and_then(|view| {
+                    if world.maps.get(link.0).ok() != world.maps.get(npc).ok()
+                        || world.maps.get(npc).is_err()
+                    {
+                        return Err(InteractionError::InvalidTarget);
+                    }
+                    Ok(view.0.template_id)
+                });
+                match result {
+                    Ok(entry) => {
+                        let player = link.0;
+                        commands.queue(move |world: &mut World| {
+                            spellclick::cast_spellclick(world, player, npc, entry)
+                        });
+                    }
+                    Err(error) => senders.failed(connection, request.npc, error),
+                }
+                continue;
+            }
             let result = Entity::try_from_bits(request.npc)
                 .ok_or(InteractionError::InvalidTarget)
                 .and_then(|npc| open_interaction(&world, link.0, npc));
@@ -470,7 +503,23 @@ fn process_game_object_uses(
                 Ok((object, ObjectUse::BattlegroundFlag)) => {
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
-                        crate::pvp::use_battleground_flag(world, connection, player, object);
+                        crate::pvp::use_battleground_object(world, connection, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::HousingUiLink)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) =
+                            crate::housing::use_ui_link(world, connection, player, object)
+                            && let Some(mut sender) =
+                                world.get_mut::<MessageSender<InteractionFailed>>(connection)
+                        {
+                            sender.send::<InteractionChannel>(InteractionFailed {
+                                npc: object.to_bits(),
+                                error,
+                            });
+                        }
                     });
                     continue;
                 }

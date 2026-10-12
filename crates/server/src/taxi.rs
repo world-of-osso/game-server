@@ -44,8 +44,6 @@ pub(crate) use network::{TaxiNetwork, TaxiRoute, Team, load_taxi_network};
 
 /// AzerothCore `PLAYER_FLIGHT_SPEED`.
 pub(crate) const FLIGHT_SPEED: f32 = 32.0;
-/// The server hosts Eastern Kingdoms only (`death::WORLD_MAP_ID`).
-const CONTINENT: u32 = 0;
 /// `networking_movement::DEFAULT_RUN_SPEED`, restored on landing.
 const RUN_SPEED: f32 = 7.0;
 
@@ -87,8 +85,9 @@ pub(crate) fn taxi_map(
     known: &BTreeSet<u32>,
     team: Team,
 ) -> TaxiMap {
+    let continent = network.nodes[&current].continent;
     let mut nodes: Vec<TaxiNodeInfo> = network
-        .map_nodes(CONTINENT, team)
+        .map_nodes(continent, team)
         .map(|(id, node)| {
             let route = (id != current)
                 .then(|| network.route(current, id, known, team))
@@ -115,7 +114,7 @@ pub(crate) fn taxi_map(
     nodes.sort_by_key(|node| node.node);
     TaxiMap {
         npc,
-        continent: CONTINENT,
+        continent,
         nodes,
     }
 }
@@ -160,10 +159,13 @@ fn open_flight_master(interaction: Option<&ActiveInteraction>) -> Option<Entity>
         .map(|interaction| interaction.npc)
 }
 
+type FlightMasterPositions<'w, 's> =
+    Query<'w, 's, (&'static Position, &'static crate::maps::InMap), With<Npc>>;
+
 /// Opening a flight master learns its node and shows the map.
 fn open_flight_maps(
     opened: Query<(Entity, &InWorld, &PlayerLink, &ActiveInteraction), Changed<ActiveInteraction>>,
-    npcs: Query<&Position, With<Npc>>,
+    npcs: FlightMasterPositions,
     players: Query<&Player>,
     network: Res<TaxiNetwork>,
     db: Option<Res<GameDatabase>>,
@@ -175,13 +177,13 @@ fn open_flight_maps(
         let Some(npc) = open_flight_master(Some(interaction)) else {
             continue;
         };
-        let (Ok(npc_position), Some(team)) = (
+        let (Ok((npc_position, npc_map)), Some(team)) = (
             npcs.get(npc),
             players.get(link.0).ok().and_then(|p| team_for_race(p.race)),
         ) else {
             continue;
         };
-        let Some(current) = network.nearest_node(CONTINENT, wow(npc_position), team) else {
+        let Some(current) = network.nearest_node(npc_map.map_id, wow(npc_position), team) else {
             continue;
         };
         let mut known = load_known_taxi_nodes(&db.db, in_world.character_id);
@@ -219,7 +221,7 @@ struct Takeoff<'w, 's> {
     network: Res<'w, TaxiNetwork>,
     db: Option<Res<'w, GameDatabase>>,
     gold: ResMut<'w, GoldUpdateQueue>,
-    npcs: Query<'w, 's, &'static Position, With<Npc>>,
+    npcs: FlightMasterPositions<'w, 's>,
     players: TaxiPlayers<'w, 's>,
 }
 
@@ -243,10 +245,10 @@ impl Takeoff<'_, '_> {
             return Err(TaxiError::InCombat);
         }
         let team = team_for_race(player_data.race).ok_or(TaxiError::NoPath)?;
-        let npc_position = self.npcs.get(npc).map_err(|_| TaxiError::NoVendorNearby)?;
+        let (npc_position, npc_map) = self.npcs.get(npc).map_err(|_| TaxiError::NoVendorNearby)?;
         let current = self
             .network
-            .nearest_node(CONTINENT, wow(npc_position), team)
+            .nearest_node(npc_map.map_id, wow(npc_position), team)
             .ok_or(TaxiError::NoVendorNearby)?;
         if destination == current {
             return Err(TaxiError::SameNode);

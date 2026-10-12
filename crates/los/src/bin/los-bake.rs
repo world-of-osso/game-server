@@ -30,6 +30,7 @@ struct Args {
     all: bool,
     cutoff: Option<f32>,
     no_eyes: bool,
+    m2_only: bool,
     probe: Option<(Vec3, Vec3)>,
 }
 
@@ -49,22 +50,27 @@ fn run() -> Result<(), String> {
     }
     let data = args.data.clone().ok_or("--data is required")?;
     let world_db = args.world_db.clone().ok_or("--world-db is required")?;
-    let mut baker = Baker::new(&data, args.cutoff.unwrap_or(DEFAULT_THICKNESS_CUTOFF));
+    let mut baker = if args.m2_only {
+        Baker::for_m2_floors(&data)
+    } else {
+        Baker::new(&data, args.cutoff.unwrap_or(DEFAULT_THICKNESS_CUTOFF))
+    };
+    let mut floors = Baker::for_m2_floors(&data);
     let wdt = map_wdt(&world_db, map)?;
-    let tiles = baker.map_tiles(wdt)?;
-    let wanted = wanted_tiles(&args, &tiles);
     let map_dir = out.join(map.to_string());
+    let map_dir = if args.m2_only {
+        map_dir.join("m2")
+    } else {
+        map_dir
+    };
     std::fs::create_dir_all(&map_dir).map_err(|err| format!("{}: {err}", map_dir.display()))?;
     let mut report = format!(
         "LOS bake of map {map} (WDT {wdt}), thickness cutoff {:.2} yd\n\n\
          tile\tterrain\twmo\tdoodad\ttriangles\tfile_bytes\tmemory_bytes\tray_us\talpha_blend_dropped\tthin_doodads\n",
         baker.cutoff
     );
-    for tile in wanted {
+    bake_requested_tiles(&mut baker, wdt, &args, |tile, baked, stats| {
         let started = Instant::now();
-        let Some((baked, stats)) = baker.bake_tile(&tiles, tile)? else {
-            continue;
-        };
         let path = map_dir.join(tile_file_name(tile));
         let bytes = baked.to_bytes();
         std::fs::write(&path, &bytes).map_err(|err| format!("{}: {err}", path.display()))?;
@@ -78,15 +84,51 @@ fn run() -> Result<(), String> {
             loaded.triangle_count(),
             started.elapsed()
         );
+        Ok(())
+    })?;
+    if !args.m2_only {
+        let floor_dir = map_dir.join("m2");
+        std::fs::create_dir_all(&floor_dir).map_err(|error| error.to_string())?;
+        bake_requested_tiles(&mut floors, wdt, &args, |tile, baked, _| {
+            std::fs::write(floor_dir.join(tile_file_name(tile)), baked.to_bytes())
+                .map_err(|error| error.to_string())
+        })?;
+        for problem in &floors.problems {
+            writeln!(report, "M2 floor asset gap: {problem}").unwrap();
+        }
     }
     report_dropped(&mut report, &baker);
-    if !args.no_eyes {
+    if !args.no_eyes && !args.m2_only {
         report_eyes(&mut report, &data, &world_db, &out)?;
     }
     let report_path = map_dir.join("report.txt");
     std::fs::write(&report_path, &report)
         .map_err(|err| format!("{}: {err}", report_path.display()))?;
     eprintln!("report: {}", report_path.display());
+    Ok(())
+}
+
+/// Global WMO doodad sets and continent MDDFs use the same collector.
+fn bake_requested_tiles(
+    baker: &mut Baker,
+    wdt: u32,
+    args: &Args,
+    mut write_tile: impl FnMut((u32, u32), LosTile, TileStats) -> Result<(), String>,
+) -> Result<(), String> {
+    if let Some(global) = baker.collect_global(wdt)? {
+        for (tile, geometry) in global {
+            let (vertices, triangles) = los::bake::index_triangles(&geometry.triangles);
+            let baked = LosTile::build(tile.0, tile.1, vertices, triangles);
+            write_tile(tile, baked, TileStats::default())?;
+        }
+        return Ok(());
+    }
+    let tiles = baker.map_tiles(wdt)?;
+    for tile in wanted_tiles(args, &tiles) {
+        if let Some((baked, stats)) = baker.bake_tile(&tiles, tile)? {
+            write_tile(tile, baked, stats)?;
+        }
+    }
     Ok(())
 }
 
@@ -280,6 +322,7 @@ fn parse_args() -> Result<Args, String> {
             "--all" => args.all = true,
             "--cutoff" => args.cutoff = Some(number(&value()?)?),
             "--no-eyes" => args.no_eyes = true,
+            "--m2-only" => args.m2_only = true,
             "--probe" => {
                 let raw = value()?;
                 let (a, b) = raw.split_once(':').ok_or("--probe takes A:B")?;
