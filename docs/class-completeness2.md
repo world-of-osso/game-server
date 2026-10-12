@@ -26,6 +26,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 174a2e84 / shared2a48bdc | 2889 | 4756 | 182 | Native aura229, all7827 memberships, exit0, 696.66s |
 | a5de3082 / shared00d33e7 | 2897 | 4748 | 182 | Native aura429/raw mastery, all7827 memberships, exit0, 745.53s |
 | 578c18d7 / shared00d33e7 | 2901 | 4744 | 182 | Native434249 ready-time credit, all7827 memberships, exit0, 716.33s |
+| 36758fce / shared00d33e7 | 2905 | 4740 | 182 | Native429433 counters/charged missile modifiers, all7827 memberships, exit0, 602.80s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -132,7 +133,7 @@ Native429433 counts completed8936 Regrowth casts independently of78674 Starsurge
 
 `62de709c` genuine RED2 missing buffs → `1364d5ef` generation GREEN, then genuine delayed-Wrath RED60 versus122.44. The damage bonus disappeared because launch consumed429474 before missile impact read live spell modifiers. `95792364` retains already matched charged op/percent/amount values on the per-cast SpellInfo clone; live charged modifiers are excluded once that clone is frozen. Uncharged modifiers retain their existing live behavior. This is not a full damage/crit/stat snapshot or certified inheritance through independently constructed triggered-child contexts. Pinned TC a352b1fa Spell.cpp8569–8641 retains launch-target damage/healing before impact.
 
-At `0a862575` / shared`00d33e7`, eight native controls pass: both counters, real instant/ordinary next uses, delayed impact after consumption, no retroactive new buff, cancellation/triggered exclusion, Balance-only mixed counting, removal/foreign/relearn reset and missing-child rejection before payment/counter change. Adjacent Stormkeeper3/3, Tidal Waves1/1 and Backdraft1/1 pass. Full Starfall/hero/loadout/PvP behavior and independently observed Retail proc timing remain open. Logs: `blooming-{red,green1,green2,controls2}.log`, `blooming-adjacent-*.log`.
+At `0a862575` / shared`00d33e7`, eight native controls pass: both counters, real instant/ordinary next uses, delayed impact after consumption, no retroactive new buff, cancellation/triggered exclusion, Balance-only mixed counting, removal/foreign/relearn reset and missing-child rejection before payment/counter change. Adjacent Stormkeeper3/3, Tidal Waves1/1 and Backdraft1/1 pass. Full batch20 census at `36758fce` records all7827 memberships:2905 working/4740 partial/182 broken; four429433 memberships move to working. Full Starfall/hero/loadout/PvP behavior and independently observed Retail proc timing remain open. Logs: `blooming-{red,green1,green2,controls2}.log`, `blooming-adjacent-*.log`.
 
 ### Symbiotic Relationship source gap
 
