@@ -569,6 +569,102 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[61781], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Turkeyproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 2.0);
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(PlayerAchievementState::default());
+    h.app.update();
+    // Authored spell61781/effect55694 selects an allied unit and applies turkey feathers.
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), u8::MAX);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&61577)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 61781)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&61577),
+        Some(&1)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(target)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&61577)
+    );
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&61577),
+        Some(&1)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&61577),
+        Some(&2)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&61577),
+        Some(&2)
+    );
+}
+
+#[test]
 fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_target() {
     let mut h =
         crate::spell_cast::test_harness::harness_with_plugins(vec![], &[76145], 1, false, |app| {
