@@ -25,6 +25,8 @@ CREATE TABLE bossmod_encounter(addon TEXT,version TEXT,encounter_id INTEGER,map_
 CREATE TABLE bossmod_rule(id INTEGER PRIMARY KEY,addon TEXT,version TEXT,encounter_id INTEGER,trigger TEXT,trigger_spell_id INTEGER,health_pct REAL,required_phase REAL,action TEXT,spell_id INTEGER,delay_ms INTEGER,phase REAL,severity INTEGER,warning_key TEXT,source_file TEXT,source_line INTEGER,event_kind TEXT);
 CREATE TABLE bossmod_import_issue(addon TEXT,source_file TEXT,source_line INTEGER,reason TEXT);
 CREATE TABLE bossmod_import_meta(build TEXT,parser TEXT);
+CREATE TABLE bossmod_authority(encounter_id INTEGER PRIMARY KEY,addon TEXT NOT NULL);
+CREATE TABLE bossmod_binding(map_id INTEGER,npc_entry INTEGER,encounter_id INTEGER,bit INTEGER,PRIMARY KEY(map_id,npc_entry));
 '''
 RULE_FIELDS = ['addon', 'version', 'encounter_id', 'trigger', 'trigger_spell_id', 'health_pct', 'required_phase', 'action', 'spell_id', 'delay_ms', 'phase', 'severity', 'warning_key', 'source_file', 'source_line', 'event_kind']
 
@@ -363,16 +365,44 @@ def validate_spells(db, encounters):
         raise ValueError('Unknown Spell/SpellName IDs: ' + ', '.join(map(str, invalid)))
 
 
+def schedule_authorities(encounters):
+    sources = {}
+    for encounter in encounters:
+        if any(rule['action'] == 'timer' for rule in encounter['rules']):
+            sources.setdefault(encounter['encounter_id'], set()).add(encounter['addon'])
+    ambiguous = {encounter: sorted(addons) for encounter, addons in sources.items() if len(addons) > 1}
+    if ambiguous:
+        raise ValueError(f'Conflicting schedule authorities require explicit selection: {ambiguous}')
+    return {encounter: next(iter(addons)) for encounter, addons in sources.items()}
+
+
+def write_host_bindings(out, encounters, authorities):
+    for encounter in encounters:
+        if authorities.get(encounter['encounter_id']) != encounter['addon']:
+            continue
+        for npc in encounter['npcs']:
+            rows = out.execute('SELECT DISTINCT e.MapID,e.Bit FROM dungeon_encounter e '
+                               'WHERE e.ID=? AND e.MapID=? AND EXISTS(SELECT 1 FROM tdb_creature c WHERE c.id=? AND c.map=e.MapID)',
+                               (encounter['encounter_id'], encounter['map_id'], npc)).fetchall()
+            if len(rows) == 1:
+                map_id, bit = rows[0]
+                out.execute('INSERT OR IGNORE INTO bossmod_binding VALUES(?,?,?,?)',
+                            (map_id, npc, encounter['encounter_id'], bit))
+
+
 def write_copy(source, target, encounters):
     source, target = Path(source).resolve(), Path(target).resolve()
     if source == target or target.exists():
         raise ValueError('Output must be a new, separate database copy')
     with closing(sqlite3.connect(source.as_uri()+'?mode=ro', uri=True)) as src:
         validate_spells(src, encounters)
+        authorities = schedule_authorities(encounters)
         with closing(sqlite3.connect(target)) as out:
             src.backup(out)
             out.executescript(SCHEMA)
             out.execute('INSERT INTO bossmod_import_meta VALUES(?,?)', (BUILD, 'luaparser==4.0.0'))
+            out.executemany('INSERT INTO bossmod_authority VALUES(?,?)', authorities.items())
+            write_host_bindings(out, encounters, authorities)
             for encounter in encounters:
                 for npc in encounter['npcs'] or [0]:
                     out.execute('INSERT OR IGNORE INTO bossmod_encounter VALUES(?,?,?,?,?,?)',

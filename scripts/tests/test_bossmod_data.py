@@ -62,11 +62,18 @@ end
         timer = next(r for r in result['rules'] if r.get('health_pct') == 35 and r['action'] == 'timer')
         self.assertEqual(timer['delay_ms'], 5000)
 
+    def test_sole_schedule_authority_and_no_arbitrary_addon_priority(self):
+        cookie = bm.extract_bigwigs(SOURCE, 'Cookie.lua', 'LittleWigs', 'abc123')
+        self.assertEqual(bm.schedule_authorities([cookie]), {2986: 'LittleWigs'})
+        other = dict(cookie, addon='DBM')
+        with self.assertRaisesRegex(ValueError, '2986'):
+            bm.schedule_authorities([cookie, other])
+
     def test_spell_validation_and_copy_preserve_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             source, target = Path(tmp)/'world.db', Path(tmp)/'imported.db'
             with closing(sqlite3.connect(source)) as db:
-                db.executescript('CREATE TABLE spell(ID INTEGER); CREATE TABLE spell_name(ID INTEGER,Name_lang TEXT); INSERT INTO spell VALUES(6306); INSERT INTO spell_name VALUES(6306,"Acid Splash"); CREATE TABLE marker(value TEXT); INSERT INTO marker VALUES("unchanged"); CREATE TABLE db2_build(table_name TEXT,build TEXT); INSERT INTO db2_build VALUES("spell","12.1.0.69933"),("spell_name","12.1.0.69933");')
+                db.executescript('CREATE TABLE spell(ID INTEGER); CREATE TABLE spell_name(ID INTEGER,Name_lang TEXT); INSERT INTO spell VALUES(6306); INSERT INTO spell_name VALUES(6306,"Acid Splash"); CREATE TABLE marker(value TEXT); INSERT INTO marker VALUES("unchanged"); CREATE TABLE dungeon_encounter(ID INTEGER,MapID INTEGER,Bit INTEGER); INSERT INTO dungeon_encounter VALUES(2986,36,7); CREATE TABLE tdb_creature(id INTEGER,map INTEGER); INSERT INTO tdb_creature VALUES(645,36); CREATE TABLE db2_build(table_name TEXT,build TEXT); INSERT INTO db2_build VALUES("spell","12.1.0.69933"),("spell_name","12.1.0.69933");')
             original = source.read_bytes()
             result = bm.extract_bigwigs(SOURCE, 'Cookie.lua', 'LittleWigs', 'abc123')
             bm.write_copy(source, target, [result])
@@ -74,6 +81,8 @@ end
             with closing(sqlite3.connect(target)) as db:
                 self.assertEqual(db.execute('SELECT count(*) FROM bossmod_rule').fetchone()[0], 3)
                 self.assertEqual(db.execute('SELECT value FROM marker').fetchone()[0], 'unchanged')
+                self.assertEqual(db.execute('SELECT * FROM bossmod_binding').fetchall(), [(36, 645, 2986, 7)])
+                self.assertEqual(db.execute('SELECT * FROM bossmod_authority').fetchall(), [(2986, 'LittleWigs')])
             with self.assertRaises(ValueError): bm.write_copy(source, source, [result])
             result['rules'][0]['spell_id'] = 99999999
             with self.assertRaisesRegex(ValueError, '99999999'): bm.write_copy(source, Path(tmp)/'bad.db', [result])
