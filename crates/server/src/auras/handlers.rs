@@ -15,6 +15,8 @@ pub enum AuraKind {
     ProcTrigger,
     /// Consumed by incoming damage (`absorb_damage`).
     Absorb,
+    /// Native per-effect area damage reduction, restricted by school mask.
+    AreaAvoidance,
     /// Redirects native school-mask damage to the aura caster.
     DamageTransfer,
     /// Negates damage of its school mask.
@@ -137,6 +139,7 @@ pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
 pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
 pub const PERIODIC_DUMMY: u32 = 226;
+pub const MOD_AOE_DAMAGE_AVOIDANCE: u32 = 229;
 pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
 /// TC a352b1fa HandleUnused: viewer-local humanoid appearance, client-side only.
 pub const CHANGE_MODEL_FOR_ALL_HUMANOIDS: u32 = 233;
@@ -189,6 +192,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         MOD_TAUNT => Taunt,
+        MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
