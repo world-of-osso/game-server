@@ -11,7 +11,6 @@ loaded, imported or executed. Unknown branches are recorded, not guessed.
 import argparse
 import hashlib
 import json
-import re
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -26,6 +25,7 @@ CREATE TABLE bossmod_encounter(addon TEXT,version TEXT,encounter_id INTEGER,map_
 CREATE TABLE bossmod_rule(id INTEGER PRIMARY KEY,addon TEXT,version TEXT,encounter_id INTEGER,trigger TEXT,trigger_spell_id INTEGER,health_pct REAL,required_phase REAL,action TEXT,spell_id INTEGER,delay_ms INTEGER,phase REAL,severity INTEGER,warning_key TEXT,warning_text TEXT,source_file TEXT,source_line INTEGER,event_kind TEXT);
 CREATE TABLE bossmod_import_issue(addon TEXT,source_file TEXT,source_line INTEGER,reason TEXT);
 CREATE TABLE bossmod_import_meta(build TEXT,parser TEXT);
+CREATE TABLE bossmod_static_source(addon TEXT,encounter_id INTEGER,source_file TEXT,kind TEXT,data_json TEXT);
 CREATE TABLE bossmod_authority(encounter_id INTEGER PRIMARY KEY,addon TEXT NOT NULL);
 CREATE TABLE bossmod_binding(map_id INTEGER,npc_entry INTEGER,encounter_id INTEGER,bit INTEGER,PRIMARY KEY(map_id,npc_entry));
 '''
@@ -126,10 +126,25 @@ def top_constants(block):
     return bindings
 
 
+def flatten_timer_table(values, path=()):
+    for key, value in values.items():
+        lookup = (*path, key)
+        if isinstance(value, dict):
+            yield from flatten_timer_table(value, lookup)
+        elif type(value) in (int, float) and value > 0:
+            yield dict(lookup_path=list(lookup), seconds=value)
+
+
 def audit_timer_calls(tree, result, timer_vars=None):
     """Preserve timer calls not reachable from an understood event boundary."""
     handled = {r['source_line'] for r in result['rules']} | {g['source_line'] for g in result['issues']}
     for node in all_nodes(tree):
+        if isinstance(node, lua.LocalAssign):
+            for target, value in zip(node.targets, node.values):
+                if isinstance(target, lua.Name) and 'timer' in target.id.lower() and isinstance(value, lua.Table):
+                    result['timer_tables'].append(dict(name=target.id, source_line=line(node),
+                        values=list(flatten_timer_table(static_value(value, {}, {})))))
+                    issue(result, node, 'timer lookup table requires authored lookup index/phase/duration input: ' + target.id)
         name = method_name(node)
         is_dbm_timer = timer_vars and isinstance(node, lua.Invoke) and expression(node.source) in timer_vars and timer_vars[expression(node.source)][2] == 'timer'
         if name in ('Bar', 'CDBar', 'CastBar') or (is_dbm_timer and name in ('Start', 'TLStart', 'SetTimeline')):
@@ -164,7 +179,7 @@ def expression(node):
 
 def make_result(file, addon, version):
     return dict(encounter_id=0, map_id=0, npcs=[], addon=addon, version=version,
-                source_file=file, rules=[], issues=[], static_timers=[])
+                source_file=file, rules=[], issues=[], static_timers=[], timer_tables=[], dynamic_timeline=None)
 
 
 def issue(result, node, reason):
@@ -244,7 +259,7 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
         if name in ('CDBar', 'Bar', 'CastBar') and len(args) >= 2:
             spell = spell_value(args[0], context)
             delay = static_value(args[1], bindings, context)
-            if spell is None or delay is None or delay <= 0:
+            if spell is None or type(delay) not in (int, float) or delay <= 0:
                 issue(result, node, 'nonliteral timer: ' + expression(node))
                 continue
             add_rule(result, node, context, action='timer', spell_id=spell,
@@ -271,7 +286,7 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
             spell, default, action, severity, key = definition
             if action == 'timer':
                 delay = static_value(args[0], bindings, context) if args else default
-                if delay is None or delay <= 0:
+                if type(delay) not in (int, float) or delay <= 0:
                     issue(result, node, 'nonliteral DBM timer: ' + expression(node))
                     continue
                 add_rule(result, node, context, action='timer', spell_id=spell,
@@ -489,14 +504,17 @@ def render_warnings(result, spell_names, locales):
                     text = template % name
                 except (TypeError, ValueError):
                     pass
+        elif name and key and result['addon'] == 'EXBossData':
+            # EncounterData labels are plain data, never parse them as Lua.
+            if key.isascii() and key.strip():
+                text = key
         elif name and key:
             try:
                 node = ast.parse('local value = ' + key).body.body[0].values[0]
                 text = render_locale_expression(node, name, locales)
-            except Exception:
-                # EXBoss labels are literal data, not Lua expressions.
-                if result['addon'] == 'EXBossData' and key.isascii():
-                    text = key
+            except Exception as error:
+                result['issues'].append(dict(addon=result['addon'], source_file=rule['source_file'],
+                    source_line=rule['source_line'], reason='warning expression parse failed: ' + str(error)))
         if isinstance(text, str) and text:
             rule['warning_text'] = text
             accepted.append(rule)
@@ -558,6 +576,11 @@ def write_copy(source, target, encounters):
                 for npc in encounter['npcs'] or [0]:
                     out.execute('INSERT OR IGNORE INTO bossmod_encounter VALUES(?,?,?,?,?,?)',
                                 tuple(encounter[k] for k in ('addon', 'version', 'encounter_id', 'map_id')) + (npc, encounter['source_file']))
+                for kind in ('static_timers', 'timer_tables', 'dynamic_timeline'):
+                    values = encounter.get(kind)
+                    if values:
+                        out.execute('INSERT INTO bossmod_static_source VALUES(?,?,?,?,?)',
+                            (encounter['addon'], encounter['encounter_id'], encounter['source_file'], kind, json.dumps(values, ensure_ascii=False)))
                 for rule in encounter['rules']:
                     out.execute('INSERT INTO bossmod_rule('+','.join(RULE_FIELDS)+') VALUES('+','.join('?' for _ in RULE_FIELDS)+')',
                                 tuple(rule.get(k) for k in RULE_FIELDS))
@@ -600,6 +623,10 @@ def import_sources(db, roots):
             locales = dict(common)
             if addon == 'DBM':
                 locales.update(locale_literals((root/'DBM-Core/localization.en.lua').read_text(), 'DBM'))
+            dynamic = {}
+            if addon == 'EXBossData':
+                dynamic_tree = ast.parse((root/'FixedTimelineBosses.lua').read_text())
+                dynamic = top_constants(dynamic_tree.body).get('encounterTriggers', {})
             paths = [root/'EncounterData.lua'] if addon == 'EXBossData' else sorted(root.rglob('*.lua'))
             for path in paths:
                 file = str(path.relative_to(root))
@@ -616,6 +643,11 @@ def import_sources(db, roots):
                     gaps.append(dict(addon=addon, source_file=file, source_line=0, reason=f'parse failure: {error}'))
                     continue
                 for result in results:
+                    if addon == 'EXBossData':
+                        result['dynamic_timeline'] = dynamic.get(result['encounter_id'])
+                        if result['dynamic_timeline']:
+                            result['issues'].append(dict(addon=addon, source_file='FixedTimelineBosses.lua', source_line=0,
+                                reason='durationRules/aiStateMachine classify native timeline input; not initial/repeat cooldowns'))
                     accepted = []
                     for rule in result['rules']:
                         invalid = [rule[k] for k in ('spell_id', 'trigger_spell_id') if rule.get(k) and rule[k] not in valid]
@@ -650,7 +682,10 @@ def main():
         rows = [e for e in encounters if e['addon'] == addon]
         coverage[addon] = dict(encounters=len({e['encounter_id'] for e in rows}),
                                timed_encounters=len({e['encounter_id'] for e in rows if any(r['action']=='timer' for r in e['rules'])}),
-                               rules=sum(len(e['rules']) for e in rows), issues=sum(len(e['issues']) for e in rows))
+                               rules=sum(len(e['rules']) for e in rows), issues=sum(len(e['issues']) for e in rows),
+                               audited_timer_calls=sum(len(e['static_timers']) for e in rows),
+                               timer_lookup_tables=sum(len(e['timer_tables']) for e in rows),
+                               native_timeline_encounters=sum(e['dynamic_timeline'] is not None for e in rows))
     args.report.write_text(json.dumps(dict(build=BUILD, coverage=coverage, encounters=encounters), ensure_ascii=False, indent=2)+'\n')
     print(json.dumps(coverage))
 
