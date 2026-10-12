@@ -295,6 +295,56 @@ fn world_quest_bound_item_uses_persisted_credit_not_bag_count() {
 }
 
 #[test]
+fn world_quest_area_trigger_enter_zero_amount_is_an_unset_boolean_not_free_completion() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest(quest_id INTEGER); INSERT INTO content_world_quest VALUES(86610);
+        CREATE TABLE content_world_quest_objective(quest_id INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,flags2 INTEGER,weight REAL,description TEXT,ordinal INTEGER);
+        INSERT INTO content_world_quest_objective VALUES(86610,19,35987,0,0,0,0,'The Oasis mail delivered',0);
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT); CREATE TABLE content_item(ID INTEGER,name TEXT);").unwrap();
+    let mut db = crate::quest_data::QuestDb::default();
+    db.quests.insert(
+        86610,
+        QuestTemplate {
+            id: 86610,
+            ..Default::default()
+        },
+    );
+    crate::world_quest_objectives::load(&conn, &mut db).unwrap();
+    let mut log = crate::persistence::quest_store::QuestLogData {
+        active: vec![ActiveQuestData {
+            quest_id: 86610,
+            counts: vec![0],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    assert!(
+        !objectives_done(&db.quests[&86610], &[0]),
+        "Amount0 is not a satisfied task trigger"
+    );
+    assert!(crate::quest_rules::credit_objective(
+        &db,
+        &mut log,
+        ObjectiveKind::AreaTriggerEnter,
+        35987
+    ));
+    assert_eq!(log.active(86610).unwrap().counts, vec![1]);
+    assert!(objectives_done(&db.quests[&86610], &[1]));
+    assert!(!crate::quest_rules::credit_objective(
+        &db,
+        &mut log,
+        ObjectiveKind::AreaTriggerEnter,
+        35987
+    ));
+    assert!(!crate::quest_rules::credit_objective(
+        &db,
+        &mut log,
+        ObjectiveKind::Monster,
+        35987
+    ));
+}
+
+#[test]
 fn world_quest_hidden_mandatory_requirement_still_blocks_completion() {
     let quest = QuestTemplate {
         id: 1,

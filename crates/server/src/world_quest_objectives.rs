@@ -75,10 +75,10 @@ pub(crate) fn load(
         template.objectives.push(ObjectiveDef {
             kind,
             object_id,
-            required: if kind == ObjectiveKind::ProgressBar {
-                100
-            } else {
-                amount
+            required: match kind {
+                ObjectiveKind::ProgressBar => 100,
+                ObjectiveKind::AreaTriggerEnter => 1, // Player.cpp17226: stored boolean.
+                _ => amount,
             },
             text,
         });
