@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
+
 - 2026-10-11 — [Armory refresh](systems/site-snapshots.md): user-selected default-public character policy minus ID opt-outs; exclusive mode0600 copy-only redb crash recovery; native release exporter and installed-but-disabled agent-server 15-minute user timer. Refresh validates before staging and uses atomic directory exchange, retaining data.old. Production-copy local dry-run succeeded with zero saved characters; existing real private-proof copy produced five characters against canonical read-only world.db. First publish/enable stays lead-owned. [Operator contract](../specs/site-snapshots.md#agent-server-refresh-job).
 - 2026-10-11 — [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11): preserve visual/character bitcode, additive jewelry/trinket/relic storage, paired first-empty/lower-level replacement, authored unique/category rejection, source-qualified snapshots/stat input. Eight focused handler tests cover pairs/swaps/rejection/migration/reopen/class/ranged/stat-modifier boundaries; native both-skin paid Mood Ring/five slots/stat/tooltip/drag and exact restart/relog receipts. No full server suite/canonical DB/UDP5000 writes; current Mainline has no relic fixture or ranged button.
 

@@ -349,6 +349,7 @@ pub(crate) fn create_tables(db: &Database) {
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);
     migrate_legacy_auctions(db);
+    mail_store::migrate_sender_mailboxes(db);
     mail_store::migrate_legacy_mailboxes(db, crate::guild_bank::unix_now());
     banks::migrate_guild_ranks(db);
     charters::initialize(db);

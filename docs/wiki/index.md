@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
+
 - [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
 - [Static armory snapshots](systems/site-snapshots.md) — public-only offline JSON, local PNG icons, attributable future M+ completion and raid first-kill/guild credit; no listener or production publishing.
 
