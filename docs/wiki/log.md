@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Adventure Guide](../specs/adventure-guide.md): copy-only catalog import, signed priorities, monthly contribution persistence and query/tracking. Four scoped service tests pass; live continuation proof pending.
+
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
 
 - 2026-10-11 — [SmartAI final integration](../smartai-census.md#proof): code65dee4d9 keeps master follower leash exclusion/data-selected boss tracking; targeted53PASS/1pre-existingignored, importer2PASS and enginephysics14PASS; check/fmt clean. Rebuilt final binaries completed both native skins on explicit authentic legacy copy;12 new inspected PNGs. Mixed-Retail scaling and unsupported vocabulary remain open; independent verifier unavailable.
