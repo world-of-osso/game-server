@@ -31,6 +31,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 1deb60e3 / shared00d33e7 | 2928 | 4717 | 182 | Native142 physical base armor, all7827 memberships, exit0, 539.21s |
 | 1441a273 / shared00d33e7 | 2934 | 4711 | 182 | Native305 player minimum speed, all7827 memberships, exit0, 565.22s |
 | dfc71656 / shared00d33e7 | 2965 | 4680 | 182 | Native466 final player armor, all7827 memberships, exit0, 477.51s |
+| d41f51c2 / shared00d33e7 | 2969 | 4676 | 182 | Zero-amount284/285 child linkage, all7827 memberships, exit0, 545.53s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -194,7 +195,7 @@ Nonzero285 fields stay explicit source gaps. Pinned TC would overwrite child bas
 |471492→471491 Ursol's Warding|10|−1|+10; damage-taken reduction becomes an increase|
 |427775→1224451 A Fire Inside|1|1|1; no numeric conflict, but nonzero linkage/child226 remain outside this zero-amount proof|
 
-Adjacent Unending Resolve2, stats/itemstats21, Chrono6 and Blooming8 pass. Logs: `linked-aura-{red2,green,controls}.log`, `linked-aura-adjacent-*.log`; exact native rows in `linked-aura-native-effects.json`. No new live proof; full census pending. Existing child/script/proc gaps remain, not marker no-ops.
+Adjacent Unending Resolve2, stats/itemstats21, Chrono6 and Blooming8 pass. Logs: `linked-aura-{red2,green,controls}.log`, `linked-aura-adjacent-*.log`; exact native rows in `linked-aura-native-effects.json`. No new live proof. Batch25 at `d41f51c2` records all7827 memberships:2969 working/4676 partial/182 broken; Ironfur's four build-union memberships become working at the controlled probe boundary. All six nonzero linked-root memberships remain partial. Existing child/script/proc gaps remain, not marker no-ops.
 
 ## Retained boundaries
 
