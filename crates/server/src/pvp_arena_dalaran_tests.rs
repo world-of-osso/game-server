@@ -38,7 +38,7 @@ fn source_harness(corner: [f32; 2], height: f32) -> Harness {
         crate::zones::MapContent {
             map: COPY,
             difficulty_id: 0,
-            dead_bosses: &Default::default(),
+            dead_bosses: Vec::new(),
         },
         false,
     );
