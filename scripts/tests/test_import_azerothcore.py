@@ -1080,6 +1080,52 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
 
+    def test_class_talent_summons_keep_native_templates_without_world_spawns(self):
+        self.write_retail_spawn_fixture()
+        templates = (self.tdb / "creature_template.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template.sql").write_text(
+            templates + "," + tdb_template(63508, "Xuen", 954, 0)
+            + "," + tdb_template(258584, "Imp Lord", 0, 0, unit_class=4) + ";\n")
+        models = (self.tdb / "creature_template_model.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template_model.sql").write_text(
+            models + ",(63508,0,45042,1,1,69497),(258584,0,141129,1,1,69497);\n")
+        difficulties = (self.tdb / "creature_template_difficulty.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template_difficulty.sql").write_text(
+            difficulties + "," + tdb_difficulty(63508, 1, 0, 0, 0, content_tuning=482)
+            + "," + tdb_difficulty(258584, 1, 0, 0, 0, content_tuning=0) + ";\n")
+        csv_dir = self.csv / db2.DEFAULT_BUILD
+        write_db2_rows(csv_dir, "ChrClasses", [
+            {"ID": 10, "Name_lang": "Monk"}, {"ID": 9, "Name_lang": "Warlock"}])
+        write_db2_rows(csv_dir, "SkillLine", [
+            {"ID": 829, "CategoryID": 7, "DisplayName_lang": "Monk"},
+            {"ID": 849, "CategoryID": 7, "DisplayName_lang": "Warlock"}])
+        write_db2_rows(csv_dir, "SkillLineXTraitTree", [
+            {"ID": 57, "SkillLineID": 829, "TraitTreeID": 1000},
+            {"ID": 56, "SkillLineID": 849, "TraitTreeID": 720}])
+        write_db2_rows(csv_dir, "TraitNode", [
+            {"ID": 101243, "TraitTreeID": 1000}, {"ID": 110197, "TraitTreeID": 720}])
+        write_db2_rows(csv_dir, "TraitNodeXTraitNodeEntry", [
+            {"ID": 122493, "TraitNodeID": 101243, "TraitNodeEntryID": 125062},
+            {"ID": 134944, "TraitNodeID": 110197, "TraitNodeEntryID": 136726}])
+        write_db2_rows(csv_dir, "TraitNodeEntry", [
+            {"ID": 125062, "TraitDefinitionID": 129894},
+            {"ID": 136726, "TraitDefinitionID": 141498}])
+        write_db2_rows(csv_dir, "TraitDefinition", [
+            {"ID": 129894, "SpellID": 123904}, {"ID": 141498, "SpellID": 1276452}])
+        write_db2_rows(csv_dir, "SpellEffect", [
+            {"ID": 156549, "SpellID": 123904, "Effect": 28, "EffectMiscValue_0": 63508},
+            {"ID": 1290246, "SpellID": 1276452, "EffectIndex": 1, "Effect": 28, "EffectMiscValue_0": 258584}])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(conn.execute(
+                "SELECT entry,name FROM content_creature_template WHERE entry IN (63508,258584) ORDER BY entry"
+            ).fetchall(), [(63508, "Xuen"), (258584, "Imp Lord")])
+            self.assertEqual(conn.execute(
+                "SELECT CreatureID,CreatureDisplayID FROM content_creature_template_model WHERE CreatureID IN (63508,258584) ORDER BY CreatureID"
+            ).fetchall(), [(63508, 45042), (258584, 141129)])
+            self.assertEqual(conn.execute("SELECT count(*) FROM content_creature WHERE id1 IN (63508,258584)").fetchone()[0], 0)
+
     def write_transform_fixture(self):
         """Tentacle of Isorath Transform 84861 names TrinityCore creature 45409, which nothing spawns."""
         self.write_retail_spawn_fixture()
