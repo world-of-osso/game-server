@@ -54,6 +54,7 @@ fn achievements_criteria_native_dance_chat_and_intent_persist_without_idle_repla
             MessageReceiver::<EmoteIntent>::default(),
             MessageSender::<ChatMessage>::default(),
             MessageSender::<EmoteEvent>::default(),
+            MessageReceiver::<EmoteEvent>::default(),
             MessageSender::<EmoteIntent>::default(),
         ))
         .id();
