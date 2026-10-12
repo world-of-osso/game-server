@@ -67,6 +67,11 @@ fn probe_silvershard_cart_approach(ground: &mut GroundMap, center: Vec3) -> Opti
     None
 }
 
+fn sample_cart_segment(start: Vec3, end: Vec3) -> impl Iterator<Item = Vec3> {
+    let count = start.distance(end).ceil().max(1.0) as u32;
+    (0..=count).map(move |index| start.lerp(end, index as f32 / count as f32))
+}
+
 #[test]
 fn silvershard_authored_cart_routes_have_walkable_control_approaches() {
     let db = rusqlite::Connection::open_with_flags(
@@ -100,14 +105,40 @@ fn silvershard_authored_cart_routes_have_walkable_control_approaches() {
             .push(serde_json::json!({"path":path,"center":center.to_array(),"approach":approach}));
     };
     for definition in shared::battleground::SILVERSHARD_CARTS {
-        append(definition.initial_path, Vec3::from_array(definition.spawn));
+        let start = Vec3::from_array(definition.spawn);
+        let end = routes[&definition.initial_path][0];
+        for center in sample_cart_segment(start, end) {
+            append(definition.initial_path, center);
+        }
+    }
+    // TC switch branches connect these authored paths, including one-node connectors.
+    for (from, to) in [
+        (0, 1),
+        (2, 3),
+        (2, 5),
+        (3, 4),
+        (5, 6),
+        (7, 8),
+        (7, 10),
+        (8, 9),
+        (10, 11),
+    ] {
+        let from = 6014000 + from;
+        let to = 6014000 + to;
+        let start = *routes[&from].last().unwrap();
+        let end = routes[&to][0];
+        for center in sample_cart_segment(start, end) {
+            append(to, center);
+        }
     }
     for (path, nodes) in routes {
-        assert!(nodes.len() > 1);
+        assert!(!nodes.is_empty());
+        // The authored depot connector paths can contain one node.
+        for node in &nodes {
+            append(path, *node);
+        }
         for segment in nodes.windows(2) {
-            let count = segment[0].distance(segment[1]).ceil().max(1.0) as u32;
-            for index in 0..=count {
-                let center = segment[0].lerp(segment[1], index as f32 / count as f32);
+            for center in sample_cart_segment(segment[0], segment[1]) {
                 append(path, center);
             }
         }
