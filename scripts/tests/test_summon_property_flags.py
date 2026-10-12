@@ -37,6 +37,37 @@ class SummonPropertyFlagsTests(unittest.TestCase):
             self.assertEqual(self.source[3077][5:], [16, 0])
             self.assertEqual(self.source[3135][5:], [133384, 0])
 
+    def test_preserves_real_legacy_signed_enum_encoding(self):
+        with self.database() as conn:
+            conn.execute('INSERT INTO summon_properties VALUES (?,?,?,?,?)', self.source[3001][:5])
+            self.assertEqual(self.source[3001][3], 4294967295)
+            flags.import_flags(conn, self.payload)
+            self.assertEqual(conn.execute('SELECT * FROM summon_properties WHERE ID=3001').fetchone(), tuple(self.source[3001]))
+
+    def test_repeated_import_is_idempotent(self):
+        with self.database() as conn:
+            flags.import_flags(conn, self.payload)
+            before = conn.iterdump()
+            first_dump = list(before)
+            flags.import_flags(conn, self.payload)
+            self.assertEqual(list(conn.iterdump()), first_dump)
+
+    def test_rejects_identity_drift_without_adding_schema(self):
+        with self.database() as conn:
+            conn.execute('UPDATE summon_properties SET Control=3 WHERE ID=64')
+            before = list(conn.iterdump())
+            with self.assertRaisesRegex(ValueError, 'metadata differs'):
+                flags.import_flags(conn, self.payload)
+            self.assertEqual(list(conn.iterdump()), before)
+
+    def test_rolls_back_columns_and_values_after_database_write_failure(self):
+        with self.database() as conn:
+            conn.execute("CREATE TRIGGER reject_flags BEFORE UPDATE ON summon_properties BEGIN SELECT RAISE(ABORT,'fixture rejects update'); END")
+            before = list(conn.iterdump())
+            with self.assertRaisesRegex(sqlite3.IntegrityError, 'fixture rejects update'):
+                flags.import_flags(conn, self.payload)
+            self.assertEqual(list(conn.iterdump()), before)
+
     def test_rejects_layout_drift_before_schema_or_row_changes(self):
         payload = bytearray(self.payload)
         payload[156:160] = (0).to_bytes(4, 'little')

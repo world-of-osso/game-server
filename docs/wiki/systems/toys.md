@@ -2,6 +2,16 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source summon flag import (2026-10-12)
+
+Canonical read-only inspection found3610 SummonProperties rows with only ID/Control/Faction/Title/Slot, despite the maintained DB2 schema already naming `Flags_0`/`Flags_1`. Local CASC FDID1345276/layoutA4CA5ECF and pinned TC DB2LoadInfo supply both words for3610 readable records; three encrypted records are explicitly omitted. `scripts/import_summon_property_flags.py` validates every existing source identity, transactionally adds the missing columns and populates flags without rewriting identities/unrelated data. Legacy3001 Title4294967295 equals the source signed32 -1 bit pattern; validation normalizes bits, not stored data.
+
+Private visibility is a separate runtime step: TC `SpellEffects.cpp::EffectSummonType` uses OnlyVisibleToSummoner0x10 and OnlyVisibleToSummonerGroup0x10000 to set a private owner; `Object.cpp::CheckPrivateObjectOwnerVisibility` filters seers. Source3077 used by the four warning signs carries0x10, while the existing summon/interest path ignores it. Importing flags alone is not a visibility fix or a new working-toy claim. Lead canonical command, once requested:
+
+```text
+python3 scripts/import_summon_property_flags.py --db2 /home/osso/.worktrees/logs/toy-effects14-continuation/runtime/data/summon-properties-source/1345276.db2 --db data/world.db
+```
+
 ## Linked cooking traps (2026-10-12)
 
 Source-limited `game_objects::cooking_traps` loads31442 plus addon35, spawns a separate unowned trap at its summoned focus and routes7353 through ordinary triggered spell selection. Environmental activation searches living same-map players within diameter/2 plus scaled combat reach; the spell independently selects10yd allies. Charges0 repeat at the source TC default4s. Parent expiry/removal despawns the linked trap before another refresh. The snapshotted versatility aura keeps its60s duration even after its GO caster disappears; rating-only snapshot retention fixes the observed unconditional casterless-removal failure without claiming other aura/source combinations.
