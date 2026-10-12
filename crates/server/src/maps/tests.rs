@@ -1122,6 +1122,16 @@ fn exercise_arena_channel(rated: bool) {
         ))
     );
     assert_eq!(ended.players.len(), 4);
+    let killer = ended
+        .players
+        .iter()
+        .find(|player| player.character_id == 1)
+        .unwrap();
+    assert_eq!(killer.killing_blows, 2);
+    assert!(
+        killer.damage_done > 0,
+        "real combat events populate arena damage scoreboard"
+    );
     if rated {
         assert_eq!(ended.arena.as_ref().unwrap().mode, ArenaQueueMode::Rated2v2);
         assert_eq!(ended.arena.as_ref().unwrap().rating_changes.len(), 4);

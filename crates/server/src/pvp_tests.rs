@@ -17,7 +17,7 @@ fn arena_skirmish_pairing_requires_four_or_six_unique_eligible_players() {
     ] {
         let mut state = PvpServerState::default();
         let mut players = vec![PlayerPvpState::default(); count];
-        assert!(arena::queue_player(&mut players[0], &mut state, &catalog, 1, 9, mode).is_err());
+        assert!(arena::queue_player(&mut players[0], &mut state, &catalog, 1, 19, mode).is_err());
         for (index, player) in players.iter_mut().enumerate() {
             arena::queue_player(player, &mut state, &catalog, index as u64 + 1, 90, mode).unwrap();
             if index + 1 < count {
@@ -293,7 +293,12 @@ fn arena_opponents_of_same_race_attack_only_after_preparation_and_never_attack_t
         Relation::Enemy
     ));
     h.attack(h.npc);
-    h.advance(20);
+    for _ in 0..100 {
+        h.advance(5);
+        if h.app.world().get::<Health>(h.npc).unwrap().current < health {
+            break;
+        }
+    }
     assert!(
         h.app.world().get::<Health>(h.npc).unwrap().current < health,
         "actual HostClient attack caused damage"

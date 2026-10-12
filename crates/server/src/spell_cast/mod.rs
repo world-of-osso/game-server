@@ -568,6 +568,7 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::damage_meter::record_damage(world, &event);
+    crate::pvp::record_arena_event(world, &event);
     let mut players: Vec<Entity> = Vec::new();
     for unit in [event.source, event.target]
         .into_iter()

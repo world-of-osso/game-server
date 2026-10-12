@@ -121,6 +121,7 @@ fn update_match(
     let Some(arena) = matched.arena.as_mut() else {
         return false;
     };
+    let scores_changed = std::mem::take(&mut arena.score_dirty);
     let previous = arena.snapshot.clone();
     let old_phase = matched.instance.phase;
     let teams = [
@@ -217,5 +218,5 @@ fn update_match(
         arena.snapshot.shadow_sight_available =
             arena.started.is_some_and(|start| now - start >= 90.0);
     }
-    previous != arena.snapshot || old_phase != matched.instance.phase
+    scores_changed || previous != arena.snapshot || old_phase != matched.instance.phase
 }
