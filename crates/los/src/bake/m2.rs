@@ -87,6 +87,29 @@ impl<'a> M2File<'a> {
             .collect()
     }
 
+    /// Authored collision face normals (MD20 +0xE8), one per bounding triangle.
+    /// Movement uses these placed normals, not render normals or two-sided camera policy.
+    pub fn collision_normals(&self) -> Result<Vec<Vec3>> {
+        let (indices, _) = array_at(self.md20, 0xD8)?;
+        let normals = records(self.md20, array_at(self.md20, 0xE8)?, 12, f32x3_at)?;
+        if !indices.is_multiple_of(3) || normals.len() != indices / 3 {
+            return Err(format!(
+                "M2 collision has {indices} indices and {} face normals",
+                normals.len()
+            ));
+        }
+        normals
+            .into_iter()
+            .map(|normal| {
+                let normal = super::adt::file_to_bevy(normal);
+                if !normal.is_finite() {
+                    return Err("M2 collision normal is not finite".into());
+                }
+                Ok(normal)
+            })
+            .collect()
+    }
+
     /// The top centre of the model's bounding box (a flat model's box has no height); an
     /// error for an inverted box, which a model without geometry has.
     pub fn bounds_top(&self) -> Result<Vec3> {

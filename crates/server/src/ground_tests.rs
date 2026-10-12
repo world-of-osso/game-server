@@ -14,7 +14,11 @@ const AUCTION_HOUSE_WOW: (f32, f32) = (-8820.0, 660.0);
 const AUCTION_HOUSE_FLOOR: f32 = 98.06;
 
 fn client_data_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+    std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+        })
 }
 
 /// `world/maps/azeroth/azeroth.wdt`.

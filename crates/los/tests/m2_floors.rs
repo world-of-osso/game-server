@@ -52,8 +52,7 @@ fn chunk(tag: &[u8; 4], bytes: &[u8]) -> Vec<u8> {
     out
 }
 
-#[test]
-fn m2_floor_global_wmo_doodad_outside_group_bounds_supports_feet() {
+fn global_wmo_fixture() -> tempfile::TempDir {
     // Synthetic WMO container, real198581 hull. No WMO group geometry: only its
     // active doodad set collides. Its translated/scaled/rotated floor must still bake.
     let dir = tempfile::tempdir().unwrap();
@@ -91,16 +90,75 @@ fn m2_floor_global_wmo_doodad_outside_group_bounds_supports_feet() {
     root.extend(chunk(b"MODS", &set));
     root.extend(chunk(b"MODD", &doodad));
     std::fs::write(dir.path().join("models/999.wmo"), root).unwrap();
-    let mut baker = Baker::for_m2_floors(dir.path());
+    dir
+}
+
+fn global_floor(dir: &std::path::Path, feet: Vec3) -> Option<f32> {
+    let mut baker = Baker::for_m2_floors(dir);
     let global = baker.collect_global(999).unwrap().unwrap();
-    let feet = Vec3::new(1200.0, 123.54, -1300.0);
-    let height = global
+    global
         .into_iter()
         .filter_map(|(tile, geometry)| {
             let (vertices, indices) = los::bake::index_triangles(&geometry.triangles);
             LosTile::build(tile.0, tile.1, vertices, indices).floor_height(feet)
         })
         .max_by(f32::total_cmp)
-        .expect("active WMO doodad floor outside group bounds");
-    assert!((height - 123.53668).abs() < 0.01, "{height}");
+}
+
+#[test]
+fn m2_floor_global_wmo_doodad_outside_group_bounds_supports_feet() {
+    let dir = global_wmo_fixture();
+    let feet = Vec3::new(1200.0, 123.54, -1300.0);
+    let height =
+        global_floor(dir.path(), feet).expect("active WMO doodad floor outside group bounds");
+    assert!((height - 123.45688).abs() < 0.01, "{height}");
+}
+
+#[test]
+fn m2_floor_authored_downward_normal_is_not_a_floor() {
+    let dir = global_wmo_fixture();
+    let path = dir.path().join("models/198581.m2");
+    std::fs::remove_file(&path).unwrap();
+    // Two collision planes: underside at0 with downward winding/normal, roof at4.
+    // The same WMO placement puts them at110/118, beyond each other's step reach.
+    let mut bytes = vec![0; 384];
+    bytes[..4].copy_from_slice(b"MD20");
+    for (offset, value) in [
+        (0xD8, 6u32),
+        (0xDC, 240),
+        (0xE0, 6),
+        (0xE4, 256),
+        (0xE8, 2),
+        (0xEC, 336),
+    ] {
+        bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+    for (index, value) in [0u16, 2, 1, 3, 4, 5].into_iter().enumerate() {
+        bytes[240 + index * 2..242 + index * 2].copy_from_slice(&value.to_le_bytes());
+    }
+    for (index, vertex) in [
+        [-4f32, -4.0, 0.0],
+        [4.0, -4.0, 0.0],
+        [0.0, 4.0, 0.0],
+        [-4.0, -4.0, 4.0],
+        [4.0, -4.0, 4.0],
+        [0.0, 4.0, 4.0],
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        for (axis, value) in vertex.into_iter().enumerate() {
+            let offset = 256 + index * 12 + axis * 4;
+            bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+    }
+    bytes[344..348].copy_from_slice(&(-1f32).to_le_bytes());
+    bytes[356..360].copy_from_slice(&1f32.to_le_bytes());
+    std::fs::write(path, bytes).unwrap();
+    assert_eq!(
+        global_floor(dir.path(), Vec3::new(1200.0, 110.0, -1300.0)),
+        None
+    );
+    let roof = global_floor(dir.path(), Vec3::new(1200.0, 118.0, -1300.0)).unwrap();
+    assert!((roof - 118.0).abs() < 0.001, "{roof}");
 }
