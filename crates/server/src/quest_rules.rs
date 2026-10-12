@@ -341,12 +341,13 @@ pub(crate) fn credit_objective(
             continue;
         };
         active.counts.resize(quest.objectives.len(), 0);
-        for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
+        for (index, objective) in quest.objectives.iter().enumerate() {
             if objective.kind == kind
                 && objective.object_id == object_id
-                && *count < objective.required
+                && active.counts[index] < objective.required
+                && crate::world_quest_objectives::creditable(quest, &active.counts, index)
             {
-                *count += 1;
+                active.counts[index] += 1;
                 changed = true;
             }
         }
@@ -370,16 +371,15 @@ pub(crate) fn credit_player_kill(db: &QuestDb, log: &mut QuestLogData, same_team
             continue;
         };
         active.counts.resize(quest.objectives.len(), 0);
-        for (index, (objective, count)) in
-            quest.objectives.iter().zip(&mut active.counts).enumerate()
-        {
+        for (index, objective) in quest.objectives.iter().enumerate() {
             let flags = crate::world_quest_objectives::rule(quest, index).flags;
             let team_allowed = flags & SAME_FACTION == 0 || same_team;
             if objective.kind == ObjectiveKind::PlayerKills
                 && team_allowed
-                && *count < objective.required
+                && active.counts[index] < objective.required
+                && crate::world_quest_objectives::creditable(quest, &active.counts, index)
             {
-                *count += 1;
+                active.counts[index] += 1;
                 changed = true;
             }
         }

@@ -136,6 +136,39 @@ pub(crate) fn derive_progress_bars(quest: &QuestTemplate, counts: &mut [u32]) {
     }
 }
 
+/// Pinned Player::IsQuestObjectiveCompletable: contributors delegate to their bar;
+/// sequence boundaries apply to credit, not just presentation.
+pub(crate) fn creditable(quest: &QuestTemplate, counts: &[u32], index: usize) -> bool {
+    let metadata = rule(quest, index);
+    if metadata.flags & CONTRIBUTOR != 0 {
+        return quest
+            .objectives
+            .iter()
+            .enumerate()
+            .find(|(i, objective)| {
+                objective.kind == ObjectiveKind::ProgressBar
+                    && rule(quest, *i).flags & CONTRIBUTOR == 0
+            })
+            .is_some_and(|(bar, _)| {
+                weighted_percent(quest, counts) < 100. && creditable(quest, counts, bar)
+            });
+    }
+    let mut sequence_satisfied = true;
+    for before in (0..index).rev() {
+        let previous = rule(quest, before);
+        let complete = counts[before] >= quest.objectives[before].required;
+        if previous.flags & SEQUENCED != 0 {
+            return if metadata.flags & SEQUENCED != 0 {
+                complete && sequence_satisfied
+            } else {
+                complete || creditable(quest, counts, before)
+            };
+        }
+        sequence_satisfied &= complete || !previous.required();
+    }
+    metadata.flags & SEQUENCED == 0 || sequence_satisfied
+}
+
 pub(crate) fn visible(quest: &QuestTemplate, counts: &[u32], index: usize) -> bool {
     let metadata = rule(quest, index);
     if metadata.hidden() {
