@@ -394,7 +394,7 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
         .spells
         .clear();
     h.send::<Request, ProfessionChannel>(Request::Query {
-        skill_line: 197,
+        skill_line: 2540,
         kind: Kind::Public,
         mine: true,
     });
@@ -407,6 +407,7 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
         .find(|recipe| recipe.spell_id == RECIPE)
         .unwrap();
     assert_eq!(recipe.item_id, OUTPUT);
+    assert_eq!(recipe.skill_line, 2540);
     let reagents = recipe
         .reagents
         .iter()

@@ -28,7 +28,7 @@ pub(crate) fn load_catalog(conn: &Connection) -> Result<OrderCatalog, String> {
     }
     let mut query = conn
         .prepare(
-            "SELECT a.Spell, a.SkillLine, e.EffectItemType,
+            "SELECT a.Spell, CASE WHEN a.SkillupSkillLineID<>0 THEN a.SkillupSkillLineID ELSE a.SkillLine END, e.EffectItemType,
                 MAX(1, CAST(ROUND(e.EffectBasePointsF) AS INTEGER)), n.Name_lang
          FROM crafting_order o
          JOIN skill_line_ability a ON a.ID=o.SkillLineAbilityID
