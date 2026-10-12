@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use shared::components::{Level, Npc, Player};
 use shared::protocol::{
     AchievementCatalogPage, AchievementChannel, AchievementSnapshot, AchievementStateUpdate,
-    AchievementToastSnapshot, QueryAchievementCatalog,
+    AchievementToastSnapshot, ChallengePhase, ChallengeRun, QueryAchievementCatalog,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -209,6 +209,32 @@ pub(crate) fn record_spell_cast(world: &mut World, caster: Entity, spell: u32) {
 /// TC a352b1fa Spell.cpp:2876-2880 credits the targeted player, not caster.
 pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
+}
+
+/// Called only after durable M+ settlement; players must belong to the finished copy.
+pub(crate) fn record_mythic_completion(world: &mut World, run: &ChallengeRun) {
+    if run.phase != ChallengePhase::Completed {
+        return;
+    }
+    let players: Vec<_> = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .filter_map(|(link, _)| {
+            let map = world.get::<InMap>(link.0)?;
+            let level = world.get::<Level>(link.0)?;
+            (map.map_id == run.map_id && map.instance_id == run.instance_id)
+                .then_some((link.0, level.0))
+        })
+        .collect();
+    for (player, player_level) in players {
+        let completion = catalog::MythicCompletion {
+            key_level: run.key.level,
+            challenge_map: run.key.challenge_id,
+            player_level,
+            in_time: run.elapsed_ms <= run.time_limit_ms,
+        };
+        record_criteria_event(world, player, CriteriaEvent::CompleteMythicPlus(completion));
+    }
 }
 
 /// Terminal authoritative winner only; conditional PvP/streak rows remain unevaluated.

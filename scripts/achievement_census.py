@@ -8,7 +8,9 @@ import json
 import sqlite3
 from pathlib import Path
 
-BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 36, 46, 158, 165}
+from import_achievement_modifiers import qualified_mythic_criteria
+
+BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 36, 46, 158, 165, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -35,11 +37,17 @@ def walk_tree(root, rows, children, visiting=frozenset()):
     return descendants, errors
 
 
-def supported_criteria(criteria, types, spells, skills):
+def supported_criteria(criteria, types, spells, skills, mythic_ids):
     supported = set()
     for row_id, row in criteria.items():
         kind, asset = int(row['Type']), int(row['Asset'])
-        if kind not in types or any(int(row[key]) for key in CONDITIONS):
+        if kind not in types:
+            continue
+        if kind == 216:
+            if row_id in mythic_ids:
+                supported.add(row_id)
+            continue
+        if any(int(row[key]) for key in CONDITIONS):
             continue
         if kind in (28, 29) and asset not in spells:
             continue
@@ -75,7 +83,8 @@ def census(db2, modifiers_path, world_db, types):
     with sqlite3.connect(f'{world_db.resolve().as_uri()}?mode=ro', uri=True) as db:
         spells = {row[0] for row in db.execute('SELECT ID FROM spell')}
         skills = {row[0] for row in db.execute('SELECT ID FROM skill_line')}
-    supported = supported_criteria(criteria, types, spells, skills)
+    mythic_ids = qualified_mythic_criteria(criteria, modifiers)
+    supported = supported_criteria(criteria, types, spells, skills, mythic_ids)
     by_type = collections.defaultdict(set)
     records = {}
     for row_id, row in achievements.items():
@@ -108,7 +117,7 @@ def census(db2, modifiers_path, world_db, types):
     trackable = [row for row in records.values() if row['trackable']]
     ranking = []
     for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
-        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills)
+        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids)
         gain = sum(not records[id]['trackable'] and not records[id]['flags'] & 1
                    and supports_tree(records[id]['root'], trees, children, newly_supported)
                    for id in ids)
