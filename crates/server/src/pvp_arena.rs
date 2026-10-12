@@ -211,6 +211,8 @@ pub(super) fn create_match(
             eye: None,
             kotmogu: None,
             silvershard: None,
+            deephaul: None,
+            seething: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
             arena: Some(arena),
