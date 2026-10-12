@@ -267,6 +267,7 @@ fn source_from_row(row: &rusqlite::Row) -> rusqlite::Result<Source> {
         offer: source_visual && condition == 0,
         view: TransmogSource {
             source_id: row.get(0)?,
+            source_type,
             appearance_id: row.get(1)?,
             item_id: row.get(2)?,
             display_id: row.get(3)?,
