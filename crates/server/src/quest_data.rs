@@ -583,6 +583,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     }
     load_reconstruction_metadata(&conn, &mut db)?;
     crate::world_quest_objectives::load(&conn, &mut db)?;
+    crate::housing_quests::load(&conn, &mut db)?;
     link_quests(&mut db, &links);
     db.starters = load_relations(&conn, "content_creature_queststarter")?;
     db.enders = load_relations(&conn, "content_creature_questender")?;
