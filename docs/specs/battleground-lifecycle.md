@@ -14,6 +14,12 @@ Sources: local BattlemasterList FDID1360265/layout3414CBD7 and Map CSV12.1.0.699
 
 Current proof/source ledger: `/home/osso/.worktrees/handoff-bg-coverage.md`; durable receipts in engine `data/diagnostics/bg-coverage-2026-10-12/`. This section supersedes WSG-only scope, not previously proved WSG behavior.
 
+### Node-map implementation (verification pending)
+
+Arathi1018/map2107 uses source points227420/227522/227536/227538/227544, starts7056/7055,60-second CaptureTime from TDB type42 Data0,2-second resource ticks `[0,2,3,4,7,60]` and PvP stats926/927. Gilneas120/map761 uses228050/228052/228053, starts1798/1799, the same authored CaptureTime,1-second ticks `[0,1,3,30]` and stats370/371. Contested points stop income; previous owners defend immediately; neutral contests can be reversed. Source POI/widget/resource/base WorldStates accompany retained roster objective counters. Both maps end at1500 and use existing isolated-entry/origin-return authority. Honor remains unknown, not granted. Banner lock/channel visuals, graveyard ownership/resurrection, preparation gates and warning/sound broadcasts are not certified by the current controller.
+
+Lead-owned promotion uses the existing importer commands below followed by `python3 scripts/content_policy.py --db data/world.db`; the policy now includes2107/761 with authored difficulty0. Agents must apply this only to a diagnostics-owned copy for live proof. No canonical changes have been made by this branch.
+
 ## Selection and source evidence — 2026-10-11
 
 Mainline Warsong Gulch map2106 is the smallest local source-backed candidate: TDB1210 has28 creatures,14 gameobjects and2 capture area triggers. AB2107 has308/36/4; IoC628 has242/158; AV30 has1138/265. Classic maps489/529 have no source spawn rows in this archive. Counts are source coverage, not live proof or all selectable battleground modes.

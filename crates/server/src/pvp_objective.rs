@@ -76,9 +76,6 @@ fn update_match(
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
-    let Some(homes) = flag_homes(sources, map) else {
-        return false;
-    };
     let mut changed = false;
     if matched.instance.phase == BgPhase::Waiting
         && roster_ready(matched, actors, map, template.min_players_per_team as usize)
@@ -89,6 +86,15 @@ fn update_match(
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }
+    if let Some(nodes) = matched.nodes.as_mut() {
+        let before = nodes.world_states(&matched.instance);
+        let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
+        nodes.advance(delta_ms, &mut matched.instance, &template);
+        return changed || before != nodes.world_states(&matched.instance);
+    }
+    let Some(homes) = flag_homes(sources, map) else {
+        return changed;
+    };
     for team in [BgTeam::A, BgTeam::B] {
         let enemy = enemy_team(team);
         let flag = flag_state(matched, enemy);
@@ -173,6 +179,9 @@ fn build_scoreboard(
                 healing_done: 0,
                 flag_captures: 0,
                 flag_returns: 0,
+                objective_scores: shared::battleground::node_rules(map_id(matched))
+                    .map(|rules| vec![(rules.assault_stat, 0), (rules.defense_stat, 0)])
+                    .unwrap_or_default(),
                 honorable_kills: None,
                 honor_level: None,
             })
@@ -206,14 +215,27 @@ fn spawn_flag(world: &mut World, map: InMap, source: &GameObjectSpawn, position:
     ));
 }
 
-pub(crate) fn use_battleground_flag(
+fn map_id(matched: &InvitedBattleground) -> u32 {
+    template_by_id(matched.instance.bg_id)
+        .expect("registered match template")
+        .map_id
+}
+
+pub(crate) fn use_battleground_object(
     world: &mut World,
     connection: Entity,
     player: Entity,
     object: Entity,
 ) {
     let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
-        pickup_or_return_flag(world, &mut state, player, object)
+        if world
+            .get::<GameObjectInfo>(object)
+            .is_some_and(GameObjectInfo::is_battleground_capture_point)
+        {
+            assault_capture_point(world, &mut state, player, object)
+        } else {
+            pickup_or_return_flag(world, &mut state, player, object)
+        }
     });
     super::pvp_invites::send_response(world, connection, player, result.clone());
     if result.is_ok() {
@@ -225,6 +247,55 @@ pub(crate) fn use_battleground_flag(
             send_match_snapshot(world, match_id);
         }
     }
+}
+
+fn assault_capture_point(
+    world: &World,
+    state: &mut PvpServerState,
+    player: Entity,
+    object: Entity,
+) -> Result<String, String> {
+    let snapshot = world
+        .get::<PlayerPvpState>(player)
+        .and_then(|state| state.battleground.as_ref())
+        .ok_or("player is not in a battleground")?;
+    let character_id = world
+        .get::<ClientId>(player)
+        .ok_or("player character missing")?
+        .0;
+    let entry = world
+        .get::<GameObjectInfo>(object)
+        .ok_or("capture point is no longer available")?
+        .entry;
+    let matched = state
+        .battleground_matches
+        .get_mut(&snapshot.match_id)
+        .ok_or("match missing")?;
+    let map = matched.map.ok_or("battleground map missing")?;
+    if world.get::<InMap>(player) != Some(&map)
+        || world.get::<InMap>(object) != Some(&map)
+        || matched.instance.phase != BgPhase::InProgress
+        || !matched.accepted.contains(&character_id)
+    {
+        return Err("capture point is not usable in this player's active match".into());
+    }
+    let nodes = matched
+        .nodes
+        .as_mut()
+        .ok_or("match has no capture points")?;
+    let stat = nodes.assault(entry, snapshot.team)?;
+    let score = matched
+        .scoreboard
+        .iter_mut()
+        .find(|score| score.character_id == character_id)
+        .ok_or("participant scoreboard row missing")?;
+    let counter = score
+        .objective_scores
+        .iter_mut()
+        .find(|(id, _)| *id == stat)
+        .ok_or("source objective scoreboard column missing")?;
+    counter.1 += 1;
+    Ok("capture point state updated".into())
 }
 
 fn pickup_or_return_flag(
@@ -335,6 +406,11 @@ fn send_match_snapshot(world: &mut World, match_id: u64) {
             matched.flags.clone(),
             matched.instance.outcome,
             matched.scoreboard.clone(),
+            matched
+                .nodes
+                .as_ref()
+                .map(|nodes| nodes.world_states(&matched.instance))
+                .unwrap_or_default(),
         )
     };
     let mut connections =
@@ -360,6 +436,7 @@ fn send_match_snapshot(world: &mut World, match_id: u64) {
         snapshot.flags = values.3.clone();
         snapshot.outcome = values.4;
         snapshot.players = values.5.clone();
+        snapshot.world_states = values.6.clone();
         super::pvp_invites::send_response(
             world,
             connection,
