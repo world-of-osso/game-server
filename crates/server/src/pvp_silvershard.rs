@@ -102,7 +102,7 @@ pub(crate) fn change_track(world: &mut World, caster: Entity, target: Entity, _d
     let Some(map) = world
         .get::<InMap>(target)
         .copied()
-        .filter(|map| Some(map) == world.get::<InMap>(caster).copied())
+        .filter(|map| Some(*map) == world.get::<InMap>(caster).copied())
     else {
         return;
     };
