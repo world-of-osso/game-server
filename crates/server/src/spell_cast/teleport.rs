@@ -152,7 +152,7 @@ pub(super) fn forward_destination(
     let mut end = clamp_to_wall(los, map, start, dest.position);
     let ground = world
         .get_resource_mut::<crate::ground::GroundMap>()?
-        .ground_at(map.map_id, end);
+        .ground_in(map, end);
     let crate::ground::GroundProbe::Supported(height) = ground else {
         error!(
             "Spell {}: destination has no supported ground",

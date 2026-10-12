@@ -46,6 +46,7 @@ pub struct LineOfSight {
     missing: Mutex<HashSet<u32>>,
     /// Segments tested against the bake so far.
     rays: AtomicU64,
+    live_hulls: crate::game_objects::collision::LiveHulls,
 }
 
 /// What places a unit's eyes: its components (the entity and `Npc` name it in logs).
@@ -69,6 +70,7 @@ impl LineOfSight {
             maps: Mutex::new(HashMap::new()),
             missing: Mutex::new(HashSet::new()),
             rays: AtomicU64::new(0),
+            live_hulls: HashMap::new(),
         })
     }
 
@@ -127,7 +129,10 @@ impl LineOfSight {
     /// The first of `target`'s eyes, chest and feet a clear ray from `watcher`'s eyes
     /// reaches on map `map`.
     pub fn witness(&self, map: InMap, watcher: &Body, target: &Body) -> Option<Vec3> {
-        let found = self.with_map(map, |tiles| tiles.witness(watcher.eyes, target));
+        let found = target
+            .aim_points()
+            .into_iter()
+            .find(|&end| self.clear(map, watcher.eyes, end));
         let aims = target.aim_points();
         // The search stops at the first clear aim point.
         let rays = found.map_or(aims.len(), |end| {
@@ -135,7 +140,8 @@ impl LineOfSight {
                 .position(|&aim| aim == end)
                 .map_or(aims.len(), |i| i + 1)
         });
-        self.rays.fetch_add(rays as u64, Ordering::Relaxed);
+        // clear() counts each tested segment, including live GO blockers.
+        debug_assert!(rays <= aims.len());
         found
     }
 
@@ -151,10 +157,22 @@ impl LineOfSight {
         self.witness(map, watcher, target).is_some()
     }
 
-    /// Whether the segment `a..b` crosses no baked triangle of map `map`.
+    pub(crate) fn set_live_hulls(&mut self, hulls: crate::game_objects::collision::LiveHulls) {
+        self.live_hulls = hulls;
+    }
+
+    fn live_clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
+        self.live_hulls
+            .get(&map)
+            .into_iter()
+            .flatten()
+            .all(|hull| !hull.blocks(a, b))
+    }
+
+    /// Whether the segment `a..b` crosses no baked or enabled live GO triangle.
     pub fn clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
         self.rays.fetch_add(1, Ordering::Relaxed);
-        self.with_map(map, |tiles| tiles.clear(a, b))
+        self.live_clear(map, a, b) && self.with_map(map, |tiles| tiles.clear(a, b))
     }
 
     fn with_map<T>(&self, map: InMap, query: impl FnOnce(&mut LosMap) -> Result<T, String>) -> T {

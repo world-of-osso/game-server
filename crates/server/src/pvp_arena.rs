@@ -25,6 +25,10 @@ pub(super) struct SourceMap {
 #[derive(Resource, Default)]
 pub(crate) struct Catalog(pub(super) Vec<SourceMap>);
 impl Catalog {
+    pub(crate) fn contains_map(&self, map_id: u32) -> bool {
+        self.0.iter().any(|source| source.map_id == map_id)
+    }
+
     pub(crate) fn load(db: &Connection) -> rusqlite::Result<Self> {
         let mut query = db.prepare("SELECT battlemaster_id,map_id,name,start_a,start_b,min_level,max_level,weight FROM arena_map ORDER BY battlemaster_id")?;
         Ok(Self(

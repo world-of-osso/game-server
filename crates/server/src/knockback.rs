@@ -93,7 +93,7 @@ fn require_ground_and_collision(world: &mut World, map: InMap, feet: Vec3) -> Re
     let mut ground = world
         .get_resource_mut::<GroundMap>()
         .ok_or("knockback ground service unavailable")?;
-    if ground.ground_at(map.map_id, feet) == GroundProbe::Unloaded {
+    if ground.ground_in(map, feet) == GroundProbe::Unloaded {
         return Err(format!(
             "knockback ground assets unavailable on map{}",
             map.map_id
@@ -136,7 +136,7 @@ fn launch_velocity(
     Ok(direction * speed_xy + Vec3::Y * speed_z)
 }
 
-fn update_knockbacks(world: &mut World) {
+pub(crate) fn update_knockbacks(world: &mut World) {
     let delta = world.resource::<Time>().delta_secs();
     let targets: Vec<_> = world
         .query_filtered::<Entity, With<KnockbackFlight>>()
@@ -191,7 +191,7 @@ fn advance_over_ground(
     let (probe, minimum) = {
         let mut ground = world.resource_mut::<GroundMap>();
         (
-            ground.ground_at(flight.map.map_id, probe_feet),
+            ground.ground_in(flight.map, probe_feet),
             ground.min_height(flight.map.map_id, next),
         )
     };
