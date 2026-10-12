@@ -34,6 +34,14 @@ pub use trait_data::{
 
 pub(crate) const WORLD_DB_PATH: &str = "data/world.db";
 
+/// One already matched charged spell modifier, retained by its launched cast.
+#[derive(Debug, Clone)]
+pub(crate) struct ChargedSpellModifier {
+    pub op: i32,
+    pub percent: bool,
+    pub amount: f32,
+}
+
 /// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
 /// ~400k spells without such rows stay small.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -57,6 +65,9 @@ pub struct SpellInfo {
     /// Owned bag GUID on this cast's queued/active snapshot.
     #[serde(skip)]
     pub(crate) cast_target_item_guid: Option<u64>,
+    /// Successful-launch charged modifiers; None means not yet snapshotted.
+    #[serde(skip)]
+    pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
