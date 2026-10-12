@@ -292,6 +292,28 @@ pub(crate) fn record_player_kill(world: &mut World, killer: Entity, victim: Enti
     }
 }
 
+/// Pinned CriteriaType69 GainAura: task-local single-leaf completion only.
+pub(crate) fn record_gain_aura(world: &mut World, player: Entity, spell: u32) {
+    let Some(quests) = world.get_resource::<QuestDb>() else {
+        return;
+    };
+    let roots: Vec<u32> = quests
+        .task_criteria
+        .iter()
+        .filter_map(|(&root, &binding)| (binding == (69, spell)).then_some(root))
+        .collect();
+    for root in roots {
+        event_credit(
+            world,
+            player,
+            player,
+            crate::quest_data::ObjectiveKind::CriteriaTree,
+            root,
+            false,
+        );
+    }
+}
+
 /// Spell/script event credit; personal events do not award nearby party members.
 pub(crate) fn event_credit(
     world: &mut World,

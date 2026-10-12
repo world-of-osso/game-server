@@ -346,8 +346,11 @@ pub(crate) fn credit_objective(
         };
         active.counts.resize(quest.objectives.len(), 0);
         for (index, objective) in quest.objectives.iter().enumerate() {
-            if objective.kind == kind
-                && objective.object_id == object_id
+            let counted_match = objective.kind == kind && objective.object_id == object_id;
+            let criterion_match = kind == ObjectiveKind::Monster
+                && objective.kind == ObjectiveKind::CriteriaTree
+                && db.task_criteria.get(&objective.object_id) == Some(&(0, object_id));
+            if (counted_match || criterion_match)
                 && active.counts[index] < objective.required
                 && crate::world_quest_objectives::creditable(quest, &active.counts, index)
             {

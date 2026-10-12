@@ -221,6 +221,8 @@ pub(crate) struct QuestDb {
     pub kill_credits: HashMap<u32, Vec<u32>>,
     /// Authenticated CreatureLabel membership by entry and selected difficulty mode.
     pub creature_labels: HashMap<(u32, u32), Vec<u32>>,
+    /// Single amount-one leaf task trees: root -> (authenticated criterion type, asset).
+    pub task_criteria: HashMap<u32, (u32, u32)>,
 }
 
 /// An `AreaTrigger.db2` row that explores quests.

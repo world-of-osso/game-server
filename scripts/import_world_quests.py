@@ -71,10 +71,34 @@ def insert_creature_labels(conn, poi):
         conn.executemany('INSERT INTO content_world_quest_creature_label VALUES (?,?,?)',sorted(memberships))
 
 
+def insert_criterion_bindings(conn):
+    # All three polygon task trees have exactly one unconditional, amount-one
+    # leaf. Its completion bit belongs in the task's persisted objective count,
+    # not lifetime achievement progress. Other tree shapes stay unrepresented.
+    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_criterion (root_id INTEGER PRIMARY KEY,criterion_id INTEGER,kind INTEGER,asset INTEGER)')
+    conn.execute('DELETE FROM content_world_quest_criterion')
+    roots = conn.execute('SELECT DISTINCT ObjectID FROM tdb_quest_objectives WHERE Type=14').fetchall()
+    for (root,) in roots:
+        tree = conn.execute('SELECT Operator,Amount,CriteriaID,Flags FROM criteria_tree WHERE ID=?',(root,)).fetchone()
+        children = conn.execute('SELECT ID,Operator,Amount,CriteriaID,Flags FROM criteria_tree WHERE Parent=?',(root,)).fetchall()
+        if tree != (4,0,0,0) or len(children) != 1:
+            continue
+        leaf, operator, amount, criterion, flags = children[0]
+        if operator != 0 or amount != 1 or flags != 0 or not criterion:
+            continue
+        if conn.execute('SELECT EXISTS(SELECT 1 FROM criteria_tree WHERE Parent=?)',(leaf,)).fetchone()[0]:
+            continue
+        row = conn.execute('SELECT Type,Asset FROM criteria WHERE ID=? AND ModifierTreeId=0 AND StartEvent=0 AND StartAsset=0 AND StartTimer=0 AND FailEvent=0 AND FailAsset=0 AND EligibilityWorldStateID=0 AND EligibilityWorldStateValue=0 AND Flags=32',(criterion,)).fetchone()
+        if row and row[0] in (0,69) and row[1] > 0:
+            conn.execute('INSERT INTO content_world_quest_criterion VALUES(?,?,?,?)',(root,criterion,*row))
+
+
 def supported_objectives(conn, quest):
     rows = conn.execute('SELECT Type,ObjectID,Amount,Flags,ProgressBarWeight FROM tdb_quest_objectives WHERE QuestID=?', (quest,)).fetchall()
     for kind, object_id, amount, flags, weight in rows:
-        if kind not in (0, 1, 2, 3, 9, 15, 21) or amount <= 0 or (kind not in (9, 15) and object_id <= 0):
+        if kind not in (0, 1, 2, 3, 9, 14, 15, 21) or amount <= 0 or (kind not in (9, 15) and object_id <= 0):
+            return False
+        if kind == 14 and (amount != 1 or not conn.execute('SELECT EXISTS(SELECT 1 FROM content_world_quest_criterion WHERE root_id=?)',(object_id,)).fetchone()[0]):
             return False
         if kind == 21 and not conn.execute('SELECT EXISTS(SELECT 1 FROM content_world_quest_creature_label WHERE label_id=?)',(object_id,)).fetchone()[0]:
             return False
@@ -165,6 +189,7 @@ def import_definitions(conn, receipt, poi, policy_duration=86400):
     world_ids = {row[0] for row in conn.execute('SELECT q.ID FROM tdb_quest_template q JOIN quest_info i ON i.ID=q.QuestInfoID WHERE i.Modifiers & 256 != 0')}
     areas = polygon_areas(dict(poi, blobs=[blob for blob in poi['blobs'] if blob['QuestID'] in world_ids]))
     insert_creature_labels(conn, poi)
+    insert_criterion_bindings(conn)
     definitions = select_definitions(conn, receipt, areas, policy_duration)
     conn.execute("CREATE TEMP TABLE IF NOT EXISTS world_quest_selection (ID INTEGER PRIMARY KEY)")
     conn.execute("DELETE FROM world_quest_selection")
