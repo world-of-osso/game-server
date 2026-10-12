@@ -211,6 +211,11 @@ pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32)
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
 }
 
+/// Terminal authoritative winner only; conditional PvP/streak rows remain unevaluated.
+pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
+    record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
+}
+
 fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     scenario::record(world, player, event);
     if !world

@@ -24,6 +24,7 @@ pub(crate) enum CriteriaEvent {
     CurrencyGained(u32, u32),
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
+    WinPetBattle,
     CompleteQuest(u32),
     CastSpell(u32),
     BeSpellTarget(u32),
@@ -39,6 +40,7 @@ impl CriteriaEvent {
             Self::CurrencyGained(_, _) => 12,
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
+            Self::WinPetBattle => 158,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
@@ -52,6 +54,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::WinPetBattle => criteria.asset == 0,
             Self::SkillRank(asset, _)
             | Self::CurrencyGained(asset, _)
             | Self::ReputationGained(asset, _)
@@ -308,7 +311,7 @@ impl AchievementCatalog {
                 *counter = if self
                     .criteria
                     .get(&id)
-                    .is_some_and(|row| matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 165))
+                    .is_some_and(|row| matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 158 | 165))
                 {
                     counter.saturating_add(value)
                 } else {
@@ -529,6 +532,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: (matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
+                    || (kind == 158 && row.get::<_, i32>(2)? == 0)
                     || (kind == 7 && row.get::<_, bool>(9)?)
                     || (kind == 28 && row.get::<_, bool>(8)?)
                     || (kind == 29

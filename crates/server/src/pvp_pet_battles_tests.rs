@@ -318,9 +318,42 @@ fn petbattle_pvp_disconnect_finishes_opponent_and_releases_account() {
 }
 
 #[test]
-fn petbattle_pvp_engine_defeats_all_three_opponent_pets_without_capture() {
+fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use shared::components::{CharacterAppearance, Player};
     let mut app = app();
+    crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
+    for (account, name) in [(1, "Petwinner"), (2, "Petloser")] {
+        crate::persistence::create_character(
+            &app.world().resource::<GameDatabase>().db,
+            account,
+            name,
+            1,
+            1,
+        )
+        .unwrap();
+    }
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.init_resource::<crate::maps::ServerClock>();
     let [a, b] = matched(&mut app);
+    for (owner, name) in [(a, "Petwinner"), (b, "Petloser")] {
+        app.world_mut().entity_mut(owner).insert((
+            Player {
+                name: name.into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            PlayerAchievementState::default(),
+        ));
+    }
+    // Nine previous wins are setup; the actual engine win must cross the real tenth-win threshold.
+    app.world_mut()
+        .get_mut::<PlayerAchievementState>(a)
+        .unwrap()
+        .criteria_progress
+        .insert(19724, 9);
     let id = app.world().get::<PvpParticipant>(a).unwrap().id;
     for _ in 0..100 {
         let Some(battle) = app.world().resource::<Matchmaker>().battles.get(&id) else {
@@ -365,6 +398,39 @@ fn petbattle_pvp_engine_defeats_all_three_opponent_pets_without_capture() {
     }
     assert!(app.world().resource::<Matchmaker>().battles.is_empty());
     app.update();
+    let winner = app.world().get::<PlayerAchievementState>(a).unwrap();
+    assert_eq!(winner.criteria_progress.get(&19724), Some(&10));
+    assert!(
+        winner
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&6594)
+    );
+    assert!(!winner.criteria_progress.contains_key(&21526));
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(b)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&19724)
+    );
+    assert_eq!(
+        crate::persistence::load_achievements(&app.world().resource::<GameDatabase>().db, 1)
+            .criteria_progress
+            .get(&19724),
+        Some(&10)
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(a)
+            .unwrap()
+            .criteria_progress
+            .get(&19724),
+        Some(&10)
+    );
     for (owner, expected) in [
         (a, WildPetBattleOutcome::Won),
         (b, WildPetBattleOutcome::Lost),
