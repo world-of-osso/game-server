@@ -1757,6 +1757,7 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
+        let dest = targets::ground_destination(world, caster, effect, dest)?;
         plan.push(PlannedEffect {
             index,
             units,

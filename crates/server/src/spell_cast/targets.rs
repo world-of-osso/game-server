@@ -101,7 +101,7 @@ fn selector(id: u32) -> Option<Selector> {
         6 => Selector::Explicit(Enemy),
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
-        18 | 22 => Selector::CenterCaster,
+        18 | 22 | 62 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
         79 => Selector::DestBack,
         72 => Selector::CasterRandom,
@@ -836,6 +836,36 @@ pub fn effect_dest(
         });
     }
     dest
+}
+
+///TC TARGET_DEST_CASTER_GROUND resolves map height when the cast plan owns mutable
+///ground access. Destination selection remains independent of ground-cache mutation.
+pub(super) fn ground_destination(
+    world: &mut World,
+    caster: Entity,
+    effect: &SpellEffect,
+    destination: Option<Dest>,
+) -> Result<Option<Dest>, super::CastFailure> {
+    if !effect.implicit_targets.contains(&62) {
+        return Ok(destination);
+    }
+    let mut destination = destination.ok_or(super::CastFailure::InvalidTarget)?;
+    let map = world
+        .get::<crate::maps::InMap>(caster)
+        .copied()
+        .ok_or(super::CastFailure::InvalidTarget)?;
+    let mut ground = world
+        .get_resource_mut::<crate::ground::GroundMap>()
+        .ok_or_else(|| {
+            super::CastFailure::Unsupported("caster-ground destination requires ground data".into())
+        })?;
+    let crate::ground::GroundProbe::Supported(height) =
+        ground.ground_at(map.map_id, destination.position)
+    else {
+        return Err(super::CastFailure::InvalidTarget);
+    };
+    destination.position.y = height;
+    Ok(Some(destination))
 }
 
 /// Whether a slot of `effect` selects units in an area (the selections whose radius
