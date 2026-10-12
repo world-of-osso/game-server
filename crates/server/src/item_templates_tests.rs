@@ -3,6 +3,49 @@
 use super::*;
 
 #[test]
+fn mount_journal_chestnut_mare_item_retains_authentic_learn_spell() {
+    let templates = load_item_templates(&crate::test_data::world_db_path()).unwrap();
+    let mare = templates.retail.get(&5655).expect("Chestnut Mare item");
+    assert_eq!(mare.on_use.as_ref().map(|spell| spell.spell_id), Some(6648));
+}
+
+#[test]
+fn mount_journal_teaching_items_never_collect_transmog_even_with_appearance_metadata() {
+    let conn = Connection::open_in_memory().unwrap();
+    let path = crate::test_data::world_db_path();
+    conn.execute(
+        "ATTACH DATABASE ?1 AS authentic",
+        [format!("file:{}?mode=ro", path.display())],
+    )
+    .unwrap();
+    for table in ["content_item", "item_sparse"] {
+        conn.execute_batch(&format!(
+            "CREATE TABLE {table} AS SELECT * FROM authentic.{table} WHERE ID IN (25,5655)"
+        ))
+        .unwrap();
+    }
+    conn.execute_batch("CREATE TABLE item_x_item_effect AS SELECT * FROM authentic.item_x_item_effect WHERE ItemID=5655;
+        CREATE TABLE item_effect AS SELECT * FROM authentic.item_effect WHERE ID IN (SELECT ItemEffectID FROM item_x_item_effect);
+        CREATE TABLE mount AS SELECT * FROM authentic.mount WHERE SourceSpellID=6648;
+        CREATE TABLE spell_effect AS SELECT * FROM authentic.spell_effect WHERE SpellID=6648;").unwrap();
+    conn.execute_batch("CREATE TABLE item_modified_appearance AS SELECT * FROM authentic.item_modified_appearance WHERE ItemID=25; UPDATE item_modified_appearance SET ItemID=5655;").unwrap();
+    let templates = load_item_template_rows(&conn, ITEM_QUERY).unwrap();
+    assert_eq!(templates[&5655].on_use.unwrap().spell_id, 6648);
+    assert_eq!(
+        templates[&5655].appearance_id, None,
+        "Learning/destroying a mount item must not collect transmog"
+    );
+    conn.execute("UPDATE item_modified_appearance SET ItemID=25", [])
+        .unwrap();
+    let templates = load_item_template_rows(&conn, ITEM_QUERY).unwrap();
+    assert_eq!(
+        templates[&25].appearance_id,
+        Some(154),
+        "Ordinary equipment still collects its appearance"
+    );
+}
+
+#[test]
 fn content_item_rows_load_inventory_attributes() {
     let path = crate::test_data::world_db_path();
     let templates = load_item_templates(&path).unwrap();
