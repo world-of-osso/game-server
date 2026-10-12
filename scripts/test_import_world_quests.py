@@ -32,6 +32,8 @@ def fixture(conn):
         INSERT INTO quest_money_reward VALUES (50,0);
         CREATE TABLE tdb_quest_objectives (QuestID INTEGER, ID INTEGER, Type INTEGER, ObjectID INTEGER, Amount INTEGER, Description TEXT, "Order" INTEGER, StorageIndex INTEGER, Flags INTEGER DEFAULT 0, ProgressBarWeight REAL DEFAULT 0);
         INSERT INTO tdb_quest_objectives VALUES (52847,340072,0,138122,1,'',0,0,0,0);
+        CREATE TABLE criteria_tree(ID INTEGER,Parent INTEGER,Amount INTEGER,Operator INTEGER,CriteriaID INTEGER,Flags INTEGER);
+        CREATE TABLE criteria(ID INTEGER,Type INTEGER,Asset INTEGER,ModifierTreeId INTEGER DEFAULT 0,StartEvent INTEGER DEFAULT 0,StartAsset INTEGER DEFAULT 0,StartTimer INTEGER DEFAULT 0,FailEvent INTEGER DEFAULT 0,FailAsset INTEGER DEFAULT 0,Flags INTEGER DEFAULT 32,EligibilityWorldStateID INTEGER DEFAULT 0,EligibilityWorldStateValue INTEGER DEFAULT 0);
         CREATE TABLE tdb_creature_template_difficulty (Entry INTEGER,DifficultyID INTEGER,CreatureDifficultyID INTEGER);
         CREATE TABLE tdb_creature_template (entry INTEGER, name TEXT);
         INSERT INTO tdb_creature_template VALUES (138122,'Doom''s Howl');
@@ -91,6 +93,18 @@ class WorldQuestImportTests(unittest.TestCase):
             self.assertEqual(len(rows),8)
             self.assertEqual(rows[0],(0,138122,12,92,9.))
             self.assertEqual(rows[-1],(15,0,1,2,0.))
+
+    def test_single_leaf_quest_criteria_preserve_kill_and_aura_sources(self):
+        for kind,asset in [(0,225891),(69,420847)]:
+            with closing(sqlite3.connect(':memory:')) as conn:
+                fixture(conn)
+                conn.execute('UPDATE tdb_quest_objectives SET Type=14,ObjectID=163278,Amount=1')
+                conn.executescript('INSERT INTO criteria_tree VALUES(163278,0,0,4,0,0),(163279,163278,1,0,68193,0)')
+                conn.execute('INSERT INTO criteria(ID,Type,Asset) VALUES(68193,?,?)',(kind,asset))
+                self.assertEqual(import_definitions(conn,receipt(),areas()),[52847])
+                self.assertEqual(conn.execute('SELECT root_id,criterion_id,kind,asset FROM content_world_quest_criterion').fetchall(),[(163278,68193,kind,asset)])
+                conn.execute('UPDATE criteria SET StartTimer=10')
+                self.assertEqual(import_definitions(conn,receipt(),areas()),[])
 
     def test_authentic_label_membership_admits_only_resolved_labels(self):
         with closing(sqlite3.connect(':memory:')) as conn:

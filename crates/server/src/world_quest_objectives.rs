@@ -22,6 +22,7 @@ pub(crate) fn load(
         return Ok(());
     }
     load_creature_labels(conn, db)?;
+    load_criterion_bindings(conn, db)?;
     let mut statement=conn.prepare("SELECT o.quest_id,o.kind,o.object_id,o.amount,o.flags,o.flags2,o.weight,o.description,COALESCE(c.name,''),COALESCE(i.name,'') FROM content_world_quest_objective o JOIN content_world_quest q ON q.quest_id=o.quest_id LEFT JOIN tdb_creature_template c ON o.kind=0 AND c.entry=o.object_id LEFT JOIN content_item i ON o.kind=1 AND i.ID=o.object_id ORDER BY o.quest_id,o.ordinal")?;
     let rows = statement.query_map([], |row| {
         Ok((
@@ -86,6 +87,34 @@ pub(crate) fn load(
             .as_mut()
             .expect("initialized objective rules")
             .push(rule);
+    }
+    Ok(())
+}
+
+fn load_criterion_bindings(
+    conn: &rusqlite::Connection,
+    db: &mut crate::quest_data::QuestDb,
+) -> rusqlite::Result<()> {
+    let installed: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='content_world_quest_criterion')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !installed {
+        return Ok(());
+    }
+    let mut statement =
+        conn.prepare("SELECT root_id,kind,asset FROM content_world_quest_criterion")?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            row.get::<_, u32>(2)?,
+        ))
+    })?;
+    for row in rows {
+        let (root, kind, asset) = row?;
+        db.task_criteria.insert(root, (kind, asset));
     }
     Ok(())
 }

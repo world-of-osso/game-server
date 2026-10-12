@@ -884,6 +884,85 @@ fn mark_rewarded(app: &App, client: &Client, quest_id: u32) {
 }
 
 #[test]
+fn world_quest_single_leaf_criteria_credit_is_persisted_capped_and_fresh_for_each_task() {
+    let mut app = setup_app().unwrap();
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(1000);
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest(quest_id INTEGER); INSERT INTO content_world_quest VALUES(82387);
+        CREATE TABLE content_world_quest_objective(quest_id INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,flags2 INTEGER,weight REAL,description TEXT,ordinal INTEGER);
+        INSERT INTO content_world_quest_objective VALUES(82387,14,165946,1,0,0,0,'Have 50 or more stacks of Unseeming Shift',0);
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT); CREATE TABLE content_item(ID INTEGER,name TEXT);
+        CREATE TABLE content_world_quest_criterion(root_id INTEGER,criterion_id INTEGER,kind INTEGER,asset INTEGER);
+        INSERT INTO content_world_quest_criterion VALUES(165946,69041,0,227455);").unwrap();
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        quests.quests.insert(
+            82387,
+            crate::quest_data::QuestTemplate {
+                id: 82387,
+                ..Default::default()
+            },
+        );
+        crate::world_quest_objectives::load(&conn, &mut quests).unwrap();
+    }
+    let client = spawn_client(&mut app, 80);
+    enter_world(&mut app, &client);
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    let fresh = QuestLogData {
+        active: vec![crate::persistence::quest_store::ActiveQuestData {
+            quest_id: 82387,
+            counts: vec![0],
+            expires_at: Some(2000),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    save_quest_log(db(&app), client.character_id, &fresh);
+    killed_monster_credit(app.world_mut(), client.player, 225891);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    save_quest_log(db(&app), client.character_id, &fresh);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+}
+
+#[test]
 fn world_quest_label_credit_uses_authentic_membership_only_on_real_creature_death() {
     let mut app = setup_app().unwrap();
     let conn = rusqlite::Connection::open_in_memory().unwrap();
