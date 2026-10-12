@@ -1430,6 +1430,11 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        let target = explicit.ok_or(CastFailure::NoTarget)?;
+        crate::pvp::check_azerite_target(world, caster, target)?;
+        return Ok(Some(target));
+    }
     if open_lock::is_item_cast(spell) {
         open_lock::check_cast(world, caster, spell)?;
         return Ok(None);
