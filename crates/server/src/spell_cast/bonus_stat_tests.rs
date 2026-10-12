@@ -28,6 +28,93 @@ fn bonus_harness(negation: u32, class: u8, spec: u32) -> Harness {
     h
 }
 
+#[test]
+fn class_completeness_bonus_stat_percent_scales_gear_and_flat_before_total_percent() {
+    let input = crate::stats::StatInputs {
+        class: 8,
+        race: 1,
+        level: 80,
+        primary_stat: Some(crate::stats::PrimaryStat::Intellect),
+        mastery_coefficient: 0.0,
+        attack_power_per_strength: 0.0,
+        attack_power_per_agility: 0.0,
+        gear_primary: UnitStats {
+            intellect: 40.0,
+            ..default()
+        },
+        gear_ratings: default(),
+    };
+    let mods = crate::stats::StatModifiers {
+        primary_flat: UnitStats {
+            intellect: 20.0,
+            ..default()
+        },
+        primary_bonus_pct: UnitStats {
+            intellect: native_stat_pct(162697, 3),
+            ..default()
+        },
+        primary_pct: UnitStats {
+            intellect: 20.0,
+            ..default()
+        },
+        ..default()
+    };
+    let base = crate::stats::base_primary_stats(8, 1, 80).unwrap();
+    let suppressed = crate::stats::compute_character_stats(&input, Some(&mods)).unwrap();
+    assert_eq!(suppressed.primary.intellect, base.intellect * 1.2);
+    let restored = crate::stats::compute_character_stats(
+        &input,
+        Some(&crate::stats::StatModifiers {
+            primary_bonus_pct: default(),
+            ..mods
+        }),
+    )
+    .unwrap();
+    assert_eq!(
+        restored.primary.intellect,
+        (base.intellect + 40.0 + 20.0) * 1.2
+    );
+}
+
+#[test]
+fn class_completeness_bonus_stat_percent_preserves_unselected_and_spirit_base_values() {
+    let input = crate::stats::StatInputs {
+        class: 8,
+        race: 1,
+        level: 80,
+        primary_stat: None,
+        mastery_coefficient: 0.0,
+        attack_power_per_strength: 0.0,
+        attack_power_per_agility: 0.0,
+        gear_primary: UnitStats {
+            strength: 7.0,
+            agility: 11.0,
+            stamina: 13.0,
+            intellect: 17.0,
+            spirit: 19.0,
+        },
+        gear_ratings: default(),
+    };
+    let mods = crate::stats::StatModifiers {
+        primary_flat: UnitStats {
+            spirit: 3.0,
+            ..default()
+        },
+        primary_bonus_pct: UnitStats {
+            spirit: native_stat_pct(162697, 3),
+            ..default()
+        },
+        ..default()
+    };
+    let result = crate::stats::compute_character_stats(&input, Some(&mods)).unwrap();
+    let mut expected = crate::stats::base_primary_stats(8, 1, 80).unwrap();
+    expected.strength += 7.0;
+    expected.agility += 11.0;
+    expected.stamina += 13.0;
+    expected.intellect += 17.0;
+    assert_eq!(result.primary, expected);
+}
+
 fn native_flat(spell: u32) -> f32 {
     world_db().unwrap().store.get(spell).unwrap().effects[0].base_points
 }
