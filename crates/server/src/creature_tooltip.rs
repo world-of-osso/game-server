@@ -1,6 +1,6 @@
 //! Unit tooltip data (game-engine `docs/specs/unit-tooltip.md`): a
 //! `CreatureTooltipQuery` for a creature template entry answers `CreatureTooltip`
-//! with the template's subname and creature type, its loot table's drops with
+//! with the template's name, subname and creature type, its loot table's drops with
 //! their chances (`LootTables::drop_chances`, poor-quality items left out because
 //! loot turns them into coins) and its vendor list (`VendorCatalog`). Every item
 //! carries the `ItemAppearance` id it teaches, so the client can mark it against
@@ -66,6 +66,7 @@ impl TooltipSources<'_> {
             .collect();
         Some(CreatureTooltip {
             entry,
+            name: template.name.clone(),
             subname: template.subname.clone(),
             creature_type: template.creature_type,
             drops,

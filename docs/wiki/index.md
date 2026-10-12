@@ -4,6 +4,7 @@
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
+- [Zone population](../zone-population-counts.md) —371-zone ranked TDB/content census,43-map copy promotion,12 additional hosts; both-skin three rewarded quests/paid taxi, explicit navigation/appearance/surface gaps.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
 - [Boss-mod data import](systems/bossmod-data.md) — static AST/locale extraction, copy-only authority and actual-cast reconciliation; hosted7/7 and both-skin private two-encounter proof pass, native-input schedule coverage remains open.
 
@@ -33,7 +34,7 @@
 - [Class spell batch22](systems/spell-casting.md#twenty-second-batch-native-rewind-non-raid-healing) — authored Rewind non-raid healing, native Mind Flay certification and12 source reviews; [census/proof](../spell-dummy22-coverage.md).
 - [Scenario progression](../../../game-engine/docs/wiki/systems/scenarios.md) — shared system SSOT for local scenario imports, copy-scoped achievement-evaluator reuse and both-skin native stage completion; [server contract](../specs/scenarios.md).
 
-- [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
+- [Authoritative transmog](systems/transmog-apply.md) — authored metadata/source enums, primary collection states, account outfit/preset persistence and unchanged atomic paid Apply; both-skin native save/load proof, conditional/enchant-policy gaps explicit.
 
 - [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11) — observer detection, authored spell-area quest masks, both-skin Jaga loot/turn-in and post-reward hiding; Vin/Rendan data-route gaps explicit.
 - [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.

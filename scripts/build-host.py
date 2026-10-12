@@ -17,7 +17,9 @@ BINARIES = {
     "game-server-admin": "server",
     "game-server-site-export": "server",
     "game-cli": "client",
+    "los-bake": "los",
 }
+DEFAULT_BINARIES = ("game-server", "game-server-admin", "game-server-site-export", "game-cli")
 GROUND_GAPS = Path("crates/server/src/ground_gaps.tsv")
 ASSET_CWD = Path("/home/osso-test/.local/share/game-server/assets")
 ENVIRONMENT_NAMES = (
@@ -91,7 +93,7 @@ def cargo_arguments(args, tail):
         selection = [] if has_package_selection(tail) else ["--workspace"]
         features = ["--features", args.features] if args.features else []
         return ["test" if args.test else "check", *selection, *features, *tail]
-    binaries = [args.binary] if args.binary else list(BINARIES)
+    binaries = [args.binary] if args.binary else list(DEFAULT_BINARIES)
     packages = list(dict.fromkeys(BINARIES[binary] for binary in binaries))
     arguments = ["build"]
     for package in packages:
