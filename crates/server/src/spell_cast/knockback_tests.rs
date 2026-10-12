@@ -5,9 +5,8 @@ use lightyear::prelude::*;
 use shared::components::{MovementControl, MovementSpeed, PlayerMotion, Position, Rotation};
 use shared::protocol::{InputChannel, PlayerInput};
 
-#[test]
-fn arena_knockback_source_effect_drives_ballistic_player_motion_and_rejects_owner_input() {
-    let mut h = harness_with_plugins(Vec::new(), &[58873], 1, false, |app| {
+fn source_push_harness(spells: &[u32]) -> Harness {
+    let mut h = harness_with_plugins(Vec::new(), spells, 1, false, |app| {
         app.init_resource::<crate::friends::AutoAfkScheduler>();
         app.add_systems(FixedUpdate, crate::networking::process_player_inputs);
     })
@@ -43,6 +42,12 @@ fn arena_knockback_source_effect_drives_ballistic_player_motion_and_rejects_owne
         MessageSender::<PlayerInput>::default(),
         MessageReceiver::<PlayerInput>::default(),
     ));
+    h
+}
+
+#[test]
+fn arena_knockback_source_effect_drives_ballistic_player_motion_and_rejects_owner_input() {
+    let mut h = source_push_harness(&[58873]);
     let before = *h.app.world().get::<Position>(h.caster).unwrap();
     super::cast_triggered(h.app.world_mut(), h.npc, 58873, None, 0);
     h.app
@@ -104,4 +109,164 @@ fn arena_knockback_source_effect_drives_ballistic_player_motion_and_rejects_owne
         landed,
         "stale in-flight owner reports never undo landing"
     );
+}
+
+#[test]
+fn arena_knockback_source_root_and_area_conditions_prevent_invalid_pushes() {
+    let mut h = source_push_harness(&[58873, 339]);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.npc,
+            target: h.caster,
+            spell_id: 339,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let before = *h.app.world().get::<Position>(h.caster).unwrap();
+    super::cast_triggered(h.app.world_mut(), h.npc, 58873, None, 0);
+    h.advance(2);
+    assert_eq!(*h.app.world().get::<Position>(h.caster).unwrap(), before);
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(h.caster)
+            .unwrap()
+            .controlled
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 339,
+    );
+    let other_copy = spawn_player(&mut h.app, 1, 6.0);
+    h.app.world_mut().entity_mut(other_copy).insert((
+        Position {
+            x: 6.0,
+            y: 0.0,
+            z: -5.0,
+        },
+        crate::maps::InMap {
+            map_id: 0,
+            instance_id: 7,
+        },
+    ));
+    let far = spawn_player(&mut h.app, 1, 30.0);
+    h.app.world_mut().entity_mut(far).insert(Position {
+        x: 30.0,
+        y: 0.0,
+        z: -5.0,
+    });
+    super::cast_triggered(h.app.world_mut(), h.npc, 58873, None, 0);
+    h.advance(1);
+    assert!(
+        h.app
+            .world()
+            .get::<MovementControl>(h.caster)
+            .unwrap()
+            .controlled
+    );
+    for unit in [other_copy, far] {
+        assert!(
+            !h.app
+                .world()
+                .get::<MovementControl>(unit)
+                .unwrap()
+                .controlled,
+            "source area does not leak across copy/radius"
+        );
+    }
+}
+
+#[test]
+fn arena_knockback_transfer_cancels_its_lease_but_never_cancels_a_newer_owner() {
+    let mut h = source_push_harness(&[58873]);
+    super::cast_triggered(h.app.world_mut(), h.npc, 58873, None, 0);
+    h.advance(1);
+    let before = *h.app.world().get::<Position>(h.caster).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<crate::maps::InMap>();
+    h.advance(1);
+    assert_eq!(*h.app.world().get::<Position>(h.caster).unwrap(), before);
+    assert!(
+        !h.app
+            .world()
+            .get::<MovementControl>(h.caster)
+            .unwrap()
+            .controlled
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::maps::InMap::continent(0));
+    super::cast_triggered(h.app.world_mut(), h.npc, 58873, None, 0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(MovementControl {
+            epoch: 100,
+            controlled: true,
+        });
+    h.advance(1);
+    assert_eq!(
+        *h.app.world().get::<MovementControl>(h.caster).unwrap(),
+        MovementControl {
+            epoch: 100,
+            controlled: true
+        }
+    );
+    assert_eq!(*h.app.world().get::<Position>(h.caster).unwrap(), before);
+}
+
+#[test]
+fn arena_knockback_landing_preserves_realm_fall_damage_and_actual_feather_fall() {
+    for feather in [false, true] {
+        let mut h = source_push_harness(&[58873, 1706]);
+        h.app.world_mut().get_mut::<Position>(h.caster).unwrap().y = 5.0;
+        h.app.world_mut().get_mut::<Position>(h.npc).unwrap().y = 5.0;
+        if feather {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 1706,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let initial = h.health(h.caster);
+        let mut peak = 5.0f32;
+        super::cast_triggered(h.app.world_mut(), h.npc, 58873, None, 0);
+        for _ in 0..40 {
+            h.advance(1);
+            peak = peak.max(h.app.world().get::<Position>(h.caster).unwrap().y);
+            if !h
+                .app
+                .world()
+                .get::<MovementControl>(h.caster)
+                .unwrap()
+                .controlled
+            {
+                break;
+            }
+        }
+        assert_eq!(h.app.world().get::<Position>(h.caster).unwrap().y, 0.0);
+        let damage = initial - h.health(h.caster);
+        if feather {
+            assert_eq!(damage, 0.0);
+        } else {
+            let expected = initial * shared::movement::fall_damage_percent(peak);
+            assert!(
+                (damage - expected).abs() < 0.01,
+                "observed peak feeds the existing realm fall rule"
+            );
+            assert!(damage > 0.0);
+        }
+    }
 }
