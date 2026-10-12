@@ -31,8 +31,6 @@ mod pvp_invites;
 #[path = "pvp_silvershard.rs"]
 mod pvp_silvershard;
 use pvp_invites::process_battleground_invitation_responses;
-#[cfg(test)]
-pub(crate) use pvp_silvershard::TrackSwitch;
 pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_leave.rs"]
