@@ -3,6 +3,7 @@
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
+- [Boss-mod data import](systems/bossmod-data.md) — static AST/locale extraction, copy-only authority and actual-cast reconciliation; hosted7/7 and both-skin private two-encounter proof pass, native-input schedule coverage remains open.
 
 - [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
 - [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
@@ -222,7 +223,7 @@ Debug logs and root cause analyses.
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Bevy 0.19 change ticks, Lightyear 0.28.0/bevy_replicon sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
 | [[recurring-loop-elimination]] | Tests-first reductions and eliminations across auction, terrain, friends, auto-AFK, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, rest-state, and player-death scans; broad death/auto-AFK scans are eliminated while wider scheduler/dirty-boundary requirements remain partial |
-| [[server-tick-lag]] | :5000 simulation at 55–70% speed: frame/system instrumentation, dormant-creature scans, per-character save syncs, SipHash interest maps; debug/release/opt-level measurements with 1–3 clients |
+| [[server-tick-lag]] | Frame/system instrumentation, dormant scans and persistence; release catalog-copy regression and private idle/three-city-peer measurements |
 | [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices plus player-death and broad auto-AFK scan reductions complete, while preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |
 
 - [Zaralda observed native success](investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01) — saved exit0 interaction; source/import and renderer gates distinct; independent artifact gate116 scoped PASS, no whole-world PASS.
