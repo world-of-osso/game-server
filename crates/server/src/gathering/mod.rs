@@ -374,6 +374,10 @@ pub(crate) fn effect_gather(
     _effect: &SpellEffect,
     target: Entity,
 ) {
+    if ctx.spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        crate::pvp::capture_azerite(world, ctx.caster, target);
+        return;
+    }
     // Cast completion revalidates; repeat at the mutation boundary for competing casts.
     if let Err(error) = check_target(world, ctx.caster, ctx.spell, target) {
         error!("Gathering completion refused: {error:?}");
