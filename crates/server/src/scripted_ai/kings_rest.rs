@@ -43,7 +43,7 @@ struct AnimatedGold {
 impl CreatureAi for AnimatedGold {
     fn just_appeared(&mut self, ctx: &mut Ctx) {
         ctx.do_cast_self(BREAK_TARGETING);
-        ctx.set_react_state(crate::creature_aggro::ReactState::Passive);
+        ctx.set_react_state(super::ReactState::Passive);
     }
     fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
         if damage.damage >= damage.health_before && !self.molten_cast {
@@ -89,7 +89,10 @@ fn remove_molten_immunity(
 }
 fn set_molten_flags(world: &mut World, actor: Entity, apply: bool) {
     let mask = UnitFlags::IMMUNE_TO_PC | UnitFlags::NOT_SELECTABLE;
-    let mut flags = world.get::<UnitFlags>(actor).copied().unwrap_or_default();
+    let mut flags = world
+        .get::<UnitFlags>(actor)
+        .copied()
+        .unwrap_or(UnitFlags(0));
     if apply {
         flags.0 |= mask;
     } else {

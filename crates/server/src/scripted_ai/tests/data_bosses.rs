@@ -435,8 +435,8 @@ fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
         location,
         crate::stats::CharacterStats {
             main_hand: crate::item_stats::WeaponDamage {
-                min_damage: 100_000.0,
-                max_damage: 100_000.0,
+                min: 100_000.0,
+                max: 100_000.0,
                 ..crate::item_stats::WeaponDamage::UNARMED
             },
             ..Default::default()
