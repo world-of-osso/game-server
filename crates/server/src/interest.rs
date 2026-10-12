@@ -390,10 +390,6 @@ fn on_network_visibility_added(
 ) {
     if let Ok((position, map, life_state, private_owner)) = positions.get(trigger.entity) {
         if let Some(owner) = private_owner {
-            info!(
-                "private interest registration target={} owner={}",
-                trigger.entity, owner.0
-            );
             index.private_owners.insert(trigger.entity, owner.0);
         }
         if let Some(state) = life_state {
