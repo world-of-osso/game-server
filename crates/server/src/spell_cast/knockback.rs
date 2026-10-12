@@ -1,5 +1,6 @@
 //! TC a352b1fa SpellEffects.cpp:4037-4075, effects98/144.
 use super::{effects::EffectCtx, *};
+use crate::spell_info::SpellEffect;
 use shared::components::{Npc, Player, UnitSummonedBy};
 
 const SPEED_RATIO: f32 = 0.1;
@@ -51,7 +52,7 @@ fn target_allows_knockback(world: &World, caster: Entity, target: Entity) -> boo
     };
     let Some(template) = world
         .get_resource::<crate::world_data::WorldData>()
-        .and_then(|data| data.creature_templates.get(&npc.template_id))
+        .and_then(|data| data.templates.get(&npc.template_id))
     else {
         error!(
             "Knockback target entry{} has no sourced creature flags",
