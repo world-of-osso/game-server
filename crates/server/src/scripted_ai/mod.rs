@@ -142,7 +142,7 @@ pub enum Hook {
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
     fn initialize_ai(&mut self, ctx: &mut Ctx) {
-        self.reset(ctx);
+        dispatch(ctx.world, ctx.me, Hook::Reset);
     }
     fn reset(&mut self, _ctx: &mut Ctx) {}
     fn just_appeared(&mut self, _ctx: &mut Ctx) {}
