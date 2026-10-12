@@ -16,7 +16,7 @@ use super::PlayerAchievementState;
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
-    74, 76, 77, 107, 108, 109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220, 245,
+    66, 74, 76, 77, 107, 108, 109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220, 245,
     246,
 ];
 
@@ -44,6 +44,8 @@ pub(crate) enum CriteriaEvent {
     /// TC client loot type (`crate::loot::LootKind`) and looted item count.
     GetLootByType(u8, u32),
     LootMoney(u64),
+    MoneySpentOnPostage(u64),
+    MostMoneyOwned(u64),
     UseItem(u32),
     EquipItem(u32),
     UseGameObject(u32),
@@ -117,6 +119,8 @@ impl CriteriaEvent {
             Self::DieFromEnvironmentalDamage(_) => 26,
             Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
+            Self::MoneySpentOnPostage(_) => 66,
+            Self::MostMoneyOwned(_) => 86,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -180,6 +184,8 @@ impl CriteriaEvent {
             Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::FulfillCraftingOrderType(kind) => u32::from(kind) == criteria.asset,
             Self::LootMoney(_)
+            | Self::MoneySpentOnPostage(_)
+            | Self::MostMoneyOwned(_)
             | Self::DieAnywhere
             | Self::KilledByPlayer
             | Self::CompleteDailyQuest
@@ -593,6 +599,7 @@ impl AchievementCatalog {
                 | CriteriaEvent::BankTabsOwned(_, 0)
                 | CriteriaEvent::SkillMaxRank(_, 0)
                 | CriteriaEvent::PetBattleAchievementPoints(0)
+                | CriteriaEvent::MostMoneyOwned(0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -600,6 +607,7 @@ impl AchievementCatalog {
         let counter = state.criteria_progress.entry(id).or_default();
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
+            CriteriaEvent::MostMoneyOwned(amount) => (*counter).max(amount),
             CriteriaEvent::SkillRank(_, rank) | CriteriaEvent::SkillMaxRank(_, rank) => {
                 u64::from(rank)
             }
@@ -622,6 +630,7 @@ impl AchievementCatalog {
             CriteriaEvent::MoneyEarnedFromQuesting(amount)
             | CriteriaEvent::MoneySpentOnTaxis(amount)
             | CriteriaEvent::MoneySpentAtBarberShop(amount)
+            | CriteriaEvent::MoneySpentOnPostage(amount)
             | CriteriaEvent::MoneyEarnedFromSales(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
@@ -951,7 +960,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 17 | 23 | 48 | 59 | 62 | 63 | 65 | 67 | 74 | 76 | 77 | 81 | 107 | 108 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 17 | 23 | 48 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 81 | 86 | 107 | 108 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
