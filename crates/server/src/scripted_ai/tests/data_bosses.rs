@@ -29,6 +29,7 @@ fn bound_boss_at_difficulty(
     }
     let path = world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
     templates.retain(|id, _| *id == entry || (entry == 234648 && [234660, 255050].contains(id)));
