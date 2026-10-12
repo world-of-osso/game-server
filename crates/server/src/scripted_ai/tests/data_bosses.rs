@@ -2,8 +2,20 @@
 use super::*;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
+    bound_boss_with_catalog(entry, map_id, bit, None)
+}
+
+fn bound_boss_with_catalog(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    catalog: Option<bossmod::Catalog>,
+) -> (Harness, Entity, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
+    if let Some(catalog) = catalog {
+        app.insert_resource(catalog);
+    }
     let path = world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
@@ -148,13 +160,12 @@ fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_
         (13280, 344, 1, 22421, 5700, 8500),
         (11490, 343, 0, 22478, 3700, 8500),
     ] {
-        let (mut h, boss, _) = bound_boss(entry, 429, bit);
         let catalog_db = Connection::open_in_memory().unwrap();
         catalog_db
             .execute_batch(include_str!("bossmod_diremaul.sql"))
             .unwrap();
-        h.app
-            .insert_resource(bossmod::load_catalog(&catalog_db).unwrap());
+        let catalog = bossmod::load_catalog(&catalog_db).unwrap();
+        let (mut h, boss, _) = bound_boss_with_catalog(entry, 429, bit, Some(catalog));
         h.engage(boss);
         h.advance(0.1);
         assert_eq!(h.inbox(0).starts[0].encounter_id, encounter);
