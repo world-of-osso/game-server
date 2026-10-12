@@ -15,7 +15,7 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74, 76, 77, 107, 108,
+    0, 1, 11, 12, 14, 15, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74, 76, 77, 107, 108,
     109, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220,
 ];
 
@@ -34,6 +34,7 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
+    ParticipateInBattleground(u32),
     /// TC client loot type (`crate::loot::LootKind`) and looted item count.
     GetLootByType(u8, u32),
     LootMoney(u64),
@@ -99,6 +100,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
+            Self::ParticipateInBattleground(_) => 15,
             Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
             Self::UseItem(_) => 41,
@@ -200,6 +202,7 @@ impl CriteriaEvent {
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
             | Self::WinBattleground(asset)
+            | Self::ParticipateInBattleground(asset)
             | Self::UseItem(asset)
             | Self::EquipItem(asset)
             | Self::UseGameObject(asset)
@@ -903,7 +906,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
-                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
+                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())

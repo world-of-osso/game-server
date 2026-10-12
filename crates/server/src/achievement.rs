@@ -529,12 +529,14 @@ fn find_mythic_finishers(world: &mut World, run: &ChallengeRun) -> Vec<(Entity, 
         .collect()
 }
 
-/// TC Battleground::EndBattleground credits winning participants with MapID.
-pub(crate) fn record_battleground_win(world: &mut World, player: Entity, map: u32) {
-    let events = [
+/// TC Battleground::EndBattleground credits winners, then every participant, with MapID.
+pub(crate) fn record_battleground_end(world: &mut World, player: Entity, map: u32, won: bool) {
+    let win = [
         CriteriaEvent::WinBattleground(map),
         CriteriaEvent::WinAnyBattleground,
     ];
+    let mut events = if won { win.to_vec() } else { Vec::new() };
+    events.push(CriteriaEvent::ParticipateInBattleground(map));
     if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
         && let Some(connection) = connection_for_player(world, player)
     {
