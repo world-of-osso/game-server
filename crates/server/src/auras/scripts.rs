@@ -168,7 +168,8 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
+    (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION && effect_index == 0)
+        || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
@@ -271,6 +272,14 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        crate::spell_cast::blooming_infusion::BLOOMING_INFUSION,
+        AuraScript {
+            on_apply: Some(crate::spell_cast::blooming_infusion::start_cast_count),
+            on_remove: Some(crate::spell_cast::blooming_infusion::stop_cast_count),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM,
         AuraScript {

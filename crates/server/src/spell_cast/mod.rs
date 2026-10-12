@@ -16,6 +16,7 @@
 mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
+pub(crate) mod blooming_infusion;
 #[cfg(test)]
 mod blooming_infusion_tests;
 #[cfg(test)]
@@ -1648,6 +1649,7 @@ pub(crate) fn execute_cast(
         return Err(CastFailure::CasterDead);
     }
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
+    blooming_infusion::check_children(world, caster, spell)?;
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
@@ -1701,6 +1703,7 @@ pub(crate) fn execute_cast(
         hook(world, caster, spell);
     }
     spell_mods::consume_charges(world, caster, spell);
+    blooming_infusion::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
     if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
         crate::combat::attack_stop(world, caster);
