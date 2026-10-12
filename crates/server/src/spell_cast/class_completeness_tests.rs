@@ -50,6 +50,54 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
 }
 
 #[test]
+fn class_completeness_native_caster_rectangle_selects_front_width_not_back_allies_or_far() {
+    for (spell_id, class) in [(197214, 7), (392983, 10)] {
+        let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
+        let spell = world_db().unwrap().store.get(spell_id).unwrap().clone();
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.implicit_targets.contains(&129))
+            .unwrap();
+        let radius = super::targets::radius(effect, 0);
+        let width = spell.target_restrictions.as_ref().unwrap().width;
+        let inside = spawn_npc(&mut h.app, 1.0);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Position>(inside)
+            .unwrap()
+            .z = width * 0.5;
+        let back = spawn_npc(&mut h.app, -3.0);
+        let outside = spawn_npc(&mut h.app, 1.0);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Position>(outside)
+            .unwrap()
+            .z = width + 2.0;
+        let far = spawn_npc(&mut h.app, radius + 1.0);
+        let ally = spawn_player(&mut h.app, class, 3.0);
+        let selected = super::targets::select_targets(
+            h.app.world_mut(),
+            h.caster,
+            Some(back),
+            &spell,
+            effect,
+            0,
+            false,
+        )
+        .expect("native caster-facing rectangle129");
+        assert!(selected.contains(&h.npc));
+        assert!(selected.contains(&inside));
+        for excluded in [back, outside, far, ally] {
+            assert!(
+                !selected.contains(&excluded),
+                "excluded {excluded:?} for {spell_id}"
+            );
+        }
+    }
+}
+
+#[test]
 fn class_completeness_native_darkness_ground_destination_snaps_to_authored_terrain() {
     let mut h = harness(Vec::new(), &[196718], 12).unwrap();
     let conn = rusqlite::Connection::open_with_flags(
