@@ -101,6 +101,17 @@ fn receive_requests(world: &mut World) -> Vec<(Actor, HousingRequest)> {
 pub(crate) fn process_requests(world: &mut World) {
     for (actor, request) in receive_requests(world) {
         let result = execute(world, actor, &request.command);
+        if result.is_ok()
+            && matches!(
+                request.command,
+                HousingCommand::PlaceDecor { .. }
+                    | HousingCommand::MoveDecor { .. }
+                    | HousingCommand::RotateDecor { .. }
+                    | HousingCommand::RemoveDecor { .. }
+            )
+        {
+            publish_layout_to_observers(world, actor);
+        }
         let (neighborhood, error) = match result {
             Ok(neighborhood) => (neighborhood, None),
             Err(message) => (None, Some(message)),
@@ -110,6 +121,28 @@ pub(crate) fn process_requests(world: &mut World) {
             _ => None,
         };
         send_snapshot(world, actor, request.request_id, neighborhood, house, error);
+    }
+}
+
+fn publish_layout_to_observers(world: &mut World, editor: Actor) {
+    let map = *world
+        .get::<InMap>(editor.player)
+        .expect("accepted house edit requires an admitted map");
+    let mut query = world.query::<(Entity, &InWorld, &Authenticated, &PlayerLink)>();
+    let observers: Vec<_> = query
+        .iter(world)
+        .filter(|(connection, _, _, link)| {
+            *connection != editor.connection && world.get::<InMap>(link.0) == Some(&map)
+        })
+        .map(|(connection, entered, auth, link)| Actor {
+            connection,
+            player: link.0,
+            account: auth.account_id,
+            character: entered.character_id,
+        })
+        .collect();
+    for observer in observers {
+        send_snapshot(world, observer, 0, None, None, None);
     }
 }
 
