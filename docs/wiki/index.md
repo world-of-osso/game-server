@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29) — player-only263 admission/completion, caster-class and parent flags, thirteen controls; cooking-focus/spellcaster integration preserves both payload contracts.
+
 - [Native form admission](../class-completeness6.md#native-form-admission--batch28) — authored64-bit masks/form flags, recipient275 bypass, ten cast/lifecycle controls and explicit conditional census transitions; whole class goal remains open.
 
 - [Shared AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229) — native per-effect229 school/multiplicative reduction; five damage/lifecycle controls, flag/leech and class-wide proof limits.

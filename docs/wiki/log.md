@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
+
 - 2026-10-12 — [Native form admission](../class-completeness6.md#native-form-admission--batch28): aura275 native mask bypass and distinct form failures; RED3→GREEN10. Census2981/4664/182 retains32 required-form prerequisites and improves13 memberships. Lead gate diagnoses preserve live-target, level-scaling and placement requirements.
 
 - 2026-10-12 — [Receiver mechanic durations](../class-completeness2.md#receiver-mechanic-durations--batch27): native232/234 stronger-negative matching, integer AddPct, applied-effect masks and finite/harmful exemptions; RED5→twelve controls and35 adjacent controls. Positive-only Oppressing Roar and invalid selector1825 remain explicit source gaps.
