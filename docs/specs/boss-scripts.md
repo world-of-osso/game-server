@@ -1,4 +1,12 @@
-# Boss scripts (server)
+# Boss scripts
+
+## Encounter coverage continuation — 2026-10-12
+
+- [x] Census every hosted DungeonEncounter difficulty record and Journal-only encounter, preserving unknown/ambiguous identities and separating structural admissions from behavioral proof: [coverage](../encounter-coverage.md).
+- [x] Order work using locally authenticated Midnight Season2 relations, then Normal leveling LFG ContentTuning.MinLevelSquish, then remaining maps by descending expansion. This does not activate a Mythic+ season.
+- [ ] Complete Murder Row/Kystia3101 from pinned TC a352b1fa: primary Chaos Barrage1s/3500ms, Mirror Images14s/30500ms and Heroic+ Fel Nova12s/15s are ported; companion/infusion phases, shield stacks, authored spell scripts, doors/boundary and loot remain open.
+- [ ] Certify every boss through engage/casts/phase/death/credit/loot/lockout, and both native skins per completed instance. No complete instance claimed by this continuation.
+ (server)
 
 Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa (`CreatureAI`/`ScriptedAI`/`BossAI`, `InstanceScript`, `CreatureTextMgr`) and the Stockade scripts (src/server/scripts/EasternKingdoms/TheStockade/). Code: `crates/server/src/scripted_ai/`. Protocol: shared-protocol `protocol/encounter_messages.rs`, `ChatType::Monster*`. Client: game-engine `docs/specs/boss-encounters.md`. Data: `content_creature_text` (TDB1210 creature_text, `scripts/import-creature-text.sh`) with `content_broadcast_text`.
 

@@ -127,6 +127,56 @@ fn bound_boss_with_catalog(
 }
 
 #[test]
+fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle() {
+    // TC a352b1fa boss_kystia_manaheart.cpp: 1s initial, 3500ms repeat.
+    // Primary actor only completes encounter3101; Nibbles never grants boss credit.
+    let (mut h, boss, map) = bound_boss(234648, 2813, 0);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(boss);
+    h.advance(0.9);
+    assert_eq!(h.casts(0, boss, 1230298), 0);
+    h.advance(0.2);
+    assert_eq!(
+        h.casts(0, boss, 1230298),
+        1,
+        "authored1s Chaos Barrage missing"
+    );
+    h.advance(3.3);
+    assert_eq!(h.casts(0, boss, 1230298), 1);
+    h.advance(0.2);
+    assert_eq!(
+        h.casts(0, boss, 1230298),
+        2,
+        "authored3500ms repeat missing"
+    );
+    assert_eq!(h.inbox(0).starts[0].encounter_id, 3101);
+    assert!(h.inbox(1).starts.is_empty());
+    assert!(
+        h.inbox(1)
+            .log
+            .iter()
+            .all(|e| e.source != Some(boss.to_bits()))
+    );
+    h.hit_pct(boss, 200.0);
+    h.advance(0.05);
+    assert!(h.inbox(0).ends.last().unwrap().success);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        1
+    );
+    let casts = h.casts(0, boss, 1230298);
+    h.advance(4.0);
+    assert_eq!(h.casts(0, boss, 1230298), casts, "dead boss cast again");
+}
+
+#[test]
 fn boss_timeline_data_bound_skum_has_no_smartai_alert_fallback() {
     let (mut h, boss, _) = bound_boss(3674, 43, 4);
     h.engage(boss);

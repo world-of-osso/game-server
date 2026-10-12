@@ -21,6 +21,7 @@ pub mod creature_text;
 pub mod event_map;
 pub mod instance_script;
 pub mod movement;
+pub mod murder_row;
 pub mod smart_ai;
 pub mod the_stockade;
 
@@ -181,6 +182,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }
+    if murder_row::is_creature_script(script_name) {
+        return murder_row::creature_ai(world, creature, script_name);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -192,7 +196,9 @@ const SMART_AI: &str = "SmartAI";
 /// (`Creature::AIM_Initialize` at `AddToMap`; `FactorySelector::SelectAI` prefers the
 /// ScriptName).
 pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
-    let script_name = if the_stockade::is_creature_script(script_name) {
+    let script_name = if the_stockade::is_creature_script(script_name)
+        || murder_row::is_creature_script(script_name)
+    {
         Some(script_name.to_owned())
     } else {
         None
