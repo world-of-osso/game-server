@@ -409,13 +409,25 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         accepted: players.iter().map(|p| p.0).collect(),
         map: Some(map),
         origins: BTreeMap::new(),
-        flags: Default::default(),
+        flags: shared::battleground::flag_rules(template.map_id)
+            .map(shared::battleground::FlagBattle::new),
+        nodes: None,
+        eye: None,
+        kotmogu: None,
+        silvershard: None,
         scoreboard: Vec::new(),
         flag_positions: [None, None],
     };
     assert!(invitation.instance.start());
     invitation.instance.add_score(BgTeam::A, 2, &template);
-    assert!(invitation.flags.pickup(BgTeam::A, players[0].0));
+    assert!(
+        invitation
+            .flags
+            .as_mut()
+            .unwrap()
+            .flags
+            .pickup(BgTeam::A, players[0].0)
+    );
     let mut state = PvpServerState::default();
     state.battleground_matches.insert(17, invitation);
     world.insert_resource(state);
