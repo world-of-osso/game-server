@@ -982,6 +982,10 @@ fn startup_load_world_data(mut commands: Commands) {
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
     commands.insert_resource(
+        crate::pvp::arena_objects::GateCatalog::load(&conn)
+            .expect("Load source-backed arena gates; run scripts/import-arenas.py before startup"),
+    );
+    commands.insert_resource(
         crate::pvp::arena::Catalog::load(&conn)
             .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),
     );

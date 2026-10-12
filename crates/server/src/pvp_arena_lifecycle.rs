@@ -46,6 +46,7 @@ pub(super) fn update_matches(world: &mut World) {
             .filter_map(|(id, matched)| update_match(matched, &actors, now).then_some(*id))
             .collect::<Vec<_>>()
     });
+    super::arena_objects::update_gates(world, now);
     for id in changed {
         super::pvp_objective::send_match_snapshot(world, id);
     }

@@ -70,6 +70,20 @@ fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates(
     world.insert_resource(state);
     world.insert_resource(Time::<()>::default());
     world.insert_resource(crate::game_objects::GameObjectSpawns::default());
+    db.execute_batch("CREATE TABLE arena_gate(map_id INTEGER,entry INTEGER,action TEXT,despawn_secs INTEGER); INSERT INTO arena_gate VALUES(572,185918,'open',5);").unwrap();
+    world.insert_resource(arena_objects::GateCatalog::load(&db).unwrap());
+    let gate = world
+        .spawn((
+            map,
+            shared::protocol::GameObjectInfo {
+                entry: 185918,
+                go_type: 0,
+                display_id: 0,
+                name: "source door".into(),
+                scale: 1.0,
+            },
+        ))
+        .id();
     let mut actors = Vec::new();
     for player in 1..=4 {
         let entity = world
@@ -108,6 +122,13 @@ fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates(
             .preparation_remaining_secs,
         None
     );
+    assert_eq!(
+        world
+            .get::<shared::protocol::GameObjectAnimation>(gate)
+            .unwrap()
+            .animation_id,
+        147
+    );
     world.entity_mut(actors[3]).insert(map);
     arena::update_matches(&mut world);
     assert_eq!(
@@ -138,6 +159,21 @@ fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates(
             .instance
             .phase,
         shared::battleground::BgPhase::InProgress
+    );
+    assert_eq!(
+        world
+            .get::<shared::protocol::GameObjectAnimation>(gate)
+            .unwrap()
+            .animation_id,
+        148
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(5));
+    arena::update_matches(&mut world);
+    assert!(
+        world.get_entity(gate).is_err(),
+        "source door despawns five seconds after opening"
     );
     world.get_mut::<Health>(actors[1]).unwrap().current = 0.0;
     arena::update_matches(&mut world);
