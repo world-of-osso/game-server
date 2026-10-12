@@ -452,7 +452,8 @@ pub(crate) fn modded_base_points(
     effect: &SpellEffect,
 ) -> f32 {
     let base_points = calc_base_value(world, caster, spell, effect)
-        + level_scaled_points(world, caster, spell, effect);
+        + level_scaled_points(world, caster, spell, effect)
+        + crate::auras::mastery::effect_bonus(world, caster, spell, effect);
     let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
     match SpellModOp::points_index(effect.index) {
         Some(op) => spell_mods::modify(world, caster, spell, op, base),
@@ -789,6 +790,7 @@ fn deal_damage_and_report(
     } else {
         stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
             * versatility_multiplier(world, ctx.caster)
+            * crate::auras::summon_damage::multiplier(world, ctx.caster)
     };
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
     let amount = (if resolved_source {

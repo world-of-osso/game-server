@@ -99,11 +99,13 @@ fn run_attack_tick(app: &mut App) {
          mut attackers: Query<(Entity, &mut AutoAttack, &Position, Option<&CharacterStats>)>,
          mut targets: AutoAttackTargets,
          scaling: Query<ScalingItem<'static>>,
+         summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers,
          armor_constants: Option<Res<ArmorConstants>>,
          sight: SwingSight| {
             let dt = time.delta_secs();
             let context = SwingContext {
                 scaling: &scaling,
+                summon_modifiers: &summon_modifiers,
                 sight: &sight,
                 armor_constants: armor_constants.as_deref(),
                 spells: None,

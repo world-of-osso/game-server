@@ -20,6 +20,7 @@ pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
 pub mod invisibility;
 pub(crate) mod linked_summon;
+pub(crate) mod mastery;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod periodic;
@@ -29,6 +30,7 @@ pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
+pub(crate) mod summon_damage;
 mod unit_state;
 pub use invisibility::Invisibility;
 
@@ -97,6 +99,7 @@ impl Plugin for AuraPlugin {
                     mount::receive_cancel_mount_aura
                         .after(crate::spell_cast::receive_cast_requests),
                     queue_passive_sync,
+                    mastery::refresh_amounts.after(crate::stats::update_character_stats),
                 ),
             )
             .add_systems(
