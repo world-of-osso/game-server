@@ -180,6 +180,7 @@ pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
 pub const MOD_STAT_BONUS_PCT: u32 = 467;
 pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
+pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
@@ -230,6 +231,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MASTERY
         | MOD_STAT_BONUS_PCT
         | MOD_BASE_RESISTANCE_PCT
+        | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
         | MOD_SUMMON_DAMAGE

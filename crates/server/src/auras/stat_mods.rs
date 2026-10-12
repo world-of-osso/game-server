@@ -205,6 +205,8 @@ struct Accumulator {
     slowest: f32,
     /// Strongest positive absolute speed cap (yards/second), not a percent.
     normal_speed_cap: f32,
+    /// Aura305's strongest positive percent floor, applied after slows.
+    minimum_speed_pct: f32,
     immobile: bool,
     /// MOD_CASTING_SPEED_NOT_STACK: strongest only.
     haste_not_stack: f32,
@@ -245,7 +247,7 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
         if acc.immobile {
             0.0
         } else {
-            (speed * pct(acc.slowest)).max(0.0)
+            (speed * pct(acc.slowest)).max(acc.minimum_speed_pct / 100.0)
         }
     };
     acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
@@ -294,6 +296,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     mask == 0 || mask & (1 << index) != 0
                 })
             }
+            MOD_MINIMUM_SPEED => acc.minimum_speed_pct = acc.minimum_speed_pct.max(amount),
             MOD_BASE_RESISTANCE_PCT => {
                 if misc & 1 != 0 {
                     // Native independent aura factors multiply; retain a percentage value.
