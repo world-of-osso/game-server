@@ -185,7 +185,11 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
         assert_eq!(result.score_a, score);
         assert_eq!(result.honor_reward, None);
         assert_eq!(result.players.len(), players.len());
-        let score_state = if copy.map_id == 998 { 6303 } else { 1776 };
+        let score_state = match copy.map_id {
+            998 => 6303,
+            727 => 6437,
+            _ => 1776,
+        };
         assert!(result.world_states.contains(&(score_state, score as i32)));
         h.app
             .world_mut()
