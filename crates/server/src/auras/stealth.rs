@@ -127,6 +127,9 @@ pub(crate) type GeometryParts<'a> = (
 );
 
 impl DetectionGeometry {
+    pub(crate) fn is_unit(&self) -> bool {
+        self.unit
+    }
     pub(crate) fn from_parts(
         (level, rotation, scale, player, npc, object): GeometryParts<'_>,
     ) -> Self {

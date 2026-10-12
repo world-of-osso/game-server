@@ -208,7 +208,12 @@ impl InterestIndex {
                         .get(&observer.player)
                         .cloned()
                         .unwrap_or_default()
-                        .detects(&self.invisibility.get(&entity).cloned().unwrap_or_default())
+                        .detects(
+                            &self.invisibility.get(&entity).cloned().unwrap_or_default(),
+                            self.detection_geometry
+                                .get(&entity)
+                                .is_some_and(DetectionGeometry::is_unit),
+                        )
                     && self
                         .stealth
                         .get(&observer.player)
