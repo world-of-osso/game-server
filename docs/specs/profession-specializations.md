@@ -34,7 +34,8 @@ Profession knowledge, irreversible specialization spending and learned recipes c
 ## Known gaps (current cycle)
 
 - [ ] Runtime integration tests, actual quest/request boundary proof, and native both-skin proof remain open.
-- [ ] Source-known profession effect/description variables without executable bindings remain explicit gaps; nonzero trait definition spells are learned, not cast, and quality operations remain disabled.
+- [x] Resolve numbered profession effect value/name variables from imported TraitDefinition/ProfessionTrait effect bindings; expose independent sourced major-bonus and subpath flags. Missing/unsupported description variables emit an explicit unavailable reason, never guessed numbers or raw variables.
+- [ ] Source-known profession effects without an operation evaluator remain explicit gaps; nonzero trait definition spells are learned, not cast, and quality operations remain disabled.
 - [ ] Crafting-quality numeric effects remain gated by the missing authentic operation evaluator; this does not block sourced recipe unlocks.
 
 ## Out of scope

@@ -106,14 +106,24 @@ fn load_edges(conn: &Connection, tree: u32) -> rusqlite::Result<Vec<ProfessionSp
 }
 
 fn load_node_metadata(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, NodeMetadata>> {
-    let mut statement = conn.prepare("SELECT e.ID,CASE WHEN d.OverrideName_lang<>'' THEN d.OverrideName_lang ELSE COALESCE(s.Name_lang,'') END,d.OverrideDescription_lang,d.OverrideIcon FROM trait_node_entry e JOIN trait_definition d ON d.ID=e.TraitDefinitionID LEFT JOIN spell_name s ON s.ID=d.SpellID WHERE e.ID IN (SELECT x.TraitNodeEntryID FROM trait_node_x_trait_node_entry x JOIN trait_node n ON n.ID=x.TraitNodeID JOIN skill_line_x_trait_tree t ON t.TraitTreeID=n.TraitTreeID WHERE t.Variant>0)")?;
+    let sources = super::descriptions::load_description_sources(conn)?;
+    let mut statement = conn.prepare("SELECT e.ID,CASE WHEN d.OverrideName_lang<>'' THEN d.OverrideName_lang ELSE COALESCE(s.Name_lang,'') END,d.OverrideDescription_lang,d.OverrideIcon,d.ID FROM trait_node_entry e JOIN trait_definition d ON d.ID=e.TraitDefinitionID LEFT JOIN spell_name s ON s.ID=d.SpellID WHERE e.ID IN (SELECT x.TraitNodeEntryID FROM trait_node_x_trait_node_entry x JOIN trait_node n ON n.ID=x.TraitNodeID JOIN skill_line_x_trait_tree t ON t.TraitTreeID=n.TraitTreeID WHERE t.Variant>0)")?;
     statement
         .query_map([], |row| {
+            let definition: u32 = row.get(4)?;
+            let text: String = row.get(2)?;
+            let description = match sources.resolve(definition, &text) {
+                Ok(description) => description,
+                Err(reason) => {
+                    tracing::warn!(definition, %reason, "Profession description unavailable");
+                    format!("Description unavailable (definition {definition}): {reason}")
+                }
+            };
             Ok((
                 row.get(0)?,
                 NodeMetadata {
                     name: row.get(1)?,
-                    description: row.get(2)?,
+                    description,
                     icon: row.get(3)?,
                 },
             ))
@@ -138,6 +148,9 @@ fn load_paths(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, ProfessionSpe
 }
 
 fn load_perks(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, ProfessionSpecPerk>> {
+    // Retail ProfessionSpecConstantsDocumentation.lua: ProfTraitPerkNodeFlags.
+    const UNLOCKS_SUBPATH: u32 = 1;
+    const IS_MAJOR_BONUS: u32 = 2;
     let mut statement = conn.prepare(
         "SELECT p.TraitNodeID,p.RequiredPointsInThisNode,p.Flags,
             CASE WHEN COUNT(DISTINCT path.TraitNodeID)=1 THEN MIN(path.TraitNodeID) ELSE 0 END
@@ -155,7 +168,8 @@ fn load_perks(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, ProfessionSpe
                 ProfessionSpecPerk {
                     path_node_id: row.get(3)?,
                     required_points: row.get(1)?,
-                    unlocks_subpath: flags & 1 != 0,
+                    unlocks_subpath: flags & UNLOCKS_SUBPATH != 0,
+                    is_major_bonus: flags & IS_MAJOR_BONUS != 0,
                 },
             ))
         })?

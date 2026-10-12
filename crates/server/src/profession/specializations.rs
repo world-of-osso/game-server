@@ -2,6 +2,7 @@
 use super::PlayerProfessions;
 
 mod data;
+mod descriptions;
 mod runtime;
 mod state;
 mod store;
