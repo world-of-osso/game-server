@@ -13,7 +13,7 @@ const WAKING_DREAM: u32 = 392_221;
 const WAKING_CHILD: u32 = 392_223;
 
 fn linked_harness() -> Harness {
-    harness(
+    harness_with(
         Vec::new(),
         &[
             IRONFUR,
@@ -26,6 +26,7 @@ fn linked_harness() -> Harness {
             WAKING_CHILD,
         ],
         11,
+        true,
     )
     .unwrap()
 }
