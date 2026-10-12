@@ -102,6 +102,68 @@ fn world_quest_weighted_progress_uses_hidden_counts_and_optional_rows_never_bloc
 }
 
 #[test]
+fn world_quest_sequence_and_contributor_bar_prerequisites_block_premature_credit() {
+    let quest = QuestTemplate {
+        id: 82531,
+        objectives: vec![
+            ObjectiveDef {
+                kind: ObjectiveKind::Monster,
+                object_id: 226416,
+                required: 1,
+                text: "Appropriate a Skiff".into(),
+            },
+            ObjectiveDef {
+                kind: ObjectiveKind::ProgressBar,
+                object_id: 0,
+                required: 100,
+                text: "Progress".into(),
+            },
+            ObjectiveDef {
+                kind: ObjectiveKind::Monster,
+                object_id: 227724,
+                required: 10,
+                text: "Contributor".into(),
+            },
+        ],
+        world_objective_rules: Some(vec![
+            ObjectiveRule::default(),
+            ObjectiveRule {
+                flags: 2,
+                weight: 0.,
+            },
+            ObjectiveRule {
+                flags: 92,
+                weight: 10.,
+            },
+        ]),
+        ..Default::default()
+    };
+    let mut db = crate::quest_data::QuestDb::default();
+    db.quests.insert(82531, quest);
+    let mut log = crate::persistence::quest_store::QuestLogData {
+        active: vec![ActiveQuestData {
+            quest_id: 82531,
+            counts: vec![0; 3],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    assert!(!crate::quest_rules::credit_kill(&db, &mut log, 227724));
+    assert_eq!(log.active(82531).unwrap().counts, vec![0, 0, 0]);
+    assert!(crate::quest_rules::credit_kill(&db, &mut log, 226416));
+    for _ in 0..10 {
+        assert!(crate::quest_rules::credit_kill(&db, &mut log, 227724));
+    }
+    assert!(
+        !crate::quest_rules::credit_kill(&db, &mut log, 227724),
+        "completed bar rejects extra contributor credit"
+    );
+    let counts = objective_counts(&db.quests[&82531], log.active(82531).unwrap(), |_| 0);
+    assert_eq!(counts[1], 100);
+    assert!(objectives_done(&db.quests[&82531], &counts));
+}
+
+#[test]
 fn world_quest_dynamic_objective_load_preserves_order_flags_names_and_weights() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_world_quest (quest_id INTEGER);INSERT INTO content_world_quest VALUES(76587);
