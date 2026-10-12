@@ -146,6 +146,20 @@ fn class_completeness_native_blooming_infusion_delayed_wrath_keeps_consumed_dama
         "Wrath amount{} vs native expected{expected}",
         hit.amount
     );
+    h.inbox.log.clear();
+    h.cast_and_deliver(WRATH, Some(h.npc));
+    h.advance(100);
+    let ordinary = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(WRATH))
+        .unwrap();
+    assert!(
+        varied(base).contains(&(ordinary.amount as f32)),
+        "following Wrath has no consumed bonus: {}",
+        ordinary.amount
+    );
 }
 
 #[test]
@@ -214,16 +228,25 @@ fn class_completeness_native_blooming_triggered_regrowth_and_cancelled_cast_do_n
         cast_regrowth(&mut h);
     }
     fill_pools(&mut h);
+    h.inbox.go.clear();
     h.cast_and_deliver(REGROWTH, Some(caster));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_some()
+    );
     super::cancel_cast(h.app.world_mut(), caster);
     h.advance(45);
+    assert!(
+        !h.inbox.go.iter().any(|go| go.spell_id == REGROWTH),
+        "cancelled cast never completes"
+    );
     assert!(!crate::auras::has_aura(
         h.app.world(),
         caster,
         OFFENSIVE_INFUSION
     ));
-    assert!(!h.inbox.failed.is_empty());
-    h.inbox.failed.clear();
     cast_regrowth(&mut h);
     assert!(crate::auras::has_aura(
         h.app.world(),
@@ -265,6 +288,71 @@ fn class_completeness_native_blooming_starsurges_grant_one_instant_regrowth_use(
         !h.inbox.go.iter().any(|go| go.spell_id == REGROWTH),
         "following Regrowth retains its authored cast time"
     );
+}
+
+#[test]
+fn class_completeness_native_blooming_unlearn_and_foreign_aura_reset_cast_counts() {
+    let mut h = infusion_harness();
+    for _ in 1..native_cast_count() {
+        cast_regrowth(&mut h);
+    }
+    let ids: Vec<_> = FIXTURE_IDS
+        .iter()
+        .copied()
+        .filter(|&id| id != BLOOMING_INFUSION)
+        .collect();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(ids));
+    h.advance(3);
+    let foreign = spawn_player(&mut h.app, 11, 0.0);
+    let owner = h.caster;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: foreign,
+            target: owner,
+            spell_id: BLOOMING_INFUSION,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..native_cast_count() {
+        cast_regrowth(&mut h);
+    }
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        owner,
+        OFFENSIVE_INFUSION
+    ));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == BLOOMING_INFUSION,
+    );
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::class_progression::KnownSpells::fixture(
+            FIXTURE_IDS.to_vec(),
+        ));
+    h.advance(3);
+    for _ in 1..native_cast_count() {
+        cast_regrowth(&mut h);
+    }
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        owner,
+        OFFENSIVE_INFUSION
+    ));
+    cast_regrowth(&mut h);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        owner,
+        OFFENSIVE_INFUSION
+    ));
 }
 
 #[test]
