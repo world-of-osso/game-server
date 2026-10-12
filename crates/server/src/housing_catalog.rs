@@ -23,6 +23,7 @@ pub(crate) struct HousingCatalog {
     neighborhoods: BTreeMap<u32, Neighborhood>,
     plots: BTreeMap<u32, HousingPlot>,
     cornerstones: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
+    home_entry: Option<WorldLocation>,
 }
 
 impl HousingCatalog {
@@ -47,6 +48,17 @@ impl HousingCatalog {
             neighborhoods,
             plots,
             cornerstones: BTreeMap::new(),
+            home_entry: read_rows(db, "NeighborhoodMap")?
+                .into_iter()
+                .find(|(id, _)| *id == 7)
+                .map(|(_, fields)| {
+                    Ok::<_, String>(WorldLocation {
+                        map_id: number(&fields, "MapID")?,
+                        position: Vec3::from_array(vector(&fields, "EntryPosition")?),
+                        orientation: number(&fields, "EntryRotation")?,
+                    })
+                })
+                .transpose()?,
         };
         catalog.cornerstones = cornerstones::read_cornerstones(db, &catalog)?;
         Ok(catalog)
@@ -93,6 +105,12 @@ impl HousingCatalog {
             }
         }
         Ok(plots)
+    }
+
+    pub(crate) fn home_entry(&self) -> Result<WorldLocation, String> {
+        self.home_entry
+            .filter(|entry| entry.map_id == 2783)
+            .ok_or_else(|| "The authenticated Home Interior map entry is unavailable.".into())
     }
 
     pub(crate) fn cornerstones(&self) -> Vec<crate::game_objects::GameObjectSpawn> {

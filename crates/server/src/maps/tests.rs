@@ -246,6 +246,86 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     assert_eq!(cornerstones_in(restarted.app.world_mut(), place.map), 1);
 }
 
+#[test]
+fn housing_wire_home_map_admission_restores_visited_identity_without_component_grants() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("visited-house.redb");
+    let db = redb::Database::create(&path).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let mut h = housing_harness(db);
+    let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(owner.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    assert_eq!(
+        h.housing_request(
+            &owner,
+            HousingCommand::EnterNeighborhood { neighborhood_id: 1 }
+        )
+        .error,
+        None
+    );
+    h.ack(&owner);
+    h.walk_to(&owner, Vec3::new(2942.744, -214.26563, 113.11285));
+    let bought = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    let house = &bought.state.owned_houses[0];
+    let house_id = house.house_id;
+    assert!(!house.interior_grant_available && !house.exterior_grant_available);
+    let entered = h.housing_request(&owner, HousingCommand::EnterHouse { house_id });
+    assert_eq!(
+        entered.error, None,
+        "raw authored Home Interior map admission is not a component grant"
+    );
+    assert_eq!(h.map_of(&owner), None);
+    assert_eq!(h.new_worlds(&owner).last().unwrap().map_id, 2783);
+    h.ack(&owner);
+    let map = h.map_of(&owner).unwrap();
+    assert_eq!(map.map_id, 2783);
+    let position = bevy(Vec3::new(-1000.0, -1000.0, 0.1));
+    assert_eq!(
+        *h.app.world().get::<Position>(owner.player).unwrap(),
+        position
+    );
+    let layout = h.housing_request(&owner, HousingCommand::ReloadLayout { house_id });
+    assert!(layout.state.layout.unwrap().can_edit);
+    drop(h);
+    let mut restarted = housing_harness(redb::Database::open(&path).unwrap());
+    let place = restarted
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                1,
+                RaidDifficulty::default(),
+                2783,
+                position,
+            )
+        })
+        .unwrap()
+        .expect("persisted visited-house identity must survive restart");
+    assert_eq!(place.map.map_id, 2783);
+    assert_eq!(
+        restarted
+            .app
+            .world()
+            .resource::<InstanceManager>()
+            .housing_property(place.map),
+        Some(house_id)
+    );
+    assert_eq!(place.position, position);
+}
+
 fn cornerstones_in(world: &mut World, map: InMap) -> usize {
     let mut objects = world.query::<(&InMap, &GameObjectInfo, &Position)>();
     objects

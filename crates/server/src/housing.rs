@@ -171,10 +171,8 @@ fn apply_house_command(
 ) -> Result<(), String> {
     match command {
         HousingCommand::PurchasePlot { plot_id } => purchase_plot(world, actor, context, *plot_id)?,
-        HousingCommand::EnterHouse { house_id } => {
-            refuse_unavailable_house_entry(world, context, *house_id)?
-        }
-        HousingCommand::LeaveHouse => return Err("House entry is not yet supported.".into()),
+        HousingCommand::EnterHouse { house_id } => enter_house(world, actor, context, *house_id)?,
+        HousingCommand::LeaveHouse => leave_house(world, actor, context)?,
         HousingCommand::SetHouseAccessAnyone { house_id, allowed } => {
             store::set_access(
                 &world.resource::<GameDatabase>().db,
@@ -229,16 +227,67 @@ pub(crate) fn collect_authenticated_item(
     Ok(())
 }
 
-fn refuse_unavailable_house_entry(
-    world: &World,
+fn enter_house(
+    world: &mut World,
+    actor: Actor,
     context: store::Actor,
     house_id: u64,
 ) -> Result<(), String> {
+    store::house(&world.resource::<GameDatabase>().db, context, house_id)?;
+    let entry = catalog(world)?.home_entry()?;
+    transfer_property(world, actor, entry, house_id)?;
+    store::save_house_location(&world.resource::<GameDatabase>().db, context, house_id)
+}
+
+fn leave_house(world: &mut World, actor: Actor, context: store::Actor) -> Result<(), String> {
+    let house_id = context
+        .inside_house
+        .ok_or("Enter a house before leaving it.")?;
     let house = store::house(&world.resource::<GameDatabase>().db, context, house_id)?;
-    if !house.interior_grant_available {
-        return Err("No verified first-house interior grant source is available; entry is not yet supported.".into());
+    let plot = catalog(world)?.plot(house.plot_id)?.clone();
+    let neighborhood = catalog(world)?.neighborhood(house.neighborhood_id)?.clone();
+    let destination = crate::maps::WorldLocation {
+        map_id: neighborhood.entry.map_id,
+        position: Vec3::from_array(plot.teleport),
+        orientation: neighborhood.entry.orientation,
+    };
+    transfer_property(world, actor, destination, u64::from(house.neighborhood_id))?;
+    store::save_neighborhood_location(
+        &world.resource::<GameDatabase>().db,
+        actor.character,
+        &store::NeighborhoodLocation {
+            map_id: destination.map_id,
+            neighborhood_id: house.neighborhood_id,
+        },
+    )
+}
+
+fn transfer_property(
+    world: &mut World,
+    actor: Actor,
+    destination: crate::maps::WorldLocation,
+    property_id: u64,
+) -> Result<(), String> {
+    if world.get::<InMap>(actor.player).is_none() {
+        return Err("Finish the current map transfer first.".into());
     }
-    Err("House component placement is not yet supported.".into())
+    world
+        .resource_scope(|world, mut manager: Mut<InstanceManager>| {
+            manager.authorize_housing_entry(
+                world.resource::<MapStore>(),
+                destination.map_id,
+                property_id,
+                actor.character,
+            )
+        })
+        .map_err(|reason| format!("Housing admission refused: {reason:?}"))?;
+    if !crate::maps::teleport_to(world, actor.player, destination, TeleportOptions::default()) {
+        world
+            .resource_mut::<InstanceManager>()
+            .revoke_housing_entry(actor.character);
+        return Err("Housing transfer was refused.".into());
+    }
+    Ok(())
 }
 
 fn enter_neighborhood(world: &mut World, actor: Actor, neighborhood_id: u32) -> Result<(), String> {

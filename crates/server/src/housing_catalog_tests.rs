@@ -22,6 +22,12 @@ pub(crate) fn catalog_fixture() -> Connection {
         params![BUILD_KEY, neighborhood.to_string()],
     )
     .unwrap();
+    let interior = serde_json::json!({"MapID":"2783", "EntryPosition_0":"-1000", "EntryPosition_1":"-1000", "EntryPosition_2":"0.1", "EntryRotation":"0"});
+    db.execute(
+        "INSERT INTO housing_catalog_record VALUES (?, 'NeighborhoodMap', 7, ?)",
+        params![BUILD_KEY, interior.to_string()],
+    )
+    .unwrap();
     let plot = serde_json::json!({"NeighborhoodMapID":"1", "PlotIndex":"0", "Name":"", "Cost":"10000000", "CornerstonePosition_0":"2942.743896484375", "CornerstonePosition_1":"-214.265625", "CornerstonePosition_2":"113.11284637451172", "TeleportPosition_0":"2939.34375", "TeleportPosition_1":"-212.25540161132812", "TeleportPosition_2":"113.32099914550781", "CornerstoneGameObjectID":"527268"});
     db.execute(
         "INSERT INTO housing_catalog_record VALUES (?, 'NeighborhoodPlot', 417, ?)",
