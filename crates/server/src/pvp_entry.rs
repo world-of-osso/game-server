@@ -116,6 +116,7 @@ fn create_match_map(
         .copied()
         .collect();
     let capacity = u32::from(template.team_size) * 2;
+    let arena = invitation.arena.is_some();
     let now = crate::maps::difficulty::now(world);
     let map = world
         .resource_scope(|world, mut instances: Mut<InstanceManager>| {
@@ -134,5 +135,9 @@ fn create_match_map(
         .expect("validated match")
         .map = Some(map);
     crate::maps::transfer::spawn_map_content(world, map);
+    if arena {
+        super::arena_objects::prepare_map(world, map);
+        super::arena_sight::prepare_map(world, map);
+    }
     Ok(map)
 }
