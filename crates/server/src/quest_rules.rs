@@ -246,7 +246,7 @@ pub(crate) fn objective_counts(
     active: &ActiveQuestData,
     bag_count: impl Fn(u32) -> u32,
 ) -> Vec<u32> {
-    quest
+    let mut counts: Vec<_> = quest
         .objectives
         .iter()
         .enumerate()
@@ -257,7 +257,9 @@ pub(crate) fn objective_counts(
             };
             current.min(objective.required)
         })
-        .collect()
+        .collect();
+    crate::world_quest_objectives::derive_progress_bars(quest, &mut counts);
+    counts
 }
 
 pub(crate) fn objectives_done(quest: &QuestTemplate, counts: &[u32]) -> bool {
@@ -268,7 +270,11 @@ pub(crate) fn objectives_done(quest: &QuestTemplate, counts: &[u32]) -> bool {
         .objectives
         .iter()
         .zip(counts)
-        .all(|(objective, &count)| count >= objective.required)
+        .enumerate()
+        .all(|(index, (objective, &count))| {
+            !crate::world_quest_objectives::rule(quest, index).required()
+                || count >= objective.required
+        })
 }
 
 /// TrinityCore `.quest complete` for the counted objectives: every kill and object

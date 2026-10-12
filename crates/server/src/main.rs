@@ -127,6 +127,7 @@ mod wild_pet_battles;
 mod world_data;
 mod world_map;
 mod world_quest_availability;
+mod world_quest_objectives;
 mod world_quest_rewards;
 mod world_quests;
 mod world_time;

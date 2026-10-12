@@ -222,6 +222,10 @@ pub(crate) fn load_definitions(conn: &rusqlite::Connection) -> rusqlite::Result<
 }
 
 #[cfg(test)]
+#[path = "world_quest_objective_tests.rs"]
+mod objective_tests;
+
+#[cfg(test)]
 #[path = "world_quest_expiry_tests.rs"]
 mod expiry_tests;
 
