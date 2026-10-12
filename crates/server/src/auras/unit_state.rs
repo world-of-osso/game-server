@@ -98,7 +98,11 @@ fn reconcile_scale(world: &mut World, unit: Entity) {
     } else {
         0.01
     };
-    let scale = shared::components::UnitScale((1.0 + points / 100.0).max(minimum));
+    let object_scale = (1.0 + points / 100.0).max(minimum);
+    let display_scale = world
+        .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+        .map_or(1.0, |summon| summon.display_scale);
+    let scale = shared::components::UnitScale(object_scale * display_scale);
     if world.get::<shared::components::UnitScale>(unit).copied() == Some(scale) {
         return;
     }

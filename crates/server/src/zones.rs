@@ -742,6 +742,7 @@ mod tests {
             unit_flags: 0,
             models: vec![CreatureModelInfo {
                 display_id,
+                display_scale: 1.0,
                 probability: 1.0,
                 is_trigger: false,
             }],
@@ -953,6 +954,7 @@ mod tests {
     fn model(display_id: u32, probability: f32, is_trigger: bool) -> CreatureModelInfo {
         CreatureModelInfo {
             display_id,
+            display_scale: 1.0,
             probability,
             is_trigger,
         }
