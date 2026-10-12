@@ -150,6 +150,19 @@ pub struct DeathState {
     pub respawn_timer: f32,
 }
 
+/// TC Creature::SetUnkillable, CREATURE_STATIC_FLAG_UNKILLABLE.
+#[derive(Component, Debug)]
+pub(crate) struct Unkillable;
+
+/// TC Unit.cpp936–945: other units' lethal damage leaves an unkillable creature at1HP.
+pub(crate) fn limit_unkillable_loss(current_health: f32, loss: f32, protected: bool) -> f32 {
+    if protected && loss >= current_health {
+        (current_health - 1.0).max(0.0)
+    } else {
+        loss
+    }
+}
+
 /// Seconds from death to respawn: AzerothCore `Creature::setDeathState`
 /// `m_respawnTime = now + m_respawnDelay (spawntimesecs) + m_corpseDelay`.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
@@ -422,6 +435,7 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static shared::components::UnitFlags>,
         CanAvoid<'static>,
         Option<&'static shared::components::PlayerStandState>,
+        Has<Unkillable>,
     ),
 >;
 
@@ -906,7 +920,7 @@ fn melee_damage_splits(
     attacker: Entity,
 ) -> Vec<crate::auras::damage_transfer::Split> {
     let candidates = match targets.get_mut(victim) {
-        Ok((_, _, _, _, _, _, _, _, _, avoidance, _)) => {
+        Ok((_, _, _, _, _, _, _, _, _, avoidance, _, _)) => {
             crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
         }
         Err(_) => return Vec::new(),
@@ -918,7 +932,8 @@ fn melee_damage_splits(
         {
             continue;
         }
-        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _)) = targets.get_mut(split.recipient)
+        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _, _)) =
+            targets.get_mut(split.recipient)
         else {
             continue;
         };
@@ -974,6 +989,7 @@ fn try_swing(
         flags,
         mut avoidance,
         stand_state,
+        unkillable,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -1081,7 +1097,11 @@ fn try_swing(
         duel,
         attacker.entity,
         health.current,
-        health_loss(training_dummy, scaled_loss),
+        limit_unkillable_loss(
+            health.current,
+            health_loss(training_dummy, scaled_loss),
+            unkillable && attacker.entity != target_entity,
+        ),
     );
     let rescue =
         crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss);
@@ -1376,6 +1396,8 @@ pub(crate) fn deal_health_damage(
         return;
     };
     let before = health.current;
+    let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
+    let loss = limit_unkillable_loss(before, loss, protected);
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
