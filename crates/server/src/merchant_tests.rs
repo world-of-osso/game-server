@@ -315,6 +315,77 @@ impl Harness {
     }
 }
 
+#[test]
+fn mount_journal_authentic_vendor_purchase_then_learn_preserves_appearance_collection() {
+    let mut h = harness().expect("authentic Katie Hunter and mount data");
+    let catalog = crate::mount_journal::load(&h.conn).unwrap();
+    h.app.insert_resource(catalog);
+    h.app.world_mut().entity_mut(h.player).insert(Level(60));
+    h.app.world_mut().entity_mut(h.connection).insert((
+        crate::auth::Authenticated { account_id: 1 },
+        pair::<shared::protocol::SelectGossipOption>(),
+    ));
+    h.set_gold(10_000);
+    let npc = h.open(384);
+    let opening = h.take::<InteractionOpened>().pop().unwrap();
+    if let InteractionKind::Gossip(menu) = opening.kind {
+        let option_id = menu
+            .options
+            .iter()
+            .find(|option| option.icon == 1)
+            .expect("authored vendor role")
+            .option_id;
+        h.send::<_, InteractionChannel>(shared::protocol::SelectGossipOption {
+            npc: npc.to_bits(),
+            option_id,
+        });
+    }
+    let offers = h
+        .take::<VendorInventory>()
+        .pop()
+        .expect("authentic vendor inventory");
+    let mount = offers
+        .items
+        .iter()
+        .find(|item| item.item_id == 5655)
+        .expect("Chestnut Mare Bridle");
+    assert_eq!(mount.price, 10_000);
+    let slot = mount.slot;
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let appearances = crate::persistence::appearance_store::load_account_appearances(db, 1);
+    h.buy(npc, slot, 5655, 1);
+    assert!(h.failures().is_empty());
+    assert_eq!(h.inventory().gold, 0);
+    assert_eq!(h.count_of(5655), vec![1]);
+    let location = h
+        .bag_view()
+        .into_iter()
+        .find(|(_, id, _)| *id == 5655)
+        .unwrap()
+        .0;
+    assert!(
+        crate::mount_journal::learn_item(h.app.world_mut(), h.character_id, h.player, location)
+            .unwrap()
+    );
+    assert!(h.count_of(5655).is_empty());
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        crate::persistence::mount_store::load(db, 1).get(&18),
+        Some(&false)
+    );
+    assert_eq!(
+        crate::persistence::appearance_store::load_account_appearances(db, 1),
+        appearances
+    );
+    h.buy(npc, slot, 5655, 1);
+    assert!(
+        !h.failures().is_empty(),
+        "Unaffordable mount purchase refuses"
+    );
+    assert!(h.count_of(5655).is_empty());
+    assert_eq!(h.inventory().gold, 0);
+}
+
 /// Tarnished Chain Vest 44/55 and Large Round Shield 25/35 (0.8 copper a point).
 fn damage_gear(h: &mut Harness) {
     let slot = |slot, item_id, current, max| DurabilitySlotState {
