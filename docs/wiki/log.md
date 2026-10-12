@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Kings' Rest source admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): Golden primary-only SQL preparation from pinned instance/header/script and local journal/TDB; no companion credit or canonical mutation. Missing emerge/intro pipeline and mutable-damage ordering remain named gaps, not a whole-boss port.
+
 - 2026-10-12 — [Murder Row mirror callbacks](systems/boss-scripts.md#murder-row-continuation-2026-10-12): source aura23 callback, random destination offset and wild creature-spawn lifecycle implemented after the inherited mirror test reproduced missing summons. Infusion remains a named source gap; no full-encounter or native acceptance claimed.
 
 - 2026-10-12 — [Encounter coverage](../encounter-coverage.md): complete hosted identity census and source-related work order; partial Kystia/Nibbles port. Friendly phase generic-evade boundary reproduced; scripted victim-update ownership preserves the source's skipped UpdateVictim. No full boss/instance certification.
