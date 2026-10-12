@@ -443,8 +443,63 @@ fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
         },
         crate::combat::AutoAttack::new(gold),
     ));
+    // Reproduce the failed boundary deterministically with native Dark Luck's
+    // -100 melee-hit field, rather than changing or seeding production RNG.
+    let before = h.health(gold).current;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: player,
+            target: player,
+            spell_id: 194356,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     h.advance(0.2);
-    assert_eq!(h.health(gold).current, 1.0);
+    assert_eq!(h.health(gold).current, before);
+    assert!(!h.has_aura(gold, 265915));
+    assert!(h.inbox(0).log.iter().any(|event| {
+        event.source == Some(player.to_bits())
+            && event.target == Some(gold.to_bits())
+            && matches!(event.kind, shared::protocol::CombatLogKind::Miss(_))
+    }));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        player,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 194356,
+    );
+    h.advance(1.8);
+    // Require an observed landed hit, not a lucky first roll.
+    // CharacterStats keeps the ordinary native hit table after debuff removal.
+    let mut landed = false;
+    for _ in 0..32 {
+        let location = *h.app.world().get::<Position>(gold).unwrap();
+        h.app.world_mut().entity_mut(player).insert(location);
+        h.advance(0.2);
+        landed = h.inbox(0).log.iter().any(|event| {
+            event.source == Some(player.to_bits())
+                && event.target == Some(gold.to_bits())
+                && event.spell_id.is_none()
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        });
+        if landed {
+            break;
+        }
+        h.advance(1.8); // Keep the native two-second weapon cadence between attempts.
+    }
+    let receipts: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(player.to_bits()) && event.target == Some(gold.to_bits())
+        })
+        .collect();
+    assert!(landed, "no landed melee hit: {receipts:?}");
+    assert_eq!(h.health(gold).current, 1.0, "{receipts:?}");
     assert!(h.has_aura(gold, 265915));
     assert!(
         h.app

@@ -20,6 +20,8 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+mod chrono_flame;
+pub(crate) use chrono_flame::record_health_change;
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
@@ -210,6 +212,8 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (DEMON_SPIKES, 0) => Some(demon_spikes),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
+        (chrono_flame::CHRONO_FLAMES, 0) => Some(living_flame),
+        (LIVING_FLAME_DAMAGE | LIVING_FLAME_HEAL, 0) => Some(chrono_flame::repeat_landed_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
         (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
         (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
@@ -545,6 +549,9 @@ pub fn check_target(
     spell_id: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
+    if spell_id == chrono_flame::CHRONO_FLAMES {
+        return chrono_flame::check_children(world);
+    }
     if spell_id == batch8::PROVOKE {
         return batch8::check_provoke(world, caster, target);
     }

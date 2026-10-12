@@ -26,6 +26,7 @@ struct ObjectTemplate {
     bounds: Option<GameObjectBounds>,
     chair: Option<crate::chair::Chair>,
     scripted: bool,
+    spellcaster: Option<super::spellcaster::SpellcasterObject>,
     cooking_focus: Option<(u32, f32)>,
     extra_focus_payload: bool,
 }
@@ -41,7 +42,7 @@ pub(crate) struct SummonedObject {
     pub expires_at: Option<f64>,
 }
 
-fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
+fn template_from_row(row: &Row, conn: &Connection) -> rusqlite::Result<(u32, ObjectTemplate)> {
     let entry = row.get(0)?;
     let go_type = row.get(1)?;
     let scale = row.get::<_, f64>(4)? as f32;
@@ -74,10 +75,22 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ObjectTemplate)> {
                 })
                 .transpose()?,
             scripted: !row.get::<_, String>(7)?.is_empty() || !row.get::<_, String>(8)?.is_empty(),
+            spellcaster: (go_type == super::spellcaster::GAMEOBJECT_TYPE_SPELLCASTER)
+                .then(|| -> rusqlite::Result<_> {
+                    Ok(super::spellcaster::SpellcasterObject {
+                        spell: row.get(16)?,
+                        charges: row.get(17)?,
+                        party_only: row.get::<_, u32>(18)? != 0,
+                        identity: super::identity_conditions::load_condition(conn, row.get(19)?)?,
+                        radius_override: row.get(20)?,
+                        uses: 0,
+                    })
+                })
+                .transpose()?,
             cooking_focus: (go_type == GAMEOBJECT_TYPE_SPELL_FOCUS)
                 .then(|| -> rusqlite::Result<_> { Ok((row.get(5)?, geo(6)?)) })
                 .transpose()?,
-            extra_focus_payload: row.get(16)?,
+            extra_focus_payload: row.get(21)?,
         },
     ))
 }
@@ -90,12 +103,13 @@ pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObje
     let focus_type = GAMEOBJECT_TYPE_SPELL_FOCUS;
     let sql = format!("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
         d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
+        t.Data0,t.Data1,t.Data2,t.Data5,t.Data8,
         t.type={focus_type} AND ({additional_focus_fields})<>0
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
         WHERE t.type={focus_type} OR t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)");
     let mut query = conn.prepare(&sql)?;
     let templates = query
-        .query_map([], template_from_row)?
+        .query_map([], |row| template_from_row(row, conn))?
         .collect::<rusqlite::Result<_>>()?;
     Ok(SummonedObjectTemplates(templates))
 }
@@ -124,6 +138,21 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
     }
     if template.scripted {
         return Some(format!("gameobject {entry} requires custom script"));
+    }
+    if let Some(spellcaster) = &template.spellcaster {
+        return spellcaster
+            .identity
+            .as_ref()
+            .err()
+            .map(|reason| format!("gameobject {entry}: {reason}"))
+            .or_else(|| {
+                template.bounds.is_none().then(|| {
+                    format!(
+                        "gameobject {entry} missing display {}",
+                        template.info.display_id
+                    )
+                })
+            });
     }
     let cooking_only = template
         .cooking_focus
@@ -226,6 +255,9 @@ fn spawn_object(
     ));
     if let Some(chair) = template.chair {
         object.insert(chair);
+    }
+    if let Some(spellcaster) = template.spellcaster {
+        object.insert(spellcaster);
     }
 }
 
