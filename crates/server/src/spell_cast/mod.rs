@@ -99,6 +99,8 @@ mod guardian;
 mod guardian_tests;
 mod hit;
 #[cfg(test)]
+mod linked_aura_tests;
+#[cfg(test)]
 mod minimum_speed_tests;
 mod missiles;
 mod open_lock;
