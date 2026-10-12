@@ -77,7 +77,7 @@ const STONE_LEVEL_QUERY: &str = "SELECT t.entry, l.maxlevel \
 
 const RITUAL_QUERY: &str = "SELECT t.entry, t.displayId, t.name, t.size, t.Data0, t.Data1, \
      t.Data6, d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5 \
-     FROM content_gameobject_template t \
+     FROM tdb_gameobject_template t \
      JOIN game_object_display_info d ON d.ID = t.displayId \
      WHERE t.type = ?1";
 
