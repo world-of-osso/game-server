@@ -12,7 +12,7 @@ One exclusive Update step initializes accounts, publishes context changes, then 
 
 Summon uses `cast_for_player`, and dismount uses `cancel_mount_aura`; existing riding/area/flight rules remain authoritative. Random candidates are owned usable favourites. Authored visibility flags and capability/positive-swim/FlightCapability/non-control passenger-seat categories are transmitted to the native journal; these categories are data-derived, not a claim of unpublished client classification parity.
 
-Verified2026-10-11: durable account/item tests and five journal transport/cast/boundary tests pass. Native both-skin acceptance remains open in the contract. World.db is read-only; existing1694 mount rows need no new import.
+Verified2026-10-12 after merging master99f61aec: 173 targeted `mount`/`merchant::`/`auction` server tests pass; private UDP5901 native runs pass in both skins for paid Katie Hunter item5655→Mount18, alternate-character persistence and two-account AH listing/buyout/mail/UseItem of unbound item44413→Mount275. World.db is read-only; existing1694 mount rows need no new import.
 
 ### Vendor acquisition
 

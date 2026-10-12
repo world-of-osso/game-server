@@ -1,5 +1,6 @@
 # Wiki Log
 
+- 2026-10-12 — [Mount Journal](systems/mounts.md#mount-journal): post-merge targeted mount/merchant/auction tests and both-skin native vendor and two-account AH acceptance; [contract](../specs/mount-journal.md) closed.
 - 2026-10-12 — [Mount vendor acquisition](systems/mounts.md#vendor-acquisition): authenticated mount-only ExtendedCost, exact currency precision, atomic payment/delivery and ItemSparse reputation authority; [pinned data/gaps](../mount-vendor-costs.md). Main owns native/integration acceptance.
 
 - 2026-10-11 — [Mount Journal](systems/mounts.md#mount-journal): read-only catalog, account item/favourite persistence and spell-backed requests; both auth-entry crash boundaries reproduced and fixed through one initialized Update step. Native/final acceptance remains tracked by the contract.
