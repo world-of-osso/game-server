@@ -19,6 +19,16 @@ python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/g
 
 This combined export includes the original audit, authenticated cornerstones and catalog acquisition sources:47 tables/70,552 rows/54 unreadable records. It supersedes the older35-table and cornerstone-only imports; each import replaces this build's records, so do not run an older export afterward. The same command with an isolated output database verifies the export. Static catalogs are not proof of playable neighborhoods, Housing Dashboard, decor acquisition, editor or visitor replication.
 
+### Lead-only preview asset publication
+
+After landing the client WMO receipt support and closure correction, publish the34authenticated preview assets (2M2,8skins,6WMO root/groups,18BLPs;2,037,802bytes) with the maintained no-clobber importer:
+
+```text
+python3 /home/osso/Projects/world-of-osso/game-engine/scripts/import_model_asset_chains.py --data /home/osso/Projects/world-of-osso/game-engine/data --product wow --staged-manifest /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/housing-core-2026-10-12/core7/preview-model-assets-staged.json --resolution /home/osso/.worktrees/housing-core-evidence/housing-resolution.sqlite --fragment housing-core7-preview
+```
+
+Staged source paths are durable, isolated diagnostic copies, not pool-slot paths. Content-key MD5 and SHA256 authenticate every payload against the frozen resolution snapshot; source identity/hash is retained. The isolated importer proof produces34receipts/8skin aliases and includes actual WMO6429362's auxiliary texture5984930, previously missed by the MOMT-vs-pixel-ID closure bug. This command mutates canonical data/cache and is lead-only; agents must not run it. It does not change world.db, housing.sqlite, grants or permissions and is not a full no-install/housing-art certification.
+
 ## Housing map metadata
 
 Load authored Map.db2 types 7 (House) and 8 (Neighborhood), retaining map2735/2736/2783 names and WDT FDIDs. They are not dungeons and generic continent/dungeon admission remains refused until the housing service authorizes a particular neighborhood/owner/visitor copy. Loading map metadata is not hosting playable housing.
@@ -29,7 +39,7 @@ No verified first-house exterior/interior grant source is available. Do not infe
 
 ## Default unlock sources (not a starter layout)
 
-The pinned Retail generated `PlayerHousingConstantsDocumentation.lua` names room UnlockedByDefault4, exterior-type UnlockedByDefault1, fixture IsDefaultFixture1/UnlockedByDefault2, theme UnlockedByDefault1 and wallpaper UnlockedByDefault1. Existing imported Flags fields identify14default room patterns,4default exterior types,17themes and17wallpapers. This narrows the prior source gap: default availability is sourced; first-house instance quantities, initial exterior choice/placement, starting room layout and level/budget thresholds are not established by those flags. Preserve unlock availability separately from storage/grants and assembly. Unknown NeighborhoodPlot vectors and unnamed GameParameter values remain uninterpreted.
+The pinned Retail generated `PlayerHousingConstantsDocumentation.lua` names room UnlockedByDefault4, exterior-type UnlockedByDefault1, fixture IsDefaultFixture1/UnlockedByDefault2, theme UnlockedByDefault1 and wallpaper UnlockedByDefault1. Existing imported Flags fields identify14HouseRoom rows with default-unlock bit4,4default exterior types,17themes and17wallpapers. This narrows the prior source gap: default availability is sourced; first-house instance quantities, initial exterior choice/placement, starting room layout and level/budget thresholds are not established by those flags. Preserve unlock availability separately from storage/grants and assembly. Unknown NeighborhoodPlot vectors and unnamed GameParameter values remain uninterpreted.
 
 Dye source contracts are also narrower than category matching: `HousingDecorSharedDocumentation.lua` says slots currently accept colors of any category. `Blizzard_HouseEditorCustomizationDyeTemplates.lua` charges one real DyeColor.ItemID per changed preview dye slot and validates cumulative item counts. These sources do not establish the native gradient/shader payload or a legal starter assembly. Do not invent dye items, enforce category restrictions absent from Retail, or substitute colors.
 
