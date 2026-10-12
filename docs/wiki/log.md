@@ -5,6 +5,8 @@
 - 2026-10-11 — [Class completeness continuation](../class-completeness2.md): native ground/rectangle selectors, retail ritual metadata, controlled elemental lifecycle and persisted owned-item unlocks; batch12 receipts and source/threshold limits recorded. Whole13-class/40-spec and remaining-class live acceptance stay open.
 
 - 2026-10-11 — [Level80 class completeness](systems/spell-casting.md#level80-class-completeness):7827 native memberships/all13/all40 build-union cast/passive receipts;2841 working-boundary/4607 partial/379 broken. Source-derived537 owner/label,457 category charge haste/progress,416 masked truncated cooldowns; signed Rune/Runic generation and full/partial-school miss cost boundaries. Real-row RED/GREEN, targeted resource controls, no full suite/DB write/master merge/UDP5000. [Contract](../specs/class-completeness.md) and [proof limits](../class-completeness.md) retain legal-build, missing-data and underivable mechanic gaps.
+- 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
+
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
 
 - 2026-10-11 — [SmartAI final integration](../smartai-census.md#proof): code65dee4d9 keeps master follower leash exclusion/data-selected boss tracking; targeted53PASS/1pre-existingignored, importer2PASS and enginephysics14PASS; check/fmt clean. Rebuilt final binaries completed both native skins on explicit authentic legacy copy;12 new inspected PNGs. Mixed-Retail scaling and unsupported vocabulary remain open; independent verifier unavailable.
@@ -897,3 +899,10 @@ Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reus
 - [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.
 
 - 2026-10-11 class-completeness2: [continuation](../class-completeness2.md) records cone24/corpse119, portals/identity predicates, corrected random72/86/91, and authentic class summon-template closure. Latest probe2854/4776/197; Monk cone has private both-skin receipts. Whole goal remains open.
+## 2026-10-11 — additional profession references
+
+Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [receipt](reference/profession-reference-import.md) separates concrete data from unresolved quality/concentration/recraft formulas. No canonical DB mutation or runtime acceptance claim.
+
+## 2026-10-11 — profession specialization runtime
+
+Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.
