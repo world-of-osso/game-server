@@ -12,7 +12,7 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1, 34, 670, 2106)
+RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998, 727)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
 # spawns in it are seen by everyone, like PhaseId 0.
 DEFAULT_PHASE = 169
@@ -48,7 +48,7 @@ SPAWN_DIFFICULTIES = f"""(SELECT group_concat(difficulty, ',') FROM (SELECT r.di
 
 def create_retail_map_table(conn):
     """temp.retail_map: each (RETAIL_MAPS map, difficulty its copies spawn at): 0 for open world, every
-    MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use0."""
+    MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use 0."""
     rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({MAP_LIST})"))
     missing = [m for m in RETAIL_MAPS if m not in rows]
     unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND)}
@@ -251,6 +251,8 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     66768, 114846, 175582, 263908, 270689,
     # Source-defined scaled scenery, with independent display/object scale.
     156086, 241494, 246171, 267634,
+    # Source-complete stationary warning signs, without interactions.
+    73781, 88280, 156052, 218978,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
