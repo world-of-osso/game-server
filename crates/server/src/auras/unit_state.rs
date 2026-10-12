@@ -91,7 +91,10 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
 }
 
 fn reconcile_preparation(world: &mut World, unit: Entity, preparing: bool) {
-    let previous = world.get::<UnitFlags>(unit).copied().unwrap_or_default();
+    let previous = world
+        .get::<UnitFlags>(unit)
+        .copied()
+        .unwrap_or(UnitFlags(0));
     let mut flags = previous;
     if preparing {
         flags.0 |= UnitFlags::ARENA_PREPARATION;
