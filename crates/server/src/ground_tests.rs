@@ -24,6 +24,23 @@ fn client_data_dir() -> PathBuf {
 /// `world/maps/azeroth/azeroth.wdt`.
 const AZEROTH_WDT_FDID: u32 = 775_971;
 
+#[test]
+fn silvershard_track_switch_approach_uses_real_floor_not_npc_pivot() {
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(727, 810604)]));
+    // Source4000143's exact pivot has no walkable WMO face at its authored height.
+    // The neighboring collision floor is a valid player approach within interaction range.
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(715.642, 100.165, 320.284);
+    assert_eq!(
+        ground.ground_at(727, Vec3::new(x, y, z)),
+        GroundProbe::Supported(0.0)
+    );
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(719.642, 100.165, 321.0);
+    let GroundProbe::Supported(height) = ground.ground_at(727, Vec3::new(x, y, z)) else {
+        panic!("missing approach floor beside source Track Switch");
+    };
+    assert!((height - 320.82416).abs() < 0.01, "approach floor {height}");
+}
+
 fn client_ground() -> GroundMap {
     GroundMap::new(
         &client_data_dir(),
