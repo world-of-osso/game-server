@@ -27,5 +27,9 @@ pub(crate) fn award_knowledge(
 }
 
 #[cfg(test)]
+#[path = "specializations/live_fixture.rs"]
+mod live_fixture;
+
+#[cfg(test)]
 #[path = "specializations/tests.rs"]
 mod tests;
