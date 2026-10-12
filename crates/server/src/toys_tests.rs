@@ -3902,6 +3902,130 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
 }
 
 #[test]
+fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
+    use crate::auras::ActiveAuras;
+    use shared::components::{Position, Rotation, UnitScale};
+    use shared::protocol::GameObjectInfo;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry) in [
+        (70722, 99767, 208935),
+        (104309, 148553, 223229),
+        (116435, 171549, 236014),
+        (116757, 171760, 236110),
+        (182780, 340241, 357706),
+        (184404, 345745, 364811),
+        (199892, 388258, 381360),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("linked-fire.redb"));
+        h.app.insert_resource(store.clone());
+        h.app.world_mut().entity_mut(h.caster).insert((
+            UnitScale(1.0),
+            Rotation {
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        h.advance(100);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let fire = world
+            .query::<(Entity, &GameObjectInfo)>()
+            .iter(world)
+            .find(|(_, info)| info.entry == entry)
+            .unwrap()
+            .0;
+        let traps: Vec<_> = world
+            .query::<(Entity, &GameObjectInfo)>()
+            .iter(world)
+            .filter(|(_, info)| info.entry == 31442)
+            .map(|(entity, info)| (entity, info.clone()))
+            .collect();
+        assert_eq!(traps.len(), 1);
+        let (trap, info) = &traps[0];
+        assert_eq!((info.go_type, info.display_id), (6, 0));
+        assert_eq!(world.get::<Position>(fire), world.get::<Position>(*trap));
+        assert_eq!(
+            world.get::<crate::maps::InMap>(fire),
+            world.get::<crate::maps::InMap>(*trap)
+        );
+        let aura = world
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 7353)
+            .unwrap();
+        assert_eq!(
+            aura.caster, *trap,
+            "linked trap is not owned by the toy caster"
+        );
+        assert_eq!(aura.effects[0].amount, 1.0);
+        assert_eq!(
+            world
+                .get::<crate::stats::StatModifiers>(h.caster)
+                .unwrap()
+                .ratings_flat
+                .versatility,
+            1.0
+        );
+        let fire_position = *world.get::<Position>(fire).unwrap();
+        // Once triggered, the 60s buff survives leaving the 10yd spell area.
+        world.entity_mut(h.caster).insert(Position {
+            x: fire_position.x + 30.0,
+            ..fire_position
+        });
+        h.advance(100);
+        assert!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 7353)
+        );
+        // Removing the focus despawns its linked trap; the already-cast buff is not an area lease.
+        h.app.world_mut().despawn(fire);
+        h.advance(2);
+        assert!(h.app.world().get_entity(*trap).is_err());
+        assert!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 7353)
+        );
+        h.advance(1300);
+        assert!(
+            !h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 7353)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::stats::StatModifiers>(h.caster)
+                .unwrap()
+                .ratings_flat
+                .versatility,
+            0.0
+        );
+    }
+}
+
+#[test]
 fn toyfx17_cozy_fire_adds_source_versatility_rating_and_restores_it() {
     use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
     use shared::components::{CombatRatings, Position};
