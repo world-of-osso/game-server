@@ -28,7 +28,17 @@ fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
     });
-    let scripts = smart_ai::load_smart_scripts(&path).unwrap();
+    let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
+    if entry == 3674 {
+        // Pin the successful branch of Skum's authored80% chance; keep the
+        // real3–4s selected timer, spell and target. Production is unchanged.
+        for row in std::sync::Arc::make_mut(scripts.0.get_mut(&entry).unwrap()) {
+            if row.action_type == 11 {
+                assert_eq!(row.chance, 80);
+                row.chance = 100;
+            }
+        }
+    }
     let mut spell_ids = vec![133];
     if let Some(rows) = scripts.0.get(&entry) {
         spell_ids.extend(
@@ -116,10 +126,46 @@ fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
+fn boss_timeline_data_bound_skum_uses_its_authored_smartai_deadline() {
+    use shared::protocol::EncounterTimelineEvent;
+    let (mut h, boss, _) = bound_boss(3674, 43, 4);
+    h.engage(boss);
+    h.advance(0.1);
+    let timer = h
+        .inbox(0)
+        .timeline
+        .iter()
+        .find_map(|event| match event {
+            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
+                timers.iter().find(|timer| timer.spell_id == 6254)
+            }
+            _ => None,
+        })
+        .expect("data-bound Skum selected3–4s Knockdown timer")
+        .clone();
+    assert!((3000..=4000).contains(&timer.remaining_ms));
+    assert!(h.inbox(1).timeline.is_empty());
+    h.advance(timer.remaining_ms as f32 / 1000.0 - 0.25);
+    assert!(
+        !h.inbox(0)
+            .timeline
+            .iter()
+            .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+    );
+    h.advance(0.3);
+    assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
+        EncounterTimelineEvent::Cast { caster, spell_id:6254, .. } if *caster == boss.to_bits())));
+}
+
+#[test]
 fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
     // Authentic local journal/display/map joins; neither has Rust registration.
     for (entry, map_id, bit, encounter) in [(6910, 70, 0, 547), (12118, 409, 0, 663)] {
         let (mut h, boss, map) = bound_boss(entry, map_id, bit);
+        let database_file = tempfile::NamedTempFile::new().unwrap();
+        h.app.insert_resource(crate::persistence::GameDatabase {
+            db: redb::Database::create(database_file.path()).unwrap(),
+        });
         h.engage(boss);
         h.advance(0.05);
         assert_eq!(
@@ -169,6 +215,27 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
             instance_script::done_boss_entries(h.app.world().resource::<MapStore>(), map_id, done),
             vec![entry]
         );
+        if map_id == 409 {
+            use redb::ReadableDatabase;
+            let txn = h
+                .app
+                .world()
+                .resource::<crate::persistence::GameDatabase>()
+                .db
+                .begin_read()
+                .unwrap();
+            let table = txn
+                .open_table(redb::TableDefinition::<&str, &[u8]>::new(
+                    "raid_first_kills_v1",
+                ))
+                .unwrap();
+            let difficulty = instances.copy_difficulty(map).unwrap().difficulty_id;
+            let key = format!("character:2001:409:{difficulty}:663");
+            let row = table.get(key.as_str()).unwrap().unwrap();
+            let credit: serde_json::Value = serde_json::from_slice(row.value()).unwrap();
+            assert_eq!(credit["participants"][0]["character_id"], "2001");
+            assert_eq!(credit["participants"].as_array().unwrap().len(), 1);
+        }
     }
 }
 

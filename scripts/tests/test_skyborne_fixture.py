@@ -48,6 +48,18 @@ class PortableFixtureTest(unittest.TestCase):
                     table,
                 )
             self.assertEqual(
+                portable.execute("SELECT ID,ArmorTypeMask FROM chr_classes ORDER BY ID").fetchall(),
+                [(1, 113), (3, 41), (4, 37), (7, 2665), (8, 35), (11, 2341)],
+            )
+            self.assertEqual(
+                portable.execute(
+                    "SELECT DISTINCT e.SpellID,e.EquippedItemSubclass "
+                    "FROM spell_equipped_items e JOIN spell_effect f ON f.SpellID=e.SpellID "
+                    "WHERE f.Effect=60 AND e.EquippedItemClass=2"
+                ).fetchall(),
+                [],
+            )
+            self.assertEqual(
                 portable.execute(
                     "SELECT ClassID,SubclassID,Stackable,VendorStackCount FROM skyborne_content_item WHERE ID=2947"
                 ).fetchone(),

@@ -32,3 +32,4 @@ Private UDP5760, two fb_* accounts, Modern/Forever: native menu/group/portal/Rai
 
 - [[content-import]] — instance population prerequisite; branches dungeon-population17374e7 and dungeon-loot87d51eb.
 - [[quest-share-resets]] — same Tuesday15:00 UTC weekly calendar.
+- [[site-snapshots]] — separate future first-kill/guild-credit history; never infer lifetime progress from reset locks.
