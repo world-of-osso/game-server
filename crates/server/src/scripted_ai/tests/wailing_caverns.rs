@@ -145,6 +145,8 @@ fn boss_timeline_phase_changes_follow_active_encounter_not_spawn_or_evade_reset(
         action_type: 22,
         action_params: [phase, 0, 0, 0, 0, 0, 0],
         target_type: 0,
+        target_params: [0; 4],
+        target_position: [0.0; 4],
     };
     let (mut h, boss) =
         cobrahn_with_events(vec![phase_event(1001, 25, 1), phase_event(1002, 4, 2)]);

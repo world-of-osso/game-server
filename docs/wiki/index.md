@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
 - [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
 - [Static armory snapshots](systems/site-snapshots.md) — public-only offline JSON, local PNG icons, attributable future M+ completion and raid first-kill/guild credit; no listener or production publishing.
 
