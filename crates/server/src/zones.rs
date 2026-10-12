@@ -216,7 +216,11 @@ pub(crate) fn spawn_creature(
         let display_id = choose_display_id(template, spawn, rng);
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
-        let mut entity = commands.spawn((bundle, map));
+        let mut entity = commands.spawn((
+            bundle,
+            map,
+            crate::creature_ai::HomeOrientation(spawn.orientation + std::f32::consts::FRAC_PI_2),
+        ));
         if let Some((scaling, tuning)) = scaling {
             entity.insert((scaling, ScaledStats(tuning.stats.clone())));
         }
@@ -369,6 +373,16 @@ pub(crate) fn summon_creature(
     });
     queue.apply(world);
     if let Some(summon) = summon {
+        crate::scripted_ai::dispatch(
+            world,
+            summon,
+            crate::scripted_ai::Hook::IsSummonedBy(summoner),
+        );
+        crate::scripted_ai::dispatch(
+            world,
+            summoner,
+            crate::scripted_ai::Hook::JustSummoned(summon),
+        );
         info!("{summoner} summoned creature {entry} as {summon} at {position:?}");
     }
     summon
