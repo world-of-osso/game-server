@@ -64,6 +64,16 @@ fn arathi_multiple_players_finish_at_authored_resource_limit() {
 }
 
 #[test]
+fn objective_tick_without_matches_needs_no_world_object_catalog() {
+    let mut world = World::new();
+    world.init_resource::<PvpServerState>();
+    for _ in 0..200 {
+        super::pvp_objective::update_battleground_objectives(&mut world);
+    }
+    assert!(world.resource::<PvpServerState>().battleground_matches.is_empty());
+}
+
+#[test]
 fn matched_warsong_players_keep_an_invitation_until_their_response() {
     let mut state = PvpServerState::default();
     let template = shared::battleground::warsong_gulch();
