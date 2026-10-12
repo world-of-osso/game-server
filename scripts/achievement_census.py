@@ -11,7 +11,7 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 12, 27, 28, 29, 34, 36, 41, 42, 43, 46, 68, 69, 73, 74, 75, 96, 130, 156, 157, 158, 165, 216}
+BASE_TYPES = {0, 1, 5, 7, 8, 12, 27, 28, 29, 34, 36, 41, 42, 43, 46, 68, 69, 73, 74, 75, 96, 130, 156, 157, 158, 165, 185, 186, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -38,7 +38,7 @@ def walk_tree(root, rows, children, visiting=frozenset()):
     return descendants, errors
 
 
-def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures):
+def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, toy_items):
     supported = set()
     for row_id, row in criteria.items():
         kind, asset = int(row['Type']), int(row['Asset'])
@@ -56,9 +56,11 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue  # TDB1210 orphan aura66303 and holiday404 requirements.
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
-        if kind in (74, 130, 156, 157, 158) and asset != 0:
+        if kind in (74, 130, 156, 157, 158, 186) and asset != 0:
             continue
         if kind == 43 and asset not in overlay_assets:
+            continue
+        if kind == 185 and asset not in toy_items:
             continue
         if kind == 96 and asset not in pet_creatures:
             continue
@@ -91,13 +93,14 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
         spells = {row[0] for row in db.execute('SELECT ID FROM spell')}
         skills = {row[0] for row in db.execute('SELECT ID FROM skill_line')}
         pet_creatures = {row[0] for row in db.execute('SELECT creature_id FROM battle_pet_species WHERE creature_id != 0')}
+        toy_items = {row[0] for row in db.execute('SELECT ItemID FROM toy')}
         areas = {row[0] for row in db.execute('SELECT ID FROM area_table WHERE ID != 0 AND AreaBit >= 0')}
     header, overlays = db2_casc.decode(overlays_path.read_bytes())
     if header['layout_hash'] != 0x9A196494:
         raise ValueError('requires pinned WorldMapOverlay layout9A196494')
     overlay_assets = {row_id for row_id, row in overlays.items() if any(area in areas for area in row[12:16])}
     mythic_ids = qualified_mythic_criteria(criteria, modifiers)
-    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures)
+    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, toy_items)
     by_type = collections.defaultdict(set)
     records = {}
     for row_id, row in achievements.items():
@@ -135,7 +138,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     trackable = [row for row in records.values() if row['trackable']]
     ranking = []
     for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
-        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets, pet_creatures)
+        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets, pet_creatures, toy_items)
         gain = sum(not records[id]['trackable'] and not records[id]['flags'] & (1 | 0x4000)
                    and supports_tree(records[id]['root'], trees, children, newly_supported)
                    for id in ids)

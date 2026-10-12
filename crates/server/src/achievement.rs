@@ -307,6 +307,19 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     }
 }
 
+pub(crate) fn record_toy_ownership(world: &mut World, player: Entity, account: u64) {
+    let toys = crate::persistence::toy_store::load(&world.resource::<GameDatabase>().db, account);
+    let events: Vec<_> = toys
+        .keys()
+        .copied()
+        .map(CriteriaEvent::LearnToy)
+        .chain(std::iter::once(CriteriaEvent::OwnToys(
+            u32::try_from(toys.len()).expect("toy count fits u32"),
+        )))
+        .collect();
+    record_criteria_events(world, player, &events);
+}
+
 /// Retail CriteriaType157 AccountObtainPetThroughBattle: committed trap reward, not request.
 pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::CaptureBattlePet);

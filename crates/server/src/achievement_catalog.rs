@@ -31,6 +31,8 @@ pub(crate) enum CriteriaEvent {
     KnowSkillLineSpells(u32, u32),
     KnowPetCreature(u32),
     OwnUniquePets(u32),
+    LearnToy(u32),
+    OwnToys(u32),
     WinPetBattle,
     CaptureBattlePet,
     Login,
@@ -62,6 +64,8 @@ impl CriteriaEvent {
             Self::KnowSkillLineSpells(_, _) => 75,
             Self::KnowPetCreature(_) => 96,
             Self::OwnUniquePets(_) => 156,
+            Self::LearnToy(_) => 185,
+            Self::OwnToys(_) => 186,
             Self::WinPetBattle => 158,
             Self::CaptureBattlePet => 157,
             Self::Login => 74,
@@ -87,6 +91,7 @@ impl CriteriaEvent {
             Self::ReachLevel(_) => true,
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::OwnUniquePets(_)
+            | Self::OwnToys(_)
             | Self::WinPetBattle
             | Self::CaptureBattlePet
             | Self::Login
@@ -111,6 +116,7 @@ impl CriteriaEvent {
             | Self::UseItem(asset)
             | Self::UseGameObject(asset)
             | Self::KnowPetCreature(asset)
+            | Self::LearnToy(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -423,7 +429,11 @@ impl AchievementCatalog {
             }
             for (id, value) in contribution.criteria_progress {
                 // Account-journal quantities come from the owning journal, not stale character facts.
-                if self.criteria.get(&id).is_some_and(|row| row.kind == 156) {
+                if self
+                    .criteria
+                    .get(&id)
+                    .is_some_and(|row| matches!(row.kind, 156 | 185 | 186))
+                {
                     continue;
                 }
                 if !contribution.signed_reputation
@@ -466,7 +476,9 @@ impl AchievementCatalog {
         // TC SetCriteriaProgress does not create a first zero-valued progress row.
         if matches!(
             event,
-            CriteriaEvent::KnowSkillLineSpells(_, 0) | CriteriaEvent::OwnUniquePets(0)
+            CriteriaEvent::KnowSkillLineSpells(_, 0)
+                | CriteriaEvent::OwnUniquePets(0)
+                | CriteriaEvent::OwnToys(0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -478,10 +490,11 @@ impl AchievementCatalog {
             CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
-            | CriteriaEvent::KnowPetCreature(_) => 1,
-            CriteriaEvent::KnowSkillLineSpells(_, count) | CriteriaEvent::OwnUniquePets(count) => {
-                u64::from(count)
-            }
+            | CriteriaEvent::KnowPetCreature(_)
+            | CriteriaEvent::LearnToy(_) => 1,
+            CriteriaEvent::KnowSkillLineSpells(_, count)
+            | CriteriaEvent::OwnUniquePets(count)
+            | CriteriaEvent::OwnToys(count) => u64::from(count),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::CurrencyGained(_, amount)
             | CriteriaEvent::AcquireItem(_, amount)
@@ -497,6 +510,26 @@ impl AchievementCatalog {
     ) {
         for &id in self.event_criteria.get(&156).into_iter().flatten() {
             Self::update_counter(state, id, CriteriaEvent::OwnUniquePets(count));
+        }
+    }
+
+    pub(super) fn set_account_toy_ownership(
+        &self,
+        state: &mut PlayerAchievementState,
+        toys: &BTreeMap<u32, bool>,
+    ) {
+        for &id in self.event_criteria.get(&185).into_iter().flatten() {
+            let item = self.criteria[&id].asset;
+            if toys.contains_key(&item) {
+                Self::update_counter(state, id, CriteriaEvent::LearnToy(item));
+            }
+        }
+        for &id in self.event_criteria.get(&186).into_iter().flatten() {
+            Self::update_counter(
+                state,
+                id,
+                CriteriaEvent::OwnToys(u32::try_from(toys.len()).expect("toy count fits u32")),
+            );
         }
     }
 
@@ -706,7 +739,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset) FROM criteria c")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -743,7 +776,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
-                        || (matches!(kind, 74 | 130 | 156 | 157 | 158) && row.get::<_, i32>(2)? == 0)
+                        || (kind == 185 && row.get::<_, bool>(10)?)
+                        || (matches!(kind, 74 | 130 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
