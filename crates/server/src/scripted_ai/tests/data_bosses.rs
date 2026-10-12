@@ -142,7 +142,7 @@ fn boss_timeline_data_bound_skum_has_no_smartai_alert_fallback() {
 }
 
 #[test]
-fn bossmod_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_warnings() {
+fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_warnings() {
     use shared::protocol::{EncounterSeverity, EncounterTimelineEvent};
     for (entry, encounter, bit, spell, initial, repeat) in [
         (13280, 344, 1, 22421, 5700, 8500),

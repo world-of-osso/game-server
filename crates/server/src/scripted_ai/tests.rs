@@ -177,6 +177,7 @@ fn stockade_app(data: &'static Data) -> App {
         ScriptedAiPlugin,
         crate::achievement::AchievementPlugin,
     ));
+    app.insert_resource(bossmod::Catalog::default());
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
