@@ -663,6 +663,7 @@ fn world_quest_player_kills_use_authoritative_deaths_personal_credit_and_faction
                 ObjectiveRule::default(),
                 ObjectiveRule {
                     flags: 128,
+                    flags2: 0,
                     weight: 0.,
                 },
                 ObjectiveRule::default(),

@@ -52,23 +52,28 @@ fn world_quest_weighted_progress_uses_hidden_counts_and_optional_rows_never_bloc
         world_objective_rules: Some(vec![
             ObjectiveRule {
                 flags: 28,
+                flags2: 0,
                 weight: 0.,
             },
             ObjectiveRule {
                 flags: 2,
+                flags2: 0,
                 weight: 0.,
             },
             ObjectiveRule {
                 flags: 92,
+                flags2: 0,
                 weight: 9.,
             },
             ObjectiveRule {
                 flags: 92,
+                flags2: 0,
                 weight: 14.,
             },
             ObjectiveRule::default(),
             ObjectiveRule {
                 flags: 4,
+                flags2: 0,
                 weight: 0.,
             },
         ]),
@@ -129,10 +134,12 @@ fn world_quest_sequence_and_contributor_bar_prerequisites_block_premature_credit
             ObjectiveRule::default(),
             ObjectiveRule {
                 flags: 2,
+                flags2: 0,
                 weight: 0.,
             },
             ObjectiveRule {
                 flags: 92,
+                flags2: 0,
                 weight: 10.,
             },
         ]),
@@ -167,8 +174,8 @@ fn world_quest_sequence_and_contributor_bar_prerequisites_block_premature_credit
 fn world_quest_dynamic_objective_load_preserves_order_flags_names_and_weights() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_world_quest (quest_id INTEGER);INSERT INTO content_world_quest VALUES(76587);
-        CREATE TABLE content_world_quest_objective (quest_id INTEGER,objective_id INTEGER,ordinal INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,weight REAL,description TEXT);
-        INSERT INTO content_world_quest_objective VALUES (76587,1,1,15,0,1,2,0,'Close Time Rifts'),(76587,2,0,0,207974,12,92,9,'');
+        CREATE TABLE content_world_quest_objective (quest_id INTEGER,objective_id INTEGER,ordinal INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,weight REAL,description TEXT,flags2 INTEGER DEFAULT 0);
+        INSERT INTO content_world_quest_objective VALUES (76587,1,1,15,0,1,2,0,'Close Time Rifts',0),(76587,2,0,0,207974,12,92,9,'',0);
         CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT);INSERT INTO tdb_creature_template VALUES(207974,'Time Rift Invader');
         CREATE TABLE content_item(ID INTEGER,name TEXT);").unwrap();
     let mut db = crate::quest_data::QuestDb::default();
@@ -189,9 +196,40 @@ fn world_quest_dynamic_objective_load_preserves_order_flags_names_and_weights() 
         quest.world_objective_rules.as_ref().unwrap()[0],
         ObjectiveRule {
             flags: 92,
+            flags2: 0,
             weight: 9.
         }
     );
+}
+
+#[test]
+fn world_quest_bound_item_uses_persisted_credit_not_bag_count() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest (quest_id INTEGER); INSERT INTO content_world_quest VALUES(80295);
+        CREATE TABLE content_world_quest_objective (quest_id INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,flags2 INTEGER,weight REAL,description TEXT,ordinal INTEGER);
+        INSERT INTO content_world_quest_objective VALUES(80295,1,217343,20,0,1,0,'Collect',0);
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT); CREATE TABLE content_item(ID INTEGER,name TEXT);").unwrap();
+    let mut db = crate::quest_data::QuestDb::default();
+    db.quests.insert(
+        80295,
+        QuestTemplate {
+            id: 80295,
+            ..Default::default()
+        },
+    );
+    crate::world_quest_objectives::load(&conn, &mut db).unwrap();
+    let active = ActiveQuestData {
+        quest_id: 80295,
+        counts: vec![4],
+        ..Default::default()
+    };
+    let quest = &db.quests[&80295];
+    assert_eq!(objective_counts(quest, &active, |_| 20), vec![4]);
+    assert!(!objectives_done(
+        quest,
+        &objective_counts(quest, &active, |_| 20)
+    ));
+    assert_eq!(objective_counts(quest, &active, |_| 0), vec![4]);
 }
 
 #[test]
@@ -206,6 +244,7 @@ fn world_quest_hidden_mandatory_requirement_still_blocks_completion() {
         }],
         world_objective_rules: Some(vec![ObjectiveRule {
             flags: 8,
+            flags2: 0,
             weight: 0.,
         }]),
         ..Default::default()

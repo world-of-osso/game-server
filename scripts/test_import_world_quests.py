@@ -46,6 +46,7 @@ def fixture(conn):
     conn.execute("INSERT INTO tdb_quest_template (ID, QuestInfoID, ManagedWorldStateID, LogTitle) VALUES (999,1,113,'Ordinary quest')")
     for index in range(1,10):
         conn.execute(f"ALTER TABLE quest_money_reward ADD COLUMN Difficulty_{index} INTEGER DEFAULT 0")
+    conn.execute('ALTER TABLE tdb_quest_objectives ADD COLUMN Flags2 INTEGER DEFAULT 0')
     conn.commit()
 
 
@@ -71,7 +72,7 @@ class WorldQuestImportTests(unittest.TestCase):
             poi['blobs'].append({'ID': 99, 'QuestID': 999, 'MapID': 0, 'UiMapID': 14, 'NumPoints': 1})
             poi["blobs"][0]["QuestID"] = 52848
             poi["blobs"][1]["QuestID"] = 52847
-            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52848,340073,0,138122,1,'',0,0,0,0)")
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52848,340073,0,138122,1,'',0,0,0,0,0)")
             self.assertEqual(import_definitions(conn, receipt(), poi, 172800), [52848])
             self.assertEqual(conn.execute("SELECT duration_seconds,duration_source FROM content_world_quest").fetchall(), [(172800, 'policy')])
             self.assertEqual(conn.execute("SELECT map_id,ui_map_id,x,y FROM content_world_quest_area ORDER BY point_index").fetchall(),
@@ -81,19 +82,26 @@ class WorldQuestImportTests(unittest.TestCase):
         with closing(sqlite3.connect(':memory:')) as conn:
             fixture(conn)
             conn.execute('DELETE FROM tdb_quest_objectives')
-            conn.executemany('INSERT INTO tdb_quest_objectives VALUES (?,?,?,?,?,?,?,?,?,?)',
-                             [(52847,340072+n,0,138122+n,12,'Contributor',n,n,92,9.) for n in range(7)])
-            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340090,15,0,1,'Progress',7,7,2,0)")
+            conn.executemany('INSERT INTO tdb_quest_objectives VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                             [(52847,340072+n,0,138122+n,12,'Contributor',n,n,92,9.,0) for n in range(7)])
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340090,15,0,1,'Progress',7,7,2,0,0)")
             self.assertEqual(import_definitions(conn,receipt(),areas()),[52847])
             rows=conn.execute('SELECT kind,object_id,amount,flags,weight FROM content_world_quest_objective ORDER BY ordinal').fetchall()
             self.assertEqual(len(rows),8)
             self.assertEqual(rows[0],(0,138122,12,92,9.))
             self.assertEqual(rows[-1],(15,0,1,2,0.))
 
+    def test_quest_bound_item_flags_are_preserved(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            conn.execute('UPDATE tdb_quest_objectives SET Type=1,ObjectID=217343,Amount=20,Flags2=1')
+            self.assertEqual(import_definitions(conn,receipt(),areas()),[52847])
+            self.assertEqual(conn.execute('SELECT kind,object_id,amount,flags2 FROM content_world_quest_objective').fetchall(),[(1,217343,20,1)])
+
     def test_unsupported_objective_is_excluded_not_silently_completed(self):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)
-            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340073,99,138122,1,'',1,1,0,0)")
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340073,99,138122,1,'',1,1,0,0,0)")
             self.assertEqual(import_definitions(conn, receipt(), areas()), [])
             self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template").fetchone()[0], 0)
 
