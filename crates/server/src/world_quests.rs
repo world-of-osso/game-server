@@ -91,33 +91,34 @@ impl Rotation {
     }
 
     pub(crate) fn read_env() -> Result<Self, String> {
-        let mut policy = Self::default();
-        if let Ok(value) = std::env::var("WORLD_QUEST_EPOCH") {
-            policy.epoch = value
-                .parse()
-                .map_err(|_| "WORLD_QUEST_EPOCH must be Unix seconds")?;
-        }
-        if let Ok(value) = std::env::var("WORLD_QUEST_ACTIVE_PER_ZONE") {
-            policy.active_per_zone = value
-                .parse()
-                .map_err(|_| "WORLD_QUEST_ACTIVE_PER_ZONE must be positive")?;
-        }
-        if policy.active_per_zone == 0 {
+        let defaults = Self::default();
+        let active_per_zone =
+            read_setting("WORLD_QUEST_ACTIVE_PER_ZONE", defaults.active_per_zone)?;
+        if active_per_zone == 0 {
             return Err("WORLD_QUEST_ACTIVE_PER_ZONE must be positive".into());
         }
-        if let Ok(value) = std::env::var("WORLD_QUEST_GAP_SECONDS") {
-            policy.gap_seconds = value
-                .parse()
-                .map_err(|_| "WORLD_QUEST_GAP_SECONDS must be a nonnegative u32")?;
-        }
-        if let Ok(value) = std::env::var("WORLD_QUEST_ORDER") {
-            policy.descending = match value.as_str() {
-                "ascending" => false,
-                "descending" => true,
-                _ => return Err("WORLD_QUEST_ORDER must be ascending or descending".into()),
-            };
-        }
-        Ok(policy)
+        let order = read_setting("WORLD_QUEST_ORDER", "ascending".to_owned())?;
+        let descending = match order.as_str() {
+            "ascending" => false,
+            "descending" => true,
+            _ => return Err("WORLD_QUEST_ORDER must be ascending or descending".into()),
+        };
+        Ok(Self {
+            epoch: read_setting("WORLD_QUEST_EPOCH", defaults.epoch)?,
+            active_per_zone,
+            descending,
+            gap_seconds: read_setting("WORLD_QUEST_GAP_SECONDS", defaults.gap_seconds)?,
+        })
+    }
+}
+
+fn read_setting<T: std::str::FromStr>(name: &str, default: T) -> Result<T, String> {
+    match std::env::var(name) {
+        Ok(value) => value
+            .parse()
+            .map_err(|_| format!("invalid {name}: {value}")),
+        Err(std::env::VarError::NotPresent) => Ok(default),
+        Err(std::env::VarError::NotUnicode(_)) => Err(format!("{name} must be UTF-8")),
     }
 }
 
@@ -147,8 +148,91 @@ pub(crate) fn load_definitions(conn: &rusqlite::Connection) -> rusqlite::Result<
 }
 
 #[cfg(test)]
+#[path = "world_quest_expiry_tests.rs"]
+mod expiry_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn world_quest_rotation_env_configuration() {
+        const CHILD_MODE: &str = "WORLD_QUEST_TEST_CONFIG_MODE";
+        if let Ok(mode) = std::env::var(CHILD_MODE) {
+            let result = Rotation::read_env();
+            match mode.as_str() {
+                "defaults" => {
+                    let policy = result.unwrap();
+                    assert_eq!(
+                        (
+                            policy.epoch,
+                            policy.active_per_zone,
+                            policy.descending,
+                            policy.gap_seconds
+                        ),
+                        (1_767_225_600, 1, false, 86400)
+                    );
+                }
+                "configured" => {
+                    let policy = result.unwrap();
+                    assert_eq!(
+                        (
+                            policy.epoch,
+                            policy.active_per_zone,
+                            policy.descending,
+                            policy.gap_seconds
+                        ),
+                        (1000, 2, true, 0)
+                    );
+                }
+                "invalid" => assert!(result.is_err()),
+                _ => panic!("unknown configuration test mode"),
+            }
+            return;
+        }
+        let cases: &[(&str, &[(&str, &str)])] = &[
+            ("defaults", &[]),
+            (
+                "configured",
+                &[
+                    ("WORLD_QUEST_EPOCH", "1000"),
+                    ("WORLD_QUEST_ACTIVE_PER_ZONE", "2"),
+                    ("WORLD_QUEST_ORDER", "descending"),
+                    ("WORLD_QUEST_GAP_SECONDS", "0"),
+                ],
+            ),
+            ("invalid", &[("WORLD_QUEST_ACTIVE_PER_ZONE", "0")]),
+            ("invalid", &[("WORLD_QUEST_ORDER", "random")]),
+            ("invalid", &[("WORLD_QUEST_EPOCH", "not-a-time")]),
+            ("invalid", &[("WORLD_QUEST_GAP_SECONDS", "-1")]),
+        ];
+        for (mode, variables) in cases {
+            let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+            command.args([
+                "--exact",
+                "world_quests::tests::world_quest_rotation_env_configuration",
+                "--nocapture",
+            ]);
+            for name in [
+                "WORLD_QUEST_EPOCH",
+                "WORLD_QUEST_ACTIVE_PER_ZONE",
+                "WORLD_QUEST_ORDER",
+                "WORLD_QUEST_GAP_SECONDS",
+            ] {
+                command.env_remove(name);
+            }
+            let output = command
+                .env(CHILD_MODE, mode)
+                .envs(variables.iter().copied())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "configuration child {mode}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
 
     fn definitions() -> Vec<Definition> {
         vec![
