@@ -132,4 +132,4 @@ fn err(message: &str) -> AuctionOperationResponse {
 
 #[cfg(test)]
 #[path = "auction_house_tests.rs"]
-mod tests;
+pub(crate) mod tests;
