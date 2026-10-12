@@ -40,6 +40,26 @@ class BattlegroundSummonTests(unittest.TestCase):
                 self.assertEqual(conn.execute('SELECT id,point,position_x,position_y,position_z,move_type FROM content_waypoint_data WHERE id BETWEEN 6014000 AND 6014011 ORDER BY id,point').fetchall(),source)
                 self.assertEqual(conn.execute('SELECT * FROM content_npc_spellclick_spells WHERE npc_entry=60283').fetchall(),[(60283,124491,1,0)])
 
+    def test_deephaul_cart_templates_and_both_exact_routes_are_authentic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'prepared.sqlite'
+            self.prepare(path)
+            with closing(sqlite3.connect(path)) as conn, conn:
+                for table, column in [('content_creature_template','entry'),('content_creature_template_model','CreatureID'),('content_creature_template_addon','entry')]:
+                    conn.execute(f'DELETE FROM {table} WHERE {column} IN (214690,217346)')
+                conn.execute('DELETE FROM content_waypoint_data WHERE id IN (21469000,21734600)')
+            for _ in range(2):
+                result = self.run_import(path)
+                self.assertEqual(result.returncode,0,result.stderr)
+            with closing(sqlite3.connect(path)) as conn:
+                self.assertEqual(conn.execute('SELECT entry,name,speed_walk FROM content_creature_template WHERE entry IN (214690,217346) ORDER BY entry').fetchall(),[(214690,'Mine Cart',1.4),(217346,'Mine Cart',1.4)])
+                for entry in (214690,217346):
+                    self.assertEqual(conn.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=?',(entry,)).fetchall(),conn.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(entry,)).fetchall())
+                source = conn.execute('SELECT n.PathId,n.NodeId,n.PositionX,n.PositionY,n.PositionZ,p.MoveType FROM tdb_waypoint_path_node n JOIN tdb_waypoint_path p ON p.PathId=n.PathId WHERE n.PathId IN (21469000,21734600) ORDER BY n.PathId,n.NodeId').fetchall()
+                self.assertEqual(len(source),128)
+                self.assertEqual(conn.execute('SELECT id,point,position_x,position_y,position_z,move_type FROM content_waypoint_data WHERE id IN (21469000,21734600) ORDER BY id,point').fetchall(),source)
+                self.assertEqual(conn.execute('SELECT count(*) FROM content_creature WHERE id1 IN (214690,217346) AND map=2656').fetchone()[0],0,'scripted objective carts must not become fabricated static spawns')
+
     def test_missing_model_aborts_transaction_without_partial_templates(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'prepared.sqlite'
