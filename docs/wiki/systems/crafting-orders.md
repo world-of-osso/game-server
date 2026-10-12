@@ -27,7 +27,7 @@ Appending the third bitcode MailSender variant changes enum packing. `character_
 
 ## Proof
 
-RED importer stubs failed expected counts; RED lifecycle stubs rejected placement; old-mail reopen RED failed with `invalid packing`, demonstrating migration necessity. Targeted GREEN/check/fmt ledger: `/home/osso/.worktrees/handoff-crafting-orders-srv.md`. Persistent artifacts: canonical engine `data/diagnostics/crafting-orders-srv-2026-10-11/`. Native/live proof is outside this server slice.
+RED importer stubs failed expected counts; RED lifecycle stubs rejected placement; old-mail reopen RED failed with `invalid packing`, demonstrating migration necessity. Post-master server e4603dd6/protocol86dcd21:17 affected crafting tests (including10 order tests),10 existing mail regressions and2 Python importer tests pass; `cargo check --locked -p server` and `cargo fmt --all -- --check` pass without warnings. Targeted GREEN/check/fmt ledger: `/home/osso/.worktrees/handoff-crafting-orders-srv.md`. Persistent artifacts: canonical engine `data/diagnostics/crafting-orders-srv-2026-10-11/`. Native/live proof is outside this server slice.
 
 ## Sources
 

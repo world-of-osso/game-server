@@ -4,12 +4,12 @@ Server lifecycle in `crates/server/src/crafting_orders/`, using imported Retail 
 
 ## What it must do
 
-- [ ] Import/export authentic2047-row layout05F8699D and select89 CraftingOrder→SkillLineAbility→effect24 rows without modifying the source database.
-- [ ] Place public/guild/personal orders with exact authored reagent requirements; escrow customer contributions and commission atomically.
-- [ ] Browse by type/profession; guild members and named personal recipients alone may claim their addressed orders. Customer need not know the profession; crafter must know the recipe.
-- [ ] Fulfil through normal cast timing, known-spell, tools and reagent validation; mail result to customer and commission to crafter in the same transaction. Do not grant the result to the crafter's bags.
-- [ ] Release claims; cancel unclaimed orders or expire active orders once, refunding held item identities and commission by mail. Interrupted/failed casts retain escrow and claim for retry/release.
-- [ ] Preserve orders, claims and deliveries across redb reopen, and migrate existing two-sender mailboxes before introducing CraftingOrder system mail.
+- [x] Import/export authentic2047-row layout05F8699D and select89 CraftingOrder→SkillLineAbility→effect24 rows without modifying the source database.
+- [x] Place public/guild/personal orders with exact authored reagent requirements; escrow customer contributions and commission atomically.
+- [x] Browse by type/profession; guild members and named personal recipients alone may claim their addressed orders. Customer need not know the profession; crafter must know the recipe.
+- [x] Fulfil through normal cast timing, known-spell, tools and reagent validation; mail result to customer and commission to crafter in the same transaction. Do not grant the result to the crafter's bags.
+- [x] Release claims; cancel unclaimed orders or expire active orders once, refunding held item identities and commission by mail. Interrupted/failed casts retain escrow and claim for retry/release.
+- [x] Preserve orders, claims and deliveries across redb reopen, and migrate existing two-sender mailboxes before introducing CraftingOrder system mail.
 
 ## How it works
 
