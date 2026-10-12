@@ -11,7 +11,8 @@ import json
 from pathlib import Path
 
 TABLES = ('TransmogSet', 'TransmogSetItem', 'TransmogIllusion',
-          'TransmogOutfitEntry', 'TransmogOutfitSlotInfo', 'TransmogOutfitSlotOption')
+          'TransmogOutfitEntry', 'TransmogOutfitSlotInfo', 'TransmogOutfitSlotOption',
+          'SpellItemEnchantment')
 
 
 def load_rows(directory, table):
@@ -31,7 +32,11 @@ def build_catalogue(directory):
     entries = [{'id':int(row['ID']), 'name':row['Name_lang'], 'order_index':int(row['OrderIndex']),
                 'cost':int(row['Cost']), 'source':int(row['Source']), 'flags':int(row['Flags']),
                 'set_type':int(row['SetType'])} for row in tables['TransmogOutfitEntry']]
+    # Illusion name/icon come from SpellItemEnchantment (C_TransmogCollection.GetIllusionInfo).
+    enchantments = {int(row['ID']): row for row in tables['SpellItemEnchantment']}
     illusions = [{'id':int(row['ID']), 'enchantment_id':int(row['SpellItemEnchantmentID']),
+                  'name':enchantments[int(row['SpellItemEnchantmentID'])]['Name_lang'],
+                  'icon_fdid':int(enchantments[int(row['SpellItemEnchantmentID'])]['IconFileDataID']),
                   'cost':int(row['TransmogCost']), 'unlock_condition_id':int(row['UnlockConditionID']),
                   'flags':int(row['Flags']), 'collected':False} for row in tables['TransmogIllusion']]
     slots = [{'id':int(row['ID']), 'inventory_slot_id':int(row['InventorySlotID']),

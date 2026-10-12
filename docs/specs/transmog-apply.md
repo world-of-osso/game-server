@@ -31,7 +31,8 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 
 `scripts/import_transmog_catalogue.py` embeds pinned local-CASC CSV exports in
 `scripts/reference/retail-12.1.0.69933/transmog.json` (input SHA-256s included).
-Regenerate after exporting six tables with the sibling engine's maintained
+Regenerate after exporting seven tables (the six Transmog tables plus
+SpellItemEnchantment for illusion names/icons) with the sibling engine's maintained
 `export_db2_csv.py`; no world.db writes. Six unreadable sets and56 unreadable set
 members are omitted, not fabricated. Source ownership remains visual-level.
 

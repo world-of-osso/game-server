@@ -333,6 +333,10 @@ fn transmog_catalogue_exposes_authored_sets_outfits_illusions_and_ownership() {
         (illusion.enchantment_id, illusion.cost, illusion.collected),
         (1898, 10000, true)
     );
+    assert_eq!(
+        (illusion.name.as_str(), illusion.icon_fdid),
+        ("Lifestealing", 136130)
+    );
     assert!(
         state.outfit_slots.iter().any(|entry| entry.id == 13
             && entry.slot == EquipmentSlot::MainHand
