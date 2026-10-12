@@ -126,11 +126,28 @@ fn learn(h: &mut Harness, slot: u8) -> Vec<ToyResult> {
 }
 
 fn activate(h: &mut Harness, item_id: u32) -> Vec<ToyResult> {
+    activate_at(h, item_id, None)
+}
+
+fn activate_at(h: &mut Harness, item_id: u32, destination: Option<[f32; 3]>) -> Vec<ToyResult> {
+    activate_witnessed(h, item_id, destination, None)
+}
+
+fn activate_witnessed(
+    h: &mut Harness,
+    item_id: u32,
+    destination: Option<[f32; 3]>,
+    witness: Option<shared::protocol::WitnessRay>,
+) -> Vec<ToyResult> {
     h.app
         .world_mut()
         .get_mut::<MessageSender<UseToy>>(h.connection)
         .unwrap()
-        .send::<CollectionChannel>(UseToy { item_id });
+        .send::<CollectionChannel>(UseToy {
+            item_id,
+            destination,
+            witness,
+        });
     pump(h).0
 }
 
@@ -416,7 +433,14 @@ fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
             }],
         },
     );
-    assert_eq!(learn(h, 0)[0].error, None);
+    let results = learn(h, 0);
+    assert!(
+        results
+            .iter()
+            .any(|result| result.operation == ToyOperation::Learn && result.error.is_none()),
+        "physical toy {item_id} did not learn: {results:?}; errors: {:?}",
+        drain::<InventoryError>(&mut h.app, h.connection)
+    );
 }
 
 #[test]
@@ -1065,7 +1089,14 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
                 z: 0.0,
             });
         learn_effect_toy(&mut h, character, item);
-        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        // Banner62736 is target87: the clicked point, not the caster's feet.
+        // Chair42766/MOLL-E54710 remain target47's authored forward offsets.
+        let destination = (item == 45011).then_some([4.0, 0.0, -3.0]);
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "toy {item}"
+        );
         h.advance(100); // includes real cast time for MOLL-E.
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
@@ -1083,8 +1114,9 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
             (go_type, display, scale)
         );
         let pos = world.get::<shared::components::Position>(*object).unwrap();
-        assert!((pos.x - offset).abs() < 0.001, "{pos:?}");
-        assert_eq!((pos.y, pos.z), (0.0, 0.0));
+        let expected = destination.unwrap_or([offset, 0.0, 0.0]);
+        assert!((pos.x - expected[0]).abs() < 0.001, "{pos:?}");
+        assert_eq!((pos.y, pos.z), (expected[1], expected[2]));
         assert_eq!(
             world.get::<crate::maps::InMap>(*object),
             world.get::<crate::maps::InMap>(h.caster)
@@ -1679,7 +1711,17 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         learn_effect_toy(&mut h, character, item);
         let caster_position = *h.app.world().get::<Position>(h.caster).unwrap();
-        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        // Both source effects use target87, requiring the actual clicked destination.
+        let placed = Position {
+            x: caster_position.x + 2.0,
+            y: caster_position.y,
+            z: caster_position.z + 1.0,
+        };
+        assert_eq!(
+            activate_at(&mut h, item, Some([placed.x, placed.y, placed.z]))[0].error,
+            None,
+            "item {item}"
+        );
         h.advance(10);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
@@ -1697,7 +1739,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
             world.get::<UnitSummonedBy>(summon).unwrap().0,
             h.caster.to_bits()
         );
-        assert_eq!(world.get::<Position>(summon), Some(&caster_position));
+        assert_eq!(world.get::<Position>(summon), Some(&placed));
         assert_eq!(
             world.get::<crate::maps::InMap>(summon),
             world.get::<crate::maps::InMap>(h.caster)
@@ -1713,10 +1755,7 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
         );
         world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
         h.advance(lifetime_frames - 30);
-        assert_eq!(
-            h.app.world().get::<Position>(summon),
-            Some(&caster_position)
-        );
+        assert_eq!(h.app.world().get::<Position>(summon), Some(&placed));
         h.advance(40);
         assert!(
             h.app.world().get_entity(summon).is_err(),
@@ -1913,12 +1952,12 @@ fn toyfx9_prepared_census_preserves_interaction_blockers() {
     let toys = report["toys"].as_array().unwrap();
     for item in [
         163986, 163987, 187834, 187957, 187958, 197719, 203716, 208057, 211424, 218128, 232301,
-        232302, 232303, 232305, 232306, 232307,
+        232302, 232303, 232305, 232306, 232307, 238852,
     ] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [88387, 88579, 193478, 198156, 219387, 238852] {
+    for item in [88387, 88579, 193478, 198156, 219387] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(
             !toy["unavailable"].is_null(),
@@ -2456,11 +2495,11 @@ fn toyfx10_prepared_census_retains_script_and_interaction_refusals() {
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX10_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
-    for item in [88417, 88587, 131812, 175063] {
+    for item in [88417, 88587, 131812, 175063, 238852] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [48933, 88387, 95567, 138873, 198156, 219387, 238852] {
+    for item in [48933, 88387, 95567, 138873, 198156, 219387] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(!toy["unavailable"].is_null(), "unproved action: {toy}");
     }
@@ -2594,6 +2633,876 @@ fn toyfx11_prepared_census_keeps_unbound_controls_and_actions_blocked() {
             !toy["unavailable"].is_null(),
             "unbound control/interaction must remain blocked: {toy}"
         );
+    }
+}
+
+#[test]
+fn toyfx14_source_item_preparation_enables_real_transform_learning_use_and_restore() {
+    use shared::components::{ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("transform.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+    learn_effect_toy(&mut h, character, 64646); // Bones of Transformation.
+    assert_eq!(activate(&mut h, 64646)[0].error, None);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 91760));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(h.caster)
+            .unwrap()
+            .display_id,
+        32473
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 91760)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura { spell_id: 91760 });
+    h.advance(5);
+    assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), before.as_ref());
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 91760)
+    );
+}
+
+#[test]
+fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_CENSUS_REPORT");
+    for item in [64646, 109183, 113542] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+    for item in [37710, 198156, 71259, 72231] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["item_id"] == item)
+            .unwrap();
+        assert!(
+            !toy["unavailable"].is_null(),
+            "unbound remote control/wormhole/narrative/metadata: {toy}"
+        );
+    }
+}
+
+#[test]
+fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
+    use shared::components::{ModelDisplay, Player, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    for (item, spell, race, male, female) in [
+        (33079, 42365, 1, 21723, 21723),
+        (54651, 75531, 1, 31654, 31655),
+        (54653, 75532, 2, 31737, 31738),
+    ] {
+        for sex in [0, 1] {
+            let (mut h, character) = setup_for_race(
+                &directory.path().join(format!("costume-{item}-{sex}.redb")),
+                race,
+            );
+            h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+            h.app
+                .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+            h.app
+                .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+            h.app
+                .world_mut()
+                .get_mut::<Player>(h.caster)
+                .unwrap()
+                .appearance
+                .sex = sex;
+            let before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+            let other_before = h.app.world().get::<ModelDisplay>(h.npc).cloned();
+            learn_effect_toy(&mut h, character, item);
+            assert_eq!(
+                activate(&mut h, item)[0].error,
+                None,
+                "item {item},sex {sex}"
+            );
+            if spell == 42365 {
+                assert!(
+                    !h.inbox.go.iter().any(|go| go.spell_id == spell),
+                    "Murloc's authored6000ms cast must finish first"
+                );
+            }
+            h.advance(140);
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+            let display = if sex == 1 { female } else { male };
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<ModelDisplay>(h.caster)
+                    .unwrap()
+                    .display_id,
+                display
+            );
+            assert_eq!(
+                h.app.world().get::<ModelDisplay>(h.npc),
+                other_before.as_ref()
+            );
+            assert!(
+                h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == spell)
+            );
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+                .unwrap()
+                .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                    spell_id: spell,
+                });
+            h.advance(5);
+            assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), before.as_ref());
+            assert!(
+                !h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == spell)
+            );
+        }
+    }
+}
+
+#[test]
+fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_gameplay() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, duration) in [
+        (108743, 160688, 600000),
+        (110586, 160093, 180000),
+        (116115, 170869, 900000),
+        (127864, 188172, 3600000),
+        (137294, 212660, 300000),
+        (147537, 242014, 3600000),
+        (163744, 280053, 300000),
+        (180947, 335276, 900000),
+        (182890, 340276, 180000),
+        (204220, 403491, 300000),
+        (230727, 467285, 1800000),
+        (259240, 1264653, 300000),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("attachment-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(store.clone());
+        let model_before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+        let caster_health = *h.app.world().get::<Health>(h.caster).unwrap();
+        let target_health = *h.app.world().get::<Health>(h.npc).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(60);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        let aura = h
+            .app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap();
+        assert_eq!(
+            aura.duration_ms, duration,
+            "authored lifetime of item {item}"
+        );
+        assert_eq!(
+            h.app.world().get::<ModelDisplay>(h.caster),
+            model_before.as_ref()
+        );
+        assert_eq!(
+            *h.app.world().get::<Health>(h.caster).unwrap(),
+            caster_health
+        );
+        assert_eq!(*h.app.world().get::<Health>(h.npc).unwrap(), target_health);
+        assert_eq!(
+            h.app
+                .world_mut()
+                .query::<&crate::spell_cast::summon::SummonedCreature>()
+                .iter(h.app.world())
+                .count(),
+            0
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                spell_id: spell,
+            });
+        h.advance(5);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
+fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitSummonedBy};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, display, duration) in [
+        (89869, 131171, 66768, 45436, 150000),
+        (141299, 225824, 114846, 73493, 60000),
+        (184415, 345799, 175582, 99948, 180000),
+        (272339, 1290957, 263908, 143906, 60000),
+        (279590, 1306978, 270689, 146432, 60000),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("scenery-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.insert_resource(store.clone());
+        learn_effect_toy(&mut h, character, item);
+        let destination = if matches!(item, 89869 | 184415) {
+            let origin = h.app.world().get::<Position>(h.caster).unwrap();
+            Some([origin.x + 2.0, origin.y, origin.z])
+        } else {
+            None
+        };
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "item {item}"
+        );
+        h.advance(60); // Includes the globe's authored 3000ms cast.
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        let world = h.app.world_mut();
+        let actors: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, _)| entity)
+            .collect();
+        assert_eq!(actors.len(), 1, "item {item}");
+        let actor = actors[0];
+        assert_eq!(
+            world.get::<ModelDisplay>(actor).unwrap().display_id,
+            display
+        );
+        assert_eq!(
+            world.get::<UnitSummonedBy>(actor).unwrap().0,
+            h.caster.to_bits()
+        );
+        assert_eq!(
+            world.get::<crate::maps::InMap>(actor),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(actor)
+                .is_none()
+        );
+        let placed = *world.get::<Position>(actor).unwrap();
+        world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
+        let expires = world
+            .get::<SummonedCreature>(actor)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        let now = world.resource::<Time>().elapsed_secs_f64();
+        let remaining = expires - now;
+        assert!(
+            remaining > duration as f64 / 1000.0 - 4.0 && remaining <= duration as f64 / 1000.0
+        );
+        h.app
+            .world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(std::time::Duration::from_secs_f64(remaining));
+        h.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_secs_f64(remaining - 0.1),
+            ));
+        h.advance(1);
+        assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
+        h.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(200),
+            ));
+        h.advance(1);
+        assert!(
+            h.app.world().get_entity(actor).is_err(),
+            "authored expiry of item {item}"
+        );
+    }
+}
+
+#[test]
+fn toyfx14_stationary_source_summon_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_SUMMON_CENSUS_REPORT");
+    for item in [89869, 141299, 184415, 272339, 279590] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
+fn toyfx14_area_cosmetics_preserve_authored_recipients_and_lifetimes() {
+    use shared::components::{
+        Health, ModelDisplay, Position, Rotation, UnitAuras, UnitFactionTemplate,
+    };
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, duration) in [(141300, 225826, 10000), (141301, 225828, 30000)] {
+        let (mut h, character) = setup(&directory.path().join(format!("area-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(store.clone());
+        h.app
+            .insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let map = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
+        let faction = *h.app.world().get::<UnitFactionTemplate>(h.caster).unwrap();
+        h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+        h.app.world_mut().entity_mut(h.npc).insert((
+            faction,
+            Position {
+                x: origin.x + 2.0,
+                ..origin
+            },
+        ));
+        let outside = h
+            .app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: origin.x - 50.0,
+                    ..origin
+                },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                map,
+                faction,
+                UnitAuras::default(),
+            ))
+            .id();
+        let model = h.app.world().get::<ModelDisplay>(h.npc).cloned();
+        let health = *h.app.world().get::<Health>(h.npc).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(40);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<UnitAuras>(h.npc)
+            .unwrap()
+            .auras
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, duration);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(outside)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert_eq!(h.app.world().get::<ModelDisplay>(h.npc), model.as_ref());
+        assert_eq!(*h.app.world().get::<Health>(h.npc).unwrap(), health);
+        h.advance((duration / 50) as usize + 10);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(h.npc)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
+fn toyfx14_area_cosmetics_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_AREA_CENSUS_REPORT");
+    for item in [141300, 141301] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
+fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("ground.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    learn_effect_toy(&mut h, character, 89869);
+    assert_eq!(
+        activate(&mut h, 89869)[0].error.as_deref(),
+        Some("NoTarget")
+    );
+    assert!(
+        h.inbox.go.is_empty(),
+        "a cursor-only request must not cast at the player's feet"
+    );
+    let origin = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.caster)
+        .unwrap();
+    for (destination, error) in [
+        ([f32::NAN, origin.y, origin.z], "InvalidTarget"),
+        ([origin.x + 11.0, origin.y, origin.z], "OutOfRange"),
+    ] {
+        assert_eq!(
+            activate_at(&mut h, 89869, Some(destination))[0]
+                .error
+                .as_deref(),
+            Some(error)
+        );
+        assert!(h.inbox.go.is_empty());
+    }
+    let destination = [origin.x + 3.0, origin.y, origin.z];
+    assert_eq!(activate_at(&mut h, 89869, Some(destination))[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 131171));
+    let world = h.app.world_mut();
+    let positions: Vec<_> = world
+        .query::<(&shared::components::Npc, &shared::components::Position)>()
+        .iter(world)
+        .filter(|(npc, _)| npc.template_id == 66768)
+        .map(|(_, position)| *position)
+        .collect();
+    assert_eq!(
+        positions,
+        vec![shared::components::Position {
+            x: destination[0],
+            y: destination[1],
+            z: destination[2]
+        }]
+    );
+}
+
+#[test]
+fn toyfx14_target_and_sound_cosmetics_preserve_source_ownership() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, duration) in [(122120, 179869, 60000), (168824, 298869, 180000)] {
+        let (mut h, character) = setup(&directory.path().join(format!("target-sound-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(store.clone());
+        let target = if item == 122120 { h.npc } else { h.caster };
+        let other = if item == 122120 { h.caster } else { h.npc };
+        h.app
+            .world_mut()
+            .get_mut::<crate::networking::CombatTarget>(h.caster)
+            .unwrap()
+            .0 = Some(h.npc);
+        let health = *h.app.world().get::<Health>(target).unwrap();
+        let model = h.app.world().get::<ModelDisplay>(target).cloned();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(50);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<UnitAuras>(target)
+            .unwrap()
+            .auras
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, duration);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(other)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert_eq!(*h.app.world().get::<Health>(target).unwrap(), health);
+        assert_eq!(h.app.world().get::<ModelDisplay>(target), model.as_ref());
+    }
+}
+
+#[test]
+fn toyfx14_target_and_sound_cosmetics_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_SOUND_CENSUS_REPORT");
+    for item in [122120, 168824] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
+fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
+    use shared::components::{ModelDisplay, Position, Rotation, UnitAuras};
+    use shared::protocol::WitnessRay;
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("witness.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let dir = crate::ground::ground_data_dir().join("los");
+    crate::test_data::require(dir.join(los::eye::EYE_TABLE_FILE));
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&dir).unwrap());
+    // Actual Northshire west-door bake: source spell range30yd, clear door opening.
+    h.app.world_mut().entity_mut(h.caster).insert((
+        Position {
+            x: -8908.2,
+            y: 81.95,
+            z: 146.6,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Position {
+            x: -8896.5,
+            y: 81.58,
+            z: 173.8,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        ModelDisplay { display_id: 10913 },
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(h.npc);
+    learn_effect_toy(&mut h, character, 122120);
+    let catalog = snapshot(h.app.world(), 1);
+    assert!(
+        catalog
+            .toys
+            .iter()
+            .find(|toy| toy.item_id == 122120)
+            .unwrap()
+            .requires_target_witness
+    );
+    assert!(
+        !catalog
+            .toys
+            .iter()
+            .find(|toy| toy.item_id == 168824)
+            .unwrap()
+            .requires_target_witness
+    );
+    let world = h.app.world();
+    let los = world.resource::<crate::line_of_sight::LineOfSight>();
+    let body = |entity| {
+        let unit = world.entity(entity);
+        los.body((
+            entity,
+            unit.get::<shared::components::Npc>(),
+            unit.get::<Position>().unwrap(),
+            unit.get::<Rotation>(),
+            unit.get::<ModelDisplay>(),
+            None,
+            unit.get::<shared::components::Player>(),
+            unit.get::<shared::components::PlayerStandState>(),
+        ))
+        .unwrap()
+    };
+    let caster = body(h.caster);
+    let target = body(h.npc);
+    let end = los
+        .witness(crate::maps::InMap::continent(0), &caster, &target)
+        .expect("authored doorway has a clear ray");
+    let witness = WitnessRay {
+        start: caster.eyes.to_array(),
+        end: end.to_array(),
+    };
+    assert_eq!(
+        activate(&mut h, 122120)[0].error.as_deref(),
+        Some("LineOfSight")
+    );
+    let forged = WitnessRay {
+        start: [witness.start[0] + 5.0, witness.start[1], witness.start[2]],
+        ..witness
+    };
+    assert_eq!(
+        activate_witnessed(&mut h, 122120, None, Some(forged))[0]
+            .error
+            .as_deref(),
+        Some("LineOfSight")
+    );
+    assert!(h.inbox.go.is_empty());
+    assert_eq!(
+        activate_witnessed(&mut h, 122120, None, Some(witness))[0].error,
+        None
+    );
+    h.advance(3);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 179869));
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(h.npc)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 179869 && a.duration_ms == 60000)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 179869)
+    );
+}
+
+#[test]
+fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitScale};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, display, scale) in [
+        (170476, 304620, 156086, 92605, 0.35),
+        (238852, 1227383, 241494, 127931, 0.75),
+        (246227, 1240408, 246171, 131280, 0.5),
+        (276229, 1299034, 267634, 145135, 1.5),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("scaled-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.insert_resource(store.clone());
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let destination = (item == 246227).then_some([origin.x + 2.0, origin.y, origin.z]);
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "item {item}"
+        );
+        h.advance(50);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let actors: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, _)| entity)
+            .collect();
+        assert_eq!(actors.len(), 1);
+        let actor = actors[0];
+        assert_eq!(
+            world.get::<ModelDisplay>(actor).unwrap().display_id,
+            display
+        );
+        assert_eq!(
+            world.get::<UnitScale>(actor).copied().unwrap_or_default().0,
+            scale
+        );
+        // A real scale aura must compose with display scale, not overwrite it.
+        let growth = store.get(156132).unwrap(); // World Shrinker: authored +100% object scale.
+        assert_eq!(growth.effects[0].aura, crate::auras::handlers::MOD_SCALE);
+        let effect = &growth.effects[0];
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: actor,
+                spell_id: 156132,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(
+            (world.get::<UnitScale>(actor).unwrap().0 - scale * (1.0 + effect.base_points / 100.0))
+                .abs()
+                < 0.00001
+        );
+        crate::auras::remove_auras(world, actor, crate::auras::RemoveReason::Cancelled, |a| {
+            a.spell_id == 156132
+        });
+        assert_eq!(world.get::<UnitScale>(actor).unwrap().0, scale);
+    }
+}
+
+#[test]
+fn toyfx14_scaled_scenery_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_SCALE_CENSUS_REPORT");
+    for item in [170476, 238852, 246227, 276229] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
     }
 }
 
