@@ -34,6 +34,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | d41f51c2 / shared00d33e7 | 2969 | 4676 | 182 | Zero-amount284/285 child linkage, all7827 memberships, exit0, 545.53s |
 | 8d143318 / shared00d33e7 | 2983 | 4662 | 182 | Native330 moving cast/channel masks, all7827 memberships, exit0, 549.22s |
 | 5e015838 / shared00d33e7 | 3000 | 4645 | 182 | Native232/234 receiver duration rule, all7827 memberships, exit0, 515.50s |
+| 78413ce2 / shared80bec38 | 3000 | 4645 | 182 | Mainline-integrated current-source census, all7827 memberships, exit0, 581.54s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -227,7 +228,7 @@ Server `40f54418` integrates `c9062b6e`; engine `a2b4c01e6` integrates `4f71f614
 
 At server `d6ead749`/shared`80bec38`,129 targeted server cases pass, including corrected native guardian outcomes. The first `warlock_pet_tests` selector ran zero tests and is not proof; qualified `pet_control::warlock_tests` proves nine lifecycle cases. Server cargo check and workspace fmt pass. Engine core/appearance seven matching cases pass, extension cargo check runs through the maintained depot native command/locks, and changed engine Rust files pass rustfmt check. No new live/client proof or full suite was run. Per-command logs: `integration-oct12-*`, `integration2-oct12-*`, `integration-warlock-qualified.log`, `integration-server-{check,fmt}.log`, `integration-engine-{core-full,check,rustfmt}.log`.
 
-Current-source post-integration census remains pending; prior3000/4645/182 receipts retain their exact pre-integration revision. The full spell/talent goal is still open.
+Post-integration current-source census at `78413ce2`/shared`80bec38` records all7827 memberships, exit0,581.54s:3000 working/4645 partial/182 broken, with no status changes from batch27. Authentic source revalidation still finds zero names for the37 missing IDs and zero positions for the four Mage destination IDs. The full spell/talent goal is still open.
 
 ## Retained boundaries
 
