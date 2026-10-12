@@ -79,6 +79,50 @@ pub(super) fn save_account_progress(
     (aggregate, toasts)
 }
 
+pub(super) fn save_monthly_contribution(
+    db: &redb::Database,
+    account: u64,
+    character: u64,
+    state: &PlayerAchievementState,
+) {
+    let characters = persistence::load_account_char_ids(db, account);
+    let txn = db
+        .begin_write()
+        .expect("begin monthly contribution transaction");
+    let mut accounts = txn
+        .open_table(ACCOUNTS)
+        .expect("open account achievement contributions");
+    let mut saved: AccountProgress = match accounts.get(account).expect("read account contribution")
+    {
+        Some(row) => serde_json::from_slice(row.value()).expect("decode account contribution"),
+        None => AccountProgress::default(),
+    };
+    write_character_contributions(&txn, &mut saved, characters, character, state);
+    let bytes = serde_json::to_vec(&saved).expect("encode monthly contribution");
+    accounts
+        .insert(account, bytes.as_slice())
+        .expect("save monthly contribution");
+    drop(accounts);
+    txn.commit().expect("commit monthly contribution");
+}
+
+pub(super) fn monthly_contributions(
+    db: &redb::Database,
+    account: u64,
+) -> Vec<PlayerAchievementState> {
+    let txn = db.begin_read().expect("read monthly account contributions");
+    let table = txn
+        .open_table(ACCOUNTS)
+        .expect("account contributions initialized");
+    let row = table
+        .get(account)
+        .expect("read monthly contributions")
+        .expect("monthly contribution saved");
+    let saved: AccountProgress =
+        serde_json::from_slice(row.value()).expect("decode monthly contributions");
+    saved.contributions.into_values().collect()
+}
+
 fn write_character_contributions(
     txn: &redb::WriteTransaction,
     saved: &mut AccountProgress,
