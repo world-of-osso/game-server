@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Final armor factors](../class-completeness2.md#final-armor-factors--batch24): native466 final player multiplier, preserved fractional stat armor, native zero class fields; six arithmetic/damage/lifecycle controls and34 adjacent stat/armor/summon controls. Pet inheritance and non-player parity remain uncertified.
+
 - 2026-10-12 — [Minimum-speed floors](../class-completeness2.md#minimum-speed-floors--batch23): native305 player speed floor after normalization/slows; RED2→six lifecycle/recipient controls and twelve adjacent movement/mount controls. Non-player template-relative rates and whole-dash parity remain uncertified.
 
 - 2026-10-12 — [Representative class gate](../class-completeness2.md#representative-both-skin-class-gate--2026-10-12): all13 both-skin representatives and26 inspected PNGs, authentic private datasets/assets, no shared-realm changes. Full spell/talent goal remains2889 working-boundary/4756 partial/182 broken; no legal-build/rotation certificate.

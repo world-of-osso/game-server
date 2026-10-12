@@ -166,6 +166,16 @@ Aura305 uses the strongest positive native percentage as a floor after normaliza
 
 Adjacent movement1/1, normalization1/1 and mount10/10 pass. Logs: `minimum-speed-{red,green,controls3}.log`, `minimum-speed-adjacent-*.log`. Non-player template-relative minimum-speed rates and backward movement remain uncertified; no new live proof. Batch23 at `1441a273` records all7827 memberships:2934 working/4711 partial/182 broken; six memberships become working at the controlled player probe boundary.
 
+## Final armor factors — batch24
+
+Pinned TC a352b1fa Player::UpdateArmor (StatSystem.cpp255–276) applies aura466 after gear/base percentages and stat-derived armor; independent factors multiply. HandleModBonusArmorPercent (SpellAuraEffects.cpp3973) recomputes armor on amount/application changes. Native161394 supplies75%,262496 supplies100%,238666 supplies−15% for8000ms. Native162697/162698/162699/162701 author zero for466; these remain zero, not inferred suppression or extra armor.
+
+`147f0a3e` genuine RED: calculated213 armor versus372 under native161394. Its second stacking expectation initially omitted an already learned Tempered Scales passive and was corrected against the baseline; it is not separate valid RED. `8e0adc12` adds the final multiplier. Expanded `5bcd7c64` exposes genuine fractional-boundary RED355 versus356: stat armor was rounded before the final factor. `7d9397af` retains the fraction until final armor conversion.
+
+Six controls now pass: base/stat ordering with actual incoming physical damage, independent positive/negative stacking, removal to remaining factors, native negative expiry, native zero class fields and fractional rounding. Adjacent stats/itemstats21, physical base armor5, bonus-stat4 and summon4 pass. Concrete calculator fixtures isolate armor arithmetic; only the native selected aura effects are applied, not unrelated ability scripts. Pet owner-armor inheritance, ordinary-NPC aura466 parity and whole abilities remain uncertified.
+
+Logs: `bonus-armor-{red,green,controls-red,controls-green}.log`, `bonus-armor-adjacent-*.log`. No new live proof; full census pending.
+
 ## Retained boundaries
 
 At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. The earlier Monk evidence is retained in the completed representative gate above; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
