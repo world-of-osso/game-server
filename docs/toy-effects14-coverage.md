@@ -61,6 +61,25 @@ Native Gaze122120 first exposed focused Toy Box typing executing AssistTarget/F;
 
 The next summon group still has238 overlapping blockers. Four contracts provide only stationary authored scenery with exact TDB model scale:170476/304620→156086/display92605/.35 (180000ms),238852/1227383→241494/127931/.75 (60000ms),246227/1240408→246171/131280/.5 (180000ms, cursor87),276229/1299034→267634/145135/1.5 (2000ms cast,120000ms). All Control0/Title0/Slot0, template.scale1, npcflags0, MovementType0, AIName/ScriptNameempty, ExtendedDisplayInfo0. No custom interaction/guardian behavior is inferred. Source TC a352b1fa Unit.cpp10850–10864 supplies template-model DisplayScale, independent from object scale;14317–14335 explicitly multiplies it with ModelData.ModelScale and CDI.CreatureModelScale. Spire CDI scale.5 remains native in the visual, not replaced by the TDB.5 factor. The loader now retains DisplayScale, preserving master NativeObjectScale and aura composition rather than replacing either. RED2 real170476 missing156086/prepared316. GREEN actual four-toy learning/use/source scale and156132 object aura/reset passes143.26s; prepared320/1166. Private5911 actual Underlight Sealamp170476/display92605 passes Modern/Forever on2026-10-12: two native meshes, root scale0.35, native visual scale1, no PetFrame. Four1280×720 PNGs inspected; `modern-scaled-live`/`forever-scaled-live` logs and receipts in continuation evidence. Remaining three identities now also pass both-skin actual journal/native proof:238852/display127931 root.75/three meshes;246227/display131280 root.5/independent CDI visual.5/eleven meshes at the clicked point;276229/display145135 root1.5/one mesh. Current logs/receipts `modern-scaled-orbit-proof`, `forever-scaled-orbit-proof`. Native Sealamp/Spire expiry and CDI state kits now pass in both skins:116424/model1398891/.5 attachment and236744/model1952826/.25 attachment/.35 alpha, each starts once and disappears with natural180-second actor expiry. Source owners2358259/1625030 have empty attachment tables; semantic GROUND19 uses observed unit origin, without an invented bone/model. Current logs/receipts `modern-state-kit-ground-green`, `forever-state-kit-ground-green`, `modern-lamp-state-kit-green`, `forever-lamp-state-kit-green`; core spell-visual11 tests and native builds pass. Banner/Prey native expiry, display-replacement process proof and full per-toy effect certification remain separate boundaries. Previous combat-area fixture death was corrected with the source-defined Human Mage start and actual admin resurrection; toy gates unchanged. All owned runtime stopped. No canonical imports.
 
+## Batch10: source Orb of Deception race/sex transforms
+
+Actual1973/16739 RED learns the item but UseToy refuses aura56 (`orb-deception-red.log`, Human male). Retail69933 confirms one caster-targeted transform56, zero creature entry, ordinary duration and ItemEffect1800000ms recovery. Pinned TC a352b1fa `SpellAuraEffects.cpp2110-2161` supplies the exact table below from original race/native gender, not the currently displayed body. Source display rows exist for all20 identities.
+
+|Native race ID|Male display|Female display|
+|---|---|---|
+|Human1|10137|10138|
+|Orc2|10139|10140|
+|Dwarf3|10141|10142|
+|Night Elf4|10143|10144|
+|Undead5|10146|10145|
+|Tauren6|10136|10147|
+|Gnome7|10148|10149|
+|Troll8|10135|10134|
+|Blood Elf10|17829|17830|
+|Draenei11|17827|17828|
+
+The table is now implemented; actual20-variant learning/use/cancellation and unmapped-race GREEN is pending. Unlisted source races remain explicitly unavailable before cast/cooldown under the existing zero-entry no-op rule; TC's default does not supply a display, and no extra counterpart model is inferred. Native profiles/assets, both-skin actual Orb use/restoration and prepared re-census are separate pending boundaries. Source capsule: `orb-deception-source.json` under the continuation evidence root. No canonical imports.
+
 ## Remaining mechanic incidence
 
 Whole catalog overlapping blockers: aura4=273,summon28=243,dummy3=156,script77=61,transmitted-object50=52,periodic226=35,area-trigger179=25,puppet control3=24,vehicle control4=16,transform56=14. Missing item rows must not hide these counts. Aura233 is accepted server state but authentic viewer-local payload resolution remains unimplemented; enum and aura replication are insufficient proof.
