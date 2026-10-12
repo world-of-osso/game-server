@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Lead-owned authentic Silvershard summons/paths/spellclick import after content_policy.
+"""Lead-owned authentic Silvershard/Deephaul summons, paths and spellclick import.
 
 python3 scripts/import-battlegrounds.py --dump <local-TDB.sql> --db <database>
-python3 scripts/content_policy.py --db <database>
+python3 scripts/promote_battlegrounds.py --maps <explicit maps> --db <database>
 python3 scripts/add_battleground_summon_templates.py --db <database>
 No generated static cart placements: the battleground runtime summons them.
 """
@@ -14,8 +14,8 @@ from pathlib import Path
 
 import retail_content
 
-ENTRIES = (60140, 60283)
-PATHS = tuple(range(6014000, 6014012))
+ENTRIES = (60140, 60283, 214690, 217346)
+PATHS = (*range(6014000, 6014012), 21469000, 21734600)
 
 
 def validate_sources(conn):
@@ -40,8 +40,9 @@ def add_templates(conn):
     retail_content.create_retail_map_table(conn)
     retail_content.create_difficulty_table(conn)
     conn.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
-    before = {entry for (entry,) in conn.execute('SELECT entry FROM content_creature_template WHERE entry IN (60140,60283)')}
-    retail_content.insert_tdb_templates(conn, '60140,60283')
+    entries = ','.join(str(entry) for entry in ENTRIES)
+    before = {entry for (entry,) in conn.execute(f'SELECT entry FROM content_creature_template WHERE entry IN ({entries})')}
+    retail_content.insert_tdb_templates(conn, entries)
     for entry in set(ENTRIES) - before:
         conn.execute('''INSERT INTO content_creature_template_model
             SELECT * FROM tdb_creature_template_model WHERE CreatureID=?''', (entry,))
@@ -52,16 +53,17 @@ def add_templates(conn):
             raise ValueError(f'missing prepared battleground template: {entry}')
 
 
-def import_silvershard(conn):
+def import_battleground_summons(conn):
     validate_sources(conn)
     add_templates(conn)
-    # Twelve TC paths are dynamic NPC routes, not selected by a static spawn addon.
-    conn.execute('DELETE FROM content_waypoint_data WHERE id BETWEEN 6014000 AND 6014011')
-    conn.execute('''INSERT INTO content_waypoint_data
+    # Fourteen TC paths are dynamic NPC routes, not static spawn addons.
+    paths = ','.join(str(path) for path in PATHS)
+    conn.execute(f'DELETE FROM content_waypoint_data WHERE id IN ({paths})')
+    conn.execute(f'''INSERT INTO content_waypoint_data
         (id,point,position_x,position_y,position_z,orientation,delay,move_type)
         SELECT n.PathId,n.NodeId,n.PositionX,n.PositionY,n.PositionZ,n.Orientation,n.Delay,p.MoveType
         FROM tdb_waypoint_path_node n JOIN tdb_waypoint_path p ON p.PathId=n.PathId
-        WHERE n.PathId BETWEEN 6014000 AND 6014011''')
+        WHERE n.PathId IN ({paths})''')
     conn.execute('''CREATE TABLE IF NOT EXISTS content_npc_spellclick_spells
         (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER,
         PRIMARY KEY(npc_entry,spell_id))''')
@@ -77,7 +79,7 @@ def main():
     with closing(sqlite3.connect(args.db.resolve().as_uri() + '?mode=rw', uri=True)) as conn:
         with conn:
             conn.execute('BEGIN')
-            result = import_silvershard(conn)
+            result = import_battleground_summons(conn)
     print(json.dumps(result))
 
 
