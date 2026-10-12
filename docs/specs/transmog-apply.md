@@ -9,7 +9,7 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - [x] Stage pending changes; validate all requested GUIDs/choices before changing anything.
 - [x] Charge authentic locally derivable target cost atomically with per-item appearance modifiers and binding; original appearance restoration is free.
 - [x] Replicate self/observer equipment appearance and preserve through relog and gear swaps.
-- [ ] Permit hide options only for Retail-supported slots; illusions require authentic local data.
+- [ ] Permit hide options only for Retail-supported slots; every-slot hide policy is not certified by the bounded weapon/set fixture.
 - [x] Account-scoped saved outfits use authored automatically awarded entries2/3. Save validates appearance choices against the existing paid slot list and illusions against authored weapon slots/collected choices, but never changes gold, binding or equipped visuals. Loading stages choices; paid Apply remains the unchanged application path.
 
 - [x] Available sets are class-usable, condition-free sets with a collected member; each carries one primary appearance per transmog slot (collected member first; TrinityCore CollectionMgr::IsSetCompleted grouping). Members missing from world.db content_item are omitted, never invented.
@@ -50,7 +50,8 @@ members are omitted, not fabricated. Source ownership remains visual-level.
 - [ ] Collection state records visual IDs, not source IDs; exact collected-source distinction remains the acquisition system's recorded gap.
 - [x] Catalogue exposes local Retail69933 TransmogSet/TransmogSetItem, TransmogOutfitEntry/SlotInfo/SlotOption and all93 readable TransmogIllusion records. Seven authentic default illusions are collected (TrinityCore a352b1fa); other condition/acquisition grants remain unimplemented. Set primary appearances distinguish visual-level collected, uncollected and non-collectable ItemModifiedAppearance pieces without broadening paid choices. The state carries no item catalogue: it is resent after every Apply and save, and ~4.8k catalogue sources delayed each live reply by ~15 s.
 - [x] Native picker/pending/paid-apply, self/observer rebuild and both-skin relog proven on private55087: target2850 GUID123, sources821/1181,1500copper/application; private-server restart preserved modifiers in the same redb. [Bounded native evidence](../../../game-engine/docs/wiki/systems/transmog-apply.md#native-proof--verified-2026-10-11).
-- [ ] Native saved-outfit and catalogue proof remains pending; source/host-message tests are not native acceptance. Purchasable outfit entries are represented with authentic costs but purchasing is not implemented.
+- [x] Native saved-outfit/illusion selection and set membership proof passes in both skins on private5926; Custom Sets save/load includes a real second page. [Client evidence and policy boundaries](../../../game-engine/docs/wiki/systems/transmog-apply.md#retail121-native-proof--verified2026-10-12). Purchasable outfit entries carry authentic costs but purchasing is not implemented.
+- [x] Each offered/set source preserves authored `Enum.TransmogSource` for native source filtering; metadata does not broaden paid Apply eligibility.
 
 ## Out of scope
 
