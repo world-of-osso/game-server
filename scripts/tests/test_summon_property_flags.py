@@ -1,4 +1,5 @@
 """Real readable CASC69933 records; three encrypted records are not invented."""
+from contextlib import closing
 import os
 from pathlib import Path
 import sqlite3
@@ -27,7 +28,7 @@ class SummonPropertyFlagsTests(unittest.TestCase):
         return conn
 
     def test_imports_zero_private_and_creature_level_flags_without_changing_identity(self):
-        with self.database() as conn:
+        with closing(self.database()) as conn:
             flags.import_flags(conn, self.payload)
             for record_id in [64, 3077, 3135]:
                 row = conn.execute('SELECT * FROM summon_properties WHERE ID=?', (record_id,)).fetchone()
@@ -38,14 +39,14 @@ class SummonPropertyFlagsTests(unittest.TestCase):
             self.assertEqual(self.source[3135][5:], [133384, 0])
 
     def test_preserves_real_legacy_signed_enum_encoding(self):
-        with self.database() as conn:
+        with closing(self.database()) as conn:
             conn.execute('INSERT INTO summon_properties VALUES (?,?,?,?,?)', self.source[3001][:5])
             self.assertEqual(self.source[3001][3], 4294967295)
             flags.import_flags(conn, self.payload)
             self.assertEqual(conn.execute('SELECT * FROM summon_properties WHERE ID=3001').fetchone(), tuple(self.source[3001]))
 
     def test_repeated_import_is_idempotent(self):
-        with self.database() as conn:
+        with closing(self.database()) as conn:
             flags.import_flags(conn, self.payload)
             before = conn.iterdump()
             first_dump = list(before)
@@ -53,7 +54,7 @@ class SummonPropertyFlagsTests(unittest.TestCase):
             self.assertEqual(list(conn.iterdump()), first_dump)
 
     def test_rejects_identity_drift_without_adding_schema(self):
-        with self.database() as conn:
+        with closing(self.database()) as conn:
             conn.execute('UPDATE summon_properties SET Control=3 WHERE ID=64')
             before = list(conn.iterdump())
             with self.assertRaisesRegex(ValueError, 'metadata differs'):
@@ -61,7 +62,7 @@ class SummonPropertyFlagsTests(unittest.TestCase):
             self.assertEqual(list(conn.iterdump()), before)
 
     def test_rolls_back_columns_and_values_after_database_write_failure(self):
-        with self.database() as conn:
+        with closing(self.database()) as conn:
             conn.execute("CREATE TRIGGER reject_flags BEFORE UPDATE ON summon_properties BEGIN SELECT RAISE(ABORT,'fixture rejects update'); END")
             before = list(conn.iterdump())
             with self.assertRaisesRegex(sqlite3.IntegrityError, 'fixture rejects update'):
@@ -71,7 +72,7 @@ class SummonPropertyFlagsTests(unittest.TestCase):
     def test_rejects_layout_drift_before_schema_or_row_changes(self):
         payload = bytearray(self.payload)
         payload[156:160] = (0).to_bytes(4, 'little')
-        with self.database() as conn:
+        with closing(self.database()) as conn:
             before = conn.execute('SELECT * FROM summon_properties').fetchall()
             with self.assertRaisesRegex(ValueError, 'layout'):
                 flags.import_flags(conn, payload)
