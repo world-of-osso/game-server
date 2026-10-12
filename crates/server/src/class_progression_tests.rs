@@ -972,6 +972,63 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
             state.criteria_progress.get(&57642).copied(),
             (starting_level == 89).then_some(1)
         );
+        if starting_level == 89 {
+            assert_eq!(state.criteria_progress.get(&64625), Some(&1));
+            assert!(!state.criteria_progress.contains_key(&64623));
+            assert!(!state.earned_ids.contains(&7382));
+            let db = &app.world().resource::<GameDatabase>().db;
+            let (mage_character, _) =
+                persistence::create_character(db, 1, "Mageproof", HUMAN, 8).unwrap();
+            save_xp(
+                db,
+                mage_character,
+                crate::experience::xp_to_next_level(89) - 1,
+            );
+            let mage = spawn_player(&mut app, mage_character, HUMAN, 8, 89);
+            app.world_mut().entity_mut(mage).insert((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                PlayerAchievementState::default(),
+            ));
+            let connection = connection_of(&mut app, mage);
+            app.world_mut().entity_mut(connection).insert((
+                Authenticated { account_id: 1 },
+                InWorld {
+                    character_id: mage_character,
+                },
+            ));
+            advance(&mut app);
+            app.world_mut().spawn((
+                Npc {
+                    template_id: 299,
+                    name: "Second fixture wolf".into(),
+                },
+                UnitLevel(89),
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                crate::maps::InMap::continent(0),
+                crate::creature_tap::CreatureTap::tapped_by(mage_character),
+                shared::components::Health {
+                    current: 0.0,
+                    max: 100.0,
+                },
+                DeathState {
+                    respawn_timer: 60.0,
+                },
+            ));
+            advance(&mut app);
+            assert_eq!(app.world().get::<Level>(mage), Some(&Level(90)));
+            let state = app.world().get::<PlayerAchievementState>(mage).unwrap();
+            assert_eq!(state.criteria_progress.get(&64623), Some(&1));
+            assert!(!state.criteria_progress.contains_key(&64625));
+            assert!(state.account.as_ref().unwrap().earned_ids.contains(&7382));
+        }
         // Unrelated/admin level mutation is not an XP transition.
         app.world_mut().entity_mut(player).insert(Level(90));
         advance(&mut app);

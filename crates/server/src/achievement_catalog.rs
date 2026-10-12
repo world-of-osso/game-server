@@ -29,7 +29,7 @@ pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
     ActivelyReachLevel(u8),
-    ReachMaxLevel,
+    ReachMaxLevel(u8),
     GainLevels(u8),
     SkillRank(u32, u16),
     /// TC GetPureMaxSkillValue of a known skill line.
@@ -125,7 +125,7 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
             Self::ActivelyReachLevel(_) => 196,
-            Self::ReachMaxLevel => 221,
+            Self::ReachMaxLevel(_) => 221,
             Self::GainLevels(_) => 253,
             Self::SkillRank(_, _) => 7,
             Self::SkillMaxRank(_, _) => 40,
@@ -222,8 +222,13 @@ impl CriteriaEvent {
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::FulfillCraftingOrderType(kind) => u32::from(kind) == criteria.asset,
-            Self::ReachMaxLevel
-            | Self::GainLevels(_)
+            Self::ReachMaxLevel(class) => {
+                criteria.asset == 0
+                    && criteria
+                        .max_level_class
+                        .is_none_or(|required| required == class)
+            }
+            Self::GainLevels(_)
             | Self::LootMoney(_)
             | Self::DamageDealt(_)
             | Self::HighestDamageDone(_)
@@ -336,6 +341,8 @@ impl MythicRequirements {
     }
 }
 
+#[path = "achievement_level_classes.rs"]
+mod level_classes;
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
 #[path = "achievement_overlays.rs"]
@@ -347,6 +354,7 @@ struct Criteria {
     asset: u32,
     supported: bool,
     mythic: Option<MythicRequirements>,
+    max_level_class: Option<u8>,
     exploration_bits: Vec<u32>,
 }
 
@@ -1009,18 +1017,24 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             Vec::new()
         };
-        let supported_mythic =
-            mythic.is_some() && conditional.iter().skip(1).all(|value| *value == 0);
+        let max_level_class = if kind == 221 && row.get::<_, i32>(2)? == 0 {
+            level_classes::max_level_class(criteria_id, conditional[0])
+        } else {
+            None
+        };
+        let supported_predicate = (mythic.is_some() || max_level_class.is_some())
+            && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
             row.get(0)?,
             Criteria {
                 kind,
                 mythic,
+                max_level_class,
                 exploration_bits: exploration_bits.clone(),
                 asset: row.get::<_, i32>(2)? as u32,
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
-                supported: supported_mythic
+                supported: supported_predicate
                     || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 16 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
