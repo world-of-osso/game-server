@@ -12,7 +12,7 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998)
+RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998, 727)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
 # spawns in it are seen by everyone, like PhaseId 0.
 DEFAULT_PHASE = 169
