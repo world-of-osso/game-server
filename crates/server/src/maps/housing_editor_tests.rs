@@ -106,6 +106,7 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
         .send::<HousingChannel>(HousingRequest {
             request_id: 41,
             command: HousingCommand::PlaceDecor {
+                variant_id: None,
                 house_id,
                 decor_id: 1693,
                 transform: DecorTransform {

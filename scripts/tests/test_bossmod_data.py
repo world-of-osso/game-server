@@ -16,7 +16,7 @@ mod:SetEncounterID(mod:Retail() and 2986 or 2746)
 function mod:OnBossEnable()
  self:Log("SPELL_CAST_START", "AcidSplash", 6306)
 end
-function mod:OnEngage()
+function mod:OnEncounterStart()
  self:CDBar(6306, 2.4)
 end
 function mod:AcidSplash(args)
@@ -30,6 +30,43 @@ end
 '''
 
 class BossmodImportTests(unittest.TestCase):
+    def test_retail_engage_uses_encounter_start_not_legacy_on_engage(self):
+        source = SOURCE.replace('OnEncounterStart', 'OnEngage') + '''
+if mod:Retail() then
+ function mod:OnEncounterStart()
+  self:CDBar(6306, 5)
+ end
+end
+'''
+        result = bm.extract_bigwigs(source, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual([r['delay_ms'] for r in result['rules'] if r['trigger'] == 'engage'], [5000])
+
+    def test_retail_method_replacement_removes_obsolete_cast_registration(self):
+        source = SOURCE.replace('OnEncounterStart', 'OnEngage') + '''
+if mod:Retail() then
+ function mod:OnBossEnable()
+ end
+ function mod:OnEncounterStart()
+  self:CDBar(6306, 5)
+ end
+end
+'''
+        result = bm.extract_bigwigs(source, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertFalse(any(r['trigger'] == 'cast_start' for r in result['rules']))
+        self.assertEqual([r['delay_ms'] for r in result['rules'] if r['trigger'] == 'engage'], [5000])
+
+    def test_retail_replacement_uses_final_handler_body_and_lexical_binding(self):
+        source = SOURCE + '''
+do
+ local delay = 7
+ function mod:AcidSplash(args)
+  self:CDBar(args.spellId, delay)
+ end
+end
+'''
+        result = bm.extract_bigwigs(source, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual([r['delay_ms'] for r in result['rules'] if r['trigger'] == 'cast_start'], [7000])
+
     def test_static_timer_tables_calls_and_dbm_dispatch(self):
         source = '''local mod = DBM:NewMod(1, "DBM", 1)
 mod:SetEncounterID(343)

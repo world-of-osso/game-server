@@ -4,7 +4,7 @@ use redb::{ReadableTable, WriteTransaction};
 use rusqlite::Connection;
 use serde_json::Value;
 
-pub(super) const SCHEMA_VERSION: u64 = 2;
+pub(super) const SCHEMA_VERSION: u64 = 3;
 
 pub(super) fn version(bytes: &[u8]) -> Result<u64, String> {
     let state: Value =
@@ -28,7 +28,7 @@ pub(super) fn migrate(txn: &WriteTransaction, source: &Connection) -> Result<(),
     let version = version(&bytes)?;
     match version {
         SCHEMA_VERSION => return Ok(()),
-        0 | 1 => {}
+        0 | 1 | 2 => {}
         version => return Err(format!("Unsupported housing schema {version}.")),
     }
     let mut state: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
@@ -59,24 +59,36 @@ pub(super) fn migrate(txn: &WriteTransaction, source: &Connection) -> Result<(),
                 source_missing_axes(source, placed)?;
             }
         }
-        let object = house.as_object_mut().ok_or("Invalid house record.")?;
-        let previous = object
-            .remove("access_anyone")
-            .ok_or("Missing previous house permission.")?;
-        let access = match previous {
-            Value::Null => Value::Null,
-            Value::Bool(allowed) => serde_json::to_value(shared::protocol::HouseAccess {
-                anyone: allowed,
-                neighbors: allowed,
-                guild: allowed,
-                friends: allowed,
-                party: allowed,
-            })
-            .map_err(|e| e.to_string())?,
-            _ => return Err("Invalid previous house permission.".into()),
-        };
-        object.insert("house_access".into(), access);
+        let decor = house["decor"]
+            .as_array_mut()
+            .ok_or("Missing house decor.")?;
+        for placed in decor {
+            placed
+                .as_object_mut()
+                .ok_or("Invalid placed decor.")?
+                .insert("dyes".into(), serde_json::json!([]));
+        }
+        if version < 2 {
+            let object = house.as_object_mut().ok_or("Invalid house record.")?;
+            let previous = object
+                .remove("access_anyone")
+                .ok_or("Missing previous house permission.")?;
+            let access = match previous {
+                Value::Null => Value::Null,
+                Value::Bool(allowed) => serde_json::to_value(shared::protocol::HouseAccess {
+                    anyone: allowed,
+                    neighbors: allowed,
+                    guild: allowed,
+                    friends: allowed,
+                    party: allowed,
+                })
+                .map_err(|e| e.to_string())?,
+                _ => return Err("Invalid previous house permission.".into()),
+            };
+            object.insert("house_access".into(), access);
+        }
     }
+    state["storage_variants"] = serde_json::json!({});
     state["schema_version"] = Value::from(SCHEMA_VERSION);
     // Validate the complete new representation before atomically replacing the row.
     let migrated: super::State = serde_json::from_value(state)
