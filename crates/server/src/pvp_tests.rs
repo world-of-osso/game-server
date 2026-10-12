@@ -43,7 +43,7 @@ fn arena_skirmish_pairing_requires_four_or_six_unique_eligible_players() {
 fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates() {
     use shared::components::{Health, Player, Position};
     use shared::protocol::ArenaQueueMode;
-    let mut db = rusqlite::Connection::open_in_memory().unwrap();
+    let db = rusqlite::Connection::open_in_memory().unwrap();
     db.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
     let catalog = arena::Catalog::load(&db).unwrap();
     let mut state = PvpServerState::default();
