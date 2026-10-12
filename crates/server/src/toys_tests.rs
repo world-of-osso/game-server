@@ -1952,12 +1952,12 @@ fn toyfx9_prepared_census_preserves_interaction_blockers() {
     let toys = report["toys"].as_array().unwrap();
     for item in [
         163986, 163987, 187834, 187957, 187958, 197719, 203716, 208057, 211424, 218128, 232301,
-        232302, 232303, 232305, 232306, 232307,
+        232302, 232303, 232305, 232306, 232307, 238852,
     ] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [88387, 88579, 193478, 198156, 219387, 238852] {
+    for item in [88387, 88579, 193478, 198156, 219387] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(
             !toy["unavailable"].is_null(),
@@ -2495,11 +2495,11 @@ fn toyfx10_prepared_census_retains_script_and_interaction_refusals() {
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX10_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
-    for item in [88417, 88587, 131812, 175063] {
+    for item in [88417, 88587, 131812, 175063, 238852] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [48933, 88387, 95567, 138873, 198156, 219387, 238852] {
+    for item in [48933, 88387, 95567, 138873, 198156, 219387] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(!toy["unavailable"].is_null(), "unproved action: {toy}");
     }
