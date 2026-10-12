@@ -42,7 +42,6 @@ fn target_allows_knockback(world: &World, caster: Entity, target: Entity) -> boo
         .is_some_and(|auras| {
             auras.has_type(crate::auras::handlers::MOD_ROOT)
                 || auras.has_type(crate::auras::handlers::MOD_ROOT_2)
-                || auras.is_stunned()
         });
     if rooted {
         return false;

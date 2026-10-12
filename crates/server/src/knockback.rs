@@ -126,6 +126,13 @@ fn launch_velocity(
             .ok_or("coincident knockback target has no Rotation")?;
         -Vec3::new(rotation.y.sin(), 0.0, rotation.y.cos())
     };
+    // TC MotionMaster::MoveKnockbackFrom makes NPC vertical speed positive.
+    // Player packet-driven speed preserves its sign; this realm owns its trajectory.
+    let speed_z = if world.get::<shared::components::Npc>(target).is_some() {
+        speed_z.abs()
+    } else {
+        speed_z
+    };
     Ok(direction * speed_xy + Vec3::Y * speed_z)
 }
 
