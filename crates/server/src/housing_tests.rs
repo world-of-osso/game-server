@@ -104,3 +104,89 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
     );
     assert!(read_snapshot(&world, actor, Some(4), None).is_err());
 }
+
+#[test]
+fn housing_finder_relationships_use_persisted_friends_and_account_ownership() {
+    use shared::protocol::HousingPlotOwnerType;
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("friend-housing.redb")).unwrap();
+    persistence::create_tables(&db);
+    let (owner, _) = persistence::create_character(&db, 1, "Friendowner", 1, 2).unwrap();
+    let (viewer, _) = persistence::create_character(&db, 2, "Friendviewer", 1, 2).unwrap();
+    persistence::save_inventory(
+        &db,
+        owner,
+        &InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let source = crate::housing_catalog::HousingCatalog::read(
+        &crate::housing_catalog::tests::catalog_fixture(),
+    )
+    .unwrap();
+    store::purchase(
+        &db,
+        store::Actor {
+            account_id: 1,
+            character_id: owner,
+            neighborhood_id: Some(1),
+            inside_house: None,
+        },
+        source.plot(417).unwrap(),
+    )
+    .unwrap();
+    let mut world = World::new();
+    world.insert_resource(GameDatabase { db });
+    world.insert_resource(InstanceManager::default());
+    world.insert_resource(HousingAvailability(Ok(source)));
+    let player = world.spawn(InMap::continent(0)).id();
+    let actor = Actor {
+        connection: Entity::PLACEHOLDER,
+        player,
+        account: 2,
+        character: viewer,
+    };
+    assert_eq!(
+        read_snapshot(&world, actor, Some(1), None).unwrap().plots[0].owner_type,
+        HousingPlotOwnerType::Stranger
+    );
+    persistence::save_friends(
+        &world.resource::<GameDatabase>().db,
+        viewer,
+        &crate::friends::PlayerFriendsState {
+            entries: vec![crate::friends::FriendRecord {
+                name: "Friendowner".into(),
+                note: String::new(),
+            }],
+        },
+    );
+    assert_eq!(
+        read_snapshot(&world, actor, Some(1), None).unwrap().plots[0].owner_type,
+        HousingPlotOwnerType::Friend
+    );
+    let (alt, _) =
+        persistence::create_character(&world.resource::<GameDatabase>().db, 1, "Friendalt", 1, 2)
+            .unwrap();
+    let self_actor = Actor {
+        account: 1,
+        character: alt,
+        ..actor
+    };
+    assert_eq!(
+        read_snapshot(&world, self_actor, Some(1), None)
+            .unwrap()
+            .plots[0]
+            .owner_type,
+        HousingPlotOwnerType::SelfOwned
+    );
+    persistence::save_friends(
+        &world.resource::<GameDatabase>().db,
+        viewer,
+        &crate::friends::PlayerFriendsState::default(),
+    );
+    assert_eq!(
+        read_snapshot(&world, actor, Some(1), None).unwrap().plots[0].owner_type,
+        HousingPlotOwnerType::Stranger
+    );
+}

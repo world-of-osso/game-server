@@ -2697,3 +2697,55 @@ fn raid_entry_only_leader_sets_raid_selections_over_the_real_message_receiver_ou
         }
     );
 }
+
+#[test]
+fn housing_finder_visit_ports_to_authored_plot_without_payment_or_grant() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("plot-visit.redb")).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let mut h = housing_harness(db);
+    let viewer = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(viewer.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    let plot = h
+        .app
+        .world()
+        .resource::<crate::housing::HousingAvailability>()
+        .0
+        .as_ref()
+        .unwrap()
+        .plot(417)
+        .unwrap()
+        .clone();
+    let reply = h.housing_request(&viewer, HousingCommand::VisitPlot { plot_id: 417 });
+    assert_eq!(reply.error, None);
+    assert!(reply.state.owned_houses.is_empty());
+    assert!(reply.state.stored.is_empty());
+    h.ack(&viewer);
+    assert_eq!(h.map_of(&viewer).map_id, 2735);
+    let [x, y, z] = plot.teleport;
+    let expected = crate::terrain_height::wow_to_bevy(x, y, z);
+    let actual = h.app.world().get::<Position>(viewer.player).unwrap();
+    assert_eq!((actual.x, actual.y, actual.z), expected);
+    assert_eq!(
+        crate::persistence::load_inventory(
+            &h.app
+                .world()
+                .resource::<crate::persistence::GameDatabase>()
+                .db,
+            30
+        )
+        .gold,
+        20_000_000
+    );
+}

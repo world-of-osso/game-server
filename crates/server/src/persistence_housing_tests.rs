@@ -14,6 +14,7 @@ fn plot() -> HousingPlot {
         cost: 10_000_000,
         house_id: None,
         owner_character_id: None,
+        owner_type: shared::protocol::HousingPlotOwnerType::None,
     }
 }
 
