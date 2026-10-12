@@ -120,6 +120,7 @@ fn process_barber_shop_apply_requests(
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<BarberShopStateUpdate>>,
+    mut commands: Commands,
 ) {
     let Some(db) = db else { return };
     for (conn_entity, link, in_world, mut receiver) in &mut receivers {
@@ -136,6 +137,7 @@ fn process_barber_shop_apply_requests(
                 dirty_queue.as_deref(),
                 &mut gold_updates,
                 &mut senders,
+                &mut commands,
             );
         }
     }
@@ -155,6 +157,7 @@ fn handle_apply_request(
     dirty_queue: Option<&ReplicationDirtyQueue>,
     gold_updates: &mut GoldUpdateQueue,
     senders: &mut Query<&mut MessageSender<BarberShopStateUpdate>>,
+    commands: &mut Commands,
 ) {
     let Ok(mut player) = players.get_mut(application.player) else {
         send_barber_shop_error(
@@ -201,6 +204,19 @@ fn handle_apply_request(
         None,
         senders,
     );
+    // TC CharacterHandler.cpp:1867-1879: paid copper, then the haircut itself.
+    let player = application.player;
+    commands.queue(move |world: &mut World| {
+        use crate::achievement::{CriteriaEvent, record_player_event};
+        if cost > 0 {
+            record_player_event(
+                world,
+                player,
+                CriteriaEvent::MoneySpentAtBarberShop(u64::from(cost)),
+            );
+        }
+        record_player_event(world, player, CriteriaEvent::GotHaircut);
+    });
 }
 
 fn save_barber_shop_changes(
@@ -364,6 +380,102 @@ mod tests {
                 .0,
             90_000
         );
+    }
+
+    /// TC HandleAlterAppearance: a paid haircut credits GotHaircut48 and its copper65;
+    /// an unaffordable request credits nothing.
+    #[test]
+    fn achievements_criteria_paid_haircut_credits_haircut_and_copper_not_refusals() {
+        use crate::achievement::PlayerAchievementState;
+        use lightyear::connection::host::HostClient;
+        use lightyear::prelude::{Connected, PeerId, RemoteId};
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: std::time::Duration::from_millis(50),
+        });
+        app.add_plugins(shared::protocol::ProtocolPlugin);
+        app.add_plugins(BarberShopPlugin);
+        app.init_resource::<GoldUpdateQueue>();
+        app.init_resource::<crate::maps::ServerClock>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        let db = crate::persistence::temp_database();
+        let (character_id, _) = crate::persistence::create_character(&db, 1, "Alice", 1, 1)
+            .expect("character should be created");
+        let poor = InventoryData {
+            gold: 5_000,
+            items: Vec::new(),
+        };
+        crate::persistence::save_inventory(&db, character_id, &poor);
+        app.insert_resource(GameDatabase { db });
+        app.finish();
+        app.cleanup();
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name: "Alice".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: appearance(),
+                },
+                crate::persistence::ClientId(character_id),
+                PlayerAchievementState::default(),
+            ))
+            .id();
+        let connection = app
+            .world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(1)),
+                Connected,
+                HostClient { buffer: Vec::new() },
+                Authenticated { account_id: 1 },
+                InWorld { character_id },
+                PlayerLink(player),
+                MessageSender::<ApplyBarberShopChanges>::default(),
+                MessageReceiver::<ApplyBarberShopChanges>::default(),
+                MessageSender::<BarberShopStateUpdate>::default(),
+                MessageReceiver::<BarberShopStateUpdate>::default(),
+            ))
+            .id();
+        app.update();
+        let request = |app: &mut App| {
+            app.world_mut()
+                .get_mut::<MessageSender<ApplyBarberShopChanges>>(connection)
+                .unwrap()
+                .send::<BarberShopChannel>(ApplyBarberShopChanges {
+                    appearance: CharacterAppearance {
+                        hair_color: 9,
+                        ..appearance()
+                    },
+                });
+            for _ in 0..3 {
+                app.update();
+            }
+        };
+        // Statistic1147 criterion3357 (copper) and Shave and a Haircut545 criterion2341.
+        let counters = |app: &App| {
+            let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+            (
+                state.criteria_progress.get(&3357).copied(),
+                state.criteria_progress.get(&2341).copied(),
+                state.earned_ids.contains(&545),
+            )
+        };
+        request(&mut app);
+        assert_eq!(counters(&app), (None, None, false));
+        let rich = InventoryData {
+            gold: 100_000,
+            items: Vec::new(),
+        };
+        crate::persistence::save_inventory(
+            &app.world().resource::<GameDatabase>().db,
+            character_id,
+            &rich,
+        );
+        request(&mut app);
+        assert_eq!(counters(&app), (Some(10_000), Some(1), true));
     }
 
     #[test]

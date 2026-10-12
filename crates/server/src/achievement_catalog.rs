@@ -15,8 +15,8 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 62, 63, 67, 68, 69, 73, 74, 76, 77, 107, 108, 130, 151,
-    152, 157, 158, 160, 162, 165, 216,
+    0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 62, 63, 65, 67, 68, 69, 73, 74, 76, 77, 107, 108, 130,
+    151, 152, 157, 158, 160, 162, 165, 216,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -74,6 +74,8 @@ pub(crate) enum CriteriaEvent {
     BuyTaxi,
     WinDuel,
     LoseDuel,
+    GotHaircut,
+    MoneySpentAtBarberShop(u64),
     MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
@@ -127,6 +129,8 @@ impl CriteriaEvent {
             Self::BuyTaxi => 108,
             Self::WinDuel => 76,
             Self::LoseDuel => 77,
+            Self::GotHaircut => 48,
+            Self::MoneySpentAtBarberShop(_) => 65,
             Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
@@ -153,6 +157,8 @@ impl CriteriaEvent {
             | Self::BuyTaxi
             | Self::WinDuel
             | Self::LoseDuel
+            | Self::GotHaircut
+            | Self::MoneySpentAtBarberShop(_)
             | Self::MoneySpentOnTaxis(_)
             | Self::OwnUniquePets(_)
             | Self::OwnToys(_)
@@ -562,6 +568,7 @@ impl AchievementCatalog {
             | CriteriaEvent::KnowPetCreature(_)
             | CriteriaEvent::LearnToy(_)
             | CriteriaEvent::LearnTaxiNode(_)
+            | CriteriaEvent::GotHaircut
             | CriteriaEvent::EquipItem(_) => 1,
             CriteriaEvent::KnowSkillLineSpells(_, count)
             | CriteriaEvent::LearnTradeskillSkillLine(_, count)
@@ -572,7 +579,8 @@ impl AchievementCatalog {
             | CriteriaEvent::PetBattleAchievementPoints(count) => u64::from(count),
             CriteriaEvent::RewardedQuestsInZone(_, count) => (*counter).max(u64::from(count)),
             CriteriaEvent::MoneyEarnedFromQuesting(amount)
-            | CriteriaEvent::MoneySpentOnTaxis(amount) => counter.saturating_add(amount),
+            | CriteriaEvent::MoneySpentOnTaxis(amount)
+            | CriteriaEvent::MoneySpentAtBarberShop(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
             CriteriaEvent::CurrencyGained(_, amount)
@@ -891,7 +899,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 62 | 63 | 67 | 74 | 76 | 77 | 81 | 107 | 108 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 48 | 62 | 63 | 65 | 67 | 74 | 76 | 77 | 81 | 107 | 108 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
