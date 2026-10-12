@@ -3933,7 +3933,18 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
             },
         ));
         learn_effect_toy(&mut h, character, item);
-        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        let cursor = store
+            .get(spell)
+            .unwrap()
+            .effects
+            .iter()
+            .any(|effect| effect.implicit_targets.contains(&87));
+        let destination = cursor.then_some([3.0, 0.0, 0.0]);
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "toy {item}"
+        );
         h.advance(100);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
