@@ -52,7 +52,7 @@ def polygon_areas(poi):
 def supported_objectives(conn, quest):
     rows = conn.execute('SELECT Type,ObjectID,Amount,Flags,ProgressBarWeight FROM tdb_quest_objectives WHERE QuestID=?', (quest,)).fetchall()
     for kind, object_id, amount, flags, weight in rows:
-        if kind not in (0, 1, 2, 15) or amount <= 0 or (kind != 15 and object_id <= 0):
+        if kind not in (0, 1, 2, 3, 9, 15) or amount <= 0 or (kind not in (9, 15) and object_id <= 0):
             return False
         if not math.isfinite(weight) or weight < 0:
             raise ValueError(f'quest {quest}: invalid authenticated objective weight')
