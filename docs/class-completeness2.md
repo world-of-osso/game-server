@@ -21,6 +21,7 @@ Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes 
 | 9f2c5cbd / shared6ba2f5cd | 2854 | 4791 | 182 | All 7827 memberships, exit0, 603.33s |
 | 42c85bc2 / shared6ba2f5cd | 2860 | 4785 | 182 | All 7827 memberships plus fresh source-gap analysis, exit0, 539.22s |
 | 8fcddcd9 / sharedd503cd3 | 2870 | 4775 | 182 | All 7827 memberships, current explicitly proved named consumers, exit0, 622.23s |
+| 672a43a4 / sharedd503cd3 | 2874 | 4771 | 182 | All 7827 memberships plus exact231040s2 consumer, exit0, 705.59s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -69,11 +70,11 @@ Private UDP5841 live runs use `fb_class2growth`/Fbgrowth and native Blackrock In
 
 ## Lingering Healing named aura4 consumer
 
-Native231040s2 extends Regrowth8936 only for self casts. Its independent index0 aura107/class-mask16 already extends Rejuvenation774; it does not match Regrowth's native mask64. Native REDced0f945 records6000 versus9000ms in the replicated aura and premature expiration. The named index1 consumer adds its native3000ms only for the caster's own Regrowth, after existing duration modifiers. Foreign casts and other recipients retain the native base duration; Rejuvenation's existing masked extension is unchanged. Optional percentage-duration interactions beyond this native control remain uncertified, not silently generalized.
+Native231040s2 extends Regrowth8936 only for self casts. Its independent index0 aura107/class-mask16 already extends Rejuvenation774; it does not match Regrowth's native mask64. Native REDced0f945 records6000 versus9000ms in the replicated aura and premature expiration. GREEN672a43a4 passes three Lingering controls and four adjacent Protective Growth controls. The named index1 consumer adds its native3000ms only for the caster's own Regrowth, after existing duration modifiers. Foreign casts and other recipients retain the native base duration; Rejuvenation's existing masked extension is unchanged. Optional percentage-duration interactions beyond this native control remain uncertified, not silently generalized.
 
 ## Fount of Strength named aura4 consumer
 
-Native441675 already supplies20 raw Energy and200 raw Rage maximums through its two aura35 effects. Its index2 states that Frenzied Regeneration also increases maximum health by10%. Native RED6c23385f records public maximum health1110 rather than1221 during own22842. The named consumer folds into the existing max-health stat path only while the learner carries that aura; foreign recipients/casters do not activate it. Cancellation and native expiry restore health maxima, retaining valid current health and the existing native max-power bonuses. This controlled field/lifecycle proof does not certify other percentage-stacking or healing-snapshot interactions.
+Native441675 already supplies20 raw Energy and200 raw Rage maximums through its two aura35 effects. Its index2 states that Frenzied Regeneration also increases maximum health by10%. Native RED6c23385f records public maximum health1110 rather than1221 during own22842. GREEN78ea6e06 passes three native health/resource/lifecycle controls. The named consumer folds into the existing max-health stat path only while the learner carries that aura; foreign recipients/casters do not activate it. Cancellation and native expiry restore health maxima, retaining valid current health and the existing native max-power bonuses. This controlled field/lifecycle proof does not certify other percentage-stacking or healing-snapshot interactions.
 
 ## Retained boundaries
 
