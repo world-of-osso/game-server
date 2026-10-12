@@ -37,6 +37,9 @@ mod arena_preparation;
 mod arena_rated_queue;
 #[path = "pvp_arena_rated_results.rs"]
 mod arena_rated_results;
+#[path = "pvp_arena_scores.rs"]
+mod arena_scores;
+pub(crate) use arena_scores::record as record_arena_event;
 #[path = "pvp_arena_rating.rs"]
 mod arena_rating;
 #[path = "pvp_arena_sight.rs"]

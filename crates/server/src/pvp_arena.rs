@@ -7,6 +7,8 @@ use shared::components::Level;
 use shared::protocol::{ArenaMatchSnapshot, ArenaQueueMode, BattlegroundSnapshot, QueueForArena};
 
 pub(super) use super::arena_lifecycle::update_matches;
+// BattlemasterList6 (All Arenas), build12.1.0.69933.
+const SKIRMISH_MIN_LEVEL: u8 = 20;
 use super::{InvitedBattleground, PlayerPvpQueue, PlayerPvpState, PvpServerState};
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
@@ -49,6 +51,7 @@ pub(super) struct MatchState {
     pub started: Option<f64>,
     pub snapshot: ArenaMatchSnapshot,
     pub rated: Option<super::arena_rating::RatedMatch>,
+    pub score_dirty: bool,
 }
 impl MatchState {
     pub fn template(&self) -> BgTemplate {
@@ -94,10 +97,11 @@ pub(super) fn queue_player(
     if player.battleground.is_some() || player.queue.is_some() {
         return Err("already queued or invited to PvP".into());
     }
-    if !catalog
-        .0
-        .iter()
-        .any(|map| map.levels.contains(level) && map.weight > 0)
+    if level < SKIRMISH_MIN_LEVEL
+        || !catalog
+            .0
+            .iter()
+            .any(|map| map.levels.contains(level) && map.weight > 0)
     {
         return Err("no source-backed arena supports this level".into());
     }
@@ -174,6 +178,7 @@ pub(super) fn create_match(
         preparation_started: None,
         started: None,
         rated: None,
+        score_dirty: false,
         snapshot: ArenaMatchSnapshot {
             mode,
             preparation_remaining_secs: None,
