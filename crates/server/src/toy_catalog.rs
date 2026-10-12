@@ -62,6 +62,7 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
                     source_type: r.get(5)?,
                     source_text: r.get(6)?,
                     spell_id,
+                    requires_target_witness: false,
                     learned: false,
                     favourite: false,
                     unavailable_reason,
