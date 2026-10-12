@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Masked moving casts/channels](../class-completeness2.md#masked-moving-casts-and-channels--batch26): native330 admission and dynamic CastState permission, family/recipient masks and native Attr13 veto; RED4→eight controls and22 adjacent controls. Full Hover, empowerment and client/live movement remain uncertified.
+
 - 2026-10-12 — [Zero-amount linked auras](../class-completeness2.md#zero-amount-linked-auras--batch25): native284/285 child ownership/application/removal, stack clocks and trigger depth; RED3→seven controls,37 adjacent controls. Nonzero amounts remain named source gaps; no invented sign or magnitude conversion.
 
 - 2026-10-12 — [Final armor factors](../class-completeness2.md#final-armor-factors--batch24): native466 final player multiplier, preserved fractional stat armor, native zero class fields; six arithmetic/damage/lifecycle controls and34 adjacent stat/armor/summon controls. Pet inheritance and non-player parity remain uncertified.

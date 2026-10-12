@@ -197,6 +197,16 @@ Nonzero285 fields stay explicit source gaps. Pinned TC would overwrite child bas
 
 Adjacent Unending Resolve2, stats/itemstats21, Chrono6 and Blooming8 pass. Logs: `linked-aura-{red2,green,controls}.log`, `linked-aura-adjacent-*.log`; exact native rows in `linked-aura-native-effects.json`. No new live proof. Batch25 at `d41f51c2` records all7827 memberships:2969 working/4676 partial/182 broken; Ironfur's four build-union memberships become working at the controlled probe boundary. All six nonzero linked-root memberships remain partial. Existing child/script/proc gaps remain, not marker no-ops.
 
+## Masked moving casts and channels — batch26
+
+Pinned TC a352b1fa Unit::CanCastSpellWhileMoving (Unit.cpp3298–3313) treats330 as a matching-family/mask permission; the amount is not a speed, chance or percentage. Attr13 `0x08000000` prevents the aura exception. Spell::CheckMovement (Spell.cpp7175–7196) uses it both at preparation and while channeling; existing intrinsically mobile spells remain mobile.
+
+`4f9ea446` genuine RED4: native Spiritwalker's Grace79206 still rejects moving Lightning Bolt188196, native Hover358267 rejects moving Disintegrate356995, and gaining Grace leaves the active cast's permission false. The initial import compiler error was not RED. `10ef9c2f` adds mask-based permission at admission/creation and refreshes active cast permissions on aura changes. `a2f3d5d7` splits the active-cast lookup and extends exclusions.
+
+Eight controls pass: real moving Lightning Bolt damage, real moving Disintegrate channel/ticks, gain/removal/expiry during an active cast, foreign family, empty mask within the same family, foreign recipient and the Attr13 veto. The empty-mask and veto controls isolate native metadata on a real Lightning Bolt fixture; they are not native empower execution proof. Tests assert server CastState (the replicated component) and actual cast outcomes, not newly captured client-side replication/live UI. Hover applies only its330 field here, not dash geometry or complete ability parity.
+
+Adjacent ordinary movement cancellation2, Disintegrate1, queue/override11 and Blooming8 pass. Logs: `cast-mobility-{red2,green,controls}.log`, `cast-mobility-adjacent-*.log`. Other movement-exception aura types, charged-buff consumption, empowerment, legal builds and native live movement remain uncertified. Full census pending.
+
 ## Retained boundaries
 
 At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. The earlier Monk evidence is retained in the completed representative gate above; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
