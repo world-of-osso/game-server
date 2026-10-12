@@ -566,9 +566,7 @@ impl AchievementCatalog {
         character_scope: bool,
     ) -> AchievementCriterionLine {
         let tree = &self.trees[&id];
-        let counter = character_scope
-            .then(|| self.criterion_counter(tree.criteria_id, state))
-            .flatten();
+        let progress = self.tree_progress(id, state);
         let supported = character_scope
             && self
                 .criteria
@@ -581,9 +579,9 @@ impl AchievementCatalog {
             order_index: *order_index,
             criteria_id: tree.criteria_id,
             description: description.clone(),
-            current: counter.unwrap_or(0).min(tree.amount),
-            required: tree.amount,
-            completed: supported && counter.is_some_and(|current| current >= tree.amount),
+            current: if character_scope { progress.current } else { 0 },
+            required: progress.required,
+            completed: supported && progress.completed,
             progress_supported: supported,
         }
     }

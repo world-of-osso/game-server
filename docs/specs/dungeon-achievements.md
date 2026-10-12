@@ -14,7 +14,7 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [x] Match Achievement.Faction (-1 both, 0 Horde, 1 Alliance) to the player's authored faction template; exclude opposing/neutral faction-only rows from grants, catalog/criteria pages and live progress.
 - [x] Separate account-wide grants with Retail ACHIEVEMENT_FLAGS_ACCOUNT (0x20000), not SHOW_CRITERIA_MEMBERS (0x10000). Aggregate durable character contributions within the owning account; migrate historical progress without changing other character rows. Never persist account totals into character counters.
 - [x] Retain account earned IDs and earliest known dates across reconnect, restart and character deletion. Account criteria pages and snapshots use account aggregates; character rows use their own counters. Unrelated accounts remain isolated.
-- [x] Zero-amount Single leaves still require a real positive credit and present coherent0/1→1/1 progress, never granting from a stored zero counter.
+- [x] Zero-amount Single leaves still require a real positive credit and present coherent0/1→1/1 progress, never granting from a stored zero counter. Catalog/criteria replies use the same evaluator as snapshots, including type40 rank thresholds at authored amount x75; no 0/0 or rank75 clamped to raw amount1.
 - [x] Evaluate Single/All/Any and direct-child count operators, preserving numeric progress in redb.
 - [x] Grant Retail achievements at the previous 10/20/40/60/70/80 thresholds, using actual Retail IDs rather than placeholder 1–6; migrate persisted placeholders once.
 
