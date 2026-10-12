@@ -51,7 +51,7 @@ fn fixture(item_id: u32) -> (Harness, tempfile::TempDir, u64) {
     (h, directory, guid)
 }
 
-fn cast_item(h: &mut Harness, guid: u64) {
+fn send_item_cast(h: &mut Harness, guid: u64) {
     h.app
         .world_mut()
         .get_mut::<MessageSender<SpellCastIntent>>(h.connection)
@@ -64,12 +64,16 @@ fn cast_item(h: &mut Harness, guid: u64) {
             destination: None,
             witness: None,
         });
+}
+
+fn cast_item(h: &mut Harness, guid: u64) {
+    send_item_cast(h, guid);
     h.advance(150);
 }
 
 #[test]
 fn class_completeness_native_pick_lock_accepts_owned_bag_item_without_consuming_it() {
-    let (mut h, _directory, guid) = fixture(4638);
+    let (mut h, directory, guid) = fixture(4638);
     cast_item(&mut h, guid);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.inbox.go.iter().any(|go| go.spell_id == 1804));
@@ -86,7 +90,7 @@ fn class_completeness_native_pick_lock_accepts_owned_bag_item_without_consuming_
     let db = h.app.world_mut().remove_resource::<GameDatabase>().unwrap();
     drop(db);
     h.app.insert_resource(GameDatabase {
-        db: redb::Database::open(_directory.path().join("lockbox.redb")).unwrap(),
+        db: redb::Database::open(directory.path().join("lockbox.redb")).unwrap(),
     });
     h.inbox = Inbox::default();
     cast_item(&mut h, guid);
@@ -98,6 +102,33 @@ fn class_completeness_native_pick_lock_accepts_owned_bag_item_without_consuming_
         h.inbox.failed[0].reason,
         shared::spell_data::CastFailReason::InvalidTarget
     );
+}
+
+#[test]
+fn class_completeness_native_pick_lock_rechecks_owned_item_at_completion() {
+    let (mut h, _directory, guid) = fixture(4638);
+    send_item_cast(&mut h, guid);
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_some()
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut inventory = persistence::load_inventory(db, 1);
+    inventory.items.retain(|item| item.item_guid != guid);
+    persistence::save_inventory(db, 1, &inventory);
+    h.advance(150);
+    assert!(h.inbox.go.is_empty());
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::InvalidTarget
+    );
+    assert!(!persistence::inventory_store::is_item_unlocked(
+        &h.app.world().resource::<GameDatabase>().db,
+        guid
+    ));
 }
 
 #[test]

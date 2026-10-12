@@ -1581,7 +1581,7 @@ pub(crate) fn execute_cast(
         explicit.is_some_and(|target| !plan.iter().any(|effect| effect.units.contains(&target)));
     let costs = discount_missed_rune_costs(costs, discounted_player && primary_missed);
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
-    open_lock::unlock_cast(world, caster, spell)?;
+    open_lock::unlock_cast(world, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);

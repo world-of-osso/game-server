@@ -11,6 +11,10 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 use bevy::prelude::*;
 use shared::item_data::ItemDefinitionSource::Retail;
 
+const EFFECT_OPEN_LOCK: u32 = 33;
+const TARGET_GAMEOBJECT_ITEM: u32 = 26;
+const LOCKTYPE_LOCKPICKING: u32 = 1;
+
 #[derive(Resource)]
 pub(crate) struct ItemLocks {
     items: HashMap<u32, u32>,
@@ -38,17 +42,14 @@ pub(crate) fn load_startup(mut commands: Commands) {
 }
 
 pub(crate) fn is_item_effect(effect: &SpellEffect) -> bool {
-    effect.effect == 33 && effect.implicit_targets.contains(&26)
+    effect.effect == EFFECT_OPEN_LOCK && effect.implicit_targets.contains(&TARGET_GAMEOBJECT_ITEM)
 }
 
 pub(crate) fn is_item_cast(spell: &SpellInfo) -> bool {
     spell.cast_target_item_guid.is_some() && spell.effects.iter().any(is_item_effect)
 }
 
-fn checked_guid(world: &World, caster: Entity, spell: &SpellInfo) -> Result<u64, CastFailure> {
-    let guid = spell
-        .cast_target_item_guid
-        .ok_or(CastFailure::InvalidTarget)?;
+fn load_locked_item(world: &World, caster: Entity, guid: u64) -> Result<u32, CastFailure> {
     let owner = world
         .get::<ClientId>(caster)
         .ok_or(CastFailure::InvalidTarget)?
@@ -67,12 +68,21 @@ fn checked_guid(world: &World, caster: Entity, spell: &SpellInfo) -> Result<u64,
     let data = world
         .get_resource::<ItemLocks>()
         .ok_or_else(|| CastFailure::Unsupported("Item lock metadata unavailable".into()))?;
-    let lock = data
-        .items
+    data.items
         .get(&item.item_id)
-        .ok_or(CastFailure::InvalidTarget)?;
+        .copied()
+        .ok_or(CastFailure::InvalidTarget)
+}
+
+fn check_effects(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    lock: u32,
+) -> Result<(), CastFailure> {
+    let data = world.resource::<ItemLocks>();
     for effect in spell.effects.iter().filter(|effect| is_item_effect(effect)) {
-        if effect.misc_values[0] != 1 {
+        if effect.misc_values[0] != LOCKTYPE_LOCKPICKING as i32 {
             return Err(CastFailure::Unsupported(format!(
                 "Item lock type {} not implemented",
                 effect.misc_values[0]
@@ -81,10 +91,11 @@ fn checked_guid(world: &World, caster: Entity, spell: &SpellInfo) -> Result<u64,
         // Native RealPointsPerLevel goes through the normal cast value calculation.
         // Pinned TC CanOpenLock calls CalcValueAsInt without a caster; that reference
         // cannot certify Retail per-level lock thresholds (see class-completeness2).
-        let points = super::effects::modded_base_points(world, caster, spell, effect) as i32;
+        let points =
+            super::effects::modded_base_points(world, caster, spell, effect).round() as i32;
         match data
             .locks
-            .check_spell(*lock, spell.id, 1, points)
+            .check_spell(lock, spell.id, LOCKTYPE_LOCKPICKING, points)
             .map_err(|error| CastFailure::Unsupported(error.to_string()))?
         {
             LockCastResult::Allowed => {}
@@ -92,7 +103,7 @@ fn checked_guid(world: &World, caster: Entity, spell: &SpellInfo) -> Result<u64,
             LockCastResult::LowSkill => return Err(CastFailure::LowCastLevel),
         }
     }
-    Ok(guid)
+    Ok(())
 }
 
 pub(crate) fn check_cast(
@@ -101,17 +112,15 @@ pub(crate) fn check_cast(
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
     if is_item_cast(spell) {
-        checked_guid(world, caster, spell)?;
+        let guid = spell.cast_target_item_guid.expect("item cast GUID");
+        let lock = load_locked_item(world, caster, guid)?;
+        check_effects(world, caster, spell, lock)?;
     }
     Ok(())
 }
 
 /// Run after final validation and target planning, before publishing CastSuccess.
-pub(crate) fn unlock_cast(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> Result<(), CastFailure> {
+pub(crate) fn unlock_cast(world: &World, spell: &SpellInfo) -> Result<(), CastFailure> {
     if !is_item_cast(spell) {
         return Ok(());
     }
