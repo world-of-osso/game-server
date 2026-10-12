@@ -277,7 +277,18 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         .get_mut::<MessageSender<UseItem>>(owner.connection)
         .unwrap()
         .send::<InventoryChannel>(use_item.clone());
-    h.advance(5);
+    let mut errors = Vec::new();
+    for _ in 0..5 {
+        h.advance(1);
+        errors.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<InventoryError>>(owner.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    assert!(errors.is_empty(), "normal bookcase use refused: {errors:?}");
     let db = &h
         .app
         .world()
