@@ -3923,7 +3923,7 @@ fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
     let other_rotation = h.app.world().get::<Rotation>(h.npc).copied();
     learn_effect_toy(&mut h, character, 45984);
     assert_eq!(activate(&mut h, 45984)[0].error, None);
-    h.advance(15);
+    h.advance(50); // Source cast time is 2000ms; harness frames are 50ms.
     assert!(h.inbox.go.iter().any(|go| go.spell_id == 64385));
     let rotation = h.app.world().get::<Rotation>(h.caster).unwrap();
     let source_orientation = rotation.y - std::f32::consts::FRAC_PI_2;
