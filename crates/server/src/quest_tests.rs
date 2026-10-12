@@ -468,6 +468,27 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         Some(1100)
     );
     assert!(log.watched.contains(&BEATING_THEM_BACK));
+    app.world_mut()
+        .resource_mut::<QuestDb>()
+        .quests
+        .get_mut(&THE_FARGODEEP_MINE)
+        .unwrap()
+        .time_allowed = 500;
+    let giver = spawn_npc(&mut app, MARSHAL_DUGHAN, 15.);
+    app.world_mut()
+        .entity_mut(Entity::try_from_bits(giver).unwrap())
+        .insert(Position {
+            x: 15.,
+            y: 100.,
+            z: -15.,
+        });
+    accept(&mut app, &client, giver, THE_FARGODEEP_MINE);
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .is_some(),
+        "task availability deadlines are not ordinary quest timers"
+    );
     app.world_mut().entity_mut(client.player).insert(origin());
     app.update();
     let log = load_quest_log(db(&app), client.character_id);

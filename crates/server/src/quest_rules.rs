@@ -223,10 +223,13 @@ pub(crate) fn can_take(
     requirements(db, log, player, quest)?;
     level_ok(player, quest)?;
     if quest.time_allowed != 0
-        && log
-            .active
-            .iter()
-            .any(|q| q.expires_at.is_some() && !q.failed)
+        && log.active.iter().any(|active| {
+            !active.failed
+                && db
+                    .quests
+                    .get(&active.quest_id)
+                    .is_some_and(|template| template.time_allowed > 0)
+        })
     {
         return Err(QuestFailedReason::OnlyOneTimedQuest);
     }
