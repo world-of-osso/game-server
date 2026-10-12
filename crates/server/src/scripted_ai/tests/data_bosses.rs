@@ -160,12 +160,23 @@ fn bound_boss_in_state(
         ));
     }
     let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-    let near = [
-        spawn.position_x + 3.0,
-        spawn.position_y,
-        spawn.position_z,
-        std::f32::consts::PI,
-    ];
+    let near = if entry == 135322 && initial_state != EncounterState::NotStarted {
+        // Keep the relocated source branch idle until its fixture explicitly pulls.
+        let position = app.world().get::<Position>(boss).unwrap();
+        [
+            position.x + 500.0,
+            -position.z,
+            position.y,
+            std::f32::consts::PI,
+        ]
+    } else {
+        [
+            spawn.position_x + 3.0,
+            spawn.position_y,
+            spawn.position_z,
+            std::f32::consts::PI,
+        ]
+    };
     let (player, connection) = spawn_player(&mut app, map, near, 1);
     app.world_mut()
         .entity_mut(player)
@@ -474,6 +485,12 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
 fn encounter_coverage_golden_serpent_evade_retires_and_respawns_without_credit() {
     let (mut h, boss, map) =
         bound_boss_in_state(135322, 1762, 0, 1, None, EncounterState::InProgress);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
     h.engage(boss);
     let gold = crate::zones::summon_creature(
         h.app.world_mut(),
@@ -500,6 +517,10 @@ fn encounter_coverage_golden_serpent_evade_retires_and_respawns_without_credit()
         0
     );
     assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 500.0,
+        ..position
+    });
     h.advance(30.5);
     assert!(
         h.app
