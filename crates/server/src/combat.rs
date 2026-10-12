@@ -438,7 +438,13 @@ fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bo
 }
 
 /// A creature's own armor or a player's gear armor.
-type TargetArmor<'a> = (Option<&'a CreatureArmor>, Option<&'a CharacterStats>);
+type TargetArmor<'a> = (
+    Option<&'a CreatureArmor>,
+    Option<&'a CharacterStats>,
+    Option<&'a crate::stats::StatModifiers>,
+    Option<&'a crate::hunter_pet::HunterPet>,
+    Option<&'a crate::spell_cast::summon::SummonedCreature>,
+);
 
 /// The same unit bodies and server ray search used by creature spells.
 #[derive(SystemParam)]
@@ -766,12 +772,15 @@ pub(crate) fn creature_miss_chance(mods: Option<&AuraStatMods>) -> f32 {
 /// The target's armor against `attacker` (Unit::CalcArmorReducedDamage): a
 /// creature's own armor × its level-scaling armor multiplier, a player's gear armor.
 fn target_armor(
-    (creature, player): TargetArmor,
+    (creature, player, modifiers, hunter, summon): TargetArmor,
     target: &UnitScaling,
     attacker: &UnitScaling,
 ) -> f32 {
     match (creature, player) {
-        (Some(armor), _) => target.armor_against(armor.0, attacker),
+        (Some(armor), _) => {
+            let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
+            target.armor_against(armor.0 * multiplier, attacker)
+        }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     }

@@ -294,6 +294,18 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     mask == 0 || mask & (1 << index) != 0
                 })
             }
+            MOD_BASE_RESISTANCE_PCT => {
+                if misc & 1 != 0 {
+                    // Native independent aura factors multiply; retain a percentage value.
+                    stats.base_armor_pct += amount * (1.0 + stats.base_armor_pct / 100.0);
+                }
+                if misc & !1 != 0 {
+                    warn!(
+                        "Aura142 spell{} has unmodeled nonphysical base-resistance mask{misc}",
+                        aura.spell_id
+                    );
+                }
+            }
             MOD_ARMOR_PCT_FROM_STAT => {
                 if misc == -2 {
                     stats.armor_from_primary_stat_pct += amount;

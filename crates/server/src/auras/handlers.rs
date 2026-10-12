@@ -179,6 +179,7 @@ pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
 pub const MOD_STAT_BONUS_PCT: u32 = 467;
+pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
@@ -228,6 +229,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_CRIT_PCT
         | MASTERY
         | MOD_STAT_BONUS_PCT
+        | MOD_BASE_RESISTANCE_PCT
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
         | MOD_SUMMON_DAMAGE

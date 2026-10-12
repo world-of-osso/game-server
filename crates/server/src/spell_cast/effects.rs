@@ -543,7 +543,14 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
         world.get::<CreatureArmor>(target),
         world.get::<CharacterStats>(target),
     ) {
-        (Some(armor), _) => target_scaling.armor_against(armor.0, &caster_scaling),
+        (Some(armor), _) => {
+            let multiplier = crate::auras::base_armor::pet_multiplier(
+                world.get::<crate::stats::StatModifiers>(target),
+                world.get::<crate::hunter_pet::HunterPet>(target),
+                world.get::<super::summon::SummonedCreature>(target),
+            );
+            target_scaling.armor_against(armor.0 * multiplier, &caster_scaling)
+        }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
