@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11): source items/costumes/kits/scenery, clicked ground points, real sight witnesses and focused-search recipient retention; private both-skin proofs and explicit320 prepared-candidate versus full-effect boundary. Source-scaled scenery live proof remains pending.
+
 - 2026-10-11 — [Adventure Guide](../specs/adventure-guide.md): copy-only catalogs, signed priorities, current-month account contributions and query/tracking. Five scoped service tests pass; both-skin persisted Track and authored display-only TrainingGrounds852 rendered. Check/fmt pass; unsupported gates/criteria/month/reward bindings remain explicit.
 - 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
 - 2026-10-11 — [Boss-mod continuation](../bossmod-data-coverage.md): target5 root fix gives real Zevrim CastState/effects; lexical/guard/locale/custom-timer regressions17PASS, timeline7PASS, changed protocol1729PASS and check/fmt pass. Rendered addon warnings and both-skin private5906 Hydrospawn/Zevrim bars/warnings proved in eight inspected PNGs. DBM/EXBoss native input clocks remain explicit gaps; no fabricated timers or shared realm changes.
