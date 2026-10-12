@@ -246,6 +246,9 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     65298, 65387, 144025, 144026, 181826, 182459, 182461, 193182,
     201798, 208477, 214220, 220620, 233144, 233145, 233146, 233148,
     233149, 233150, 121762, 183727,
+    # Source-defined stationary scarecrow, light globe, vesper and arena banners.
+    # No interaction/control/AI contract: docs/toy-effects14-coverage.md.
+    66768, 114846, 175582, 263908, 270689,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
