@@ -9,7 +9,7 @@ const FIREBALL: u32 = 133;
 const DAMAGE: f32 = 1_000.0;
 
 fn avoidance_harness() -> Harness {
-    let mut h = harness(Vec::new(), &[FEINT, ARCANE_EXPLOSION, FIREBALL], 4).unwrap();
+    let mut h = harness(Vec::new(), &[FEINT, ARCANE_EXPLOSION, FIREBALL, 269], 4).unwrap();
     h.app.world_mut().entity_mut(h.caster).insert(Health {
         current: 100_000.0,
         max: 100_000.0,
@@ -81,7 +81,7 @@ fn class_completeness_native_feint_reduces_area_not_single_target_damage() {
 
 fn apply_native(h: &mut Harness, spell_id: u32, caster: Entity, target: Entity) {
     let spell = world_db().unwrap().store.get(spell_id).unwrap();
-    crate::auras::apply_aura(
+    crate::auras::apply_aura_with_spell(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
             caster,
@@ -90,7 +90,9 @@ fn apply_native(h: &mut Harness, spell_id: u32, caster: Entity, target: Entity) 
             effect_mask: crate::auras::aura_effect_mask(spell),
             source: crate::auras::AuraSource::Cast,
         },
+        spell,
     );
+    assert!(crate::auras::has_aura(h.app.world(), target, spell_id));
 }
 
 #[test]
