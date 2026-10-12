@@ -26,6 +26,8 @@ mod bonus_armor_tests;
 #[cfg(test)]
 mod bonus_stat_tests;
 #[cfg(test)]
+mod cast_while_moving_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
