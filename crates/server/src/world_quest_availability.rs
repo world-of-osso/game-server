@@ -81,7 +81,7 @@ fn snapshot(
             quest_id: quest.id,
             title: quest.title.clone(),
             map_id: area.map_id,
-            zone_id: quest.sort_id as u32,
+            zone_id: quest.sort_id.max(0) as u32,
             ui_map_id: area.ui_map_id,
             position,
             expires_at: window.expires_at,
