@@ -164,9 +164,10 @@ pub(crate) fn xp(quests: &QuestDb, quest: &QuestTemplate, player_level: u8) -> u
     if player_level >= crate::experience::MAX_LEVEL {
         return 0;
     }
-    let Some(data) = quests.world_quest_rewards.get(&quest.id) else {
-        return 0;
-    };
+    let data = quests
+        .world_quest_rewards
+        .get(&quest.id)
+        .expect("imported world quest reward metadata");
     let level = quest.money_scaling.map_or(player_level, |scaling| {
         player_level.clamp(scaling.min_level, scaling.max_level.max(scaling.min_level))
     });
@@ -174,6 +175,6 @@ pub(crate) fn xp(quests: &QuestDb, quest: &QuestTemplate, player_level: u8) -> u
         .world_quest_xp
         .get(&(level, quest.reward_xp_difficulty))
         .copied()
-        .unwrap_or(0);
+        .expect("pinned QuestXP level/difficulty row");
     (base as f32 * data.xp_multiplier) as u32
 }
