@@ -100,6 +100,7 @@ fn transmog_outfit_save_is_durable_account_scoped_and_never_charges_apply() {
     let outfit = TransmogOutfit {
         id: 2,
         name: "Gladius".into(),
+        icon_fdid: 135274,
         choices: vec![TransmogOutfitChoice {
             slot: EquipmentSlot::MainHand,
             choice: TransmogChoice::Source(SOURCE),
@@ -243,6 +244,7 @@ fn transmog_outfit_refusals_preserve_saved_configuration_and_gold() {
             outfit: TransmogOutfit {
                 id,
                 name: name.into(),
+                icon_fdid: 135274,
                 choices: vec![TransmogOutfitChoice {
                     slot: EquipmentSlot::MainHand,
                     choice: TransmogChoice::Source(choice),

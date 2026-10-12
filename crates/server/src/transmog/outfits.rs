@@ -4,11 +4,91 @@ use redb::{ReadableDatabase, TableDefinition};
 
 const ACCOUNT_OUTFITS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("transmog_account_outfits");
+const OUTFIT_SCHEMA: TableDefinition<u8, u32> =
+    TableDefinition::new("transmog_account_outfits_schema");
+const OUTFIT_VERSION: u32 = 1;
+
+/// Pre-icon schema. Only the migration decodes this shape.
+#[derive(serde::Deserialize)]
+struct LegacyOutfit {
+    id: u32,
+    name: String,
+    choices: Vec<TransmogOutfitChoice>,
+    illusions: Vec<TransmogOutfitIllusion>,
+}
+
+fn migrate_outfits(db: &redb::Database) {
+    let read = db.begin_read().expect("begin outfit schema read");
+    match read.open_table(OUTFIT_SCHEMA) {
+        Ok(table) => {
+            let version = table
+                .get(0)
+                .expect("read outfit schema")
+                .expect("missing outfit schema version")
+                .value();
+            assert_eq!(version, OUTFIT_VERSION, "unsupported account outfit schema");
+            return;
+        }
+        Err(redb::TableError::TableDoesNotExist(_)) => {}
+        Err(error) => panic!("open outfit schema: {error}"),
+    }
+    drop(read);
+    let txn = db.begin_write().expect("begin outfit migration");
+    {
+        let mut schema = txn.open_table(OUTFIT_SCHEMA).expect("open outfit schema");
+        // Another caller can finish migration before this write transaction starts.
+        if let Some(version) = schema.get(0).expect("read outfit schema") {
+            assert_eq!(
+                version.value(),
+                OUTFIT_VERSION,
+                "unsupported account outfit schema"
+            );
+            return;
+        }
+        let mut table = txn
+            .open_table(ACCOUNT_OUTFITS)
+            .expect("open legacy outfits");
+        let rows: Vec<_> = table
+            .iter()
+            .expect("scan legacy outfits")
+            .map(|row| {
+                let (account, bytes) = row.expect("read legacy outfits");
+                let old: Vec<LegacyOutfit> =
+                    serde_json::from_slice(bytes.value()).expect("decode legacy outfits");
+                let outfits: Vec<_> = old
+                    .into_iter()
+                    .map(|old| TransmogOutfit {
+                        id: old.id,
+                        name: old.name,
+                        icon_fdid: 0,
+                        choices: old.choices,
+                        illusions: old.illusions,
+                    })
+                    .collect();
+                (
+                    account.value(),
+                    serde_json::to_vec(&outfits).expect("encode migrated outfits"),
+                )
+            })
+            .collect();
+        for (account, bytes) in rows {
+            table
+                .insert(account, bytes.as_slice())
+                .expect("write migrated outfits");
+        }
+        schema
+            .insert(0, OUTFIT_VERSION)
+            .expect("write outfit schema version");
+    }
+    txn.commit().expect("commit outfit migration");
+}
+
 const AUTO_AWARDED: u8 = 1;
 const AWARD_ON_LOGIN: u32 = 1;
 const ALLOWS_ILLUSION: u32 = 2;
 
 pub(super) fn load_outfits(db: &redb::Database, account: u64) -> Vec<TransmogOutfit> {
+    migrate_outfits(db);
     let txn = db.begin_read().expect("begin account outfit read");
     let table = match txn.open_table(ACCOUNT_OUTFITS) {
         Ok(table) => table,
@@ -123,6 +203,49 @@ mod tests {
     use super::*;
 
     #[test]
+    fn transmog_outfit_legacy_rows_migrate_atomically_and_survive_reopen() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("legacy.redb");
+        let db = redb::Database::create(&path).unwrap();
+        let legacy = br#"[{"id":2,"name":"Gladius","choices":[{"slot":"MainHand","choice":{"Source":821}}],"illusions":[{"slot":"MainHand","illusion_id":3}]}]"#;
+        let txn = db.begin_write().unwrap();
+        {
+            let mut table = txn.open_table(ACCOUNT_OUTFITS).unwrap();
+            table.insert(1, legacy.as_slice()).unwrap();
+            table.insert(2, legacy.as_slice()).unwrap();
+        }
+        txn.commit().unwrap();
+        drop(db);
+        let db = redb::Database::open(&path).unwrap();
+        let migrated = load_outfits(&db, 1);
+        assert_eq!(migrated[0].icon_fdid, 0);
+        assert_eq!(migrated[0].choices[0].choice, TransmogChoice::Source(821));
+        assert_eq!(migrated[0].illusions[0].illusion_id, 3);
+        assert_eq!(load_outfits(&db, 2), migrated);
+        assert!(load_outfits(&db, 3).is_empty());
+        let mut edited = migrated[0].clone();
+        edited.icon_fdid = 135343;
+        persist_outfit(&db, 1, edited.clone());
+        drop(db);
+        let db = redb::Database::open(&path).unwrap();
+        assert_eq!(load_outfits(&db, 1), vec![edited]);
+        assert_eq!(load_outfits(&db, 2), migrated);
+    }
+
+    #[test]
+    #[should_panic(expected = "unsupported account outfit schema")]
+    fn transmog_outfit_unknown_version_is_not_silently_decoded() {
+        let db = redb::Database::create(tempfile::NamedTempFile::new().unwrap().path()).unwrap();
+        let txn = db.begin_write().unwrap();
+        txn.open_table(OUTFIT_SCHEMA)
+            .unwrap()
+            .insert(0, 99)
+            .unwrap();
+        txn.commit().unwrap();
+        load_outfits(&db, 1);
+    }
+
+    #[test]
     fn transmog_outfit_storage_survives_database_reopen_and_overwrites_entry() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("outfits.redb");
@@ -130,6 +253,7 @@ mod tests {
         let mut outfit = TransmogOutfit {
             id: 2,
             name: "Gladius".into(),
+            icon_fdid: 135274,
             choices: vec![TransmogOutfitChoice {
                 slot: EquipmentSlot::MainHand,
                 choice: TransmogChoice::Source(821),
@@ -141,6 +265,7 @@ mod tests {
         };
         persist_outfit(&db, 1, outfit.clone());
         outfit.name = "Sword".into();
+        outfit.icon_fdid = 135343;
         persist_outfit(&db, 1, outfit.clone());
         drop(db);
         let reopened = redb::Database::open(&path).unwrap();
