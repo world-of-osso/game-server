@@ -72,6 +72,10 @@ pub(crate) struct PetCatalog {
 }
 
 impl PetCatalog {
+    pub(crate) fn creature_id(&self, species: u32) -> Option<u32> {
+        self.species.get(&species).map(|entry| entry.creature_id)
+    }
+
     pub(crate) fn load(conn: &Connection) -> rusqlite::Result<Self> {
         let mut query = conn.prepare(
             "SELECT species_id, creature_id, name, display_id, summon_spell_id \
