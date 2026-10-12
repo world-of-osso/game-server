@@ -26,14 +26,13 @@ fn selects_area(effect: &SpellEffect) -> bool {
 }
 
 fn is_area_damage(spell: &SpellInfo, effect: Option<&SpellEffect>, periodic: bool) -> bool {
-    if periodic
-        && crate::spell_cast::attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0
-    {
+    let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
+    if periodic && attributes[4] & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0 {
         return false;
     }
     effect.is_some_and(selects_area)
-        || crate::spell_cast::attributes(spell, 5) & ATTR5_TREAT_AS_AREA_EFFECT != 0
-        || crate::spell_cast::attributes(spell, 7) & ATTR7_TREAT_AS_NPC_AOE != 0
+        || attributes[5] & ATTR5_TREAT_AS_AREA_EFFECT != 0
+        || attributes[7] & ATTR7_TREAT_AS_NPC_AOE != 0
 }
 
 pub(crate) fn reduce_damage(
