@@ -873,6 +873,11 @@ fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_retu
     }
 }
 
+#[test]
+fn arena_dalaran_authored_waterfall_and_pipe_hazards_follow_actual_lifetime() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 617);
+}
+
 fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
@@ -911,6 +916,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         .unwrap();
     let catalog = crate::pvp::arena::Catalog::load(&catalog_db).unwrap();
     let gates = crate::pvp::arena_objects::GateCatalog::load(&source).unwrap();
+    let dalaran = crate::pvp::arena_dalaran::Catalog::load(&source).unwrap();
     let gate_actions: Vec<(u32, String, u32)> = source
         .prepare("SELECT entry,action,despawn_secs FROM arena_gate WHERE map_id=?")
         .unwrap()
@@ -919,11 +925,14 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         .collect::<rusqlite::Result<_>>()
         .unwrap();
     assert!(!gate_actions.is_empty(), "map{map_id} source gates");
-    let entries: Vec<_> = gate_actions
+    let mut entries: Vec<_> = gate_actions
         .iter()
         .map(|(entry, _, _)| *entry)
         .chain([184663, 184664])
         .collect();
+    if map_id == 617 {
+        entries.extend([191877, 194395]);
+    }
     let objects = source_map_objects(map_id, &entries);
     let sight = crate::pvp::arena_objects::SightCatalog::load(&source, &objects).unwrap();
     let source_orb = objects
@@ -934,7 +943,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         .clone();
     let store = crate::spell_cast::test_harness::world_db().unwrap();
     let spells = crate::spell_info::SpellStore::fixture(
-        [32727, 34709]
+        [32727, 34709, 57405, 96538, 96539, 58873, 254013, 48018]
             .iter()
             .map(|id| store.store.get(*id).unwrap().clone())
             .collect(),
@@ -958,6 +967,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         app.insert_resource(catalog);
         app.insert_resource(gates);
         app.insert_resource(sight);
+        app.insert_resource(dalaran);
     })
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
@@ -1263,7 +1273,42 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             );
         }
     }
-    h.receive_pvp_updates(1700);
+    if map_id == 617 {
+        h.receive_pvp_updates(700);
+        let collision = h
+            .app
+            .world_mut()
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                &shared::protocol::GameObjectCollision,
+            )>()
+            .iter(h.app.world())
+            .find(|(copy, info, _)| **copy == map && info.entry == 194395)
+            .map(|(_, _, state)| state.0)
+            .unwrap();
+        assert!(
+            collision,
+            "TC waterfall collision activates after30s warning+5s"
+        );
+        h.receive_pvp_updates(600);
+        let collision = h
+            .app
+            .world_mut()
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                &shared::protocol::GameObjectCollision,
+            )>()
+            .iter(h.app.world())
+            .find(|(copy, info, _)| **copy == map && info.entry == 194395)
+            .map(|(_, _, state)| state.0)
+            .unwrap();
+        assert!(!collision, "TC waterfall resets after30s active duration");
+        h.receive_pvp_updates(400);
+    } else {
+        h.receive_pvp_updates(1700);
+    }
     assert_eq!(
         object_count(h.app.world_mut(), 6),
         0,

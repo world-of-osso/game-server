@@ -222,6 +222,10 @@ pub(crate) fn spawn_creature(
             shared::components::UnitScale(display_scale),
             crate::creature_ai::HomeOrientation(spawn.orientation + std::f32::consts::FRAC_PI_2),
         ));
+        let source_guid = spawn.guid;
+        entity.queue(move |actor: EntityWorldMut| {
+            crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
+        });
         if let Some((scaling, tuning)) = scaling {
             entity.insert((scaling, ScaledStats(tuning.stats.clone())));
         }

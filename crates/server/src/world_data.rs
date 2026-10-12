@@ -992,6 +992,9 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::pvp::arena_objects::GateCatalog::load(&conn)
             .expect("Load source-backed arena gates; run scripts/import-arenas.py before startup"),
     );
+    commands.insert_resource(crate::pvp::arena_dalaran::Catalog::load(&conn).expect(
+        "Load source Dalaran spout identities/pipe triggers; run scripts/import-arenas.py",
+    ));
     commands.insert_resource(
         crate::pvp::arena::Catalog::load(&conn)
             .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),

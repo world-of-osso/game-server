@@ -1000,6 +1000,10 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 /// `EffectTriggerSpell` at the caster, triggered. TrinityCore keeps that cast's power and
 /// reagent costs; `cast_triggered` ignores costs.
 fn force_cast(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if ctx.spell.id == 57405 && effect.trigger_spell == 61698 {
+        crate::pvp::arena_dalaran::push_pipe_player(world, target, ctx.caster);
+        return;
+    }
     super::cast_triggered(
         world,
         target,
