@@ -690,6 +690,33 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
     crate::spell_cast::mark_dirty(world, target);
 }
 
+/// `Aura::SetStackAmount` on the unit's own cast, then refresh derived stats/views.
+/// A non-stacking aura has a single stack; zero removes it in TC and is not a
+/// stack assignment. Callers needing removal use remove_instance instead.
+pub(crate) fn set_self_cast_stacks(
+    world: &mut World,
+    unit: Entity,
+    spell_id: u32,
+    stacks: u8,
+) -> bool {
+    assert!(stacks > 0, "zero aura stack assignment requires removal");
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == unit)
+    else {
+        return false;
+    };
+    aura.stacks = stacks.min(aura.max_stacks.max(1));
+    auras.dirty = true;
+    drop(auras);
+    auras_changed(world, unit);
+    true
+}
+
 /// Apply (or refresh) the aura effects of one resolution on a target.
 pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     let Some(spell) = lookup_spell(world, application.spell_id) else {

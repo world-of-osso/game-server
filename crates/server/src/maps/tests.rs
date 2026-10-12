@@ -466,7 +466,7 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         inside_house: None,
     };
     assert_eq!(
-        crate::persistence::housing_store::snapshot(db, actor, None)
+        crate::persistence::housing_store::snapshot(db, actor, None, None)
             .unwrap()
             .stored,
         vec![StoredDecor {
@@ -486,7 +486,7 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         .resource::<crate::persistence::GameDatabase>()
         .db;
     assert_eq!(
-        crate::persistence::housing_store::snapshot(db, actor, None)
+        crate::persistence::housing_store::snapshot(db, actor, None, None)
             .unwrap()
             .stored[0]
             .quantity,
@@ -953,9 +953,11 @@ fn harness_with_content_and(extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("open world.db");
     let objects = crate::game_objects::load_game_object_spawns(&conn).expect("game objects");
+    let bossmod = crate::scripted_ai::bossmod::load_catalog(&conn).expect("boss-mod catalog");
     harness_with(move |app| {
         app.insert_resource(world_data);
         app.insert_resource(objects);
+        app.insert_resource(bossmod);
         extra(app);
     })
 }
