@@ -118,7 +118,13 @@ fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
         .world_mut()
         .entity_mut(guardian)
         .remove::<crate::stats::CharacterStats>()
-        .insert(crate::combat::AutoAttack::new(h.npc));
+        .insert((
+            crate::combat::AutoAttack::new(h.npc),
+            crate::auras::AuraStatMods {
+                melee_hit_chance_pct: 100.0,
+                ..default()
+            },
+        ));
     h.app
         .world_mut()
         .entity_mut(h.npc)
