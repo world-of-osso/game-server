@@ -13,6 +13,12 @@ use shared::protocol::{
 
 use super::PlayerAchievementState;
 
+/// Event counters add across an account's characters; absolute facts use the maximum.
+const SUMMED_ACCOUNT_KINDS: &[u32] = &[
+    0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 62, 67, 68, 69, 73, 74, 107, 130, 151, 152, 157, 158,
+    160, 162, 165, 216,
+];
+
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
 // 0x00010000 is SHOW_CRITERIA_MEMBERS, not account scope.
 const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
@@ -51,6 +57,14 @@ pub(crate) enum CriteriaEvent {
     CompleteAnyScenario,
     CompleteQuest(u32),
     CompleteDailyQuest,
+    /// Positive copper paid by a committed quest reward.
+    MoneyEarnedFromQuesting(u64),
+    /// One committed reward of a quest whose QuestSortID is this zone.
+    CompleteQuestInZone(u32),
+    /// Login: counter-increasing rewarded quests in this zone.
+    RewardedQuestsInZone(u32, u32),
+    RewardedQuestCount(u32),
+    AbandonQuest,
     CastSpell(u32),
     BeSpellTarget(u32),
     LearnSpell(u32),
@@ -92,6 +106,10 @@ impl CriteriaEvent {
             Self::CompleteAnyScenario => 151,
             Self::CompleteQuest(_) => 27,
             Self::CompleteDailyQuest => 14,
+            Self::MoneyEarnedFromQuesting(_) => 62,
+            Self::CompleteQuestInZone(_) | Self::RewardedQuestsInZone(_, _) => 11,
+            Self::RewardedQuestCount(_) => 9,
+            Self::AbandonQuest => 107,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
             Self::LearnSpell(_) => 34,
@@ -111,6 +129,9 @@ impl CriteriaEvent {
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::LootMoney(_)
             | Self::CompleteDailyQuest
+            | Self::MoneyEarnedFromQuesting(_)
+            | Self::RewardedQuestCount(_)
+            | Self::AbandonQuest
             | Self::OwnUniquePets(_)
             | Self::OwnToys(_)
             | Self::WinPetBattle
@@ -142,6 +163,8 @@ impl CriteriaEvent {
             | Self::KnowPetCreature(asset)
             | Self::LearnToy(asset)
             | Self::CompleteScenario(asset)
+            | Self::CompleteQuestInZone(asset)
+            | Self::RewardedQuestsInZone(asset, _)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -469,33 +492,11 @@ impl AchievementCatalog {
                     continue;
                 }
                 let counter = aggregate.criteria_progress.entry(id).or_default();
-                *counter = if self.criteria.get(&id).is_some_and(|row| {
-                    matches!(
-                        row.kind,
-                        0 | 1
-                            | 12
-                            | 14
-                            | 28
-                            | 29
-                            | 36
-                            | 41
-                            | 42
-                            | 67
-                            | 68
-                            | 69
-                            | 73
-                            | 74
-                            | 130
-                            | 151
-                            | 152
-                            | 157
-                            | 158
-                            | 160
-                            | 162
-                            | 165
-                            | 216
-                    )
-                }) {
+                *counter = if self
+                    .criteria
+                    .get(&id)
+                    .is_some_and(|row| SUMMED_ACCOUNT_KINDS.contains(&row.kind))
+                {
                     counter.saturating_add(value)
                 } else {
                     (*counter).max(value)
@@ -513,6 +514,8 @@ impl AchievementCatalog {
                 | CriteriaEvent::LearnTradeskillSkillLine(_, 0)
                 | CriteriaEvent::OwnUniquePets(0)
                 | CriteriaEvent::OwnToys(0)
+                | CriteriaEvent::RewardedQuestCount(0)
+                | CriteriaEvent::RewardedQuestsInZone(_, 0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -530,7 +533,10 @@ impl AchievementCatalog {
             CriteriaEvent::KnowSkillLineSpells(_, count)
             | CriteriaEvent::LearnTradeskillSkillLine(_, count)
             | CriteriaEvent::OwnUniquePets(count)
-            | CriteriaEvent::OwnToys(count) => u64::from(count),
+            | CriteriaEvent::OwnToys(count)
+            | CriteriaEvent::RewardedQuestCount(count) => u64::from(count),
+            CriteriaEvent::RewardedQuestsInZone(_, count) => (*counter).max(u64::from(count)),
+            CriteriaEvent::MoneyEarnedFromQuesting(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
             CriteriaEvent::CurrencyGained(_, amount)
@@ -780,7 +786,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset) FROM criteria c")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -819,8 +825,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
+                        || (kind == 11 && row.get::<_, bool>(12)?)
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 14 | 67 | 74 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 62 | 67 | 74 | 107 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

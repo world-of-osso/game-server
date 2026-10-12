@@ -284,6 +284,85 @@ fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_dail
 }
 
 #[test]
+fn achievements_criteria_quest_money_zone_count_and_abandon_credit_only_committed_requests() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use shared::protocol::AchievementStateUpdate;
+    let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic quest data");
+    let client = spawn_client(&mut app, 60);
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(PlayerAchievementState::default());
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    enter_world(&mut app, &client);
+    let progress = |app: &App, criterion: u32| {
+        persistence::load_achievements(db(app), client.character_id)
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    // Real Hellfire quest9355: giver/ender16837, QuestSortID3483, kill16857 x15; its
+    // authored prerequisite10142 (also Hellfire) is seeded as rewarded history.
+    mark_rewarded(&app, &client, 10142);
+    let giver = spawn_npc(&mut app, 16837, 0.0);
+    accept(&mut app, &client, giver, 9355);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    // Statistic94 criterion5289 counts a committed log removal, not a refused one.
+    request(&mut app, &client, AbandonQuest { quest_id: 9355 });
+    assert_eq!(progress(&app, 5289), Some(1));
+    request(&mut app, &client, AbandonQuest { quest_id: 9355 });
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    assert_eq!(progress(&app, 5289), Some(1));
+    accept(&mut app, &client, giver, 9355);
+    turn_in(&mut app, &client, giver, 9355, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    for criterion in [4092, 3912, 3631] {
+        assert_eq!(
+            progress(&app, criterion),
+            None,
+            "refused turn-in credited {criterion}"
+        );
+    }
+    kill(&mut app, &client, 16857, 15);
+    let before = persistence::load_inventory(db(&app), client.character_id).gold;
+    turn_in(&mut app, &client, giver, 9355, Some(0));
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    let paid = persistence::load_inventory(db(&app), client.character_id).gold - before;
+    assert!(paid > 0);
+    // Gold from quest rewards4092, Hellfire quests3912 and Quests completed3631.
+    assert_eq!(progress(&app, 4092), Some(paid));
+    assert_eq!(progress(&app, 3912), Some(1));
+    assert_eq!(progress(&app, 3631), Some(2));
+    let saved = persistence::load_achievements(db(&app), client.character_id);
+    app.world_mut()
+        .entity_mut(client.connection)
+        .remove::<InWorld>();
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(saved.clone());
+    enter_world(&mut app, &client);
+    let reloaded = app
+        .world()
+        .get::<PlayerAchievementState>(client.player)
+        .unwrap();
+    // TC login case: highest of counted rewarded Hellfire quests (10142, 9355); money
+    // and abandons are never replayed.
+    assert_eq!(reloaded.criteria_progress.get(&3912), Some(&2));
+    for criterion in [4092, 3631, 5289] {
+        assert_eq!(
+            reloaded.criteria_progress.get(&criterion),
+            saved.criteria_progress.get(&criterion),
+            "login changed {criterion}"
+        );
+    }
+}
+
+#[test]
 fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     use shared::protocol::AchievementStateUpdate;
@@ -368,6 +447,10 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
         reloaded.account.take().is_some(),
         "login reconstructs account presentation"
     );
+    // Type74 Login (criterion23250) is the one counter each world entry adds to.
+    let mut saved = saved;
+    let logins = saved.criteria_progress.remove(&23250).unwrap();
+    assert_eq!(reloaded.criteria_progress.remove(&23250), Some(logins + 1));
     assert_eq!(reloaded, saved);
     assert!(
         received::<AchievementStateUpdate>(&mut app, &client)
