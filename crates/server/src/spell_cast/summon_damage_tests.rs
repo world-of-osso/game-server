@@ -1,0 +1,186 @@
+//! Native aura429 ownership and mastery damage contracts; no guessed coefficients.
+use super::test_harness::*;
+use bevy::prelude::*;
+use shared::components::{ActiveSpec, Health, Level};
+
+const COMMAND: u32 = 21_563;
+const RESTORATION: u32 = 137_012;
+const BEAST_MASTERY: u32 = 76_657;
+const FIREBALL: u32 = 133;
+const DAMAGE: f32 = 1_000.0;
+
+fn damage_harness(ids: &[u32], class: u8, computed: bool) -> Harness {
+    let mut h = harness_with(Vec::new(), ids, class, computed).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 1_000_000.0,
+        max: 1_000_000.0,
+    });
+    h.advance(3);
+    h
+}
+
+fn controlled_pet(h: &mut Harness, owner: Entity) -> Entity {
+    let unit = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(crate::hunter_pet::HunterPet { owner, slot: 0 });
+    unit
+}
+
+fn guardian(h: &mut Harness, owner: Entity) -> Entity {
+    let unit = spawn_npc(&mut h.app, 0.0);
+    let source = world_db().unwrap();
+    let spell = source.store.get(46_585).unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 28)
+        .unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &source.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let properties_id = effect.misc_values[1] as u32;
+    let properties = super::summon::load_summon_properties(&conn).unwrap().0[&properties_id];
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(super::summon::SummonedCreature {
+            owner,
+            spell_id: spell.id,
+            properties_id,
+            properties,
+            expires_at: None,
+        });
+    unit
+}
+
+fn spell_loss(h: &mut Harness, caster: Entity, copied: bool) -> f32 {
+    let spell = world_db().unwrap().store.get(FIREBALL).unwrap();
+    let ctx = super::effects::EffectCtx {
+        caster,
+        spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let before = h.health(h.npc);
+    if copied {
+        super::effects::deal_copied_damage(h.app.world_mut(), &ctx, h.npc, DAMAGE);
+    } else {
+        super::effects::deal_damage(h.app.world_mut(), &ctx, h.npc, DAMAGE, false, false);
+    }
+    before - h.health(h.npc)
+}
+
+#[test]
+fn class_completeness_native_command_buffs_pet_and_guardian_not_owner_stranger_or_copy() {
+    let mut h = damage_harness(&[COMMAND, FIREBALL], 3, false);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(h.caster)
+        .unwrap()
+        .race = 2;
+    let owner = h.caster;
+    let pet = controlled_pet(&mut h, owner);
+    let guardian = guardian(&mut h, owner);
+    let stranger = spawn_player(&mut h.app, 3, 0.0);
+    let foreign = controlled_pet(&mut h, stranger);
+    assert_eq!(spell_loss(&mut h, owner, false), DAMAGE);
+    assert_eq!(spell_loss(&mut h, foreign, false), DAMAGE);
+    assert_eq!(
+        spell_loss(&mut h, pet, true),
+        DAMAGE,
+        "source copies must not consume owner damage twice"
+    );
+    let native = world_db().unwrap().store.get(COMMAND).unwrap().effects[0].base_points;
+    let expected = (DAMAGE * (1.0 + native / 100.0)).round();
+    assert_eq!(spell_loss(&mut h, pet, false), expected);
+    assert_eq!(spell_loss(&mut h, guardian, false), expected);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == COMMAND,
+    );
+    assert_eq!(spell_loss(&mut h, pet, false), DAMAGE);
+}
+
+#[test]
+fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
+    use bevy::ecs::system::RunSystemOnce;
+    let mut h = damage_harness(&[RESTORATION, FIREBALL], 11, false);
+    let owner = h.caster;
+    let guardian = guardian(&mut h, owner);
+    h.app
+        .world_mut()
+        .entity_mut(guardian)
+        .remove::<crate::stats::CharacterStats>()
+        .insert(crate::combat::AutoAttack::new(h.npc));
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::Position {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    let before = h.health(h.npc);
+    h.app
+        .world_mut()
+        .run_system_once(crate::combat::auto_attack_system)
+        .unwrap();
+    let native = world_db()
+        .unwrap()
+        .store
+        .get(RESTORATION)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.aura == 429)
+        .unwrap()
+        .base_points;
+    assert_eq!(
+        before - h.health(h.npc),
+        (10.0 * (1.0 + native / 100.0)).round()
+    );
+}
+
+#[test]
+fn class_completeness_native_mastery_summon_bonus_tracks_real_owner_stat_changes() {
+    let mut h = damage_harness(&[BEAST_MASTERY, FIREBALL], 3, true);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((Level(80), ActiveSpec(253)));
+    h.advance(4);
+    let owner = h.caster;
+    let pet = controlled_pet(&mut h, owner);
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap();
+    let expected = (DAMAGE * (1.0 + stats.mastery_pct / 100.0)).round();
+    assert!(expected > DAMAGE);
+    assert_eq!(spell_loss(&mut h, pet, false), expected);
+    let mut modifiers = h
+        .app
+        .world()
+        .get::<crate::stats::StatModifiers>(owner)
+        .cloned()
+        .unwrap_or_default();
+    modifiers.mastery_points += 4.0;
+    h.app.world_mut().entity_mut(owner).insert(modifiers);
+    h.advance(4);
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap();
+    let changed = (DAMAGE * (1.0 + stats.mastery_pct / 100.0)).round();
+    assert!(changed > expected);
+    assert_eq!(spell_loss(&mut h, pet, false), changed);
+}
