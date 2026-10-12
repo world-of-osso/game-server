@@ -256,9 +256,11 @@ pub(super) fn record_map(world: &mut World, map: InMap, event: CriteriaEvent) {
         step: run.step,
         criteria: run.criteria.clone(),
     };
+    let was_complete = run.step >= def.steps.len();
     if !run.apply(def, criteria, event) {
         return;
     }
+    let completed = !was_complete && run.step >= def.steps.len();
     let id = *id;
     world
         .resource_mut::<ScenarioRuns>()
@@ -272,5 +274,8 @@ pub(super) fn record_map(world: &mut World, map: InMap, event: CriteriaEvent) {
         .collect();
     for connection in connections {
         send_snapshot(world, connection, map);
+    }
+    if completed {
+        super::record_scenario_completion(world, map, id);
     }
 }
