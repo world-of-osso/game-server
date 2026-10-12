@@ -503,7 +503,14 @@ fn map_store() -> Option<&'static MapStore> {
         .as_ref()
 }
 
+#[path = "tests_battleground_nodes.rs"]
+mod battleground_nodes;
+
 fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
+    source_battleground_objects(2106)
+}
+
+fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSpawns {
     let source = Connection::open_with_flags(
         crate::test_data::world_db_path(),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -520,13 +527,13 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
     let target = Connection::open(dir.path().join("world.db")).unwrap();
     target.execute_batch("CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
         CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
-        CREATE TABLE game_object_display_info (ID INTEGER,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
+        CREATE TABLE game_object_display_info (ID INTEGER PRIMARY KEY,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
     let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
         g.spawntimesecs,t.Data3,t.Data5,t.Data6
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
-        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=2106 AND g.id IN (227740,227741) ORDER BY g.guid").unwrap();
-    let mut rows = query.query([]).unwrap();
+        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=?1 AND t.type IN (36,42) ORDER BY g.guid").unwrap();
+    let mut rows = query.query([map_id]).unwrap();
     while let Some(row) = rows.next().unwrap() {
         let values: Vec<rusqlite::types::Value> =
             (0..24).map(|index| row.get(index).unwrap()).collect();
@@ -551,7 +558,7 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
         display.extend_from_slice(&values[14..20]);
         target
             .execute(
-                "INSERT INTO game_object_display_info VALUES (?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO game_object_display_info VALUES (?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&display),
             )
             .unwrap();
@@ -567,6 +574,15 @@ fn authored_warsong_new_flags_are_loaded_as_usable_world_objects() {
         assert!(flag.info.is_usable());
         assert_eq!(flag.map_id, 2106);
     }
+}
+
+#[test]
+fn arathi_authored_capture_points_are_loadable_and_usable() {
+    let points = source_battleground_objects(2107);
+    let mut entries: Vec<_> = points.0.iter().map(|point| point.info.entry).collect();
+    entries.sort_unstable();
+    assert_eq!(entries, [227420, 227522, 227536, 227538, 227544]);
+    assert!(points.0.iter().all(|point| point.info.is_usable()));
 }
 
 fn close(a: Vec3, b: Vec3) -> bool {
@@ -1215,7 +1231,19 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 
 #[test]
 fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
-    let flags = source_warsong_flags();
+    flag_match_over_the_channel(shared::battleground::warsong_gulch(), "warsonggulch2");
+}
+
+#[test]
+fn ten_twin_peaks_players_capture_three_source_flags_over_the_channel() {
+    flag_match_over_the_channel(shared::battleground::twin_peaks(), "cataclysmctf");
+}
+
+/// Source-minimum roster queue/invite/entry, three physical captures and origin return.
+fn flag_match_over_the_channel(template: shared::battleground::BgTemplate, directory: &str) {
+    let rules = shared::battleground::flag_rules(template.map_id).unwrap();
+    let flags = source_battleground_objects(template.map_id);
+    assert_eq!(flags.0.len(), 2, "both authored team flags");
     let source_flags = flags.clone();
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
@@ -1230,9 +1258,11 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
         ));
     })
     .unwrap();
-    let template = shared::battleground::warsong_gulch();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
-    let players: Vec<_> = (1..=10).map(|id| h.spawn(id, STORMWIND, origin)).collect();
+    let roster = 2 * u64::from(template.min_players_per_team);
+    let players: Vec<_> = (1..=roster)
+        .map(|id| h.spawn(id, STORMWIND, origin))
+        .collect();
     for who in &players {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
@@ -1268,7 +1298,7 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
     let match_id = invitations[0].match_id;
     for (who, invitation) in players.iter().zip(&invitations) {
         assert_eq!(invitation.match_id, match_id);
-        assert_eq!(invitation.map_id, 2106);
+        assert_eq!(invitation.map_id, template.map_id);
         assert_eq!(invitation.invitation_time_left_secs, None);
         assert!(!invitation.accepted);
         assert_eq!(h.map_of(who), Some(STORMWIND));
@@ -1290,11 +1320,11 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
         );
         let messages = h.new_worlds(who);
         assert_eq!(messages.len(), 1);
-        assert_eq!(messages[0].map_id, 2106);
-        assert_eq!(messages[0].map_directory, "warsonggulch2");
+        assert_eq!(messages[0].map_id, template.map_id);
+        assert_eq!(messages[0].map_directory, directory);
         let safe_id = match invitation.team {
-            shared::battleground::BgTeam::A => 7051,
-            shared::battleground::BgTeam::B => 7050,
+            shared::battleground::BgTeam::A => rules.starts[0],
+            shared::battleground::BgTeam::B => rules.starts[1],
         };
         let destination = map_store().unwrap().safe_locs[&safe_id];
         assert!(close(
@@ -1310,7 +1340,7 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
         h.ack(who);
     }
     let shared_map = h.map_of(&players[0]).unwrap();
-    assert_eq!(shared_map.map_id, 2106);
+    assert_eq!(shared_map.map_id, template.map_id);
     assert_ne!(shared_map.instance_id, 0);
     for who in &players {
         assert_eq!(h.map_of(who), Some(shared_map));
@@ -1382,16 +1412,18 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
             scored.honor_reward, None,
             "never apply synthetic legacy rewards"
         );
-        assert_eq!(scored.players.len(), 10);
-        assert_eq!(
-            scored
-                .players
-                .iter()
-                .find(|row| row.character_id == 1)
-                .unwrap()
-                .flag_captures,
-            capture
+        assert_eq!(scored.players.len() as u64, roster);
+        let row = scored
+            .players
+            .iter()
+            .find(|row| row.character_id == 1)
+            .unwrap();
+        assert!(
+            row.objective_scores
+                .contains(&(rules.capture_stat, capture))
         );
+        assert!(row.objective_scores.contains(&(rules.return_stat, 0)));
+        assert!(scored.world_states.contains(&(1581, capture as i32)));
     }
     for who in &players {
         let result = h
