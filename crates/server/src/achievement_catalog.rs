@@ -26,6 +26,7 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     WinPetBattle,
+    Login,
     CompleteMythicPlus(MythicCompletion),
     CompleteQuest(u32),
     CastSpell(u32),
@@ -44,6 +45,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::WinPetBattle => 158,
+            Self::Login => 74,
             Self::CompleteMythicPlus(_) => 216,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
@@ -59,7 +61,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
-            Self::WinPetBattle => criteria.asset == 0,
+            Self::WinPetBattle | Self::Login => criteria.asset == 0,
             Self::CompleteMythicPlus(completion) => criteria
                 .mythic
                 .is_some_and(|requirements| requirements.matches(completion)),
@@ -351,14 +353,13 @@ impl AchievementCatalog {
                     continue;
                 }
                 let counter = aggregate.criteria_progress.entry(id).or_default();
-                *counter =
-                    if self.criteria.get(&id).is_some_and(|row| {
-                        matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 158 | 165 | 216)
-                    }) {
-                        counter.saturating_add(value)
-                    } else {
-                        (*counter).max(value)
-                    };
+                *counter = if self.criteria.get(&id).is_some_and(|row| {
+                    matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 74 | 158 | 165 | 216)
+                }) {
+                    counter.saturating_add(value)
+                } else {
+                    (*counter).max(value)
+                };
             }
         }
         aggregate
@@ -584,7 +585,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
                     || ((matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
-                        || (kind == 158 && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 74 | 158) && row.get::<_, i32>(2)? == 0)
                         || (kind == 7 && row.get::<_, bool>(9)?)
                         || (matches!(kind, 28 | 34) && row.get::<_, bool>(8)?)
                         || (kind == 29

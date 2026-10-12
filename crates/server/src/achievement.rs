@@ -125,7 +125,7 @@ fn send_initial_achievement_snapshot(world: &mut World) {
 }
 
 fn load_login_events(world: &World, character: u64, level: u8) -> Vec<CriteriaEvent> {
-    let mut events = vec![CriteriaEvent::ReachLevel(level)];
+    let mut events = vec![CriteriaEvent::Login, CriteriaEvent::ReachLevel(level)];
     if let Some(db) = world.get_resource::<GameDatabase>() {
         events.extend(
             persistence::quest_store::load_quest_log(&db.db, character)

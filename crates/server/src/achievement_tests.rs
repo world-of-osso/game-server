@@ -2,6 +2,89 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_login_credits_authenticated_world_entry_once_and_survives_reopen() {
+    use shared::components::CharacterAppearance;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 17, "Loginproof", 1, 1).unwrap();
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(GameDatabase { db });
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Loginproof".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Level(1),
+            PlayerAchievementState::default(),
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((Authenticated { account_id: 17 }, PlayerLink(player)))
+        .id();
+    app.update();
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&23250)
+    );
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&23250),
+        Some(&1)
+    );
+    app.update();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&23250),
+        Some(&1)
+    );
+    app.world_mut().entity_mut(connection).remove::<InWorld>();
+    app.update();
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&23250),
+        Some(&2)
+    );
+    drop(app);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&23250),
+        Some(&2)
+    );
+}
+
+#[test]
 fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cast_never() {
     use crate::class_progression::{ClassProgressionPlugin, KnownSpells};
     use crate::profession::PlayerProfessions;
