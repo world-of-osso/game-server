@@ -136,6 +136,16 @@ end
         self.assertFalse(any(r['action'] == 'warning' for r in unresolved['rules']))
         self.assertTrue(any('locale' in gap['reason'] for gap in unresolved['issues']))
 
+    def test_exboss_declared_timeline_not_runtime_mutations(self):
+        source = '''local TRIGGER_AI = "AI"
+local encounterTriggers = { [343] = {trigger=TRIGGER_AI, durationRules={{time=31,eventID=12}}} }
+for encounterID,config in pairs(encounterTriggers) do
+ encounterTriggers[encounterID].trigger = NormalizeTrigger(config.trigger)
+end
+error("addon code must never run")
+'''
+        self.assertEqual(bm.extract_exboss_timeline(source), {343: {'trigger':'AI', 'durationRules':{1:{'time':31,'eventID':12}}}})
+
     def test_exboss_missing_times_are_per_encounter_gaps(self):
         source = '''local EncounterData = { maps = { [429] = {bosses = { [343] = {
  events = { [12] = {spellID = 22478, castType = "begincast", firstSeenSec = nil, cdSeriesSec = nil} }
