@@ -70,6 +70,8 @@ pub struct StatModifiers {
     pub armor_from_stat_pct: UnitStats,
     /// MiscValue -2 selects the specialization's primary stat.
     pub armor_from_primary_stat_pct: f32,
+    /// Aura142: composed base/gear armor percentage, excluding stat-derived armor.
+    pub base_armor_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -376,7 +378,9 @@ pub fn compute_character_stats(
         leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
-        armor: ratings.armor + armor_from_stats(&primary, input.primary_stat, &mods),
+        armor: (ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
+            + armor_from_stats(&primary, input.primary_stat, &mods))
+        .floor(),
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
         defense: PlayerDefense::default(),
