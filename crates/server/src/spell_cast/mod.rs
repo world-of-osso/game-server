@@ -858,7 +858,7 @@ pub(crate) fn cast_toy_spell(
     toy: &crate::toy_catalog::Toy,
     target: Option<Entity>,
     item_level: u16,
-    destination: Option<[f32; 3]>,
+    request: &shared::protocol::UseToy,
 ) -> Result<(), CastFailure> {
     let spell_id = toy.snapshot.spell_id.ok_or(CastFailure::UnknownSpell)?;
     let mut spell = world
@@ -866,7 +866,7 @@ pub(crate) fn cast_toy_spell(
         .get(spell_id)
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
-    spell.cast_destination = destination;
+    spell.cast_destination = request.destination;
     validate_toy_destination(world, caster, &spell)?;
     spell.cast_item_level = Some(item_level);
     let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
@@ -882,7 +882,7 @@ pub(crate) fn cast_toy_spell(
             .get_or_insert_with(Default::default)
             .category = toy.category;
     }
-    let result = start_cast(world, caster, &spell, target, None);
+    let result = start_cast(world, caster, &spell, target, request.witness);
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -896,6 +896,11 @@ pub(crate) fn cast_toy_spell(
         );
     }
     result
+}
+
+pub(crate) fn requires_target_witness(spell: &SpellInfo) -> bool {
+    targets::explicit_requirement(spell.effects.iter()).is_some()
+        && attributes(spell, 2) & SPELL_ATTR2_IGNORE_LINE_OF_SIGHT == 0
 }
 
 fn validate_toy_destination(

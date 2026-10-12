@@ -130,6 +130,15 @@ fn activate(h: &mut Harness, item_id: u32) -> Vec<ToyResult> {
 }
 
 fn activate_at(h: &mut Harness, item_id: u32, destination: Option<[f32; 3]>) -> Vec<ToyResult> {
+    activate_witnessed(h, item_id, destination, None)
+}
+
+fn activate_witnessed(
+    h: &mut Harness,
+    item_id: u32,
+    destination: Option<[f32; 3]>,
+    witness: Option<shared::protocol::WitnessRay>,
+) -> Vec<ToyResult> {
     h.app
         .world_mut()
         .get_mut::<MessageSender<UseToy>>(h.connection)
@@ -137,6 +146,7 @@ fn activate_at(h: &mut Harness, item_id: u32, destination: Option<[f32; 3]>) -> 
         .send::<CollectionChannel>(UseToy {
             item_id,
             destination,
+            witness,
         });
     pump(h).0
 }
@@ -3246,6 +3256,140 @@ fn toyfx14_target_and_sound_cosmetics_census() {
             .unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
+}
+
+#[test]
+fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
+    use shared::components::{ModelDisplay, Position, Rotation, UnitAuras};
+    use shared::protocol::WitnessRay;
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("witness.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let dir = crate::ground::ground_data_dir().join("los");
+    crate::test_data::require(dir.join(los::eye::EYE_TABLE_FILE));
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&dir).unwrap());
+    // Actual Northshire west-door bake: source spell range30yd, clear door opening.
+    h.app.world_mut().entity_mut(h.caster).insert((
+        Position {
+            x: -8908.2,
+            y: 81.95,
+            z: 146.6,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Position {
+            x: -8896.5,
+            y: 81.58,
+            z: 173.8,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        ModelDisplay { display_id: 10913 },
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(h.npc);
+    learn_effect_toy(&mut h, character, 122120);
+    let catalog = snapshot(h.app.world(), 1);
+    assert!(
+        catalog
+            .toys
+            .iter()
+            .find(|toy| toy.item_id == 122120)
+            .unwrap()
+            .requires_target_witness
+    );
+    assert!(
+        !catalog
+            .toys
+            .iter()
+            .find(|toy| toy.item_id == 168824)
+            .unwrap()
+            .requires_target_witness
+    );
+    let world = h.app.world();
+    let los = world.resource::<crate::line_of_sight::LineOfSight>();
+    let body = |entity| {
+        let unit = world.entity(entity);
+        los.body((
+            entity,
+            unit.get::<shared::components::Npc>(),
+            unit.get::<Position>().unwrap(),
+            unit.get::<Rotation>(),
+            unit.get::<ModelDisplay>(),
+            None,
+            unit.get::<shared::components::Player>(),
+            unit.get::<shared::components::PlayerStandState>(),
+        ))
+        .unwrap()
+    };
+    let caster = body(h.caster);
+    let target = body(h.npc);
+    let end = los
+        .witness(crate::maps::InMap::continent(0), &caster, &target)
+        .expect("authored doorway has a clear ray");
+    let witness = WitnessRay {
+        start: caster.eyes.to_array(),
+        end: end.to_array(),
+    };
+    assert_eq!(
+        activate(&mut h, 122120)[0].error.as_deref(),
+        Some("LineOfSight")
+    );
+    let forged = WitnessRay {
+        start: [witness.start[0] + 5.0, witness.start[1], witness.start[2]],
+        ..witness
+    };
+    assert_eq!(
+        activate_witnessed(&mut h, 122120, None, Some(forged))[0]
+            .error
+            .as_deref(),
+        Some("LineOfSight")
+    );
+    assert!(h.inbox.go.is_empty());
+    assert_eq!(
+        activate_witnessed(&mut h, 122120, None, Some(witness))[0].error,
+        None
+    );
+    h.advance(3);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 179869));
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(h.npc)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 179869 && a.duration_ms == 60000)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 179869)
+    );
 }
 
 #[test]
