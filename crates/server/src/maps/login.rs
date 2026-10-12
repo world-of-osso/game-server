@@ -93,6 +93,7 @@ impl LoginMaps<'_> {
             let location = match crate::persistence::housing_store::load_house_location(
                 &database.db,
                 character_id,
+                self.groups.as_deref(),
             ) {
                 Ok(location) => location,
                 Err(message) => {

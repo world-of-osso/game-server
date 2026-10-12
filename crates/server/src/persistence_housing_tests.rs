@@ -47,6 +47,259 @@ fn fixture(path: &std::path::Path) -> Database {
 }
 
 #[test]
+fn housing_access_settings_survive_reopen_and_check_owner_friends_not_visitor_claims() {
+    use shared::protocol::HouseAccess;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("access.redb");
+    let db = fixture(&path);
+    let (owner_id, _) = crate::persistence::create_character(&db, 1, "Accessowner", 1, 2).unwrap();
+    crate::persistence::save_inventory(
+        &db,
+        owner_id,
+        &InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let owner = actor(1, owner_id);
+    let visitor = actor(2, 31);
+    let property = purchase(&db, owner, &plot()).unwrap();
+    let (friend_id, _) =
+        crate::persistence::create_character(&db, 2, "Accessfriend", 1, 2).unwrap();
+    let friend = actor(2, friend_id);
+    let access = HouseAccess {
+        friends: true,
+        ..HouseAccess::default()
+    };
+    assert!(set_access(&db, friend, property.house_id, access).is_err());
+    set_access(&db, owner, property.house_id, access).unwrap();
+    assert!(house(&db, friend, property.house_id, None).is_err());
+    crate::persistence::save_friends(
+        &db,
+        friend_id,
+        &crate::friends::PlayerFriendsState {
+            entries: vec![crate::friends::FriendRecord {
+                name: "Accessowner".into(),
+                note: String::new(),
+            }],
+        },
+    );
+    assert!(house(&db, friend, property.house_id, None).is_err());
+    crate::persistence::save_friends(
+        &db,
+        owner_id,
+        &crate::friends::PlayerFriendsState {
+            entries: vec![crate::friends::FriendRecord {
+                name: "Accessfriend".into(),
+                note: String::new(),
+            }],
+        },
+    );
+    let view = house(&db, friend, property.house_id, None).unwrap();
+    assert!(!view.can_edit);
+    save_house_location(&db, friend, property.house_id, None).unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_err());
+    drop(db);
+    let db = Database::open(&path).unwrap();
+    assert_eq!(
+        snapshot(&db, owner, None, None).unwrap().owned_houses[0].house_access,
+        Some(access)
+    );
+    assert_eq!(
+        load_house_location(&db, friend_id, None).unwrap().house_id,
+        property.house_id
+    );
+    crate::persistence::save_friends(
+        &db,
+        owner_id,
+        &crate::friends::PlayerFriendsState::default(),
+    );
+    assert!(load_house_location(&db, friend_id, None).is_err());
+    set_access(&db, owner, property.house_id, HouseAccess::default()).unwrap();
+    assert!(house(&db, friend, property.house_id, None).is_err());
+    assert!(house(&db, owner, property.house_id, None).unwrap().can_edit);
+    set_access(
+        &db,
+        owner,
+        property.house_id,
+        HouseAccess {
+            anyone: true,
+            neighbors: true,
+            guild: true,
+            friends: true,
+            party: true,
+        },
+    )
+    .unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_ok());
+}
+
+#[test]
+fn housing_limited_access_rechecks_neighbors_guild_and_current_party() {
+    use shared::protocol::HouseAccess;
+    let dir = tempfile::tempdir().unwrap();
+    let db = fixture(&dir.path().join("social.redb"));
+    let (owner_id, _) = crate::persistence::create_character(&db, 1, "Socialowner", 1, 2).unwrap();
+    let (visitor_id, _) =
+        crate::persistence::create_character(&db, 2, "Socialguest", 1, 2).unwrap();
+    for id in [owner_id, visitor_id] {
+        crate::persistence::save_inventory(
+            &db,
+            id,
+            &InventoryData {
+                gold: 20_000_000,
+                items: vec![],
+            },
+        );
+    }
+    let owner = actor(1, owner_id);
+    let visitor = actor(2, visitor_id);
+    let property = purchase(&db, owner, &plot()).unwrap();
+    set_access(
+        &db,
+        owner,
+        property.house_id,
+        HouseAccess {
+            neighbors: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_err());
+    let other = HousingPlot {
+        plot_id: 418,
+        plot_index: 1,
+        ..plot()
+    };
+    purchase(&db, visitor, &other).unwrap();
+    assert!(
+        !house(&db, visitor, property.house_id, None)
+            .unwrap()
+            .can_edit
+    );
+    set_access(
+        &db,
+        owner,
+        property.house_id,
+        HouseAccess {
+            guild: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_err());
+    crate::persistence::set_character_guild_by_id(&db, owner_id, 71, "Housingguild").unwrap();
+    crate::persistence::set_character_guild_by_id(&db, visitor_id, 72, "Otherguild").unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_err());
+    crate::persistence::set_character_guild_by_id(&db, visitor_id, 71, "Housingguild").unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_ok());
+    crate::persistence::set_character_guild_by_id(&db, visitor_id, 72, "Otherguild").unwrap();
+    assert!(house(&db, visitor, property.house_id, None).is_err());
+    set_access(
+        &db,
+        owner,
+        property.house_id,
+        HouseAccess {
+            party: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut groups = crate::group::GroupRegistry::default();
+    let online: crate::group::OnlineView = [(owner_id, "Socialowner"), (visitor_id, "Socialguest")]
+        .into_iter()
+        .map(|(id, name)| {
+            (
+                id,
+                crate::group::OnlineMember {
+                    entity: id + 100,
+                    name: name.into(),
+                    class: 2,
+                    level: 10,
+                    portrait: Default::default(),
+                    dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
+                    raid_difficulty: Default::default(),
+                },
+            )
+        })
+        .collect();
+    assert!(house(&db, visitor, property.house_id, Some(&groups)).is_err());
+    groups.invite(owner_id, "Socialguest", &online);
+    assert!(house(&db, visitor, property.house_id, Some(&groups)).is_err());
+    groups.respond_invite(visitor_id, true);
+    assert!(house(&db, visitor, property.house_id, Some(&groups)).is_ok());
+    save_house_location(&db, visitor, property.house_id, Some(&groups)).unwrap();
+    assert!(load_house_location(&db, visitor_id, Some(&groups)).is_ok());
+    groups.leave(visitor_id);
+    assert!(house(&db, visitor, property.house_id, Some(&groups)).is_err());
+    assert!(load_house_location(&db, visitor_id, Some(&groups)).is_err());
+}
+
+#[test]
+fn housing_access_migration_preserves_unknown_closed_open_and_decor() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("migration.redb");
+    let db = fixture(&path);
+    let legacy = serde_json::json!({
+        "schema_version":1, "build_key":BUILD_KEY, "next_house_id":4, "next_instance_id":2,
+        "storage":{"1":{"2330":1}},
+        "houses": {
+            "1":{"house_id":1,"account_id":1,"owner_character_id":30,"neighborhood_id":1,"plot_id":417,"access_anyone":null,"decor":[]},
+            "2":{"house_id":2,"account_id":2,"owner_character_id":31,"neighborhood_id":1,"plot_id":418,"access_anyone":false,"decor":[]},
+            "3":{"house_id":3,"account_id":3,"owner_character_id":32,"neighborhood_id":1,"plot_id":419,"access_anyone":true,"decor":[{"instance_id":1,"decor_id":1693,"transform":{"position":[1.25,2.0,-3.0],"yaw":0.5,"pitch":0.25,"roll":-0.5,"scale":1.25}}]}
+        }
+    });
+    let txn = db.begin_write().unwrap();
+    txn.open_table(STATE)
+        .unwrap()
+        .insert(STATE_ROW, serde_json::to_vec(&legacy).unwrap().as_slice())
+        .unwrap();
+    migration::migrate(&txn, &rusqlite::Connection::open_in_memory().unwrap()).unwrap();
+    txn.commit().unwrap();
+    drop(db);
+    let db = Database::open(&path).unwrap();
+    assert_eq!(
+        snapshot(&db, actor(1, 30), None, None)
+            .unwrap()
+            .owned_houses[0]
+            .house_access,
+        None
+    );
+    assert_eq!(
+        snapshot(&db, actor(2, 31), None, None)
+            .unwrap()
+            .owned_houses[0]
+            .house_access,
+        Some(Default::default())
+    );
+    assert!(house(&db, actor(1, 30), 2, None).is_err());
+    let open = house(&db, actor(1, 30), 3, None).unwrap();
+    assert_eq!(
+        open.house_access,
+        Some(shared::protocol::HouseAccess {
+            anyone: true,
+            neighbors: true,
+            guild: true,
+            friends: true,
+            party: true
+        })
+    );
+    let layout = snapshot(&db, actor(1, 30), Some(3), None)
+        .unwrap()
+        .layout
+        .unwrap();
+    assert_eq!(layout.decor[0].transform.scale, 1.25);
+    assert_eq!(layout.decor[0].transform.position, [1.25, 2.0, -3.0]);
+    let txn = db.begin_write().unwrap();
+    migration::migrate(&txn, &rusqlite::Connection::open_in_memory().unwrap()).unwrap();
+    txn.commit().unwrap();
+    assert_eq!(
+        snapshot(&db, actor(1, 30), Some(3), None).unwrap().layout,
+        Some(layout)
+    );
+}
+
+#[test]
 fn housing_purchase_is_account_owned_paid_once_and_survives_database_reopen() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("housing.redb");
@@ -57,15 +310,15 @@ fn housing_purchase_is_account_owned_paid_once_and_survives_database_reopen() {
     assert_eq!(crate::persistence::load_inventory(&db, 30).gold, 10_000_000);
     assert!(purchase(&db, actor(2, 31), &plot()).is_err());
     assert_eq!(crate::persistence::load_inventory(&db, 31).gold, 20_000_000);
-    assert!(snapshot(&db, actor(2, 31), Some(house.house_id)).is_err());
-    assert!(snapshot(&db, owner, None).unwrap().stored.is_empty());
+    assert!(snapshot(&db, actor(2, 31), Some(house.house_id), None).is_err());
+    assert!(snapshot(&db, owner, None, None).unwrap().stored.is_empty());
     drop(db);
     let db = Database::open(&path).unwrap();
-    let state = snapshot(&db, actor(1, 32), None).unwrap();
+    let state = snapshot(&db, actor(1, 32), None, None).unwrap();
     assert_eq!(state.owned_houses.len(), 1);
     assert_eq!(state.owned_houses[0].house_id, house.house_id);
     assert!(state.owned_houses[0].can_edit);
-    assert_eq!(state.owned_houses[0].house_access_anyone, None);
+    assert_eq!(state.owned_houses[0].house_access, None);
     assert!(!state.owned_houses[0].exterior_grant_available);
     assert!(!state.owned_houses[0].interior_grant_available);
 }
@@ -120,7 +373,10 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         .is_err()
     );
     assert!(crate::persistence::load_inventory(&db, 30).items.is_empty());
-    assert_eq!(snapshot(&db, owner, None).unwrap().stored[0].quantity, 1);
+    assert_eq!(
+        snapshot(&db, owner, None, None).unwrap().stored[0].quantity,
+        1
+    );
     edit(
         &db,
         owner,
@@ -137,7 +393,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         },
     )
     .unwrap();
-    let state = snapshot(&db, owner, Some(house.house_id)).unwrap();
+    let state = snapshot(&db, owner, Some(house.house_id), None).unwrap();
     assert!(state.stored.is_empty());
     let placed = vec![StoredDecor {
         decor_id: 1693,
@@ -145,7 +401,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
     }];
     assert_eq!(state.placed, placed);
     // Retail totalNumPlaced is account-wide, also outside any house layout.
-    assert_eq!(snapshot(&db, owner, None).unwrap().placed, placed);
+    assert_eq!(snapshot(&db, owner, None, None).unwrap().placed, placed);
     let instance = state.layout.unwrap().decor[0].instance_id;
     assert!(
         edit(
@@ -197,14 +453,34 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         )
         .is_err()
     );
-    set_access(&db, owner, house.house_id, true).unwrap();
+    set_access(
+        &db,
+        owner,
+        house.house_id,
+        shared::protocol::HouseAccess {
+            anyone: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     let mut visitor = actor(2, 31);
     visitor.inside_house = Some(house.house_id);
-    let visited = snapshot(&db, visitor, Some(house.house_id)).unwrap();
+    let visited = snapshot(&db, visitor, Some(house.house_id), None).unwrap();
     assert!(!visited.layout.as_ref().unwrap().can_edit);
     assert!(visited.stored.is_empty());
     assert!(visited.placed.is_empty());
-    assert!(set_access(&db, visitor, house.house_id, true).is_err());
+    assert!(
+        set_access(
+            &db,
+            visitor,
+            house.house_id,
+            shared::protocol::HouseAccess {
+                anyone: true,
+                ..Default::default()
+            }
+        )
+        .is_err()
+    );
     assert!(
         edit(
             &db,
@@ -218,7 +494,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
     );
     drop(db);
     let db = Database::open(&path).unwrap();
-    let layout = snapshot(&db, visitor, Some(house.house_id))
+    let layout = snapshot(&db, visitor, Some(house.house_id), None)
         .unwrap()
         .layout
         .unwrap();
@@ -233,11 +509,11 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         },
     )
     .unwrap();
-    let removed = snapshot(&db, owner, Some(house.house_id)).unwrap();
+    let removed = snapshot(&db, owner, Some(house.house_id), None).unwrap();
     assert_eq!(removed.stored[0].quantity, 1);
     assert!(removed.placed.is_empty());
     assert!(
-        snapshot(&db, visitor, Some(house.house_id))
+        snapshot(&db, visitor, Some(house.house_id), None)
             .unwrap()
             .layout
             .unwrap()
@@ -324,7 +600,7 @@ fn housing_precision_migration_is_atomic_sourced_and_survives_reopen() {
         inside_house: Some(1),
         ..actor(1, 30)
     };
-    let state = snapshot(&db, owner, Some(1)).unwrap();
+    let state = snapshot(&db, owner, Some(1), None).unwrap();
     assert_eq!(
         state.stored,
         vec![StoredDecor {
@@ -403,14 +679,24 @@ fn housing_precision_migration_is_atomic_sourced_and_survives_reopen() {
     drop(db);
     let db = Database::open(&path).unwrap();
     assert_eq!(
-        snapshot(&db, owner, Some(1)).unwrap().layout.unwrap().decor[0].transform,
+        snapshot(&db, owner, Some(1), None)
+            .unwrap()
+            .layout
+            .unwrap()
+            .decor[0]
+            .transform,
         transform
     );
     let txn = db.begin_write().unwrap();
     migration::migrate(&txn, &source).unwrap();
     txn.commit().unwrap();
     assert_eq!(
-        snapshot(&db, owner, Some(1)).unwrap().layout.unwrap().decor[0].transform,
+        snapshot(&db, owner, Some(1), None)
+            .unwrap()
+            .layout
+            .unwrap()
+            .decor[0]
+            .transform,
         transform
     );
 }

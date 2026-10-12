@@ -17,7 +17,7 @@ fn bound_boss_with_catalog(
 
 /// Use the production importer on a consistent isolated snapshot, never
 /// canonical data. The TempDir stays alive until all fixture resources are loaded.
-fn prepare_mirror_database() -> (tempfile::TempDir, std::path::PathBuf) {
+fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let directory = tempfile::tempdir().expect("isolated encounter fixture directory");
     let path = directory.path().join("encounter-mirror.sqlite");
     let source = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -29,6 +29,8 @@ fn prepare_mirror_database() -> (tempfile::TempDir, std::path::PathBuf) {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/encounter_summons.py");
     let result = std::process::Command::new("python3")
         .arg(script)
+        .arg("--encounter")
+        .arg(encounter)
         .arg("--db")
         .arg(&path)
         .output()
@@ -53,7 +55,11 @@ fn bound_boss_at_difficulty(
     if let Some(catalog) = catalog {
         app.insert_resource(catalog);
     }
-    let prepared = (entry == 234648).then(prepare_mirror_database);
+    let prepared = match entry {
+        234648 => Some(prepare_encounter_database("kystia")),
+        135322 => Some(prepare_encounter_database("golden-serpent")),
+        _ => None,
+    };
     let path = prepared
         .as_ref()
         .map_or_else(world_db_path, |(_, path)| path.clone());
@@ -61,7 +67,11 @@ fn bound_boss_at_difficulty(
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
-    templates.retain(|id, _| *id == entry || (entry == 234648 && [234660, 255050].contains(id)));
+    templates.retain(|id, _| {
+        *id == entry
+            || (entry == 234648 && [234660, 255050].contains(id))
+            || (entry == 135322 && *id == 135406)
+    });
     crate::world_data::load_template_models(&conn, &mut templates);
     let difficulty_templates =
         crate::world_data::load_difficulty_templates(&conn, &expected, &templates);
@@ -307,6 +317,188 @@ fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit(
         Some(EncounterState::InProgress)
     );
     assert!(h.app.world().get_entity(kystia).is_ok());
+}
+
+#[test]
+fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_death() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    let amount = h.health(gold).max * 2_000.0;
+    h.hit(gold, amount);
+    assert_eq!(
+        h.health(gold).current,
+        1.0,
+        "TC Animated Gold intercepts lethal loss before death"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(gold)
+            .is_none()
+    );
+    assert!(
+        h.has_aura(gold, 265915),
+        "lethal interception must cast authored Molten Gold"
+    );
+    let flags = h
+        .app
+        .world()
+        .get::<shared::components::UnitFlags>(gold)
+        .unwrap();
+    assert_ne!(flags.0 & shared::components::UnitFlags::IMMUNE_TO_PC, 0);
+    assert_ne!(flags.0 & shared::components::UnitFlags::NOT_SELECTABLE, 0);
+    assert_eq!(*h.app.world().get::<InMap>(gold).unwrap(), map);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+}
+
+#[test]
+fn encounter_coverage_animated_gold_direct_self_loss_also_intercepts_lethal_damage() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    let amount = h.health(gold).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, amount);
+    assert_eq!(
+        h.health(gold).current,
+        1.0,
+        "script clamp includes self, unlike built-in unkillable"
+    );
+    assert!(h.has_aura(gold, 265915));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(gold)
+            .is_none()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    let flags = h
+        .app
+        .world()
+        .get::<shared::components::UnitFlags>(gold)
+        .unwrap();
+    assert_eq!(
+        flags.0
+            & (shared::components::UnitFlags::IMMUNE_TO_PC
+                | shared::components::UnitFlags::NOT_SELECTABLE),
+        0
+    );
+}
+
+#[test]
+fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    let player = h.player();
+    let location = *h.app.world().get::<Position>(gold).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        location,
+        crate::stats::CharacterStats {
+            main_hand: crate::item_stats::WeaponDamage {
+                min: 100_000.0,
+                max: 100_000.0,
+                ..crate::item_stats::WeaponDamage::UNARMED
+            },
+            ..Default::default()
+        },
+        crate::combat::AutoAttack::new(gold),
+    ));
+    h.advance(0.2);
+    assert_eq!(h.health(gold).current, 1.0);
+    assert!(h.has_aura(gold, 265915));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(gold)
+            .is_none()
+    );
+}
+
+#[test]
+fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is_not_lethal() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    let player = h.player();
+    let before = h.health(gold).current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, before - 1.0);
+    assert_eq!(h.health(gold).current, 1.0);
+    assert!(
+        !h.has_aura(gold, 265915),
+        "leaving exactly1HP is not the source lethal predicate"
+    );
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    let ctx = EffectCtx {
+        caster: player,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    deal_damage(h.app.world_mut(), &ctx, gold, 100_000.0, false, true);
+    // At1HP the source clamps the lethal loss to0 BEFORE its authored heal136.
+    // Do not clamp again after the heal or invent a permanently-one-HP actor.
+    assert_eq!(h.health(gold).current, h.health(gold).max);
+    assert!(h.has_aura(gold, 265915));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(gold)
+            .is_none()
+    );
 }
 
 #[test]
