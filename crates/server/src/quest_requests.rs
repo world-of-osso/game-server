@@ -843,7 +843,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         }
         self.queue_script_quest_hook(npc, quest_id, true);
         let has_knowledge_reward = knowledge.is_some();
-        let daily = quest.repeatability() == crate::quest_data::QuestRepeatability::Daily;
+        let daily = quest.repeatability() == shared::protocol::QuestRepeatability::Daily;
         self.io.commands.queue(move |world: &mut World| {
             crate::achievement::record_quest_reward(world, character, quest_id, daily);
             if has_knowledge_reward {
