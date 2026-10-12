@@ -177,6 +177,7 @@ pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED_SUMMON: u32 = 428;
+pub const MOD_SUMMON_DAMAGE: u32 = 429;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
@@ -227,6 +228,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MASTERY
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
+        | MOD_SUMMON_DAMAGE
         | MOD_RAGE_FROM_DAMAGE_DEALT
         | MOD_MANA_REGEN_PCT
         | MOD_HIT_CHANCE

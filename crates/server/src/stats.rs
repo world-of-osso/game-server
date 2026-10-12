@@ -130,6 +130,8 @@ pub struct CharacterStats {
     pub crit_pct: f32,
     pub haste_pct: f32,
     pub mastery_pct: f32,
+    /// Raw points before the active specialization's display coefficient.
+    pub mastery_points: f32,
     pub versatility_pct: f32,
     /// Tertiary ratings after their diminishing returns.
     pub leech_pct: f32,
@@ -365,6 +367,7 @@ pub fn compute_character_stats(
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
         haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
+        mastery_points,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
             + mods.versatility_pct,
         leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),

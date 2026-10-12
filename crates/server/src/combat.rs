@@ -480,6 +480,7 @@ impl SwingSight<'_, '_> {
 pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
+    summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     sight: SwingSight<'w, 's>,
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
@@ -538,6 +539,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                 &mut params.units.p1(),
                 &SwingContext {
                     scaling: &params.scaling,
+                    summon_modifiers: &params.summon_modifiers,
                     sight: &params.sight,
                     armor_constants: params.armor_constants.as_deref(),
                     spells: params.spells.as_deref(),
@@ -707,6 +709,7 @@ impl Attacker<'_> {
 /// World data a swing reads besides the two units.
 pub(crate) struct SwingContext<'a, 'w, 's> {
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
+    summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
     sight: &'a SwingSight<'w, 's>,
@@ -722,6 +725,7 @@ fn swing_damage(
     hand: Hand,
     scaling: &UnitScaling,
     target_mods: Option<&AuraStatMods>,
+    summon_damage_mult: f32,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let mut rng = rand::thread_rng();
@@ -736,7 +740,7 @@ fn swing_damage(
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
-    (base * done * taken).max(0.0).round()
+    (base * done * summon_damage_mult * taken).max(0.0).round()
 }
 
 /// A creature's main-hand weapon damage roll (Unit::CalculateDamage): its
@@ -982,7 +986,14 @@ fn try_swing(
     let level_difference = i32::from(target.level_against(&attacker_scaling))
         - i32::from(attacker_scaling.level_against(&target));
     let armored = armor_mitigated(
-        swing_damage(attacker, &weapon, hand, &attacker_scaling, target_mods),
+        swing_damage(
+            attacker,
+            &weapon,
+            hand,
+            &attacker_scaling,
+            target_mods,
+            context.summon_modifiers.multiplier(attacker.entity),
+        ),
         target_armor(armor, &target, &attacker_scaling),
         &attacker_scaling,
         &target,
