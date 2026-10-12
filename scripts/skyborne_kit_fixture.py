@@ -71,6 +71,7 @@ def fixture_database():
             "db2_row_source",
             "spell_name",
             "spell_effect",
+            "mount",
             "tdb_playercreateinfo",
             "tdb_playercreateinfo_item",
             "tdb_playercreateinfo_action",
