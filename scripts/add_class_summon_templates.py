@@ -5,6 +5,7 @@ Adds the exact missing TDB templates, models and addons selected by the normal
 content importer. Never creates world spawns or fabricates creature statistics.
 """
 import argparse
+from contextlib import closing
 import sqlite3
 from pathlib import Path
 
@@ -36,7 +37,7 @@ def main():
     args = parser.parse_args()
     if args.db.name == "world.db" or not args.db.is_file():
         parser.error("provide an existing prepared copy, not world.db")
-    with sqlite3.connect(args.db) as conn:
+    with closing(sqlite3.connect(args.db)) as conn, conn:
         added = add_class_summon_templates(conn)
     print(f"added {len(added)} authentic class summon templates; world spawns unchanged")
 

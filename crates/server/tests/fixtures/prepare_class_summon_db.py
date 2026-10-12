@@ -1,5 +1,6 @@
 """Read-only native snapshot plus production class-summon import for process fixtures."""
 import argparse
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import sys
@@ -12,8 +13,8 @@ import add_class_summon_templates
 def prepare(source, destination):
     if destination.exists() or destination.name == "world.db":
         raise ValueError("class fixture requires a fresh owned database copy")
-    with sqlite3.connect(f"file:{source.resolve()}?mode=ro", uri=True) as native:
-        with sqlite3.connect(destination) as copied:
+    with closing(sqlite3.connect(f"file:{source.resolve()}?mode=ro", uri=True)) as native:
+        with closing(sqlite3.connect(destination)) as copied, copied:
             native.backup(copied)
             added = add_class_summon_templates.add_class_summon_templates(copied)
     return added
