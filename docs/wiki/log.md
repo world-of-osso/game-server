@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Achievement criteria producer inventory](../achievement-criteria-producer-inventory.md): all243 raw types separated from current-root rows and unsupported actors/conditions; earned XP196/221/253,13 sourced class predicates, traditional ranks47/87/88 and real terrain163/164. Native account Dynamic Duo, authenticated45068 settlement, five terrain destinations and reopened persistence proved; current-build both-skin/integration gate remains open.
+
 - 2026-10-12 — [Kings' Rest source admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): Golden primary-only SQL preparation from pinned instance/header/script and local journal/TDB; no companion credit or canonical mutation. Missing emerge/intro pipeline and mutable-damage ordering remain named gaps, not a whole-boss port.
 
 - 2026-10-12 — [Murder Row mirror callbacks](systems/boss-scripts.md#murder-row-continuation-2026-10-12): source aura23 callback, random destination offset and wild creature-spawn lifecycle implemented after the inherited mirror test reproduced missing summons. Infusion remains a named source gap; no full-encounter or native acceptance claimed.

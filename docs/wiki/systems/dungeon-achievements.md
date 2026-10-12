@@ -96,8 +96,15 @@ Append each row's arguments. The protocol test uses `--manifest-path /home/osso-
 
 The standalone native check uses `--config 'patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso-test/.worktrees/shared-protocol-dungeon"'` and `--config 'patch.crates-io.lightyear_netcode.path="/home/osso-test/.worktrees/shared-protocol-dungeon/vendor/lightyear_netcode"'`. Do not use Cargo `paths` overrides (they emitted dependency-graph warnings), or add `--locked` again (the native helper already injects it). Neither workaround is retained in source/config. Import code stays at `7cb75b9`; presentation/criteria code stays at `46bdcd6`. The later snapshot-only change does not invalidate their proofs. Final docs-only edits do not invalidate code evidence. No broad suite, client execution, push, merge or deployment.
 
+## Full raw producer continuation (2026-10-12)
+
+[Producer inventory and current-root coverage](../../achievement-criteria-producer-inventory.md) supersedes historical slice counts and records every raw69933 type, current wiring, source/state gaps and proof ledger. The [contract](../../specs/dungeon-achievements.md) owns per-type semantics.
+
+Earned player levels are published at the native XP persistence boundary, not from `Changed<Level>`; generated max-level class predicates admit actual current tree leaves without stripping conditions. Area transitions use authored full ancestry for IsInArea but retain the separate one-parent terrain-zone rule. Traditional faction rank totals exclude friendship, renown and paragon-target state. Raw CriteriaTree references outside all Achievement roots remain orphan counters, not artificial achievement gains.
+
 ## Sources
 
+- [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
 - `scripts/import_achievements.py`, `scripts/db2_casc.py` — local extraction/export/import.
 - `crates/server/src/achievement_account.rs`, `achievement_catalog.rs`, `achievement_window.rs`, `achievement.rs`, `dungeon_progress.rs` — catalog, bounded presentation and gameplay delivery.
 - [Client hookup](../../dungeon-achievements-client.md) — protocol fields, bounds and Retail sources.
