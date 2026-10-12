@@ -8,7 +8,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 36, 46, 165}
+BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 36, 46, 158, 165}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -45,6 +45,8 @@ def supported_criteria(criteria, types, spells, skills):
             continue
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
+        if kind == 158 and asset != 0:
+            continue
         if kind == 7 and asset not in skills:
             continue
         supported.add(row_id)
@@ -114,6 +116,7 @@ def census(db2, modifiers_path, world_db, types):
                             achievements=sum(not records[id]['flags'] & 1 for id in ids),
                             statistics=sum(bool(records[id]['flags'] & 1) for id in ids),
                             enabled=kind in types, potential_unconditional_gain=gain))
+    ranking.sort(key=lambda row: (-row['achievements'], -row['statistics'], row['type']))
     paths = [db2 / (name + '.csv') for name in ('Achievement', 'CriteriaTree', 'Criteria')]
     paths.append(modifiers_path)
     return dict(

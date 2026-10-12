@@ -829,6 +829,9 @@ fn advance_encounter(
             Outcome::Draw => WildPetBattleOutcome::Draw,
         }
     };
+    if outcome == WildPetBattleOutcome::Won {
+        crate::achievement::record_pet_battle_win(world, owner);
+    }
     info!(
         "Wild pet battle {} ended: account {}, outcome {:?}, captured {:?}, rewards {:?}",
         encounter.id, account, outcome, guid, rewards
