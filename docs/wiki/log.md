@@ -1,5 +1,18 @@
 # Wiki Log
 
+- 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
+
+- 2026-10-11 — [SmartAI final integration](../smartai-census.md#proof): code65dee4d9 keeps master follower leash exclusion/data-selected boss tracking; targeted53PASS/1pre-existingignored, importer2PASS and enginephysics14PASS; check/fmt clean. Rebuilt final binaries completed both native skins on explicit authentic legacy copy;12 new inspected PNGs. Mixed-Retail scaling and unsupported vocabulary remain open; independent verifier unavailable.
+
+- 2026-10-11 — [SmartAI private live proof/census](../smartai-census.md): both-skin full GUI863 acceptance/path/group0/credit/choice/turn-in,12 inspected PNGs. Explicit authentic legacy source fixture; mixed Retail scaling remains unproved.24 action kinds41,696 rows,19 event kinds41,014 rows,8 target kinds50,628 rows are admissions, not per-row quest certification.
+
+- 2026-10-11 — [SmartAI summon lifecycle](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): actual child initialization54, parent17 and timed-despawn35 dispatch; two lifecycle regressions fail before implementation. Generic summon boundary owns each callback once.
+
+- 2026-10-11 — [SmartAI ranked actions](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): orientation66 and looping emote17 (1,998 total/1,116 quest-linked rows) follow pinned TC semantics; two real-row missing-action regressions. Timed chance/max-delay proofs exercise existing behavior; live escort remains separate.
+
+- 2026-10-11 — [SmartAI motion authority](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11): authentic Wizzle acceptance plus production fixed-schedule point/wander integration reproduces a second0.125-yard stride; active escort ownership excludes idle roaming. Client stall/home-return and both-skin live acceptance still pending.
+
+- 2026-10-11 — SmartAI escort coverage: generic private overlay, timed-list combat gates/self-nesting policy and generic death/distance/waypoint lifecycle. Targeted proofs and remaining vocabulary/live work tracked in coverage handoff; [system](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11).
 - 2026-10-11 — [Armory refresh](systems/site-snapshots.md): user-selected default-public character policy minus ID opt-outs; exclusive mode0600 copy-only redb crash recovery; native release exporter and installed-but-disabled agent-server 15-minute user timer. Refresh validates before staging and uses atomic directory exchange, retaining data.old. Production-copy local dry-run succeeded with zero saved characters; existing real private-proof copy produced five characters against canonical read-only world.db. First publish/enable stays lead-owned. [Operator contract](../specs/site-snapshots.md#agent-server-refresh-job).
 - 2026-10-11 — [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11): preserve visual/character bitcode, additive jewelry/trinket/relic storage, paired first-empty/lower-level replacement, authored unique/category rejection, source-qualified snapshots/stat input. Eight focused handler tests cover pairs/swaps/rejection/migration/reopen/class/ranged/stat-modifier boundaries; native both-skin paid Mood Ring/five slots/stat/tooltip/drag and exact restart/relog receipts. No full server suite/canonical DB/UDP5000 writes; current Mainline has no relic fixture or ranged button.
 
