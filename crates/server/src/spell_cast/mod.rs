@@ -22,6 +22,8 @@ mod chrono_flame_tests;
 mod class_completeness_probe;
 #[cfg(test)]
 mod class_completeness_tests;
+#[cfg(test)]
+mod control_dream_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
 mod disenchant;
