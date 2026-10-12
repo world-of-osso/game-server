@@ -25,6 +25,14 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - `crates/server/src/npc_interaction/gossip.rs`, `zones.rs` — preserve authored Retail flags and service routing.
 - Sibling `shared-protocol/src/protocol/transmog_messages.rs` — source-qualified service and pending application messages.
 
+## Catalogue inputs
+
+`scripts/import_transmog_catalogue.py` embeds pinned local-CASC CSV exports in
+`scripts/reference/retail-12.1.0.69933/transmog.json` (input SHA-256s included).
+Regenerate after exporting six tables with the sibling engine's maintained
+`export_db2_csv.py`; no world.db writes. Six unreadable sets and56 unreadable set
+members are omitted, not fabricated. Source ownership remains visual-level.
+
 ## Tests asserting this spec
 
 - `crates/server/src/transmog_tests.rs` — host-message application through real world.db gossip.
@@ -35,11 +43,11 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - [ ] Only items with `ITEM_FLAG2_OVERRIDE_GOLD_COST` have proven local exact costs. Other ItemSparse SellPrice values are not a substitute for dynamic pricing: ItemPriceBase, ImportPriceQuality/Armor/Weapon and ItemClass.csv are absent from audited local inputs. Return explicit cost-unavailable, not invented prices.
 - [ ] Nonzero TransmogPlayerConditionID source requirements are not yet evaluated; such sources are not offered. Artifact override appearance policy is not implemented.
 - [ ] Collection state records visual IDs, not source IDs; exact collected-source distinction remains the acquisition system's recorded gap.
-- [ ] TransmogIllusion local CSV absent; illusions disabled.
+- [x] Catalogue exposes local Retail69933 TransmogSet/TransmogSetItem, TransmogOutfitEntry/SlotInfo/SlotOption and all93 readable TransmogIllusion records. Seven authentic default illusions are collected (TrinityCore a352b1fa); other condition/acquisition grants remain unimplemented. ItemModifiedAppearance catalogue distinguishes visual-level collection, uncollected and non-collectable entries without broadening paid choices.
 - [x] Native picker/pending/paid-apply, self/observer rebuild and both-skin relog proven on private55087: target2850 GUID123, sources821/1181,1500copper/application; private-server restart preserved modifiers in the same redb. [Bounded native evidence](../../../game-engine/docs/wiki/systems/transmog-apply.md#native-proof--verified-2026-10-11).
 - [ ] Saved outfits remain unimplemented; this proof is not every-slot/product certification.
 
 ## Out of scope
 
-- World.db writes, guessed prices/data, master merges and port5000 changes are prohibited by this task.
+- World.db writes, guessed prices/data and port5000 changes are prohibited by this task.
 - Forever-only behavior/layout is prohibited; Forever changes art only.
