@@ -3,6 +3,13 @@ use crate::persistence;
 use shared::components::CombatStatus;
 
 #[test]
+fn mount_journal_new_character_has_no_fabricated_mounts() {
+    let db = persistence::temp_database();
+    let collection = persistence::load_collections(&db, 42);
+    assert!(collection.mounts.is_empty());
+}
+
+#[test]
 fn summon_mount_marks_only_selected_mount_active() {
     let mut collection = PlayerCollectionState {
         mounts: vec![
