@@ -2718,6 +2718,115 @@ fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
 }
 
 #[test]
+fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
+    use shared::components::{ModelDisplay, Player, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    // TC a352b1fa SpellAuraEffects.cpp2110-2161, not inferred faction counterparts.
+    for (race, male, female) in [
+        (1, 10137, 10138),
+        (2, 10139, 10140),
+        (3, 10141, 10142),
+        (4, 10143, 10144),
+        (5, 10146, 10145),
+        (6, 10136, 10147),
+        (7, 10148, 10149),
+        (8, 10135, 10134),
+        (10, 17829, 17830),
+        (11, 17827, 17828),
+    ] {
+        for sex in [0, 1] {
+            let (mut h, character) = setup_for_race(
+                &directory.path().join(format!("orb-{race}-{sex}.redb")),
+                race,
+            );
+            h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+            h.app
+                .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+            h.app
+                .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+            h.app
+                .world_mut()
+                .get_mut::<Player>(h.caster)
+                .unwrap()
+                .appearance
+                .sex = sex;
+            let native = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+            let other = h.app.world().get::<ModelDisplay>(h.npc).cloned();
+            learn_effect_toy(&mut h, character, 1973);
+            assert_eq!(
+                activate(&mut h, 1973)[0].error,
+                None,
+                "race {race},sex {sex}"
+            );
+            h.advance(5);
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == 16739));
+            let display = if sex == 1 { female } else { male };
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<ModelDisplay>(h.caster)
+                    .unwrap()
+                    .display_id,
+                display
+            );
+            let player = h.app.world().get::<Player>(h.caster).unwrap();
+            assert_eq!((player.race, player.appearance.sex), (race, sex));
+            assert_eq!(h.app.world().get::<ModelDisplay>(h.npc), other.as_ref());
+            assert!(
+                h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == 16739)
+            );
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+                .unwrap()
+                .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                    spell_id: 16739,
+                });
+            h.advance(5);
+            assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), native.as_ref());
+            assert!(
+                !h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == 16739)
+            );
+        }
+    }
+    // No source mapping for Goblin9: no successful cosmetic no-op or spent cooldown.
+    let (mut h, character) = setup_for_race(&directory.path().join("orb-unmapped.redb"), 9);
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    learn_effect_toy(&mut h, character, 1973);
+    let result = activate(&mut h, 1973);
+    assert!(
+        result[0]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("no source display mapping for race 9")
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 16739));
+    assert!(!h.inbox.cooldowns.iter().any(|cd| cd.spell_id == 16739));
+}
+
+#[test]
 fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
     use shared::components::{ModelDisplay, Player, UnitAuras};
     let directory = tempfile::tempdir().unwrap();

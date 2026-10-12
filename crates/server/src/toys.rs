@@ -223,6 +223,19 @@ pub(crate) fn use_toy(
         return Err(reason);
     }
     check_item_requirements(world, player, item_id)?;
+    if toy.snapshot.spell_id == Some(16739) {
+        let native = world
+            .get::<shared::components::Player>(player)
+            .ok_or("player missing")?;
+        if crate::auras::unit_state::orb_deception_display(native.race, native.appearance.sex)
+            .is_none()
+        {
+            return Err(format!(
+                "Orb of Deception has no source display mapping for race {}",
+                native.race
+            ));
+        }
+    }
     let target = world
         .get::<crate::networking::CombatTarget>(player)
         .and_then(|target| target.0);
