@@ -238,6 +238,12 @@ fn source_snapshot_preserves_visual_edges_wallet_mapping_and_lock_reasons() {
     assert!(root.unavailable_reason.is_some());
     assert_eq!(root.rank, 0);
     assert_eq!(root.granted_rank, 0);
+    let root_perk = tree
+        .nodes
+        .iter()
+        .find(|node| node.node_id == 28534)
+        .unwrap();
+    assert_eq!(root_perk.perk.as_ref().unwrap().path_node_id, 28546);
 }
 
 #[test]

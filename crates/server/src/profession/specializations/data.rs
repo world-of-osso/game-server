@@ -139,7 +139,13 @@ fn load_paths(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, ProfessionSpe
 
 fn load_perks(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, ProfessionSpecPerk>> {
     let mut statement = conn.prepare(
-        "SELECT TraitNodeID,RequiredPointsInThisNode,Flags FROM prof_trait_perk_node ORDER BY ID",
+        "SELECT p.TraitNodeID,p.RequiredPointsInThisNode,p.Flags,
+            CASE WHEN COUNT(DISTINCT path.TraitNodeID)=1 THEN MIN(path.TraitNodeID) ELSE 0 END
+         FROM prof_trait_perk_node p
+         LEFT JOIN trait_node_x_trait_cond x ON x.TraitNodeID=p.TraitNodeID
+         LEFT JOIN trait_cond c ON c.ID=x.TraitCondID AND c.CondType=2
+         LEFT JOIN prof_trait_path_node path ON path.TraitNodeID=c.TraitNodeID
+         GROUP BY p.ID ORDER BY p.ID",
     )?;
     statement
         .query_map([], |row| {
@@ -147,6 +153,7 @@ fn load_perks(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, ProfessionSpe
             Ok((
                 row.get(0)?,
                 ProfessionSpecPerk {
+                    path_node_id: row.get(3)?,
                     required_points: row.get(1)?,
                     unlocks_subpath: flags & 1 != 0,
                 },

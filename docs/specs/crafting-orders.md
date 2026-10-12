@@ -2,6 +2,11 @@
 
 Server lifecycle in `crates/server/src/crafting_orders/`, using imported Retail CraftingOrder rows and the existing effect24 cast pipeline. [Implementation and provenance](../wiki/systems/crafting-orders.md).
 
+## Customer service integration
+
+- [ ] Source TDB brokers route menu30243/OptionNpc50 through normal InteractionOpened/Closed; retain their full64-bit NPC flags.
+- [ ] Place/cancel require an active customer-broker interaction and repeat life/faction/combat/range checks before modifying escrow.
+
 ## What it must do
 
 - [x] Import/export authentic2047-row layout05F8699D and select89 CraftingOrder→SkillLineAbility→effect24 rows without modifying the source database.
