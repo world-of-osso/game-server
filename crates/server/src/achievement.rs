@@ -473,9 +473,13 @@ fn record_criteria_events(world: &mut World, player: Entity, events: &[CriteriaE
 }
 
 fn process_inventory_acquisition_credits(world: &mut World) {
-    let (acquired, looted) = {
+    let (acquired, looted, money) = {
         let mut updates = world.resource_mut::<crate::gold::GoldUpdateQueue>();
-        (updates.take_acquisitions(), updates.take_looted_items())
+        (
+            updates.take_acquisitions(),
+            updates.take_looted_items(),
+            updates.take_looted_money(),
+        )
     };
     let owners: BTreeMap<_, _> = world
         .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
@@ -490,6 +494,11 @@ fn process_inventory_acquisition_credits(world: &mut World) {
     for (character, item, count) in looted {
         if let Some(&player) = owners.get(&character) {
             record_criteria_event(world, player, CriteriaEvent::LootItem(item, count));
+        }
+    }
+    for (character, copper) in money {
+        if let Some(&player) = owners.get(&character) {
+            record_criteria_event(world, player, CriteriaEvent::LootMoney(copper));
         }
     }
 }

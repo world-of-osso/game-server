@@ -62,6 +62,74 @@ struct Looter {
     connection: Entity,
 }
 
+#[test]
+fn achievements_criteria_loot_money_counts_committed_coins_not_refusals_or_retakes() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut h = harness_with_plugins(false, |app| {
+        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    })
+    .expect("authentic loot harness");
+    let player = h.looter.player;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    let corpse = h.kill_kobold();
+    h.stock(corpse);
+    h.take_slot(corpse, 0);
+    assert_eq!(h.inventory().gold, 0);
+    assert!(
+        !persistence::load_achievements(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.looter.character_id
+        )
+        .criteria_progress
+        .contains_key(&4093)
+    );
+    h.open(corpse, false);
+    h.take_slot(corpse, 0);
+    assert_eq!(h.inventory().gold, 3);
+    assert_eq!(
+        persistence::load_achievements(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.looter.character_id
+        )
+        .criteria_progress
+        .get(&4093),
+        Some(&3)
+    );
+    h.take_slot(corpse, 0);
+    h.settle();
+    assert_eq!(
+        persistence::load_achievements(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.looter.character_id
+        )
+        .criteria_progress
+        .get(&4093),
+        Some(&3)
+    );
+    let corpse2 = h.kill_kobold();
+    h.stock(corpse2);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut inventory = h.inventory();
+    inventory.gold = MAX_MONEY;
+    persistence::save_inventory(db, h.looter.character_id, &inventory);
+    h.open(corpse2, false);
+    h.take_slot(corpse2, 0);
+    assert_eq!(h.inventory().gold, MAX_MONEY);
+    assert_eq!(
+        persistence::load_achievements(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.looter.character_id
+        )
+        .criteria_progress
+        .get(&4093),
+        Some(&3)
+    );
+}
+
 fn harness(tables: bool) -> Option<Harness> {
     harness_with_plugins(tables, |_| {})
 }
