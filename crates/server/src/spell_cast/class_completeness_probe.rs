@@ -186,11 +186,35 @@ fn cast_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
     h.advance(cast_ms / 50 + 200); // Native cast time plus ten seconds of ticks/flight.
 }
 
+fn place_ground_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
+    if !spell
+        .effects
+        .iter()
+        .any(|effect| effect.implicit_targets.contains(&62))
+    {
+        return;
+    }
+    // Generic zero-coordinate actors do not stand on an authored terrain tile.
+    // Use the native Human arena location, not invented ground or a successful no-op.
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (x, y, z): (f32, f32, f32) = conn.query_row("SELECT position_x,position_y,position_z FROM tdb_playercreateinfo WHERE race=1 AND class=1", [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(Position { x, y, z });
+}
+
 fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
     let Some(spell) = world_db().unwrap().store.get(row.id).cloned() else {
         return json!({"spec": spec.id, "spell": row.id, "missing_store": true});
     };
     spawn_case(h, spec, row);
+    place_ground_case(h, &spell);
     let baseline_warnings = crate::auras::take_unhandled_auras(h.app.world_mut());
     h.app
         .world_mut()
@@ -251,8 +275,15 @@ fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
         .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
-    h.app
-        .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        maps.maps
+            .values()
+            .map(|map| (map.id, map.wdt_file_data_id))
+            .collect(),
+    ));
+    h.app.insert_resource(maps);
     h.app.init_resource::<crate::maps::InstanceManager>();
     h.app.init_resource::<crate::group::GroupRegistry>();
     h.app
