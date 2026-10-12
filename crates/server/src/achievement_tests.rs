@@ -182,7 +182,7 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 #[test]
 fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_target() {
     let mut h =
-        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[61863], 1, false, |app| {
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[76145], 1, false, |app| {
             app.add_plugins(AchievementPlugin);
         })
         .unwrap();
@@ -197,7 +197,7 @@ fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_t
     let application = crate::auras::AuraApplication {
         caster: h.npc,
         target: h.caster,
-        spell_id: 61863,
+        spell_id: 76145,
         effect_mask: 1,
         source: crate::auras::AuraSource::Cast,
     };
@@ -213,7 +213,7 @@ fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_t
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
-            .contains_key(&9098)
+            .contains_key(&13673)
     );
     h.app
         .world_mut()
@@ -227,7 +227,7 @@ fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_t
             .get::<crate::auras::ActiveAuras>(h.caster)
             .unwrap()
             .iter()
-            .any(|aura| aura.spell_id == 61863)
+            .any(|aura| aura.spell_id == 76145)
     );
     assert_eq!(
         h.app
@@ -235,7 +235,7 @@ fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_t
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
-            .get(&9098),
+            .get(&13673),
         Some(&1)
     );
     crate::auras::apply_aura(h.app.world_mut(), &application);
@@ -245,7 +245,7 @@ fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_t
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
-            .get(&9098),
+            .get(&13673),
         Some(&1)
     );
     h.app.update();
@@ -255,7 +255,7 @@ fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_t
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
-            .get(&9098),
+            .get(&13673),
         Some(&1)
     );
 }
