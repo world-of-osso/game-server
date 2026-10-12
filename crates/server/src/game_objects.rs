@@ -159,7 +159,7 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
 }
 
 /// Server-space (`wow_to_bevy`) position of a WoW coordinate.
-fn bevy_position(wow: Vec3) -> Position {
+pub(crate) fn bevy_position(wow: Vec3) -> Position {
     let (x, y, z) = wow_to_bevy(wow.x, wow.y, wow.z);
     Position { x, y, z }
 }
