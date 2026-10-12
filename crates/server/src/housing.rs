@@ -11,6 +11,9 @@ use shared::protocol::{
     HousingChannel, HousingCommand, HousingReply, HousingRequest, HousingState,
 };
 
+#[path = "housing_dye_requests.rs"]
+mod dye_requests;
+
 #[derive(Resource)]
 pub(crate) struct HousingAvailability(pub(crate) Result<HousingCatalog, String>);
 
@@ -109,6 +112,7 @@ pub(crate) fn process_requests(world: &mut World) {
                     | HousingCommand::RotateDecor { .. }
                     | HousingCommand::TransformDecor { .. }
                     | HousingCommand::RemoveDecor { .. }
+                    | HousingCommand::CommitDecorDyes { .. }
             )
         {
             publish_layout_to_observers(world, actor);
@@ -218,6 +222,16 @@ fn apply_house_command(
                 *access,
             )?;
         }
+        HousingCommand::PreviewDecorDyes {
+            house_id,
+            instance_id,
+            changes,
+        } => dye_requests::preview(world, actor, context, *house_id, *instance_id, changes)?,
+        HousingCommand::CommitDecorDyes {
+            house_id,
+            instance_id,
+        } => dye_requests::commit_preview(world, actor, context, *house_id, *instance_id)?,
+        HousingCommand::CancelDecorDyes => dye_requests::cancel(world, actor),
         HousingCommand::RedeemDecor { item_guid } => collect_decor(world, actor, *item_guid)?,
         HousingCommand::PlaceDecor {
             decor_id,
@@ -612,6 +626,7 @@ fn read_snapshot(
         store::populate_plots(db, &mut state.plots)?;
         load_plot_relationships(db, actor.character, &mut state);
     }
+    dye_requests::attach_preview(world, actor, &mut state);
     Ok(state)
 }
 
