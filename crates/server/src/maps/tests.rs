@@ -47,6 +47,31 @@ fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
     );
 }
 
+#[test]
+fn arena_roster_reservation_admits_only_its_own_map_copy() {
+    let store = map_store().expect("pinned Map DB2");
+    let mut manager = InstanceManager::default();
+    let copy = manager
+        .create_battleground_map(store, 572, &[1, 2, 3, 4], 4, at(0.0))
+        .expect("arena reservation");
+    for id in 1..=4 {
+        let resolved = manager
+            .create_map(store, 572, entrant(id, None), at(0.0))
+            .expect("reserved arena entrant");
+        assert_eq!(resolved.map, copy);
+    }
+    assert!(
+        manager
+            .create_map(store, 572, entrant(5, None), at(0.0))
+            .is_err()
+    );
+    assert!(
+        manager
+            .create_map(store, 617, entrant(1, None), at(0.0))
+            .is_err()
+    );
+}
+
 const STOCKADE: u32 = 34;
 /// `areatrigger_teleport` 101 "Stormwind Jail Entrance Target": its AreaTrigger box
 /// center in Stormwind City.
