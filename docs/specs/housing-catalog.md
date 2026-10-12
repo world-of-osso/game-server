@@ -27,6 +27,16 @@ Property copies are keyed by authored map ID and authoritative neighborhood/hous
 
 No verified first-house exterior/interior grant source is available. Do not infer default grants from component membership, UnlockItemID=0 or the placeholder House row. Rank3 may use one bounded authentic vendor-item redemption path backed by world.db/TDB npc_vendor or an authored DB2 item effect (lead approval, 2026-10-11); never turn StartingQuantity into ownership without grant semantics.
 
+## Default unlock sources (not a starter layout)
+
+The pinned Retail generated `PlayerHousingConstantsDocumentation.lua` names room UnlockedByDefault4, exterior-type UnlockedByDefault1, fixture IsDefaultFixture1/UnlockedByDefault2, theme UnlockedByDefault1 and wallpaper UnlockedByDefault1. Existing imported Flags fields identify14default room patterns,4default exterior types,17themes and17wallpapers. This narrows the prior source gap: default availability is sourced; first-house instance quantities, initial exterior choice/placement, starting room layout and level/budget thresholds are not established by those flags. Preserve unlock availability separately from storage/grants and assembly. Unknown NeighborhoodPlot vectors and unnamed GameParameter values remain uninterpreted.
+
+Dye source contracts are also narrower than category matching: `HousingDecorSharedDocumentation.lua` says slots currently accept colors of any category. `Blizzard_HouseEditorCustomizationDyeTemplates.lua` charges one real DyeColor.ItemID per changed preview dye slot and validates cumulative item counts. These sources do not establish the native gradient/shader payload or a legal starter assembly. Do not invent dye items, enforce category restrictions absent from Retail, or substitute colors.
+
+Catalog3D preview uses the existing M2/WMO loaders in an isolated world and does not mutate this database. Its pixel20/MOMT23 WMO appearance retains the primary renderer's black AO TODO; complete Retail AO remains a named source gap. The client contract documents the native framing and partial source boundary.
+
+The [lead import](#lead-import-canonical-database-mutation-agents-must-not-run) remains unchanged: all these records already exist in the47-table export; agents must not re-import canonical world.db or housing.sqlite merely to decode their flags.
+
 ## Authoritative catalog coordinates
 
 The server reads build-qualified NeighborhoodMap entries and NeighborhoodPlot cornerstone/teleport coordinates from the imported catalog. Supported shipping neighborhoods are map2735/2736; record4/map2640 has no matching Map.db2 row. Plot prices retain authored copper amounts under the Retail cornerstone MoneyFrame/GetMoney contract. Names may be authentically empty; do not generate neighborhood/plot names or grants. Missing catalog imports must produce an explicit unavailable error.
