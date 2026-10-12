@@ -272,6 +272,64 @@ fn housing_dye_preview_is_owner_local_and_commit_consumes_per_changed_slot_atomi
 }
 
 #[test]
+fn housing_dye_failure_after_first_item_rolls_back_real_bag_placements() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = fixture(&dir.path().join("atomic-bags.redb"));
+    let (owner, house_id) = placed_shelf(&db);
+    let catalog = dye_source();
+    let mut inventory = crate::persistence::load_inventory(&db, 30);
+    inventory.items = vec![dye_item(701, 274470, 1), dye_item(702, 274473, 1)];
+    crate::persistence::save_inventory(&db, 30, &inventory);
+    let placements = vec![
+        inventory_store::ItemPlacementData {
+            item_guid: 701,
+            bag: 0,
+            slot: 0,
+        },
+        inventory_store::ItemPlacementData {
+            item_guid: 702,
+            bag: 0,
+            slot: 1,
+        },
+    ];
+    let txn = db.begin_write().unwrap();
+    inventory_store::write_item_definition_source(&txn, 702, ItemDefinitionSource::Forever70205);
+    txn.open_table(inventory_store::INVENTORY_LAYOUTS)
+        .unwrap()
+        .insert(30, bitcode::encode(&placements).as_slice())
+        .unwrap();
+    txn.commit().unwrap();
+    // Green274470 is consumed first, including its bag placement; Red274473 then refuses its foreign definition.
+    let changes = [
+        shared::protocol::DecorDye {
+            slot_id: 28,
+            color_id: Some(24),
+        },
+        shared::protocol::DecorDye {
+            slot_id: 29,
+            color_id: Some(23),
+        },
+    ];
+    let preview = preview_dyes(&db, owner, house_id, 1, &changes, &catalog).unwrap();
+    assert!(commit_dyes(&db, owner, &preview, &catalog).is_err());
+    assert_eq!(crate::persistence::load_inventory(&db, 30), inventory);
+    let txn = db.begin_read().unwrap();
+    let table = txn.open_table(inventory_store::INVENTORY_LAYOUTS).unwrap();
+    let stored: Vec<inventory_store::ItemPlacementData> =
+        bitcode::decode(table.get(30).unwrap().unwrap().value()).unwrap();
+    assert_eq!(stored, placements);
+    assert!(
+        snapshot(&db, owner, Some(house_id), None)
+            .unwrap()
+            .layout
+            .unwrap()
+            .decor[0]
+            .dyes
+            .is_empty()
+    );
+}
+
+#[test]
 fn housing_dye_schema2_migration_preserves_existing_undyed_counts_and_permissions() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("schema2.redb");
