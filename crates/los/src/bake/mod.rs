@@ -30,7 +30,8 @@ pub const DEFAULT_THICKNESS_CUTOFF: f32 = 1.0;
 #[derive(Default)]
 pub struct CollectedGeometry {
     pub triangles: Vec<[Vec3; 3]>,
-    /// M2 collision hulls are obstacles: runtime GroundMap has no M2 floor support.
+    /// Navigation's M2 obstacle classification. The dedicated ground bake does not
+    /// change navigation's walkable-span policy.
     pub obstacles: Vec<[Vec3; 3]>,
 }
 pub type GlobalGeometry = Vec<((u32, u32), CollectedGeometry)>;
@@ -42,6 +43,9 @@ pub struct ModelGeometry {
     pub max: Vec3,
     /// Triangles of alpha-tested or blended batches.
     pub dropped_triangles: usize,
+    /// Authored M2 face normals in model-local engine axes, populated only for
+    /// the dedicated floor bake. LOS and navigation retain their existing rules.
+    floor_normals: Vec<Vec3>,
 }
 
 impl ModelGeometry {
@@ -55,7 +59,19 @@ impl ModelGeometry {
             min,
             max,
             dropped_triangles,
+            floor_normals: Vec::new(),
         }
+    }
+
+    fn walkable_m2_faces(&self, world: Affine3A) -> Vec<[Vec3; 3]> {
+        self.triangles
+            .iter()
+            .zip(&self.floor_normals)
+            .filter_map(|(&triangle, &normal)| {
+                let world_normal = world.matrix3.mul_vec3(normal.into()).normalize_or_zero();
+                (world_normal.y >= shared::ground::min_walkable_normal_y()).then_some(triangle)
+            })
+            .collect()
     }
 
     /// Smallest side of the bounding box at `scale`.
@@ -93,6 +109,7 @@ pub struct Baker {
     listfile: Option<rusqlite::Connection>,
     pub cutoff: f32,
     collision: bool,
+    m2_only: bool,
     m2s: HashMap<u32, Option<Rc<ModelGeometry>>>,
     wmos: HashMap<u32, Option<Rc<WmoModel>>>,
     /// Dropped thin doodads by model, counted once per (placement unique id, model): the
@@ -116,6 +133,7 @@ impl Baker {
             listfile,
             cutoff,
             collision: false,
+            m2_only: false,
             m2s: HashMap::new(),
             wmos: HashMap::new(),
             dropped: HashMap::new(),
@@ -128,6 +146,16 @@ impl Baker {
     pub fn for_navigation(data: &Path) -> Self {
         Self {
             collision: true,
+            ..Self::new(data, 0.0)
+        }
+    }
+
+    /// Authored M2 collision hulls only, without LOS thickness/material filtering.
+    /// WMO doodad sets use the same composed transforms as navigation and rendering.
+    pub fn for_m2_floors(data: &Path) -> Self {
+        Self {
+            collision: true,
+            m2_only: true,
             ..Self::new(data, 0.0)
         }
     }
@@ -169,8 +197,13 @@ impl Baker {
             adt::placement_rotation(placement.rotation),
             position,
         );
+        let triangles = if self.m2_only {
+            self.load_global_m2_triangles(&model.root, &placement, world)
+        } else {
+            transformed(&model.geometry.triangles, world).collect()
+        };
         let mut tiles = std::collections::BTreeSet::new();
-        for tri in transformed(&model.geometry.triangles, world) {
+        for tri in triangles {
             let min = tri[0].min(tri[1]).min(tri[2]);
             let max = tri[0].max(tri[1]).max(tri[2]);
             let (r0, c1) = tile_of(min.x, min.z);
@@ -200,6 +233,21 @@ impl Baker {
             ));
         }
         Ok(Some(geometry))
+    }
+
+    fn load_global_m2_triangles(
+        &mut self,
+        root: &wmo::WmoRoot,
+        placement: &Placement,
+        world: Affine3A,
+    ) -> Vec<[Vec3; 3]> {
+        let mut triangles = Vec::new();
+        for doodad in placed_wmo_doodads(root, placement, world) {
+            if let Some(model) = self.m2(doodad.fdid) {
+                triangles.extend(transformed(&model.triangles, doodad.world));
+            }
+        }
+        triangles
     }
 
     /// Authored terrain-water quads, using the same MH2O parser as runtime ground.
@@ -302,7 +350,11 @@ impl Baker {
         let root = self
             .read("terrain", &format!("{}.adt", files.root))
             .map_err(|err| format!("terrain/{}.adt: {err}", files.root))?;
-        let terrain = adt::terrain_triangles(&root)?;
+        let terrain = if self.m2_only {
+            Vec::new()
+        } else {
+            adt::terrain_triangles(&root)?
+        };
         let mut build = TileBuild {
             tile: (row, col),
             border: if self.collision { 2.0 } else { 0.0 },
@@ -313,7 +365,7 @@ impl Baker {
             triangles: terrain,
             obstacles: Vec::new(),
         };
-        if self.collision {
+        if self.collision && !self.m2_only {
             self.collect_neighbour_terrain(tiles, &mut build)?;
         }
         self.collect_placed_geometry(tiles, &mut build)?;
@@ -427,30 +479,12 @@ impl Baker {
             return;
         };
         let Some(model) = self.wmo(fdid) else { return };
-        if overlaps_tile(&model.geometry, world, build.tile, build.border) {
+        if !self.m2_only && overlaps_tile(&model.geometry, world, build.tile, build.border) {
             build.stats.wmo_triangles += build.add(&model.geometry.triangles, world);
             build.stats.alpha_or_blended_triangles += model.geometry.dropped_triangles;
         }
-        // WMO file space -> WMO-local Bevy space: (x, y, z) -> (x, z, -y).
-        let file_to_bevy = Affine3A::from_cols_array(&[
-            1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-        ]);
-        for doodad in model.root.doodads(placement.doodad_set) {
-            let local = file_to_bevy
-                * Affine3A::from_scale_rotation_translation(
-                    Vec3::splat(doodad.scale),
-                    glam::Quat::from_array(doodad.rotation).normalize(),
-                    Vec3::from(doodad.position),
-                )
-                * file_to_bevy.inverse();
-            // WMO doodads have no unique id of their own: the report keys them by the WMO's.
-            let placed = PlacedDoodad {
-                fdid: doodad.fdid,
-                unique_id: placement.unique_id,
-                scale: doodad.scale * placement.scale,
-                world: world * local,
-            };
-            self.place_doodad(&placed, build);
+        for doodad in placed_wmo_doodads(&model.root, placement, world) {
+            self.place_doodad(&doodad, build);
         }
     }
 
@@ -467,8 +501,13 @@ impl Baker {
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
             let before = build.triangles.len();
-            build.stats.doodad_triangles += build.add(&model.triangles, doodad.world);
-            if self.collision {
+            let added = if self.m2_only {
+                build.add(&model.walkable_m2_faces(doodad.world), doodad.world)
+            } else {
+                build.add(&model.triangles, doodad.world)
+            };
+            build.stats.doodad_triangles += added;
+            if self.collision && !self.m2_only {
                 build
                     .obstacles
                     .extend_from_slice(&build.triangles[before..]);
@@ -512,7 +551,11 @@ impl Baker {
             .map_err(|err| err.to_string())?;
         let file = m2::M2File::parse(&data)?;
         if self.collision {
-            return Ok(ModelGeometry::new(file.collision_triangles()?, 0));
+            let mut geometry = ModelGeometry::new(file.collision_triangles()?, 0);
+            if self.m2_only {
+                geometry.floor_normals = file.collision_normals()?;
+            }
+            return Ok(geometry);
         }
         let skin = primary_skin(&self.data.join("models"), fdid, file.skin_fdid)?;
         let (triangles, dropped) = file.opaque_triangles(&skin)?;
@@ -576,6 +619,31 @@ struct PlacedDoodad {
     unique_id: u32,
     scale: f32,
     world: Affine3A,
+}
+
+/// WMO file space -> local engine axes, composed with its parent placement.
+fn placed_wmo_doodads<'a>(
+    root: &'a wmo::WmoRoot,
+    placement: &'a Placement,
+    world: Affine3A,
+) -> impl Iterator<Item = PlacedDoodad> + 'a {
+    let file_to_bevy =
+        Affine3A::from_cols_array(&[1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
+    root.doodads(placement.doodad_set).map(move |doodad| {
+        let file_local = Affine3A::from_scale_rotation_translation(
+            Vec3::splat(doodad.scale),
+            glam::Quat::from_array(doodad.rotation).normalize(),
+            Vec3::from(doodad.position),
+        );
+        let local = file_to_bevy * file_local * file_to_bevy.inverse();
+        PlacedDoodad {
+            fdid: doodad.fdid,
+            // A WMO doodad's report key uses its parent placement's unique id.
+            unique_id: placement.unique_id,
+            scale: doodad.scale * placement.scale,
+            world: world * local,
+        }
+    })
 }
 
 /// The triangles one tile keeps and its counts.
