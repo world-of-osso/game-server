@@ -41,6 +41,11 @@ const QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT: u32 = 0x2;
 pub(crate) enum ObjectiveKind {
     Monster,
     ProgressBar,
+    TalkTo,
+    PlayerKills,
+    CriteriaTree,
+    AreaTriggerEnter,
+    KillWithLabel,
     GameObject,
     Item,
     /// Set by entering one of the quest's `areatrigger_involvedrelation` triggers.
@@ -52,6 +57,11 @@ impl ObjectiveKind {
         match self {
             Self::Monster => Some(QuestObjectiveKind::Monster),
             Self::ProgressBar => Some(QuestObjectiveKind::ProgressBar),
+            Self::TalkTo => Some(QuestObjectiveKind::TalkTo),
+            Self::PlayerKills => Some(QuestObjectiveKind::PlayerKills),
+            Self::CriteriaTree => Some(QuestObjectiveKind::CriteriaTree),
+            Self::AreaTriggerEnter => Some(QuestObjectiveKind::AreaTriggerEnter),
+            Self::KillWithLabel => Some(QuestObjectiveKind::KillWithLabel),
             Self::GameObject => Some(QuestObjectiveKind::GameObject),
             Self::Item => Some(QuestObjectiveKind::Item),
             Self::ExplorationOrEvent => None,

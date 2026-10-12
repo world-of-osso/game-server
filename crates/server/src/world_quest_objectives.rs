@@ -42,7 +42,12 @@ pub(crate) fn load(
             0 => ObjectiveKind::Monster,
             1 => ObjectiveKind::Item,
             2 => ObjectiveKind::GameObject,
+            3 => ObjectiveKind::TalkTo,
+            9 => ObjectiveKind::PlayerKills,
+            14 => ObjectiveKind::CriteriaTree,
             15 => ObjectiveKind::ProgressBar,
+            19 => ObjectiveKind::AreaTriggerEnter,
+            21 => ObjectiveKind::KillWithLabel,
             _ => return Err(rusqlite::Error::InvalidQuery),
         };
         let template = db
