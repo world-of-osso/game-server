@@ -36,6 +36,9 @@ const SPELL_ILLICIT_INFUSION: u32 = 1230289;
 const SPELL_LIGHT_INFUSION: u32 = 1230304;
 const FACTION_FRIENDLY: u32 = 35;
 const DISPLAY_FRIENDLY: u32 = 128332;
+const DISPLAY_UNFRIENDLY: u32 = 126199;
+const SPELL_ILLICIT_INFUSION_CAST: u32 = 474238;
+const SPELL_DESTABILIZED: u32 = 1265412;
 
 pub fn is_creature_script(script_name: &str) -> bool {
     matches!(script_name, SCRIPT | NIBBLES_SCRIPT)
@@ -63,7 +66,11 @@ pub fn creature_ai(
         .get_resource::<InstanceManager>()
         .and_then(|manager| manager.copy_difficulty(*map))
         .is_some_and(|difficulty| matches!(difficulty.difficulty_id, 2 | 8 | 23));
-    Some(Box::new(KystiaManaheart { boss, heroic }))
+    Some(Box::new(KystiaManaheart {
+        boss,
+        heroic,
+        felshield_count: 0,
+    }))
 }
 
 /// TC spell_kystia_manaheart_fel_nova_selector::HandleHitTarget.
@@ -109,6 +116,57 @@ fn cast_felshield_stacks(world: &mut World, caster: Entity, stacks: u8) {
 struct KystiaManaheart {
     boss: BossAi,
     heroic: bool,
+    felshield_count: u8,
+}
+
+pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::AuraScripts>) {
+    use crate::auras::scripts::AuraScript;
+    scripts.0.insert(
+        SPELL_LIGHT_INFUSION,
+        AuraScript {
+            on_apply: Some(apply_destabilized),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        SPELL_ILLICIT_INFUSION,
+        AuraScript {
+            on_apply: Some(apply_corrupted_faction),
+            ..Default::default()
+        },
+    );
+}
+
+fn cast_ignoring_in_progress(world: &mut World, caster: Entity, target: Entity, spell: u32) {
+    if let Err(error) =
+        crate::spell_cast::creature_cast_ignoring_in_progress(world, caster, spell, Some(target))
+    {
+        warn!("Murder Row scripted cast{spell} from{caster:?} to{target:?} failed: {error:?}");
+    }
+}
+
+fn apply_destabilized(world: &mut World, target: Entity, aura: &crate::auras::AuraInstance) {
+    if aura
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.aura_type == crate::auras::handlers::DUMMY)
+    {
+        cast_ignoring_in_progress(world, target, target, SPELL_DESTABILIZED);
+    }
+}
+
+fn apply_corrupted_faction(world: &mut World, target: Entity, aura: &crate::auras::AuraInstance) {
+    // Local1230289 effect1 is MOD_FACTION243/misc16; consume this authored field.
+    if let Some(effect) = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1 && effect.aura_type == 243)
+    {
+        world
+            .entity_mut(target)
+            .insert(UnitFactionTemplate(effect.misc_values[0] as u32))
+            .remove::<super::ScriptedVictimUpdatePaused>();
+    }
 }
 
 fn find_instance_actor(ctx: &mut Ctx, entry: u32) -> Option<Entity> {
@@ -191,6 +249,14 @@ impl Nibbles {
 }
 
 impl CreatureAi for Nibbles {
+    fn channel_finished(&mut self, ctx: &mut Ctx, spell_id: u32) {
+        if spell_id == SPELL_LIGHT_INFUSION {
+            if let Some(kystia) = find_instance_actor(ctx, NPC_KYSTIA) {
+                cast_ignoring_in_progress(ctx.world, kystia, ctx.me, SPELL_ILLICIT_INFUSION_CAST);
+            }
+        }
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.events.reset();
         ctx.world
@@ -275,6 +341,29 @@ impl CreatureAi for KystiaManaheart {
 
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
+        self.felshield_count = 0;
+    }
+
+    fn channel_finished(&mut self, ctx: &mut Ctx, spell_id: u32) {
+        if spell_id != SPELL_ILLICIT_INFUSION_CAST {
+            return;
+        }
+        let amount = 3_u8.wrapping_sub(self.felshield_count);
+        let stacks = if amount == 0 { 1 } else { amount };
+        cast_felshield_stacks(ctx.world, ctx.me, stacks);
+        self.felshield_count = self.felshield_count.wrapping_add(1);
+        if let Some(nibbles) = find_instance_actor(ctx, NPC_NIBBLES) {
+            ctx.world.entity_mut(nibbles).insert(ModelDisplay {
+                display_id: DISPLAY_UNFRIENDLY,
+            });
+            cast_ignoring_in_progress(ctx.world, nibbles, nibbles, SPELL_ILLICIT_INFUSION);
+        }
+    }
+
+    fn spell_hit(&mut self, ctx: &mut Ctx, _caster: Entity, spell_id: u32) {
+        if spell_id == SPELL_DESTABILIZED {
+            ctx.talk(3);
+        }
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
