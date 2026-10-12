@@ -97,6 +97,7 @@ pub struct InstanceManager {
     copies: HashMap<InMap, InstanceCopy>,
     battleground_by_character: HashMap<u64, InMap>,
     housing_copies: HashMap<(u32, u64), InMap>,
+    housing_content_pending: HashSet<InMap>,
     housing_by_character: HashMap<u64, InMap>,
     recent_by_character: HashMap<(u64, u32), u32>,
     /// `Group::m_recentInstances`: map → (instance owner, instance id).
@@ -115,6 +116,7 @@ impl Default for InstanceManager {
             copies: HashMap::new(),
             battleground_by_character: HashMap::new(),
             housing_copies: HashMap::new(),
+            housing_content_pending: HashSet::new(),
             housing_by_character: HashMap::new(),
             recent_by_character: HashMap::new(),
             recent_by_group: HashMap::new(),
@@ -329,13 +331,9 @@ impl InstanceManager {
                     created: false,
                 })
                 .ok_or(TransferAbortReason::MapNotAllowed),
-            InstanceType::House | InstanceType::Neighborhood => self
-                .authorized_housing_map(entrant.character_id, map_id)
-                .map(|map| ResolvedMap {
-                    map,
-                    created: false,
-                })
-                .ok_or(TransferAbortReason::MapNotAllowed),
+            InstanceType::House | InstanceType::Neighborhood => {
+                self.create_authorized_housing_map(entrant.character_id, map_id)
+            }
             _ => Err(TransferAbortReason::MapNotAllowed),
         }
     }

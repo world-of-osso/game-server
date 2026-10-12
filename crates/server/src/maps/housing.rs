@@ -32,6 +32,7 @@ impl InstanceManager {
                     instance_id: self.generate_instance_id(),
                 };
                 self.housing_copies.insert(key, map);
+                self.housing_content_pending.insert(map);
                 (map, true)
             }
         };
@@ -44,6 +45,19 @@ impl InstanceManager {
             .get(&character_id)
             .copied()
             .filter(|map| map.map_id == map_id)
+    }
+
+    /// Reservation allocates identity; only the first arrival initializes content.
+    pub(super) fn create_authorized_housing_map(
+        &mut self,
+        character_id: u64,
+        map_id: u32,
+    ) -> Result<ResolvedMap, TransferAbortReason> {
+        let map = self
+            .authorized_housing_map(character_id, map_id)
+            .ok_or(TransferAbortReason::MapNotAllowed)?;
+        let created = self.housing_content_pending.remove(&map);
+        Ok(ResolvedMap { map, created })
     }
 
     pub(crate) fn revoke_housing_entry(&mut self, character_id: u64) {

@@ -174,6 +174,9 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
         },
     );
     let mut h = housing_harness(db);
+    h.app
+        .world_mut()
+        .insert_resource(housing_cornerstone_fixture());
     let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
     h.app
         .world_mut()
@@ -190,7 +193,25 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     assert_eq!(h.map_of(&owner), None);
     assert_eq!(h.new_worlds(&owner).last().unwrap().map_id, 2735);
     h.ack(&owner);
-    assert_eq!(h.map_of(&owner).unwrap().map_id, 2735);
+    let neighborhood_map = h.map_of(&owner).unwrap();
+    assert_eq!(neighborhood_map.map_id, 2735);
+    assert_eq!(cornerstones_in(h.app.world_mut(), neighborhood_map), 1);
+    let visitor = h.spawn(31, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(visitor.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    assert_eq!(
+        h.housing_request(
+            &visitor,
+            HousingCommand::EnterNeighborhood { neighborhood_id: 1 }
+        )
+        .error,
+        None
+    );
+    h.ack(&visitor);
+    assert_eq!(h.map_of(&visitor), Some(neighborhood_map));
+    assert_eq!(cornerstones_in(h.app.world_mut(), neighborhood_map), 1);
     let distant = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
     assert!(distant.error.unwrap().contains("cornerstone"));
     let cornerstone = Vec3::new(2942.744, -214.26563, 113.11285);
@@ -207,6 +228,10 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     let db = redb::Database::open(&path).unwrap();
     assert_eq!(crate::persistence::load_inventory(&db, 30).gold, 10_000_000);
     let mut restarted = housing_harness(db);
+    restarted
+        .app
+        .world_mut()
+        .insert_resource(housing_cornerstone_fixture());
     let place = restarted
         .app
         .world_mut()
@@ -225,6 +250,50 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     assert_eq!(place.map.map_id, 2735);
     assert_ne!(place.map.instance_id, 0);
     assert_eq!(place.position, position);
+    assert_eq!(cornerstones_in(restarted.app.world_mut(), place.map), 1);
+}
+
+// Pinned GameObjects527268/layout44BD453C and GameObjectDisplayInfo110660.
+// No fabricated production spawn or first-house geometry enters this fixture.
+fn housing_cornerstone_fixture() -> crate::game_objects::GameObjectSpawns {
+    use crate::game_objects::{GameObjectBounds, GameObjectSpawn, GameObjectSpawns};
+    let orientation = 2.0 * 0.9025853_f32.atan2(0.43051097);
+    GameObjectSpawns(vec![GameObjectSpawn {
+        guid: 527268,
+        map_id: 2735,
+        info: GameObjectInfo {
+            entry: 527268,
+            go_type: 48,
+            display_id: 110660,
+            name: "Cornerstone - Plot 0".into(),
+            scale: 1.0,
+        },
+        position: Vec3::new(2941.2317, -214.5868, 113.15639),
+        orientation,
+        bounds: GameObjectBounds {
+            min: Vec3::new(-2.6780343, -2.6780343, -0.5331883),
+            max: Vec3::new(2.6780343, 2.6780343, 4.1304092),
+            scale: 1.0,
+            orientation,
+        },
+        spawn_difficulties: vec![0],
+        chair: None,
+        quest_object: None,
+    }])
+}
+
+fn cornerstones_in(world: &mut World, map: InMap) -> usize {
+    let mut objects = world.query::<(&InMap, &GameObjectInfo, &Position)>();
+    objects
+        .iter(world)
+        .filter(|(copy, info, position)| {
+            **copy == map
+                && info.entry == 527268
+                && crate::game_objects::wow_position(position)
+                    .distance(Vec3::new(2941.2317, -214.5868, 113.15639))
+                    < 0.001
+        })
+        .count()
 }
 
 #[test]
