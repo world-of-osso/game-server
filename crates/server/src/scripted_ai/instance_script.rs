@@ -368,10 +368,12 @@ pub fn send_engage_unit(world: &mut World, map: InMap, unit: Entity) {
             target_frame_priority: BOSS_FRAME_PRIORITY,
         },
     );
+    super::bossmod::engage(world, unit);
 }
 
 /// `SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, unit)`.
 pub fn send_disengage_unit(world: &mut World, map: InMap, unit: Entity) {
+    super::bossmod::disengage(world, unit);
     send_to_players(
         world,
         map,
@@ -407,22 +409,15 @@ pub(super) fn send_to_players<M: lightyear::prelude::Message + Clone>(
 }
 
 /// A live instance boss, not an ordinary creature with a similar spell.
-pub(super) fn is_active_boss(world: &World, map: InMap, unit: Entity) -> bool {
-    let Some(npc) = world.get::<shared::components::Npc>(unit) else {
-        return false;
-    };
-    world
-        .get_resource::<InstanceScripts>()
-        .and_then(|scripts| scripts.0.get(&map))
-        .is_some_and(|script| {
-            script.boss_creatures.iter().any(|&(entry, id)| {
-                entry == npc.template_id
-                    && script
-                        .bosses
-                        .get(id as usize)
-                        .is_some_and(|boss| boss.state == EncounterState::InProgress)
-            })
-        })
+pub(super) fn active_encounter_id(world: &World, map: InMap, unit: Entity) -> Option<u32> {
+    let npc = world.get::<shared::components::Npc>(unit)?;
+    let script = world.get_resource::<InstanceScripts>()?.0.get(&map)?;
+    let (_, boss_id) = script
+        .boss_creatures
+        .iter()
+        .find(|(entry, _)| *entry == npc.template_id)?;
+    let boss = script.bosses.get(*boss_id as usize)?;
+    (boss.state == EncounterState::InProgress).then_some(boss.encounter_id)
 }
 
 #[cfg(test)]

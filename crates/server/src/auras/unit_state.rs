@@ -98,7 +98,10 @@ fn reconcile_scale(world: &mut World, unit: Entity) {
     } else {
         0.01
     };
-    let object_scale = (1.0 + points / 100.0).max(minimum);
+    let native = world
+        .get::<crate::zones::NativeObjectScale>(unit)
+        .map_or(1.0, |scale| scale.0);
+    let object_scale = (native * (1.0 + points / 100.0)).max(minimum);
     let display_scale = world
         .get::<crate::spell_cast::summon::SummonedCreature>(unit)
         .map_or(1.0, |summon| summon.display_scale);

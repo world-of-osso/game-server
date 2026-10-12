@@ -27,7 +27,7 @@ pub struct CreatureTemplate {
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
-    pub npc_flags: u32,
+    pub npc_flags: u64,
     pub speed_walk: f32,
     pub speed_run: f32,
     pub health_modifier: f32,
@@ -79,7 +79,7 @@ pub struct TemplateTuning {
 #[derive(Clone)]
 pub struct CreatureModelInfo {
     pub display_id: u32,
-    /// Authored creature_template_model.DisplayScale, independent of object scale.
+    /// Authored creature_template_model.DisplayScale, independent of object and client DB2 scale.
     pub display_scale: f32,
     /// Weight of the model among the template's (`GetRandomValidModel`).
     pub probability: f32,
@@ -464,7 +464,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         min_level: row.get::<_, i64>(1)? as u8,
         max_level: row.get::<_, i64>(2)? as u8,
         faction: row.get::<_, i64>(3)? as u16,
-        npc_flags: row.get::<_, i64>(4)? as u32,
+        npc_flags: row.get::<_, i64>(4)? as u64,
         speed_walk: row.get(5)?,
         health_modifier,
         name: row.get(7)?,
@@ -572,9 +572,8 @@ pub(crate) fn load_template_models(
 ) {
     let mut stmt = conn
         .prepare(&format!(
-            "SELECT model.CreatureID, model.CreatureDisplayID, model.Probability,
-                    COALESCE(data.FileDataID IN ({TRIGGER_MODEL_FILE_DATA_IDS}), 0),
-                    model.DisplayScale
+            "SELECT model.CreatureID, model.CreatureDisplayID, model.Probability, model.DisplayScale,
+                    COALESCE(data.FileDataID IN ({TRIGGER_MODEL_FILE_DATA_IDS}), 0)
              FROM content_creature_template_model model
              LEFT JOIN creature_display_info display ON display.ID = model.CreatureDisplayID
              LEFT JOIN creature_model_data data ON data.ID = display.ModelID
@@ -588,9 +587,9 @@ pub(crate) fn load_template_models(
                 row.get::<_, i64>(0)? as u32,
                 CreatureModelInfo {
                     display_id: row.get::<_, i64>(1)? as u32,
-                    display_scale: row.get(4)?,
                     probability: row.get(2)?,
-                    is_trigger: row.get(3)?,
+                    display_scale: row.get(3)?,
+                    is_trigger: row.get(4)?,
                 },
             ))
         })
@@ -919,6 +918,18 @@ fn startup_load_world_data(mut commands: Commands) {
     let professions = crate::profession::load_profession_data(&conn)
         .expect("Failed to load profession data; run scripts/import-azerothcore.sh");
     commands.insert_resource(professions);
+    commands.insert_resource(
+        crate::profession::specializations::load_specialization_data(&conn)
+            .expect("Failed to load profession specialization references; run scripts/profession_data.py with explicit --db and --source-dir"),
+    );
+    let orders = crate::crafting_orders::load_catalog(&conn)
+        .expect("Failed to load CraftingOrder reference catalog");
+    if orders.0.is_empty() {
+        warn!(
+            "Crafting orders unavailable: run copy-only scripts/crafting_orders_import.py and select its world DB"
+        );
+    }
+    commands.insert_resource(orders);
     let loot = crate::loot::load_loot_tables(&conn)
         .expect("Failed to load content_creature_loot_template; run scripts/import-azerothcore.sh");
     info!("Loaded loot tables for {} creatures", loot.creature.len());
@@ -964,6 +975,7 @@ fn startup_load_world_data(mut commands: Commands) {
         "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
     );
     commands.insert_resource(scenarios);
+    commands.insert_resource(crate::adventure_guide::load_catalog(&conn, &achievements));
     commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
