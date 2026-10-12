@@ -151,6 +151,14 @@ fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
 #[test]
 fn class_completeness_native_mastery_summon_bonus_tracks_real_owner_stat_changes() {
     let mut h = damage_harness(&[BEAST_MASTERY, FIREBALL], 3, true);
+    let source = world_db().unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &source.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_class_spells(&conn).unwrap());
     h.app
         .world_mut()
         .entity_mut(h.caster)
