@@ -2869,6 +2869,116 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
 }
 
 #[test]
+fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitSummonedBy};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, display, duration) in [
+        (89869, 131171, 66768, 45436, 150000),
+        (141299, 225824, 114846, 73493, 60000),
+        (184415, 345799, 175582, 99948, 180000),
+        (272339, 1290957, 263908, 143906, 60000),
+        (279590, 1306978, 270689, 146432, 60000),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("scenery-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.insert_resource(store.clone());
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(60); // Includes the globe's authored 3000ms cast.
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        let world = h.app.world_mut();
+        let actors: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, _)| entity)
+            .collect();
+        assert_eq!(actors.len(), 1, "item {item}");
+        let actor = actors[0];
+        assert_eq!(
+            world.get::<ModelDisplay>(actor).unwrap().display_id,
+            display
+        );
+        assert_eq!(
+            world.get::<UnitSummonedBy>(actor).unwrap().0,
+            h.caster.to_bits()
+        );
+        assert_eq!(
+            world.get::<crate::maps::InMap>(actor),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(actor)
+                .is_none()
+        );
+        let placed = *world.get::<Position>(actor).unwrap();
+        world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
+        let expires = world
+            .get::<SummonedCreature>(actor)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        let now = world.resource::<Time>().elapsed_secs_f64();
+        let remaining = expires - now;
+        assert!(
+            remaining > duration as f64 / 1000.0 - 4.0 && remaining <= duration as f64 / 1000.0
+        );
+        h.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_secs_f64(remaining - 0.1),
+            ));
+        h.advance(1);
+        assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
+        h.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(200),
+            ));
+        h.advance(1);
+        assert!(
+            h.app.world().get_entity(actor).is_err(),
+            "authored expiry of item {item}"
+        );
+    }
+}
+
+#[test]
+fn toyfx14_stationary_source_summon_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_SUMMON_CENSUS_REPORT");
+    for item in [89869, 141299, 184415, 272339, 279590] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
