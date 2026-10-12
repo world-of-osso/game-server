@@ -96,3 +96,107 @@ fn class_completeness_native_control_dream_counts_only_time_after_actual_recover
         "ready-time credit: {reduction}ms"
     );
 }
+
+fn charged_dream_harness(spell: u32) -> Harness {
+    let mut h = harness(Vec::new(), &[CONTROL_OF_THE_DREAM, spell], 11).unwrap();
+    h.advance(3);
+    h
+}
+
+fn cast_charge(h: &mut Harness, spell: u32) -> shared::protocol::SpellChargesUpdate {
+    h.inbox.charges.clear();
+    h.cast_and_deliver(spell, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.inbox
+        .charges
+        .iter()
+        .find(|r| r.spell_id == spell)
+        .unwrap()
+        .clone()
+}
+
+#[test]
+fn class_completeness_native_control_dream_charged_alignment_credits_only_full_time() {
+    const ALIGNMENT: u32 = 194_223;
+    let mut h = charged_dream_harness(ALIGNMENT);
+    let source = world_db().unwrap().store.get(ALIGNMENT).unwrap();
+    let category = source.categories.as_ref().unwrap();
+    h.advance(400);
+    let first = cast_charge(&mut h, ALIGNMENT);
+    assert_eq!(first.current, category.max_charges - 1);
+    assert_eq!(first.recharge_ms, category.charge_recovery_ms);
+    assert_eq!(
+        first.remaining_ms,
+        category.charge_recovery_ms - native_cap_ms()
+    );
+    h.advance((first.remaining_ms / 50 + 60) as usize);
+    let next = cast_charge(&mut h, ALIGNMENT);
+    let reduction = category.charge_recovery_ms - next.remaining_ms;
+    assert!(
+        (3_000..=3_250).contains(&reduction),
+        "full-charge credit: {reduction}ms"
+    );
+}
+
+#[test]
+fn class_completeness_native_control_dream_restored_incarnation_starts_credit_at_restore() {
+    const INCARNATION: u32 = 390_414;
+    let mut h = charged_dream_harness(INCARNATION);
+    let source = world_db().unwrap().store.get(INCARNATION).unwrap();
+    let category = source.categories.as_ref().unwrap();
+    h.advance(400);
+    let first = cast_charge(&mut h, INCARNATION);
+    assert_eq!(
+        first.remaining_ms,
+        category.charge_recovery_ms - native_cap_ms()
+    );
+    h.advance(400);
+    super::restore_charges(
+        h.app.world_mut(),
+        h.caster,
+        category.charge_category,
+        category.max_charges,
+    );
+    h.advance(60);
+    let restored = cast_charge(&mut h, INCARNATION);
+    let reduction = category.charge_recovery_ms - restored.remaining_ms;
+    assert!(
+        (3_000..=3_250).contains(&reduction),
+        "restore-time credit: {reduction}ms"
+    );
+}
+
+#[test]
+fn class_completeness_native_control_dream_removal_and_foreign_aura_grant_no_credit() {
+    let mut h = dream_harness(true);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            NATURES_SWIFTNESS,
+            BARKSKIN,
+        ]));
+    let owner = h.caster;
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Unlearned,
+        |aura| aura.spell_id == CONTROL_OF_THE_DREAM,
+    );
+    let foreign = spawn_player(&mut h.app, 11, 0.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: foreign,
+            target: owner,
+            spell_id: CONTROL_OF_THE_DREAM,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(400);
+    assert_eq!(
+        cast_cooldown(&mut h, NATURES_SWIFTNESS).duration_ms,
+        native_cooldown(NATURES_SWIFTNESS)
+    );
+}
