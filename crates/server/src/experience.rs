@@ -430,6 +430,7 @@ type XpPlayers<'w, 's> = Query<
     (
         Entity,
         &'static ClientId,
+        &'static Player,
         &'static mut Level,
         Option<&'static mut UnitLevel>,
         Option<&'static PlayerDeathState>,
@@ -471,7 +472,7 @@ fn apply_xp_awards(
             amount,
             ..
         } = award;
-        let Some((entity, _, mut level, unit_level, death, rest)) =
+        let Some((entity, _, player, mut level, unit_level, death, rest)) =
             players.iter_mut().find(|(_, id, ..)| id.0 == character_id)
         else {
             continue;
@@ -519,7 +520,7 @@ fn apply_xp_awards(
         if new_level == MAX_LEVEL {
             criteria.write(crate::achievement::CriteriaCredit {
                 player: entity,
-                event: crate::achievement::CriteriaEvent::ReachMaxLevel,
+                event: crate::achievement::CriteriaEvent::ReachMaxLevel(player.class),
             });
         }
         if let Some(mut unit_level) = unit_level {
