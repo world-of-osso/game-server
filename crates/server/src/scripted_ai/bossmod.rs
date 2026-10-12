@@ -16,8 +16,15 @@ pub enum Trigger {
 }
 #[derive(Debug, Clone)]
 pub enum Action {
-    Timer { spell_id: u32, duration_ms: u32 },
-    Warning { spell_id: u32, severity: u32 },
+    Timer {
+        spell_id: u32,
+        duration_ms: u32,
+    },
+    Warning {
+        spell_id: u32,
+        severity: u32,
+        text: String,
+    },
     Phase(f64),
 }
 #[derive(Debug, Clone)]
@@ -131,6 +138,7 @@ fn read_rule(row: &rusqlite::Row<'_>) -> rusqlite::Result<(u32, Rule)> {
         "warning" => Action::Warning {
             spell_id: row.get(7)?,
             severity: row.get(10)?,
+            text: row.get(11)?,
         },
         "phase" => Action::Phase(row.get(9)?),
         _ => return Err(rusqlite::Error::InvalidQuery),
@@ -158,7 +166,7 @@ pub fn load_catalog(conn: &Connection) -> rusqlite::Result<Catalog> {
         );
         return Ok(Catalog::default());
     }
-    let mut statement = conn.prepare("SELECT r.id,r.encounter_id,r.trigger,r.trigger_spell_id,r.health_pct,r.required_phase,r.action,r.spell_id,r.delay_ms,r.phase,r.severity FROM bossmod_rule r JOIN bossmod_authority a ON a.encounter_id=r.encounter_id AND a.addon=r.addon ORDER BY r.id")?;
+    let mut statement = conn.prepare("SELECT r.id,r.encounter_id,r.trigger,r.trigger_spell_id,r.health_pct,r.required_phase,r.action,r.spell_id,r.delay_ms,r.phase,r.severity,r.warning_text FROM bossmod_rule r JOIN bossmod_authority a ON a.encounter_id=r.encounter_id AND a.addon=r.addon ORDER BY r.id")?;
     let mut catalog = HashMap::<u32, Vec<Rule>>::new();
     for row in statement.query_map([], read_rule)? {
         let (encounter, rule) = row?;
@@ -251,10 +259,12 @@ fn publish_actions(world: &mut World, map: InMap, unit: Entity, actions: Vec<Act
             Action::Warning {
                 spell_id,
                 severity: value,
+                text,
             } => EncounterTimelineEvent::Cast {
                 caster: unit.to_bits(),
                 spell_id,
                 severity: severity(value),
+                warning_text: text,
             },
             Action::Phase(phase) if phase.fract() == 0.0 && phase >= 0.0 => {
                 EncounterTimelineEvent::Phase {
@@ -348,6 +358,7 @@ mod tests {
                 action: Action::Warning {
                     spell_id: 6306,
                     severity: 1,
+                    text: "Acid Splash".into(),
                 },
             },
         ])
@@ -365,7 +376,8 @@ mod tests {
             a,
             Action::Warning {
                 spell_id: 6306,
-                severity: 1
+                severity: 1,
+                ..
             }
         )));
         assert_eq!(schedule.timers.get(&6306), Some(&(13300, 13300)));

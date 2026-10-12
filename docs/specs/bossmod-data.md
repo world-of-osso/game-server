@@ -36,7 +36,7 @@ Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred S
 - [ ] Dynamic Blizzard timeline callbacks, observed duration classification and variable/count-indexed timer arrays need their real triggering data; they cannot be substituted with invented intervals.
 - [ ] Complete server/client integration and native acceptance. Hosted Hydrospawn/Zevrim reconciliation test passes: real Zevrim CastState and completed effects, authored repeat delay and warning severity, isolated copy and evade retirement. Native live proof remains required; this branch is not ready.
 - [ ] DBM/BigWigs extraction coverage beyond literal supported constructs.
-- [ ] Render stored warning text expressions/keys; current unchanged wire message displays the spell label and imported severity only.
+- [x] Render statically resolvable enUS warning expressions with pinned SpellName substitution; transport/render exact warning_text. Unresolved dynamic format arguments or absent enUS strings remain per-encounter gaps.
 - [ ] Complete independent verification; the available delegation backend cannot refresh its OAuth session.
 
 ## Out of scope

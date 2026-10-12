@@ -202,8 +202,9 @@ fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_
             "entry {entry} spell {spell}: actual spell effect must resolve, not an injected warning"
         );
         assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
-            EncounterTimelineEvent::Cast { caster, spell_id, severity:alert_severity }
-            if *caster == boss.to_bits() && *spell_id == spell && *alert_severity == severity)));
+            EncounterTimelineEvent::Cast { caster, spell_id, severity:alert_severity, warning_text }
+            if *caster == boss.to_bits() && *spell_id == spell && *alert_severity == severity
+                && warning_text == if entry == 11490 { "Casting Intense Pain" } else { "Riptide" })));
         assert!(
             h.inbox(0).timeline.iter().any(|event| match event {
                 EncounterTimelineEvent::Timers { timers, .. } => timers

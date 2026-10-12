@@ -23,3 +23,12 @@ INSERT INTO bossmod_rule VALUES
 (15,'LittleWigs',346,'engage',NULL,NULL,NULL,'timer',22662,900,NULL,NULL),
 (16,'LittleWigs',346,'cast_start',22662,NULL,NULL,'warning',22662,NULL,NULL,2),
 (17,'LittleWigs',346,'cast_start',22662,NULL,NULL,'timer',22662,7300,NULL,NULL);
+-- Rendered from enUS_common.lua CL.casting and pinned SpellName12.1.0.69933.
+ALTER TABLE bossmod_rule ADD COLUMN warning_text TEXT;
+UPDATE bossmod_rule SET warning_text = CASE spell_id
+ WHEN 22419 THEN 'Riptide'
+ WHEN 22421 THEN 'Massive Geyser'
+ WHEN 22478 THEN 'Casting Intense Pain'
+ WHEN 17228 THEN 'Casting Shadow Bolt Volley'
+ WHEN 22662 THEN 'Wither'
+ END WHERE action='warning';
