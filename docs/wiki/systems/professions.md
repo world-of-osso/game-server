@@ -39,6 +39,8 @@ TDB1210 trainers teach the profession spell (264617 Tailoring) and expansion lin
 
 ## Crafting
 
+[Fixed-output orders](crafting-orders.md) reuse this cast pipeline, with customer escrow and atomic result/commission mail instead of crafter-bag output. This does not add quality-crafting or recrafting.
+
 `CraftRecipe { spell_id, casts }` starts a normal player cast (`spell_cast::cast_for_player`: known-spell check includes profession spells, cast bar from `SpellCastTimes`). The remaining casts sit in `CraftQueue`; `continue_craft_queues` starts the next one after the cast ends, and `cancel_cast` (stop, movement, death) drops the queue. A cast that cannot start answers `CastFailed` and ends the queue.
 
 - `check_cast_items` (`Spell::CheckItems`) runs at cast start and completion: every reagent in the bags (`Reagents`, "Missing reagent: X"), every tool item or a bag item whose totem category is compatible (`IsTotemCategoryCompatibleWith`: same type, mask covers; `Totems`, "Requires X"), and room for every created item (`InventoryFull`).
