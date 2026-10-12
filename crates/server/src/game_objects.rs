@@ -18,6 +18,7 @@
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
 pub(crate) mod cooking_focus;
+mod cooking_traps;
 mod locks;
 pub(crate) mod quest_object;
 pub(crate) mod summoned;
