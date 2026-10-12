@@ -1037,7 +1037,7 @@ fn display_counts(entry: u32) -> HashMap<u32, u32> {
     let mut counts = HashMap::new();
     for _ in 0..4000 {
         *counts
-            .entry(choose_display_id(template, spawn, &mut rng))
+            .entry(choose_display(template, spawn, &mut rng).0)
             .or_default() += 1;
     }
     counts
