@@ -27,6 +27,8 @@ pub(crate) enum CriteriaEvent {
     AcquireItem(u32, u32),
     LootItem(u32, u32),
     UseGameObject(u32),
+    KnowSkillLineSpells(u32, u32),
+    KnowPetCreature(u32),
     WinPetBattle,
     Login,
     ExploreAreaBit(u32),
@@ -53,6 +55,8 @@ impl CriteriaEvent {
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
             Self::UseGameObject(_) => 68,
+            Self::KnowSkillLineSpells(_, _) => 75,
+            Self::KnowPetCreature(_) => 96,
             Self::WinPetBattle => 158,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
@@ -84,7 +88,8 @@ impl CriteriaEvent {
             | Self::CurrencyGained(asset, _)
             | Self::ReputationGained(asset, _)
             | Self::AcquireItem(asset, _)
-            | Self::LootItem(asset, _) => asset == criteria.asset,
+            | Self::LootItem(asset, _)
+            | Self::KnowSkillLineSpells(asset, _) => asset == criteria.asset,
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
@@ -94,6 +99,7 @@ impl CriteriaEvent {
             | Self::GainAura(asset)
             | Self::WinBattleground(asset)
             | Self::UseGameObject(asset)
+            | Self::KnowPetCreature(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -197,6 +203,8 @@ pub(crate) struct AchievementCatalog {
     event_criteria: HashMap<u32, Vec<u32>>,
     faction_groups: HashMap<u32, u32>,
     area_bits: HashMap<u32, u32>,
+    pet_creatures: BTreeSet<u32>,
+    spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
 }
 
 #[derive(Debug, Default)]
@@ -207,6 +215,34 @@ pub(crate) struct TreeProgress {
 }
 
 impl AchievementCatalog {
+    /// TC CriteriaHandler.cpp718-740 counts each known spell once per authored skill line.
+    pub(super) fn known_spell_events(
+        &self,
+        spells: impl Iterator<Item = u32>,
+    ) -> Vec<CriteriaEvent> {
+        let known: BTreeSet<_> = spells.collect();
+        let mut counts = HashMap::<u32, u32>::new();
+        for spell in &known {
+            for &skill in self.spell_skill_lines.get(spell).into_iter().flatten() {
+                *counts.entry(skill).or_default() += 1;
+            }
+        }
+        let skills: BTreeSet<_> = self
+            .event_criteria
+            .get(&75)
+            .into_iter()
+            .flatten()
+            .map(|id| self.criteria[id].asset)
+            .collect();
+        known
+            .into_iter()
+            .map(CriteriaEvent::LearnSpell)
+            .chain(skills.into_iter().map(|skill| {
+                CriteriaEvent::KnowSkillLineSpells(skill, counts.get(&skill).copied().unwrap_or(0))
+            }))
+            .collect()
+    }
+
     pub(super) fn area_bit(&self, area: u32) -> Option<u32> {
         self.area_bits.get(&area).copied()
     }
@@ -397,13 +433,21 @@ impl AchievementCatalog {
     }
 
     fn update_counter(state: &mut PlayerAchievementState, id: u32, event: CriteriaEvent) {
+        // TC SetCriteriaProgress does not create a first zero-valued progress row.
+        if matches!(event, CriteriaEvent::KnowSkillLineSpells(_, 0))
+            && !state.criteria_progress.contains_key(&id)
+        {
+            return;
+        }
         let counter = state.criteria_progress.entry(id).or_default();
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
             CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
             CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
-            | CriteriaEvent::ExploreAreaBit(_) => 1,
+            | CriteriaEvent::ExploreAreaBit(_)
+            | CriteriaEvent::KnowPetCreature(_) => 1,
+            CriteriaEvent::KnowSkillLineSpells(_, count) => u64::from(count),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::CurrencyGained(_, amount)
             | CriteriaEvent::AcquireItem(_, amount)
@@ -578,7 +622,13 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
     catalog.area_bits = areas
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<rusqlite::Result<_>>()?;
+    let mut pets =
+        conn.prepare("SELECT DISTINCT creature_id FROM battle_pet_species WHERE creature_id != 0")?;
+    catalog.pet_creatures = pets
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
     load_criteria(conn, &mut catalog)?;
+    load_spell_skill_lines(conn, &mut catalog)?;
     load_trees(conn, &mut catalog)?;
     load_definitions(conn, &mut catalog)?;
     let mut query = conn.prepare("SELECT ID, FactionGroup FROM faction_template")?;
@@ -635,7 +685,11 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                     || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 68 | 73 | 165)
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (matches!(kind, 74 | 130 | 158) && row.get::<_, i32>(2)? == 0)
-                        || (kind == 7 && row.get::<_, bool>(9)?)
+                        || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)
+                        || (kind == 96
+                            && catalog
+                                .pet_creatures
+                                .contains(&(row.get::<_, i32>(2)? as u32)))
                         || (matches!(kind, 28 | 34 | 69) && row.get::<_, bool>(8)?)
                         || (kind == 29
                             && row.get::<_, bool>(8)?
@@ -645,6 +699,22 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         ))
     })?;
     catalog.criteria = rows.collect::<rusqlite::Result<_>>()?;
+    Ok(())
+}
+
+fn load_spell_skill_lines(
+    conn: &Connection,
+    catalog: &mut AchievementCatalog,
+) -> rusqlite::Result<()> {
+    let mut query = conn.prepare("SELECT DISTINCT s.Spell, s.SkillLine FROM skill_line_ability s JOIN criteria c ON c.Asset=s.SkillLine WHERE c.Type=75")?;
+    for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
+        let (spell, skill) = row?;
+        catalog
+            .spell_skill_lines
+            .entry(spell)
+            .or_default()
+            .insert(skill);
+    }
     Ok(())
 }
 

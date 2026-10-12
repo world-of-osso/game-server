@@ -94,6 +94,7 @@ impl Plugin for AchievementPlugin {
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
                 process_known_spell_achievement_updates,
+                process_owned_pet_achievement_updates,
                 process_reputation_achievement_updates,
                 process_exploration_achievement_updates,
                 process_committed_criteria_credits,
@@ -177,10 +178,43 @@ fn process_skill_achievement_updates(world: &mut World) {
 
 /// TC CriteriaHandler.cpp687/1530-1535: knowing the authored spell is a boolean fact.
 fn process_known_spell_achievement_updates(world: &mut World) {
-    let updates: Vec<_> = world.query_filtered::<(Entity, &crate::class_progression::KnownSpells), Changed<crate::class_progression::KnownSpells>>()
-        .iter(world).flat_map(|(player, known)| known.iter().map(move |spell| (player, CriteriaEvent::LearnSpell(spell)))).collect();
-    for (player, event) in updates {
-        record_criteria_event(world, player, event);
+    let mut query = world.query_filtered::<(Entity, &crate::class_progression::KnownSpells), Changed<crate::class_progression::KnownSpells>>();
+    let Some(catalog) = world.get_resource::<AchievementCatalog>() else {
+        return;
+    };
+    let updates: Vec<_> = query
+        .iter(world)
+        .map(|(player, known)| (player, catalog.known_spell_events(known.iter())))
+        .collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
+    }
+}
+
+/// Account journal facts, never the old cosmetic collection's pre-filled known flags.
+fn process_owned_pet_achievement_updates(world: &mut World) {
+    let mut query = world.query_filtered::<(Entity, &crate::battle_pets::AccountPetJournal), Changed<crate::battle_pets::AccountPetJournal>>();
+    let Some(catalog) = world.get_resource::<crate::battle_pets::PetCatalog>() else {
+        return;
+    };
+    let updates: Vec<_> = query
+        .iter(world)
+        .map(|(player, journal)| {
+            let creatures: BTreeSet<_> = journal
+                .journal
+                .pets
+                .iter()
+                .filter_map(|pet| catalog.creature_id(pet.species_id))
+                .collect();
+            let events: Vec<_> = creatures
+                .into_iter()
+                .map(CriteriaEvent::KnowPetCreature)
+                .collect();
+            (player, events)
+        })
+        .collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
     }
 }
 
@@ -344,14 +378,25 @@ pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
 }
 
 fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
-    scenario::record(world, player, event);
-    if !world
-        .get_resource::<AchievementCatalog>()
-        .is_some_and(|catalog| catalog.tracks(event))
-    {
+    record_criteria_events(world, player, &[event]);
+}
+
+fn record_criteria_events(world: &mut World, player: Entity, events: &[CriteriaEvent]) {
+    for &event in events {
+        scenario::record(world, player, event);
+    }
+    let Some(catalog) = world.get_resource::<AchievementCatalog>() else {
+        return;
+    };
+    let tracked: Vec<_> = events
+        .iter()
+        .copied()
+        .filter(|event| catalog.tracks(*event))
+        .collect();
+    if tracked.is_empty() {
         return;
     }
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &[event], None)
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &tracked, None)
         && let Some(connection) = connection_for_player(world, player)
     {
         send_updates(world, connection, snapshot, toasts);

@@ -2,6 +2,150 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_knowledge_skill_line_counts_distinct_actual_spells_and_recomputes() {
+    use crate::class_progression::KnownSpells;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Skillproof".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            PlayerAchievementState::default(),
+            KnownSpells::fixture(vec![22717, 22717, 60116]),
+        ))
+        .id();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4787),
+        Some(&2)
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4787),
+        Some(&2)
+    );
+    app.world_mut()
+        .entity_mut(player)
+        .insert(KnownSpells::fixture(vec![60116]));
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4787),
+        Some(&1)
+    );
+}
+
+#[test]
+fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmetic_defaults() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 42, "Petproof", 1, 1).unwrap();
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.add_systems(Update, crate::battle_pets::load_account_journals);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(crate::battle_pets::load_test_catalog());
+    app.insert_resource(GameDatabase { db });
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Petproof".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            PlayerAchievementState::default(),
+            Level(1),
+            crate::collection::default_collection_state(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<crate::collection::PlayerCollectionState>(player)
+        .unwrap()
+        .pets
+        .push(crate::collection::CollectionPet {
+            pet_id: 224,
+            name: "Calico Cat".into(),
+            known: true,
+            active: false,
+        });
+    app.world_mut().spawn((
+        Authenticated { account_id: 42 },
+        PlayerLink(player),
+        InWorld {
+            character_id: character,
+        },
+    ));
+    app.update();
+    app.update();
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&23579)
+    );
+    assert!(
+        crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 65358, 1).unwrap()
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&23579),
+        Some(&1)
+    );
+    assert!(
+        crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 65358, 1).unwrap()
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&23579),
+        Some(&1)
+    );
+    drop(app);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::battle_pets::load_journal(&db, 42).count_species(224),
+        2
+    );
+    assert_eq!(crate::battle_pets::load_journal(&db, 43).count(), 0);
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&23579),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_comparison_reads_target_account_and_character_without_mutating_viewer() {
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     let mut world = World::new();
