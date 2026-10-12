@@ -2298,7 +2298,7 @@ fn send_charges(world: &mut World, unit: Entity, charges: &ChargeState, now: f64
     );
 }
 
-/// `SpellHistory::RestoreCharge` (SpellHistory.cpp:917-926) `count` times: give back the
+/// `SpellHistory::RestoreCharge` (a352b1fa SpellHistory.cpp:831-840) `count` times: give back the
 /// most recently used charges of `charge_category`; the oldest keeps recovering.
 pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
     let now = now(world);
