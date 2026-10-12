@@ -25,6 +25,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 78ea6e06 / shared2a48bdc | 2878 | 4767 | 182 | All 7827 memberships plus exact441675s3 consumer, exit0, 736.94s |
 | 174a2e84 / shared2a48bdc | 2889 | 4756 | 182 | Native aura229, all7827 memberships, exit0, 696.66s |
 | a5de3082 / shared00d33e7 | 2897 | 4748 | 182 | Native aura429/raw mastery, all7827 memberships, exit0, 745.53s |
+| 578c18d7 / shared00d33e7 | 2901 | 4744 | 182 | Native434249 ready-time credit, all7827 memberships, exit0, 716.33s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -123,7 +124,7 @@ Native434249's s1 caps unused-ready credit at15 seconds. The next cooldown of th
 
 Native132158 Nature's Swiftness demonstrates ordinary cooldowns;194223 Celestial Alignment and390414 Incarnation demonstrate category2328. Native468743 Whirling Stars supplies the second charge and authored flat recovery adjustment: casting with one available charge does not accrue full-charge credit. Known-spell sync starts a newly acquired ability's clock at learning, preserves unchanged named aliases and discards lost abilities. Own talent removal and foreign copies grant no credit.
 
-`f7a0f057` genuine RED60000 versus45000; `80c53fcc` genuine RED15000 milliseconds credited before ability learning. At `92dd4b92`, eight native controls pass, with adjacent charge-haste4/4 and cooldown-haste3/3 retained at their documented source scope. Logs: `control-dream-{red,learning-red,learning-green}.log`, `dream-*-controls.log`. These prove cooldown/charge policy, not full Convoke/treant/Incarnation effects, legal talent purchases, persistence across reconnect or independently observed Retail timing.
+`f7a0f057` genuine RED60000 versus45000; `80c53fcc` genuine RED15000 milliseconds credited before ability learning. At `92dd4b92`, eight native controls pass, with adjacent charge-haste4/4 and cooldown-haste3/3 retained at their documented source scope. Logs: `control-dream-{red,learning-red,learning-green}.log`, `dream-*-controls.log`. At `578c18d7`, final dream8/8 and adjacent cooldown-haste3/3 pass after zeroed-clock simplification. Full batch19 census records all7827 memberships:2901 working/4744 partial/182 broken; four434249 memberships move to working. These prove cooldown/charge policy, not full Convoke/treant/Incarnation effects, legal talent purchases, persistence across reconnect or independently observed Retail timing.
 
 ## Retained boundaries
 
