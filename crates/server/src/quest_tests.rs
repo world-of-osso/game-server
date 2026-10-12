@@ -454,8 +454,8 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     );
     app.world_mut().entity_mut(client.player).insert(Position {
         x: 15.,
-        y: 15.,
-        z: 0.,
+        y: 100.,
+        z: -15.,
     });
     app.update();
     let log = load_quest_log(db(&app), client.character_id);
@@ -471,8 +471,8 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     assert!(!log.watched.contains(&BEATING_THEM_BACK));
     app.world_mut().entity_mut(client.player).insert(Position {
         x: 15.,
-        y: 15.,
-        z: 0.,
+        y: 100.,
+        z: -15.,
     });
     app.update();
     let gold = persistence::load_inventory(db(&app), client.character_id).gold;
