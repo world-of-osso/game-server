@@ -15,6 +15,32 @@ fn bound_boss_with_catalog(
     bound_boss_at_difficulty(entry, map_id, bit, difficulty, catalog)
 }
 
+/// Use the production importer on a consistent isolated snapshot, never
+/// canonical data. The TempDir stays alive until all fixture resources are loaded.
+fn prepare_mirror_database() -> (tempfile::TempDir, std::path::PathBuf) {
+    let directory = tempfile::tempdir().expect("isolated encounter fixture directory");
+    let path = directory.path().join("encounter-mirror.sqlite");
+    let source = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("read-only encounter source database");
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .expect("snapshot canonical encounter data without writing source");
+    let script =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/encounter_summons.py");
+    let result = std::process::Command::new("python3")
+        .arg(script)
+        .arg("--db")
+        .arg(&path)
+        .output()
+        .expect("run authenticated mirror template importer");
+    assert!(
+        result.status.success(),
+        "mirror source preparation failed: {}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    (directory, path)
+}
+
 fn bound_boss_at_difficulty(
     entry: u32,
     map_id: u32,
@@ -27,7 +53,10 @@ fn bound_boss_at_difficulty(
     if let Some(catalog) = catalog {
         app.insert_resource(catalog);
     }
-    let path = world_db_path();
+    let prepared = (entry == 234648).then(prepare_mirror_database);
+    let path = prepared
+        .as_ref()
+        .map_or_else(world_db_path, |(_, path)| path.clone());
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
