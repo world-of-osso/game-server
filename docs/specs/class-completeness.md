@@ -9,6 +9,9 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Census uses authored production destinations/maps, actor identity and group state rather than reporting absent fixture startup resources as product gaps.
 - [x] Native target24 selects hostile units within the authored caster-facing cone/radius.
 - [x] Native target119 offers resurrection to eligible party/raid corpse owners at their body positions, using authored restoration percentages.
+- [x] Native targets72/86/91 use random directions and authored radii around the caster or prior destination.
+- [x] Unspawned class/spec/talent summon templates/models/addons are retained from authentic TDB rows without creating world spawns.
+- [x] Native spellcaster portals restrict party access and apply authored class/race conditions before casting their destination chain.
 - [x] Apply native aura537 damage percentages only for matching label and aura owner.
 - [x] Apply aura457 haste only to its charge category; preserve running-clock progress and publish rate changes/replenishment without another cast.
 - [x] Apply aura416 haste only to matching spell families, for both spell/category cooldowns, truncating native fractional milliseconds.
