@@ -240,6 +240,11 @@ fn arena_opponents_of_same_race_attack_only_after_preparation_and_never_attack_t
     use shared::battleground::{BgPhase, BgTeam};
     use shared::components::{Health, Player, UnitFactionTemplate};
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .main_hand = crate::item_stats::WeaponDamage::UNARMED;
     let map = crate::maps::InMap {
         map_id: 572,
         instance_id: 1,
