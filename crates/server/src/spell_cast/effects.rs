@@ -738,6 +738,7 @@ fn deal_damage_and_report(
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, incoming_loss);
     }
     let lethal = crate::auras::apply_attack_damage(world, target, loss);
+    crate::achievement::record_damage(world, ctx.caster, target, before, amount, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
     }
