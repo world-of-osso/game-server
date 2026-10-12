@@ -91,6 +91,14 @@ class WorldQuestImportTests(unittest.TestCase):
             self.assertEqual(rows[0],(0,138122,12,92,9.))
             self.assertEqual(rows[-1],(15,0,1,2,0.))
 
+    def test_authoritative_talk_and_player_kill_objectives_are_admitted(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            conn.execute('UPDATE tdb_quest_objectives SET Type=3,ObjectID=138122,Amount=1')
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES(52847,340073,9,0,10,'Players defeated',1,1,128,0,0)")
+            self.assertEqual(import_definitions(conn,receipt(),areas()),[52847])
+            self.assertEqual(conn.execute('SELECT kind,object_id,amount,flags FROM content_world_quest_objective ORDER BY ordinal').fetchall(),[(3,138122,1,0),(9,0,10,128)])
+
     def test_quest_bound_item_flags_are_preserved(self):
         with closing(sqlite3.connect(':memory:')) as conn:
             fixture(conn)
