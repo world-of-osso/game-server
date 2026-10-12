@@ -28,6 +28,9 @@ const TITLE_RUNEBLADE: u32 = 6;
 const IMMUNE_TO_PC_AND_NPC: u32 = 0x100 | 0x200;
 const DANCING_RUNE_WEAPON: u32 = 49028;
 const RUNE_WEAPON_PARRY: u32 = 81256;
+/// TC a352b1fa DBCEnums.h / Spell::EffectSummonType private owner selection.
+const ONLY_VISIBLE_TO_SUMMONER: u32 = 0x10;
+const ONLY_VISIBLE_TO_SUMMONER_GROUP: u32 = 0x10000;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SummonProperties {
@@ -35,6 +38,8 @@ pub struct SummonProperties {
     pub faction: u32,
     pub title: u32,
     pub slot: i32,
+    /// The first authored SummonProperties flag word; other flag semantics are separate.
+    pub flags: u32,
 }
 
 impl SummonProperties {
@@ -67,7 +72,7 @@ pub struct SummonPropertiesStore(pub HashMap<u32, SummonProperties>);
 
 pub fn load_summon_properties(conn: &Connection) -> rusqlite::Result<SummonPropertiesStore> {
     let mut stmt =
-        conn.prepare("SELECT ID, Control, Faction, Title, Slot FROM summon_properties")?;
+        conn.prepare("SELECT ID, Control, Faction, Title, Slot, Flags_0 FROM summon_properties")?;
     let rows = stmt.query_map([], |row| {
         Ok((
             row.get(0)?,
@@ -76,6 +81,7 @@ pub fn load_summon_properties(conn: &Connection) -> rusqlite::Result<SummonPrope
                 faction: row.get(2)?,
                 title: row.get(3)?,
                 slot: row.get(4)?,
+                flags: row.get::<_, i64>(5)? as u32,
             },
         ))
     })?;
@@ -128,6 +134,11 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
         return Some(format!(
             "summon control {} title {}",
             properties.control, properties.title
+        ));
+    }
+    if properties.flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0 {
+        return Some(format!(
+            "summon {properties_id} requires private group visibility"
         ));
     }
     let entry = effect.misc_values[0] as u32;
@@ -341,6 +352,7 @@ fn spawn_summon(
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
+    let private_owner = private_summon_owner(world, owner, properties.flags);
     let mut entity = world.spawn((
         (
             Position {
@@ -400,12 +412,29 @@ fn spawn_summon(
             IMMUNE_TO_PC_AND_NPC | UnitFlags::NON_ATTACKABLE_2,
         ));
     }
+    if let Some(owner) = private_owner {
+        entity.insert(crate::interest::PrivateObjectOwner(owner));
+    }
     if replicate {
         entity.insert((
             Replicate::to_clients(NetworkTarget::All),
             crate::interest::NetworkVisibility::default(),
         ));
     }
+}
+
+fn private_summon_owner(world: &World, caster: Entity, flags: u32) -> Option<Entity> {
+    // Group-private summons remain an explicit toy preflight gap; do not reinterpret
+    // their group GUID as owner-only. Other class summon behavior is not changed here.
+    if flags & ONLY_VISIBLE_TO_SUMMONER_GROUP != 0 || flags & ONLY_VISIBLE_TO_SUMMONER == 0 {
+        return None;
+    }
+    // TC: an already-private caster passes its actual private owner to the child.
+    let owner = match world.get::<crate::interest::PrivateObjectOwner>(caster) {
+        Some(owner) => owner.0,
+        None => caster,
+    };
+    Some(owner)
 }
 
 pub(super) fn expire_summons(world: &mut World) {
