@@ -236,12 +236,20 @@ fn stockade_fall_points_are_outside_the_wmo_and_its_floors_hold_beside_them() {
             );
         }
     }
-    for (x, y, floor) in [(103.0, 76.0, -34.86), (104.5, 77.3, -34.86)] {
+    // (103, 76) is inside Jail18, under barrel01.m2 (FDID 199563), MODD 523 of
+    // WMO 108631's selected/default set 0. Its authored hull top is -33.924946;
+    // use bare WMO columns here, not the barrel column. Fall columns above have
+    // no terrain, WMO or M2 face, including with the full M2 bake present.
+    for (x, y, floor) in [(106.0, 76.0, -34.86), (104.5, 77.3, -34.86)] {
         let GroundProbe::Supported(height) = stockade_ground(&mut ground, x, y, floor + 0.3) else {
             panic!("no Jail18 floor at ({x}, {y})");
         };
         assert!((height - floor).abs() < 0.05, "({x}, {y}) floor {height}");
     }
+    let GroundProbe::Supported(barrel) = stockade_ground(&mut ground, 103.0, 76.0, -34.5) else {
+        panic!("no authored MODD 523 barrel floor at (103, 76)");
+    };
+    assert!((barrel + 33.924946).abs() < 0.01, "barrel floor {barrel}");
     let GroundProbe::Supported(corridor) = stockade_ground(&mut ground, 78.0, -16.0, -26.0) else {
         panic!("no Jail02 floor at (78, -16)");
     };
