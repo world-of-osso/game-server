@@ -26,6 +26,7 @@ pub(crate) use class_data::MAX_LEVEL;
 #[cfg(test)]
 pub(crate) use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
+pub(crate) use trait_data::load_trait_tree_by_id;
 pub use trait_data::{
     COND_FLAG_GATE, COND_FLAG_SUFFICIENT, TraitCond, TraitCondType, TraitCost, TraitEdgeType,
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
