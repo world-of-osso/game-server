@@ -81,6 +81,26 @@ const LASHING_FLAMES: u32 = 334168;
 const RAKE_BLEED: u32 = 155722;
 const UNSTABLE_AFFLICTION: u32 = 30108;
 const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
+const PROTECTIVE_GROWTH: u32 = 433_748;
+const REGROWTH: u32 = 8_936;
+
+/// Native433748s1: "Your Regrowth protects you ... while your Regrowth is on you."
+/// Fold into the recipient's shared school multipliers so spells and melee agree.
+pub(super) fn protective_growth_multiplier(unit: Entity, auras: &super::ActiveAuras) -> f32 {
+    let own_regrowth = auras
+        .iter()
+        .any(|aura| aura.spell_id == REGROWTH && aura.caster == unit);
+    if !own_regrowth {
+        return 1.0;
+    }
+    let talent = auras
+        .iter()
+        .find(|aura| aura.spell_id == PROTECTIVE_GROWTH && aura.caster == unit);
+    let amount = talent
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    1.0 - amount / 100.0
+}
 
 ///60103/334046/334168 explicitly limit this vulnerability to Flame Shock.
 ///Other271 masks do not establish a universal filter:208086's description
@@ -110,7 +130,8 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 }
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
-    (spell_id == 431442 && matches!(effect_index, 0..=2))
+    (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
+        || (spell_id == 431442 && matches!(effect_index, 0..=2))
         || (spell_id == 1260647 && effect_index == 0)
         || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
