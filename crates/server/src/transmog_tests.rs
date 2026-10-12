@@ -379,6 +379,16 @@ fn transmog_state_exposes_authored_outfits_illusions_and_paid_choices() {
         && entry.slot_info_id == 13
         && entry.name == "One Handed Weapon"));
     assert!(!state.slots[0].sources.is_empty());
+    assert_eq!(
+        state.slots[0]
+            .sources
+            .iter()
+            .find(|source| source.source_id == SOURCE)
+            .unwrap()
+            .source_type,
+        3,
+        "Gladius keeps Enum.TransmogSource.Vendor from DB2"
+    );
     assert!(
         state.slots[0]
             .sources
