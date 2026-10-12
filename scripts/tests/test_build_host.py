@@ -268,6 +268,12 @@ class BuildHostTests(unittest.TestCase):
             time.sleep(0.02)
         return json.loads(marker.read_text())
 
+    def test_site_export_tool_build_does_not_launch_server(self):
+        record = self.observed(self.invoke("--bin", "game-server-site-export"))
+        self.assertEqual(record["cargo_args"], ["build", "-p", "server", "--bin", "game-server-site-export"])
+        self.assertFalse(record["ran"])
+        self.assertIsNone(record["runtime_args"])
+
     def test_adapter_exists(self):
         self.assertTrue(ADAPTER.is_file(), "native game-server adapter is missing")
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh World of Osso public Armory snapshot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/lib/game-server-site-refresh/refresh.py
+UMask=0077
+TimeoutStartSec=12min
+StandardOutput=journal
+StandardError=journal

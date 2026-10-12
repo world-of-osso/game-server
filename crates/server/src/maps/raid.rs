@@ -174,13 +174,14 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
     };
     let difficulty = instances.copy_difficulty(map).map(|d| d.difficulty_id);
     let Some(difficulty) = difficulty else { return };
-    if !store
+    let Some(encounter_id) = store
         .encounters_for_map(map.map_id, difficulty)
         .iter()
-        .any(|e| e.bit == bit)
-    {
+        .find(|e| e.bit == bit)
+        .map(|e| e.id)
+    else {
         return;
-    }
+    };
     let completed = instances.completed_encounters(map);
     if completed & (1 << bit) != 0 {
         return;
@@ -194,6 +195,7 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
         .resource_mut::<InstanceManager>()
         .update_instance_lock(map, &players, completed | (1 << bit), Some(bit), unix);
     super::difficulty::send_instance_saved(world, &saved);
+    crate::raid_history::record_first_kill(world, map, encounter_id, difficulty);
     for (entity, character) in players {
         super::difficulty::send_raid_info(world, entity, character);
     }

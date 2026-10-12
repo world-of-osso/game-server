@@ -27,6 +27,11 @@ pub(crate) const INVENTORY_LAYOUTS: TableDefinition<u64, &[u8]> =
 pub(crate) const BAG_SLOTS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_bag_slots");
 
+/// Non-visual equipment keyed by Retail inventory slot id (2, 11-14, 18).
+/// Additive storage preserves the legacy visual equipment bitcode ABI.
+pub(crate) const NONVISUAL_EQUIPMENT: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_nonvisual_equipment");
+
 /// Item instance attributes: item_guid (u64) -> bitcode `ItemInstanceData`.
 /// Keyed by guid so attributes follow the item through trade, mail and auctions.
 pub(crate) const ITEM_INSTANCES: TableDefinition<u64, &[u8]> =
@@ -68,6 +73,7 @@ pub struct InventoryRecord {
     pub inventory: InventoryData,
     pub placements: Vec<ItemPlacementData>,
     pub equipped: Vec<EquippedItem>,
+    pub nonvisual_equipped: Vec<(u8, InventoryItemData)>,
     pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
     pub item_durability: HashMap<u64, (u32, u32)>,
@@ -90,6 +96,11 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         &txn.open_table(EQUIPMENT).expect("open equipment"),
         character_id,
     );
+    let nonvisual_equipped: Vec<(u8, InventoryItemData)> = read_row(
+        &txn.open_table(NONVISUAL_EQUIPMENT)
+            .expect("open nonvisual equipment"),
+        character_id,
+    );
     let bag_slots: Vec<EquippedBagData> = read_row(
         &txn.open_table(BAG_SLOTS).expect("open bag slots"),
         character_id,
@@ -102,6 +113,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         .items
         .iter()
         .chain(equipped.iter().map(|entry| &entry.item))
+        .chain(nonvisual_equipped.iter().map(|(_, item)| item))
         .chain(bag_slots.iter().map(|entry| &entry.item))
         .map(|item| item.item_guid)
         .collect::<Vec<_>>();
@@ -137,6 +149,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         inventory,
         placements,
         equipped,
+        nonvisual_equipped,
         bag_slots,
         instances,
         item_durability,
@@ -260,10 +273,14 @@ pub(crate) fn write_inventory_record(
         record.definition_sources.keys().copied(),
         &record.transmogs,
     );
-    let rows: [(TableDefinition<u64, &[u8]>, Vec<u8>); 5] = [
+    let rows: [(TableDefinition<u64, &[u8]>, Vec<u8>); 6] = [
         (INVENTORIES, bitcode::encode(&record.inventory)),
         (INVENTORY_LAYOUTS, bitcode::encode(&record.placements)),
         (EQUIPMENT, bitcode::encode(&record.equipped)),
+        (
+            NONVISUAL_EQUIPMENT,
+            bitcode::encode(&record.nonvisual_equipped),
+        ),
         (BAG_SLOTS, bitcode::encode(&record.bag_slots)),
         (CHARACTERS, record.character.encode_stored()),
     ];

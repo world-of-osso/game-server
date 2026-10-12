@@ -32,7 +32,8 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 - [ ] Bags 1-4 always report size 0 (containers are not equippable yet; `item_sparse.ContainerSlots` has the sizes); items beyond 16 backpack slots stay owned but are not addressable.
 - [ ] Dual wield and weapon/armor skills are not tracked: one-handers equip to the main hand only.
 - [ ] Items arriving by trade, mail or loot take a free slot rather than stacking onto existing stacks; soulbound items are not blocked from trade.
-- [ ] Neck, finger, trinket and ranged slots have no server storage (`WRONG_SLOT`).
+- [x] Neck, both fingers, both trinkets and the legacy relic inventory slot persist beside visual equipment without changing existing character encodings. Equipment snapshots/deltas and physical stat inputs include them. Ranged weapons retain Retail Mainline's main-hand mapping; Mainline exposes no ranged paperdoll button.
+- [x] ItemSparse.Flags_0 `ITEM_FLAG_UNIQUE_EQUIPPABLE` rejects a second same-source item with `ItemUniqueEquippable`, excluding the replaced slot and the moving GUID. Paired slots support explicit swaps and first-empty auto-equip; when both are occupied, automatic equip replaces the valid lower ItemLevel occupant (TrinityCore a352b1fa Player::FindEquipSlot). ItemSparse.LimitCategory applies the authenticated Retail ItemLimitCategory.Quantity across distinct same-source definitions; replacement and paired movement exclude displaced slots/moving GUIDs. Existing catalog has no non-visual category using ItemLimitCategoryCondition. ItemEffect on-equip triggers remain outside the existing item-stat system; existing StatModifiers continue to apply to these gear stats.
 - [ ] Bag-item durability is not tracked (`None`); equipped durability is the saved per-item state (max from `item_template.MaxDurability`, see [merchant](merchant.md)).
 - [ ] Items offered in an open trade are not locked; trade completion re-validates them.
 
