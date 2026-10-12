@@ -440,8 +440,8 @@ fn is_harmful(
     }
 }
 
-fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo, passive: bool) -> u32 {
-    if passive {
+fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) -> u32 {
+    if is_passive(spell) {
         return 0;
     }
     let base = spell
@@ -452,7 +452,15 @@ fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo, passive: bool) 
     if base <= 0 {
         return 0;
     }
-    spell_mods::modify(world, caster, spell, SpellModOp::Duration, base as f32).max(0.0) as u32
+    let duration = spell_mods::modify(
+        world,
+        application.caster,
+        spell,
+        SpellModOp::Duration,
+        base as f32,
+    );
+    let extension = scripts::self_regrowth_duration_bonus(world, application);
+    (duration + extension).max(0.0) as u32
 }
 
 fn build_effect(
@@ -509,7 +517,7 @@ fn build_instance(
 ) -> AuraInstance {
     let caster = application.caster;
     let passive = is_passive(spell);
-    let duration_ms = duration_ms(world, caster, spell, passive);
+    let duration_ms = duration_ms(world, application, spell);
     let options = spell.aura_options.as_deref();
     let max_stacks = options.map_or(0.0, |options| options.cumulative_aura as f32);
     let max_stacks =
