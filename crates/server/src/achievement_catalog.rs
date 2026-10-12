@@ -15,8 +15,8 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 62, 67, 68, 69, 73, 74, 107, 130, 151, 152, 157, 158,
-    160, 162, 165, 216,
+    0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 62, 63, 67, 68, 69, 73, 74, 107, 108, 130, 151, 152, 157,
+    158, 160, 162, 165, 216,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -70,6 +70,9 @@ pub(crate) enum CriteriaEvent {
     AbandonQuest,
     /// Purchased tabs of TC BankType (0 Character, 2 Account).
     BankTabsOwned(u32, u32),
+    LearnTaxiNode(u32),
+    BuyTaxi,
+    MoneySpentOnTaxis(u64),
     CastSpell(u32),
     BeSpellTarget(u32),
     LearnSpell(u32),
@@ -118,6 +121,9 @@ impl CriteriaEvent {
             Self::RewardedQuestCount(_) => 9,
             Self::AbandonQuest => 107,
             Self::BankTabsOwned(_, _) => 260,
+            Self::LearnTaxiNode(_) => 262,
+            Self::BuyTaxi => 108,
+            Self::MoneySpentOnTaxis(_) => 63,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
             Self::LearnSpell(_) => 34,
@@ -140,6 +146,8 @@ impl CriteriaEvent {
             | Self::MoneyEarnedFromQuesting(_)
             | Self::RewardedQuestCount(_)
             | Self::AbandonQuest
+            | Self::BuyTaxi
+            | Self::MoneySpentOnTaxis(_)
             | Self::OwnUniquePets(_)
             | Self::OwnToys(_)
             | Self::WinPetBattle
@@ -174,6 +182,7 @@ impl CriteriaEvent {
             | Self::LearnToy(asset)
             | Self::CompleteScenario(asset)
             | Self::CompleteQuestInZone(asset)
+            | Self::LearnTaxiNode(asset)
             | Self::RewardedQuestsInZone(asset, _)
             | Self::BankTabsOwned(asset, _)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
@@ -546,6 +555,7 @@ impl AchievementCatalog {
             | CriteriaEvent::ExploreAreaBit(_)
             | CriteriaEvent::KnowPetCreature(_)
             | CriteriaEvent::LearnToy(_)
+            | CriteriaEvent::LearnTaxiNode(_)
             | CriteriaEvent::EquipItem(_) => 1,
             CriteriaEvent::KnowSkillLineSpells(_, count)
             | CriteriaEvent::LearnTradeskillSkillLine(_, count)
@@ -555,7 +565,8 @@ impl AchievementCatalog {
             | CriteriaEvent::BankTabsOwned(_, count)
             | CriteriaEvent::PetBattleAchievementPoints(count) => u64::from(count),
             CriteriaEvent::RewardedQuestsInZone(_, count) => (*counter).max(u64::from(count)),
-            CriteriaEvent::MoneyEarnedFromQuesting(amount) => counter.saturating_add(amount),
+            CriteriaEvent::MoneyEarnedFromQuesting(amount)
+            | CriteriaEvent::MoneySpentOnTaxis(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
             CriteriaEvent::CurrencyGained(_, amount)
@@ -830,7 +841,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset) FROM criteria c")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset), EXISTS(SELECT 1 FROM taxi_nodes t WHERE t.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -870,10 +881,11 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
                         || (kind == 11 && row.get::<_, bool>(12)?)
+                        || (kind == 262 && row.get::<_, bool>(13)?)
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 62 | 67 | 74 | 81 | 107 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 62 | 63 | 67 | 74 | 81 | 107 | 108 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
