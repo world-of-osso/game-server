@@ -54,7 +54,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [ ] Repair every broken membership by shared root cause, then partial mechanics in descending membership count; preserve authentic unavailable-data gaps.
 - [ ] Complete legal talents and all class/spec mechanics, not just handler dispatch.
-- [ ] Prove representative repaired mechanics live, at least one per class, on a private fb_* realm in both skins; retain requested PNGs.
+- [x] Prove representative repaired mechanics live, at least one per class, on a private fb_* realm in both skins; retain requested PNGs. Current private proofs are representative only; full spell/talent acceptance remains open.
 - [ ] Commit/push batches, regenerate census counts, merge origin/master and run targeted tests/check/fmt before final report.
 
 Canonical world.db writes, UDP5000, invented coefficients, the full spell_cast suite and unfiltered server tests are prohibited. [Continuation proof](../class-completeness2.md).

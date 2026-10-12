@@ -23,6 +23,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 8fcddcd9 / sharedd503cd3 | 2870 | 4775 | 182 | All 7827 memberships, current explicitly proved named consumers, exit0, 622.23s |
 | 672a43a4 / sharedd503cd3 | 2874 | 4771 | 182 | All 7827 memberships plus exact231040s2 consumer, exit0, 705.59s |
 | 78ea6e06 / shared2a48bdc | 2878 | 4767 | 182 | All 7827 memberships plus exact441675s3 consumer, exit0, 736.94s |
+| 174a2e84 / shared2a48bdc | 2889 | 4756 | 182 | Native aura229, all7827 memberships, exit0, 696.66s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -83,8 +84,32 @@ Native1966 Feint reduces area damage by its own−40% field; native1297073 suppl
 
 Pinned TC a352b1fa `Spell.cpp::DoEffectOnLaunchTarget`, `SpellAuraEffects.cpp` periodic damage/leech and `Unit.cpp::CalculateAOEAvoidance` define per-effect area/cone or area-aura selection, TreatAsArea/TreatAsNPCAoe flags, school-mask factors and integer truncation. Periodic IgnoreDamageTakenModifiers bypasses avoidance. Flags and periodic leech are source-backed paths, not yet separately behavior-certified by these five controls. Creature-only avoidance aura310 and other Feint effects are not certified. Census regeneration follows this batch; whole class/talent acceptance remains open.
 
+## Representative both-skin class gate — 2026-10-12
+
+All13 representatives now have actual cast/mechanic receipts and inspected Modern/Forever PNGs. This closes only the representative-live gate, not the full13/all40 spell/talent goal. Current source/runtime census remains2889/4756/182. No coefficients or unavailable spell/destination rows were invented.
+
+| Class | Native mechanic observed in both skins | Proof scope |
+|---|---|---|
+| Warrior |23881 damage,117313 heal,+80 raw Rage|private class4warrior, new native receipts|
+| Paladin |20473→25914 self heal,+1 Holy Power|private class4paladin, new native receipts|
+| Hunter |56641 damage,+20 Focus through77443|private class4hunter, new native receipts|
+| Rogue |1966 Feint aura/cast|private class4rogue activation; exact40% AoE reduction has separate CPU proof|
+| Priest |139 Renew aura and real140-point ticks|private class4priest, new native receipts|
+| Death Knight |49184 Frost damage|private class4deathknight; optional incidental procs are not certified|
+| Shaman |77472 self healing|private class4shaman, new native receipts|
+| Mage |1449 area damage|private class4mage; observed resource events are not full charge-policy parity|
+| Warlock |686 completed missile damage|private class4warlock, new native receipts|
+| Monk |117418 cone damage and123154 aura|retained2026-10-11 proof, server88c21ec5/shared6ba2f5cd|
+| Druid |8936 self HoT/incoming melee with433748 learned|retained2026-10-11 proof; exact8% reduction has separate CPU proof|
+| Demon Hunter |162243 damage250/253,+25 Fury|private class4demonhunter, rebuilt engine9563568be|
+| Evoker |431443 replacement→361500 Fire1139/1141+431583 Arcane285/285|private class4evoker;431442 granted, not legal hero-purchase proof|
+
+All new runs use native level80 race-legal actors, private UDP5841, fresh redb, refreshed read-only canonical world.db copy plus authentic class summon closure, server174a2e84/shared2a48bdc. Earlier nine new classes used engine2908b5517; DH/Evoker used9563568be. Admin grants isolate mechanics, not talent legality. Setup refusals, dead-player attempts and incomplete-visual attempts are excluded. Player/equipment bytes were authenticated against the pinned local CASC root in an owned overlay, never relabelled or downloaded from CDN.
+
+Requested26 PNGs: `/syncthing/AgentShared/2026-10-12/class-completeness/`; Monk/Druid retain their original earlier evidence dates. Exact logs, source authentication, input/action scripts and native builds: slot-local `data/diagnostics/class-completeness4-2026-10-12/`. Private servers/clients stopped; engine-s4 cache/products links restored to their original targets. Native zero-display gear bug and its RED/GREEN are documented in the [engine class proof](../../game-engine/docs/wiki/investigations/class-spell-live-proof.md#class-completeness-continuation--2026-10-12). Remaining spell/mastery/guardian/legal-build gaps stay open.
+
 ## Retained boundaries
 
-At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. Required live coverage remains open for eleven classes; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
+At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. The earlier Monk evidence is retained in the completed representative gate above; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
 
 Diagnostics, native source receipts, logs and frozen protocol snapshots: `game-engine/data/diagnostics/class-completeness2-2026-10-11/`. Handoff: `/home/osso/.worktrees/handoff-class-completeness2.md`. PNG destination: `/syncthing/AgentShared/2026-10-11/class-completeness2/`.
