@@ -146,10 +146,13 @@ fn transmog_catalogue_exposes_authored_sets_outfits_illusions_and_ownership() {
         && entry.slot_info_id == 13
         && entry.name == "One Handed Weapon"));
     assert!(state.sets.iter().any(|entry| !entry.source_ids.is_empty()));
-    assert_eq!(
-        state.slots[0].sources.len(),
-        1,
-        "paid choices stay collected-only"
+    assert!(!state.slots[0].sources.is_empty());
+    assert!(
+        state.slots[0]
+            .sources
+            .iter()
+            .all(|source| source.appearance_id == 154),
+        "paid choices stay within the collected visual, including its alternate sources"
     );
 }
 
