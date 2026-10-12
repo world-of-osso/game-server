@@ -952,6 +952,32 @@ fn encounter_coverage_molten_gold_attached_area_is_copy_local_and_removed_with_a
 }
 
 #[test]
+fn encounter_coverage_molten_gold_scripted_cast_keeps_source_player_selection() {
+    let (mut h, gold, player, center, map) = molten_gold_fixture();
+    let wow = h.wow_position(gold);
+    let (selected, _) = spawn_player(&mut h.app, map, [wow.x + 20.0, wow.y, wow.z, 0.0], 998);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert((center, CombatTarget(Some(selected))));
+    h.advance(0.1);
+    assert!(
+        h.has_aura(selected, 265914),
+        "TC null-target cast uses a valid Player selection first"
+    );
+    assert!(!h.has_aura(player, 265914));
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(selected)
+        .unwrap();
+    assert!(
+        aura.iter()
+            .any(|a| a.spell_id == 265914 && a.caster == player)
+    );
+}
+
+#[test]
 fn encounter_coverage_spit_gold_summons_only_on_expiry_or_target_death() {
     let (mut h, boss, map) = bound_boss(135322, 1762, 0);
     let player = h.player();
