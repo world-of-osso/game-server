@@ -978,6 +978,37 @@ fn encounter_coverage_molten_gold_scripted_cast_keeps_source_player_selection() 
 }
 
 #[test]
+fn encounter_coverage_molten_gold_source_reach_scales_and_actor_retirement_exits() {
+    let (mut h, gold, player, center, _) = molten_gold_fixture();
+    h.app.world_mut().entity_mut(player).insert((
+        crate::zones::NativeObjectScale(2.0),
+        shared::components::UnitScale(2.0),
+        Position {
+            x: center.x + 8.01,
+            ..center
+        },
+    ));
+    h.advance(0.1);
+    assert!(!h.has_aura(player, 265914));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 7.99,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(
+        h.has_aura(player, 265914),
+        "source Player combat reach follows object scale"
+    );
+    crate::zones::unsummon(h.app.world_mut(), gold);
+    h.advance(0.1);
+    assert!(h.app.world().get_entity(gold).is_err());
+    assert!(
+        !h.has_aura(player, 265914),
+        "removing the aura target exits its area members"
+    );
+}
+
+#[test]
 fn encounter_coverage_spit_gold_summons_only_on_expiry_or_target_death() {
     let (mut h, boss, map) = bound_boss(135322, 1762, 0);
     let player = h.player();
