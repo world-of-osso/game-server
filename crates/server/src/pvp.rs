@@ -26,6 +26,8 @@ mod pvp_war_mode;
 
 #[path = "pvp_arena.rs"]
 pub(crate) mod arena;
+#[path = "pvp_arena_lifecycle.rs"]
+mod arena_lifecycle;
 
 #[path = "pvp_entry.rs"]
 mod pvp_entry;
@@ -216,6 +218,7 @@ impl Plugin for PvpPlugin {
             arena::receive_queue_requests.before(process_battleground_invitation_responses),
         );
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
+        app.add_systems(FixedUpdate, arena::update_matches);
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);

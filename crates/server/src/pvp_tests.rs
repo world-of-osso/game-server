@@ -40,6 +40,134 @@ fn arena_skirmish_pairing_requires_four_or_six_unique_eligible_players() {
 }
 
 #[test]
+fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates() {
+    use shared::components::{Health, Player, Position};
+    use shared::protocol::ArenaQueueMode;
+    let mut db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
+    let catalog = arena::Catalog::load(&db).unwrap();
+    let mut state = PvpServerState::default();
+    for id in 1..=4 {
+        arena::queue_player(
+            &mut PlayerPvpState::default(),
+            &mut state,
+            &catalog,
+            id,
+            90,
+            ArenaQueueMode::Skirmish2v2,
+        )
+        .unwrap();
+    }
+    let id = arena::form_match(&mut state, &catalog, ArenaQueueMode::Skirmish2v2).unwrap();
+    let map = crate::maps::InMap {
+        map_id: 572,
+        instance_id: 1,
+    };
+    let matched = state.battleground_matches.get_mut(&id).unwrap();
+    matched.map = Some(map);
+    matched.accepted.extend(1..=4);
+    let mut world = World::new();
+    world.insert_resource(state);
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(crate::game_objects::GameObjectSpawns::default());
+    let mut actors = Vec::new();
+    for player in 1..=4 {
+        let entity = world
+            .spawn((
+                crate::persistence::ClientId(player),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                Player {
+                    name: format!("fb_arena_{player}"),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                Level(90),
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ))
+            .id();
+        if player != 4 {
+            world.entity_mut(entity).insert(map);
+        }
+        actors.push(entity);
+    }
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .arena
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .preparation_remaining_secs,
+        None
+    );
+    world.entity_mut(actors[3]).insert(map);
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .arena
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .preparation_remaining_secs,
+        Some(60)
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(59));
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .instance
+            .phase,
+        shared::battleground::BgPhase::Waiting
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(1));
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .instance
+            .phase,
+        shared::battleground::BgPhase::InProgress
+    );
+    world.get_mut::<Health>(actors[1]).unwrap().current = 0.0;
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .instance
+            .phase,
+        shared::battleground::BgPhase::InProgress
+    );
+    world.get_mut::<Health>(actors[3]).unwrap().current = 0.0;
+    arena::update_matches(&mut world);
+    let matched = &world.resource::<PvpServerState>().battleground_matches[&id];
+    assert_eq!(
+        matched.instance.outcome,
+        Some(shared::battleground::BgOutcome::Winner(
+            shared::battleground::BgTeam::A
+        ))
+    );
+    assert_eq!(
+        matched
+            .scoreboard
+            .iter()
+            .filter(|row| row.team == shared::battleground::BgTeam::B)
+            .map(|row| row.deaths)
+            .sum::<u32>(),
+        2
+    );
+}
+
+#[test]
 fn queue_for_battleground_sets_queue_state() {
     let mut player_state = PlayerPvpState::default();
     let mut state = PvpServerState::default();

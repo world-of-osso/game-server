@@ -6,6 +6,7 @@ use shared::battleground::{BgInstance, BgMatch, BgObjective, BgTemplate, LevelBr
 use shared::components::Level;
 use shared::protocol::{ArenaMatchSnapshot, ArenaQueueMode, BattlegroundSnapshot, QueueForArena};
 
+pub(super) use super::arena_lifecycle::update_matches;
 use super::{InvitedBattleground, PlayerPvpQueue, PlayerPvpState, PvpServerState};
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
