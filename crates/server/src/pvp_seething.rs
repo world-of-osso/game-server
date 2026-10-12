@@ -4,42 +4,13 @@ use crate::game_objects::{GameObjectBounds, wow_position};
 use crate::maps::InMap;
 use crate::spell_cast::CastFailure;
 use bevy::prelude::*;
-use lightyear::prelude::*;
 use rand::Rng;
-use rusqlite::Connection;
 use shared::battleground::{
     AZERITE_COLLECTED_STAT, AZERITE_GATHERING_SPELL, AzeriteEvent, BgPhase, SEETHING_AREAS,
     SEETHING_OBJECTS, SeethingBattle,
 };
 use shared::components::{Health, Position};
-use shared::protocol::GameObjectInfo;
 use std::collections::BTreeMap;
-
-#[derive(Resource, Debug, Clone, Default)]
-pub(crate) struct AzeriteTemplates(BTreeMap<u32, (GameObjectInfo, GameObjectBounds)>);
-
-pub(crate) fn load_azerite_templates(conn: &Connection) -> rusqlite::Result<AzeriteTemplates> {
-    let mut query=conn.prepare("SELECT t.entry,t.type,t.displayId,t.name,t.size,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5 FROM tdb_gameobject_template t JOIN game_object_display_info d ON d.ID=t.displayId WHERE t.entry IN (272471,281306,281307)")?;
-    let rows = query.query_map([], |row| {
-        let scale = row.get::<_, f64>(4)? as f32;
-        let geo = |i| row.get::<_, f64>(i).map(|value| value as f32);
-        let info = GameObjectInfo {
-            entry: row.get(0)?,
-            go_type: row.get(1)?,
-            display_id: row.get(2)?,
-            name: row.get(3)?,
-            scale,
-        };
-        let bounds = GameObjectBounds {
-            min: Vec3::new(geo(5)?, geo(6)?, geo(7)?),
-            max: Vec3::new(geo(8)?, geo(9)?, geo(10)?),
-            scale,
-            orientation: 0.0,
-        };
-        Ok((info.entry, (info, bounds)))
-    })?;
-    Ok(AzeriteTemplates(rows.collect::<rusqlite::Result<_>>()?))
-}
 
 #[derive(Component)]
 struct AzeriteNode {
@@ -51,26 +22,16 @@ struct AzeriteNode {
 pub(super) struct SeethingRuntime {
     pub battle: SeethingBattle,
     sites: BTreeMap<u32, Vec3>,
-    templates: AzeriteTemplates,
     objects: BTreeMap<u64, Entity>,
 }
 
 impl SeethingRuntime {
     pub fn from_source(world: &mut World) -> Result<Self, String> {
-        let templates = world
-            .get_resource::<AzeriteTemplates>()
-            .ok_or("Azerite template catalog missing")?
-            .clone();
-        for entry in SEETHING_OBJECTS {
-            if !templates.0.contains_key(&entry) {
-                return Err(format!("source Azerite template/display {entry} missing"));
-            }
-        }
+        super::pvp_objects::require_scripted_objects(world, &SEETHING_OBJECTS)?;
         let sites = load_fissure_sites(world)?;
         Ok(Self {
             battle: SeethingBattle::new(),
             sites,
-            templates,
             objects: BTreeMap::new(),
         })
     }
@@ -105,28 +66,12 @@ impl SeethingRuntime {
         generation: u64,
         entry: u32,
     ) {
-        let (info, bounds) = &self.templates.0[&entry];
         let at = self.sites[&area];
-        let (x, y, z) = crate::terrain_height::wow_to_bevy(at.x, at.y, at.z);
-        let entity = world
-            .spawn((
-                Position { x, y, z },
-                shared::components::Rotation {
-                    x: 0.0,
-                    y: std::f32::consts::FRAC_PI_2,
-                    z: 0.0,
-                },
-                info.clone(),
-                *bounds,
-                map,
-                AzeriteNode {
-                    generation,
-                    available: true,
-                },
-                Replicate::to_clients(NetworkTarget::All),
-                crate::interest::NetworkVisibility::default(),
-            ))
-            .id();
+        let entity = super::pvp_objects::spawn_scripted_object(world, map, entry, at, 0.0);
+        world.entity_mut(entity).insert(AzeriteNode {
+            generation,
+            available: true,
+        });
         self.objects.insert(generation, entity);
     }
 }

@@ -101,6 +101,9 @@ fn update_match(
     if matched.silvershard.is_some() {
         return update_silvershard(world, matched, actors, map, &template, delta_ms) || changed;
     }
+    if matched.deephaul.is_some() {
+        return update_deephaul(world, matched, actors, map, &template, delta_ms) || changed;
+    }
     if matched.seething.is_some() {
         super::pvp_seething::update_seething(world, matched, map, delta_ms);
         return changed;
@@ -250,20 +253,7 @@ fn update_silvershard(
     template: &BgTemplate,
     delta_ms: u64,
 ) -> bool {
-    let players: Vec<_> = [
-        (BgTeam::A, &matched.instance.team_a_players),
-        (BgTeam::B, &matched.instance.team_b_players),
-    ]
-    .into_iter()
-    .flat_map(|(team, ids)| {
-        ids.iter().filter_map(move |id| {
-            let actor = actors
-                .get(id)
-                .filter(|actor| actor.map == map && actor.alive)?;
-            Some((*id, team, actor.position.to_array()))
-        })
-    })
-    .collect();
+    let players = living_participants(matched, actors, map);
     let carts = matched.silvershard.as_mut().expect("Silvershard match");
     let before = carts.battle.world_states(&matched.instance);
     for event in carts.advance(
@@ -284,6 +274,111 @@ fn update_silvershard(
         }
     }
     before != carts.battle.world_states(&matched.instance)
+}
+
+fn living_participants(
+    matched: &InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+) -> Vec<(u64, BgTeam, [f32; 3])> {
+    [
+        (BgTeam::A, &matched.instance.team_a_players),
+        (BgTeam::B, &matched.instance.team_b_players),
+    ]
+    .into_iter()
+    .flat_map(|(team, ids)| {
+        ids.iter().filter_map(move |id| {
+            let actor = actors
+                .get(id)
+                .filter(|actor| actor.map == map && actor.alive)?;
+            Some((*id, team, actor.position.to_array()))
+        })
+    })
+    .collect()
+}
+
+fn update_deephaul(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let players = living_participants(matched, actors, map);
+    let runtime = matched.deephaul.as_mut().expect("Deephaul match");
+    let before = (
+        runtime.battle.world_states(&matched.instance),
+        runtime.battle.flag_site(),
+    );
+    for event in runtime.advance(
+        world,
+        map,
+        delta_ms,
+        &players,
+        &mut matched.instance,
+        template,
+    ) {
+        if let shared::battleground::CartEvent::Controlled(id) = event {
+            credit(
+                &mut matched.scoreboard,
+                id,
+                shared::battleground::DEEPHAUL_CONTROL_STAT,
+                1,
+            );
+        }
+    }
+    update_crystal_carrier(matched, actors, map, template);
+    let runtime = matched.deephaul.as_ref().expect("Deephaul match");
+    if runtime.battle.flag_site() != before.1 {
+        runtime.synchronize_crystal(world, map);
+    }
+    before.0 != runtime.battle.world_states(&matched.instance)
+}
+
+fn update_crystal_carrier(
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+) {
+    let runtime = matched.deephaul.as_mut().expect("Deephaul match");
+    let Some(carrier) = runtime
+        .battle
+        .carrier()
+        .filter(|_| matched.instance.phase == BgPhase::InProgress)
+    else {
+        return;
+    };
+    let actor = actors.get(&carrier).filter(|actor| actor.map == map);
+    if let Some(actor) = actor.filter(|actor| actor.alive) {
+        matched.flag_positions[0] = Some(actor.position);
+        let team = if matched.instance.team_a_players.contains(&carrier) {
+            BgTeam::A
+        } else {
+            BgTeam::B
+        };
+        if runtime.battle.capture(
+            carrier,
+            team,
+            actor.position.to_array(),
+            &mut matched.instance,
+            template,
+        ) {
+            credit(
+                &mut matched.scoreboard,
+                carrier,
+                shared::battleground::DEEPHAUL_FLAG_STAT,
+                1,
+            );
+        }
+    } else {
+        let at = actor
+            .map(|actor| actor.position)
+            .or(matched.flag_positions[0])
+            .expect("carried crystal position recorded at pickup");
+        runtime.battle.drop_flag(at.to_array());
+    }
 }
 
 pub(super) fn credit(
@@ -374,7 +469,7 @@ fn flag_homes(sources: &GameObjectSpawns, map: InMap) -> Option<[GameObjectSpawn
     ])
 }
 
-fn spawn_flag(world: &mut World, map: InMap, source: &GameObjectSpawn, position: Vec3) {
+pub(super) fn spawn_flag(world: &mut World, map: InMap, source: &GameObjectSpawn, position: Vec3) {
     let mut spawn = source.clone();
     spawn.position = position;
     world.spawn((
@@ -497,6 +592,20 @@ fn pickup_or_return_flag(
         );
         world.despawn(object);
         return Ok("Orb of Power picked up".into());
+    }
+    if let Some(deephaul) = matched.deephaul.as_mut() {
+        if ![
+            shared::battleground::DEEPHAUL_FLAG_ENTRY,
+            shared::battleground::DEEPHAUL_DROP_ENTRY,
+        ]
+        .contains(&entry)
+            || !deephaul.battle.pickup(team, character_id)
+        {
+            return Err("the Deephaul Crystal is not available".into());
+        }
+        matched.flag_positions[0] = Some(position);
+        deephaul.synchronize_crystal(world, map);
+        return Ok("Deephaul Crystal picked up".into());
     }
     if let Some(eye) = matched.eye.as_mut() {
         if entry != eye.rules.flag_entry || !eye.pickup(team, character_id) {

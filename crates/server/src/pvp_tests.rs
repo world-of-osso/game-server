@@ -124,6 +124,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             kotmogu: None,
             silvershard: None,
             seething: None,
+            deephaul: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },

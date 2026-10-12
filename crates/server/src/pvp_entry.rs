@@ -56,6 +56,7 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
         .or_else(|| (invitation.map_id == 998).then_some(shared::battleground::KOTMOGU_STARTS))
         .or_else(|| (invitation.map_id == 727).then_some(shared::battleground::SILVERSHARD_STARTS))
         .or_else(|| (invitation.map_id == 1803).then_some(shared::battleground::SEETHING_STARTS))
+        .or_else(|| (invitation.map_id == 2656).then_some(shared::battleground::DEEPHAUL_STARTS))
         .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
@@ -125,6 +126,11 @@ fn create_match_map(
     } else {
         None
     };
+    let deephaul = if template.map_id == 2656 {
+        Some(super::pvp_deephaul::DeephaulRuntime::from_source(world)?)
+    } else {
+        None
+    };
     let capacity = u32::from(template.team_size) * 2;
     let now = crate::maps::difficulty::now(world);
     let map = world
@@ -149,6 +155,15 @@ fn create_match_map(
         .expect("validated match")
         .seething = seething;
     crate::maps::transfer::spawn_map_content(world, map);
+    if let Some(mut deephaul) = deephaul {
+        deephaul.synchronize_carts(world, map);
+        deephaul.synchronize_crystal(world, map);
+        state
+            .battleground_matches
+            .get_mut(&match_id)
+            .expect("validated match")
+            .deephaul = Some(deephaul);
+    }
     if let Some(mut carts) = carts {
         carts.synchronize(world, map);
         state
