@@ -569,6 +569,108 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_player_death_records_once_with_actual_killer_and_map() {
+    use shared::components::Npc;
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
+            app.add_plugins((AchievementPlugin, crate::death::DeathPlugin));
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Deathproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    let map = InMap {
+        map_id: 533,
+        instance_id: 17,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((
+        persistence::ClientId(character),
+        PlayerAchievementState::default(),
+        map,
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: 448,
+            name: "Hogger".into(),
+        },
+        map,
+    ));
+    h.app.update();
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&111)
+    );
+    // Relocated source creature448 kills through native Unit::Kill, not a seeded counter.
+    crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+    h.advance(3);
+    assert_eq!(h.health(h.caster), 0.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(h.caster)
+            .unwrap()
+            .state,
+        shared::death::DeathState::Dead
+    );
+    for criterion in [111, 943, 455] {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .get(&criterion),
+            Some(&1),
+            "criterion{criterion}"
+        );
+    }
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5594)
+    );
+    h.app
+        .world_mut()
+        .write_message(crate::death::PlayerDeathTransition { player: h.caster });
+    crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+    h.advance(3);
+    for criterion in [111, 943, 455] {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .get(&criterion),
+            Some(&1)
+        );
+    }
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    for criterion in [111, 943, 455] {
+        assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
+    }
+}
+
+#[test]
 fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
     let mut h =
         crate::spell_cast::test_harness::harness_with_plugins(vec![], &[61781], 1, false, |app| {
