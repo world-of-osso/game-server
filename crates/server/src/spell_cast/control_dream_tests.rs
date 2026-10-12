@@ -123,7 +123,7 @@ fn class_completeness_native_control_dream_charged_alignment_credits_only_full_t
     let category = source.categories.as_ref().unwrap();
     h.advance(400);
     let first = cast_charge(&mut h, ALIGNMENT);
-    assert_eq!(first.current, category.max_charges - 1);
+    assert_eq!(u32::from(first.current), category.max_charges - 1);
     assert_eq!(first.recharge_ms, category.charge_recovery_ms);
     assert_eq!(
         first.remaining_ms,
@@ -155,7 +155,7 @@ fn class_completeness_native_control_dream_restored_incarnation_starts_credit_at
         h.app.world_mut(),
         h.caster,
         category.charge_category,
-        category.max_charges,
+        category.max_charges.try_into().unwrap(),
     );
     h.advance(60);
     let restored = cast_charge(&mut h, INCARNATION);
