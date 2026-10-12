@@ -1,6 +1,6 @@
 //! Account-owned Mount.db2 IDs, independent of character serialization.
 use super::inventory_store::{InventoryRecord, write_inventory_record};
-use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use std::collections::BTreeMap;
 
 const ACCOUNT_MOUNTS: TableDefinition<u64, &[u8]> = TableDefinition::new("account_mounts");
