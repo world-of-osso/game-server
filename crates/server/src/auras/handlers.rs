@@ -178,6 +178,7 @@ pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
+pub const MOD_BONUS_ARMOR_PCT: u32 = 466;
 pub const MOD_STAT_BONUS_PCT: u32 = 467;
 pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
@@ -230,6 +231,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_CRIT_PCT
         | MASTERY
         | MOD_STAT_BONUS_PCT
+        | MOD_BONUS_ARMOR_PCT
         | MOD_BASE_RESISTANCE_PCT
         | MOD_MINIMUM_SPEED
         | MOD_MELEE_RANGED_HASTE_2
