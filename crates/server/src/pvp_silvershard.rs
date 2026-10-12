@@ -1,0 +1,140 @@
+//! TC a352b1fa Silvershard: real template60140 NPCs driven by the shared source paths.
+use bevy::ecs::system::CommandQueue;
+use bevy::prelude::*;
+use shared::battleground::{
+    BgInstance, BgTemplate, CartEvent, CartPaths, SILVERSHARD_CARTS, SilvershardBattle,
+};
+use shared::components::{Position, Rotation};
+
+use crate::maps::InMap;
+use crate::world_data::{CreatureSpawn, WorldData};
+
+#[derive(Debug)]
+pub(super) struct CartRuntime {
+    pub battle: SilvershardBattle,
+    paths: CartPaths,
+    entities: [Option<Entity>; 3],
+}
+
+impl CartRuntime {
+    pub fn from_source(data: &WorldData) -> Result<Self, String> {
+        if !data.templates.contains_key(&60140) || !data.templates.contains_key(&60283) {
+            return Err(
+                "Silvershard templates missing; run add_battleground_summon_templates.py".into(),
+            );
+        }
+        let mut paths = CartPaths::new();
+        for id in 6014000..=6014011 {
+            let path = data
+                .waypoints
+                .get(&id)
+                .filter(|path| !path.points.is_empty())
+                .ok_or_else(|| format!("Silvershard source cart path {id} is absent"))?;
+            paths.insert(
+                id,
+                path.points
+                    .iter()
+                    .map(|point| [point.position_x, point.position_y, point.position_z])
+                    .collect(),
+            );
+        }
+        Ok(Self {
+            battle: SilvershardBattle::new(),
+            paths,
+            entities: [None; 3],
+        })
+    }
+
+    pub fn advance(
+        &mut self,
+        world: &mut World,
+        map: InMap,
+        delta_ms: u64,
+        players: &[(u64, shared::battleground::BgTeam, [f32; 3])],
+        instance: &mut BgInstance,
+        template: &BgTemplate,
+    ) -> Vec<CartEvent> {
+        let events = self
+            .battle
+            .advance(delta_ms, players, &self.paths, instance, template);
+        self.synchronize(world, map);
+        events
+    }
+
+    pub fn synchronize(&mut self, world: &mut World, map: InMap) {
+        for (index, site) in self.battle.sites().into_iter().enumerate() {
+            match (self.entities[index], site) {
+                (Some(entity), None) => {
+                    world.despawn(entity);
+                    self.entities[index] = None;
+                }
+                (None, Some(at)) => {
+                    self.entities[index] = Some(spawn_cart(world, map, index, at));
+                }
+                (Some(entity), Some(at)) => move_cart(world, entity, at),
+                (None, None) => {}
+            }
+        }
+    }
+}
+
+fn spawn_cart(world: &mut World, map: InMap, index: usize, at: [f32; 3]) -> Entity {
+    let definition = &SILVERSHARD_CARTS[index];
+    // Script summon, not an invented static source placement.
+    let spawn = CreatureSpawn {
+        guid: 0,
+        template_entry: 60140,
+        map: 727,
+        zone_id: 0,
+        position_x: at[0],
+        position_y: at[1],
+        position_z: at[2],
+        orientation: definition.orientation,
+        wander_distance: 0.0,
+        movement_type: 0,
+        spawntimesecs: 0,
+        display_id: None,
+        unit_flags: None,
+        spawn_difficulties: vec![0],
+        equipment_id: 0,
+    };
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let data = world.resource::<WorldData>();
+        let mut commands = Commands::new(&mut queue, world);
+        crate::zones::spawn_creature(
+            &mut commands,
+            data,
+            &data.templates[&60140],
+            map,
+            true,
+            &spawn,
+            &mut rand::thread_rng(),
+        )
+    };
+    queue.apply(world);
+    entity
+}
+
+fn move_cart(world: &mut World, entity: Entity, at: [f32; 3]) {
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(at[0], at[1], at[2]);
+    let next = Position { x, y, z };
+    let old = *world.get::<Position>(entity).expect("live cart position");
+    if next == old {
+        return;
+    }
+    let bearing = (next.x - old.x).atan2(next.z - old.z);
+    world.entity_mut(entity).insert((
+        next,
+        Rotation {
+            x: 0.0,
+            y: bearing,
+            z: 0.0,
+        },
+        shared::components::MovementSpeed(2.0),
+    ));
+    crate::interest::mark_interest_position_changed(
+        world.get_resource::<crate::interest::InterestDirtyQueue>(),
+        entity,
+    );
+}
