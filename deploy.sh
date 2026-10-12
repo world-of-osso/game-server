@@ -29,7 +29,7 @@ test -f data/game_object_locks.json || { echo "Missing data/game_object_locks.js
 scp data/game_object_locks.json "${SERVER_HOST}:${STATE_DIR}/data/game_object_locks.json"
 scp data/economy/config.json "${SERVER_HOST}:${STATE_DIR}/data/economy/config.json"
 
-echo "Uploading ground (WDTs, ADTs and WMOs of the spawned maps)..."
+echo "Uploading ground (WDTs, ADTs and WMOs of the spawned and hosted maps)..."
 python3 scripts/ground_files.py --world-db data/world.db --cache ../game-engine/data > "$GROUND_LIST"
 rsync -a --files-from="$GROUND_LIST" ../game-engine/data/ "${SERVER_HOST}:${GROUND_DIR}/"
 echo "Uploading line of sight (los-bake output beside the ground; docs/specs/line-of-sight.md)..."

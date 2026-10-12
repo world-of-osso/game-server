@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List server ground files for spawned, explicit, or all registered maps.
+"""List server ground files for spawned/hosted, explicit, or all registered maps.
 
 crates/server/src/ground.rs reads, from the client asset cache: each map's WDT
 (`terrain/<Map.WdtFileDataID>.wdt`); for a global-WMO map (MPHD flag 0x1) the WDT MODF
@@ -16,6 +16,7 @@ tiles and WMOs have no ground on the server until they are extracted.
 """
 
 import argparse
+import re
 import sqlite3
 import struct
 import sys
@@ -119,8 +120,45 @@ class GroundFiles:
 BUILD_PRODUCTS = {"1.60.1.70205": "wow_classic_beta"}
 
 
+def read_hosted_continents():
+    """Read the same literal registry used by runtime admission and startup spawning."""
+    registry = Path(__file__).resolve().parents[1] / "crates/server/src/maps/instances.rs"
+    source = registry.read_text()
+    declaration = re.search(
+        r"pub const HOSTED_CONTINENTS:\s*\[u32;\s*\d+\]\s*=\s*\[([\d,\s]+)\];",
+        source,
+    )
+    if declaration is None:
+        raise ValueError(f"{registry}: cannot read the runtime HOSTED_CONTINENTS registry")
+    return {
+        int(value.strip())
+        for value in declaration.group(1).split(",")
+        if value.strip()
+    }
+
+
+def deployed_map_ids(db, registered_ids):
+    """Spawn maps plus registered runtime continents and authorized housing map types.
+
+    Map.db2 types7/8 are the registry checked by authorize_housing_entry; they
+    require no creature/GO spawn rows. No housing map IDs are duplicated here.
+    """
+    spawned = {
+        row[0]
+        for row in db.execute(
+            "SELECT map FROM content_creature UNION SELECT map FROM content_gameobject"
+        )
+    }
+    continents = read_hosted_continents().intersection(registered_ids)
+    housing = {
+        row[0]
+        for row in db.execute("SELECT ID FROM map WHERE InstanceType IN (7,8)")
+    }
+    return sorted(spawned | continents | housing)
+
+
 def selected_map_sources(world_db, map_ids=None, registered=False):
-    """Select explicit/registered maps or spawned maps, with their local CASC product."""
+    """Select explicit/registered maps or deploy maps, with their local CASC product."""
     with closing(sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)) as db:
         rows = dict(db.execute("SELECT ID, WdtFileDataID FROM map"))
         selected = (
@@ -128,12 +166,7 @@ def selected_map_sources(world_db, map_ids=None, registered=False):
             if map_ids
             else sorted(rows)
             if registered
-            else [
-                row[0]
-                for row in db.execute(
-                    "SELECT map FROM content_creature UNION SELECT map FROM content_gameobject ORDER BY map"
-                )
-            ]
+            else deployed_map_ids(db, rows)
         )
         has_sources = db.execute(
             "SELECT 1 FROM sqlite_master WHERE name = 'db2_row_source'"
@@ -184,7 +217,7 @@ def add_map_selection(parser):
         help="registered map ID; repeat for multiple maps, even without spawns",
     )
     selection.add_argument(
-        "--registered", action="store_true", help="all registered maps"
+        "--registered", action="store_true", help="all registered maps (default: spawned and hosted maps)"
     )
 
 
