@@ -548,6 +548,10 @@ pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
 }
 
+pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
+    record_criteria_event(world, player, event);
+}
+
 fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
     record_criteria_events(world, player, &[event]);
 }

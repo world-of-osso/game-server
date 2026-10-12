@@ -72,7 +72,12 @@ struct ActiveDuel {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum DuelResolution {
-    WinLoss { winner: Entity, loser: Entity },
+    /// `defeated`: the loser was beaten (TC `DUEL_WON`), not out of bounds (`DUEL_FLED`).
+    WinLoss {
+        winner: Entity,
+        loser: Entity,
+        defeated: bool,
+    },
     Cancelled,
 }
 
@@ -346,6 +351,19 @@ fn enforce_duel_outcomes(
     for (duel, resolution) in resolutions {
         state.remove_active(duel);
         commands.queue(move |world: &mut World| end_duel(world, duel));
+        if let DuelResolution::WinLoss {
+            winner,
+            loser,
+            defeated: true,
+        } = resolution
+        {
+            // TC Player::DuelComplete(DUEL_WON), Player.cpp:7763-7765.
+            commands.queue(move |world: &mut World| {
+                use crate::achievement::{CriteriaEvent, record_player_event};
+                record_player_event(world, loser, CriteriaEvent::LoseDuel);
+                record_player_event(world, winner, CriteriaEvent::WinDuel);
+            });
+        }
         send_duel_resolution(duel, resolution, &players, &connections, &mut senders);
     }
 }
@@ -410,7 +428,7 @@ fn send_duel_resolution(
         return;
     };
     match resolution {
-        DuelResolution::WinLoss { winner, loser } => send_win_loss_resolution(
+        DuelResolution::WinLoss { winner, loser, .. } => send_win_loss_resolution(
             DuelResolutionInfo {
                 duel,
                 winner,
@@ -665,12 +683,14 @@ fn resolve_active_duel(
         return Some(DuelResolution::WinLoss {
             winner: duel.target,
             loser: duel.challenger,
+            defeated: true,
         });
     }
     if defeated.contains(duel.target) {
         return Some(DuelResolution::WinLoss {
             winner: duel.challenger,
             loser: duel.target,
+            defeated: true,
         });
     }
     resolve_duel_state(
@@ -700,12 +720,14 @@ fn resolve_duel_state(
         return Some(DuelResolution::WinLoss {
             winner: target,
             loser: challenger,
+            defeated: true,
         });
     }
     if target_health <= 0.0 {
         return Some(DuelResolution::WinLoss {
             winner: challenger,
             loser: target,
+            defeated: true,
         });
     }
 
@@ -718,12 +740,14 @@ fn resolve_duel_state(
         return Some(DuelResolution::WinLoss {
             winner: target,
             loser: challenger,
+            defeated: false,
         });
     }
     if target_out {
         return Some(DuelResolution::WinLoss {
             winner: challenger,
             loser: target,
+            defeated: false,
         });
     }
     None
