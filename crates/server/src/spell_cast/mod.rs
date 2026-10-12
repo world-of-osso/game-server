@@ -82,6 +82,8 @@ mod guardian_tests;
 mod hit;
 mod missiles;
 #[cfg(test)]
+mod open_lock_tests;
+#[cfg(test)]
 mod portal_tests;
 pub mod powers;
 mod reflect;
