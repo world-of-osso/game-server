@@ -253,7 +253,7 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
             shared::protocol::GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE => ObjectUse::Challenge,
-            shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingCornerstone,
+            shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingUiLink,
             _ if info.is_battleground_flag() => ObjectUse::BattlegroundFlag,
             crate::game_objects::GAMEOBJECT_TYPE_CHEST
             | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
@@ -305,7 +305,7 @@ enum ObjectUse {
     /// Retail GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE.
     Challenge,
     BattlegroundFlag,
-    HousingCornerstone,
+    HousingUiLink,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -476,11 +476,11 @@ fn process_game_object_uses(
                     });
                     continue;
                 }
-                Ok((object, ObjectUse::HousingCornerstone)) => {
+                Ok((object, ObjectUse::HousingUiLink)) => {
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         if let Err(error) =
-                            crate::housing::open_cornerstone(world, connection, player, object)
+                            crate::housing::use_ui_link(world, connection, player, object)
                             && let Some(mut sender) =
                                 world.get_mut::<MessageSender<InteractionFailed>>(connection)
                         {

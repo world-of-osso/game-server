@@ -54,13 +54,13 @@ fn load_catalog(mut commands: Commands) {
     ));
 }
 
-pub(crate) fn spawn_cornerstones(
+pub(crate) fn spawn_neighborhood_objects(
     commands: &mut Commands,
     source: &HousingAvailability,
     map: InMap,
 ) {
     if let Ok(catalog) = &source.0 {
-        let objects = crate::game_objects::GameObjectSpawns(catalog.cornerstones());
+        let objects = crate::game_objects::GameObjectSpawns(catalog.neighborhood_objects());
         crate::game_objects::spawn_map_game_objects(commands, &objects, map, 0);
     }
 }
@@ -380,25 +380,37 @@ fn purchase_plot(
     Ok(())
 }
 
-pub(crate) fn open_cornerstone(
+/// GAMEOBJECT_TYPE_UI_LINK use: a plot cornerstone or the neighborhood bulletin board.
+pub(crate) fn use_ui_link(
     world: &mut World,
     connection: Entity,
     player: Entity,
     object: Entity,
 ) -> Result<(), shared::protocol::InteractionError> {
     use shared::protocol::InteractionError;
-    let actor = authenticate_cornerstone_actor(world, connection, player, object)?;
-    let info = world
+    let actor = authenticate_object_actor(world, connection, player, object)?;
+    let entry = world
         .get::<shared::protocol::GameObjectInfo>(object)
-        .ok_or(InteractionError::InvalidTarget)?;
-    let plot_id = catalog(world)
-        .map_err(|_| InteractionError::InvalidTarget)?
-        .cornerstone_plot(info.entry)
-        .ok_or(InteractionError::InvalidTarget)?;
-    require_cornerstone_reach(world, player, plot_id).map_err(|_| InteractionError::TooFarAway)?;
+        .ok_or(InteractionError::InvalidTarget)?
+        .entry;
+    let source = catalog(world).map_err(|_| InteractionError::InvalidTarget)?;
+    let cornerstone = source.cornerstone_plot(entry);
+    let board = source.bulletin_board_neighborhood(entry);
     let mut state =
         read_snapshot(world, actor, None, None).map_err(|_| InteractionError::InvalidTarget)?;
-    state.opened_cornerstone = Some(plot_id);
+    if let Some(plot_id) = cornerstone {
+        require_cornerstone_reach(world, player, plot_id)
+            .map_err(|_| InteractionError::TooFarAway)?;
+        state.opened_cornerstone = Some(plot_id);
+    } else if let Some(neighborhood_id) = board {
+        let roster = read_roster(world, neighborhood_id).map_err(|error| {
+            warn!("Neighborhood {neighborhood_id} roster unavailable: {error}");
+            InteractionError::InvalidTarget
+        })?;
+        state.bulletin_board = Some(roster);
+    } else {
+        return Err(InteractionError::InvalidTarget);
+    }
     let mut sender = world
         .get_mut::<MessageSender<HousingReply>>(connection)
         .ok_or(InteractionError::InvalidTarget)?;
@@ -410,7 +422,46 @@ pub(crate) fn open_cornerstone(
     Ok(())
 }
 
-fn authenticate_cornerstone_actor(
+/// Every house owner in this neighborhood, by plot, with live presence.
+fn read_roster(
+    world: &mut World,
+    neighborhood_id: u32,
+) -> Result<shared::protocol::NeighborhoodRoster, String> {
+    let mut plots = catalog(world)?.plots(neighborhood_id)?;
+    let db = &world.resource::<GameDatabase>().db;
+    store::populate_plots(db, &mut plots)?;
+    let owners: Vec<_> = plots
+        .iter()
+        .filter_map(|plot| Some((plot.plot_index, plot.owner_character_id?)))
+        .map(|(plot_index, character)| {
+            let name = crate::persistence::load_character(db, character)
+                .ok_or(format!("House owner character {character} is missing."))?
+                .name;
+            Ok((plot_index, character, name))
+        })
+        .collect::<Result<_, String>>()?;
+    let mut query = world.query::<&InWorld>();
+    let online: std::collections::HashSet<u64> = query
+        .iter(world)
+        .map(|entered| entered.character_id)
+        .collect();
+    let residents = owners
+        .into_iter()
+        .map(
+            |(plot_index, character, name)| shared::protocol::NeighborhoodResident {
+                name,
+                online: online.contains(&character),
+                plot_index,
+            },
+        )
+        .collect();
+    Ok(shared::protocol::NeighborhoodRoster {
+        neighborhood_id,
+        residents,
+    })
+}
+
+fn authenticate_object_actor(
     world: &World,
     connection: Entity,
     player: Entity,

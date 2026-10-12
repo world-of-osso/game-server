@@ -1,4 +1,5 @@
 //! Authenticated GameObjects references, not substitutions at plot-marker positions.
+//! Cornerstones and bulletin boards are both GAMEOBJECT_TYPE_UI_LINK (48) objects.
 use super::{HousingCatalog, number, read_rows, vector};
 use crate::game_objects::{GameObjectBounds, GameObjectSpawn};
 use bevy::prelude::*;
@@ -7,11 +8,17 @@ use std::collections::BTreeMap;
 
 use shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT;
 
+pub(super) type Objects = BTreeMap<u32, super::Fields>;
+
+pub(super) fn read_objects(db: &Connection) -> Result<Objects, String> {
+    Ok(read_rows(db, "GameObjects")?.into_iter().collect())
+}
+
 pub(super) fn read_cornerstones(
     db: &Connection,
     catalog: &HousingCatalog,
+    objects: &Objects,
 ) -> Result<BTreeMap<u32, (u32, GameObjectSpawn)>, String> {
-    let objects: BTreeMap<_, _> = read_rows(db, "GameObjects")?.into_iter().collect();
     let mut stones = BTreeMap::new();
     for (plot_id, plot) in read_rows(db, "NeighborhoodPlot")? {
         let Some(property) = catalog.plots.get(&plot_id) else {
@@ -25,13 +32,46 @@ pub(super) fn read_cornerstones(
             continue;
         };
         let map_id = catalog.neighborhood(property.neighborhood_id)?.entry.map_id;
-        let spawn = read_cornerstone(db, object_id, map_id, fields)?;
+        let spawn = read_ui_link(db, object_id, map_id, fields)?;
         stones.insert(object_id, (plot_id, spawn));
     }
     Ok(stones)
 }
 
-fn read_cornerstone(
+/// PropValue_7 of a UI link is its PlayerInteractionType; 72 is HousingBulletinBoard.
+const INTERACTION_HOUSING_BULLETIN_BOARD: u32 = 72;
+
+/// Each neighborhood map's authored board, keyed by GameObjects ID.
+pub(super) fn read_bulletin_boards(
+    db: &Connection,
+    catalog: &HousingCatalog,
+    objects: &Objects,
+) -> Result<BTreeMap<u32, (u32, GameObjectSpawn)>, String> {
+    let mut boards = BTreeMap::new();
+    for (&object_id, fields) in objects {
+        let is_board = fields
+            .get("PropValue_7")
+            .and_then(|value| value.parse().ok())
+            == Some(INTERACTION_HOUSING_BULLETIN_BOARD)
+            && number::<u8>(fields, "TypeID")? == GAMEOBJECT_TYPE_HOUSING_PLOT;
+        if !is_board {
+            continue;
+        }
+        let owner: u32 = number(fields, "OwnerID")?;
+        let Some(neighborhood) = catalog
+            .neighborhoods
+            .values()
+            .find(|neighborhood| neighborhood.entry.map_id == owner)
+        else {
+            continue;
+        };
+        let spawn = read_ui_link(db, object_id, owner, fields)?;
+        boards.insert(object_id, (neighborhood.id, spawn));
+    }
+    Ok(boards)
+}
+
+fn read_ui_link(
     db: &Connection,
     object_id: u32,
     map_id: u32,
@@ -41,7 +81,7 @@ fn read_cornerstone(
     let go_type: u8 = number(fields, "TypeID")?;
     if owner != map_id || go_type != GAMEOBJECT_TYPE_HOUSING_PLOT {
         return Err(format!(
-            "GameObjects{object_id} is not a cornerstone on map{map_id}."
+            "GameObjects{object_id} is not a housing UI link on map{map_id}."
         ));
     }
     let scale: f32 = number(fields, "Scale")?;

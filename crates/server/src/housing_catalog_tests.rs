@@ -44,6 +44,17 @@ pub(crate) fn catalog_fixture() -> Connection {
     db
 }
 
+/// GameObjects 576398 "Founders Point Bulletin Board" exactly as authored in 12.1.0.69933.
+pub(crate) fn add_bulletin_board(db: &Connection) {
+    db.execute_batch("INSERT INTO game_object_display_info VALUES (47198,-0.27140423656,-1.76862227917,-0.1756734848,0.22231735289,1.76862227917,2.63712787628);").unwrap();
+    let object = serde_json::json!({"OwnerID":"2735", "DisplayID":"47198", "Name_lang":"Founders Point Bulletin Board", "Pos_0":"3323.43579", "Pos_1":"75.2065964", "Pos_2":"101.290031", "Rot_0":"0", "Rot_1":"0", "Rot_2":"-0.237685874", "Rot_3":"0.971342087", "Scale":"1", "TypeID":"48", "PropValue_0":"4", "PropValue_1":"1", "PropValue_4":"10", "PropValue_7":"72"});
+    db.execute(
+        "INSERT INTO housing_catalog_record VALUES (?, 'GameObjects', 576398, ?)",
+        params![BUILD_KEY, object.to_string()],
+    )
+    .unwrap();
+}
+
 #[test]
 fn housing_catalog_cornerstones_keep_actual_object_transform_and_refuse_substitution() {
     let db = catalog_fixture();
