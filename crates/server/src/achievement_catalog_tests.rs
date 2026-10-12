@@ -7,6 +7,30 @@ fn catalog() -> AchievementCatalog {
 }
 
 #[test]
+fn achievements_criteria_player_snapshot_never_claims_guild_actor_progress() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.account = Some(Box::new(PlayerAchievementState::default()));
+    //Real guild5025 "Dust, Dust, and More Dust!" is not a character/account achievement.
+    assert!(
+        !catalog
+            .snapshot(&state, 1)
+            .progress
+            .iter()
+            .any(|row| row.achievement_id == 5025)
+    );
+    // Its cast criterion cannot let a single character earn the guild definition.
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut query = conn.prepare("WITH RECURSIVE tree(ID) AS (SELECT CriteriaTree FROM achievement WHERE ID=5025 UNION SELECT t.ID FROM criteria_tree t JOIN tree ON t.Parent=tree.ID) SELECT c.ID,c.Asset,t.Amount FROM tree JOIN criteria_tree t ON t.ID=tree.ID JOIN criteria c ON c.ID=t.CriteriaID WHERE c.Type=29").unwrap();
+    let (criterion, spell, amount): (u32, u32, u64) = query
+        .query_row([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .unwrap();
+    state.criteria_progress.insert(criterion, amount - 1);
+    catalog.update(&mut state, CriteriaEvent::CastSpell(spell), None, 1);
+    assert!(!state.earned_ids.contains(&5025));
+}
+
+#[test]
 fn achievements_criteria_mythic_predicates_require_authored_map_key_time_and_player_level() {
     let catalog = catalog();
     let valid = MythicCompletion {
@@ -90,7 +114,7 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 4011);
+    assert_eq!(union.len(), 3982);
 }
 
 #[test]

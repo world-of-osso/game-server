@@ -108,23 +108,31 @@ def census(db2, modifiers_path, world_db, types):
                 modifier_ids.update(found)
                 modifier_types.update(int(modifiers[node]['Type']) for node in found)
                 errors.update(problems)
+        structural = supports_tree(root, trees, children, supported)
+        flags = int(row['Flags'])
+        if flags & 0x4000:
+            errors.add('actor:guild_requires_guild_progress')
         records[row_id] = dict(
-            title=row['Title_lang'], root=root, flags=int(row['Flags']),
+            title=row['Title_lang'], root=root, flags=flags,
             types=sorted(kinds), criteria=sorted(criterion_ids), trees=sorted(nodes),
             modifiers=sorted(modifier_ids), modifier_types=sorted(modifier_types),
-            trackable=supports_tree(root, trees, children, supported), blockers=sorted(errors),
+            structurally_evaluable=structural, trackable=structural and not flags & 0x4000,
+            blockers=sorted(errors),
         )
     trackable = [row for row in records.values() if row['trackable']]
     ranking = []
     for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
         newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids)
-        gain = sum(not records[id]['trackable'] and not records[id]['flags'] & 1
+        gain = sum(not records[id]['trackable'] and not records[id]['flags'] & (1 | 0x4000)
                    and supports_tree(records[id]['root'], trees, children, newly_supported)
                    for id in ids)
         ranking.append(dict(type=kind, associated=len(ids),
                             achievements=sum(not records[id]['flags'] & 1 for id in ids),
                             statistics=sum(bool(records[id]['flags'] & 1) for id in ids),
-                            enabled=kind in types, potential_unconditional_gain=gain))
+                            event_type_enabled=kind in types,
+                            player_trackable=sum(records[id]['trackable'] and not records[id]['flags'] & 1 for id in ids),
+                            blocked_achievements=sum(not records[id]['trackable'] and not records[id]['flags'] & 1 for id in ids),
+                            potential_gain=gain))
     ranking.sort(key=lambda row: (-row['achievements'], -row['statistics'], row['type']))
     paths = [db2 / (name + '.csv') for name in ('Achievement', 'CriteriaTree', 'Criteria')]
     paths.append(modifiers_path)
@@ -133,6 +141,7 @@ def census(db2, modifiers_path, world_db, types):
         sources={str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths},
         row_counts=dict(achievement=len(achievements), criteria=len(criteria),
                         criteria_tree=len(trees), modifier_tree=len(modifiers)),
+        guild_structurally_evaluable=sum(row['structurally_evaluable'] and bool(row['flags'] & 0x4000) and not row['flags'] & 1 for row in records.values()),
         trackable=dict(achievements=sum(not row['flags'] & 1 for row in trackable),
                        account=sum(not row['flags'] & 1 and bool(row['flags'] & 0x20000) for row in trackable),
                        character=sum(not row['flags'] & (1 | 0x20000) for row in trackable),
