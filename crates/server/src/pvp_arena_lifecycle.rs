@@ -47,6 +47,7 @@ pub(super) fn update_matches(world: &mut World) {
             .collect::<Vec<_>>()
     });
     super::arena_objects::update_gates(world, now);
+    super::arena_sight::update_sight(world, now);
     for id in changed {
         super::pvp_objective::send_match_snapshot(world, id);
     }

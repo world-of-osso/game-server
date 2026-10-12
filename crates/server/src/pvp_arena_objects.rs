@@ -1,6 +1,7 @@
 //! Authored preparation gates. TC map scripts determine exactly which doors open
 //! and whether they disappear; TDB1210 supplies their actual placements/models.
 use super::PvpServerState;
+pub(crate) use super::arena_sight::{SightCatalog, SightTimers};
 use crate::maps::InMap;
 use bevy::prelude::*;
 use rusqlite::Connection;
@@ -37,6 +38,27 @@ impl GateCatalog {
         Ok(Self(gates))
     }
 }
+pub(super) fn prepare_map(world: &mut World, map: InMap) {
+    let gates = world.resource::<GateCatalog>().0.clone();
+    let mut query = world.query::<(Entity, &InMap, &GameObjectInfo)>();
+    let doors: Vec<_> = query
+        .iter(world)
+        .filter(|(_, copy, info)| {
+            **copy == map
+                && gates
+                    .get(&(map.map_id, info.entry))
+                    .is_some_and(|gate| !gate.delete)
+        })
+        .map(|(entity, _, _)| entity)
+        .collect();
+    for entity in doors {
+        world.entity_mut(entity).insert(GameObjectAnimation {
+            animation_id: CLOSED_ANIMATION,
+            looping: true,
+        });
+    }
+}
+
 pub(super) fn update_gates(world: &mut World, now: f64) {
     let maps: BTreeMap<_, _> = world
         .resource::<PvpServerState>()
@@ -63,6 +85,9 @@ pub(super) fn update_gates(world: &mut World, now: f64) {
                 source.delete
                     || (source.despawn_secs > 0 && now - start >= f64::from(source.despawn_secs))
             });
+            if source.delete && started.is_none() {
+                return None;
+            }
             let desired = GameObjectAnimation {
                 animation_id: if started.is_some() {
                     OPEN_ANIMATION

@@ -945,6 +945,10 @@ fn startup_load_world_data(mut commands: Commands) {
     let game_objects = crate::game_objects::load_game_object_spawns(&conn)
         .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
     info!("Loaded {} game object spawns", game_objects.0.len());
+    commands.insert_resource(
+        crate::pvp::arena_objects::SightCatalog::load(&conn, &game_objects)
+            .expect("Load authored arena Shadow Sight metadata"),
+    );
     commands.insert_resource(game_objects);
     let gathering = crate::gathering::load_data(&conn)
         .expect("Failed to load gathering metadata; apply scripts/gathering_metadata.py");

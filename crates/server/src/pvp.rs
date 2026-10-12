@@ -32,6 +32,8 @@ pub(crate) mod arena_combat;
 mod arena_lifecycle;
 #[path = "pvp_arena_objects.rs"]
 pub(crate) mod arena_objects;
+#[path = "pvp_arena_sight.rs"]
+mod arena_sight;
 
 #[path = "pvp_entry.rs"]
 mod pvp_entry;
@@ -218,6 +220,8 @@ impl Plugin for PvpPlugin {
         app.init_resource::<PvpServerState>();
         app.init_resource::<arena::Catalog>();
         app.init_resource::<arena_objects::GateCatalog>();
+        app.init_resource::<arena_objects::SightCatalog>();
+        app.init_resource::<arena_objects::SightTimers>();
         app.add_systems(
             Update,
             arena::receive_queue_requests.before(process_battleground_invitation_responses),

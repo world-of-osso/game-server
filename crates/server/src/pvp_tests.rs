@@ -72,6 +72,8 @@ fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates(
     world.insert_resource(crate::game_objects::GameObjectSpawns::default());
     db.execute_batch("CREATE TABLE arena_gate(map_id INTEGER,entry INTEGER,action TEXT,despawn_secs INTEGER); INSERT INTO arena_gate VALUES(572,185918,'open',5);").unwrap();
     world.insert_resource(arena_objects::GateCatalog::load(&db).unwrap());
+    world.insert_resource(arena_objects::SightCatalog::default());
+    world.insert_resource(arena_objects::SightTimers::default());
     let gate = world
         .spawn((
             map,
