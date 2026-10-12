@@ -372,8 +372,8 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap(),
     );
     h.app
-        .insert_resource(crate::housing_acquisition::HousingCollectionRule(Ok(
-            crate::housing_acquisition::read_bookcase_rule(
+        .insert_resource(crate::housing_acquisition::HousingCollectionRules(Ok(
+            crate::housing_acquisition::read_collection_rules(
                 &crate::housing_acquisition::tests::collection_fixture(),
             )
             .unwrap(),
