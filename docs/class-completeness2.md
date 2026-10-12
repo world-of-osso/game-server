@@ -19,6 +19,7 @@ Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes 
 | 7c1e1b33 / shared6ba2f5cd | 2854 | 4787 | 186 | All 7827 memberships, exit0, 560.59s |
 | 96e4cb20 / shared6ba2f5cd | 2854 | 4788 | 185 | All 7827 memberships, exit0, 556.76s |
 | 9f2c5cbd / shared6ba2f5cd | 2854 | 4791 | 182 | All 7827 memberships, exit0, 603.33s |
+| 42c85bc2 / shared6ba2f5cd | 2860 | 4785 | 182 | All 7827 memberships plus fresh source-gap analysis, exit0, 539.22s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -57,7 +58,7 @@ Native431442 overrides Living Flame361469 with431443. The replacement previously
 
 Only active learners record their own effective Damage/Heal by recipient and kind on the server clock. The native five-second window excludes unrelated actors/targets, overheal and overkill. Preservation uses431442 field0 (15%); other specs usefield2 (25%). Native DescriptionVariables852 defines SP*2.5*(1+versadmg); Overclock1260647 field0 adds40%, corroborated by the3.5SP variable. Missing scripted child records reject before payment. History is entity-local and bounded by that native window.
 
-Atb4b88fa7, six real-ID controls pass: native Fire/Arcane replacement, owner/target exclusions, window expiry, both caps, Preservation effective healing versus overheal, and missing-child pre-payment rejection. Current-primary-hit inclusion and earlier Chrono copies are literal history semantics, not independently measured Retail timing/recursion parity. Full Lifecinders/Chrono variants, legal hero purchases and live Evoker proof remain open. Source census refresh follows the current implementation; no generic Dummy no-op or blanket aura4 closure.
+Atb4b88fa7, six real-ID controls pass: native Fire/Arcane replacement, owner/target exclusions, window expiry, both caps, Preservation effective healing versus overheal, and missing-child pre-payment rejection. Current-primary-hit inclusion and earlier Chrono copies are literal history semantics, not independently measured Retail timing/recursion parity. Full Lifecinders/Chrono variants, legal hero purchases and live Evoker proof remain open. Fresh source-gap and native-runtime census at42c85bc2 promotes six Chrono memberships at the controlled probe boundary. Compared with the user's253-broken milestone: working+6, partial+65, broken−71. Remaining182 broken are170 absent SpellStore memberships and12 missing native destination memberships (120145/344587/395277/1259190 in each Mage spec). Neither missing data nor native coordinate gaps are fabricated or erased. No generic Dummy no-op or blanket aura4 closure.
 
 ## Retained boundaries
 
