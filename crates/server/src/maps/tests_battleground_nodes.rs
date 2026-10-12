@@ -12,6 +12,59 @@ struct EnteredMatch {
 }
 
 #[test]
+fn alterac_channel_last_leave_with_fresh_npc_death_unloads_without_loot_panic() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match_with(&template, [611, 610], |app| {
+        app.init_resource::<crate::merchant::VendorCatalog>();
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.add_plugins(crate::loot::LootPlugin);
+    });
+    let actor = &entered.players[0];
+    let (victim, health) = find_alterac_source_npc(&mut entered.h, entered.copy, 11947);
+    crate::combat::deal_direct_damage(
+        entered.h.app.world_mut(),
+        actor.player,
+        victim,
+        health + 1.0,
+    );
+    assert!(
+        entered
+            .h
+            .app
+            .world()
+            .get::<crate::combat::DeathState>(victim)
+            .is_some()
+    );
+    // The real death is still fresh when every accepted participant's normal
+    // Leave request arrives; no intermediate frame may settle corpse commands.
+    for who in &entered.players {
+        entered
+            .h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground {
+                match_id: entered.match_id,
+            });
+    }
+    entered.h.receive_pvp_updates(5);
+    assert!(entered.h.app.world().get_entity(victim).is_err());
+    let world = entered.h.app.world_mut();
+    let mut maps = world.query::<&InMap>();
+    assert!(!maps.iter(world).any(|map| *map == entered.copy));
+    for who in &entered.players {
+        assert!(
+            world
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match(&template, [611, 610]);
@@ -414,6 +467,14 @@ fn seething_objects(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
 
 /// Source-minimum roster queue, invitation, acceptance and safe-location entry over the channel.
 fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
+    enter_source_match_with(template, starts, |_| {})
+}
+
+fn enter_source_match_with(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
@@ -496,6 +557,7 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
             app.insert_resource(templates);
         }
         app.insert_resource(crate::faction::FactionTemplates::default());
+        setup(app);
         app.add_plugins((
             crate::pvp::PvpPlugin,
             crate::npc_interaction::NpcInteractionPlugin,
