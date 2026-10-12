@@ -18,6 +18,10 @@ Sources: local BattlemasterList FDID 1360265/layout 3414CBD7 and Map CSV 12.1.0.
 
 Current proof/source ledger: `/home/osso/.worktrees/handoff-bg-coverage.md`; durable receipts in engine `data/diagnostics/bg-coverage-2026-10-12/`. This section supersedes WSG-only scope, not previously proved WSG behavior.
 
+### Silvershard Mines (server continuation)
+
+Queue708/map727 admits the source3–10 per-team roster, levels30–90, and starts4062/4061. Three real template60140 NPC carts follow twelve exact TDB ground paths at authored walk speed2yd/s. Living same-copy participants within the source25yd control radius drive1s heartbeats; displayed faction-owned carts yield one resource per2s, delivery awards150, carts respawn after5s, and1500 wins. PvpStat428 is Carts Controlled. This NPC-objective map requires no fabricated static GO placements. Lead applies metadata importer and content policy before `python3 scripts/add_battleground_summon_templates.py --db data/world.db` to supply60140/60283 templates/models/addons, source routes and60283→124491 spellclick. Normal3s switch-cast and both-skin private proof remain pending; no completion claim.
+
 ### Flag maps — Warsong Gulch and Twin Peaks
 
 Twin Peaks 108/map 726 shares WSG's flag entries 227741/227740 and capture triggers (TDB areatrigger 65/66, create-properties 30/31, sphere 5, centred on the authored flags). Starts 1726/1727; captures/returns credit PvpStats 290/291 (WSG 928/929). Three captures win. Both TC scripts end at 17 minutes elapsed including the 2-minute start delay (Twin Peaks sets Timer 4248 to start+15min), so an in-progress flag match ends after 15 minutes: more captures win, equal non-zero scores go to the last capturer, 0–0 is a tie. Snapshots carry WorldStates 1581/1582 (captures), 17303 (max 3), 1545/1546 (flag state: InBase 1/Taken 2/Dropped 3), 2338/2339 (other-team control) and 4247 (timer active). Not modelled: the 4248 end timestamp, Focused/Brutal Assault, drop/respawn delays and Double Jeopardy 5746/5747.

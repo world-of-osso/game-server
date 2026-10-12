@@ -98,6 +98,9 @@ fn update_match(
     if matched.kotmogu.is_some() {
         return update_kotmogu(world, matched, actors, map, &template, delta_ms) || changed;
     }
+    if matched.silvershard.is_some() {
+        return update_silvershard(world, matched, actors, map, &template, delta_ms) || changed;
+    }
     let Some(battle) = matched.flags.as_mut() else {
         return changed;
     };
@@ -233,6 +236,50 @@ fn update_kotmogu(
         }
     }
     before.0 != orbs.world_states(&matched.instance)
+}
+
+fn update_silvershard(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let players: Vec<_> = [
+        (BgTeam::A, &matched.instance.team_a_players),
+        (BgTeam::B, &matched.instance.team_b_players),
+    ]
+    .into_iter()
+    .flat_map(|(team, ids)| {
+        ids.iter().filter_map(move |id| {
+            let actor = actors
+                .get(id)
+                .filter(|actor| actor.map == map && actor.alive)?;
+            Some((*id, team, actor.position.to_array()))
+        })
+    })
+    .collect();
+    let carts = matched.silvershard.as_mut().expect("Silvershard match");
+    let before = carts.battle.world_states(&matched.instance);
+    for event in carts.advance(
+        world,
+        map,
+        delta_ms,
+        &players,
+        &mut matched.instance,
+        template,
+    ) {
+        if let shared::battleground::CartEvent::Controlled(id) = event {
+            credit(
+                &mut matched.scoreboard,
+                id,
+                shared::battleground::CARTS_CONTROLLED_STAT,
+                1,
+            );
+        }
+    }
+    before != carts.battle.world_states(&matched.instance)
 }
 
 fn credit(

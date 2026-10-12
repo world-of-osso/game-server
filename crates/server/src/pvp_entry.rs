@@ -54,6 +54,7 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
         .or_else(|| shared::battleground::node_rules(invitation.map_id).map(|rules| rules.starts))
         .or_else(|| shared::battleground::eye_rules(invitation.map_id).map(|rules| rules.starts))
         .or_else(|| (invitation.map_id == 998).then_some(shared::battleground::KOTMOGU_STARTS))
+        .or_else(|| (invitation.map_id == 727).then_some(shared::battleground::SILVERSHARD_STARTS))
         .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
@@ -75,7 +76,7 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
 
 fn authored_object_entries(map_id: u32) -> Result<Vec<u32>, String> {
     let entries = shared::battleground::objective_object_entries(map_id);
-    if entries.is_empty() {
+    if !shared::battleground::has_implemented_objectives(map_id) {
         return Err("this battleground has no implemented objectives".into());
     }
     Ok(entries)
@@ -102,6 +103,15 @@ fn create_match_map(
         .chain(&invitation.instance.team_b_players)
         .copied()
         .collect();
+    let carts = if template.map_id == 727 {
+        Some(super::pvp_silvershard::CartRuntime::from_source(
+            world
+                .get_resource::<crate::world_data::WorldData>()
+                .ok_or("creature catalog unavailable")?,
+        )?)
+    } else {
+        None
+    };
     let capacity = u32::from(template.team_size) * 2;
     let now = crate::maps::difficulty::now(world);
     let map = world
@@ -121,5 +131,13 @@ fn create_match_map(
         .expect("validated match")
         .map = Some(map);
     crate::maps::transfer::spawn_map_content(world, map);
+    if let Some(mut carts) = carts {
+        carts.synchronize(world, map);
+        state
+            .battleground_matches
+            .get_mut(&match_id)
+            .expect("validated match")
+            .silvershard = Some(carts);
+    }
     Ok(map)
 }
