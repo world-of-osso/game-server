@@ -42,10 +42,16 @@ pub(crate) fn load_areas(connection: &rusqlite::Connection) -> rusqlite::Result<
     })
 }
 
+pub(crate) fn handles_effect(spell_id: u32, effect: &crate::auras::AuraEffectState) -> bool {
+    let molten_creator = spell_id == AURA && effect.index == 0;
+    let source_geometry = effect.aura_type == 395 && effect.misc_values[0] == CREATE_PROPERTIES;
+    molten_creator && source_geometry
+}
+
 fn creates_area(aura: &AuraInstance) -> bool {
-    aura.effects.iter().any(|effect| {
-        effect.index == 0 && effect.aura_type == 395 && effect.misc_values[0] == CREATE_PROPERTIES
-    })
+    aura.effects
+        .iter()
+        .any(|effect| handles_effect(aura.spell_id, effect))
 }
 
 pub(super) fn apply(world: &mut World, target: Entity, aura: &AuraInstance) {

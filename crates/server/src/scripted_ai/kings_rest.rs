@@ -6,7 +6,8 @@ mod molten_gold;
 use super::{CreatureAi, Ctx, DamageTaken};
 use bevy::prelude::*;
 pub(crate) use molten_gold::{
-    load_areas as load_molten_gold_areas, update_areas as update_molten_gold_areas,
+    handles_effect as handles_molten_gold_effect, load_areas as load_molten_gold_areas,
+    update_areas as update_molten_gold_areas,
 };
 use shared::components::UnitFlags;
 

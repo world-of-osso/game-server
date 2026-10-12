@@ -586,6 +586,7 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
         if handlers::is_handled(effect.aura_type)
             || scripts::consumes_named_field(aura.spell_id, effect.index)
+            || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
         {
             continue;
         }
