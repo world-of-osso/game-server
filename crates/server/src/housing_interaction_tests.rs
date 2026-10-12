@@ -13,7 +13,7 @@ fn housing_cornerstone_use_opens_only_for_authenticated_same_copy_player_in_real
         .authorize_housing_entry(&maps, 2735, 1, 1)
         .unwrap()
         .map;
-    let objects = crate::game_objects::GameObjectSpawns(catalog.cornerstones());
+    let objects = crate::game_objects::GameObjectSpawns::default();
     let mut h = harness_with(HUMAN_TEMPLATE, move |app| {
         app.insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
         app.insert_resource(maps);

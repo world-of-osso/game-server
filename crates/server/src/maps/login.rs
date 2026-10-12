@@ -25,6 +25,7 @@ pub(crate) struct LoginMaps<'w> {
     clock: Option<Res<'w, super::ServerClock>>,
     world_data: Option<Res<'w, WorldData>>,
     objects: Option<Res<'w, GameObjectSpawns>>,
+    housing: Option<Res<'w, crate::housing::HousingAvailability>>,
     database: Option<Res<'w, crate::persistence::GameDatabase>>,
 }
 
@@ -150,6 +151,9 @@ impl LoginMaps<'_> {
             self.objects.as_deref(),
             content,
         );
+        if let Some(housing) = &self.housing {
+            crate::housing::spawn_cornerstones(commands, housing, resolved.map);
+        }
     }
 
     fn place(&self, map: InMap, position: Position) -> Option<LoginPlace> {
