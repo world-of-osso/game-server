@@ -123,6 +123,15 @@ def top_constants(block):
     for node in block.body:
         if isinstance(node, lua.LocalAssign):
             bind_assignment(node, bindings, {})
+    # A counter/table assigned by any handler is not a constant across calls.
+    for node in all_nodes(block):
+        if isinstance(node, lua.Assign):
+            for target in node.targets:
+                root = target
+                while isinstance(root, lua.Index):
+                    root = root.value
+                if isinstance(root, lua.Name) and root.id in bindings:
+                    bindings[root.id] = None
     return bindings
 
 
@@ -221,6 +230,14 @@ def branch_context(test, context, result):
     return None
 
 
+def disjoint_dispatch(test, next_test):
+    return (isinstance(test, lua.EqToOp) and isinstance(next_test, lua.EqToOp)
+            and expression(test.left) == expression(next_test.left)
+            and static_number(test.right) is not None
+            and static_number(next_test.right) is not None
+            and static_number(test.right) != static_number(next_test.right))
+
+
 def extract_actions(block, result, context, timer_vars=None, bindings=None):
     bindings = dict(bindings or {})
     for node in block.body:
@@ -244,10 +261,10 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
                     relevant = any(method_name(n) in ('CDBar', 'Bar', 'SetStage', 'Message', 'Start', 'Show') for n in all_nodes(node))
                     if relevant:
                         issue(result, node, 'unsupported conditional: ' + expression(node.test))
-                if isinstance(node.orelse, lua.ElseIf):
+                if isinstance(node.orelse, lua.ElseIf) and disjoint_dispatch(node.test, node.orelse.test):
                     extract_actions(lua.Block(body=[node.orelse]), result, context, timer_vars, bindings)
                 elif node.orelse:
-                    issue(result, node, 'conditional else branch not inferred')
+                    issue(result, node, 'conditional else branch requires preceding guard to be false')
             continue
         if isinstance(node, lua.Do):
             extract_actions(node.body, result, context, timer_vars, bindings)
