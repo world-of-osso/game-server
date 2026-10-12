@@ -285,3 +285,44 @@ fn warband_money_stops_at_the_retail_gold_cap() {
     );
     assert_eq!(h.gold(), 1);
 }
+
+#[test]
+fn achievements_criteria_bank_tab_purchases_set_real_counts_per_bank_type() {
+    use crate::achievement::PlayerAchievementState;
+    let Some(mut h) = harness() else { return };
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    h.app.init_resource::<crate::maps::ServerClock>();
+    let player = h.player;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    let progress = |h: &crate::bank_test_harness::Harness, criterion: u32| {
+        crate::persistence::load_achievements(h.db(), h.character_id)
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    let npc = h.open_banker();
+    // Character criterion105270 (Safer Deposit) and Warband criterion67053.
+    buy_tab(&mut h, npc, BankType::Character);
+    assert!(failures(&mut h).is_empty());
+    assert_eq!((progress(&h, 105270), progress(&h, 67053)), (Some(1), None));
+    // A refused purchase changes no count.
+    buy_tab(&mut h, npc, BankType::Character);
+    assert_eq!(failures(&mut h), vec![BankError::CantAfford]);
+    assert_eq!(progress(&h, 105270), Some(1));
+    h.set_gold(10_000_000);
+    buy_tab(&mut h, npc, BankType::Account);
+    assert!(failures(&mut h).is_empty());
+    assert_eq!(
+        (progress(&h, 105270), progress(&h, 67053)),
+        (Some(1), Some(1))
+    );
+    let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
+    // Learning to Share40142: the first Warband tab is an account achievement.
+    assert!(state.account.as_ref().unwrap().earned_ids.contains(&40142));
+    assert!(!state.earned_ids.contains(&42191));
+}

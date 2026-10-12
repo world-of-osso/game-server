@@ -129,6 +129,7 @@ struct Vault<'w, 's> {
     gold: ResMut<'w, GoldUpdateQueue>,
     contents: Query<'w, 's, &'static mut MessageSender<BankContents>>,
     failures: Query<'w, 's, &'static mut MessageSender<BankFailed>>,
+    commands: Commands<'w, 's>,
 }
 
 /// The requesting connection and its open banker.
@@ -467,7 +468,25 @@ fn purchase_tab(vault: &mut Vault, patron: &Patron, req: BankPurchaseTab) -> Ban
     model.set_gold(gold - cost);
     data.tabs.push(new_tab(data.tabs.len() + 1));
     vault.save(patron, req.bank, &data, Some(model));
+    let (character, event) = (
+        patron.character_id,
+        crate::achievement::CriteriaEvent::BankTabsOwned(
+            criteria_bank_type(req.bank),
+            data.tabs.len() as u32,
+        ),
+    );
+    vault.commands.queue(move |world: &mut World| {
+        crate::achievement::record_character_event(world, character, event);
+    });
     Ok(())
+}
+
+/// TC `BankType` numbering of achievement criteria (Character 0, Account 2).
+pub(crate) fn criteria_bank_type(bank: BankType) -> u32 {
+    match bank {
+        BankType::Character => 0,
+        BankType::Account => 2,
+    }
 }
 
 /// Retail `C_Bank.DepositMoney` / `WithdrawMoney`; only the Warband bank holds money.
