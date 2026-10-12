@@ -248,6 +248,64 @@ fn encounter_coverage_nibbles_health_check_starts_authored_light_infusion_phase(
     assert_eq!(channel.cast_type, CastType::Channel);
     assert_eq!(channel.duration, 15.0, "local DurationIndex8 is15000ms");
     assert!(
+        h.has_aura(kystia, 1265412),
+        "Light Infusion dummy must apply Destabilized to Kystia"
+    );
+    assert!(
+        !h.has_aura(kystia, 1217989),
+        "Light Infusion203 must remove the initial shield"
+    );
+    h.advance(14.5);
+    assert_eq!(
+        h.app.world().get::<CastState>(nibbles).unwrap().spell_id,
+        1230304
+    );
+    h.advance(0.4);
+    let infusion = h
+        .app
+        .world()
+        .get::<CastState>(kystia)
+        .expect("completed Light Infusion must start Kystia's Illicit Infusion");
+    assert_eq!(infusion.spell_id, 474238);
+    assert_eq!(infusion.cast_type, CastType::Channel);
+    assert_eq!(infusion.duration, 3.0, "local DurationIndex27 is3000ms");
+    h.advance(3.2);
+    let shield = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(kystia)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1217989)
+        .expect("Illicit completion must renew Felshield");
+    assert_eq!(
+        shield.stacks, 3,
+        "first renewal is3−0 stacks from the pinned script"
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(nibbles).unwrap().0,
+        16
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(nibbles)
+            .unwrap()
+            .display_id,
+        126199
+    );
+    assert!(
+        h.health(nibbles).current > h.health(nibbles).max * 0.2,
+        "authored10% healing ticks must restore the companion"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    assert!(
         h.inbox(1).engages.is_empty(),
         "companion frame cannot leak to another copy"
     );

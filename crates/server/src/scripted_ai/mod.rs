@@ -47,6 +47,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, creature_text::load_creature_texts_startup)
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
+            .add_systems(Startup, murder_row::register_aura_scripts)
             .add_systems(
                 FixedUpdate,
                 (
@@ -101,6 +102,9 @@ pub enum MotionType {
 pub enum Hook {
     Reset,
     JustAppeared,
+    ChannelFinished {
+        spell_id: u32,
+    },
     JustEngagedWith(Entity),
     JustDied(Option<Entity>),
     /// `DamageTaken(attacker, damage)` with the health the damage was taken from.
@@ -135,6 +139,7 @@ pub enum Hook {
 pub trait CreatureAi: Send + Sync + 'static {
     fn reset(&mut self, _ctx: &mut Ctx) {}
     fn just_appeared(&mut self, _ctx: &mut Ctx) {}
+    fn channel_finished(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
     fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {}
     fn just_died(&mut self, _ctx: &mut Ctx, _killer: Option<Entity>) {}
     fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, _damage: DamageTaken) {}
@@ -324,6 +329,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
     match hook {
         Hook::Reset => ai.reset(&mut ctx),
         Hook::JustAppeared => ai.just_appeared(&mut ctx),
+        Hook::ChannelFinished { spell_id } => ai.channel_finished(&mut ctx, spell_id),
         Hook::JustEngagedWith(who) => ai.just_engaged_with(&mut ctx, who),
         Hook::JustDied(killer) => ai.just_died(&mut ctx, killer),
         Hook::DamageTaken {
