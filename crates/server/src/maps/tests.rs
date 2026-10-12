@@ -763,7 +763,11 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
     let flags = source_warsong_flags();
     let source_flags = flags.clone();
+    let database_file = tempfile::NamedTempFile::new().unwrap();
     let mut h = harness_with(|app| {
+        app.insert_resource(crate::persistence::GameDatabase {
+            db: redb::Database::create(database_file.path()).unwrap(),
+        });
         app.insert_resource(flags);
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.add_plugins((
