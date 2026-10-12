@@ -57,12 +57,27 @@ def import_gates(db, source):
 
 
 def promote_content(db):
-    import import_instance_population as population
-    report = population.ImportReport()
+    from import_instance_population import BASE_PHASE
+    from retail_content import RETAIL_GUID_OFFSET
+    # Only arena objects and their templates. Decorative NPCs and unrelated loot
+    # rebuilding are not part of arena gate/orb installation.
+    template_columns = [row[1] for row in db.execute('PRAGMA table_info(content_gameobject_template)')]
+    spawn_columns = [row[1] for row in db.execute('PRAGMA table_info(content_gameobject)')
+                     if row[1] in {column[1] for column in db.execute('PRAGMA table_info(tdb_gameobject)')}]
     with db:
         db.execute('BEGIN')
-        population.apply_population(db, report, map_list='SELECT map_id FROM arena_map', rebuild_pools=False)
-    return report.drops
+        db.execute(f'CREATE TEMP TABLE arena_source_objects AS SELECT * FROM tdb_gameobject '
+                   f'WHERE map IN(SELECT map_id FROM arena_map) AND {BASE_PHASE}')
+        names = ','.join(f'"{column}"' for column in template_columns)
+        db.execute(f'INSERT OR REPLACE INTO content_gameobject_template({names}) SELECT {names} '
+                   'FROM tdb_gameobject_template WHERE entry IN(SELECT id FROM arena_source_objects)')
+        db.execute('DELETE FROM content_gameobject WHERE map IN(SELECT map_id FROM arena_map)')
+        columns = ','.join(f'"{column}"' for column in spawn_columns)
+        values = ','.join(f'guid+{RETAIL_GUID_OFFSET}' if column == 'guid' else f'"{column}"' for column in spawn_columns)
+        db.execute(f'INSERT INTO content_gameobject({columns}) SELECT {values} FROM arena_source_objects')
+        count = db.execute('SELECT count(*) FROM arena_source_objects').fetchone()[0]
+        db.execute('DROP TABLE arena_source_objects')
+    return {'gameobjects': count}
 
 
 def main():
@@ -78,7 +93,7 @@ def main():
         gates = import_gates(db, Path(__file__).parent / 'reference/arena-12.1.0.69933/arena-gates.json')
         print(f'Imported {gates} source-backed gate entries')
         if args.promote:
-            print(json.dumps({'drops': promote_content(db)}, sort_keys=True))
+            print(json.dumps(promote_content(db), sort_keys=True))
 
 
 if __name__ == '__main__':
