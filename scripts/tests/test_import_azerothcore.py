@@ -163,6 +163,7 @@ class NativeClassSummonImportTests(unittest.TestCase):
                 with closing(sqlite3.connect(Path(temporary) / "world.copy.db")) as conn:
                     native.backup(conn)
                     report = content_policy.Report()
+                    retail_content.create_retail_map_table(conn)
                     content_policy.build_creature_models(conn, {}, report)
                     retail_content.build_creatures(conn, report)
                     self.assertEqual(conn.execute(
