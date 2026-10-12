@@ -23,6 +23,7 @@ pub mod invisibility;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
+mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod periodic;
@@ -467,7 +468,8 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
         base as f32,
     );
     let extension = scripts::self_regrowth_duration_bonus(world, application);
-    (duration + extension).max(0.0) as u32
+    let duration = (duration + extension).max(0.0) as u32;
+    mechanic_duration::modify_duration(world, application, spell, duration)
 }
 
 fn build_effect(
@@ -524,7 +526,6 @@ fn build_instance(
 ) -> AuraInstance {
     let caster = application.caster;
     let passive = is_passive(spell);
-    let duration_ms = duration_ms(world, application, spell);
     let options = spell.aura_options.as_deref();
     let max_stacks = options.map_or(0.0, |options| options.cumulative_aura as f32);
     let max_stacks =
@@ -542,6 +543,14 @@ fn build_instance(
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
+    let applied_mask = effects
+        .iter()
+        .fold(0, |mask, effect| mask | (1 << effect.index));
+    let effective_application = AuraApplication {
+        effect_mask: applied_mask,
+        ..*application
+    };
+    let duration_ms = duration_ms(world, &effective_application, spell);
     // AuraEffect::CalculateAmount: breakable crowd control of a spell with proc flags
     // holds 10% of the target's max health (CountPctFromMaxHealth) against damage.
     if options.is_some_and(|options| options.proc_type_mask != [0; 2]) {
@@ -599,7 +608,9 @@ fn build_instance(
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
         let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
-        let handled = handlers::is_handled(effect.aura_type) && supported_amount;
+        let duration_supported = !mechanic_duration::positive_source_gap(effect);
+        let handled =
+            handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
         if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
             continue;
         }
@@ -609,6 +620,11 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
                 warn!(
                     "Spell {}: aura type {} nonzero linked amount {} for child {} remains a source gap; tracked only",
                     aura.spell_id, effect.aura_type, effect.amount, effect.trigger_spell
+                );
+            } else if mechanic_duration::positive_source_gap(effect) {
+                warn!(
+                    "Spell {}: aura type {} positive duration amount {} remains a source gap; pinned rule cannot extend positive-only values",
+                    aura.spell_id, effect.aura_type, effect.amount
                 );
             } else {
                 warn!(
