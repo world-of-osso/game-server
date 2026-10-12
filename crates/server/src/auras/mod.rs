@@ -1630,14 +1630,18 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
     }
 }
 
-/// Auras whose caster entity despawned end (their ticks need a source).
+/// Source-dependent auras end when their caster despawns. Rating snapshots
+/// retain their authored duration (TC Aura::Update accepts a null caster).
 fn remove_casterless(world: &mut World, unit: Entity) {
     let gone: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
-                .filter(|aura| world.get_entity(aura.caster).is_err())
+                .filter(|aura| {
+                    world.get_entity(aura.caster).is_err()
+                        && !stat_mods::retains_rating_snapshot(aura)
+                })
                 .map(|aura| aura.instance_id)
                 .collect()
         })

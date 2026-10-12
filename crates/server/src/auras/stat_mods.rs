@@ -146,6 +146,15 @@ impl AuraStatMods {
     }
 }
 
+/// HandleModRating snapshots points; TC Aura::Update keeps its duration even
+/// with a null caster. Other aura kinds retain their existing source requirements.
+pub(crate) fn retains_rating_snapshot(auras: &AuraInstance) -> bool {
+    !auras.effects.is_empty()
+        && auras.effects.iter().all(|effect| {
+            effect.aura_type == MOD_RATING && effect.misc_values[0] == VERSATILITY_RATING_MASK
+        })
+}
+
 fn pct(amount: f32) -> f32 {
     1.0 + amount / 100.0
 }
