@@ -133,6 +133,11 @@ impl GroundMap {
         &self.data_dir
     }
 
+    #[cfg(test)]
+    pub(crate) fn live_hull_count(&self, map: crate::maps::InMap) -> usize {
+        self.live_hulls.get(&map).map_or(0, Vec::len)
+    }
+
     pub(crate) fn set_live_hulls(&mut self, hulls: crate::game_objects::collision::LiveHulls) {
         self.live_hulls = hulls;
     }

@@ -10,6 +10,10 @@ use shared::{
 use std::{collections::HashMap, path::Path, sync::Arc};
 
 pub(crate) type LiveHulls = HashMap<InMap, Vec<Arc<LosTile>>>;
+
+#[cfg(test)]
+#[path = "collision_tests.rs"]
+mod tests;
 type Objects<'w, 's> = Query<
     'w,
     's,
