@@ -50,6 +50,21 @@ fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul(
 }
 
 #[test]
+fn class_completeness_native_real_points_per_level_scales_pick_lock_skill() {
+    let mut h = harness(Vec::new(), &[1804], 4).unwrap();
+    let spell = world_db().unwrap().store.get(1804).unwrap().clone();
+    for (level, skill) in [(28, 14.0), (29, 15.0), (80, 66.0)] {
+        h.app.world_mut().entity_mut(h.caster).insert((
+            shared::components::Level(level),
+            shared::components::UnitLevel(level),
+        ));
+        let value =
+            super::effects::modded_base_points(h.app.world(), h.caster, &spell, &spell.effects[0]);
+        assert_eq!(value, skill, "native1804 real-points per level at{level}");
+    }
+}
+
+#[test]
 fn class_completeness_native_caster_rectangle_selects_front_width_not_back_allies_or_far() {
     for (spell_id, class) in [(197214, 7), (392983, 10)] {
         let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
