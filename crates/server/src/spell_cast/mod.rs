@@ -1314,6 +1314,10 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    // TC SpellInfo::CheckTarget rejects explicit self before any selector runs.
+    if explicit == Some(caster) && targets::excludes_caster(spell) {
+        return Err(CastFailure::InvalidTarget);
+    }
     if crate::gathering::is_gathering(spell) {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         crate::gathering::check_target(world, caster, spell, target)?;
@@ -1338,6 +1342,9 @@ fn validate_target(
         Some(_) => return Err(CastFailure::InvalidTarget),
         None => return Err(CastFailure::NoTarget),
     };
+    if target == caster && targets::excludes_caster(spell) {
+        return Err(CastFailure::InvalidTarget);
+    }
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
     let target_alive = targets::is_alive(world, target);
