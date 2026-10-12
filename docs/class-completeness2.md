@@ -20,6 +20,7 @@ Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes 
 | 96e4cb20 / shared6ba2f5cd | 2854 | 4788 | 185 | All 7827 memberships, exit0, 556.76s |
 | 9f2c5cbd / shared6ba2f5cd | 2854 | 4791 | 182 | All 7827 memberships, exit0, 603.33s |
 | 42c85bc2 / shared6ba2f5cd | 2860 | 4785 | 182 | All 7827 memberships plus fresh source-gap analysis, exit0, 539.22s |
+| 8fcddcd9 / sharedd503cd3 | 2870 | 4775 | 182 | All 7827 memberships, current explicitly proved named consumers, exit0, 622.23s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -62,7 +63,9 @@ Atb4b88fa7, six real-ID controls pass: native Fire/Arcane replacement, owner/tar
 
 ## Protective Growth named aura4 consumer
 
-Native433748 is one of the highest-membership unresolved named aura4 roots (four Druid specs). Its literal12.1.0.69933 description binds the native8% field to the learner carrying their own8936 Regrowth. Native REDd10d193f shows incoming spell damage1000 rather than920 and a real melee swing10 rather than9. The consumer folds into existing per-school recipient multipliers when the aura set changes, covering spell and melee paths without a second damage hook. Foreign Regrowth, another recipient and absent talent do not activate it; cancellation and native expiry remove it. No unrelated Dummy fields are certified.
+Native433748 is one of the highest-membership unresolved named aura4 roots (four Druid specs). Its literal12.1.0.69933 description binds the native8% field to the learner carrying their own8936 Regrowth. Native REDd10d193f shows incoming spell damage1000 rather than920 and a real melee swing10 rather than9. The consumer folds into existing per-school recipient multipliers when the aura set changes, covering spell and melee paths without a second damage hook. Foreign Regrowth, another recipient and absent talent do not activate it; cancellation and native expiry remove it. No unrelated Dummy fields are certified. GREEN43ee8117 and integrated8fcddcd9 both pass four native controls. The current source census registers only those exact numeric consumers, plus the independently tested Chrono/Overclock fields; ten memberships move partial→working at the probe boundary.
+
+Private UDP5841 live runs use `fb_class2growth`/Fbgrowth and native Blackrock Invader42937. Both Modern and Forever show native8936 CastSuccess, self HoT/healing and incoming melee, with the authored player model attached. Exact8% mitigation is proved by the deterministic native spell/melee tests, not inferred from variable live NPC rolls. PNGs: `/syncthing/AgentShared/2026-10-11/class-completeness2/druid-{modern,forever}.png`; combat and client receipts remain in durable `live/druid-*-*.log`. Night-Elf texture receipt gaps were authenticated against the pinned local CASC root in a run-owned cache/product overlay; no canonical bytes, indexes or world.db were written. Own server/client/cage PIDs stopped after capture. This adds Druid's live activation evidence; the all13-class gate is still open.
 
 ## Retained boundaries
 
