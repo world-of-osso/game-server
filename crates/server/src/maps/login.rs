@@ -106,17 +106,12 @@ impl LoginMaps<'_> {
             return;
         }
         let content = super::transfer::map_content(&self.instances, &self.store, resolved.map);
-        if let Some(objects) = &self.objects {
-            crate::game_objects::spawn_map_game_objects(
-                commands,
-                objects,
-                resolved.map,
-                content.difficulty_id,
-            );
-        }
-        if let Some(world_data) = &self.world_data {
-            crate::zones::spawn_map_creatures(commands, world_data, content, true);
-        }
+        super::transfer::queue_map_content(
+            commands,
+            self.world_data.as_deref(),
+            self.objects.as_deref(),
+            content,
+        );
     }
 
     fn place(&self, map: InMap, position: Position) -> Option<LoginPlace> {
