@@ -46,6 +46,8 @@ pub struct StatModifiers {
     pub primary_flat: UnitStats,
     /// Percent increase per primary stat, applied after `primary_flat`.
     pub primary_pct: UnitStats,
+    /// Aura467: additive percent of gear/flat bonuses, excluding create/base stats.
+    pub primary_bonus_pct: UnitStats,
     /// Added to gear ratings before conversion.
     pub ratings_flat: CombatRatings,
     pub crit_pct: f32,
@@ -325,8 +327,9 @@ pub fn compute_character_stats(
     let level = level_index(input.level)?;
     let mods = mods.copied().unwrap_or_default();
     let mut primary = base_primary_stats(input.class, input.race, input.level)?;
-    primary += usable_gear_primary(input.gear_primary, input.primary_stat);
-    primary += mods.primary_flat;
+    let mut bonus = usable_gear_primary(input.gear_primary, input.primary_stat);
+    bonus += mods.primary_flat;
+    primary += apply_primary_pct(bonus, mods.primary_bonus_pct);
     let primary = apply_primary_pct(primary, mods.primary_pct);
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
