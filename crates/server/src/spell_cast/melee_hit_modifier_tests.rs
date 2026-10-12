@@ -30,6 +30,20 @@ fn assert_dark_luck_misses(spell: u32, class: u8) {
         h.inbox.log
     );
     assert_eq!(h.health(h.npc), 5000.0);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 194356,
+    );
+    h.advance(130); // Native Mortal Strike cooldown has elapsed; no history reset.
+    h.cast_and_deliver(spell, Some(h.npc));
+    h.advance(50);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(spell)
+        && event.kind == CombatLogKind::Damage
+        && event.amount > 0));
+    assert!(h.health(h.npc) < 5000.0);
 }
 
 #[test]
