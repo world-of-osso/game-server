@@ -70,7 +70,12 @@ fn objective_tick_without_matches_needs_no_world_object_catalog() {
     for _ in 0..200 {
         super::pvp_objective::update_battleground_objectives(&mut world);
     }
-    assert!(world.resource::<PvpServerState>().battleground_matches.is_empty());
+    assert!(
+        world
+            .resource::<PvpServerState>()
+            .battleground_matches
+            .is_empty()
+    );
 }
 
 #[test]
