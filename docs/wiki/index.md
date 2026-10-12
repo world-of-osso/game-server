@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Native form admission](../class-completeness6.md#native-form-admission--batch28) — authored64-bit masks/form flags, recipient275 bypass, ten cast/lifecycle controls and explicit conditional census transitions; whole class goal remains open.
+
 - [Shared AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229) — native per-effect229 school/multiplicative reduction; five damage/lifecycle controls, flag/leech and class-wide proof limits.
 
 - [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native census; [continuation](../class-completeness2.md): native selectors/lifecycles, owner summon damage/raw mastery, ready-time credit, charged missile modifiers, minimum-speed floors and zero-amount linked children; representative live gate closed, whole spell/talent coverage open.
