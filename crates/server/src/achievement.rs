@@ -97,6 +97,7 @@ impl Plugin for AchievementPlugin {
                 process_skill_achievement_updates,
                 process_known_spell_achievement_updates,
                 process_owned_pet_achievement_updates,
+                process_equipped_achievement_updates,
                 process_reputation_achievement_updates,
                 process_exploration_achievement_updates,
                 process_committed_criteria_credits,
@@ -194,6 +195,19 @@ fn process_known_spell_achievement_updates(world: &mut World) {
         .iter(world)
         .map(|(player, known)| (player, catalog.known_spell_events(known.iter())))
         .collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
+    }
+}
+
+/// Persisted physical equipment from InventoryModel, never bag ownership or display art.
+fn process_equipped_achievement_updates(world: &mut World) {
+    let updates: Vec<_> = world.query_filtered::<(Entity, &crate::stats::EquippedItems), (With<Player>, Changed<crate::stats::EquippedItems>)>()
+        .iter(world).map(|(player, equipped)| {
+            let items: BTreeSet<_> = equipped.items.iter().filter_map(|(_, source, item)|
+                (*source == shared::item_data::ItemDefinitionSource::Retail).then_some(*item)).collect();
+            (player, items.into_iter().map(CriteriaEvent::EquipItem).collect::<Vec<_>>())
+        }).collect();
     for (player, events) in updates {
         record_criteria_events(world, player, &events);
     }
