@@ -49,6 +49,90 @@ const CHIPPED_CLAW: u32 = 7074;
 /// Pattern: Blue Linen Vest: maxcount 1, incrtime 9000 at Tharynn Bouden.
 const BLUE_LINEN_VEST_PATTERN: u32 = 6270;
 
+#[test]
+fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut h = harness_with(|app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic vendor database");
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    h.app.world_mut().entity_mut(h.player).insert(Level(10));
+    let vendor = h.open(17904);
+    let inventory = h.take::<VendorInventory>();
+    assert_eq!(inventory.len(), 1);
+    let item = inventory[0]
+        .items
+        .iter()
+        .find(|item| item.item_id == 33999)
+        .unwrap();
+    let slot = item.slot;
+    h.buy(vendor, slot, 33999, 1);
+    assert_eq!(h.take::<MerchantFailed>().len(), 1);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&1874)
+    );
+    // Purchase money is setup; the authored merchant transaction is the acquisition event.
+    h.set_gold(20_000_000);
+    h.buy(vendor, slot, 33999, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&1874),
+        Some(&1)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&893)
+    );
+    assert_eq!(
+        persistence::load_achievements(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.character_id
+        )
+        .criteria_progress
+        .get(&1874),
+        Some(&1)
+    );
+    for _ in 0..3 {
+        h.app.update();
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&1874),
+        Some(&1)
+    );
+}
+
 fn world_db_path() -> Option<PathBuf> {
     let path = crate::test_data::world_db_path();
     Some(path)
@@ -86,6 +170,10 @@ struct Harness {
 }
 
 fn harness() -> Option<Harness> {
+    harness_with(|_| {})
+}
+
+fn harness_with(add_plugins: impl FnOnce(&mut App)) -> Option<Harness> {
     let path = world_db_path()?;
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut app = App::new();
@@ -106,6 +194,7 @@ fn harness() -> Option<Harness> {
     app.add_plugins((NpcInteractionPlugin, MerchantPlugin));
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
     app.insert_resource(load_item_durability(&conn).unwrap());
+    add_plugins(&mut app);
     app.finish();
     app.cleanup();
     let db = &app.world().resource::<GameDatabase>().db;

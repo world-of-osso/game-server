@@ -702,6 +702,11 @@ impl<'a> QuestSession<'a, '_, '_> {
             let count = quest.provided_item_count.max(1);
             grant_item(inventory, self.db, self.quests, quest.start_item, count);
             self.save_inventory(&inventory, false);
+            let character = self.character();
+            self.io
+                .effects
+                .inventories
+                .record_acquisition(character, quest.start_item, count);
         }
         log.active.push(ActiveQuestData {
             quest_id,
@@ -814,6 +819,13 @@ impl<'a> QuestSession<'a, '_, '_> {
                 .unwrap_or_else(crate::persistence::quest_store::unix_now),
         );
         self.persist_reward(&inventory, &log, self.reward_appearances(quest, &items));
+        let character = self.character();
+        for &(item, count) in &items {
+            self.io
+                .effects
+                .inventories
+                .record_acquisition(character, item, count);
+        }
         self.queue_script_quest_hook(npc, quest_id, true);
         let character = self.character();
         self.io.commands.queue(move |world: &mut World| {

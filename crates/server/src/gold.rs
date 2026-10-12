@@ -24,6 +24,7 @@ pub(crate) fn format_money(copper: u64) -> String {
 pub(crate) struct GoldUpdateQueue {
     pending: HashMap<u64, u64>,
     changed_inventories: HashSet<u64>,
+    acquired_items: Vec<(u64, u32, u32)>,
 }
 
 impl GoldUpdateQueue {
@@ -35,6 +36,15 @@ impl GoldUpdateQueue {
     /// Items changed without a gold change.
     pub(crate) fn record_items(&mut self, character_id: u64) {
         self.changed_inventories.insert(character_id);
+    }
+
+    /// A committed Retail acquisition, not an inventory move or a requested grant.
+    pub(crate) fn record_acquisition(&mut self, character: u64, item: u32, count: u32) {
+        self.acquired_items.push((character, item, count));
+    }
+
+    pub(crate) fn take_acquisitions(&mut self) -> Vec<(u64, u32, u32)> {
+        std::mem::take(&mut self.acquired_items)
     }
 
     /// Characters whose bags changed this frame, before `send_inventory_deltas` takes them.

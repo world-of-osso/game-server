@@ -23,6 +23,7 @@ pub(crate) enum CriteriaEvent {
     SkillRank(u32, u16),
     CurrencyGained(u32, u32),
     ReputationGained(u32, u32),
+    AcquireItem(u32, u32),
     CompleteQuest(u32),
     CastSpell(u32),
     BeSpellTarget(u32),
@@ -37,6 +38,7 @@ impl CriteriaEvent {
             Self::SkillRank(_, _) => 7,
             Self::CurrencyGained(_, _) => 12,
             Self::ReputationGained(_, _) => 46,
+            Self::AcquireItem(_, _) => 36,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
@@ -52,7 +54,8 @@ impl CriteriaEvent {
             Self::ReachLevel(_) => true,
             Self::SkillRank(asset, _)
             | Self::CurrencyGained(asset, _)
-            | Self::ReputationGained(asset, _) => asset == criteria.asset,
+            | Self::ReputationGained(asset, _)
+            | Self::AcquireItem(asset, _) => asset == criteria.asset,
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
@@ -305,7 +308,7 @@ impl AchievementCatalog {
                 *counter = if self
                     .criteria
                     .get(&id)
-                    .is_some_and(|row| matches!(row.kind, 0 | 12 | 28 | 29 | 165))
+                    .is_some_and(|row| matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 165))
                 {
                     counter.saturating_add(value)
                 } else {
@@ -323,7 +326,9 @@ impl AchievementCatalog {
             CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
             CriteriaEvent::CompleteQuest(_) => 1,
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
-            CriteriaEvent::CurrencyGained(_, amount) => counter.saturating_add(u64::from(amount)),
+            CriteriaEvent::CurrencyGained(_, amount) | CriteriaEvent::AcquireItem(_, amount) => {
+                counter.saturating_add(u64::from(amount))
+            }
             _ => counter.saturating_add(1),
         };
     }
@@ -523,7 +528,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 asset: row.get::<_, i32>(2)? as u32,
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
-                supported: (matches!(kind, 0 | 5 | 8 | 12 | 27 | 46 | 165)
+                supported: (matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
                     || (kind == 7 && row.get::<_, bool>(9)?)
                     || (kind == 28 && row.get::<_, bool>(8)?)
                     || (kind == 29
