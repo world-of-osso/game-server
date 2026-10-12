@@ -1,0 +1,228 @@
+use super::conditions::{ConditionRule, load_conditions};
+use rusqlite::Connection;
+use serde::Deserialize;
+use shared::protocol::{AdventureSuggestion, PerksActivityTag, SuggestionCensus};
+use std::collections::{BTreeMap, BTreeSet};
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct Activity {
+    #[serde(rename = "ID")]
+    pub id: u32,
+    #[serde(rename = "ActivityName_lang")]
+    pub name: String,
+    #[serde(rename = "Description_lang")]
+    pub description: String,
+    #[serde(rename = "CriteriaTreeID")]
+    pub root: u32,
+    #[serde(rename = "ThresholdContributionAmount")]
+    pub points: u32,
+    #[serde(rename = "Supersedes")]
+    pub supersedes: u32,
+    #[serde(rename = "Priority")]
+    pub priority: u32,
+}
+#[derive(Debug, Deserialize)]
+struct Suggestion {
+    #[serde(rename = "ID")]
+    id: u32,
+    #[serde(rename = "Name_lang")]
+    name: String,
+    #[serde(rename = "Description_lang")]
+    description: String,
+    #[serde(rename = "RewardDescription_lang")]
+    reward: String,
+    #[serde(rename = "ButtonText_lang")]
+    button: String,
+    #[serde(rename = "TextureFileDataID")]
+    texture: u32,
+    #[serde(rename = "PlayerConditionID")]
+    condition: u32,
+    #[serde(rename = "BonusPlayerConditionID_0")]
+    bonus0: u32,
+    #[serde(rename = "BonusPlayerConditionID_1")]
+    bonus1: u32,
+    #[serde(rename = "ButtonActionType")]
+    action: u32,
+    #[serde(rename = "Flags")]
+    flags: u32,
+    #[serde(rename = "PriorityMin")]
+    priority: u32,
+}
+#[derive(Deserialize)]
+struct ActivityCondition {
+    #[serde(rename = "PerksActivityID")]
+    activity: u32,
+    #[serde(rename = "PlayerConditionID")]
+    condition: u32,
+    #[serde(rename = "Field_10_2_5_52206_002")]
+    kind: u32,
+}
+#[derive(Deserialize)]
+struct Tag {
+    #[serde(rename = "ID")]
+    id: u32,
+    #[serde(rename = "TagName_lang")]
+    name: String,
+}
+#[derive(Deserialize)]
+struct TagLink {
+    #[serde(rename = "PerksActivityID")]
+    activity: u32,
+    #[serde(rename = "PerksActivityTagID")]
+    tag: u32,
+}
+
+#[derive(Debug)]
+pub(crate) struct CatalogData {
+    pub activities: Vec<Activity>,
+    pub supported_indices: Vec<usize>,
+    pub supported_roots: BTreeSet<u32>,
+    suggestions: Vec<Suggestion>,
+    pub tags: Vec<PerksActivityTag>,
+    pub activity_tags: BTreeMap<u32, Vec<u32>>,
+    conditions: BTreeMap<u32, ConditionRule>,
+    activity_conditions: BTreeMap<u32, Vec<(u32, u32)>>,
+}
+
+fn read_rows<T: serde::de::DeserializeOwned>(
+    conn: &Connection,
+    table: &str,
+) -> Result<Vec<T>, String> {
+    let mut query = conn
+        .prepare(&format!("SELECT payload FROM {table} ORDER BY ID"))
+        .map_err(|e| format!("{table}: {e}"))?;
+    let rows = query
+        .query_map([], |r| r.get::<_, String>(0))
+        .map_err(|e| e.to_string())?;
+    rows.map(|row| {
+        let json = row.map_err(|e| e.to_string())?;
+        serde_json::from_str(&json).map_err(|e| format!("{table} payload: {e}"))
+    })
+    .collect()
+}
+
+impl CatalogData {
+    pub(super) fn load(
+        conn: &Connection,
+        criteria: &crate::achievement::AchievementCatalog,
+    ) -> Result<Self, String> {
+        let bad: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM adventure_guide_source WHERE build != '12.1.0.69933'",
+                [],
+                |r| r.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if bad != 0 {
+            return Err("Adventure Guide source build differs from pinned 12.1.0.69933".into());
+        }
+        let activities = read_rows::<Activity>(conn, "perks_activity")?;
+        let supported_roots: BTreeSet<_> = activities
+            .iter()
+            .filter(|a| criteria.supports_tree(a.root, &mut BTreeSet::new()))
+            .map(|a| a.root)
+            .collect();
+        let supported_indices = activities
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| supported_roots.contains(&a.root))
+            .map(|(index, _)| index)
+            .collect();
+        let suggestions = read_rows::<Suggestion>(conn, "adventure_journal")?;
+        let gates = read_rows::<ActivityCondition>(conn, "perks_activity_condition")?;
+        let ids: BTreeSet<_> = suggestions
+            .iter()
+            .flat_map(|s| [s.condition, s.bonus0, s.bonus1])
+            .chain(gates.iter().map(|g| g.condition))
+            .collect();
+        let conditions = load_conditions(conn, ids)?;
+        let tags = read_rows::<Tag>(conn, "perks_activity_tag")?
+            .into_iter()
+            .map(|tag| PerksActivityTag {
+                id: tag.id,
+                name: tag.name,
+            })
+            .collect();
+        let mut activity_tags: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
+        for link in read_rows::<TagLink>(conn, "perks_activity_x_tag")? {
+            activity_tags
+                .entry(link.activity)
+                .or_default()
+                .push(link.tag);
+        }
+        let mut activity_conditions: BTreeMap<u32, Vec<(u32, u32)>> = BTreeMap::new();
+        for gate in gates {
+            activity_conditions
+                .entry(gate.activity)
+                .or_default()
+                .push((gate.condition, gate.kind));
+        }
+        Ok(Self {
+            activities,
+            supported_indices,
+            supported_roots,
+            suggestions,
+            tags,
+            activity_tags,
+            conditions,
+            activity_conditions,
+        })
+    }
+    fn condition(&self, id: u32, level: u8) -> Result<bool, String> {
+        if id == 0 {
+            return Ok(true);
+        }
+        let rule = self
+            .conditions
+            .get(&id)
+            .ok_or_else(|| format!("PlayerCondition {id} missing"))?;
+        rule.evaluate(level).map_err(str::to_string)
+    }
+    pub(super) fn activity_eligibility(&self, id: u32, level: u8) -> Result<bool, String> {
+        for &(condition, kind) in self.activity_conditions.get(&id).into_iter().flatten() {
+            if kind != 0 {
+                return Err(format!(
+                    "Activity {id}: unknown source condition kind {kind}"
+                ));
+            }
+            if !self.condition(condition, level)? {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+    pub(super) fn suggestions(&self, level: u8) -> (Vec<AdventureSuggestion>, SuggestionCensus) {
+        let mut census = SuggestionCensus {
+            source_rows: self.suggestions.len() as u32,
+            ..Default::default()
+        };
+        let mut rows: Vec<_> = self.suggestions.iter().collect();
+        rows.sort_by_key(|row| (std::cmp::Reverse(row.priority), row.id));
+        let mut visible = Vec::new();
+        for row in rows {
+            let gates = [row.condition, row.bonus0, row.bonus1].map(|id| self.condition(id, level));
+            if row.flags != 0 || gates.iter().any(Result::is_err) {
+                census.unsupported_conditions += 1;
+                continue;
+            }
+            if !gates[0].as_ref().is_ok_and(|met| *met) {
+                census.failed_conditions += 1;
+                continue;
+            }
+            // Source action0 is display-only. No inferred Quest/RPE/LFG activation.
+            if row.action != 0 {
+                census.unsupported_actions += 1;
+                continue;
+            }
+            visible.push(AdventureSuggestion {
+                id: row.id,
+                name: row.name.clone(),
+                description: row.description.clone(),
+                reward_description: row.reward.clone(),
+                texture_fdid: row.texture,
+                button_text: row.button.clone(),
+            });
+        }
+        (visible, census)
+    }
+}
