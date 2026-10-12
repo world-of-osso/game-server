@@ -8,9 +8,21 @@ fn data() -> PathBuf {
 }
 
 #[test]
-fn legacy_global_wmo_bakes_real_blacksmith_doodad_floors() {
-    let mut baker = Baker::for_m2_floors(&data());
+fn legacy_global_wmo_collects_real_blacksmith_geometry() {
+    let mut baker = Baker::new(&data(), 0.0);
     let geometry = baker.collect_global(952203).unwrap().unwrap();
+    assert!(
+        geometry
+            .iter()
+            .any(|(_, geometry)| !geometry.triangles.is_empty())
+    );
+    assert!(baker.problems.is_empty(), "{:?}", baker.problems);
+}
+
+#[test]
+fn legacy_global_wmo_bakes_real_garrison_doodad_floors() {
+    let mut baker = Baker::for_m2_floors(&data());
+    let geometry = baker.collect_global(926423).unwrap().unwrap();
     assert!(
         geometry
             .iter()
