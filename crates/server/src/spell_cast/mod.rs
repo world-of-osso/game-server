@@ -2268,12 +2268,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
-    if recovery_ms > 0 {
+    if recovery_ms > 0 || (base_recovery_ms > 0 && ready_credit > 0) {
         history
             .spell_ready_at
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
     }
-    if category != 0 && category_ms > 0 {
+    if category != 0 && (category_ms > 0 || (base_category_ms > 0 && ready_credit > 0)) {
         history
             .category_ready_at
             .insert(category, now + category_ms as f64 / 1000.0);
