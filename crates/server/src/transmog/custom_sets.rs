@@ -66,7 +66,12 @@ fn save_set(
 pub(super) fn process_saves(world: &mut World) {
     for (connection, request) in collect_requests::<SaveTransmogCustomSet>(world) {
         let npc = request.npc;
+        let set = request.id;
         let result = save_set(world, connection, request);
+        info!(
+            "transmog custom set save connection={connection} set={set:?} result={:?}",
+            result.as_ref().map(|_| ())
+        );
         outfits::send_save_result(world, connection, npc, result);
     }
 }

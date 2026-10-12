@@ -152,7 +152,12 @@ mod tests {
 pub(super) fn process_saves(world: &mut World) {
     for (connection, request) in collect_requests::<SaveTransmogOutfit>(world) {
         let npc = request.npc;
+        let outfit = request.outfit.id;
         let result = save_outfit(world, connection, request);
+        info!(
+            "transmog outfit save connection={connection} outfit={outfit} result={:?}",
+            result.as_ref().map(|_| ())
+        );
         send_save_result(world, connection, npc, result);
     }
 }
