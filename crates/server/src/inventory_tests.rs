@@ -64,6 +64,7 @@ fn test_templates() -> ItemTemplates {
         .collect(),
         forever: Default::default(),
         loot_need: Default::default(),
+        retail_learning_spells: Default::default(),
     }
 }
 
