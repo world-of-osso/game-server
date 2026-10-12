@@ -107,7 +107,8 @@ fn follow_positions(world: &World, actor: Entity, target: Entity) -> Option<Foll
 
 fn near_point(from: Position, target: Position, reach: f32) -> Position {
     let delta = point(from) - point(target);
-    let direction = Vec3::new(delta.x, 0.0, delta.z).normalize_or_zero();
+    let angle = delta.z.atan2(delta.x);
+    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
     let near = point(target) + direction * reach;
     Position {
         x: near.x,
@@ -160,9 +161,19 @@ fn advance_path(
             reach: 0.0,
         },
     );
-    match result {
+    apply_path_step(world, actor, follow.target, speed, result)
+}
+
+fn apply_path_step(
+    world: &mut World,
+    actor: Entity,
+    target: Entity,
+    speed: f32,
+    step: Step,
+) -> bool {
+    match step {
         Step::Moved { position, reached } => {
-            replicate_step(world, actor, follow.target, position, speed);
+            replicate_step(world, actor, target, position, speed);
             reached
         }
         Step::Unbaked | Step::Blocked => {
