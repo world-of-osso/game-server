@@ -78,7 +78,7 @@ def import_creatures(conn, report, *, map_list=MAPS, base_phase=BASE_PHASE):
         position_z,orientation,spawntimesecs,wander_distance,currentwaypoint,MovementType,unit_flags,ScriptName,
         VerifiedBuild,modelid,spawnDifficulties)
         SELECT guid+{OFFSET},id,map,zoneId,areaId,equipment_id,position_x,position_y,position_z,orientation,
-        spawntimesecs,wander_distance,currentwaypoint,MovementType,COALESCE(unit_flags,0),ScriptName,VerifiedBuild,
+        spawntimesecs,wander_distance,currentwaypoint,MovementType,unit_flags,ScriptName,VerifiedBuild,
         modelid,{retail.SPAWN_DIFFICULTIES} FROM temp.instance_creature
         WHERE id IN (SELECT entry FROM content_creature_template)""")
 
