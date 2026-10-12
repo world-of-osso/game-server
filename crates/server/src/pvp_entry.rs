@@ -47,7 +47,15 @@ pub(super) fn enter_battleground(
         .get::<InMap>(player)
         .ok_or("current map transfer is still pending")?;
     let origin = crate::maps::transfer::current_location(world, player, current.map_id);
+    let dead_arena_entrant = arena.is_some()
+        && world
+            .get::<shared::components::Health>(player)
+            .is_some_and(|health| health.current <= 0.0);
     create_match_map(world, state, match_id)?;
+    // TC BattleGroundHandler.cpp:380-384 resurrects before battlefield port.
+    if dead_arena_entrant {
+        crate::death::resurrect_player_fully(world, player);
+    }
     if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
         return Err("battleground map entry was refused".into());
     }

@@ -977,6 +977,13 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
                 });
         }
     }
+    // Dead entrants are resurrected by the source battlefield-port flow.
+    let dead_entrant = players.last().unwrap().player;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(dead_entrant)
+        .unwrap()
+        .current = 0.0;
     let updates = h.receive_pvp_updates(5);
     let invitations: Vec<_> = players
         .iter()
@@ -1026,6 +1033,19 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
     h.receive_pvp_updates(5);
     let map = h.map_of(&players[0]).unwrap();
     assert!(players.iter().all(|who| h.map_of(who) == Some(map)));
+    let revived = h.app.world().get::<Health>(dead_entrant).unwrap();
+    assert_eq!(
+        revived.current, revived.max,
+        "source battlefield-port full resurrection before preparation"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(dead_entrant)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
     let object_count = |world: &mut World, kind: u8| {
         world
             .query::<(
