@@ -1405,6 +1405,11 @@ fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_retu
 }
 
 #[test]
+fn arena_cage_preparation_keeps_authored_gate_in_observer_visibility() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 2759);
+}
+
+#[test]
 fn arena_dalaran_authored_waterfall_and_pipe_hazards_follow_actual_lifetime() {
     exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 617);
 }
@@ -1490,6 +1495,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         app.insert_resource(spells);
         app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
         app.add_plugins((
+            crate::interest::InterestPlugin,
             crate::pvp::PvpPlugin,
             crate::spell_cast::SpellCastPlugin,
             crate::auras::AuraPlugin,
@@ -1691,6 +1697,33 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         assert!(
             source_gates.iter().any(|(_, actual)| actual == entry),
             "map{map_id} missing source gate{entry}"
+        );
+    }
+    if map_id == 2759 {
+        let position = h.app.world().get::<Position>(players[0].player).unwrap();
+        let gate = source_gates
+            .iter()
+            .min_by(|(a, _), (b, _)| {
+                let distance = |entity| {
+                    let gate = h.app.world().get::<Position>(entity).unwrap();
+                    Vec3::new(
+                        gate.x - position.x,
+                        gate.y - position.y,
+                        gate.z - position.z,
+                    )
+                    .length_squared()
+                };
+                distance(*a).total_cmp(&distance(*b))
+            })
+            .unwrap()
+            .0;
+        assert!(
+            h.app
+                .world()
+                .get::<crate::interest::NetworkVisibility>(gate)
+                .unwrap()
+                .is_visible(players[0].connection),
+            "nearby Cage gate must remain visible through actual32727 preparation"
         );
     }
     for (gate, entry) in &source_gates {

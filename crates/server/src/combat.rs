@@ -553,7 +553,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             .get(target_entity)
             .cloned()
             .unwrap_or_default();
-        if !observer.detects(&target)
+        if !observer.detects(&target, true)
             || !crate::auras::stealth::query_can_detect(
                 &params.stealth,
                 attacker_entity,

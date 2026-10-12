@@ -1,3 +1,7 @@
+## 2026-10-12 — Preparation visibility distinguishes unit targets
+
+[Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
+
 # Wiki Log
 
 - 2026-10-12 — [Toy scaled/state-kit proof](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11): all four actual journal/native scaled identities pass both skins; Sealamp116424 and Spire236744 authored state models/attachment scales start once and disappear with natural180-second actor expiry.21 local assets authenticated;11 scoped core tests/native builds. Prepared320 is not complete-effect certification; remaining native/per-toy boundaries explicit.
