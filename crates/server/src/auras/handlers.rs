@@ -84,6 +84,10 @@ pub const MECHANIC_IMMUNITY: u32 = 77;
 pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
 pub const MOD_ATTACKER_RANGED_HIT_CHANCE: u32 = 185;
 pub const MOD_ATTACKER_SPELL_HIT_CHANCE: u32 = 186;
+/// TC HandleModRating applies integer points to every selected CombatRating.
+pub const MOD_RATING: u32 = 189;
+/// The three versatility ratings share one value in our CombatRatings component.
+pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
@@ -220,6 +224,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
         | MOD_CRIT_PCT
+        | MOD_RATING
         | MASTERY
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE

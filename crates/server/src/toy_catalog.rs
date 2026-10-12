@@ -214,6 +214,10 @@ fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
     if effect.aura == crate::auras::handlers::PERIODIC_DUMMY {
         return crate::auras::periodic_dummy_trigger(world, effect).is_ok();
     }
+    if effect.aura == crate::auras::handlers::MOD_RATING {
+        // Other rating masks need distinct replicated ratings, not a guessed merge.
+        return effect.misc_values[0] == crate::auras::handlers::VERSATILITY_RATING_MASK;
+    }
     if effect.aura == crate::auras::handlers::SCREEN_EFFECT {
         return effect.misc_values[0] > 0;
     }
