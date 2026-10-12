@@ -26,6 +26,7 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
+    LootMoney(u64),
     UseItem(u32),
     UseGameObject(u32),
     KnowSkillLineSpells(u32, u32),
@@ -63,6 +64,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
+            Self::LootMoney(_) => 67,
             Self::UseItem(_) => 41,
             Self::UseGameObject(_) => 68,
             Self::KnowSkillLineSpells(_, _) => 75,
@@ -101,7 +103,8 @@ impl CriteriaEvent {
                 u32::from(level) == criteria.asset
             }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
-            Self::CompleteDailyQuest
+            Self::LootMoney(_)
+            | Self::CompleteDailyQuest
             | Self::OwnUniquePets(_)
             | Self::OwnToys(_)
             | Self::WinPetBattle
@@ -468,6 +471,7 @@ impl AchievementCatalog {
                             | 36
                             | 41
                             | 42
+                            | 67
                             | 68
                             | 69
                             | 73
@@ -516,6 +520,7 @@ impl AchievementCatalog {
             | CriteriaEvent::OwnUniquePets(count)
             | CriteriaEvent::OwnToys(count) => u64::from(count),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
+            CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
             CriteriaEvent::CurrencyGained(_, amount)
             | CriteriaEvent::AcquireItem(_, amount)
             | CriteriaEvent::LootItem(_, amount) => counter.saturating_add(u64::from(amount)),
@@ -802,7 +807,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 14 | 74 | 130 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 14 | 67 | 74 | 130 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

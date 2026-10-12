@@ -285,6 +285,7 @@ impl LootStore<'_> {
         }
         for (character, gold, _) in models {
             self.gold.record(character, gold);
+            self.gold.record_looted_money(character, share);
         }
         Ok(())
     }
@@ -344,9 +345,12 @@ impl LootStore<'_> {
         let gold = model.gold();
         save_inventory_record(db, character_id, &model.into_record());
         self.gold.record(character_id, gold);
-        if let LootContent::Item { item_id, count, .. } = content {
-            self.gold.record_acquisition(character_id, *item_id, *count);
-            self.gold.record_looted_item(character_id, *item_id, *count);
+        match content {
+            LootContent::Item { item_id, count, .. } => {
+                self.gold.record_acquisition(character_id, *item_id, *count);
+                self.gold.record_looted_item(character_id, *item_id, *count);
+            }
+            LootContent::Money { copper } => self.gold.record_looted_money(character_id, *copper),
         }
         Ok(())
     }

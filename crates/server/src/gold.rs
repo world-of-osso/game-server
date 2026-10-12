@@ -26,6 +26,7 @@ pub(crate) struct GoldUpdateQueue {
     changed_inventories: HashSet<u64>,
     acquired_items: Vec<(u64, u32, u32)>,
     looted_items: Vec<(u64, u32, u32)>,
+    looted_money: Vec<(u64, u64)>,
 }
 
 impl GoldUpdateQueue {
@@ -47,6 +48,17 @@ impl GoldUpdateQueue {
     /// A committed loot-slot award, including group rolls, never a vendor/craft/move.
     pub(crate) fn record_looted_item(&mut self, character: u64, item: u32, count: u32) {
         self.looted_items.push((character, item, count));
+    }
+
+    /// Actual committed coin awards, including each member's validated split share.
+    pub(crate) fn record_looted_money(&mut self, character: u64, copper: u64) {
+        if copper != 0 {
+            self.looted_money.push((character, copper));
+        }
+    }
+
+    pub(crate) fn take_looted_money(&mut self) -> Vec<(u64, u64)> {
+        std::mem::take(&mut self.looted_money)
     }
 
     pub(crate) fn take_looted_items(&mut self) -> Vec<(u64, u32, u32)> {
