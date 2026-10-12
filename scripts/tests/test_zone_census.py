@@ -1,5 +1,6 @@
 """Concrete zone attribution and ranked census, including unassigned source rows."""
 import csv
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import sys
@@ -12,7 +13,7 @@ import world_population
 
 class ZoneCensusTest(unittest.TestCase):
     def test_db2_zone_rollup_coordinate_attribution_and_quest_ranking(self):
-        with tempfile.TemporaryDirectory() as directory, sqlite3.connect(":memory:") as db:
+        with tempfile.TemporaryDirectory() as directory, closing(sqlite3.connect(":memory:")) as db:
             root = Path(directory)
             for filename, columns, rows in [
                 ("UiMap.csv", ["ID", "Name_lang", "Type", "System"], [[100, "Coast", 3, 0], [101, "Hills", 3, 0]]),
