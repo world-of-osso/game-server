@@ -230,6 +230,7 @@ fn arena_player_state(
                 preparation_remaining_secs: None,
                 shadow_sight_available: false,
                 units: Vec::new(),
+                rating_changes: Vec::new(),
             }),
         }),
         ..Default::default()
@@ -321,6 +322,17 @@ fn arena_opponents_of_same_race_attack_only_after_preparation_and_never_attack_t
         h.app.world().get::<Health>(h.npc).unwrap().current,
         teammate_health
     );
+}
+
+#[test]
+fn arena_rating_reference_uses_pinned_tc_formula_not_the_retired_elo_simulation() {
+    assert_eq!(arena_rating::rating_delta(0, 1500, true), 48);
+    assert_eq!(arena_rating::rating_delta(0, 1500, false), 0);
+    assert_eq!(arena_rating::rating_delta(1200, 1200, true), 16);
+    assert_eq!(arena_rating::rating_delta(1300, 1300, true), 12);
+    assert_eq!(arena_rating::rating_delta(1500, 1500, false), -12);
+    assert_eq!(arena_rating::matchmaker_delta(1500, 1500, true), 12);
+    assert_eq!(arena_rating::matchmaker_delta(1500, 1500, false), -12);
 }
 
 #[test]

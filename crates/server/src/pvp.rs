@@ -34,6 +34,8 @@ mod arena_lifecycle;
 pub(crate) mod arena_objects;
 #[path = "pvp_arena_preparation.rs"]
 mod arena_preparation;
+#[path = "pvp_arena_rating.rs"]
+mod arena_rating;
 #[path = "pvp_arena_sight.rs"]
 mod arena_sight;
 
