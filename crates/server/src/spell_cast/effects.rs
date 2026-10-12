@@ -708,7 +708,11 @@ fn deal_damage_and_report(
         duel.as_ref(),
         ctx.caster,
         before,
-        health_loss(training_dummy, scaled_loss),
+        crate::combat::limit_unkillable_loss(
+            before,
+            health_loss(training_dummy, scaled_loss),
+            world.get::<crate::combat::Unkillable>(target).is_some() && ctx.caster != target,
+        ),
     );
     let lethal = crate::auras::apply_attack_damage(world, target, loss);
     if loss > 0.0 {

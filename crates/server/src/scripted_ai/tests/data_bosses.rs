@@ -31,7 +31,7 @@ fn bound_boss_at_difficulty(
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
-    templates.retain(|id, _| *id == entry);
+    templates.retain(|id, _| *id == entry || (entry == 234648 && *id == 234660));
     crate::world_data::load_template_models(&conn, &mut templates);
     let hp = conn
         .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
@@ -90,26 +90,7 @@ fn bound_boss_at_difficulty(
         .map;
     app.insert_resource(instances);
     app.insert_resource(maps);
-    let spawn = conn.query_row(
-        "SELECT guid,position_x,position_y,position_z,orientation,spawntimesecs FROM content_creature WHERE id1=? AND map=? ORDER BY guid LIMIT 1",
-        [entry, map_id], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: entry,
-            map: map_id as u16, zone_id: 0, position_x: row.get(1)?, position_y: row.get(2)?,
-            position_z: row.get(3)?, orientation: row.get(4)?, spawntimesecs: row.get(5)?,
-            wander_distance: 0.0, movement_type: 0, display_id: None, unit_flags: None,
-            spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap();
-    let wd = app.world().resource::<WorldData>();
-    let mut queue = bevy::ecs::world::CommandQueue::default();
-    let mut commands = Commands::new(&mut queue, app.world());
-    let boss = crate::zones::spawn_creature(
-        &mut commands,
-        wd,
-        &wd.templates[&entry],
-        map,
-        false,
-        &spawn,
-        &mut rand::thread_rng(),
-    );
-    queue.apply(app.world_mut());
+    let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
     let near = [
         spawn.position_x + 3.0,
         spawn.position_y,
@@ -134,6 +115,69 @@ fn bound_boss_at_difficulty(
     };
     h.advance(0.05);
     (h, boss, map)
+}
+
+fn spawn_authored_actor(
+    app: &mut App,
+    conn: &Connection,
+    entry: u32,
+    map: InMap,
+    difficulty: u32,
+) -> (Entity, CreatureSpawn) {
+    let spawn = conn.query_row(
+        "SELECT guid,position_x,position_y,position_z,orientation,spawntimesecs FROM content_creature WHERE id1=? AND map=? ORDER BY guid LIMIT 1",
+        [entry, map.map_id], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: entry,
+            map: map.map_id as u16, zone_id: 0, position_x: row.get(1)?, position_y: row.get(2)?,
+            position_z: row.get(3)?, orientation: row.get(4)?, spawntimesecs: row.get(5)?,
+            wander_distance: 0.0, movement_type: 0, display_id: None, unit_flags: None,
+            spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap();
+    let wd = app.world().resource::<WorldData>();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    let actor = crate::zones::spawn_creature(
+        &mut commands,
+        wd,
+        &wd.templates[&entry],
+        map,
+        false,
+        &spawn,
+        &mut rand::thread_rng(),
+    );
+    queue.apply(app.world_mut());
+    (actor, spawn)
+}
+
+#[test]
+fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    h.engage(kystia);
+    h.advance(0.1);
+    h.hit_pct(nibbles, 2_000.0);
+    assert_eq!(
+        h.health(nibbles).current,
+        1.0,
+        "TC Nibbles SetUnkillable must clamp a lethal hit"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(nibbles)
+            .is_none()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    assert!(
+        h.inbox(0).ends.is_empty(),
+        "companion damage cannot complete encounter3101"
+    );
 }
 
 #[test]

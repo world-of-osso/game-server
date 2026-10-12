@@ -11,6 +11,7 @@ use super::{CreatureAi, Ctx, instance_script};
 use crate::maps::{InMap, InstanceManager, MapStore};
 
 const SCRIPT: &str = "boss_kystia_manaheart";
+const NIBBLES_SCRIPT: &str = "boss_kystia_manaheart_nibbles";
 const INSTANCE: &str = "instance_murder_row";
 const EVENT_CHAOS_BARRAGE: u32 = 1;
 const EVENT_MIRROR_IMAGES: u32 = 2;
@@ -25,7 +26,7 @@ const SPELL_FELSHIELD: u32 = 1217989;
 const SPELL_ILLICIT_INFUSION_VISUAL: u32 = 1217464;
 
 pub fn is_creature_script(script_name: &str) -> bool {
-    script_name == SCRIPT
+    matches!(script_name, SCRIPT | NIBBLES_SCRIPT)
 }
 
 pub fn creature_ai(
@@ -40,6 +41,9 @@ pub fn creature_ai(
     let store = world.get_resource::<MapStore>()?;
     if store.instance_scripts.get(&map.map_id).map(String::as_str) != Some(INSTANCE) {
         return None;
+    }
+    if script_name == NIBBLES_SCRIPT {
+        return Some(Box::new(Nibbles));
     }
     // Only an authenticated primary-actor binding grants encounter completion.
     let boss = instance_script::bound_boss(world, creature)?;
@@ -93,6 +97,17 @@ fn cast_felshield_stacks(world: &mut World, caster: Entity, stacks: u8) {
 struct KystiaManaheart {
     boss: BossAi,
     heroic: bool,
+}
+
+/// TC's companion constructor sets unkillable; DATA_NIBBLES is not a completion boss.
+struct Nibbles;
+
+impl CreatureAi for Nibbles {
+    fn reset(&mut self, ctx: &mut Ctx) {
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(crate::combat::Unkillable);
+    }
 }
 
 impl BossScript for KystiaManaheart {
