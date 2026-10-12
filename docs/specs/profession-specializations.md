@@ -21,15 +21,20 @@ Profession knowledge, irreversible specialization spending and learned recipes c
 
 - `crates/server/src/spell_info/trait_data.rs`: source trees/conditions/costs and explicit tree-ID loading.
 - `crates/server/src/trait_config.rs`, `trait_config/professions.rs`: shared trait validation with profession-earned progression.
+- `crates/server/src/profession/specializations/{data,state,store,view,runtime}.rs`: source catalog, pure spending/recipe decisions, atomic persistence, owner snapshots and authenticated requests.
+- `crates/server/src/quest_data.rs`, `quest_requests.rs`: source-classified knowledge rewards, written with quest/item/gold rewards in one transaction.
+- `crates/server/src/world_data.rs`, `persistence.rs`, `profession.rs`: mandatory source loading, store initialization and plugin wiring.
 - Shared protocol `profession_messages.rs`: specialization query/commit, node/tree metadata, currency identities and errors.
 
 ## Tests asserting this spec
 
 - `crates/server/src/profession_trait_tests.rs`: source Dragon Isles Leatherworking tree350, achievement15876, wallet9, rooted spending, granted thresholds and irreversible purchases.
+- `crates/server/src/profession/specializations/tests.rs`: real-source views, delta-only spending, recipe375110 acquisition without a craft, quest70191/knowledge2025Qty1, atomic three-part persistence/reopen/abort.
 
 ## Known gaps (current cycle)
 
-- [ ] Request/runtime persistence/acquisition integration and live proof remain open.
+- [ ] Runtime integration tests, actual quest/request boundary proof, and native both-skin proof remain open.
+- [ ] Source-known profession effect/description variables without executable bindings remain explicit gaps; nonzero trait definition spells are learned, not cast, and quality operations remain disabled.
 - [ ] Crafting-quality numeric effects remain gated by the missing authentic operation evaluator; this does not block sourced recipe unlocks.
 
 ## Out of scope
