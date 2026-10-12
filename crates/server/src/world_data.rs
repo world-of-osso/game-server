@@ -79,7 +79,7 @@ pub struct TemplateTuning {
 #[derive(Clone)]
 pub struct CreatureModelInfo {
     pub display_id: u32,
-    /// The selected creature_template_model.DisplayScale, in addition to client DB2 scale.
+    /// Authored creature_template_model.DisplayScale, independent of object and client DB2 scale.
     pub display_scale: f32,
     /// Weight of the model among the template's (`GetRandomValidModel`).
     pub probability: f32,

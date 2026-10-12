@@ -47,6 +47,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
+pub(crate) use unit_state::supports_zero_entry_costume;
 pub use unit_state::{Confused, is_polymorphed};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
@@ -783,6 +784,7 @@ pub(crate) fn apply_aura_with_spell(
         .cloned()
         .expect("aura just stored");
     if kind == CombatLogKind::AuraApplied {
+        crate::quest::record_gain_aura(world, target, spell.id);
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
         }

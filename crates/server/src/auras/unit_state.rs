@@ -101,7 +101,11 @@ fn reconcile_scale(world: &mut World, unit: Entity) {
     let native = world
         .get::<crate::zones::NativeObjectScale>(unit)
         .map_or(1.0, |scale| scale.0);
-    let scale = shared::components::UnitScale((native * (1.0 + points / 100.0)).max(minimum));
+    let object_scale = (native * (1.0 + points / 100.0)).max(minimum);
+    let display_scale = world
+        .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+        .map_or(1.0, |summon| summon.display_scale);
+    let scale = shared::components::UnitScale(object_scale * display_scale);
     if world.get::<shared::components::UnitScale>(unit).copied() == Some(scale) {
         return;
     }
@@ -192,7 +196,7 @@ fn source_display(
     match source {
         DisplaySource::Transform(instance_id) => {
             let entry = transform_entry(auras.get(instance_id)?);
-            transform_display(world, spell_id, entry)
+            transform_display(world, unit, spell_id, entry)
         }
         DisplaySource::Form(instance_id) => {
             let form = super::shapeshift::aura_form(auras.get(instance_id)?)?;
@@ -300,11 +304,20 @@ const UNKNOWN_TEMPLATE_DISPLAY: u32 = 16358;
 /// The display a TRANSFORM aura shows (AuraEffect::HandleAuraTransform,
 /// SpellAuraEffects.cpp:2090-2242): a model of creature template `entry`
 /// (`ObjectMgr::ChooseDisplayId`); the pink pig 16358, with an error, for an entry with no
-/// template. MiscValue 0 changes no display: TrinityCore's per-spell special cases
-/// (Orb of Deception's racial models, Murloc Costume, Corsair Costume, 53806) are not
-/// modelled, and every other spell (Citizen Costume 73815) keeps the current display.
-fn transform_display(world: &World, spell_id: u32, entry: i32) -> Option<u32> {
-    let entry = u32::try_from(entry).ok().filter(|&entry| entry != 0)?;
+/// template. Zero-entry Murloc/Gnomeregan/Darkspear costumes use the exact authored
+/// special cases below; unimplemented zero-entry spells keep their current display.
+fn transform_display(world: &World, unit: Entity, spell_id: u32, entry: i32) -> Option<u32> {
+    if entry == 0 {
+        if spell_id == 42365 {
+            return zero_entry_costume_display(spell_id, 0);
+        }
+        let sex = world
+            .get::<shared::components::Player>(unit)?
+            .appearance
+            .sex;
+        return zero_entry_costume_display(spell_id, sex);
+    }
+    let entry = u32::try_from(entry).ok()?;
     let template = world
         .get_resource::<crate::world_data::WorldData>()?
         .templates
@@ -320,6 +333,22 @@ fn transform_display(world: &World, spell_id: u32, entry: i32) -> Option<u32> {
         template,
         &mut rand::thread_rng(),
     ))
+}
+
+/// TC a352b1fa HandleAuraTransform: native sex, not the currently transformed model.
+fn zero_entry_costume_display(spell_id: u32, sex: u8) -> Option<u32> {
+    match (spell_id, sex) {
+        (42365, _) => Some(21723),
+        (75531, 0) => Some(31654),
+        (75531, 1) => Some(31655),
+        (75532, 0) => Some(31737),
+        (75532, 1) => Some(31738),
+        _ => None,
+    }
+}
+
+pub(crate) fn supports_zero_entry_costume(spell_id: u32) -> bool {
+    zero_entry_costume_display(spell_id, 0).is_some()
 }
 
 /// The first MOD_UNATTACKABLE aura sets the flag, the last one's removal clears it.

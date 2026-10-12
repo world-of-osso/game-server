@@ -177,7 +177,8 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
       FROM item_x_item_effect x JOIN item_effect e ON e.ID = x.ItemEffectID \
       WHERE e.SpellID > 0 AND (e.TriggerType = 0 OR (e.TriggerType = 6 AND EXISTS \
       (SELECT 1 FROM spell_effect pet WHERE pet.SpellID = e.SpellID AND pet.Effect = 28 \
-       AND pet.EffectMiscValue_1 = 3221)))) u ON u.ItemID = c.ID AND u.slot = 1";
+       AND pet.EffectMiscValue_1 = 3221) OR EXISTS \
+      (SELECT 1 FROM mount m WHERE m.SourceSpellID = e.SpellID)))) u ON u.ItemID = c.ID AND u.slot = 1";
 const FIRST_STAT_COLUMN: usize = 16;
 const APPEARANCE_COLUMN: usize = FIRST_STAT_COLUMN + 10 * 3;
 
@@ -223,6 +224,14 @@ fn on_use_from_row(row: &Row) -> rusqlite::Result<Option<OnUseSpell>> {
 fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
     let low: i64 = row.get(6)?;
     let high: i64 = row.get(7)?;
+    let scaling = scaling_from_row(row)?;
+    // Retail ITEM_CLASS_MISCELLANEOUS / ITEM_SUBCLASS_MISCELLANEOUS_MOUNT.
+    // Mount items are collection unlocks, never appearance-bearing equipment.
+    let appearance_id = if scaling.class_id == 15 && scaling.subclass_id == 5 {
+        None
+    } else {
+        row.get(APPEARANCE_COLUMN)?
+    };
     let template = ItemTemplate {
         inventory_type: row.get(1)?,
         max_stack: row.get::<_, i64>(2)?.clamp(1, i64::from(u32::MAX)) as u32,
@@ -230,8 +239,8 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         required_level: row.get(4)?,
         allowable_class: row.get(5)?,
         allowable_race: (u64::from(high as u32) << 32) | u64::from(low as u32),
-        scaling: scaling_from_row(row)?,
-        appearance_id: row.get(APPEARANCE_COLUMN)?,
+        scaling,
+        appearance_id,
         on_use: on_use_from_row(row)?,
         container_slots: row.get(APPEARANCE_COLUMN + 5)?,
         bag_family: row.get(APPEARANCE_COLUMN + 6)?,

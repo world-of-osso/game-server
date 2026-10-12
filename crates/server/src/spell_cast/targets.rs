@@ -253,7 +253,7 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
     let attackable = world
         .get::<shared::components::UnitFlags>(target_entity)
-        .is_none_or(|flags| flags.is_attackable());
+        .is_none_or(|flags| flags.can_be_attacked_by(caster.is_player));
     match relation {
         Relation::Enemy => attackable && (dueling || templates.can_attack(caster, target)),
         _ => !dueling && templates.can_assist(caster, target),
