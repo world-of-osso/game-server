@@ -164,14 +164,20 @@ fn encounter_coverage_kystia_mirror_tick_spawns_authored_copy_in_the_same_instan
         max: 1_000_000_000.0,
     });
     h.engage(kystia);
-    h.advance(14.7);
-    assert!(h.has_aura(kystia, 1264095));
+    h.advance(14.4);
+    assert!(!h.has_aura(kystia, 1264095));
     assert!(h.creatures_of(255050).is_empty());
-    h.advance(2.2);
+    h.advance(0.3);
+    assert!(h.has_aura(kystia, 1264095));
+    // Local DB2 Attributes5/0x200 requests an extra tick on apply; subsequent
+    // effect0 ticks are1500ms. Do not invent a2-second initial wait.
+    assert_eq!(h.creatures_of(255050).len(), 1);
+    h.advance(1.6);
     let mirrors = h.creatures_of(255050);
-    assert!(
-        !mirrors.is_empty(),
-        "sourced Mirror Images periodic23 callback must summon255050"
+    assert_eq!(
+        mirrors.len(),
+        2,
+        "initial plus authored1500ms periodic tick"
     );
     let center = *h.app.world().get::<Position>(kystia).unwrap();
     for mirror in mirrors {
