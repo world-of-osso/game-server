@@ -113,6 +113,7 @@ fn handle(
             duration_hours,
             note,
         } => {
+            require_customer_service(world, player)?;
             let skill = world
                 .resource::<super::catalog::OrderCatalog>()
                 .0
@@ -156,11 +157,26 @@ fn handle(
             Ok("Craft started".into())
         }
         CraftingOrderRequest::Cancel { order_id } => {
+            require_customer_service(world, player)?;
             rules::cancel(world, player, order_id, now)?;
             mail_changed(world, rules::character(world, player)?);
             Ok("Order refunded".into())
         }
     }
+}
+
+fn require_customer_service(world: &mut World, player: Entity) -> Result<(), String> {
+    let mut sessions = world.query::<(&PlayerLink, &crate::npc_interaction::ActiveInteraction)>();
+    let broker = sessions
+        .iter(world)
+        .find(|(link, active)| {
+            link.0 == player && active.role == Some(shared::protocol::NpcRole::CraftingOrders)
+        })
+        .map(|(_, active)| active.npc)
+        .ok_or("Open the crafting order broker before changing customer orders")?;
+    crate::npc_interaction::find_interactable_crafting_broker(world, player, broker)
+        .map_err(|error| error.message().to_string())?;
+    Ok(())
 }
 
 pub(crate) fn mail_changed(world: &mut World, id: u64) {

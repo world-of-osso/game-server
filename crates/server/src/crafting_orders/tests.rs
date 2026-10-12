@@ -416,7 +416,7 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
             supplied: reagent.quantity,
         })
         .collect();
-    h.send::<Request, ProfessionChannel>(Request::Place {
+    let place = Request::Place {
         spell_id: RECIPE,
         kind: Kind::Public,
         recipient: None,
@@ -424,7 +424,57 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
         reagents,
         duration_hours: 12,
         note: "Wire order".into(),
-    });
+    };
+    let before =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id);
+    h.send::<Request, ProfessionChannel>(place.clone());
+    assert!(h.take::<Reply>().pop().unwrap().error.is_some());
+    assert_eq!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id),
+        before
+    );
+    let (name, flags, faction): (String, u64, u32) = h
+        .conn
+        .query_row(
+            "SELECT name,npcflag,faction FROM tdb_creature_template WHERE entry=215258",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.player)
+        .unwrap();
+    let broker = h
+        .app
+        .world_mut()
+        .spawn((
+            shared::components::Npc {
+                template_id: 215258,
+                name,
+            },
+            shared::protocol::NpcFlags(flags),
+            position,
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::UnitFactionTemplate(faction),
+        ))
+        .id();
+    h.send::<shared::protocol::InteractNpc, shared::protocol::InteractionChannel>(
+        shared::protocol::InteractNpc {
+            npc: broker.to_bits(),
+        },
+    );
+    h.send::<shared::protocol::SelectGossipOption, shared::protocol::InteractionChannel>(
+        shared::protocol::SelectGossipOption {
+            npc: broker.to_bits(),
+            option_id: 0,
+        },
+    );
+    h.send::<Request, ProfessionChannel>(place);
     let reply = h.take::<Reply>().pop().unwrap();
     assert!(reply.error.is_none(), "{:?}", reply.error);
     let order = reply.snapshot.unwrap().orders.pop().unwrap();
