@@ -177,6 +177,25 @@ Six controls now pass: base/stat ordering with actual incoming physical damage, 
 
 Logs: `bonus-armor-{red,green,controls-red,controls-green}.log`, `bonus-armor-adjacent-*.log`. No new live proof. Batch24 at `dfc71656` records all7827 memberships:2965 working/4680 partial/182 broken. All31 changed memberships belong to the four zero-valued class armor fields; nonzero shared behavior is separately proved by native positive/negative controls.
 
+## Zero-amount linked auras — batch25
+
+Pinned TC a352b1fa HandleAuraLinked (SpellAuraEffects.cpp5299–5335) serves284 and285: zero amounts leave child values authored, child target requirements/channel-provided unit masks select the caster, reapplication synchronizes stacks without recasting, and removal selects the child by caster. NeedsToBeTriggeredByCaster (SpellInfo.cpp1721–1754) fixes original-caster versus recipient ownership. Linked casts retain active hit depth rather than resetting recursion limits.
+
+`37a22263` genuine RED3: Ironfur192081 retained8 instead of13 mastery points and declared child auras were absent. The earlier fixed-stat harness could not prove the mastery delta and is superseded. `3cbd7d4e` implements zero-amount links. At `3062ed26`, seven controls pass: native1251877 mastery5, recipient/original-caster ownership, native96493/96494 stack and clock preservation, channel98979/98973 caster selection, parent expiry, foreign replacement preservation, depth-limit exclusion and nonzero-conflict exclusion. Selected native aura effects are tested at production application/hit boundaries, not full-ability certification.
+
+Nonzero285 fields stay explicit source gaps. Pinned TC would overwrite child basepoint0 with the parent amount; no newer approved source resolves changed signs/magnitudes. Runtime retains285 warning receipts; the source analyzer certifies only zero-valued native linked indexes.
+
+| Parent→child | Parent amount | Native child basepoint0 | Pinned copy result / retained boundary |
+|---|---:|---:|---|
+|371905→400734 After the Wildfire|3|10|3; child Dummy magnitude replaced, action uncertified|
+|388491→388496 Secret Infusion|4|0|4; child Dummy action uncertified|
+|388511→388512 Overflowing Mists|2|0|2; proc/heal semantics uncertified|
+|392221→392223 Waking Dream|8|−1000|+8; negative cast-time modifier becomes positive|
+|471492→471491 Ursol's Warding|10|−1|+10; damage-taken reduction becomes an increase|
+|427775→1224451 A Fire Inside|1|1|1; no numeric conflict, but nonzero linkage/child226 remain outside this zero-amount proof|
+
+Adjacent Unending Resolve2, stats/itemstats21, Chrono6 and Blooming8 pass. Logs: `linked-aura-{red2,green,controls}.log`, `linked-aura-adjacent-*.log`; exact native rows in `linked-aura-native-effects.json`. No new live proof; full census pending. Existing child/script/proc gaps remain, not marker no-ops.
+
 ## Retained boundaries
 
 At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. The earlier Monk evidence is retained in the completed representative gate above; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
