@@ -60,6 +60,8 @@ enum Selector {
     AreaAroundDest(Relation),
     ///8 UNIT_DEST_AREA_ENTRY, filtered by actual implicit target conditions.
     AreaEntryAtDest,
+    ///38 UNIT_NEARBY_ENTRY: nearest qualifying unit in the spell's range.
+    NearbyEntry,
     /// Area center = the explicit target's position, the radius behind it.
     DestTargetBack,
     /// The caster's channel target.
@@ -106,6 +108,7 @@ fn selector(id: u32) -> Option<Selector> {
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
         8 => Selector::AreaEntryAtDest,
+        38 => Selector::NearbyEntry,
         28 => Selector::DynObj(Enemy),
         29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
@@ -392,6 +395,10 @@ pub fn select_targets(
                     radius(effect, slot),
                 ));
             }
+            Selector::NearbyEntry => {
+                selected_any = true;
+                units.extend(nearby_entry_unit(world, caster, spell, effect));
+            }
             Selector::AreaEntryAtDest => {
                 selected_any = true;
                 let dest = center
@@ -429,6 +436,24 @@ pub fn select_targets(
     }
     units.dedup();
     Ok(units)
+}
+
+fn nearby_entry_unit(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> Option<Entity> {
+    let negative = crate::spell_info::positivity::negative_effects(
+        world.resource::<crate::spell_info::SpellStore>(),
+        spell,
+    );
+    let range = spell_range(spell, negative != 0).1;
+    let origin = position(world, caster)?;
+    let candidates = area_units(world, caster, origin, range, Relation::Any, 0);
+    filter_entry_targets(world, candidates, spell.id, effect.index, 1)
+        .into_iter()
+        .next()
 }
 
 fn filter_entry_targets(

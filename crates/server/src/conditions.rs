@@ -5,9 +5,9 @@
 //! implicit target search the condition filters (`addToSpellImplicitTargetConditions`).
 //! A unit meets an effect's list when every condition of one `ElseGroup` holds
 //! (`IsObjectMeetToConditionList`), each negated by `NegativeCondition`; an effect
-//! without conditions takes every unit. Of the condition types only
-//! `CONDITION_OBJECT_ENTRY_GUID` (31) without a spawn id is modelled: any other
-//! condition is unmet, and is reported when loaded.
+//! without conditions takes every unit. Object-entry conditions (current51 and
+//! source-supported legacy31) without a spawn id are modelled for units/players;
+//! other conditions are unmet and reported when loaded.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -19,10 +19,13 @@ use shared::components::{Npc, Player};
 /// `CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET`.
 const SOURCE_SPELL_IMPLICIT_TARGET: u32 = 13;
 /// `CONDITION_OBJECT_ENTRY_GUID`.
-const CONDITION_OBJECT_ENTRY_GUID: u32 = 31;
+const CONDITION_OBJECT_ENTRY_GUID: u32 = 51;
+const CONDITION_OBJECT_ENTRY_GUID_LEGACY: u32 = 31;
 /// `TypeID` values `CONDITION_OBJECT_ENTRY_GUID` compares (ObjectGuid.h).
-const TYPEID_UNIT: u32 = 3;
-const TYPEID_PLAYER: u32 = 4;
+const TYPEID_UNIT: u32 = 5;
+const TYPEID_PLAYER: u32 = 6;
+const LEGACY_TYPEID_UNIT: u32 = 3;
+const LEGACY_TYPEID_PLAYER: u32 = 4;
 
 #[derive(Debug, Clone, PartialEq)]
 enum Check {
@@ -80,6 +83,21 @@ fn condition_meets(world: &World, check: &Check, unit: Entity) -> bool {
     }
 }
 
+/// ConditionMgr converts legacy TypeIDs before matching current ObjectGuid types.
+fn decode_object_entry(kind: i64, type_id: u32, entry: u32) -> Check {
+    let current_type = match (kind as u32, type_id) {
+        (CONDITION_OBJECT_ENTRY_GUID, TYPEID_UNIT)
+        | (CONDITION_OBJECT_ENTRY_GUID_LEGACY, LEGACY_TYPEID_UNIT) => TYPEID_UNIT,
+        (CONDITION_OBJECT_ENTRY_GUID, TYPEID_PLAYER)
+        | (CONDITION_OBJECT_ENTRY_GUID_LEGACY, LEGACY_TYPEID_PLAYER) => TYPEID_PLAYER,
+        _ => return Check::Unsupported,
+    };
+    Check::ObjectEntry {
+        type_id: current_type,
+        entry,
+    }
+}
+
 const CONDITION_QUERY: &str = "SELECT SourceEntry, SourceGroup, ElseGroup, ConditionTypeOrReference, \
      ConditionTarget, ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition \
      FROM tdb_conditions WHERE SourceTypeOrReferenceId = ?1 \
@@ -105,16 +123,14 @@ pub(crate) fn load_spell_target_conditions(path: &Path) -> rusqlite::Result<Spel
     for row in rows {
         let (spell, effect_mask, else_group, kind, target, [value1, value2, value3], negative) =
             row?;
-        let check = if kind == i64::from(CONDITION_OBJECT_ENTRY_GUID) && target == 0 && value3 == 0
-        {
-            Check::ObjectEntry {
-                type_id: value1,
-                entry: value2,
-            }
+        let check = if target == 0 && value3 == 0 {
+            decode_object_entry(kind, value1, value2)
         } else {
-            unsupported += 1;
             Check::Unsupported
         };
+        if check == Check::Unsupported {
+            unsupported += 1;
+        }
         for effect_index in (0..32u8).filter(|index| effect_mask & (1 << index) != 0) {
             conditions
                 .0

@@ -74,6 +74,8 @@ Molten Gold's gameplay area reads the actual TDB12928 static sphere (radius5/5, 
 
 Lucre's Call265923 local effect164 uses the same pinned `EffectRemoveAura` as203, removing TriggerSpell265915. Target8 selects living units around its authored destination in the caster's copy, applying actual implicit conditions before its target cap. Current local TDB has no265923 implicit conditions; no Animated-Gold-only condition is invented. Source SpellHit/follow/absorption still require separate behavioral proof.
 
+Luster265991 uses target38 UNIT_NEARBY_ENTRY, not an explicit boss override. Selection searches the spell's positivity-selected range in the caster's copy, filters actual implicit conditions, then takes the nearest qualifying unit. Its real TDB condition is current51/TypeID5/entry135322; ConditionMgr converts legacy31 TypeIDs before matching current51 types. The loader now recognizes both authored encodings for units/players, retaining unsupported-condition refusal. Unit-center search shares the existing selector geometry; bounding-radius edge equivalence and no-candidate cast-result equivalence remain unproven. This prerequisite does not itself implement absorption or certify Golden Serpent.
+
 Private map1762 preparation uses its actual WDT1660008 and existing local terrain/WMO/M2 assets. Existing LOS/nav bakers produced25 tiles each with zero missing inputs under engine-s10 owned diagnostics `encounter-coverage-2026-10-12/golden-navigation/`; no canonical publication. This removes the private input-bake blocker, not the follow implementation/native acceptance boundary.
 
 ## Wailing Caverns — Lord Cobrahn (2026-10-11)
