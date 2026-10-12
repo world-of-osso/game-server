@@ -63,5 +63,41 @@ class ArenaContentTest(unittest.TestCase):
             self.assertEqual(db.execute('SELECT id,map,spawnDifficulties,position_x FROM content_gameobject WHERE map=572 ORDER BY id').fetchall(),[(185917,572,'0',1278.65),(185918,572,'0',1294.94)])
 
 
+class DalaranSpoutImportTest(unittest.TestCase):
+    def test_only_source_functional_spouts_and_their_flags_models_are_promoted(self):
+        spec = importlib.util.spec_from_file_location('arena_spouts', SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with sqlite3.connect(':memory:') as db:
+            db.executescript('''
+                CREATE TABLE arena_map(map_id INTEGER); INSERT INTO arena_map VALUES(617);
+                CREATE TABLE tdb_creature(guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,StringId TEXT,terrainSwapMap INTEGER,phaseUseFlags INTEGER,PhaseId INTEGER,PhaseGroup INTEGER);
+                INSERT INTO tdb_creature VALUES
+                (2000002,28567,617,1369.98,817.288,16.0872,'arena_dalaran_sewers_water_spout_pipe',-1,0,0,0),
+                (2000004,28567,617,1292.59,790.221,7.19796,'arena_dalaran_sewers_water_spout_center',-1,0,0,0),
+                (2000005,28567,617,1212.83,765.387,16.0948,'arena_dalaran_sewers_water_spout_pipe',-1,0,0,0),
+                (7,15214,617,1,2,3,'decorative',-1,0,0,0);
+                CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL);
+                INSERT INTO content_creature VALUES(123,456,0,5,6,7),(124,15214,617,1,2,3);
+                CREATE TABLE tdb_creature_template(entry INTEGER PRIMARY KEY,name TEXT,unit_flags INTEGER);
+                INSERT INTO tdb_creature_template VALUES(28567,'Water Spout',33817344);
+                CREATE TABLE content_creature_template(entry INTEGER PRIMARY KEY,name TEXT,unit_flags INTEGER);
+                INSERT INTO content_creature_template VALUES(28567,'Water Spout',0),(456,'Keep this',99);
+                CREATE TABLE tdb_creature_template_model(CreatureID INTEGER,Idx INTEGER,CreatureDisplayID INTEGER,DisplayScale REAL,Probability REAL,VerifiedBuild INTEGER);
+                INSERT INTO tdb_creature_template_model VALUES(28567,0,169,1,0,69497),(28567,1,11686,1,1,69497);
+                CREATE TABLE content_creature_template_model(CreatureID INTEGER,Idx INTEGER,CreatureDisplayID INTEGER,DisplayScale REAL,Probability REAL,VerifiedBuild INTEGER);
+                INSERT INTO content_creature_template_model VALUES(456,0,99,1,1,1);
+            ''')
+            self.assertEqual(module.import_spouts(db), 3)
+            self.assertEqual(module.promote_dalaran_spouts(db), 3)
+            self.assertEqual(db.execute('SELECT * FROM content_creature WHERE guid IN(123,124) ORDER BY guid').fetchall(), [(123,456,0,5,6,7),(124,15214,617,1,2,3)])
+            self.assertEqual(db.execute('SELECT guid,id1,position_z FROM content_creature WHERE id1=28567 ORDER BY guid').fetchall(), [(22000002,28567,16.0872),(22000004,28567,7.19796),(22000005,28567,16.0948)])
+            self.assertEqual(db.execute('SELECT unit_flags FROM content_creature_template WHERE entry=28567').fetchone()[0], 33817344)
+            self.assertEqual(db.execute('SELECT CreatureDisplayID,Probability FROM content_creature_template_model WHERE CreatureID=28567 ORDER BY Idx').fetchall(), [(169,0),(11686,1)])
+            self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=456').fetchall(), [(456,0,99,1,1,1)])
+            self.assertEqual(module.promote_dalaran_spouts(db), 3)
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE id1=28567').fetchone()[0], 3)
+
+
 if __name__ == '__main__':
     unittest.main()

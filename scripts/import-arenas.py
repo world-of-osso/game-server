@@ -56,6 +56,42 @@ def import_gates(db, source):
     return len(gates)
 
 
+def import_spouts(db):
+    from import_instance_population import BASE_PHASE
+    from retail_content import RETAIL_GUID_OFFSET
+    rows = []
+    if db.execute('SELECT 1 FROM arena_map WHERE map_id=617').fetchone():
+        rows = db.execute(f'''SELECT guid+{RETAIL_GUID_OFFSET},map,id,StringId FROM tdb_creature
+            WHERE map=617 AND id=28567 AND {BASE_PHASE}
+            AND StringId IN('arena_dalaran_sewers_water_spout_pipe','arena_dalaran_sewers_water_spout_center')''').fetchall()
+    with db:
+        db.execute('CREATE TABLE IF NOT EXISTS arena_spout(guid INTEGER PRIMARY KEY,map_id INTEGER,entry INTEGER,string_id TEXT)')
+        db.execute('DELETE FROM arena_spout')
+        db.executemany('INSERT INTO arena_spout VALUES(?,?,?,?)', rows)
+    return len(rows)
+
+
+def promote_dalaran_spouts(db):
+    from retail_content import RETAIL_GUID_OFFSET
+    if not db.execute('SELECT 1 FROM arena_map WHERE map_id=617').fetchone():
+        return 0
+    source_columns = {row[1] for row in db.execute('PRAGMA table_info(tdb_creature)')}
+    columns = [row[1] for row in db.execute('PRAGMA table_info(content_creature)') if row[1] in source_columns or row[1]=='id1']
+    names = ','.join(f'"{column}"' for column in columns)
+    values = ','.join(f'g.guid+{RETAIL_GUID_OFFSET}' if column=='guid' else 'g.id' if column=='id1' else f'g."{column}"' for column in columns)
+    template_source = {row[1] for row in db.execute('PRAGMA table_info(tdb_creature_template)')}
+    template_columns = [row[1] for row in db.execute('PRAGMA table_info(content_creature_template)') if row[1] in template_source and row[1]!='entry']
+    assignments = ','.join(f'"{column}"=(SELECT "{column}" FROM tdb_creature_template WHERE entry=28567)' for column in template_columns)
+    with db:
+        db.execute('DELETE FROM content_creature WHERE map=617 AND id1=28567')
+        db.execute(f'INSERT INTO content_creature({names}) SELECT {values} FROM tdb_creature g JOIN arena_spout s ON s.guid=g.guid+{RETAIL_GUID_OFFSET}')
+        # Derived level/tuning columns stay in the existing Retail catalog; literal TDB flags/models replace legacy ones.
+        db.execute(f'UPDATE content_creature_template SET {assignments} WHERE entry=28567')
+        db.execute('DELETE FROM content_creature_template_model WHERE CreatureID=28567')
+        db.execute('INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=28567')
+    return db.execute('SELECT count(*) FROM content_creature WHERE map=617 AND id1=28567').fetchone()[0]
+
+
 def promote_content(db):
     from import_instance_population import BASE_PHASE
     from retail_content import RETAIL_GUID_OFFSET
@@ -77,7 +113,7 @@ def promote_content(db):
         db.execute(f'INSERT INTO content_gameobject({columns}) SELECT {values} FROM arena_source_objects')
         count = db.execute('SELECT count(*) FROM arena_source_objects').fetchone()[0]
         db.execute('DROP TABLE arena_source_objects')
-    return {'gameobjects': count}
+    return {'gameobjects': count, 'functional_spouts': promote_dalaran_spouts(db)}
 
 
 def main():
@@ -92,6 +128,7 @@ def main():
         print(f'Imported {import_catalog(db, args.battlemaster, available)} source-backed arenas')
         gates = import_gates(db, Path(__file__).parent / 'reference/arena-12.1.0.69933/arena-gates.json')
         print(f'Imported {gates} source-backed gate entries')
+        print(f'Imported {import_spouts(db)} source-backed Dalaran spout identities')
         if args.promote:
             print(json.dumps(promote_content(db), sort_keys=True))
 
