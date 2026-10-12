@@ -4,6 +4,16 @@ Player mounts cast as spells (Retail "Steady Flight" and Skyriding flight physic
 
 ## Content
 
+### Mount Journal
+
+Contract: [Mount Journal authority](../../specs/mount-journal.md). `mount_journal.rs` reads authentic Mount/ItemEffect/creature/vehicle/capability joins; `persistence_mounts.rs` stores Mount ID→favourite outside frozen character serialization. Direct learn items and inventory consumption commit atomically. Existing profession/class learned source spells add ownership; cast validation consults the account collection without injecting fake class spells.
+
+One exclusive Update step initializes accounts, publishes context changes, then handles favourite/summon/random/dismiss requests. Auth can apply deferred InWorld/PlayerLink before or after that step, but no journal reader runs before initialization. Both the original PostUpdate publication crash and an early world-entry request crash were reproduced by file-backed/HostClient regressions; initialization/publication/request orchestration now shares that boundary. HostClient delivers in Last, so tests observe the initial update before next-frame clearing.
+
+Summon uses `cast_for_player`, and dismount uses `cancel_mount_aura`; existing riding/area/flight rules remain authoritative. Random candidates are owned usable favourites. Authored visibility flags and capability/positive-swim/FlightCapability/non-control passenger-seat categories are transmitted to the native journal; these categories are data-derived, not a claim of unpublished client classification parity.
+
+Verified2026-10-11: durable account/item tests and five journal transport/cast/boundary tests pass. Native both-skin acceptance remains open in the contract. World.db is read-only; existing1694 mount rows need no new import.
+
 ### Data
 
 `world.db` gets the Retail DB2 tables `mount`, `mount_capability`, `mount_type_x_capability` and `mount_x_display` (`scripts/db2.py`; run `python3 scripts/db2.py fetch && python3 scripts/db2.py import` to add them to an existing `world.db`). `MountStore` loads them at startup with the aura spell part of the PlayerConditions they name.
