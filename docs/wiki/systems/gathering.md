@@ -1,6 +1,6 @@
 # Gathering
 
-Verified: 2026-10-11, gathering-nodes branch; native Classic baseline proved, not merged into master. The [contract](../../specs/gathering.md) owns requirements and lead-owned import instructions. Existing profession, cast, loot and spawn-pool systems carry this loop; no parallel crafting subsystem.
+Verified: 2026-10-11. Gathering is present on master; native Classic baseline proof is scoped below. The [contract](../../specs/gathering.md) owns requirements and lead-owned import instructions. Existing profession, cast, loot and spawn-pool systems carry this loop; no parallel crafting subsystem.
 
 ## Representation and wiring
 
@@ -9,6 +9,10 @@ Verified: 2026-10-11, gathering-nodes branch; native Classic baseline proved, no
 - Cast target validation admits the authored GO/dead corpse while retaining normal caster/cost/movement/cooldown handling. Completion revalidates before loot/skill mutation; unclaimed player item-loot blocks another gather.
 - Existing `LootTables` reference/group/chance/count processing rolls GO and skin templates. Existing personal item-loot window/store handles collection. `Learner::gather_skill_up` follows pinned TC thresholds/default chances and existing changed-state persistence/snapshots.
 - GO pool selections initialize with creature pools; pooled node respawn re-picks the authored group, including child-pool changes. Depletion retains the shared node for Data6 delay; positive authored spawn timers schedule respawn. Missing ability/timer mappings report gaps, not fabricated resources.
+
+## Instance-entry pool ordering
+
+Wailing Caverns43 entry on private UDP5896 reproduced a panic at `gathering/mod.rs:104` while processing real `WorldPortAck`. `spawn_map_content` queued game-object gathering nodes before creature spawning queued that copy's `PoolSpawns` state. Continental startup already used the opposite order. A follow-up reproduced the same panic during `SelectCharacter` for a character saved inside43: login had its own reversed producer order. Login and world-port now share `queue_map_content`, queuing creature/pool initialization before game objects. Pool selection still initializes when a map has no NPC population index. The node invariant remains strict, with no assertion softening or alternate selection path. The real-data transfer regression creates two independent copies; the persisted-character login regression reopens redb into fresh server apps, with and without an NPC index. Both compare actual spawned node GUIDs with the copy's authored pool selection. Teleport/summon arrivals and reset/recreated copies use world-port; battleground entry uses its same content producer. Continental startup explicitly orders game objects after creature/pool initialization.
 
 ## Corpse loot readiness
 
