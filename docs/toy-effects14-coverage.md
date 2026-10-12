@@ -33,7 +33,7 @@ Of273 remaining aura4 toy identities,96 roots have the unchanged complete-zero d
 |230727|467285|Explosive Victory aura art /1800000|
 |259240|1264653|Held wine glass and toast animation /300000|
 
-All12 retain zero base/misc/trigger/item/mechanic fields and caster targeting1. The full aura/visual/event/kit/attachment/effect-name records are `aura4-selected-source.json`; all other96-shape candidate records retained in `aura4-excluded-source.json`. Types used2/5/6; native runtime already implements them. No source renderer type1/procedural17, GenericID, Positioner or conditional viewer choice is claimed. RED actual108743 UseToy refuses aura4; GREEN/census/live pending.
+All12 retain zero base/misc/trigger/item/mechanic fields and caster targeting1. The full aura/visual/event/kit/attachment/effect-name records are `aura4-selected-source.json`; all other96-shape candidate records retained in `aura4-excluded-source.json`. Types used2/5/6; native runtime already implements them. No source renderer type1/procedural17, GenericID, Positioner or conditional viewer choice is claimed. RED actual108743 UseToy refuses aura4. GREEN1 exercises all12 real bag learn/UseToy/SpellGo/exact lifetimes/cancel, unchanged health/global model and no actors;182.74s. Re-census295→307,zero removals. Private5911 actual Blazing Wings116115/170869 source519369 wing model applies/removes with unchanged native player in both skins; wing PNGs visually inspected. Native closure277files all locally present,208model assets authenticated against frozen69933 source;69Oggs separately content-key/SHA verified. Audible output not certified. No generic dummy/no-op executor; not a claim all12 toys have per-toy rendered proof.
 
 ## Remaining mechanic incidence
 
