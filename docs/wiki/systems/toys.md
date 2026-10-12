@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Linked cooking traps (2026-10-12)
+
+Source-limited `game_objects::cooking_traps` loads31442 plus addon35, spawns a separate unowned trap at its summoned focus and routes7353 through ordinary triggered spell selection. Environmental activation searches living same-map players within diameter/2 plus scaled combat reach; the spell independently selects10yd allies. Charges0 repeat at the source TC default4s. Parent expiry/removal despawns the linked trap before another refresh. The snapshotted versatility aura keeps its60s duration even after its GO caster disappears; rating-only snapshot retention fixes the observed unconditional casterless-removal failure without claiming other aura/source combinations.
+
+[Exact seven identities, source capsule, RED/GREEN, census337 and representative both-skin proof](../../toy-effects14-coverage.md#linked-cooking-traps-2026-10-12). Leylight253080 missing source metadata and Akunda's Firesticks163211 multi-object chain remain separate; no generic trap or extra focus-field admission.
+
 ## Toy-effects14 ordinary caster visual kits (2026-10-11)
 
 Largest remaining group is aura4(273 distinct toys). Complete source audit separates96 zero-shaped bound roots from27 ordinary-model native kit chains, then12 explicit caster-only cosmetic contracts. The unchanged complete-zero predicate admits those12 source-bound spells; it does not accept arbitrary dummy auras. Models/animations/sounds use existing native kit types2/5/6, with no procedural, positioner or conditional payload asserted. Real bag learning/UseToy, exact replicated lifetimes, cancellation and unchanged health/global models are tested. [Exact12 identities/source/gaps](../../toy-effects14-coverage.md#batch3-highest-count-aura4-complete-ordinary-model-caster-kits).
