@@ -389,14 +389,8 @@ pub fn select_targets(
             Selector::AreaAroundSrc(relation) => {
                 selected_any = true;
                 let src = center.unwrap_or(caster_pos);
-                units.extend(area_units(
-                    world,
-                    caster,
-                    src,
-                    radius(effect, slot),
-                    relation,
-                    max_targets,
-                ));
+                let candidates = area_units(world, caster, src, radius(effect, slot), relation, 0);
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
             }
             Selector::ConeToDest | Selector::LineToDest => {
                 selected_any = true;
@@ -446,29 +440,40 @@ pub fn select_targets(
                     .or_else(|| spell.cast_destination.map(Vec3::from_array))
                     .or_else(|| explicit.and_then(|target| position(world, target)))
                     .unwrap_or(caster_pos);
-                units.extend(area_units(
-                    world,
-                    caster,
-                    dest,
-                    radius(effect, slot),
-                    relation,
-                    max_targets,
-                ));
+                let candidates = area_units(world, caster, dest, radius(effect, slot), relation, 0);
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
             }
         }
     }
     if !selected_any && effect.implicit_targets == [0, 0] {
         units.push(explicit.unwrap_or(caster));
     }
-    if spell
+    units = limit_spell_targets(spell, caster, units, 0);
+    units.dedup();
+    Ok(units)
+}
+
+pub(super) fn excludes_caster(spell: &SpellInfo) -> bool {
+    spell
         .misc
         .as_ref()
         .is_some_and(|misc| misc.attributes[1] & SPELL_ATTR1_EXCLUDE_CASTER != 0)
-    {
+}
+
+/// TC CheckTarget filters candidates before SelectImplicitAreaTargets caps them.
+fn limit_spell_targets(
+    spell: &SpellInfo,
+    caster: Entity,
+    mut units: Vec<Entity>,
+    cap: u32,
+) -> Vec<Entity> {
+    if excludes_caster(spell) {
         units.retain(|unit| *unit != caster);
     }
-    units.dedup();
-    Ok(units)
+    if cap > 0 {
+        units.truncate(cap as usize);
+    }
+    units
 }
 
 ///104/134 select hostile units along the caster-to-destination direction.
@@ -509,10 +514,7 @@ fn directed_units(
             half_arc,
         )
     });
-    if cap > 0 {
-        units.truncate(cap as usize);
-    }
-    Ok(units)
+    Ok(limit_spell_targets(spell, caster, units, cap))
 }
 
 fn direction_to_destination(origin: Vec3, destination: Option<Vec3>, facing: f32) -> Vec3 {
@@ -667,7 +669,7 @@ pub fn chain_targets(
     let mut candidates: Vec<Entity> =
         area_units(world, caster, search_center, search_radius, relation, 0)
             .into_iter()
-            .filter(|&unit| unit != target)
+            .filter(|&unit| unit != target && (unit != caster || !excludes_caster(spell)))
             .collect();
     let mut chain = Vec::new();
     while chain.len() < jumps {
