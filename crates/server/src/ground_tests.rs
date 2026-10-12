@@ -41,7 +41,7 @@ fn silvershard_track_switch_approach_uses_real_floor_not_npc_pivot() {
     assert!((height - 320.82416).abs() < 0.01, "approach floor {height}");
 }
 
-fn probe_silvershard_cart_approach(ground: &mut GroundMap, center: Vec3) -> Option<[f32; 3]> {
+fn probe_cart_approach(ground: &mut GroundMap, map: u32, center: Vec3) -> Option<[f32; 3]> {
     // Player feet alongside a cart, not its model pivot or the center of its rail.
     for radius in [1.0, 2.0, 4.0, 8.0, 12.0] {
         for (dx, dy) in [
@@ -57,7 +57,7 @@ fn probe_silvershard_cart_approach(ground: &mut GroundMap, center: Vec3) -> Opti
             let x = center.x + radius * dx;
             let y = center.y + radius * dy;
             let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, center.z + 1.0);
-            let GroundProbe::Supported(height) = ground.ground_at(727, Vec3::new(bx, by, bz))
+            let GroundProbe::Supported(height) = ground.ground_at(map, Vec3::new(bx, by, bz))
             else {
                 continue;
             };
@@ -68,6 +68,89 @@ fn probe_silvershard_cart_approach(ground: &mut GroundMap, center: Vec3) -> Opti
         }
     }
     None
+}
+
+#[test]
+fn deephaul_source_starts_flag_and_cart_paths_have_real_walkable_approaches() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(2656, 5246270)]));
+    let mut starts = db.prepare("SELECT ID,LocX,LocY,LocZ,TransportSpawnId FROM tdb_world_safe_locs WHERE ID IN (100070,100071) ORDER BY ID").unwrap();
+    let starts: Vec<_> = starts
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                Vec3::new(row.get(1)?, row.get(2)?, row.get(3)?),
+                row.get::<_, Option<u32>>(4)?,
+            ))
+        })
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(starts.len(), 2);
+    for (id, at, transport) in starts {
+        assert_eq!(transport, None);
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(at.x, at.y, at.z);
+        let GroundProbe::Supported(height) = ground.ground_at(2656, Vec3::new(x, y, z)) else {
+            panic!(
+                "Deephaul start {id} has missing geometry: {:?}",
+                ground.missing_files(2656)
+            );
+        };
+        assert!(
+            (height - at.z).abs() < 3.0,
+            "Deephaul start {id} floor {height}, source {at:?}"
+        );
+    }
+    let flag:Vec3 = db.query_row("SELECT position_x,position_y,position_z FROM tdb_gameobject WHERE map=2656 AND id=422413",[],|row| Ok(Vec3::new(row.get(0)?,row.get(1)?,row.get(2)?))).unwrap();
+    assert!(
+        probe_cart_approach(&mut ground, 2656, flag).is_some(),
+        "flag player approach missing"
+    );
+    let mut statement = db.prepare("SELECT PathId,PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId IN (21469000,21734600) ORDER BY PathId,NodeId").unwrap();
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                Vec3::new(row.get(1)?, row.get(2)?, row.get(3)?),
+            ))
+        })
+        .unwrap();
+    let mut routes = std::collections::BTreeMap::<u32, Vec<Vec3>>::new();
+    for row in rows {
+        let (path, at) = row.unwrap();
+        routes.entry(path).or_default().push(at);
+    }
+    assert_eq!(routes.len(), 2);
+    let mut approaches = Vec::new();
+    for definition in &shared::battleground::DEEPHAUL_CARTS {
+        let mut previous = Vec3::from_array(definition.spawn);
+        for &node in &routes[&definition.path] {
+            for center in sample_cart_segment(previous, node) {
+                let at = probe_cart_approach(&mut ground, 2656, center).unwrap_or_else(|| {
+                    panic!(
+                        "Deephaul path {} lacks player floor at {center:?}; missing {:?}",
+                        definition.path,
+                        ground.missing_files(2656)
+                    )
+                });
+                assert!(Vec3::from_array(at).distance(center) < 30.0);
+                approaches.push(at);
+            }
+            previous = node;
+        }
+    }
+    assert!(
+        approaches.len() > 128,
+        "{} samples exceed the original128source waypoints",
+        approaches.len()
+    );
+    if let Some(path) = std::env::var_os("DEEPHAUL_APPROACH_RECEIPT") {
+        std::fs::write(path, serde_json::to_vec_pretty(&approaches).unwrap()).unwrap();
+    }
 }
 
 fn sample_cart_segment(start: Vec3, end: Vec3) -> impl Iterator<Item = Vec3> {
@@ -100,7 +183,7 @@ fn silvershard_authored_cart_routes_have_walkable_control_approaches() {
     let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(727, 810604)]));
     let mut approaches = Vec::new();
     let mut append = |path, center: Vec3| {
-        let approach = probe_silvershard_cart_approach(&mut ground, center).unwrap_or_else(|| {
+        let approach = probe_cart_approach(&mut ground, 727, center).unwrap_or_else(|| {
             panic!("no grounded control approach on source path {path} at {center:?}")
         });
         assert!((Vec3::from_array(approach) - center).length() < 25.0);
