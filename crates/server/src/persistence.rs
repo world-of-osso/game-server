@@ -74,7 +74,8 @@ struct LegacyInventoryDataU32Gold {
 }
 
 /// Profession table: PlayerId (u64) -> bitcode `PlayerProfessions` (skill lines + spells).
-const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("profession_state");
+pub(crate) const PROFESSIONS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("profession_state");
 /// The AzerothCore-era profession table (placeholder Mining/Blacksmithing state), deleted.
 const LEGACY_PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
 
@@ -82,7 +83,7 @@ const LEGACY_PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("pr
 const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
 
 /// Currency table: PlayerId (u64) -> serialized currency wallet (bytes).
-const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
+pub(crate) const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
 
 /// Achievement table: PlayerId (u64) -> serialized achievement state (bytes).
 pub(crate) const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");
@@ -300,6 +301,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
     let _ = txn.open_table(pet_store::PET_STABLES);
     let _ = txn.open_table(PROFESSIONS);
+    crate::profession::specializations::initialize_store(&txn);
     txn.delete_table(LEGACY_PROFESSIONS)
         .expect("Failed to delete legacy professions table");
     let _ = txn.open_table(REPUTATIONS);
@@ -347,6 +349,7 @@ pub(crate) fn create_tables(db: &Database) {
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);
     migrate_legacy_auctions(db);
+    mail_store::migrate_sender_mailboxes(db);
     mail_store::migrate_legacy_mailboxes(db, crate::guild_bank::unix_now());
     banks::migrate_guild_ranks(db);
     charters::initialize(db);
