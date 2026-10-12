@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
+
 - [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations/real witnesses, recipient-safe typing, four scaled identities and two authored state-kit/expiry proofs; explicit remaining boundaries.
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.

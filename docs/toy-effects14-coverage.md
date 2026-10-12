@@ -1,5 +1,26 @@
 # Toy effects14 — active whole-goal coverage
 
+## Linked cooking traps (2026-10-12)
+
+Read-only canonical census330→337/1166 (+7, zero removed): Little Wickerman70722/99767→208935/display10726/.25; Eternal Kiln104309/148553→223229/14358/.5; Cozy Bonfire116435/171549→236014/30040/.5; Steamworks Sausage Grill116757/171760→236110/7385/1; Muckpool Cookpot182780/340241→357706/67291/.5; Ever-Abundant Hearth184404/345745→364811/67976/.5; Tuskarr Traveling Soup Pot199892/388258→381360/75335/.7. Each source focus4 links31442. Census measures runtime preflight, not complete per-toy effect certification.
+
+TC a352b1fa GameObject.cpp:1233,1495,1625 and GameObjectData.h establish a separate unowned invisible trap with addon faction35, source diameter10/2 plus player combat reach, living-player environmental activation and four-second repeat for charges0/cooldown0. Spell7353 supplies a10yd ally-area60s aura189, source versatility mask0x70000000 and level1-capped integer point1. Three native rating bits fold once into the shared versatility rating. Parent removal despawns the trap; an already-applied rating snapshot persists to its own expiry. TC SpellAuras.cpp `Aura::Update` accepts a null caster; old unconditional casterless removal was the failed production boundary, not a reason to truncate the source buff. Only the source-complete trap/signature and supported rating mask are admitted.
+
+|Boundary|Proof|Remaining|
+|---|---|---|
+|Actual source seven-item bag learn/UseToy, displays/scales/owner/map/lifetime, buff1 and60s restoration|Observed refusal RED; seven-item GREEN plus real rating-stat RED/GREEN|Native all-seven pixel/lifetime certification not claimed|
+|Environmental trigger and source spell audience|6.4/6.6yd reach,9yd recipient, NPC/dead/other-map exclusions and4s repeat GREEN|Other traps and interaction payloads unavailable|
+|Representative actual journal/recipe/fire/Cozy cancellation-refresh|Modern+Forever Little Wickerman: two meshes,.25 scale, nine emitters,201/198 own quads, real2672→2679, buff refresh3211/3438ms; inspected PNGs|Native parent expiry and other six variant pixels separate|
+|Authenticated model chains|88 source assets,16 local extractions,86 private receipts/19 aliases|Canonical publication lead-owned; Leylight253080 row absent, Akunda's Firesticks163211 multi-object chain separate|
+
+Evidence: `/home/osso/.worktrees/logs/toy-effects14-continuation/linked-fire-*`, `modern-linked-fire17-green/`, `forever-linked-fire17/`; requested PNGs `/syncthing/AgentShared/2026-10-12/toys/linked-fire17/`. No new template/DB2-table import: all seven focus templates,31442/addon35 and7353 already canonical. Canonical asset command (lead only, registered agent-run):
+
+```text
+python3 scripts/import_model_asset_chains.py --data data --product wow --staged-manifest /home/osso/.worktrees/logs/toy-effects14-continuation/linked-fire-staged.json --resolution data/diagnostics/toy-effects6-2026-10-10/assets/native-offline/wow/dcfc90fffd79ba00406ae46f5f657592/resolution.sqlite --fragment toy-effects17-linked-fires
+```
+
+Independent source review unavailable (expired Claude OAuth); no independent PASS claimed. Whole1166 goal remains open.
+
 ## Source dice scripts (2026-10-12)
 
 36863/47770 Decahedral Dwarven Dice: authored gendered BroadcastText26147, one uniform1–100 roll.36862/47776 Worn Troll Dice: BroadcastText26152, two independent uniform1–6 rolls. Pinned TC a352b1fa `spell_item.cpp`, `Player.cpp:30768` and `worldserver.conf.dist` define scripts, party-or-self roll delivery and40yd text-emote range. Retail69933 GlobalStrings11691 defines the result wording. Source hashes/rows: continuation `dice-source.json`; source files in `reference/`. No generic SCRIPT_EFFECT admission or gameplay mutation.

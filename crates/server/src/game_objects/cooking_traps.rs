@@ -44,7 +44,11 @@ pub(super) fn load_template(conn: &Connection) -> rusqlite::Result<Option<TrapTe
     if !matches_source_template(row)? {
         return Ok(None);
     }
-    Ok(Some(TrapTemplate {
+    Ok(Some(template_from_row(row)?))
+}
+
+fn template_from_row(row: &Row) -> rusqlite::Result<TrapTemplate> {
+    Ok(TrapTemplate {
         info: GameObjectInfo {
             entry: BASIC_CAMPFIRE_TRAP,
             go_type: 6,
@@ -55,7 +59,7 @@ pub(super) fn load_template(conn: &Connection) -> rusqlite::Result<Option<TrapTe
         faction: row.get(6)?,
         radius: row.get::<_, u32>(10)? as f32 / 2.0,
         cooldown_seconds: DEFAULT_TRAP_COOLDOWN_SECONDS,
-    }))
+    })
 }
 
 fn matches_source_template(row: &Row) -> rusqlite::Result<bool> {
