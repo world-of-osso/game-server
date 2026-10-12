@@ -11,6 +11,7 @@ loaded, imported or executed. Unknown branches are recorded, not guessed.
 import argparse
 import hashlib
 import json
+import re
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -22,13 +23,13 @@ BUILD = '12.1.0.69933'
 COLORS = {'cyan': 0, 'green': 0, 'blue': 0, 'yellow': 0, 'orange': 1, 'purple': 1, 'red': 2}
 SCHEMA = '''
 CREATE TABLE bossmod_encounter(addon TEXT,version TEXT,encounter_id INTEGER,map_id INTEGER,npc_entry INTEGER,source_file TEXT,PRIMARY KEY(addon,encounter_id,npc_entry));
-CREATE TABLE bossmod_rule(id INTEGER PRIMARY KEY,addon TEXT,version TEXT,encounter_id INTEGER,trigger TEXT,trigger_spell_id INTEGER,health_pct REAL,required_phase REAL,action TEXT,spell_id INTEGER,delay_ms INTEGER,phase REAL,severity INTEGER,warning_key TEXT,source_file TEXT,source_line INTEGER,event_kind TEXT);
+CREATE TABLE bossmod_rule(id INTEGER PRIMARY KEY,addon TEXT,version TEXT,encounter_id INTEGER,trigger TEXT,trigger_spell_id INTEGER,health_pct REAL,required_phase REAL,action TEXT,spell_id INTEGER,delay_ms INTEGER,phase REAL,severity INTEGER,warning_key TEXT,warning_text TEXT,source_file TEXT,source_line INTEGER,event_kind TEXT);
 CREATE TABLE bossmod_import_issue(addon TEXT,source_file TEXT,source_line INTEGER,reason TEXT);
 CREATE TABLE bossmod_import_meta(build TEXT,parser TEXT);
 CREATE TABLE bossmod_authority(encounter_id INTEGER PRIMARY KEY,addon TEXT NOT NULL);
 CREATE TABLE bossmod_binding(map_id INTEGER,npc_entry INTEGER,encounter_id INTEGER,bit INTEGER,PRIMARY KEY(map_id,npc_entry));
 '''
-RULE_FIELDS = ['addon', 'version', 'encounter_id', 'trigger', 'trigger_spell_id', 'health_pct', 'required_phase', 'action', 'spell_id', 'delay_ms', 'phase', 'severity', 'warning_key', 'source_file', 'source_line', 'event_kind']
+RULE_FIELDS = ['addon', 'version', 'encounter_id', 'trigger', 'trigger_spell_id', 'health_pct', 'required_phase', 'action', 'spell_id', 'delay_ms', 'phase', 'severity', 'warning_key', 'warning_text', 'source_file', 'source_line', 'event_kind']
 
 
 def method_name(node):
@@ -76,6 +77,69 @@ def static_number(node):
     return None
 
 
+def static_value(node, bindings, context):
+    """Evaluate data expressions only, never calls or addon control flow."""
+    value = static_number(node)
+    if value is not None:
+        return value
+    value = literal(node)
+    if value is not None:
+        return value
+    key = expression(node)
+    if key in ('spellId', 'args.spellId'):
+        return context.get('trigger_spell_id')
+    if key in bindings:
+        return bindings[key]
+    if isinstance(node, lua.Table):
+        values, index = {}, 1
+        for entry in node.fields:
+            key = entry.key.id if isinstance(entry.key, lua.Name) else literal(entry.key)
+            if key is None:
+                key, index = index, index + 1
+            values[key] = static_value(entry.value, bindings, context)
+        return values
+    if isinstance(node, lua.Index):
+        table = static_value(node.value, bindings, context)
+        key = static_value(node.idx, bindings, context)
+        return table.get(key) if isinstance(table, dict) else None
+    operations = {lua.AddOp: lambda a, b: a + b, lua.SubOp: lambda a, b: a - b,
+                  lua.MultOp: lambda a, b: a * b, lua.FloatDivOp: lambda a, b: a / b}
+    operation = operations.get(type(node))
+    if operation:
+        left, right = static_value(node.left, bindings, context), static_value(node.right, bindings, context)
+        if type(left) in (int, float) and type(right) in (int, float):
+            if not isinstance(node, lua.FloatDivOp) or right != 0:
+                return operation(left, right)
+    return None
+
+
+def bind_assignment(node, bindings, context):
+    for target, value in zip(node.targets, node.values):
+        bindings[expression(target)] = static_value(value, bindings, context)
+
+
+def top_constants(block):
+    bindings = {}
+    for node in block.body:
+        if isinstance(node, lua.LocalAssign):
+            bind_assignment(node, bindings, {})
+    return bindings
+
+
+def audit_timer_calls(tree, result, timer_vars=None):
+    """Preserve timer calls not reachable from an understood event boundary."""
+    handled = {r['source_line'] for r in result['rules']} | {g['source_line'] for g in result['issues']}
+    for node in all_nodes(tree):
+        name = method_name(node)
+        is_dbm_timer = timer_vars and isinstance(node, lua.Invoke) and expression(node.source) in timer_vars and timer_vars[expression(node.source)][2] == 'timer'
+        if name in ('Bar', 'CDBar', 'CastBar') or (is_dbm_timer and name in ('Start', 'TLStart', 'SetTimeline')):
+            result['static_timers'].append(dict(source_file=result['source_file'], source_line=line(node), expression=expression(node)))
+            if line(node) not in handled:
+                issue(result, node, 'timer requires unresolved event/phase/timeline input: ' + expression(node))
+    if not any(rule['action'] == 'timer' for rule in result['rules']):
+        issue(result, tree, 'no schedulable engage/cast timers; native timeline input or unsupported trigger required')
+
+
 def all_nodes(node):
     yield node
     for key, value in vars(node).items():
@@ -100,7 +164,7 @@ def expression(node):
 
 def make_result(file, addon, version):
     return dict(encounter_id=0, map_id=0, npcs=[], addon=addon, version=version,
-                source_file=file, rules=[], issues=[])
+                source_file=file, rules=[], issues=[], static_timers=[])
 
 
 def issue(result, node, reason):
@@ -137,35 +201,41 @@ def branch_context(test, context, result):
             return dict(context, required_phase=value)
         if method_name(test.left) == 'MobId' and value in result['npcs']:
             return context.copy()
-        if expression(test.left) == 'spellId' and value is not None:
+        if expression(test.left) in ('spellId', 'args.spellId') and value is not None:
             return dict(context, trigger_spell_id=int(value))
     return None
 
 
-def extract_actions(block, result, context, timer_vars=None):
+def extract_actions(block, result, context, timer_vars=None, bindings=None):
+    bindings = dict(bindings or {})
     for node in block.body:
+        if isinstance(node, (lua.LocalAssign, lua.Assign)):
+            bind_assignment(node, bindings, context)
+            continue
         if isinstance(node, (lua.If, lua.ElseIf)):
             choice = retail_condition(node.test)
             if choice is True:
-                extract_actions(node.body, result, context, timer_vars)
+                extract_actions(node.body, result, context, timer_vars, bindings)
             elif choice is False:
                 if isinstance(node.orelse, lua.Block):
-                    extract_actions(node.orelse, result, context, timer_vars)
+                    extract_actions(node.orelse, result, context, timer_vars, bindings)
                 elif isinstance(node.orelse, lua.ElseIf):
-                    extract_actions(lua.Block(body=[node.orelse]), result, context, timer_vars)
+                    extract_actions(lua.Block(body=[node.orelse]), result, context, timer_vars, bindings)
             else:
                 branch = branch_context(node.test, context, result)
                 if branch is not None:
-                    extract_actions(node.body, result, branch, timer_vars)
+                    extract_actions(node.body, result, branch, timer_vars, bindings)
                 else:
                     relevant = any(method_name(n) in ('CDBar', 'Bar', 'SetStage', 'Message', 'Start', 'Show') for n in all_nodes(node))
                     if relevant:
                         issue(result, node, 'unsupported conditional: ' + expression(node.test))
-                if node.orelse:
+                if isinstance(node.orelse, lua.ElseIf):
+                    extract_actions(lua.Block(body=[node.orelse]), result, context, timer_vars, bindings)
+                elif node.orelse:
                     issue(result, node, 'conditional else branch not inferred')
             continue
         if isinstance(node, lua.Do):
-            extract_actions(node.body, result, context, timer_vars)
+            extract_actions(node.body, result, context, timer_vars, bindings)
             continue
         name = method_name(node)
         if not name:
@@ -173,7 +243,7 @@ def extract_actions(block, result, context, timer_vars=None):
         args = node.args
         if name in ('CDBar', 'Bar', 'CastBar') and len(args) >= 2:
             spell = spell_value(args[0], context)
-            delay = static_number(args[1])
+            delay = static_value(args[1], bindings, context)
             if spell is None or delay is None or delay <= 0:
                 issue(result, node, 'nonliteral timer: ' + expression(node))
                 continue
@@ -200,7 +270,7 @@ def extract_actions(block, result, context, timer_vars=None):
                 continue
             spell, default, action, severity, key = definition
             if action == 'timer':
-                delay = static_number(args[0]) if args else default
+                delay = static_value(args[0], bindings, context) if args else default
                 if delay is None or delay <= 0:
                     issue(result, node, 'nonliteral DBM timer: ' + expression(node))
                     continue
@@ -237,6 +307,7 @@ def extract_bigwigs(source, file, addon, version):
             result['npcs'] = [int(literal(a)) for a in node.args if isinstance(literal(a), (int, float))]
         elif name == 'SetEncounterID' and node.args:
             result['encounter_id'] = static_number(node.args[0]) or 0
+    bindings = top_constants(tree.body)
     handlers = {}
     for node in all_nodes(tree):
         if method_name(node) == 'Log' and len(node.args) >= 3:
@@ -248,14 +319,15 @@ def extract_bigwigs(source, file, addon, version):
                         handlers.setdefault(handler, []).append((event.lower().removeprefix('spell_'), int(value)))
     for method in select_methods(tree.body):
         name = method.name.id
-        if name == 'OnEngage':
-            extract_actions(method.body, result, dict(trigger='engage'))
+        if name in ('OnEngage', 'OnEncounterStart'):
+            extract_actions(method.body, result, dict(trigger='engage'), bindings=bindings)
         elif name == 'UNIT_HEALTH':
-            extract_actions(method.body, result, dict(trigger='health'))
+            extract_actions(method.body, result, dict(trigger='health'), bindings=bindings)
         elif name == 'UNIT_SPELLCAST_SUCCEEDED':
-            extract_actions(method.body, result, dict(trigger='cast_success'))
+            extract_actions(method.body, result, dict(trigger='cast_success'), bindings=bindings)
         for trigger, spell in handlers.get(name, []):
-            extract_actions(method.body, result, dict(trigger=trigger, trigger_spell_id=spell))
+            extract_actions(method.body, result, dict(trigger=trigger, trigger_spell_id=spell), bindings=bindings)
+    audit_timer_calls(tree, result)
     return result
 
 
@@ -267,6 +339,8 @@ def extract_dbm(source, file, addon, version):
         name = method_name(node)
         if name == 'SetEncounterID' and node.args:
             result['encounter_id'] = static_number(node.args[0]) or 0
+        elif name == 'SetZone' and node.args:
+            result['map_id'] = static_number(node.args[0]) or 0
         elif name == 'SetCreatureID':
             result['npcs'] = [int(literal(a)) for a in node.args if isinstance(literal(a), (int, float))]
         if not isinstance(node, lua.LocalAssign) or not node.values:
@@ -284,22 +358,15 @@ def extract_dbm(source, file, addon, version):
             if spell and spell > 0:
                 severity = 2 if 'SpecialWarning' in ctor else 0
                 variables[node.targets[0].id] = (int(spell), None, 'warning', severity, ctor)
+    bindings = top_constants(tree.body)
     for method in select_methods(tree.body):
         name = method.name.id
         if name in ('OnCombatStart', 'OnLimitedCombatStart'):
-            extract_actions(method.body, result, dict(trigger='engage'), variables)
+            extract_actions(method.body, result, dict(trigger='engage'), variables, bindings)
         elif name in ('SPELL_CAST_START', 'SPELL_CAST_SUCCESS'):
             trigger = name.lower().removeprefix('spell_')
-            # DBM dispatches by args.spellId predicates, not named log handlers.
-            for node in method.body.body:
-                if isinstance(node, lua.If) and isinstance(node.test, lua.EqToOp) and expression(node.test.left) == 'args.spellId':
-                    spell = static_number(node.test.right)
-                    if spell:
-                        extract_actions(node.body, result, dict(trigger=trigger, trigger_spell_id=int(spell)), variables)
-                else:
-                    issue(result, node, 'unsupported DBM dispatch: ' + name)
-    if not result['rules'] and result['encounter_id']:
-        issue(result, tree, 'no statically known schedule; Blizzard timeline/dynamic callbacks are not cooldowns')
+            extract_actions(method.body, result, dict(trigger=trigger), variables, bindings)
+    audit_timer_calls(tree, result, variables)
     return result
 
 
@@ -348,11 +415,95 @@ def extract_exboss(source, file, addon, version):
                 if isinstance(initial, (int, float)) and initial > 0:
                     timer = dict(rule, trigger='engage', action='timer', delay_ms=round(initial*1000))
                     result['rules'].append(timer)
+                if initial is None:
+                    result['issues'].append(dict(addon=addon, source_file=file, source_line=source_line,
+                        reason=f'event {event_id}: firstSeenSec absent; no authored initial schedule'))
+                if series is None:
+                    result['issues'].append(dict(addon=addon, source_file=file, source_line=source_line,
+                        reason=f'event {event_id}: cdSeriesSec absent; native timeline input required'))
                 if series:
                     result['issues'].append(dict(addon=addon, source_file=file, source_line=source_line,
                                                  reason=f'event {event_id}: unsupported observed timer series'))
             encounters.append(result)
     return encounters
+
+
+def locale_literals(source, prefix):
+    """Read literal locale assignments; calls and computed strings stay unresolved."""
+    values = {}
+    tree = ast.parse(source)
+    for node in all_nodes(tree):
+        if isinstance(node, lua.Assign):
+            for target, value in zip(node.targets, node.values):
+                key = expression(target)
+                if key.startswith('L.'):
+                    text = literal(value)
+                    if isinstance(text, str):
+                        values[prefix + key[1:]] = text
+                    elif isinstance(value, lua.Table):
+                        for name, (text, _) in table_value(value).items():
+                            if isinstance(text, str):
+                                values[prefix + key[1:] + '.' + str(name)] = text
+        if method_name(node) == 'SetDefaultLocale' and node.args and isinstance(node.args[0], lua.Table):
+            for name, (text, _) in table_value(node.args[0]).items():
+                if isinstance(text, str):
+                    values['L.' + str(name)] = text
+    return values
+
+
+def render_locale_expression(node, spell_name, locales):
+    text = literal(node)
+    if isinstance(text, (str, int, float)):
+        return text
+    key = expression(node)
+    if key in ('spellName', 'args.spellName'):
+        return spell_name
+    if key in locales:
+        return locales[key]
+    if method_name(node) == 'format':
+        template = render_locale_expression(node.source, spell_name, locales)
+        args = [render_locale_expression(arg, spell_name, locales) for arg in node.args]
+        if isinstance(template, str) and all(arg is not None for arg in args):
+            try:
+                return template % tuple(args)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def render_warnings(result, spell_names, locales):
+    accepted = []
+    for rule in result['rules']:
+        if rule['action'] != 'warning':
+            accepted.append(rule)
+            continue
+        name = spell_names.get(rule['spell_id'])
+        key = rule['warning_key']
+        text = None
+        if name and key and key.startswith('New'):
+            category = 'AUTO_SPEC_WARN_TEXTS' if 'SpecialWarning' in key else 'AUTO_ANNOUNCE_TEXTS'
+            suffix = key.removeprefix('NewSpecialWarning').removeprefix('New').removesuffix('Announce').lower()
+            template = locales.get('DBM.' + category + '.' + suffix)
+            if template and '%%' not in template:
+                try:
+                    text = template % name
+                except (TypeError, ValueError):
+                    pass
+        elif name and key:
+            try:
+                node = ast.parse('local value = ' + key).body.body[0].values[0]
+                text = render_locale_expression(node, name, locales)
+            except Exception:
+                # EXBoss labels are literal data, not Lua expressions.
+                if result['addon'] == 'EXBossData' and key.isascii():
+                    text = key
+        if isinstance(text, str) and text:
+            rule['warning_text'] = text
+            accepted.append(rule)
+        else:
+            result['issues'].append(dict(addon=result['addon'], source_file=rule['source_file'],
+                source_line=rule['source_line'], reason='unresolved enUS locale warning or dynamic format arguments: ' + str(key)))
+    result['rules'] = accepted
 
 
 def validate_spells(db, encounters):
@@ -439,10 +590,16 @@ def source_version(root):
 def import_sources(db, roots):
     encounters, gaps = [], []
     with closing(sqlite3.connect(Path(db).resolve().as_uri()+'?mode=ro', uri=True)) as conn:
-        valid = {row[0] for row in conn.execute('SELECT s.ID FROM spell s JOIN spell_name n ON n.ID=s.ID')}
+        validate_spells(conn, [])
+        spell_names = dict(conn.execute('SELECT s.ID,n.Name_lang FROM spell s JOIN spell_name n ON n.ID=s.ID'))
+        valid = set(spell_names)
+        common = locale_literals((Path(roots['BigWigs'])/'Locales/enUS_common.lua').read_text(), 'CL') if 'BigWigs' in roots else {}
         for addon, root in roots.items():
             root = Path(root)
             version = source_version(root)
+            locales = dict(common)
+            if addon == 'DBM':
+                locales.update(locale_literals((root/'DBM-Core/localization.en.lua').read_text(), 'DBM'))
             paths = [root/'EncounterData.lua'] if addon == 'EXBossData' else sorted(root.rglob('*.lua'))
             for path in paths:
                 file = str(path.relative_to(root))
@@ -467,6 +624,7 @@ def import_sources(db, roots):
                         else:
                             accepted.append(rule)
                     result['rules'] = accepted
+                    render_warnings(result, spell_names, dict(locales, **locale_literals(source, 'L')))
                     if result['encounter_id']:
                         encounters.append(result)
     if encounters and gaps:
