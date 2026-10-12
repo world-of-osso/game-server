@@ -5,6 +5,7 @@ No spawn promotion or canonical DB mutation occurs unless the operator supplies 
 """
 import argparse
 import csv
+import json
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -42,15 +43,42 @@ def import_catalog(db, source, available_wdts):
     return len(candidates)
 
 
+def import_gates(db, source):
+    rows = json.loads(source.read_text())
+    maps = {row[0] for row in db.execute('SELECT map_id FROM arena_map')}
+    gates = [(row['map_id'], row['entry'], row['action'], row['despawn_secs']) for row in rows
+             if row['map_id'] in maps and db.execute('SELECT 1 FROM tdb_gameobject WHERE map=? AND id=?',
+                                                   (row['map_id'], row['entry'])).fetchone()]
+    with db:
+        db.execute('CREATE TABLE IF NOT EXISTS arena_gate(map_id INTEGER,entry INTEGER,action TEXT,despawn_secs INTEGER,PRIMARY KEY(map_id,entry))')
+        db.execute('DELETE FROM arena_gate')
+        db.executemany('INSERT INTO arena_gate VALUES(?,?,?,?)', gates)
+    return len(gates)
+
+
+def promote_content(db):
+    import import_instance_population as population
+    report = population.ImportReport()
+    with db:
+        db.execute('BEGIN')
+        population.apply_population(db, report, map_list='SELECT map_id FROM arena_map', rebuild_pools=False)
+    return report.drops
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', required=True, type=Path)
     parser.add_argument('--battlemaster', type=Path, default=Path(__file__).parent / 'reference/arena-12.1.0.69933/BattlemasterList.csv')
     parser.add_argument('--wdt-dir', type=Path, required=True)
+    parser.add_argument('--promote', action='store_true', help='Promote source arena population through existing scoped importer')
     args = parser.parse_args()
     available = {int(path.stem) for path in args.wdt_dir.glob('*.wdt') if path.stat().st_size > 0}
     with closing(sqlite3.connect(args.db.resolve().as_uri() + '?mode=rw', uri=True)) as db:
         print(f'Imported {import_catalog(db, args.battlemaster, available)} source-backed arenas')
+        gates = import_gates(db, Path(__file__).parent / 'reference/arena-12.1.0.69933/arena-gates.json')
+        print(f'Imported {gates} source-backed gate entries')
+        if args.promote:
+            print(json.dumps({'drops': promote_content(db)}, sort_keys=True))
 
 
 if __name__ == '__main__':
