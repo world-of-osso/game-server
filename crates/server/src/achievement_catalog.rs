@@ -15,8 +15,8 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 11, 12, 14, 15, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74, 76, 77, 107, 108,
-    109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220, 245, 246,
+    0, 1, 11, 12, 14, 15, 16, 17, 20, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74, 76,
+    77, 107, 108, 109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220, 245, 246,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -35,6 +35,9 @@ pub(crate) enum CriteriaEvent {
     AcquireItem(u32, u32),
     LootItem(u32, u32),
     ParticipateInBattleground(u32),
+    DieOnMap(u32),
+    DieAnywhere,
+    KilledByCreature(u32),
     /// TC client loot type (`crate::loot::LootKind`) and looted item count.
     GetLootByType(u8, u32),
     LootMoney(u64),
@@ -104,6 +107,9 @@ impl CriteriaEvent {
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
             Self::ParticipateInBattleground(_) => 15,
+            Self::DieOnMap(_) => 16,
+            Self::DieAnywhere => 17,
+            Self::KilledByCreature(_) => 20,
             Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
             Self::UseItem(_) => 41,
@@ -169,6 +175,7 @@ impl CriteriaEvent {
             Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::FulfillCraftingOrderType(kind) => u32::from(kind) == criteria.asset,
             Self::LootMoney(_)
+            | Self::DieAnywhere
             | Self::CompleteDailyQuest
             | Self::MoneyEarnedFromQuesting(_)
             | Self::RewardedQuestCount(_)
@@ -212,6 +219,8 @@ impl CriteriaEvent {
             | Self::GainAura(asset)
             | Self::WinBattleground(asset)
             | Self::ParticipateInBattleground(asset)
+            | Self::DieOnMap(asset)
+            | Self::KilledByCreature(asset)
             | Self::UseItem(asset)
             | Self::EquipItem(asset)
             | Self::UseGameObject(asset)
@@ -915,9 +924,12 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
-                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
+                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 16 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
+                        // TC completion1288-1293 makes type20 statistic-only; new ordinary61917
+                        // criterion111356 has no sourced completion semantics in the pinned TC.
+                        || (kind == 20 && criteria_id != 111356)
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
@@ -930,7 +942,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 48 | 59 | 62 | 63 | 65 | 67 | 74 | 76 | 77 | 81 | 107 | 108 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 17 | 48 | 59 | 62 | 63 | 65 | 67 | 74 | 76 | 77 | 81 | 107 | 108 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
