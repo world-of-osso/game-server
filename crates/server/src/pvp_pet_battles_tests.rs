@@ -433,15 +433,6 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
         .get(&19724),
         Some(&10)
     );
-    app.update();
-    assert_eq!(
-        app.world()
-            .get::<PlayerAchievementState>(a)
-            .unwrap()
-            .criteria_progress
-            .get(&19724),
-        Some(&10)
-    );
     for (owner, expected) in [
         (a, WildPetBattleOutcome::Won),
         (b, WildPetBattleOutcome::Lost),
@@ -476,4 +467,14 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
             3
         );
     }
+    // Consume terminal network messages before advancing their receiver lifetime.
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(a)
+            .unwrap()
+            .criteria_progress
+            .get(&19724),
+        Some(&10)
+    );
 }
