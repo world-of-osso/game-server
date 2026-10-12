@@ -2,7 +2,7 @@
 mod owned_commerce_sources;
 
 #[path = "auction_house_tests/criteria.rs"]
-mod criteria;
+pub(crate) mod criteria;
 
 use super::*;
 use crate::gold::GoldUpdateQueue;
