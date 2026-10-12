@@ -922,6 +922,16 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
             crate::death::PlayerDeathState::default(),
+            crate::spell_cast::powers::PowerPools {
+                order: vec![shared::components::PowerType::Rage],
+                pools: vec![crate::spell_cast::powers::PowerPool {
+                    power: shared::components::PowerType::Rage,
+                    current: 70.0,
+                    max: 100.0,
+                    regen_per_sec: 0.0,
+                }],
+                ..Default::default()
+            },
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForArena>(),
@@ -1072,7 +1082,46 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
             .iter()
             .any(|a| a.spell_id == 32727)
     );
-    h.receive_pvp_updates(1201);
+    let preparing = players[0].player;
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            h.app.world(),
+            preparing,
+            shared::components::PowerType::Rage
+        )
+        .unwrap()
+        .0,
+        0.0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<Health>(preparing)
+        .unwrap()
+        .current = 25.0;
+    crate::spell_cast::powers::change_power(
+        h.app.world_mut(),
+        preparing,
+        shared::components::PowerType::Rage,
+        60.0,
+    );
+    h.receive_pvp_updates(110);
+    let reset_health = h.app.world().get::<Health>(preparing).unwrap();
+    assert_eq!(
+        reset_health.current, reset_health.max,
+        "source preparation periodic full health"
+    );
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            h.app.world(),
+            preparing,
+            shared::components::PowerType::Rage
+        )
+        .unwrap()
+        .0,
+        0.0,
+        "source preparation resets primary rage"
+    );
+    h.receive_pvp_updates(1091);
     assert_eq!(
         h.app
             .world()

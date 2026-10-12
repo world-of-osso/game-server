@@ -143,6 +143,7 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
+mod school_costs;
 pub(crate) mod teleport;
 mod teleport_positions;
 
@@ -1442,9 +1443,11 @@ pub(crate) fn applicable_costs(
             _ => max,
         };
         let initial = amount_with(base);
+        let school_modified =
+            school_costs::modify_school_cost(world, caster, spell, cost.power_type, initial);
         let modified = match SpellModOp::power_cost(cost.order_index) {
-            Some(op) => modify(world, caster, spell, op, initial),
-            None => initial,
+            Some(op) => modify(world, caster, spell, op, school_modified),
+            None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
             scripts::mana_cost(world, caster, spell, modified)
