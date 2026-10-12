@@ -1,6 +1,7 @@
 # Wiki Log
 
 - 2026-10-11 — [Mount Journal](systems/mounts.md#mount-journal): read-only catalog, account item/favourite persistence and spell-backed requests; both auth-entry crash boundaries reproduced and fixed through one initialized Update step. Native/final acceptance remains tracked by the contract.
+- 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
 
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
 
@@ -893,3 +894,11 @@ Added local DB2/TDB importer, active-tree copy-scoped achievement-evaluator reus
 ## 2026-10-11 — integrated gathering and shared-loot readiness
 
 - [Gathering](systems/gathering.md): requested master snapshots integrated without merging into master; scoped checks/format and six real private-realm cases pass. Native images, numeric rank gains, timer boundaries and remaining limits are linked from the engine proof ledger.
+
+## 2026-10-11 — additional profession references
+
+Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [receipt](reference/profession-reference-import.md) separates concrete data from unresolved quality/concentration/recraft formulas. No canonical DB mutation or runtime acceptance claim.
+
+## 2026-10-11 — profession specialization runtime
+
+Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.

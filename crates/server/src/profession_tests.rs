@@ -7,6 +7,47 @@
 //! cap 300 from tier 336). Bolt of Linen Cloth (2963) is learned with the line,
 //! takes 2 Linen Cloth (2589), casts 1.5 s, and is orange below rank 25.
 
+#[path = "crafting_orders/tests.rs"]
+mod crafting_order_tests;
+
+#[test]
+fn quality_crafting_refuses_before_any_reagent_or_skill_mutation() {
+    let mut h = harness(80).unwrap();
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 4);
+    let mut professions = h.professions();
+    professions.spells.push(375110);
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(professions.clone());
+    h.app.update();
+    let before =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id);
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(375110)
+        .unwrap()
+        .clone();
+    assert!(spell.effects.iter().any(|effect| effect.effect == 288));
+    assert!(matches!(
+        check_cast_items(h.app.world(), h.player, &spell),
+        Err(CastFailure::Unsupported(_))
+    ));
+    h.send::<CraftRecipe, ProfessionChannel>(CraftRecipe {
+        spell_id: 375110,
+        casts: 1,
+    });
+    h.finish_crafting();
+    assert_eq!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, h.character_id),
+        before
+    );
+    assert_eq!(h.professions(), professions);
+}
+
 use std::path::PathBuf;
 use std::time::Duration;
 

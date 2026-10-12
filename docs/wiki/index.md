@@ -1,6 +1,7 @@
 # Wiki Index
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
+- [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
 
 - [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
 - [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
@@ -77,6 +78,7 @@ External resources, tooling, data sources, development workflow.
 
 | Page | Summary |
 |------|---------|
+| [[profession-reference-import]] | Nine additional source-pinned Retail profession tables, staging import and exact unresolved math/lineage boundary |
 | [[crafting-reference-import]] | Seven pinned Midnight crafting tables, exact schema/provenance, atomic staging import and modern-resolver handoff |
 | [[reference-repos]] | AzerothCore (architecture + data), Rustbolt Core (Rust patterns), SpacetimeDB (rejected), wow-engine (sibling renderer) |
 | [[auction-load-fixture]] | Executed owned 300k-offer/311-real-ID producer; reopen/counter/second-page proof, linked separate CLI latency ledger |
@@ -85,6 +87,8 @@ External resources, tooling, data sources, development workflow.
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 
 ## systems/
+
+- [Profession specializations](systems/profession-specializations.md) — source-earned knowledge, irreversible trait spending, atomic wallet/recipe persistence and owner snapshots; native/request acceptance remains open.
 
 - [Gathering](systems/gathering.md) — authored GO50/skin metadata, normal and shared loot readiness, casts/progression, pool timers/persistence; twelve scoped gathering tests and linked integrated both-skin native baseline proof.
 - [Class spell batch21](systems/spell-casting.md#twenty-first-batch-native-combo-builders) — Berserk authored extra combo point, native completed-root/cap/expiry/periodic exclusions;157 remaining Dummy roots/117 reviewed/40 underived, seven exact source/runtime deferrals and [all40/proof/limits](../spell-dummy21-coverage.md).
