@@ -1074,7 +1074,8 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         return;
     };
     auras.dirty = true;
-    let (stats, mut combat) = stat_mods::compute(&auras);
+    let (mut stats, mut combat) = stat_mods::compute(&auras);
+    stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
