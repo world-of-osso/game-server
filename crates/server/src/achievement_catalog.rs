@@ -47,6 +47,8 @@ pub(crate) enum CriteriaEvent {
     WinBattleground(u32),
     WinAnyBattleground,
     CompleteMythicPlus(MythicCompletion),
+    CompleteScenario(u32),
+    CompleteAnyScenario,
     CompleteQuest(u32),
     CompleteDailyQuest,
     CastSpell(u32),
@@ -86,6 +88,8 @@ impl CriteriaEvent {
             Self::WinBattleground(_) => 1,
             Self::WinAnyBattleground => 130,
             Self::CompleteMythicPlus(_) => 216,
+            Self::CompleteScenario(_) => 152,
+            Self::CompleteAnyScenario => 151,
             Self::CompleteQuest(_) => 27,
             Self::CompleteDailyQuest => 14,
             Self::CastSpell(_) => 29,
@@ -112,6 +116,7 @@ impl CriteriaEvent {
             | Self::WinPetBattle
             | Self::CaptureBattlePet
             | Self::Login
+            | Self::CompleteAnyScenario
             | Self::WinAnyBattleground => criteria.asset == 0,
             Self::CompleteMythicPlus(completion) => criteria
                 .mythic
@@ -136,6 +141,7 @@ impl CriteriaEvent {
             | Self::UseGameObject(asset)
             | Self::KnowPetCreature(asset)
             | Self::LearnToy(asset)
+            | Self::CompleteScenario(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -480,6 +486,8 @@ impl AchievementCatalog {
                             | 73
                             | 74
                             | 130
+                            | 151
+                            | 152
                             | 157
                             | 158
                             | 160
@@ -772,7 +780,7 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset) FROM criteria c")?;
+    let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
         let conditional = (3..8)
@@ -810,8 +818,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
+                        || (kind == 152 && row.get::<_, bool>(11)?)
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 14 | 67 | 74 | 130 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 14 | 67 | 74 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

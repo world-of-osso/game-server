@@ -454,6 +454,25 @@ pub(crate) fn record_battleground_win(world: &mut World, player: Entity, map: u3
     }
 }
 
+/// TC Scenario.cpp:88-96 CompleteScenario credits every player in the finished copy once.
+fn record_scenario_completion(world: &mut World, map: InMap, scenario: u32) {
+    let events = [
+        CriteriaEvent::CompleteAnyScenario,
+        CriteriaEvent::CompleteScenario(scenario),
+    ];
+    for player in crate::scripted_ai::instance_script::players_in_map(world, map) {
+        for &event in &events {
+            crate::adventure_guide::record(world, player, event);
+        }
+        if let Some((snapshot, toasts)) =
+            update_player_events(world, player, &events, Some(map.map_id))
+            && let Some(connection) = connection_for_player(world, player)
+        {
+            send_updates(world, connection, snapshot, toasts);
+        }
+    }
+}
+
 /// Terminal authoritative winner only; conditional PvP/streak rows remain unevaluated.
 pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
