@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""Pinned Mainline achievement coverage; never opens the world database writable."""
+import argparse
+import collections
+import csv
+import hashlib
+import json
+import sqlite3
+from pathlib import Path
+
+BASE_TYPES = {0, 5, 7, 8, 27, 28, 29, 165}
+CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
+
+
+def read_rows(path):
+    with path.open() as source:
+        return {int(row['ID']): row for row in csv.DictReader(source)}
+
+
+def index_children(rows):
+    children = collections.defaultdict(list)
+    for row_id, row in rows.items():
+        children[int(row['Parent'])].append(row_id)
+    return children
+
+
+def walk_tree(root, rows, children, visiting=frozenset()):
+    if root in visiting or root not in rows:
+        return set(), {f'missing_or_cyclic_tree:{root}'}
+    descendants, errors = {root}, set()
+    for child in children.get(root, []):
+        found, problems = walk_tree(child, rows, children, visiting | {root})
+        descendants.update(found)
+        errors.update(problems)
+    return descendants, errors
+
+
+def supported_criteria(criteria, types, spells, skills):
+    supported = set()
+    for row_id, row in criteria.items():
+        kind, asset = int(row['Type']), int(row['Asset'])
+        if kind not in types or any(int(row[key]) for key in CONDITIONS):
+            continue
+        if kind in (28, 29) and asset not in spells:
+            continue
+        if kind == 29 and 11118 <= row_id <= 11127:
+            continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
+        if kind == 7 and asset not in skills:
+            continue
+        supported.add(row_id)
+    return supported
+
+
+def supports_tree(root, trees, children, supported, visiting=frozenset()):
+    if root in visiting or root not in trees:
+        return False
+    row = trees[root]
+    operator = int(row['Operator'])
+    if operator == 0:
+        return int(row['CriteriaID']) in supported
+    branch = children.get(root, [])
+    return operator in (4, 5, 6, 7, 8, 9) and bool(branch) and all(
+        supports_tree(child, trees, children, supported, visiting | {root}) for child in branch
+    )
+
+
+def census(db2, modifiers_path, world_db, types):
+    achievements = read_rows(db2 / 'Achievement.csv')
+    criteria = read_rows(db2 / 'Criteria.csv')
+    trees = read_rows(db2 / 'CriteriaTree.csv')
+    modifiers = read_rows(modifiers_path)
+    children, modifier_children = index_children(trees), index_children(modifiers)
+    with sqlite3.connect(f'{world_db.resolve().as_uri()}?mode=ro', uri=True) as db:
+        spells = {row[0] for row in db.execute('SELECT ID FROM spell')}
+        skills = {row[0] for row in db.execute('SELECT ID FROM skill_line')}
+    supported = supported_criteria(criteria, types, spells, skills)
+    by_type = collections.defaultdict(set)
+    records = {}
+    for row_id, row in achievements.items():
+        root = int(row['CriteriaTree'])
+        nodes, errors = walk_tree(root, trees, children) if root else (set(), {'no_root'})
+        criterion_ids = {int(trees[node]['CriteriaID']) for node in nodes} - {0}
+        kinds, modifier_ids, modifier_types = set(), set(), set()
+        for criterion in criterion_ids:
+            if criterion not in criteria:
+                errors.add(f'missing_criterion:{criterion}')
+                continue
+            cr = criteria[criterion]
+            kind = int(cr['Type'])
+            kinds.add(kind)
+            by_type[kind].add(row_id)
+            if criterion not in supported:
+                errors.add(f'unsupported_criterion:{criterion}:type:{kind}')
+            modifier = int(cr['ModifierTreeId'])
+            if modifier:
+                found, problems = walk_tree(modifier, modifiers, modifier_children)
+                modifier_ids.update(found)
+                modifier_types.update(int(modifiers[node]['Type']) for node in found)
+                errors.update(problems)
+        records[row_id] = dict(
+            title=row['Title_lang'], root=root, flags=int(row['Flags']),
+            types=sorted(kinds), criteria=sorted(criterion_ids), trees=sorted(nodes),
+            modifiers=sorted(modifier_ids), modifier_types=sorted(modifier_types),
+            trackable=supports_tree(root, trees, children, supported), blockers=sorted(errors),
+        )
+    trackable = [row for row in records.values() if row['trackable']]
+    ranking = []
+    for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
+        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills)
+        gain = sum(not records[id]['trackable'] and not records[id]['flags'] & 1
+                   and supports_tree(records[id]['root'], trees, children, newly_supported)
+                   for id in ids)
+        ranking.append(dict(type=kind, associated=len(ids),
+                            achievements=sum(not records[id]['flags'] & 1 for id in ids),
+                            statistics=sum(bool(records[id]['flags'] & 1) for id in ids),
+                            enabled=kind in types, potential_unconditional_gain=gain))
+    paths = [db2 / (name + '.csv') for name in ('Achievement', 'CriteriaTree', 'Criteria')]
+    paths.append(modifiers_path)
+    return dict(
+        build=db2.name, enabled_types=sorted(types),
+        sources={str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths},
+        row_counts=dict(achievement=len(achievements), criteria=len(criteria),
+                        criteria_tree=len(trees), modifier_tree=len(modifiers)),
+        trackable=dict(achievements=sum(not row['flags'] & 1 for row in trackable),
+                       account=sum(not row['flags'] & 1 and bool(row['flags'] & 0x20000) for row in trackable),
+                       character=sum(not row['flags'] & (1 | 0x20000) for row in trackable),
+                       statistics=sum(bool(row['flags'] & 1) for row in trackable)),
+        ranking=ranking, achievements=records,
+        boundary='Structural, all-faction union; not playable-content or modifier support certification.',
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--db2', type=Path, required=True)
+    parser.add_argument('--modifiers', type=Path, required=True)
+    parser.add_argument('--world-db', type=Path, required=True)
+    parser.add_argument('--types', default=','.join(map(str, sorted(BASE_TYPES))))
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    result = census(args.db2, args.modifiers, args.world_db, {int(x) for x in args.types.split(',')})
+    args.output.write_text(json.dumps(result, indent=2) + '\n')
+    print(json.dumps({key: result[key] for key in ('row_counts', 'trackable', 'boundary')}))
+    for row in result['ranking'][:20]:
+        print(json.dumps(row))
+
+
+if __name__ == '__main__':
+    main()
