@@ -80,7 +80,7 @@ The wrapper registers WoWDBDefs layout821B5D20 with the engine's maintained WDC5
 
 Effect50 had a ritual-only handler: nonritual toys could report success and spawn nothing. `game_objects::summoned` now loads authentic spell-referenced TDB1210 templates/DB2 display bounds (not the Wrath-derived content templates: Stormwind banner194274 uses Retail display10483, not8623) at world-data startup and handles non-scripted generic decoration, chair and mailbox objects. Other template types/scripts and absent content remain explicit preflight failures. Existing ritual channel ownership is unchanged. Template scale, chair seats, destination/facing and map copy are preserved; positive spell duration expires in whole seconds, while nonpositive duration does not set a despawn timer (TC a352b1fa EffectTransmitted).
 
-Target87 is DEST_DEST, not a request to snap to terrain. It preserves the requested or earlier selected destination. TC CheckDst initializes a missing destination to the caster. UseToy currently carries no destination, so standalone87 resolves to the caster; SpellCastIntent ground positions are honored by ordinary spells.
+Target87 is DEST_DEST, preserving the clicked/selected destination. Toy Box now enters the native cursor and carries that point in UseToy; missing/nonfinite/out-of-range points reject before casting instead of silently using the caster. Target47 still uses source forward radius. [Current transport](#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11).
 
 Aura233 is TC HandleUnused/client-side-only appearance, not aura56's global transform. Server stores/replicates the authentic aura and removes it normally. Native client viewer-local humanoid presentation still needs implementation; no rendered parity claimed. Source: pinned TC a352b1fa SpellAuraDefines.h320/SpellAuraEffects.cpp305; concrete local DB2 spells289277 and384585. No synthetic IDs or database writes. Required missing object imports and census receipts live in the toy-effects4 handoff.
 
@@ -132,7 +132,7 @@ ToyCollectionUpdate on CollectionChannel carries the full catalog and learned/fa
 
 ## Activation boundary
 
-UseToy checks ownership, raw metadata, runtime item eligibility and complete reachable spell preflight before dispatch. Registry-unhandled effects/auras and script-only auras fail explicitly. Aura56 requires a real nonzero creature template; zero-entry special costumes are not implemented. Summon28 requires available properties, supported control and a creature template. Area-trigger179 without a trigger binding/radius is lifecycle-only and unavailable as a toy action. Unsupported implicit targets and trigger depth/cycles are reported too.
+UseToy checks ownership, raw metadata, runtime item eligibility and complete reachable spell preflight before dispatch. Registry-unhandled effects/auras and script-only auras fail explicitly. Aura56 requires a real creature template or an implemented source-defined zero-entry mapping; the three costume mappings above are supported, other special cases remain blocked. Summon28 requires available properties, supported control and a creature template. Area-trigger179 without a trigger binding/radius is lifecycle-only and unavailable as a toy action. Unsupported implicit targets and trigger depth/cycles are reported too.
 
 ### Data-backed toy effects (2026-10-10)
 
@@ -183,6 +183,16 @@ Proof/data receipts: `/home/osso/Projects/world-of-osso/game-engine/data/diagnos
 [All43 runtime summon blockers](../../toy-effects11-coverage.md) are classified against read-only world.db and the actual local TDB1210 archive:32 missing templates,5 puppet-control3,3 vehicle-control4,3 specialized-title55. Every source display/model metadata join resolves; missing model-file residency is not inferred from metadata. Other effects/targets and interaction/visibility/scale contracts remain explicit. Existing guardians do not close Mylune's dummy/target72 chain. No new SummonProperties type is admitted without its required runtime.
 
 Prepared census128→130/1166 adds Pilfered Sweeper147867 and Brewfest Chowdown Trophy169865, zero removals. Existing generic importer/summon runtime preserves authentic121762/76543 and183727/92396, wild factions35/0, source forward radii1/1.5yd, stationarity and300000ms expiry. Trophy triggers cosmetic caster aura302730: visual88525→kit115127→animation367705/loop82, not a stat buff or guardian. Exact source matrix, preparation command, per-toy retained contracts and proof boundaries live in the linked coverage page. Canonical DB unchanged by this task; parent owns preparation/promotion and native rendering proof.
+
+## Toy-effects14 authentic input and rendering boundaries (2026-10-11)
+
+The [coverage ledger](../../toy-effects14-coverage.md) distinguishes prepared320/1166 from complete effect certification. Source item selection and three TC costume mappings were followed by ordinary caster/area/enemy kits and static actors; unknown scripts, procedure/condition payloads, controls and interactions remain explicit gaps.
+
+Native target87 placement now uses a real clicked point, with source range validation, Escape/right-click cancellation and no cast-at-feet replacement. Source-targeted toys carry the existing player sight witness in UseToy: the real Northshire bake refuses missing/forged rays and accepts an actual Gaze122120 witness. Snapshot metadata prevents caster/ground-only toys from depending on unrelated target eye data. Focused Toy Box typing must not execute AssistTarget/F; the native process regression reproduces and fixes the selected enemy becoming the player.
+
+Stationary ownership no longer takes the combat-pet frame. Source display multipliers .35/.75/.5/1.5 survive summon creation and aura object-scale application/removal; native ModelData/CDI scale remains separate. Master NativeObjectScale for ordinary NPCs and the tick catalog-borrow fix are retained. Scaled scenery's both-skin native acceptance is pending, not implied by CPU/catalog proof.
+
+Both-skin private5911 PNG/JSON proofs cover costumes, wings, friendly-area powder, clicked Scarecrow and witnessed enemy Gaze. Ocean uses its authored precast/cast/impact sounds: isolated 3D source-stream mixes are nonzero in both skins; physical speaker output is not certified. Authentic BC5 texture2022306 exposed GPU dispatch bypassing the existing decoder; real-ID RED→GREEN fixes upload without replacement bytes. New artifacts live outside canonical checkout at `/home/osso/.worktrees/logs/toy-effects14-continuation/`; requested1280×720 PNGs are in `/syncthing/AgentShared/2026-10-11/toy-effects14/`. Private runtime only; no shared realm promotion.
 
 ## Proof and coverage
 
