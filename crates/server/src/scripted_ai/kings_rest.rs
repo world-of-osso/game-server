@@ -8,6 +8,8 @@ pub(crate) const ANIMATED_GOLD_SCRIPT: &str = "npc_animated_gold";
 const INSTANCE: &str = "instance_kings_rest";
 const MOLTEN_GOLD: u32 = 265915;
 const BREAK_TARGETING: u32 = 140562;
+const SPIT_GOLD: u32 = 265773;
+const ANIMATED_GOLD: u32 = 135406;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
     name == ANIMATED_GOLD_SCRIPT
@@ -60,6 +62,13 @@ impl CreatureAi for AnimatedGold {
 
 pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::AuraScripts>) {
     scripts.0.insert(
+        SPIT_GOLD,
+        crate::auras::scripts::AuraScript {
+            on_remove: Some(summon_gold_after_spit),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         MOLTEN_GOLD,
         crate::auras::scripts::AuraScript {
             on_apply: Some(apply_molten_immunity),
@@ -67,6 +76,35 @@ pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::A
             ..Default::default()
         },
     );
+}
+
+/// TC Spit Gold effect0/periodic-damage AfterEffectRemove: only death/expiry.
+fn summon_gold_after_spit(
+    world: &mut World,
+    target: Entity,
+    aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    if !matches!(
+        reason,
+        crate::auras::RemoveReason::Expired | crate::auras::RemoveReason::Death
+    ) {
+        return;
+    }
+    let periodic = aura.effects.iter().any(|effect| {
+        effect.index == 0 && effect.aura_type == crate::auras::handlers::PERIODIC_DAMAGE
+    });
+    if !periodic || world.get_entity(aura.caster).is_err() {
+        return;
+    }
+    let position = world
+        .get::<shared::components::Position>(target)
+        .expect("Spit Gold target position");
+    let orientation = world
+        .get::<shared::components::Rotation>(target)
+        .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2);
+    let location = [position.x, -position.z, position.y, orientation];
+    crate::zones::summon_creature(world, aura.caster, ANIMATED_GOLD, location);
 }
 
 fn has_transform(aura: &crate::auras::AuraInstance) -> bool {
