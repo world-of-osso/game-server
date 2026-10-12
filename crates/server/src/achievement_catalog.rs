@@ -1,6 +1,7 @@
 //! Achievement/Criteria/CriteriaTree DB2 rows imported by scripts/import_achievements.py.
 //! Unconditional character kill/level/quest/achievement/encounter criteria are enabled. Trees
-//! containing unknown criteria, modifiers, timers or world-state conditions stay disabled.
+//! containing unknown criteria, timers or world-state conditions stay disabled.
+//! M+ admits only compiled pinned all-of completion predicates; unknown modifiers stay disabled.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -25,6 +26,7 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     WinPetBattle,
+    CompleteMythicPlus(MythicCompletion),
     CompleteQuest(u32),
     CastSpell(u32),
     BeSpellTarget(u32),
@@ -41,6 +43,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::WinPetBattle => 158,
+            Self::CompleteMythicPlus(_) => 216,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
@@ -55,6 +58,9 @@ impl CriteriaEvent {
         match self {
             Self::ReachLevel(_) => true,
             Self::WinPetBattle => criteria.asset == 0,
+            Self::CompleteMythicPlus(completion) => criteria
+                .mythic
+                .is_some_and(|requirements| requirements.matches(completion)),
             Self::SkillRank(asset, _)
             | Self::CurrencyGained(asset, _)
             | Self::ReputationGained(asset, _)
@@ -68,11 +74,45 @@ impl CriteriaEvent {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct MythicCompletion {
+    pub key_level: u32,
+    pub challenge_map: u32,
+    pub player_level: u8,
+    pub in_time: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MythicRequirements {
+    min_level: u32,
+    challenge_map: Option<u32>,
+    player_level: Option<u32>,
+    in_time: bool,
+}
+
+impl MythicRequirements {
+    fn matches(self, completion: MythicCompletion) -> bool {
+        let level_matches = completion.key_level >= self.min_level;
+        let map_matches = self
+            .challenge_map
+            .is_none_or(|map| map == completion.challenge_map);
+        let player_matches = self
+            .player_level
+            .is_none_or(|level| level == u32::from(completion.player_level));
+        let time_matches = !self.in_time || completion.in_time;
+        level_matches && map_matches && player_matches && time_matches
+    }
+}
+
+#[path = "achievement_mythic_predicates.rs"]
+mod mythic_predicates;
+
 #[derive(Debug, Clone)]
 struct Criteria {
     kind: u32,
     asset: u32,
     supported: bool,
+    mythic: Option<MythicRequirements>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -308,15 +348,14 @@ impl AchievementCatalog {
                     continue;
                 }
                 let counter = aggregate.criteria_progress.entry(id).or_default();
-                *counter = if self
-                    .criteria
-                    .get(&id)
-                    .is_some_and(|row| matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 158 | 165))
-                {
-                    counter.saturating_add(value)
-                } else {
-                    (*counter).max(value)
-                };
+                *counter =
+                    if self.criteria.get(&id).is_some_and(|row| {
+                        matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 158 | 165 | 216)
+                    }) {
+                        counter.saturating_add(value)
+                    } else {
+                        (*counter).max(value)
+                    };
             }
         }
         aggregate
@@ -524,21 +563,31 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let conditional = (3..8)
             .map(|index| row.get::<_, u32>(index))
             .collect::<rusqlite::Result<Vec<_>>>()?;
+        let criteria_id: u32 = row.get(0)?;
+        let mythic = if kind == 216 {
+            mythic_predicates::mythic_requirements(criteria_id, conditional[0])
+        } else {
+            None
+        };
+        let supported_mythic =
+            mythic.is_some() && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
             row.get(0)?,
             Criteria {
                 kind,
+                mythic,
                 asset: row.get::<_, i32>(2)? as u32,
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
-                supported: (matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
-                    || (kind == 158 && row.get::<_, i32>(2)? == 0)
-                    || (kind == 7 && row.get::<_, bool>(9)?)
-                    || (kind == 28 && row.get::<_, bool>(8)?)
-                    || (kind == 29
-                        && row.get::<_, bool>(8)?
-                        && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
-                    && conditional.iter().all(|value| *value == 0),
+                supported: supported_mythic
+                    || ((matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
+                        || (kind == 158 && row.get::<_, i32>(2)? == 0)
+                        || (kind == 7 && row.get::<_, bool>(9)?)
+                        || (kind == 28 && row.get::<_, bool>(8)?)
+                        || (kind == 29
+                            && row.get::<_, bool>(8)?
+                            && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
+                        && conditional.iter().all(|value| *value == 0)),
             },
         ))
     })?;

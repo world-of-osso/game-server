@@ -7,6 +7,54 @@ fn catalog() -> AchievementCatalog {
 }
 
 #[test]
+fn achievements_criteria_mythic_predicates_require_authored_map_key_time_and_player_level() {
+    let catalog = catalog();
+    let valid = MythicCompletion {
+        key_level: 10,
+        challenge_map: 401,
+        player_level: 70,
+        in_time: true,
+    };
+    for completion in [
+        MythicCompletion {
+            key_level: 9,
+            ..valid
+        },
+        MythicCompletion {
+            challenge_map: 400,
+            ..valid
+        },
+        MythicCompletion {
+            player_level: 71,
+            ..valid
+        },
+        MythicCompletion {
+            in_time: false,
+            ..valid
+        },
+    ] {
+        let mut state = PlayerAchievementState::default();
+        catalog.update(
+            &mut state,
+            CriteriaEvent::CompleteMythicPlus(completion),
+            None,
+            1,
+        );
+        assert!(!state.criteria_progress.contains_key(&56012));
+    }
+    let mut state = PlayerAchievementState::default();
+    catalog.update(
+        &mut state,
+        CriteriaEvent::CompleteMythicPlus(valid),
+        None,
+        1,
+    );
+    assert_eq!(state.criteria_progress.get(&56012), Some(&1));
+    // Seasonal criterion44064 remains disabled: no active season is invented.
+    assert!(!state.criteria_progress.contains_key(&44064));
+}
+
+#[test]
 fn achievements2_other_character_earned_dependencies_do_not_grant_character_meta() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
@@ -42,7 +90,7 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 3824);
+    assert_eq!(union.len(), 3883);
 }
 
 #[test]
