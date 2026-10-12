@@ -8,7 +8,7 @@ pub(super) struct DescriptionSources {
 
 pub(super) fn load_description_sources(conn: &Connection) -> rusqlite::Result<DescriptionSources> {
     let mut statement = conn.prepare(
-        "SELECT p.TraitDefinitionID,x.Field_10_0_0_44649_003,e.Amount,t.Name_lang
+        "SELECT DISTINCT p.TraitDefinitionID,x.Field_10_0_0_44649_003,e.Amount,t.Name_lang
          FROM profession_trait p
          JOIN profession_trait_x_effect x ON x.ProfessionTraitID=p.ID
          JOIN profession_effect e ON e.ID=x.ProfessionEffectID
