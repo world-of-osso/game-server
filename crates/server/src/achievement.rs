@@ -854,6 +854,41 @@ fn send_updates(
     }
 }
 
+/// TC Unit.cpp977-1001/1078: effective totals, raw peaks, no self-hit totals.
+pub(crate) fn record_damage(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    health_before: f32,
+    damage: f32,
+    loss: f32,
+) {
+    if attacker != victim && world.get::<Player>(attacker).is_some() {
+        record_criteria_events(
+            world,
+            attacker,
+            &[
+                CriteriaEvent::DamageDealt(health_before.min(damage) as u64),
+                CriteriaEvent::HighestDamageDone(damage as u64),
+            ],
+        );
+    }
+    if world.get::<Player>(victim).is_some() {
+        record_criteria_event(
+            world,
+            victim,
+            CriteriaEvent::HighestDamageTaken(loss as u64),
+        );
+        if attacker != victim {
+            record_criteria_event(
+                world,
+                victim,
+                CriteriaEvent::TotalDamageTaken(health_before.min(loss) as u64),
+            );
+        }
+    }
+}
+
 /// TC Unit.cpp6572-6583: totals exclude overheal; peaks retain the full heal.
 pub(crate) fn record_healing(
     world: &mut World,

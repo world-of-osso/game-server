@@ -1094,7 +1094,13 @@ fn try_swing(
     if intercepted {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
-            commit_intercepted_melee_loss(world, attacker_entity, target_entity, incoming_loss);
+            commit_intercepted_melee_loss(
+                world,
+                attacker_entity,
+                target_entity,
+                damage,
+                incoming_loss,
+            );
         });
     }
     let rescue = if intercepted {
@@ -1130,6 +1136,19 @@ fn try_swing(
                 Some(attacker_entity),
                 health_before,
                 incoming_loss,
+            );
+        });
+    }
+    if !intercepted {
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::achievement::record_damage(
+                world,
+                attacker_entity,
+                target_entity,
+                health_before,
+                damage,
+                loss,
             );
         });
     }
@@ -1378,6 +1397,7 @@ fn commit_intercepted_melee_loss(
     world: &mut World,
     attacker: Entity,
     victim: Entity,
+    damage: f32,
     incoming: f32,
 ) {
     let Some(health) = world.get::<Health>(victim) else {
@@ -1394,6 +1414,7 @@ fn commit_intercepted_melee_loss(
     );
     crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming);
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
     }
@@ -1438,6 +1459,7 @@ pub(crate) fn deal_health_damage(
         crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming_loss);
     }
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::stand_state::stand_on_damage(world, victim);
