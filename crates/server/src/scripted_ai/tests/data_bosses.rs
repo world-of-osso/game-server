@@ -501,18 +501,24 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
 fn encounter_coverage_golden_serpent_rejects_obsolete_bossmod_alert_catalog() {
     // Authentic legacy LittleWigs GoldenSerpent.lua OnEngage CDBar265773/9s.
     // Current Retail never invokes it, so even a stale catalog must stay silent.
-    let catalog = bossmod::Catalog(std::collections::HashMap::from([(
-        2139,
-        vec![bossmod::Rule {
-            id: 1,
-            trigger: bossmod::Trigger::Engage,
-            required_phase: None,
-            action: bossmod::Action::Timer {
-                spell_id: 265773,
-                duration_ms: 9_000,
-            },
-        }],
-    )]));
+    let catalog_db = Connection::open_in_memory().unwrap();
+    catalog_db
+        .execute_batch(include_str!("bossmod_diremaul.sql"))
+        .unwrap();
+    catalog_db
+        .execute(
+            "INSERT INTO bossmod_authority VALUES(2139,'LittleWigs')",
+            [],
+        )
+        .unwrap();
+    catalog_db
+        .execute(
+            "INSERT INTO bossmod_rule(id,addon,encounter_id,trigger,action,spell_id,delay_ms)
+         VALUES(100,'LittleWigs',2139,'engage','timer',265773,9000)",
+            [],
+        )
+        .unwrap();
+    let catalog = bossmod::load_catalog(&catalog_db).unwrap();
     let (mut h, boss, _) = bound_boss_in_state(
         135322,
         1762,
