@@ -826,14 +826,29 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 
 #[test]
 fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_channel() {
-    exercise_arena_channel(false);
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2);
 }
 #[test]
 fn rated_arena_groups_play_then_persist_reference_rating_without_queue_only_awards() {
-    exercise_arena_channel(true);
+    exercise_arena_channel(ArenaQueueMode::Rated2v2);
 }
-fn exercise_arena_channel(rated: bool) {
+#[test]
+fn six_arena_players_complete_skirmish_three_v_three_over_real_channels() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish3v3);
+}
+#[test]
+fn six_arena_players_complete_rated_three_v_three_and_persist_played_results() {
+    exercise_arena_channel(ArenaQueueMode::Rated3v3);
+}
+fn exercise_arena_channel(mode: ArenaQueueMode) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
+    let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
+    let team_size = usize::from(crate::pvp::arena::team_size(mode).unwrap());
+    let bracket = if team_size == 2 {
+        PvpBracketSnapshot::Arena2v2
+    } else {
+        PvpBracketSnapshot::Arena3v3
+    };
     let source = Connection::open_with_flags(
         crate::test_data::world_db_path(),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -888,7 +903,7 @@ fn exercise_arena_channel(rated: bool) {
     })
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
-    let players: Vec<_> = (1..=4)
+    let players: Vec<_> = (1..=(team_size * 2) as u64)
         .map(|id| h.spawn_at_level(id, 90, STORMWIND, origin + Vec3::new(id as f32, 0.0, 0.0)))
         .collect();
     let origins: Vec<_> = players
@@ -913,9 +928,7 @@ fn exercise_arena_channel(rated: bool) {
                 .world_mut()
                 .get_mut::<MessageSender<QueueForArena>>(who.connection)
                 .unwrap()
-                .send::<PvpChannel>(QueueForArena {
-                    mode: ArenaQueueMode::Skirmish2v2,
-                });
+                .send::<PvpChannel>(QueueForArena { mode });
         }
     }
     if rated {
@@ -939,19 +952,20 @@ fn exercise_arena_channel(rated: bool) {
             .collect();
         let mut groups = h.app.world_mut().resource_mut::<GroupRegistry>();
         groups.sync_presence(&online);
-        for (leader, member) in [(1, 3), (2, 4)] {
+        for member in 3..=(team_size * 2) as u64 {
+            let leader = if member % 2 == 1 { 1 } else { 2 };
             groups.invite(leader, &format!("Traveler{member}"), &online);
             groups.respond_invite(member, true);
         }
-        assert_eq!(groups.group_members(1).len(), 2);
-        assert_eq!(groups.group_members(2).len(), 2);
+        assert_eq!(groups.group_members(1).len(), team_size);
+        assert_eq!(groups.group_members(2).len(), team_size);
         for who in &players[..2] {
             h.app
                 .world_mut()
                 .get_mut::<MessageSender<shared::protocol::QueueForRatedPvp>>(who.connection)
                 .unwrap()
                 .send::<PvpChannel>(shared::protocol::QueueForRatedPvp {
-                    bracket: shared::protocol::PvpBracketSnapshot::Arena2v2,
+                    bracket: bracket.clone(),
                 });
         }
     }
@@ -1090,7 +1104,7 @@ fn exercise_arena_channel(rated: bool) {
         "hidden orb retains aura ownership"
     );
     let attacker = players[0].player;
-    for target in [players[1].player, players[3].player] {
+    for target in players.iter().skip(1).step_by(2).map(|who| who.player) {
         h.app
             .world_mut()
             .get_mut::<Position>(target)
@@ -1121,20 +1135,23 @@ fn exercise_arena_channel(rated: bool) {
             shared::battleground::BgTeam::A
         ))
     );
-    assert_eq!(ended.players.len(), 4);
+    assert_eq!(ended.players.len(), team_size * 2);
     let killer = ended
         .players
         .iter()
         .find(|player| player.character_id == 1)
         .unwrap();
-    assert_eq!(killer.killing_blows, 2);
+    assert_eq!(killer.killing_blows, team_size as u32);
     assert!(
         killer.damage_done > 0,
         "real combat events populate arena damage scoreboard"
     );
     if rated {
-        assert_eq!(ended.arena.as_ref().unwrap().mode, ArenaQueueMode::Rated2v2);
-        assert_eq!(ended.arena.as_ref().unwrap().rating_changes.len(), 4);
+        assert_eq!(ended.arena.as_ref().unwrap().mode, mode);
+        assert_eq!(
+            ended.arena.as_ref().unwrap().rating_changes.len(),
+            team_size * 2
+        );
         for (index, who) in players.iter().enumerate() {
             let progress = &h
                 .app
@@ -1145,7 +1162,7 @@ fn exercise_arena_channel(rated: bool) {
             let entry = progress
                 .brackets
                 .iter()
-                .find(|entry| entry.bracket == shared::protocol::PvpBracketSnapshot::Arena2v2)
+                .find(|entry| entry.bracket == bracket)
                 .unwrap();
             let won = index % 2 == 0;
             assert_eq!(entry.rating, Some(if won { 48 } else { 0 }));
