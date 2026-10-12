@@ -1,4 +1,6 @@
-# Mount Journal authority
+# Mount Journal
+
+Initial world entry publishes the complete authentic catalog. Later account/context responses send changed rows only on the ordered reliable collection channel; a new player entity resets the complete-catalog boundary. authority
 
 User-approved2026-10-11 Retail account Mount Journal. [Implementation](../wiki/systems/mounts.md#mount-journal); [native UI contract](../../../game-engine/docs/specs/mount-journal.md).
 

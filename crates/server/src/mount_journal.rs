@@ -227,10 +227,16 @@ fn usable(world: &World, player: Entity, entry: &MountJournalEntry) -> bool {
     })
 }
 
-fn send_snapshot(world: &mut World, connection: Entity, player: Entity, error: Option<String>) {
+#[derive(Component)]
+struct PublishedMountSnapshot {
+    player: Entity,
+    rows: BTreeMap<u32, MountJournalEntry>,
+}
+
+fn build_mount_rows(world: &World, player: Entity) -> Vec<MountJournalEntry> {
     let owned = &world.get::<AccountMounts>(player).expect("loaded mounts").0;
     let auras = world.get::<crate::auras::ActiveAuras>(player);
-    let mounts = world
+    world
         .resource::<MountCatalog>()
         .entries
         .values()
@@ -243,11 +249,46 @@ fn send_snapshot(world: &mut World, connection: Entity, player: Entity, error: O
                 auras.is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == entry.spell_id));
             row
         })
+        .collect()
+}
+
+fn build_mount_update(
+    previous: Option<&PublishedMountSnapshot>,
+    player: Entity,
+    rows: &[MountJournalEntry],
+    error: Option<String>,
+) -> MountJournalUpdate {
+    let previous_rows = previous
+        .filter(|snapshot| snapshot.player == player)
+        .map(|snapshot| &snapshot.rows);
+    let complete = previous_rows.is_none();
+    let mounts = rows
+        .iter()
+        .filter(|row| previous_rows.is_none_or(|previous| previous.get(&row.mount_id) != Some(row)))
+        .cloned()
         .collect();
-    let mounts: Vec<MountJournalEntry> = mounts;
-    info!(?connection, count = mounts.len(), mare = ?mounts.iter().find(|mount| mount.mount_id == 18).map(|mount| (mount.collected, mount.favourite, mount.active)), ?error, "MOUNT_JOURNAL_SENT");
+    MountJournalUpdate {
+        complete,
+        mounts,
+        error,
+    }
+}
+
+fn send_snapshot(world: &mut World, connection: Entity, player: Entity, error: Option<String>) {
+    let rows = build_mount_rows(world, player);
+    let update = build_mount_update(
+        world.get::<PublishedMountSnapshot>(connection),
+        player,
+        &rows,
+        error,
+    );
+    info!(?connection, complete = update.complete, count = update.mounts.len(), mare = ?update.mounts.iter().find(|mount| mount.mount_id == 18).map(|mount| (mount.collected, mount.favourite, mount.active)), error = ?update.error, "MOUNT_JOURNAL_SENT");
+    world.entity_mut(connection).insert(PublishedMountSnapshot {
+        player,
+        rows: rows.into_iter().map(|row| (row.mount_id, row)).collect(),
+    });
     if let Some(mut sender) = world.get_mut::<MessageSender<MountJournalUpdate>>(connection) {
-        sender.send::<CollectionChannel>(MountJournalUpdate { mounts, error });
+        sender.send::<CollectionChannel>(update);
     }
 }
 

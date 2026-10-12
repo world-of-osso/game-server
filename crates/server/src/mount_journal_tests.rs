@@ -37,6 +37,68 @@ fn setup() -> Harness {
     h
 }
 #[test]
+fn mount_journal_initial_catalog_and_changed_rows_reach_account_without_repeating_catalog() {
+    let mut h = setup();
+    drain::<MountJournalUpdate>(&mut h.app, h.connection);
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<PublishedMountSnapshot>();
+    send_snapshot(h.app.world_mut(), h.connection, h.caster, None);
+    h.advance(1);
+    let initial = drain::<MountJournalUpdate>(&mut h.app, h.connection)
+        .pop()
+        .unwrap();
+    assert!(initial.complete);
+    assert_eq!(
+        initial.mounts.len(),
+        h.app.world().resource::<MountCatalog>().entries.len()
+    );
+    assert!(
+        initial
+            .mounts
+            .iter()
+            .any(|mount| mount.mount_id == 18 && mount.teaching_items.contains(&5655))
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    mount_store::learn_spells(db, 1, &[18]);
+    broadcast_account(h.app.world_mut(), 1);
+    h.advance(1);
+    let learned = drain::<MountJournalUpdate>(&mut h.app, h.connection)
+        .pop()
+        .unwrap();
+    assert!(!learned.complete);
+    assert_eq!(learned.mounts.len(), 1);
+    assert_eq!(
+        (learned.mounts[0].mount_id, learned.mounts[0].collected),
+        (18, true)
+    );
+    mount_store::favourite(&h.app.world().resource::<GameDatabase>().db, 1, 18, true).unwrap();
+    broadcast_account(h.app.world_mut(), 1);
+    h.advance(1);
+    let favourite = drain::<MountJournalUpdate>(&mut h.app, h.connection)
+        .pop()
+        .unwrap();
+    assert!(!favourite.complete);
+    assert_eq!(favourite.mounts.len(), 1);
+    assert!(favourite.mounts[0].favourite);
+    // Character selection reuses its connection but replaces the player entity.
+    let other = spawn_player(&mut h.app, 1, 0.0);
+    let owned = mount_store::load(&h.app.world().resource::<GameDatabase>().db, 1);
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(AccountMounts(owned));
+    send_snapshot(h.app.world_mut(), h.connection, other, None);
+    h.advance(1);
+    assert!(
+        drain::<MountJournalUpdate>(&mut h.app, h.connection)
+            .iter()
+            .any(|update| update.complete)
+    );
+}
+
+#[test]
 fn mount_journal_real_capability_types_distinguish_ground_flight_aquatic_and_passenger() {
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
