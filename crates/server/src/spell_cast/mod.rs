@@ -1654,7 +1654,10 @@ pub(crate) fn execute_cast(
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
-    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
+        world, caster, &prepared,
+    ));
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
