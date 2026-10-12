@@ -138,16 +138,15 @@ fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
         .world_mut()
         .run_system_once(crate::combat::auto_attack_system)
         .unwrap();
-    let native = world_db()
-        .unwrap()
-        .store
-        .get(RESTORATION)
-        .unwrap()
+    let spell = world_db().unwrap().store.get(RESTORATION).unwrap();
+    let effect = spell
         .effects
         .iter()
         .find(|effect| effect.aura == 429)
-        .unwrap()
-        .base_points;
+        .unwrap();
+    // Native137012 has no SpellLevels row; its1 RealPointsPerLevel is not zero.
+    let level = h.app.world().get::<Level>(owner).unwrap().0;
+    let native = effect.base_points + f32::from(level) * effect.real_points_per_level;
     assert_eq!(
         before - h.health(h.npc),
         (10.0 * (1.0 + native / 100.0)).round()
