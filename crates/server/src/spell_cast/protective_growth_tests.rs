@@ -204,7 +204,7 @@ fn aura_duration(h: &Harness, target: Entity, id: u32) -> u32 {
         .world()
         .get::<shared::components::UnitAuras>(target)
         .unwrap()
-        .0
+        .auras
         .iter()
         .find(|aura| aura.spell_id == id)
         .unwrap()
@@ -262,12 +262,12 @@ fn class_completeness_native_lingering_healing_preserves_rejuvenation_and_extend
     }
     cast_regrowth(&mut h, caster, caster);
     let ticks_at_base_expiry = native_duration(REGROWTH) / 50;
-    h.advance(ticks_at_base_expiry + 1);
+    h.advance((ticks_at_base_expiry + 1) as usize);
     assert!(
         crate::auras::has_aura(h.app.world(), caster, REGROWTH),
         "self Regrowth must survive its unextended native expiry"
     );
-    h.advance(lingering_extension(1) / 50 + 1);
+    h.advance((lingering_extension(1) / 50 + 1) as usize);
     assert!(
         !crate::auras::has_aura(h.app.world(), caster, REGROWTH),
         "self Regrowth must expire after the authored extension"
