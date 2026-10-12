@@ -4037,6 +4037,116 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
 }
 
 #[test]
+fn toyfx17_linked_fire_requires_a_live_player_and_repeats_on_source_cooldown() {
+    use crate::auras::{ActiveAuras, RemoveReason};
+    use shared::components::{Health, Position, Rotation, UnitScale};
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("trigger.redb"));
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        UnitScale(1.0),
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    learn_effect_toy(&mut h, character, 70722);
+    assert_eq!(activate(&mut h, 70722)[0].error, None);
+    h.advance(100);
+    let fire = {
+        let world = h.app.world_mut();
+        world
+            .query::<(&shared::protocol::GameObjectInfo, &Position)>()
+            .iter(world)
+            .find(|(info, _)| info.entry == 208935)
+            .map(|(_, position)| *position)
+            .unwrap()
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: fire.x + 30.0,
+        ..fire
+    });
+    crate::auras::remove_auras(h.app.world_mut(), h.caster, RemoveReason::Cancelled, |a| {
+        a.spell_id == 7353
+    });
+    let bystander = spawn_player(&mut h.app, 8, fire.x + 9.0);
+    let other_map = spawn_player(&mut h.app, 8, fire.x + 2.0);
+    let dead = spawn_player(&mut h.app, 8, fire.x + 2.0);
+    for entity in [bystander, other_map, dead] {
+        h.app.world_mut().entity_mut(entity).insert(UnitScale(1.0));
+    }
+    h.app
+        .world_mut()
+        .entity_mut(other_map)
+        .insert(crate::maps::InMap::continent(1));
+    h.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: fire.x + 2.0,
+        ..fire
+    });
+    h.advance(100);
+    let has_buff = |world: &World, entity| {
+        world
+            .get::<ActiveAuras>(entity)
+            .is_some_and(|auras| auras.iter().any(|a| a.spell_id == 7353))
+    };
+    assert!(
+        !has_buff(h.app.world(), bystander),
+        "9yd is inside the spell area, outside the trigger"
+    );
+    assert!(
+        !has_buff(h.app.world(), h.npc),
+        "NPC alone cannot activate this environmental trap"
+    );
+    assert!(!has_buff(h.app.world(), other_map));
+    assert!(!has_buff(h.app.world(), dead));
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: fire.x + 6.6,
+        ..fire
+    });
+    h.advance(2);
+    assert!(
+        !has_buff(h.app.world(), bystander),
+        "beyond diameter/2 + scaled1.5yd reach"
+    );
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: fire.x + 6.4,
+        ..fire
+    });
+    h.advance(2);
+    assert!(
+        has_buff(h.app.world(), bystander),
+        "source10yd area is not the5yd trigger radius"
+    );
+    assert!(!has_buff(h.app.world(), other_map));
+    assert!(!has_buff(h.app.world(), dead));
+    let deadline = |world: &World| {
+        world
+            .get::<ActiveAuras>(bystander)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 7353)
+            .unwrap()
+            .expires_at
+    };
+    let first = deadline(h.app.world());
+    h.advance(40);
+    assert_eq!(
+        deadline(h.app.world()),
+        first,
+        "no per-frame refresh before source4s cooldown"
+    );
+    h.advance(45);
+    assert!(
+        deadline(h.app.world()) > first,
+        "zero charges repeat instead of consuming the trap"
+    );
+}
+
+#[test]
 fn toyfx17_cozy_fire_adds_source_versatility_rating_and_restores_it() {
     use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
     use shared::components::{CombatRatings, Position};
