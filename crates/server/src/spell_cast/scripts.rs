@@ -25,6 +25,9 @@ pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (crate::scripted_ai::murder_row::SPELL_FEL_CRAZED, 1) {
+        return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
+    }
     batch14::cast_effect(spell, index).or_else(|| batch9::cast_effect(spell, index))
 }
 pub(super) use batch12::empower_gargoyles;

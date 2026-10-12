@@ -203,7 +203,8 @@ fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle(
         0,
         "Normal must not schedule Fel Nova"
     );
-    h.hit_pct(boss, 200.0);
+    // Controlled death proof includes the authored four-stack damage reduction.
+    h.hit_pct(boss, 2_000.0);
     h.advance(0.05);
     assert!(h.inbox(0).ends.last().unwrap().success);
     assert_eq!(
@@ -216,6 +217,37 @@ fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle(
     let casts = h.casts(0, boss, 1230298);
     h.advance(4.0);
     assert_eq!(h.casts(0, boss, 1230298), casts, "dead boss cast again");
+}
+
+#[test]
+fn encounter_coverage_kystia_appears_with_sourced_four_stack_felshield() {
+    let (mut h, boss, _) = bound_boss(234648, 2813, 0);
+    let shield_stacks = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(boss)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1217989))
+        .map(|aura| aura.stacks);
+    assert_eq!(
+        shield_stacks,
+        Some(4),
+        "TC JustAppeared/FelCrazed must supply four stacks"
+    );
+    let before = h.health(boss).current;
+    h.hit(boss, 100_000.0);
+    let protected_loss = before - h.health(boss).current;
+    assert!(protected_loss > 0.0);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1217989,
+    );
+    let before = h.health(boss).current;
+    h.hit(boss, 100_000.0);
+    let unprotected_loss = before - h.health(boss).current;
+    // DB2 aura87 authors -20% for each of the four stacks.
+    assert!((protected_loss / unprotected_loss - 0.2).abs() < 0.001);
 }
 
 #[test]

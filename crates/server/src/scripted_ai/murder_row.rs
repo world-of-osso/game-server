@@ -20,6 +20,9 @@ const SPELL_MIRROR_IMAGES: u32 = 1264095;
 pub(crate) const SPELL_FEL_NOVA_SELECTOR: u32 = 474240;
 pub(crate) const SPELL_BLINK: u32 = 474183;
 const SPELL_FEL_NOVA: u32 = 1223906;
+pub(crate) const SPELL_FEL_CRAZED: u32 = 474365;
+const SPELL_FELSHIELD: u32 = 1217989;
+const SPELL_ILLICIT_INFUSION_VISUAL: u32 = 1217464;
 
 pub fn is_creature_script(script_name: &str) -> bool {
     script_name == SCRIPT
@@ -66,6 +69,27 @@ pub(crate) fn cast_fel_nova_after_blink(
     Ctx { world, me: caster }.do_cast_self(SPELL_FEL_NOVA);
 }
 
+/// TC FelCrazed effect1 prevents the default trigger and sets aura stacks to4.
+pub(crate) fn cast_initial_felshield(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    cast_felshield_stacks(world, ctx.caster, 4);
+}
+
+fn cast_felshield_stacks(world: &mut World, caster: Entity, stacks: u8) {
+    // The source explicitly requests TRIGGERED_FULL_MASK for this shield.
+    let mut ctx = Ctx { world, me: caster };
+    if !ctx.do_cast_at(Some(caster), SPELL_FELSHIELD, true) {
+        warn!("Kystia Felshield {SPELL_FELSHIELD} cast failed for {caster:?}");
+        return;
+    }
+    if !crate::auras::set_self_cast_stacks(ctx.world, caster, SPELL_FELSHIELD, stacks) {
+        warn!("Kystia Felshield {SPELL_FELSHIELD} aura missing after cast for {caster:?}");
+    }
+}
+
 struct KystiaManaheart {
     boss: BossAi,
     heroic: bool,
@@ -100,6 +124,11 @@ impl BossScript for KystiaManaheart {
 }
 
 impl CreatureAi for KystiaManaheart {
+    fn just_appeared(&mut self, ctx: &mut Ctx) {
+        ctx.do_cast_at(Some(ctx.me), SPELL_FEL_CRAZED, false);
+        ctx.do_cast(SPELL_ILLICIT_INFUSION_VISUAL);
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
     }

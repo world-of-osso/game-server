@@ -95,6 +95,7 @@ pub enum MotionType {
 #[derive(Debug, Clone, Copy)]
 pub enum Hook {
     Reset,
+    JustAppeared,
     JustEngagedWith(Entity),
     JustDied(Option<Entity>),
     /// `DamageTaken(attacker, damage)` with the health the damage was taken from.
@@ -128,6 +129,7 @@ pub enum Hook {
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
     fn reset(&mut self, _ctx: &mut Ctx) {}
+    fn just_appeared(&mut self, _ctx: &mut Ctx) {}
     fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {}
     fn just_died(&mut self, _ctx: &mut Ctx, _killer: Option<Entity>) {}
     fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, _damage: DamageTaken) {}
@@ -262,6 +264,7 @@ fn initialize_ai(world: &mut World, creature: Entity) {
             pending: VecDeque::new(),
         });
     dispatch(world, creature, Hook::Reset);
+    dispatch(world, creature, Hook::JustAppeared);
 }
 
 /// `Creature::Respawn`: the creature starts over with a new AI.
@@ -315,6 +318,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
     let mut ctx = Ctx { world, me };
     match hook {
         Hook::Reset => ai.reset(&mut ctx),
+        Hook::JustAppeared => ai.just_appeared(&mut ctx),
         Hook::JustEngagedWith(who) => ai.just_engaged_with(&mut ctx, who),
         Hook::JustDied(killer) => ai.just_died(&mut ctx, killer),
         Hook::DamageTaken {
