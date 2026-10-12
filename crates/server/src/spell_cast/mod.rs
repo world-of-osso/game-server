@@ -1759,7 +1759,7 @@ type TargetPlan = Vec<PlannedEffect>;
 /// The first effect whose targets `Spell::SelectSpellTargets` selects together with
 /// effect `index` (Spell.cpp:741-781): an effect with the same implicit targets and, for
 /// area selections, the same radii. Its selection (its chain) serves both.
-fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
+fn target_group_leader(world: &World, spell: &SpellInfo, index: usize) -> usize {
     let effect = &spell.effects[index];
     spell.effects[..index]
         .iter()
@@ -1767,9 +1767,14 @@ fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
             other.effect != 0
                 && targets::unsupported_target(other).is_none()
                 && other.implicit_targets == effect.implicit_targets
+                && world
+                    .get_resource::<crate::conditions::SpellTargetConditions>()
+                    .is_none_or(|conditions| {
+                        conditions.share_targets(spell.id, other.index, effect.index)
+                    })
                 && other.attributes & EFFECT_ATTR_PLAYERS_ONLY
                     == effect.attributes & EFFECT_ATTR_PLAYERS_ONLY
-                && (!targets::selects_area(effect)
+                && (!targets::shared_selection_checks_radius(effect)
                     || (other.radius[0] == effect.radius[0] && other.radius[1] == effect.radius[1]))
         })
         .unwrap_or(index)
@@ -1833,7 +1838,7 @@ fn plan_targets(
             });
             continue;
         }
-        let leader = target_group_leader(spell, index);
+        let leader = target_group_leader(world, spell, index);
         let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
             None => {

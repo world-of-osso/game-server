@@ -796,15 +796,17 @@ pub fn effect_dest(
     dest
 }
 
-/// Whether a slot of `effect` selects units in an area (the selections whose radius
-/// `Spell::SelectSpellTargets` compares: Spell.cpp:757-775).
-pub fn selects_area(effect: &SpellEffect) -> bool {
+/// Nearby/cone/area/line selections whose radii TC compares before sharing targets.
+pub fn shared_selection_checks_radius(effect: &SpellEffect) -> bool {
     effect.implicit_targets.iter().any(|&id| {
         matches!(
             selector(id),
             Some(
                 Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
+                    | Selector::AreaEntryAtDest
+                    | Selector::NearbyEntry
+                    | Selector::ConeEntry
                     | Selector::ConeToDest
                     | Selector::LineToDest
             )
