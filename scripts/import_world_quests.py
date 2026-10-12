@@ -166,7 +166,7 @@ def insert_source_rewards(conn, templates, poi):
     conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_xp (level INTEGER, difficulty INTEGER, amount INTEGER)')
     conn.execute('DELETE FROM content_world_quest_xp')
     conn.executemany('INSERT INTO content_world_quest_xp VALUES (?,?,?)',
-                     [(row['ID'], n, row[f'Difficulty_{n}']) for row in poi.get('xp', []) for n in range(10)])
+                     [(row['ID'], n, row[f'Difficulty_{n}']) for row in poi['xp'] for n in range(10)])
     for quest, raw in templates.items():
         source = json.loads(raw)
         for n in range(1, 5):
@@ -182,7 +182,7 @@ def insert_source_rewards(conn, templates, poi):
             amount = int(override / 100) if override else poi['faction_rewards'][2 if index < 0 else 1][abs(index)]
             if faction and amount:
                 conn.execute('INSERT INTO content_world_quest_reward VALUES (?,?,?,?,?)',
-                             (quest, 'reputation', faction, amount, source.get(f'RewardFactionCapIn{n}', 7)))
+                             (quest, 'reputation', faction, amount, source[f'RewardFactionCapIn{n}']))
 
 
 def import_definitions(conn, receipt, poi, policy_duration=86400):

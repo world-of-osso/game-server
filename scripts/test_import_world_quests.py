@@ -94,6 +94,21 @@ class WorldQuestImportTests(unittest.TestCase):
             self.assertEqual(rows[0],(0,138122,12,92,9.))
             self.assertEqual(rows[-1],(15,0,1,2,0.))
 
+    def test_missing_xp_source_is_rejected_not_imported_as_empty(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            poi=areas()
+            del poi['xp']
+            with self.assertRaises(KeyError):
+                import_definitions(conn,receipt(),poi)
+
+    def test_missing_reputation_cap_is_rejected_not_guessed(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            conn.execute('ALTER TABLE tdb_quest_template DROP COLUMN RewardFactionCapIn1')
+            with self.assertRaises(KeyError):
+                import_definitions(conn,receipt(),areas())
+
     def test_single_leaf_quest_criteria_preserve_kill_and_aura_sources(self):
         for kind,asset in [(0,225891),(69,420847)]:
             with closing(sqlite3.connect(':memory:')) as conn:
