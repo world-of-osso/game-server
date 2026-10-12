@@ -2,6 +2,7 @@ mod achievement;
 mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
+mod adventure_guide;
 mod appearance_collection;
 mod area_table;
 mod auction_house;
@@ -22,6 +23,7 @@ mod collection;
 mod combat;
 mod combat_refs;
 mod conditions;
+mod crafting_orders;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;
@@ -176,7 +178,8 @@ fn log_plugin() -> bevy::log::LogPlugin {
 fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
-        .add_plugins(achievement::AchievementPlugin);
+        .add_plugins(achievement::AchievementPlugin)
+        .add_plugins(adventure_guide::AdventureGuidePlugin);
     add_social_plugins(app);
     add_progression_plugins(app);
     add_world_plugins(app);
@@ -219,6 +222,7 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(death::DeathPlugin)
         .add_plugins(pvp::PvpPlugin)
         .add_plugins(profession::ProfessionPlugin)
+        .add_plugins(crafting_orders::CraftingOrdersPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(rest::RestPlugin)
         .add_plugins(stand_state::StandStatePlugin)
