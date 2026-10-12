@@ -219,6 +219,18 @@ fn encounter_coverage_nibbles_health_check_starts_authored_light_infusion_phase(
             .display_id,
         128332
     );
+    assert!(
+        matches!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(nibbles),
+            Some(crate::creature_ai::CreatureState::Pursuing { .. })
+        ),
+        "friendly scripted phase cannot be generic evade: {:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(nibbles)
+    );
     let cast = h
         .app
         .world()

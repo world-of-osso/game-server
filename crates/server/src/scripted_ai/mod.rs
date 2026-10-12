@@ -75,6 +75,11 @@ impl Plugin for ScriptedAiPlugin {
 #[derive(Component, Debug, Clone)]
 pub struct CreatureScriptName(pub String);
 
+/// A scripted phase does not call TC UpdateVictim; the pre-AI generic updater
+/// must not refresh/evade that actor until the script resumes combat updates.
+#[derive(Component)]
+pub(crate) struct ScriptedVictimUpdatePaused;
+
 /// `ReactStates`: a passive creature neither attacks on sight nor picks a victim
 /// (`CreatureAI::UpdateVictim` stops its attack); an aggressive one does both.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]

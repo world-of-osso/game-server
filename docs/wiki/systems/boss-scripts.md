@@ -44,6 +44,12 @@ Private-copy [SmartAI overlay instructions](../../specs/smartai-escort.md) recon
 
 Sources: `crates/server/src/scripted_ai/smart_{ai,timed,paths,escort,targets,lifetimes}.rs`; real-row and table fixtures in `smart_escort_tests.rs`; pinned TC SmartAI.cpp:185–259,549–554,912–950 and archived SmartScript.cpp in engine `data/diagnostics/smartai-coverage-2026-10-11/`.
 
+## Murder Row continuation (2026-10-12)
+
+[Whole-goal census and fixed work order](../../encounter-coverage.md) distinguishes structural coverage from completion. Pinned TC primary Kystia3101 binds234648, never companion234660. [Contract](../../specs/boss-scripts.md) tracks remaining callbacks/data gaps; `scripts/encounter_cpp_bindings.py` prepares lead-owned SQL only.
+
+Nibbles' friendly phase returns before TC UpdateVictim. The server's independent pre-AI victim updater instead discarded its now-friendly threat and forced Returning, cancelling Light Infusion. The real fixed-schedule reproduction asserts this boundary. `ScriptedVictimUpdatePaused` gives that source control flow explicit ownership: phase entry pauses the generic updater and reset resumes it; re-corruption callbacks remain open. No faction-check removal, passive-state substitution or invented timer.
+
 ## Wailing Caverns — Lord Cobrahn (2026-10-11)
 
 `encounter_compat.csv` preserves Cobrahn3669 as saved boss ordinal0 / encounter586 (previously registered in `wailing_caverns.rs`, now removed). Local `tdb_smart_scripts` death row0 sets data0→DONE3; `dungeon_encounter` names the same creature on map43/Normal1. `SmartAi` retains the authored spell timers and adds optional `BossAi` lifecycle; the existing hook boundary emits encounter/frame messages and death credit, with no separate spell schedule or new persistence model. AGGRO4 runs TALK1 using existing CreatureText selection.

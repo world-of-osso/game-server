@@ -295,6 +295,7 @@ type Engaged<'w, 's> = Query<
             Option<&'static SpawnPoint>,
             Option<&'static LastDamagedTime>,
         ),
+        Has<crate::scripted_ai::ScriptedVictimUpdatePaused>,
     ),
     (
         Without<DeathState>,
@@ -369,6 +370,7 @@ pub(crate) fn update_victim_system(
         react,
         auras,
         (home, last_damaged),
+        scripted_update_paused,
     ) in &mut engaged
     {
         let dungeon = maps
@@ -378,7 +380,7 @@ pub(crate) fn update_victim_system(
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
-        if react == Some(&crate::scripted_ai::ReactState::Passive) {
+        if scripted_update_paused || react == Some(&crate::scripted_ai::ReactState::Passive) {
             continue;
         }
         let valid = |unit: u64| {
