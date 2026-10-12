@@ -11,6 +11,10 @@ const URSOLS_WARDING: u32 = 471_492;
 const URSOLS_CHILD: u32 = 471_491;
 const WAKING_DREAM: u32 = 392_221;
 const WAKING_CHILD: u32 = 392_223;
+const STACKING_SHIELD: u32 = 96_493;
+const STACKING_CHILD: u32 = 96_494;
+const CHANNEL_LINK: u32 = 98_979;
+const CHANNEL_CHILD: u32 = 98_973;
 
 fn linked_harness() -> Harness {
     harness_with(
@@ -24,6 +28,10 @@ fn linked_harness() -> Harness {
             URSOLS_CHILD,
             WAKING_DREAM,
             WAKING_CHILD,
+            STACKING_SHIELD,
+            STACKING_CHILD,
+            CHANNEL_LINK,
+            CHANNEL_CHILD,
         ],
         11,
         true,
@@ -150,6 +158,62 @@ fn class_completeness_native_linked_explicit_child_uses_original_caster_and_pres
         aura.spell_id == SPELLSHIELD && aura.caster == caster
     });
     assert_eq!(child_aura(&h, npc, SPELLSHIELD_CHILD).caster, npc);
+}
+
+#[test]
+fn class_completeness_native_linked_reapply_synchronizes_native_stacks_without_restarting_child() {
+    let mut h = linked_harness();
+    let (caster, npc) = (h.caster, h.npc);
+    apply_link(&mut h, STACKING_SHIELD, caster, npc);
+    let first = child_aura(&h, npc, STACKING_CHILD);
+    apply_link(&mut h, STACKING_SHIELD, caster, npc);
+    let child = child_aura(&h, npc, STACKING_CHILD);
+    assert_eq!(child.stacks, 2);
+    assert_eq!(child.expires_at, first.expires_at);
+    let native = world_db()
+        .unwrap()
+        .store
+        .get(STACKING_CHILD)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.aura == 87)
+        .unwrap()
+        .base_points;
+    let multiplier = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(npc)
+        .unwrap()
+        .damage_taken(1);
+    assert!((multiplier - (1.0 + native * 2.0 / 100.0)).abs() < 0.0001);
+}
+
+#[test]
+fn class_completeness_native_linked_channel_with_area_unit_child_uses_original_caster() {
+    let mut h = linked_harness();
+    let (caster, npc) = (h.caster, h.npc);
+    apply_link(&mut h, CHANNEL_LINK, caster, npc);
+    assert_eq!(child_aura(&h, caster, CHANNEL_CHILD).caster, caster);
+}
+
+#[test]
+fn class_completeness_native_linked_child_respects_active_trigger_depth_limit() {
+    let mut h = linked_harness();
+    let caster = h.caster;
+    super::cast_triggered(
+        h.app.world_mut(),
+        caster,
+        IRONFUR,
+        Some(caster),
+        super::effects::MAX_TRIGGER_DEPTH,
+    );
+    assert!(crate::auras::has_aura(h.app.world(), caster, IRONFUR));
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        caster,
+        IRONFUR_MASTERY
+    ));
 }
 
 #[test]
