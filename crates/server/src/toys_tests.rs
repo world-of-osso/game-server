@@ -3027,6 +3027,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             .unwrap();
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
     for (item, spell, entry, display, duration) in [
+        (170197, 438546, 218978, 117639, 60000),
         (104331, 148627, 73781, 51525, 60000),
         (119039, 176310, 88280, 51525, 60000),
         (170196, 304505, 156052, 92597, 60000),
@@ -3080,7 +3081,11 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             world.get::<ModelDisplay>(actor).unwrap().display_id,
             display
         );
-        let expected_scale = if item == 170196 { 0.6 } else { 1.0 };
+        let expected_scale = if matches!(item, 170196 | 170197) {
+            0.6
+        } else {
+            1.0
+        };
         let scale = world
             .get::<shared::components::UnitScale>(actor)
             .copied()
@@ -3140,7 +3145,7 @@ fn toyfx14_stationary_source_summon_census() {
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX14_SUMMON_CENSUS_REPORT");
     for item in [
-        104331, 119039, 170196, 89869, 141299, 184415, 272339, 279590,
+        104331, 119039, 170196, 170197, 89869, 141299, 184415, 272339, 279590,
     ] {
         let toy = report["toys"]
             .as_array()
