@@ -135,13 +135,13 @@ fn load_creature_labels(
             row.get::<_, u32>(2)?,
         ))
     })?;
+    // Replace, not append: reloading the catalog must not double label credit.
+    let mut labels: std::collections::HashMap<(u32, u32), Vec<u32>> = Default::default();
     for row in rows {
         let (entry, difficulty, label) = row?;
-        db.creature_labels
-            .entry((entry, difficulty))
-            .or_default()
-            .push(label);
+        labels.entry((entry, difficulty)).or_default().push(label);
     }
+    db.creature_labels = labels;
     Ok(())
 }
 
