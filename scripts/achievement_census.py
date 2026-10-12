@@ -11,7 +11,7 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 import db2_casc
 
-BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 34, 36, 43, 46, 69, 73, 74, 158, 165, 216}
+BASE_TYPES = {0, 1, 5, 7, 8, 12, 27, 28, 29, 34, 36, 43, 46, 69, 73, 74, 130, 158, 165, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -54,7 +54,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
-        if kind in (74, 158) and asset != 0:
+        if kind in (74, 130, 158) and asset != 0:
             continue
         if kind == 43 and asset not in overlay_assets:
             continue

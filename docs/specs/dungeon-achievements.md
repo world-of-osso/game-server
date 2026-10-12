@@ -77,3 +77,5 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 - Type39 rated arena remains unsupported: no rating producer exists. Never seed a rating to claim support.
 - Type69: new authoritative aura applications credit the receiving player after successful installation; refreshes, immune/empty applications and dead-target rejection do not credit.
 - Type132 rated battleground rating has no native rating producer, matching the type39 gap. Type205 lacks authored local TransmogSet/TransmogSetGroup membership and a group-completion producer; collection IDs are not inferred.
+- Types1/130: native objective terminal wins credit only accepted, authenticated winning participants still in the completed copy; draws, losses, leaving and repeated ticks do not credit. Rated rows remain unsupported.
+- Type261 ReachRenownLevel remains blocked by absent native renown amounts/levels; signed traditional standings are not renown levels.
