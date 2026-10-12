@@ -1,5 +1,7 @@
 //! Native434249: unused ready time, capped by s1 seconds, reduces the next cooldown.
 //! IDs follow the named abilities in local Mainline12.1.0.69933 Spell/SpellName.
+use std::collections::{HashMap, HashSet};
+
 use bevy::prelude::*;
 
 use crate::auras::{ActiveAuras, AuraInstance, RemoveReason};
@@ -7,15 +9,18 @@ use crate::spell_info::SpellInfo;
 
 pub(crate) const CONTROL_OF_THE_DREAM: u32 = 434_249;
 
-#[derive(Component)]
-struct DreamLearnedAt(f64);
+#[derive(Component, Default)]
+struct DreamReadiness(HashMap<u32, f64>);
 
 pub(crate) fn start_ready_credit(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura.caster != unit || world.get::<DreamLearnedAt>(unit).is_some() {
+    if aura.caster != unit || world.get::<DreamReadiness>(unit).is_some() {
         return;
     }
-    let now = super::now(world);
-    world.entity_mut(unit).insert(DreamLearnedAt(now));
+    let spells = world
+        .get::<crate::class_progression::KnownSpells>(unit)
+        .map_or_else(Vec::new, |known| known.iter().collect());
+    world.entity_mut(unit).insert(DreamReadiness::default());
+    sync_known_ready_credit(world, unit, &spells);
 }
 
 pub(crate) fn stop_ready_credit(
@@ -25,24 +30,30 @@ pub(crate) fn stop_ready_credit(
     _reason: RemoveReason,
 ) {
     if aura.caster == unit {
-        world.entity_mut(unit).remove::<DreamLearnedAt>();
+        world.entity_mut(unit).remove::<DreamReadiness>();
     }
 }
 
-fn affects_spell(spell: &SpellInfo) -> bool {
-    matches!(
-        spell.id,
-        132_158
-            | 33_891
-            | 205_636
-            | 194_223
-            | 383_410
-            | 395_022
-            | 102_560
-            | 390_414
-            | 394_013
-            | 391_528
-    )
+fn ability_key(spell_id: u32) -> Option<u32> {
+    match spell_id {
+        194_223 | 383_410 | 395_022 => Some(194_223),
+        102_560 | 390_414 | 394_013 => Some(102_560),
+        132_158 | 33_891 | 205_636 | 391_528 => Some(spell_id),
+        _ => None,
+    }
+}
+
+/// A newly acquired ability was not available during earlier talent time.
+pub(crate) fn sync_known_ready_credit(world: &mut World, unit: Entity, spells: &[u32]) {
+    let now = super::now(world);
+    let Some(mut readiness) = world.get_mut::<DreamReadiness>(unit) else {
+        return;
+    };
+    let known: HashSet<_> = spells.iter().filter_map(|&id| ability_key(id)).collect();
+    readiness.0.retain(|id, _| known.contains(id));
+    for id in known {
+        readiness.0.entry(id).or_insert(now);
+    }
 }
 
 fn native_cap_seconds(world: &World, unit: Entity) -> Option<f64> {
@@ -83,10 +94,14 @@ fn fully_ready_at(history: &super::SpellHistory, spell: &SpellInfo, now: f64) ->
 }
 
 pub(super) fn ready_credit_ms(world: &World, unit: Entity, spell: &SpellInfo, now: f64) -> u32 {
-    if !affects_spell(spell) {
+    let Some(key) = ability_key(spell.id) else {
         return 0;
-    }
-    let Some(learned) = world.get::<DreamLearnedAt>(unit) else {
+    };
+    let learned_at = world
+        .get::<DreamReadiness>(unit)
+        .and_then(|state| state.0.get(&key))
+        .copied();
+    let Some(learned_at) = learned_at else {
         return 0;
     };
     let Some(cap) = native_cap_seconds(world, unit) else {
@@ -94,12 +109,12 @@ pub(super) fn ready_credit_ms(world: &World, unit: Entity, spell: &SpellInfo, no
     };
     let ready = world
         .get::<super::SpellHistory>(unit)
-        .map_or(Some(learned.0), |history| {
+        .map_or(Some(learned_at), |history| {
             fully_ready_at(history, spell, now)
         });
     let Some(ready) = ready else {
         return 0;
     };
-    let elapsed = (now - ready.max(learned.0)).max(0.0).min(cap);
+    let elapsed = (now - ready.max(learned_at)).max(0.0).min(cap);
     (elapsed * 1_000.0).round() as u32
 }

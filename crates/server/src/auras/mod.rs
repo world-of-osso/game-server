@@ -1561,6 +1561,9 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
             );
         }
     }
+    if source == AuraSource::KnownSpell {
+        crate::spell_cast::control_dream::sync_known_ready_credit(world, unit, spells);
+    }
 }
 
 type AuraUnit = (
