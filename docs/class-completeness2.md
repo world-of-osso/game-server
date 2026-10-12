@@ -28,6 +28,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 578c18d7 / shared00d33e7 | 2901 | 4744 | 182 | Native434249 ready-time credit, all7827 memberships, exit0, 716.33s |
 | 36758fce / shared00d33e7 | 2905 | 4740 | 182 | Native429433 counters/charged missile modifiers, all7827 memberships, exit0, 602.80s |
 | 116d3eff / shared00d33e7 | 2911 | 4734 | 182 | Native467 bonus-stat negation, all7827 memberships, exit0, 606.66s |
+| 1deb60e3 / shared00d33e7 | 2928 | 4717 | 182 | Native142 physical base armor, all7827 memberships, exit0, 539.21s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -154,7 +155,7 @@ Native aura142's Normal-school bit multiplies gear/base armor before adding stat
 
 `49d0752a` genuine RED pet hit677 versus545.45 under native396571's75%. Earlier149-point baseline failures were fixture fidelity: caster UnitLevel was absent despite Character Level10, selecting ArmorConstant0 and the mitigation cap. The fixture now supplies both unit levels. `6209336c` repairs the shared armor paths. At `4c8a6992`, five controls pass: pet spell/melee damage, ordinary-NPC exclusion, native75%×200% factor composition with stat-armor ordering, removal and187827 timed expiry. Adjacent stats/itemstats21/21, physical spell1/1, player swings5/5 and Demon Spikes3/3 pass. An initial unqualified player-damage selector ran zero tests and is not proof.
 
-Logs: `base-armor-{baseline-diagnostic,red2,green,controls}.log`, `base-armor-adjacent-*.log`. No new live, all-specific-script override or legal-build certificate.
+Logs: `base-armor-{baseline-diagnostic,red2,green,controls}.log`, `base-armor-adjacent-*.log`. Batch22 at `1deb60e3` records all7827 memberships:2928 working/4717 partial/182 broken;17 memberships move to working while other142 roots retain their separate gaps. No new live, all-specific-script override or legal-build certificate.
 
 ## Retained boundaries
 
