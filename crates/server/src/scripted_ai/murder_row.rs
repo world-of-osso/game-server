@@ -58,12 +58,14 @@ impl BossScript for KystiaManaheart {
     fn execute_event(&mut self, ctx: &mut Ctx, event_id: u32) {
         match event_id {
             EVENT_CHAOS_BARRAGE => {
-                ctx.do_cast_at(ctx.victim(), SPELL_CHAOS_BARRAGE, true);
+                // TC ignores cast-in-progress, not cast time/costs/school locks.
+                // boss_update_ai already excludes an in-progress cast here.
+                ctx.do_cast_at(ctx.victim(), SPELL_CHAOS_BARRAGE, false);
                 self.boss.events.repeat(3_500);
             }
             EVENT_MIRROR_IMAGES => {
                 ctx.talk(1);
-                ctx.do_cast_at(Some(ctx.me), SPELL_MIRROR_IMAGES, true);
+                ctx.do_cast_at(Some(ctx.me), SPELL_MIRROR_IMAGES, false);
                 self.boss.events.repeat(30_500);
             }
             EVENT_FEL_NOVA => {
