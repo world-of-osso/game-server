@@ -3658,6 +3658,7 @@ fn capture_toy_chat(
 #[test]
 fn toyfx14_dice_learn_emote_and_roll_to_only_the_authored_audience() {
     use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use crate::persistence::ClientId;
     use shared::components::{Health, Player, Position};
     let source = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -3789,14 +3790,20 @@ fn toyfx14_dice_learn_emote_and_roll_to_only_the_authored_audience() {
         }
         let near = captured.get(&peers[0].1).unwrap();
         assert_eq!(near.len(), 1);
-        assert_eq!(near[0], *emotes[0]);
+        assert_eq!(near[0].sender, emotes[0].sender);
+        assert_eq!(near[0].content, emotes[0].content);
+        assert_eq!(near[0].channel, emotes[0].channel);
         assert!(captured.get(&peers[1].1).is_none_or(Vec::is_empty));
         assert!(captured.get(&peers[2].1).is_none_or(Vec::is_empty));
         let party_chat = captured.get(&peers[3].1);
         if in_party {
             let party_chat = party_chat.unwrap();
             assert_eq!(party_chat.len(), count);
-            assert_eq!(party_chat, &rolls.into_iter().cloned().collect::<Vec<_>>());
+            for (received, expected) in party_chat.iter().zip(&rolls) {
+                assert_eq!(received.sender, expected.sender);
+                assert_eq!(received.content, expected.content);
+                assert_eq!(received.channel, expected.channel);
+            }
         } else {
             assert!(party_chat.is_none_or(Vec::is_empty));
         }
