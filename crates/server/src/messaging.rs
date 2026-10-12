@@ -70,6 +70,12 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     time: Res<'w, Time>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     criteria: MessageWriter<'w, crate::achievement::CriteriaCredit>,
+    entered: Query<
+        'w,
+        's,
+        &'static PlayerLink,
+        (With<crate::auth::Authenticated>, With<crate::auth::InWorld>),
+    >,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
 }
 
@@ -83,10 +89,14 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
     }
     for emote in &emotes {
         mark_activity(&mut q, emote.player_entity, activity_at);
-        q.criteria.write(crate::achievement::CriteriaCredit {
-            player: emote.player_entity,
-            event: crate::achievement::CriteriaEvent::DoEmote(retail_text_emote(emote.event.emote)),
-        });
+        if q.entered.iter().any(|link| link.0 == emote.player_entity) {
+            q.criteria.write(crate::achievement::CriteriaCredit {
+                player: emote.player_entity,
+                event: crate::achievement::CriteriaEvent::DoEmote(retail_text_emote(
+                    emote.event.emote,
+                )),
+            });
+        }
     }
     collected.extend(emotes.iter().map(|emote| CollectedChat {
         msg: emote.chat.clone(),
