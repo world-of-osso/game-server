@@ -20,6 +20,7 @@ pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
 pub mod invisibility;
+mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
 pub(crate) mod mechanic_immunity;
@@ -597,9 +598,9 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        if handlers::is_handled(effect.aura_type)
-            || scripts::consumes_named_field(aura.spell_id, effect.index)
-        {
+        let handled = handlers::is_handled(effect.aura_type)
+            && (!linked::is_linked(effect.aura_type) || effect.amount == 0.0);
+        if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
@@ -802,6 +803,7 @@ pub(crate) fn apply_aura_with_spell(
             shapeshift::remove_other_forms(world, target, id);
         }
         scripts::run_apply(world, target, &aura);
+        linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
@@ -810,6 +812,9 @@ pub(crate) fn apply_aura_with_spell(
             .iter()
             .any(|effect| effect.aura_type == handlers::MOD_STUN);
         crate::stand_state::on_aura_applied(world, target, aura.interrupt_flags, stuns);
+    }
+    if kind == CombatLogKind::AuraRefreshed {
+        linked::on_reapplied(world, target, &aura);
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
@@ -967,6 +972,7 @@ pub(crate) fn apply_attack_damage(world: &mut World, unit: Entity, loss: f32) ->
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     scripts::run_remove(world, unit, aura, reason);
+    linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));

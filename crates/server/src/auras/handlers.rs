@@ -47,6 +47,8 @@ pub enum AuraKind {
     Override,
     /// Trigger a summon on application and remove it with its aura.
     LinkedSummon,
+    /// Trigger and remove an owned child aura; only zero parent amounts are supported.
+    Linked,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -176,6 +178,8 @@ pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
+pub const LINKED: u32 = 284;
+pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
 pub const MOD_BONUS_ARMOR_PCT: u32 = 466;
@@ -201,6 +205,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
+        LINKED | LINKED_2 => Linked,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT

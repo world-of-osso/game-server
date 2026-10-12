@@ -488,7 +488,7 @@ fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
 }
 
-fn is_channeled(spell: &SpellInfo) -> bool {
+pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
     attributes(spell, 1) & SPELL_ATTR1_CHANNELED != 0
 }
 
@@ -1923,6 +1923,7 @@ fn resolve_effects(
         resolving.0.push(HitFrame {
             caster,
             spell_id: spell.id,
+            depth,
             damage: Vec::new(),
         });
     }
@@ -2089,7 +2090,16 @@ pub(crate) struct ResolvingHits(Vec<HitFrame>);
 struct HitFrame {
     caster: Entity,
     spell_id: u32,
+    depth: u8,
     damage: Vec<(Entity, f32)>,
+}
+
+/// A linked child inherits the active hit's trigger depth, without persisting cast state in an aura.
+pub(crate) fn next_trigger_depth(world: &World) -> u8 {
+    world
+        .get_resource::<ResolvingHits>()
+        .and_then(|hits| hits.0.last())
+        .map_or(1, |hit| hit.depth.saturating_add(1))
 }
 
 /// Add `amount` dealt to `target` to the innermost resolution of `spell_id` by
