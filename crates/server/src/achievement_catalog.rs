@@ -30,6 +30,7 @@ pub(crate) enum CriteriaEvent {
     UseGameObject(u32),
     KnowSkillLineSpells(u32, u32),
     KnowPetCreature(u32),
+    OwnUniquePets(u32),
     WinPetBattle,
     CaptureBattlePet,
     Login,
@@ -60,6 +61,7 @@ impl CriteriaEvent {
             Self::UseGameObject(_) => 68,
             Self::KnowSkillLineSpells(_, _) => 75,
             Self::KnowPetCreature(_) => 96,
+            Self::OwnUniquePets(_) => 156,
             Self::WinPetBattle => 158,
             Self::CaptureBattlePet => 157,
             Self::Login => 74,
@@ -84,7 +86,8 @@ impl CriteriaEvent {
         match self {
             Self::ReachLevel(_) => true,
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
-            Self::WinPetBattle
+            Self::OwnUniquePets(_)
+            | Self::WinPetBattle
             | Self::CaptureBattlePet
             | Self::Login
             | Self::WinAnyBattleground => criteria.asset == 0,
@@ -419,6 +422,10 @@ impl AchievementCatalog {
                     .or_insert(date);
             }
             for (id, value) in contribution.criteria_progress {
+                // Account-journal quantities come from the owning journal, not stale character facts.
+                if self.criteria.get(&id).is_some_and(|row| row.kind == 156) {
+                    continue;
+                }
                 if !contribution.signed_reputation
                     && self.criteria.get(&id).is_some_and(|row| row.kind == 46)
                 {
@@ -457,8 +464,10 @@ impl AchievementCatalog {
 
     fn update_counter(state: &mut PlayerAchievementState, id: u32, event: CriteriaEvent) {
         // TC SetCriteriaProgress does not create a first zero-valued progress row.
-        if matches!(event, CriteriaEvent::KnowSkillLineSpells(_, 0))
-            && !state.criteria_progress.contains_key(&id)
+        if matches!(
+            event,
+            CriteriaEvent::KnowSkillLineSpells(_, 0) | CriteriaEvent::OwnUniquePets(0)
+        ) && !state.criteria_progress.contains_key(&id)
         {
             return;
         }
@@ -470,13 +479,25 @@ impl AchievementCatalog {
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
             | CriteriaEvent::KnowPetCreature(_) => 1,
-            CriteriaEvent::KnowSkillLineSpells(_, count) => u64::from(count),
+            CriteriaEvent::KnowSkillLineSpells(_, count) | CriteriaEvent::OwnUniquePets(count) => {
+                u64::from(count)
+            }
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::CurrencyGained(_, amount)
             | CriteriaEvent::AcquireItem(_, amount)
             | CriteriaEvent::LootItem(_, amount) => counter.saturating_add(u64::from(amount)),
             _ => counter.saturating_add(1),
         };
+    }
+
+    pub(super) fn set_account_unique_pet_count(
+        &self,
+        state: &mut PlayerAchievementState,
+        count: u32,
+    ) {
+        for &id in self.event_criteria.get(&156).into_iter().flatten() {
+            Self::update_counter(state, id, CriteriaEvent::OwnUniquePets(count));
+        }
     }
 
     /// Scenario credit is restricted to the active tree and never grants achievements.
@@ -722,7 +743,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
-                        || (matches!(kind, 74 | 130 | 157 | 158) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 74 | 130 | 156 | 157 | 158) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

@@ -217,6 +217,10 @@ fn process_owned_pet_achievement_updates(world: &mut World) {
             let events: Vec<_> = creatures
                 .into_iter()
                 .map(CriteriaEvent::KnowPetCreature)
+                .chain(std::iter::once(CriteriaEvent::OwnUniquePets(
+                    u32::try_from(journal.journal.unique_species())
+                        .expect("journal count fits u32"),
+                )))
                 .collect();
             (player, events)
         })
