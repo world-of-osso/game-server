@@ -455,6 +455,51 @@ fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
 }
 
 #[test]
+fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is_not_lethal() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    let player = h.player();
+    let before = h.health(gold).current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, before - 1.0);
+    assert_eq!(h.health(gold).current, 1.0);
+    assert!(
+        !h.has_aura(gold, 265915),
+        "leaving exactly1HP is not the source lethal predicate"
+    );
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    let ctx = EffectCtx {
+        caster: player,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    deal_damage(h.app.world_mut(), &ctx, gold, 100_000.0, false, true);
+    assert_eq!(h.health(gold).current, 1.0);
+    assert!(h.has_aura(gold, 265915));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(gold)
+            .is_none()
+    );
+}
+
+#[test]
 fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let conn =
