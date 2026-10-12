@@ -1,10 +1,14 @@
-//! Partial Golden Serpent companion port from TC a352b1fa boss_golden_serpent.cpp.
-//! Primary intro/events, follow/absorption and molten area triggers remain gaps.
+//! Partial Golden Serpent port from TC a352b1fa boss_golden_serpent.cpp.
+//! TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
+//! Intro paths/flying, follow/absorption and molten area triggers remain gaps.
+mod golden_serpent;
 use super::{CreatureAi, Ctx, DamageTaken};
 use bevy::prelude::*;
 use shared::components::UnitFlags;
 
 pub(crate) const ANIMATED_GOLD_SCRIPT: &str = "npc_animated_gold";
+pub(crate) const GOLDEN_SERPENT_SCRIPT: &str = "boss_the_golden_serpent";
+pub(crate) const GOLDEN_SERPENT_ENCOUNTER: u32 = 2139;
 const INSTANCE: &str = "instance_kings_rest";
 const MOLTEN_GOLD: u32 = 265915;
 const BREAK_TARGETING: u32 = 140562;
@@ -12,7 +16,7 @@ const SPIT_GOLD: u32 = 265773;
 const ANIMATED_GOLD: u32 = 135406;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
-    name == ANIMATED_GOLD_SCRIPT
+    matches!(name, ANIMATED_GOLD_SCRIPT | GOLDEN_SERPENT_SCRIPT)
 }
 
 pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Box<dyn CreatureAi>> {
@@ -23,6 +27,9 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
     let maps = world.get_resource::<crate::maps::MapStore>()?;
     if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(INSTANCE) {
         return None;
+    }
+    if name == GOLDEN_SERPENT_SCRIPT {
+        return golden_serpent::creature_ai(world, actor);
     }
     Some(Box::new(AnimatedGold::default()))
 }

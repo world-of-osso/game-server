@@ -103,6 +103,7 @@ pub enum MotionType {
 /// A `CreatureAI` hook with its arguments.
 #[derive(Debug, Clone, Copy)]
 pub enum Hook {
+    InitializeAi,
     Reset,
     JustAppeared,
     ChannelFinished {
@@ -140,6 +141,9 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
+    fn initialize_ai(&mut self, ctx: &mut Ctx) {
+        self.reset(ctx);
+    }
     fn reset(&mut self, _ctx: &mut Ctx) {}
     fn just_appeared(&mut self, _ctx: &mut Ctx) {}
     fn channel_finished(&mut self, _ctx: &mut Ctx, _spell_id: u32) {}
@@ -283,7 +287,7 @@ fn initialize_ai(world: &mut World, creature: Entity) {
     // SmartAI initializes event timers in its constructor and dispatches RESET
     // after RESPAWN in JustAppeared. Other CreatureAI implementations reset here.
     if name != SMART_AI && !name.is_empty() {
-        dispatch(world, creature, Hook::Reset);
+        dispatch(world, creature, Hook::InitializeAi);
     }
     dispatch(world, creature, Hook::JustAppeared);
 }
@@ -338,6 +342,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
     }
     let mut ctx = Ctx { world, me };
     match hook {
+        Hook::InitializeAi => ai.initialize_ai(&mut ctx),
         Hook::Reset => ai.reset(&mut ctx),
         Hook::JustAppeared => ai.just_appeared(&mut ctx),
         Hook::ChannelFinished { spell_id } => ai.channel_finished(&mut ctx, spell_id),
