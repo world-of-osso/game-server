@@ -11,11 +11,84 @@ struct EnteredMatch {
     origin: Vec3,
 }
 
+#[test]
+fn seething_channel_source_gathering_cast_cancellation_natural_victory_and_return() {
+    let template = shared::battleground::seething_shore();
+    let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
+    let actor = &entered.players[0];
+    let h = &mut entered.h;
+    use_second_frames(h);
+    h.advance(42);
+    let nodes = seething_objects(h, entered.copy);
+    assert_eq!(nodes.len(), 3);
+    let (object, at) = nodes[0];
+    h.walk_to(actor, at);
+    h.app.world_mut().entity_mut(object).insert(InMap {
+        instance_id: entered.copy.instance_id + 1,
+        ..entered.copy
+    });
+    use_object(h, actor, object);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    assert_eq!(battleground(h, actor).score_a, 0);
+    h.app.world_mut().entity_mut(object).insert(entered.copy);
+    use_object(h, actor, object);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_some()
+    );
+    assert_eq!(battleground(h, actor).score_a, 0);
+    crate::spell_cast::cancel_cast(h.app.world_mut(), actor.player);
+    h.advance(7);
+    assert_eq!(battleground(h, actor).score_a, 0);
+    use_object(h, actor, object);
+    h.advance(6);
+    assert_eq!(battleground(h, actor).score_a, 100);
+    use_object(h, actor, object);
+    h.advance(6);
+    assert_eq!(battleground(h, actor).score_a, 100);
+    for _ in 0..20 {
+        h.advance(42);
+        for (object, at) in seething_objects(h, entered.copy) {
+            if battleground(h, actor).phase != BgPhase::InProgress {
+                break;
+            }
+            h.walk_to(actor, at);
+            use_object(h, actor, object);
+            h.advance(6);
+        }
+        if battleground(h, actor).phase == BgPhase::Ended {
+            break;
+        }
+    }
+    let result = battleground(h, actor);
+    let own = result
+        .players
+        .iter()
+        .find(|row| row.character_id == 1)
+        .unwrap();
+    assert!(own.objective_scores.contains(&(744, 15)));
+    win_leave_and_return(&mut entered, 1500);
+}
+
+fn seething_objects(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
+    shared::battleground::SEETHING_OBJECTS
+        .into_iter()
+        .flat_map(|entry| objects_in(h, copy, entry))
+        .collect()
+}
+
 /// Source-minimum roster queue, invitation, acceptance and safe-location entry over the channel.
 fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
-    } else if template.map_id == 727 {
+    } else if matches!(template.map_id, 727 | 1803) {
         crate::game_objects::GameObjectSpawns::default()
     } else {
         source_battleground_objects(template.map_id)
@@ -37,6 +110,23 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
                     .map(|id| data.store.get(id).unwrap().clone())
                     .collect(),
             ));
+            app.insert_resource(crate::spell_cast::test_harness::power_table(data));
+            app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
+        }
+        if template.map_id == 1803 {
+            let (world_data, templates) = seething_source_world();
+            app.insert_resource(world_data);
+            app.insert_resource(templates);
+            app.insert_resource(crate::ground::GroundMap::new(
+                &std::env::var_os("GAME_SERVER_GROUND_DIR")
+                    .map(std::path::PathBuf::from)
+                    .expect("source Seething terrain root"),
+                std::collections::HashMap::from([(1803, 1686724)]),
+            ));
+            let data = crate::spell_cast::test_harness::world_db().unwrap();
+            app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
+                data.store.get(261857).unwrap().clone(),
+            ]));
             app.insert_resource(crate::spell_cast::test_harness::power_table(data));
             app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
         }
@@ -201,6 +291,7 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
         let score_state = match copy.map_id {
             998 => 6303,
             727 => 6437,
+            1803 => 13845,
             _ => 1776,
         };
         assert!(result.world_states.contains(&(score_state, score as i32)));
@@ -378,6 +469,30 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     h.walk_to(actor, Vec3::new(1783.41, 1333.56, 6.0));
     h.advance(1300);
     win_leave_and_return(&mut entered, 1500);
+}
+
+fn seething_source_world() -> (crate::world_data::WorldData, crate::pvp::AzeriteTemplates) {
+    let copy = tempfile::NamedTempFile::new().unwrap();
+    std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
+    let promoted = std::process::Command::new("python3")
+        .args([
+            "../../scripts/promote_battlegrounds.py",
+            "--maps",
+            "1803",
+            "--db",
+        ])
+        .arg(copy.path())
+        .output()
+        .unwrap();
+    assert!(
+        promoted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&promoted.stderr)
+    );
+    let conn = Connection::open_with_flags(copy.path(), rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .unwrap();
+    let templates = crate::pvp::load_azerite_templates(&conn).unwrap();
+    (crate::world_data::load_world_data(copy.path()), templates)
 }
 
 fn silvershard_source_world() -> (
