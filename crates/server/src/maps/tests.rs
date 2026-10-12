@@ -227,6 +227,99 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     assert_eq!(place.position, position);
 }
 
+#[test]
+fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_storage() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("collection.redb")).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 500_000,
+            items: vec![crate::persistence::InventoryItemData {
+                item_guid: 100,
+                item_id: 245259,
+                name: "Small Val'sharah Bookcase".into(),
+                quality: 2,
+                required_level: 0,
+                stack_count: 1,
+                vendor_sell_price: 10_000,
+                unique_auction: false,
+            }],
+        },
+    );
+    let mut h = housing_harness(db);
+    h.app.insert_resource(
+        crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap(),
+    );
+    h.app
+        .insert_resource(crate::housing_acquisition::HousingCollectionRule(Ok(
+            crate::housing_acquisition::read_bookcase_rule(
+                &crate::housing_acquisition::tests::collection_fixture(),
+            )
+            .unwrap(),
+        )));
+    h.app
+        .add_systems(Update, crate::inventory::process_use_requests);
+    let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app.world_mut().entity_mut(owner.connection).insert((
+        pair::<UseItem>(),
+        pair::<HousingReply>(),
+        pair::<InventoryError>(),
+    ));
+    let use_item = UseItem {
+        location: ItemLocation::Bag { bag: 0, slot: 0 },
+        target: None,
+    };
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(owner.connection)
+        .unwrap()
+        .send::<InventoryChannel>(use_item.clone());
+    h.advance(5);
+    let db = &h
+        .app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .db;
+    assert!(crate::persistence::load_inventory(db, 30).items.is_empty());
+    assert_eq!(crate::persistence::load_inventory(db, 30).gold, 500_000);
+    let actor = crate::persistence::housing_store::Actor {
+        account_id: 30,
+        character_id: 30,
+        neighborhood_id: None,
+        inside_house: None,
+    };
+    assert_eq!(
+        crate::persistence::housing_store::snapshot(db, actor, None)
+            .unwrap()
+            .stored,
+        vec![StoredDecor {
+            decor_id: 1693,
+            quantity: 1
+        }]
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(owner.connection)
+        .unwrap()
+        .send::<InventoryChannel>(use_item);
+    h.advance(5);
+    let db = &h
+        .app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .db;
+    assert_eq!(
+        crate::persistence::housing_store::snapshot(db, actor, None)
+            .unwrap()
+            .stored[0]
+            .quantity,
+        1
+    );
+}
+
 fn housing_harness(db: redb::Database) -> Harness {
     let catalog = crate::housing_catalog::HousingCatalog::read(
         &crate::housing_catalog::tests::catalog_fixture(),

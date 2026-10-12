@@ -50,6 +50,7 @@ mod group;
 mod guild;
 mod guild_bank;
 mod housing;
+mod housing_acquisition;
 mod housing_catalog;
 mod hunter_pet;
 mod ignore_list;

@@ -418,6 +418,9 @@ fn use_item(
     player: Entity,
     request: &UseItem,
 ) -> Result<(), InventoryError> {
+    if crate::housing_acquisition::collect_item(world, character_id, player, request.location)? {
+        return Ok(());
+    }
     if crate::toys::learn_item(world, character_id, player, request.location)? {
         return Ok(());
     }
