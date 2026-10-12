@@ -436,6 +436,7 @@ type AutoAttackTargets<'w, 's> = Query<
         CanAvoid<'static>,
         Option<&'static shared::components::PlayerStandState>,
         Has<Unkillable>,
+        Option<&'static crate::scripted_ai::CreatureScriptName>,
     ),
 >;
 
@@ -977,6 +978,7 @@ fn try_swing(
         mut avoidance,
         stand_state,
         unkillable,
+        script_name,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -1073,13 +1075,16 @@ fn try_swing(
     });
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let overkill = crate::level_scaling::damage_overkill(damage, scaled_loss, health.current);
+    let incoming_loss = health_loss(training_dummy, scaled_loss);
+    let scripted_loss =
+        crate::scripted_ai::limit_scripted_loss(script_name, health.current, incoming_loss);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel,
         attacker.entity,
         health.current,
         limit_unkillable_loss(
             health.current,
-            health_loss(training_dummy, scaled_loss),
+            scripted_loss,
             unkillable && attacker.entity != target_entity,
         ),
     );
@@ -1096,7 +1101,7 @@ fn try_swing(
             )
         });
     }
-    if is_npc && loss > 0.0 {
+    if is_npc && incoming_loss > 0.0 {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
             crate::creature_tap::record_damage(
@@ -1111,7 +1116,7 @@ fn try_swing(
                 target_entity,
                 Some(attacker_entity),
                 health_before,
-                loss,
+                incoming_loss,
             );
         });
     }
@@ -1376,8 +1381,17 @@ pub(crate) fn deal_health_damage(
         return;
     };
     let before = health.current;
+    let incoming_loss = loss;
+    let scripted_loss = crate::scripted_ai::limit_scripted_loss(
+        world.get::<crate::scripted_ai::CreatureScriptName>(victim),
+        before,
+        incoming_loss,
+    );
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
-    let loss = limit_unkillable_loss(before, loss, protected);
+    let loss = limit_unkillable_loss(before, scripted_loss, protected);
+    if incoming_loss > 0.0 {
+        crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming_loss);
+    }
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
@@ -1409,7 +1423,6 @@ pub(crate) fn deal_health_damage(
     );
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
-        crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, loss);
     }
     if !lethal {
         return;
