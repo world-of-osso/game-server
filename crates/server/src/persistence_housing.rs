@@ -17,6 +17,15 @@ const STATE_ROW: u8 = 0;
 const NEIGHBORHOOD_LOCATIONS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("housing_neighborhood_locations");
 
+const HOUSE_LOCATIONS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("housing_house_locations");
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct HouseLocation {
+    pub house_id: u64,
+    pub account_id: u64,
+}
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct NeighborhoodLocation {
     pub map_id: u32,
@@ -71,6 +80,8 @@ impl State {
 }
 
 pub(crate) fn create_tables(txn: &WriteTransaction) {
+    txn.open_table(HOUSE_LOCATIONS)
+        .expect("create housing house locations");
     txn.open_table(NEIGHBORHOOD_LOCATIONS)
         .expect("create housing neighborhood locations");
     let mut table = txn.open_table(STATE).expect("create housing state table");
@@ -84,6 +95,55 @@ pub(crate) fn create_tables(txn: &WriteTransaction) {
             .insert(STATE_ROW, bytes.as_slice())
             .expect("initialize empty housing state");
     }
+}
+
+pub(crate) fn save_house_location(
+    db: &Database,
+    actor: Actor,
+    house_id: u64,
+) -> Result<(), String> {
+    let txn = db.begin_write().map_err(|error| error.to_string())?;
+    let state = read_in(&txn)?;
+    require_visit(&state, actor, house_id)?;
+    let bytes = serde_json::to_vec(&HouseLocation {
+        house_id,
+        account_id: actor.account_id,
+    })
+    .map_err(|error| format!("Encode house admission: {error}"))?;
+    txn.open_table(HOUSE_LOCATIONS)
+        .map_err(|error| error.to_string())?
+        .insert(actor.character_id, bytes.as_slice())
+        .map_err(|error| error.to_string())?;
+    txn.commit()
+        .map_err(|error| format!("Persist visited house: {error}"))
+}
+
+pub(crate) fn load_house_location(
+    db: &Database,
+    character_id: u64,
+) -> Result<HouseLocation, String> {
+    let txn = db.begin_read().map_err(|error| error.to_string())?;
+    let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
+    let table = txn
+        .open_table(HOUSE_LOCATIONS)
+        .map_err(|error| error.to_string())?;
+    let row = table
+        .get(character_id)
+        .map_err(|error| error.to_string())?
+        .ok_or("No persisted visited-house identity exists.")?;
+    let location: HouseLocation = serde_json::from_slice(row.value())
+        .map_err(|error| format!("Decode visited house: {error}"))?;
+    require_visit(
+        &state,
+        Actor {
+            account_id: location.account_id,
+            character_id,
+            neighborhood_id: None,
+            inside_house: None,
+        },
+        location.house_id,
+    )?;
+    Ok(location)
 }
 
 pub(crate) fn save_neighborhood_location(

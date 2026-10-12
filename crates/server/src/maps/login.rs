@@ -84,6 +84,27 @@ impl LoginMaps<'_> {
     }
 
     fn restore_housing_admission(&mut self, map_id: u32, character_id: u64) -> Option<()> {
+        if self
+            .store
+            .map(map_id)
+            .is_some_and(|entry| entry.instance_type == super::store::InstanceType::House)
+        {
+            let database = self.database.as_ref()?;
+            let location = match crate::persistence::housing_store::load_house_location(
+                &database.db,
+                character_id,
+            ) {
+                Ok(location) => location,
+                Err(message) => {
+                    error!("Restore character {character_id} visited house: {message}");
+                    return None;
+                }
+            };
+            self.instances
+                .authorize_housing_entry(&self.store, map_id, location.house_id, character_id)
+                .ok()?;
+            return Some(());
+        }
         let housing = self
             .store
             .map(map_id)
