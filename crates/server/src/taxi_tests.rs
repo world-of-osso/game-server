@@ -286,6 +286,7 @@ fn zone_population_flight_master_discovers_opens_and_flies_on_its_own_map() {
     let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy");
     let content = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut h = harness().expect("authentic taxi network");
+    h.app.insert_resource(load_taxi_network(&content).unwrap());
     let (name, faction, flags, x, y, z): (String, u32, u32, f32, f32, f32) = content
         .query_row(
             "SELECT t.name,t.faction,t.npcflag,c.position_x,c.position_y,c.position_z
@@ -355,7 +356,8 @@ fn zone_population_flight_master_discovers_opens_and_flies_on_its_own_map() {
     h.learn(&known.iter().copied().collect::<Vec<_>>());
     h.set_gold(1_000_000);
     h.fly_to(npc, destination);
-    assert!(h.failures().is_empty());
+    let failures = h.failures();
+    assert!(failures.is_empty(), "taxi failures: {failures:?}");
     assert!(h.app.world().get::<TaxiFlight>(h.player).is_some());
     assert!(h.control().controlled);
     assert!(h.gold() < 1_000_000);

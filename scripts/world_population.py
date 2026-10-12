@@ -90,6 +90,7 @@ def apply_population(conn, report, maps):
     population.apply_population(conn, report, map_list=map_list, base_phase=BASE_PHASE)
     restore_rows(conn, snapshots)
     promote_zone_services(conn, report, map_list)
+    import_taxi_mount_models(conn, report, map_list)
     conn.execute("DROP TABLE temp.world_shared_creature")
     conn.execute("DROP TABLE temp.world_shared_object")
     for kind in ("creature", "gameobject"):
@@ -134,6 +135,18 @@ def promote_zone_services(conn, report, map_list):
     for table in ("retail_entry", "retail_gameobject_entry", "retail_relation", "zone_quest_candidate",
                   "retail_quest", "azerothcore_quest"):
         conn.execute(f"DROP TABLE temp.{table}")
+
+
+def import_taxi_mount_models(conn, report, map_list):
+    """Flight mounts need authored models even when they have no world spawn."""
+    mounts = f"""SELECT MountCreatureID_0 FROM taxi_nodes WHERE ContinentID IN ({map_list})
+        UNION SELECT MountCreatureID_1 FROM taxi_nodes WHERE ContinentID IN ({map_list})"""
+    conn.execute(f"""INSERT INTO content_creature_template_model SELECT * FROM tdb_creature_template_model
+        WHERE CreatureID IN ({mounts}) AND CreatureID NOT IN
+            (SELECT CreatureID FROM content_creature_template_model)""")
+    for (entry,) in conn.execute(f"""SELECT * FROM ({mounts}) WHERE MountCreatureID_0<>0
+            AND MountCreatureID_0 NOT IN (SELECT CreatureID FROM content_creature_template_model)"""):
+        report.drop("taxi_nodes", f"mount={entry}", entry, "no authored mount model; taxi takeoff unavailable")
 
 
 def snapshot_content(conn):
