@@ -17,6 +17,7 @@
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
+pub(crate) mod collision;
 pub(crate) mod cooking_focus;
 mod locks;
 pub(crate) mod quest_object;
@@ -264,6 +265,13 @@ impl Plugin for GameObjectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameObjectSpawns>()
             .add_plugins(crate::gathering::GatheringPlugin)
+            .add_systems(
+                FixedUpdate,
+                collision::sync_live_objects
+                    .before(crate::networking::process_player_inputs)
+                    .before(crate::networking::apply_terrain_gravity)
+                    .before(crate::knockback::update_knockbacks),
+            )
             .add_systems(
                 PostStartup,
                 spawn_continent_game_objects.after(crate::zones::spawn_continent_creatures),

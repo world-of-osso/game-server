@@ -259,7 +259,7 @@ fn wander_system(
 /// The ground under `feet` on the creature's map; `Unloaded` without ground data.
 fn probe_ground(ground: Option<&mut GroundMap>, map: Option<&InMap>, feet: Vec3) -> GroundProbe {
     match (ground, map) {
-        (Some(ground), Some(map)) => ground.ground_at(map.map_id, feet),
+        (Some(ground), Some(map)) => ground.ground_in(*map, feet),
         _ => GroundProbe::Unloaded,
     }
 }
