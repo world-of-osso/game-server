@@ -28,6 +28,8 @@ mod pvp_war_mode;
 pub(crate) mod arena;
 #[path = "pvp_arena_lifecycle.rs"]
 mod arena_lifecycle;
+#[path = "pvp_arena_objects.rs"]
+pub(crate) mod arena_objects;
 
 #[path = "pvp_entry.rs"]
 mod pvp_entry;
@@ -213,6 +215,7 @@ impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
         app.init_resource::<arena::Catalog>();
+        app.init_resource::<arena_objects::GateCatalog>();
         app.add_systems(
             Update,
             arena::receive_queue_requests.before(process_battleground_invitation_responses),
