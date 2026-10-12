@@ -417,6 +417,9 @@ pub(crate) fn record_player_death(world: &mut World, player: Entity) {
     if let Some(npc) = killer.and_then(|killer| world.get::<Npc>(killer)) {
         events.push(CriteriaEvent::KilledByCreature(npc.template_id));
     }
+    if killer.is_some_and(|killer| killer != player && world.get::<Player>(killer).is_some()) {
+        events.push(CriteriaEvent::KilledByPlayer);
+    }
     record_criteria_events(world, player, &events);
 }
 
