@@ -79,6 +79,8 @@ pub struct TemplateTuning {
 #[derive(Clone)]
 pub struct CreatureModelInfo {
     pub display_id: u32,
+    /// The selected creature_template_model.DisplayScale, in addition to client DB2 scale.
+    pub display_scale: f32,
     /// Weight of the model among the template's (`GetRandomValidModel`).
     pub probability: f32,
     /// `CreatureModelInfo::is_trigger`: the display's model file is an invisible trigger model.
@@ -570,7 +572,7 @@ pub(crate) fn load_template_models(
 ) {
     let mut stmt = conn
         .prepare(&format!(
-            "SELECT model.CreatureID, model.CreatureDisplayID, model.Probability,
+            "SELECT model.CreatureID, model.CreatureDisplayID, model.Probability, model.DisplayScale,
                     COALESCE(data.FileDataID IN ({TRIGGER_MODEL_FILE_DATA_IDS}), 0)
              FROM content_creature_template_model model
              LEFT JOIN creature_display_info display ON display.ID = model.CreatureDisplayID
@@ -586,7 +588,8 @@ pub(crate) fn load_template_models(
                 CreatureModelInfo {
                     display_id: row.get::<_, i64>(1)? as u32,
                     probability: row.get(2)?,
-                    is_trigger: row.get(3)?,
+                    display_scale: row.get(3)?,
+                    is_trigger: row.get(4)?,
                 },
             ))
         })
