@@ -1,6 +1,6 @@
 # Wiki Index
 
-- [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations and real witnesses, recipient-safe typing and explicit native/data coverage boundaries.
+- [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations/real witnesses, recipient-safe typing, four scaled identities and two authored state-kit/expiry proofs; explicit remaining boundaries.
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
