@@ -10,7 +10,7 @@ Retail Mainline Transmogrifier service in `crates/server/src/transmog.rs`, using
 - [x] Charge authentic locally derivable target cost atomically with per-item appearance modifiers and binding; original appearance restoration is free.
 - [x] Replicate self/observer equipment appearance and preserve through relog and gear swaps.
 - [ ] Permit hide options only for Retail-supported slots; illusions require authentic local data.
-- [ ] Saved outfits follow core application and use the same application validation.
+- [x] Account-scoped saved outfits use authored automatically awarded entries2/3. Save validates appearance choices against the existing paid slot list and illusions against authored weapon slots/collected choices, but never changes gold, binding or equipped visuals. Loading stages choices; paid Apply remains the unchanged application path.
 
 ## How it works
 
@@ -45,7 +45,7 @@ members are omitted, not fabricated. Source ownership remains visual-level.
 - [ ] Collection state records visual IDs, not source IDs; exact collected-source distinction remains the acquisition system's recorded gap.
 - [x] Catalogue exposes local Retail69933 TransmogSet/TransmogSetItem, TransmogOutfitEntry/SlotInfo/SlotOption and all93 readable TransmogIllusion records. Seven authentic default illusions are collected (TrinityCore a352b1fa); other condition/acquisition grants remain unimplemented. ItemModifiedAppearance catalogue distinguishes visual-level collection, uncollected and non-collectable entries without broadening paid choices.
 - [x] Native picker/pending/paid-apply, self/observer rebuild and both-skin relog proven on private55087: target2850 GUID123, sources821/1181,1500copper/application; private-server restart preserved modifiers in the same redb. [Bounded native evidence](../../../game-engine/docs/wiki/systems/transmog-apply.md#native-proof--verified-2026-10-11).
-- [ ] Saved outfits remain unimplemented; this proof is not every-slot/product certification.
+- [ ] Native saved-outfit and catalogue proof remains pending; source/host-message tests are not native acceptance. Purchasable outfit entries are represented with authentic costs but purchasing is not implemented.
 
 ## Out of scope
 

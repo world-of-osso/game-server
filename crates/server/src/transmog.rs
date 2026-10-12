@@ -1,5 +1,6 @@
 //! Retail application at an authenticated Transmogrifier. See specs/transmog-apply.md.
 mod data;
+mod outfits;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use rusqlite::Connection;
@@ -324,7 +325,7 @@ impl Plugin for TransmogPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (send_opened_states, process_requests)
+            (send_opened_states, process_requests, outfits::process_saves)
                 .chain()
                 .after(crate::npc_interaction::NpcInteractionsProcessed),
         );
@@ -462,7 +463,8 @@ fn handle(
     let collection = crate::persistence::appearance_store::load_account_appearances(db, account);
     let catalog = world.resource::<TransmogCatalog>();
     let templates = world.resource::<ItemTemplates>();
-    let state = catalog.state(npc, &record, templates, &collection);
+    let mut state = catalog.state(npc, &record, templates, &collection);
+    state.outfits = outfits::load_outfits(db, account);
     let Some(changes) = changes else {
         return Ok(state);
     };
@@ -475,7 +477,8 @@ fn handle(
     let appearance = model.appearance().clone();
     record = model.into_record();
     save_inventory_record(db, character, &record);
-    let state = catalog.state(npc, &record, templates, &collection);
+    let mut state = catalog.state(npc, &record, templates, &collection);
+    state.outfits = outfits::load_outfits(db, account);
     if let Some(mut current) = world.get_mut::<EquipmentAppearance>(player) {
         current.set_if_neq(appearance);
     }
