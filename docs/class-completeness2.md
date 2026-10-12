@@ -157,6 +157,14 @@ Native aura142's Normal-school bit multiplies gear/base armor before adding stat
 
 Logs: `base-armor-{baseline-diagnostic,red2,green,controls}.log`, `base-armor-adjacent-*.log`. Batch22 at `1deb60e3` records all7827 memberships:2928 working/4717 partial/182 broken;17 memberships move to working while other142 roots retain their separate gaps. No new live, all-specific-script override or legal-build certificate.
 
+## Minimum-speed floors — batch23
+
+Aura305 uses the strongest positive native percentage as a floor after normalization and the strongest slow (pinned TC a352b1fa Unit.cpp8931–8943). Independent floors do not multiply; roots/stuns still prevent movement. Player run/flight/swim rates share this fold. Removal/expiry recomputes remaining rates without changing other speed mechanics.
+
+`5ccfb332` genuine RED2: Ghost Wolf2645 produced0.65/0.5/0.65 instead of1/1/1; Chi Torpedo115008's isolated native floor produced the same slowed rates instead of3/3/3. `655be822` implements the floor. At `8002244a`, six native controls pass: strongest floor, normalization/slow ordering, root/stun, removal, timed expiry to the weaker floor, faster-speed preservation and foreign-recipient isolation. Expanded fixture compile errors were not behavioral RED. Chi Torpedo applies only its floor/normalization effects at the production aura boundary; this is not whole-dash certification.
+
+Adjacent movement1/1, normalization1/1 and mount10/10 pass. Logs: `minimum-speed-{red,green,controls3}.log`, `minimum-speed-adjacent-*.log`. Non-player template-relative minimum-speed rates and backward movement remain uncertified; no new live proof. Full census pending.
+
 ## Retained boundaries
 
 At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. The earlier Monk evidence is retained in the completed representative gate above; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
