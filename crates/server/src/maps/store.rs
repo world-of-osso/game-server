@@ -512,17 +512,45 @@ fn load_raid_creature_encounters(conn: &Connection) -> rusqlite::Result<HashMap<
         [],
         |row| row.get(0),
     )?;
-    if !exists {
+    let mut bindings = if exists {
+        let mut statement =
+            conn.prepare("SELECT map_id, creature_entry, bit FROM raid_encounter_creature")?;
+        statement
+            .query_map([], |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)))?
+            .collect::<rusqlite::Result<HashMap<_, _>>>()?
+    } else {
         warn!(
-            "Raid boss credit catalog absent; prepare/import scripts/raid_encounters.py reference SQL before raid boss credit is available"
+            "Raid boss credit catalog absent; import source bindings before raid boss credit is available"
         );
-        return Ok(HashMap::new());
+        HashMap::new()
+    };
+    load_bossmod_bindings(conn, &mut bindings)?;
+    Ok(bindings)
+}
+
+fn load_bossmod_bindings(
+    conn: &Connection,
+    bindings: &mut HashMap<(u32, u32), u32>,
+) -> rusqlite::Result<()> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='bossmod_binding')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !exists {
+        return Ok(());
     }
-    let mut statement =
-        conn.prepare("SELECT map_id, creature_entry, bit FROM raid_encounter_creature")?;
-    statement
-        .query_map([], |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)))?
-        .collect()
+    let mut statement = conn.prepare("SELECT map_id,npc_entry,bit FROM bossmod_binding")?;
+    let rows = statement.query_map([], |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)))?;
+    for row in rows {
+        let (key, bit) = row?;
+        if let Some(existing) = bindings.insert(key, bit) {
+            if existing != bit {
+                return Err(rusqlite::Error::InvalidQuery);
+            }
+        }
+    }
+    Ok(())
 }
 
 fn load_maps(conn: &Connection) -> rusqlite::Result<HashMap<u32, MapEntry>> {
