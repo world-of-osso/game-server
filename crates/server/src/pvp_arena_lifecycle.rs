@@ -50,6 +50,7 @@ pub(super) fn update_matches(world: &mut World) {
     super::arena_objects::update_gates(world, now);
     super::arena_sight::update_sight(world, now);
     for id in changed {
+        super::arena_rated_results::apply_result(world, id);
         finish_match(world, id);
         super::pvp_objective::send_match_snapshot(world, id);
     }
@@ -127,7 +128,7 @@ fn update_match(
         (BgTeam::B, matched.instance.team_b_players.clone()),
     ];
     let ready = teams.iter().all(|(_, ids)| {
-        !ids.is_empty()
+        ids.len() == usize::from(super::arena::team_size(arena.mode).expect("arena team size"))
             && ids.iter().all(|id| {
                 matched.accepted.contains(id)
                     && actors.get(id).is_some_and(|actor| actor.map == map)

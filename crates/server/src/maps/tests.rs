@@ -826,6 +826,13 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 
 #[test]
 fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_channel() {
+    exercise_arena_channel(false);
+}
+#[test]
+fn rated_arena_groups_play_then_persist_reference_rating_without_queue_only_awards() {
+    exercise_arena_channel(true);
+}
+fn exercise_arena_channel(rated: bool) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let source = Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -895,18 +902,58 @@ fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_c
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
             pair::<QueueForArena>(),
+            pair::<shared::protocol::QueueForRatedPvp>(),
             pair::<RespondToBattlegroundInvite>(),
             pair::<LeaveBattleground>(),
             pair::<PvpStateUpdate>(),
             pair::<shared::protocol::AttackSwing>(),
         ));
-        h.app
-            .world_mut()
-            .get_mut::<MessageSender<QueueForArena>>(who.connection)
-            .unwrap()
-            .send::<PvpChannel>(QueueForArena {
-                mode: ArenaQueueMode::Skirmish2v2,
-            });
+        if !rated {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<QueueForArena>>(who.connection)
+                .unwrap()
+                .send::<PvpChannel>(QueueForArena {
+                    mode: ArenaQueueMode::Skirmish2v2,
+                });
+        }
+    }
+    if rated {
+        let online: OnlineView = players
+            .iter()
+            .enumerate()
+            .map(|(index, who)| {
+                (
+                    (index + 1) as u64,
+                    OnlineMember {
+                        entity: who.player.to_bits(),
+                        name: format!("Traveler{}", index + 1),
+                        class: 1,
+                        level: 90,
+                        portrait: Default::default(),
+                        dungeon_difficulty: 1,
+                        raid_difficulty: Default::default(),
+                    },
+                )
+            })
+            .collect();
+        let mut groups = h.app.world_mut().resource_mut::<GroupRegistry>();
+        groups.sync_presence(&online);
+        for (leader, member) in [(1, 3), (2, 4)] {
+            groups.invite(leader, &format!("Traveler{member}"), &online);
+            groups.respond_invite(member, true);
+        }
+        assert_eq!(groups.group_members(1).len(), 2);
+        assert_eq!(groups.group_members(2).len(), 2);
+        for who in &players[..2] {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<shared::protocol::QueueForRatedPvp>>(who.connection)
+                .unwrap()
+                .send::<PvpChannel>(shared::protocol::QueueForRatedPvp {
+                    bracket: shared::protocol::PvpBracketSnapshot::Arena2v2,
+                });
+        }
     }
     let updates = h.receive_pvp_updates(5);
     let invitations: Vec<_> = players
@@ -1075,6 +1122,37 @@ fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_c
         ))
     );
     assert_eq!(ended.players.len(), 4);
+    if rated {
+        assert_eq!(ended.arena.as_ref().unwrap().mode, ArenaQueueMode::Rated2v2);
+        assert_eq!(ended.arena.as_ref().unwrap().rating_changes.len(), 4);
+        for (index, who) in players.iter().enumerate() {
+            let progress = &h
+                .app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .progress;
+            let entry = progress
+                .brackets
+                .iter()
+                .find(|entry| entry.bracket == shared::protocol::PvpBracketSnapshot::Arena2v2)
+                .unwrap();
+            let won = index % 2 == 0;
+            assert_eq!(entry.rating, Some(if won { 48 } else { 0 }));
+            assert_eq!(entry.matchmaker_rating, Some(if won { 1512 } else { 1488 }));
+            assert_eq!(entry.season_wins, u32::from(won));
+            assert_eq!(entry.season_losses, u32::from(!won));
+            assert_eq!((progress.honor, progress.conquest), (0, 0));
+            let saved = crate::persistence::load_pvp(
+                &h.app
+                    .world()
+                    .resource::<crate::persistence::GameDatabase>()
+                    .db,
+                (index + 1) as u64,
+            );
+            assert_eq!(saved, *progress);
+        }
+    }
     for who in &players {
         assert_eq!(
             h.app.world().get::<Health>(who.player).unwrap().current,
