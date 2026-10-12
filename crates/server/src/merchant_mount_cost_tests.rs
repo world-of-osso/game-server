@@ -118,6 +118,11 @@ fn mount_costs_currency_and_gold_refusals_are_atomic() {
     let mut h = shopper();
     wallet(&mut h, 241, 9);
     h.set_gold(10_000_000);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterReputation>(h.player)
+        .unwrap()
+        .set_rep(72, threshold_for_standing(Standing::Exalted));
     let (npc, item) = offer(&mut h, 33307, 46758);
     assert_eq!(item.price, 5_000_000);
     assert_eq!(
@@ -168,6 +173,11 @@ fn mount_costs_currency_payment_and_inventory_survive_database_reopen() {
     h.app.insert_resource(GameDatabase { db });
     wallet(&mut h, 241, 13);
     h.set_gold(10_000_007);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterReputation>(h.player)
+        .unwrap()
+        .set_rep(72, threshold_for_standing(Standing::Exalted));
     let (npc, item) = offer(&mut h, 33307, 46758);
     h.buy(npc, item.slot, item.item_id, 2);
     assert!(h.failures().is_empty());
@@ -221,12 +231,65 @@ fn mount_costs_reputation_listing_and_purchase_use_actual_standing() {
         .world_mut()
         .get_mut::<CharacterReputation>(h.player)
         .unwrap()
+        .set_rep(978, threshold_for_standing(Standing::Exalted) - 1);
+    h.buy(npc, item.slot, item.item_id, 1);
+    assert_eq!(h.failures(), vec![MerchantError::ReputationRequired]);
+    assert_eq!(h.inventory(), before);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterReputation>(h.player)
+        .unwrap()
         .set_rep(978, threshold_for_standing(Standing::Exalted));
     let (npc, item) = offer(&mut h, 20240, 29227);
     assert!(item.usable);
     h.buy(npc, item.slot, item.item_id, 1);
     assert!(h.failures().is_empty());
     assert_eq!(h.count_of(29227), vec![1]);
+}
+
+#[test]
+fn mount_costs_two_item_price_rolls_back_first_turnin_when_second_is_missing() {
+    let mut h = shopper();
+    h.grant(26045, 140);
+    h.grant(26044, 29);
+    let (npc, item) = offer(&mut h, 21485, 28915);
+    assert_eq!(
+        item.extra_costs
+            .iter()
+            .map(|cost| (cost.currency, cost.id, cost.amount))
+            .collect::<Vec<_>>(),
+        vec![(false, 26045, 70), (false, 26044, 15)]
+    );
+    let before = h.inventory();
+    h.buy(npc, item.slot, item.item_id, 2);
+    assert_eq!(h.failures(), vec![MerchantError::MissingTurnins]);
+    assert_eq!(h.inventory(), before);
+    h.grant(26044, 1);
+    h.buy(npc, item.slot, item.item_id, 2);
+    assert!(h.failures().is_empty());
+    assert!(h.count_of(26045).is_empty());
+    assert!(h.count_of(26044).is_empty());
+    assert_eq!(h.count_of(28915), vec![1, 1]);
+}
+
+#[test]
+fn mount_costs_unavailable_metadata_is_not_a_free_offer_or_currency_alias() {
+    let mut h = shopper();
+    assert!(
+        !h.app
+            .world()
+            .resource::<VendorCatalog>()
+            .items(13216)
+            .iter()
+            .any(|slot| slot.item_id == 19030)
+    );
+    wallet(&mut h, 5, 1000); // Legacy fake Champion's Seal is not CurrencyTypes241.
+    let (npc, item) = offer(&mut h, 33307, 45125);
+    let before = h.inventory();
+    h.buy(npc, item.slot, item.item_id, 1);
+    assert_eq!(h.failures(), vec![MerchantError::MissingTurnins]);
+    assert_eq!(h.inventory(), before);
+    assert_eq!(balance(&h, 5), 1000);
 }
 
 #[test]
