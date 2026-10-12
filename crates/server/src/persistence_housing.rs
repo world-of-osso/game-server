@@ -362,6 +362,15 @@ pub(crate) fn snapshot(
         .flat_map(|storage| storage.iter())
         .map(|(&decor_id, &quantity)| StoredDecor { decor_id, quantity })
         .collect();
+    let mut placed = BTreeMap::<u32, u32>::new();
+    for decor in state
+        .houses
+        .values()
+        .filter(|house| house.account_id == actor.account_id)
+        .flat_map(|house| &house.decor)
+    {
+        *placed.entry(decor.decor_id).or_default() += 1;
+    }
     Ok(HousingState {
         build_key: state.build_key,
         neighborhood_id: actor.neighborhood_id,
@@ -369,6 +378,10 @@ pub(crate) fn snapshot(
         plots: Vec::new(),
         owned_houses,
         stored,
+        placed: placed
+            .into_iter()
+            .map(|(decor_id, quantity)| StoredDecor { decor_id, quantity })
+            .collect(),
         layout,
     })
 }
