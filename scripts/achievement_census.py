@@ -9,8 +9,9 @@ import sqlite3
 from pathlib import Path
 
 from import_achievement_modifiers import qualified_mythic_criteria
+import db2_casc
 
-BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 34, 36, 46, 74, 158, 165, 216}
+BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 34, 36, 43, 46, 74, 158, 165, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -37,7 +38,7 @@ def walk_tree(root, rows, children, visiting=frozenset()):
     return descendants, errors
 
 
-def supported_criteria(criteria, types, spells, skills, mythic_ids):
+def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets):
     supported = set()
     for row_id, row in criteria.items():
         kind, asset = int(row['Type']), int(row['Asset'])
@@ -54,6 +55,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids):
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
         if kind in (74, 158) and asset != 0:
+            continue
+        if kind == 43 and asset not in overlay_assets:
             continue
         if kind == 7 and asset not in skills:
             continue
@@ -74,7 +77,7 @@ def supports_tree(root, trees, children, supported, visiting=frozenset()):
     )
 
 
-def census(db2, modifiers_path, world_db, types):
+def census(db2, modifiers_path, world_db, types, overlays_path):
     achievements = read_rows(db2 / 'Achievement.csv')
     criteria = read_rows(db2 / 'Criteria.csv')
     trees = read_rows(db2 / 'CriteriaTree.csv')
@@ -83,8 +86,13 @@ def census(db2, modifiers_path, world_db, types):
     with sqlite3.connect(f'{world_db.resolve().as_uri()}?mode=ro', uri=True) as db:
         spells = {row[0] for row in db.execute('SELECT ID FROM spell')}
         skills = {row[0] for row in db.execute('SELECT ID FROM skill_line')}
+        areas = {row[0] for row in db.execute('SELECT ID FROM area_table WHERE ID != 0 AND AreaBit >= 0')}
+    header, overlays = db2_casc.decode(overlays_path.read_bytes())
+    if header['layout_hash'] != 0x9A196494:
+        raise ValueError('requires pinned WorldMapOverlay layout9A196494')
+    overlay_assets = {row_id for row_id, row in overlays.items() if any(area in areas for area in row[12:16])}
     mythic_ids = qualified_mythic_criteria(criteria, modifiers)
-    supported = supported_criteria(criteria, types, spells, skills, mythic_ids)
+    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets)
     by_type = collections.defaultdict(set)
     records = {}
     for row_id, row in achievements.items():
@@ -122,7 +130,7 @@ def census(db2, modifiers_path, world_db, types):
     trackable = [row for row in records.values() if row['trackable']]
     ranking = []
     for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
-        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids)
+        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets)
         gain = sum(not records[id]['trackable'] and not records[id]['flags'] & (1 | 0x4000)
                    and supports_tree(records[id]['root'], trees, children, newly_supported)
                    for id in ids)
@@ -135,7 +143,7 @@ def census(db2, modifiers_path, world_db, types):
                             potential_gain=gain))
     ranking.sort(key=lambda row: (-row['achievements'], -row['statistics'], row['type']))
     paths = [db2 / (name + '.csv') for name in ('Achievement', 'CriteriaTree', 'Criteria')]
-    paths.append(modifiers_path)
+    paths.extend([modifiers_path, overlays_path])
     return dict(
         build=db2.name, enabled_types=sorted(types),
         sources={str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths},
@@ -156,10 +164,11 @@ def main():
     parser.add_argument('--db2', type=Path, required=True)
     parser.add_argument('--modifiers', type=Path, required=True)
     parser.add_argument('--world-db', type=Path, required=True)
+    parser.add_argument('--overlays-db2', type=Path, required=True)
     parser.add_argument('--types', default=','.join(map(str, sorted(BASE_TYPES))))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    result = census(args.db2, args.modifiers, args.world_db, {int(x) for x in args.types.split(',')})
+    result = census(args.db2, args.modifiers, args.world_db, {int(x) for x in args.types.split(',')}, args.overlays_db2)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({key: result[key] for key in ('row_counts', 'trackable', 'boundary')}))
     for row in result['ranking'][:20]:

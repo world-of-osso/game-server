@@ -739,8 +739,26 @@ fn achievements2_account_migration_keeps_dates_and_distinct_counter_semantics_af
 }
 
 #[test]
-fn achievements2_exploration_without_overlay_mapping_never_fabricates_area_credit() {
-    assert_unsupported_achievement(627, 502, 1);
+fn achievements_criteria_exploration_does_not_complete_an_entire_zone_from_one_area() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    // Real overlay117 requires Area800; another area is not equivalent.
+    catalog.update(
+        &mut state,
+        CriteriaEvent::ExploreAreaBit(catalog.area_bit(87).unwrap()),
+        None,
+        1,
+    );
+    assert!(!state.criteria_progress.contains_key(&502));
+    catalog.update(
+        &mut state,
+        CriteriaEvent::ExploreAreaBit(catalog.area_bit(800).unwrap()),
+        None,
+        1,
+    );
+    assert_eq!(state.criteria_progress.get(&502), Some(&1));
+    assert!(!state.earned_ids.contains(&627));
 }
 
 #[test]
