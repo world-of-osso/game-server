@@ -1049,13 +1049,11 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
             Some(&1)
         );
         if starting_level == 89 {
+            let saved = persistence::load_achievements(&reopened, character);
             let mut restored = setup_progression_app(reopened, class_spells().unwrap(), true);
             restored.insert_resource(load_achievement_catalog(&conn).unwrap());
             let player = spawn_player(&mut restored, character, HUMAN, PALADIN, 90);
-            restored
-                .world_mut()
-                .entity_mut(player)
-                .insert(PlayerAchievementState::default());
+            restored.world_mut().entity_mut(player).insert(saved);
             let connection = connection_of(&mut restored, player);
             restored.world_mut().entity_mut(connection).insert(InWorld {
                 character_id: character,
