@@ -2308,6 +2308,7 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    crate::crafting_orders::interrupt(world, caster);
     world.entity_mut(caster).remove::<PendingCastSpell>();
     world
         .entity_mut(caster)
@@ -2399,6 +2400,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
         return;
     };
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
+        crate::crafting_orders::interrupt(world, caster);
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
         let (reason, detail) = failure.to_contract();
         // `Spell::cast` cleanup: SendCastResult to the caster, SendInterrupted to its set.

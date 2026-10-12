@@ -98,7 +98,10 @@ fn reconcile_scale(world: &mut World, unit: Entity) {
     } else {
         0.01
     };
-    let scale = shared::components::UnitScale((1.0 + points / 100.0).max(minimum));
+    let native = world
+        .get::<crate::zones::NativeObjectScale>(unit)
+        .map_or(1.0, |scale| scale.0);
+    let scale = shared::components::UnitScale((native * (1.0 + points / 100.0)).max(minimum));
     if world.get::<shared::components::UnitScale>(unit).copied() == Some(scale) {
         return;
     }

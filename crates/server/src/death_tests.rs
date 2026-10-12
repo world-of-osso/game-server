@@ -457,7 +457,7 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
                 min_level: 1,
                 max_level: 1,
                 faction: 0,
-                npc_flags: npcflag,
+                npc_flags: u64::from(npcflag),
                 speed_walk: 1.0,
                 speed_run: 1.0,
                 health_modifier: 1.0,
