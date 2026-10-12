@@ -355,6 +355,7 @@ fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
 macro_rules! for_quest_messages {
     ($apply:ident, $($arg:expr),*) => {
         $apply::<QuestLogSnapshot>($($arg),*);
+        $apply::<shared::protocol::WorldQuestAvailability>($($arg),*);
         $apply::<QuestLogUpdate>($($arg),*);
         $apply::<QuestGiverStatusQuery>($($arg),*);
         $apply::<QuestGiverStatusMultiple>($($arg),*);
@@ -410,6 +411,17 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         quest.reward_money = 125;
         quest.money_scaling = None;
         quest.captured_reward_xp = Some(0);
+        quests.world_quest_rewards.insert(
+            BEATING_THEM_BACK,
+            crate::world_quest_rewards::Rewards {
+                currencies: vec![shared::protocol::WorldQuestNumericReward {
+                    id: shared::currency::HONOR_CURRENCY_ID,
+                    amount: 7,
+                }],
+                reputation: vec![shared::protocol::WorldQuestNumericReward { id: 72, amount: 75 }],
+                ..Default::default()
+            },
+        );
         quests.world_quests = vec![Definition {
             quest_id: BEATING_THEM_BACK,
             zone_id: 37,
@@ -426,6 +438,15 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     }
     let client = spawn_client(&mut app, 30);
     enter_world(&mut app, &client);
+    let availability = received::<shared::protocol::WorldQuestAvailability>(&mut app, &client)
+        .pop()
+        .unwrap();
+    assert_eq!(availability.quests.len(), 1);
+    assert_eq!(availability.quests[0].expires_at, 1100);
+    assert_eq!(
+        availability.quests[0].position,
+        shared::protocol::QuestPoiPoint { x: 15, y: 15 }
+    );
     assert!(
         load_quest_log(db(&app), client.character_id)
             .active(BEATING_THEM_BACK)
@@ -455,6 +476,8 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     });
     app.update();
     let gold = persistence::load_inventory(db(&app), client.character_id).gold;
+    let reputation_before =
+        persistence::load_reputation(db(&app), client.character_id, Default::default).get_value(72);
     kill(&mut app, &client, BLACKROCK_WORG, 1);
     assert_eq!(
         load_quest_log(db(&app), client.character_id)
@@ -473,7 +496,21 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         persistence::load_inventory(db(&app), client.character_id).gold,
         gold + 125
     );
+    assert_eq!(
+        persistence::load_currencies(db(&app), client.character_id)
+            .get(shared::currency::HONOR_CURRENCY_ID),
+        7
+    );
+    assert_eq!(
+        persistence::load_reputation(db(&app), client.character_id, Default::default).get_value(72),
+        reputation_before + 75
+    );
     app.update();
+    assert_eq!(
+        persistence::load_currencies(db(&app), client.character_id)
+            .get(shared::currency::HONOR_CURRENCY_ID),
+        7
+    );
     assert_eq!(
         persistence::load_inventory(db(&app), client.character_id).gold,
         gold + 125

@@ -4,7 +4,7 @@ Contract and World of Osso rotation policy: [engine world-quest spec](../../game
 
 ## Private import
 
-`python3 scripts/import_world_quests.py --source-db /home/osso/Projects/world-of-osso/game-server/data/world.db --duration-receipt /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/world-quests-2026-10-11/source-census.json --poi-db2-dir /home/osso/Projects/world-of-osso/game-engine/data/db2/12.1.0.69933 --policy-duration 86400 --output-db /home/osso/.worktrees/world-quests-lead/world.db`
+`python3 scripts/import_world_quests.py --source-db /home/osso/Projects/world-of-osso/game-server/data/world.db --duration-receipt /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/world-quests-2026-10-11/source-census.json --poi-db2-dir /home/osso/Projects/world-of-osso/game-engine/data/db2/12.1.0.69933 --policy-duration 86400 --faction-reward-db2 /home/osso/.worktrees/world-quests-data/db2/1282622.db2 --output-db /home/osso/.worktrees/world-quests-lead/world.db`
 
 The command opens the source read-only and SQLite-backups into an exclusively created output. It admits world quests with a nondegenerate polygon from pinned QuestPOIBlob/QuestPOIPoint and objectives supported by the existing quest system. Single points are pins, not areas. Authentic ManagedWorldState UpTimeSecs takes precedence; other admitted quests use `--policy-duration` (default86400 seconds), explicit World of Osso policy. Existing output files and source/output identity are rejected.
 
@@ -20,4 +20,4 @@ The matching WoWDBDefs layouts decode3,909 AreaPOI,1,070 AreaPOIState and154 Man
 
 `world_quests.rs` computes half-open per-zone windows from the policy; `quest_time.rs` refreshes them with the realm ServerClock and removes expired task logs/watches. Definitions load from `content_world_quest`; invalid/zero durations and missing runtime quest templates fail loading. No table means the import has not been installed, not a substitute activation source.
 
-Area-entry acceptance, automatic source-backed reward settlement, availability transport, native pins/tooltips/task tracking and UDP5861 both-skin proof remain open. Rotation tests do not establish those behaviors.
+Area entry accepts and tracks; departure untracks without discarding progress. Existing objective credit automatically settles complete tasks. The reward transaction persists quest history, items/money and imported currency/reputation together; XP uses pinned QuestXP rather than synthetic quest XP. Numeric reward amounts follow TrinityCore Player.cpp6627–6638 (override/100 or QuestFactionReward difficulty). WorldQuestAvailability publishes per-character eligible windows, authentic geometry centers, expiry and rewards previews. Native pins/tooltips/task tracking and UDP5861 both-skin proof remain open. Rotation tests do not establish those behaviors.

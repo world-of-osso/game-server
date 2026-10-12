@@ -79,10 +79,10 @@ const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professio
 const LEGACY_PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
 
 /// Reputation table: PlayerId (u64) -> serialized reputation state (bytes).
-const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
+pub(crate) const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
 
 /// Currency table: PlayerId (u64) -> serialized currency wallet (bytes).
-const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
+pub(crate) const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
 
 /// Achievement table: PlayerId (u64) -> serialized achievement state (bytes).
 pub(crate) const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");

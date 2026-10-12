@@ -884,6 +884,16 @@ impl<'a> QuestSession<'a, '_, '_> {
             return Err(failed(quest_id, QuestFailedReason::ObjectivesIncomplete));
         }
         let items = self.granted_items(quest, choice_index)?;
+        let numeric = crate::world_quest_rewards::load_settlement(
+            self.db,
+            self.character(),
+            self.requester.player.race,
+            self.quests.world_quest_rewards.get(&quest_id),
+        )
+        .map_err(|error| {
+            warn!("Quest {quest_id} reward rejected: {error}");
+            failed(quest_id, QuestFailedReason::NotAvailable)
+        })?;
         let money = quest_money(self.quests, quest, self.requester.player);
         let gold = inventory.gold.checked_add_signed(i64::from(money));
         let Some(gold) = gold else {
@@ -905,7 +915,12 @@ impl<'a> QuestSession<'a, '_, '_> {
                 .now
                 .unwrap_or_else(crate::persistence::quest_store::unix_now),
         );
-        self.persist_reward(&inventory, &log, self.reward_appearances(quest, &items));
+        self.persist_reward(
+            &inventory,
+            &log,
+            self.reward_appearances(quest, &items),
+            numeric,
+        );
         self.queue_script_quest_hook(npc, quest_id, true);
         let character = self.character();
         self.io.commands.queue(move |world: &mut World| {
@@ -913,7 +928,9 @@ impl<'a> QuestSession<'a, '_, '_> {
         });
         // `RewardQuest`: no XP at the cap.
         let level = self.requester.player.level;
-        let xp = if level >= MAX_LEVEL {
+        let xp = if quest.quest_info_modifiers & 0x100 != 0 {
+            crate::world_quest_rewards::xp(self.quests, quest, level)
+        } else if level >= MAX_LEVEL {
             0
         } else {
             match quest.captured_reward_xp {
@@ -952,6 +969,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         inventory: &InventoryData,
         log: &QuestLogData,
         appearances: Vec<u32>,
+        numeric: Option<crate::world_quest_rewards::Settlement>,
     ) {
         let character = self.character();
         let account = persistence::find_account_id_for_character(self.db, character)
@@ -966,7 +984,16 @@ impl<'a> QuestSession<'a, '_, '_> {
             .expect("open quest logs")
             .insert(character, bitcode::encode(log).as_slice())
             .expect("write rewarded quest log");
+        if let Some(settlement) = &numeric {
+            settlement.persist_in(&txn, character);
+        }
         txn.commit().expect("commit quest reward");
+        if let Some(settlement) = numeric {
+            let connection = self.requester.connection;
+            self.io
+                .commands
+                .queue(move |world: &mut World| settlement.publish(world, connection));
+        }
         self.io
             .effects
             .inventories

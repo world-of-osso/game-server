@@ -95,6 +95,7 @@ impl Plugin for QuestPlugin {
                 mark_quest_inputs_changed,
                 quest_requests::process_world_quests,
                 send_quest_updates,
+                crate::world_quest_availability::publish,
             )
                 .chain()
                 .before(crate::inventory::InventoryDeltas)
