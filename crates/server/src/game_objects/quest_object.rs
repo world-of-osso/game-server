@@ -149,5 +149,6 @@ pub(crate) fn use_object(
         .get_mut::<QuestObject>(object)
         .expect("validated quest object")
         .available_at = now + state.cooldown;
+    crate::achievement::record_game_object_use(world, player, info.entry);
     Ok(())
 }
