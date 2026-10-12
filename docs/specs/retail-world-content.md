@@ -28,6 +28,16 @@ How it works: [content import](../wiki/systems/content-import.md).
 
 Implementation: `scripts/world_population.py` reuses the [instance import functions](../wiki/systems/content-import.md#instance-population-2026-10-11). Process/copy proof: `scripts/tests/test_world_population.py`; admission/private-copy ECS tests in `maps/tests.rs` and `zones.rs`. [Census and observed both-skin Boralus proof](../world-population-counts.md) distinguish imported rows, living actors, source-empty maps and client appearance gaps.
 
+## Zone population continuation (2026-10-11)
+
+- [x] Read-only census ranks each hosted continent's zones using AreaTable/UiMap, distinguishes declared/inferred/unassigned placements, and counts TDB versus content creatures, gameobjects, quests and giver/ender identities.
+- [x] The existing world-promote/instance importer promotes authentic source rows on an unlinked copy, retaining effective source unit flags, overlays and unrelated content; reports per-table before/after/added/removed row counts.
+- [x] Missing zone quests use existing Retail converters. Unsupported objective kinds or slot overflow exclude the whole new quest; no synthetic placements, relations or quest objectives. Item-only vendors, source trainer tables and DB2 taxi data supply services, including authored taxi mount models without world spawns.
+- [x] Ground/deploy-file and navmesh inventories cover every hosted map; missing assets/bakes and unsupported surfaces remain explicit data boundaries, not claimed as working navigation.
+- [x] Private UDP5916 native proof visits at least three newly populated zones, accepts/rewards one authentic quest each and uses a flight master in both skins. Canonical writes, UDP5000, fabricated quest credit and full suites are excluded.
+
+[Ranked census, copy command and evidence](../zone-population-counts.md) own measured coverage. Template/player-immunity flags must remain effective on the client interaction path, so neutral immune quest enders are spoken to rather than auto-attacked.
+
 ## Instance population (2026-10-11)
 
 Maps from local `Map.db2` with `InstanceType` dungeon/raid (1/2) and `MapDifficulty.db2` rows, union all canonical TDB `instance_template` maps, take authentic TDB creature/gameobject spawns, templates, models, addons, formations, equipment and paths through the copy-only [instance importer](../wiki/systems/content-import.md#instance-population-2026-10-11). The historical four-map importer below remains the world/quest/vendor policy; instance population runs after it during regeneration.

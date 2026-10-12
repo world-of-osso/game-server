@@ -12,6 +12,8 @@ pub(crate) mod banks;
 pub(crate) mod charters;
 #[path = "persistence_equipment.rs"]
 pub(crate) mod equipment;
+#[path = "persistence_housing.rs"]
+pub(crate) mod housing_store;
 #[path = "persistence_inventory.rs"]
 pub(crate) mod inventory_store;
 #[path = "persistence_mail.rs"]
@@ -347,6 +349,7 @@ pub(crate) fn create_tables(db: &Database) {
     banks::create_bank_tables(&txn);
     appearance_store::create_appearance_tables(&txn);
     toy_store::create_tables(&txn);
+    housing_store::create_tables(&txn);
     mount_store::create_tables(&txn);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);

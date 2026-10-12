@@ -4,6 +4,7 @@
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
+- [Zone population](../zone-population-counts.md) —371-zone ranked TDB/content census,43-map copy promotion,12 additional hosts; both-skin three rewarded quests/paid taxi, explicit navigation/appearance/surface gaps.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
 - [Boss-mod data import](systems/bossmod-data.md) — static AST/locale extraction, copy-only authority and actual-cast reconciliation; hosted7/7 and both-skin private two-encounter proof pass, native-input schedule coverage remains open.
 

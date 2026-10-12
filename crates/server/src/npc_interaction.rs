@@ -253,6 +253,7 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
             shared::protocol::GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE => ObjectUse::Challenge,
+            shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingUiLink,
             _ if info.is_battleground_flag()
                 || info.is_battleground_orb()
                 || info.is_battleground_capture_point() =>
@@ -309,6 +310,7 @@ enum ObjectUse {
     /// Retail GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE.
     Challenge,
     BattlegroundFlag,
+    HousingUiLink,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -476,6 +478,22 @@ fn process_game_object_uses(
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::pvp::use_battleground_object(world, connection, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::HousingUiLink)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) =
+                            crate::housing::use_ui_link(world, connection, player, object)
+                            && let Some(mut sender) =
+                                world.get_mut::<MessageSender<InteractionFailed>>(connection)
+                        {
+                            sender.send::<InteractionChannel>(InteractionFailed {
+                                npc: object.to_bits(),
+                                error,
+                            });
+                        }
                     });
                     continue;
                 }

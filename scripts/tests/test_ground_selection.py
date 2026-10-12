@@ -1,6 +1,7 @@
 """Registered-map extraction and build-selected local CASC products."""
 
 import sqlite3
+from contextlib import closing
 import struct
 import subprocess
 import sys
@@ -17,10 +18,11 @@ class GroundSelectionTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.db = Path(self.temp.name) / "world.db"
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db:
             db.executescript("""
                 CREATE TABLE map (ID INTEGER PRIMARY KEY, WdtFileDataID INTEGER);
                 CREATE TABLE content_creature (map INTEGER);
+                CREATE TABLE content_gameobject (map INTEGER);
                 CREATE TABLE db2_row_source (table_name TEXT, row_id INTEGER, build TEXT);
                 INSERT INTO map VALUES (0,775971),(2991,7198644),(42,123);
                 INSERT INTO content_creature VALUES (0),(0);
@@ -32,6 +34,13 @@ class GroundSelectionTest(unittest.TestCase):
             ground_files.selected_map_sources(self.db, [2991]),
             [(2991, 7198644, "wow_classic_beta")],
         )
+
+    def test_default_deploy_selection_includes_gameobject_only_zone(self):
+        with closing(sqlite3.connect(self.db)) as db:
+            db.execute("INSERT INTO content_gameobject VALUES (42)")
+            db.commit()
+        self.assertEqual(ground_files.selected_map_sources(self.db),
+                         [(0, 775971, "wow"), (42, 123, "wow")])
 
     def test_registered_maps_and_default_spawn_selection(self):
         self.assertEqual(

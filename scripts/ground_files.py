@@ -131,7 +131,7 @@ def selected_map_sources(world_db, map_ids=None, registered=False):
             else [
                 row[0]
                 for row in db.execute(
-                    "SELECT DISTINCT map FROM content_creature ORDER BY map"
+                    "SELECT map FROM content_creature UNION SELECT map FROM content_gameobject ORDER BY map"
                 )
             ]
         )

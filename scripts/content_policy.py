@@ -457,9 +457,23 @@ def main():
     )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
-    parser.add_argument("--mode", choices=("rebuild", "world-promote"), default="rebuild")
+    parser.add_argument("--mode", choices=("rebuild", "world-promote", "world-census"), default="rebuild")
     parser.add_argument("--maps", help="comma-separated explicit open-world map IDs; world-promote only")
     args = parser.parse_args()
+    if args.mode == "world-census":
+        import world_population
+
+        if not args.maps:
+            parser.error("world-census requires explicit hosted --maps")
+        maps = [int(value) for value in args.maps.split(",")]
+        with sqlite3.connect(f"file:{args.db}?mode=ro", uri=True) as conn:
+            for map_id in maps:
+                if conn.execute("SELECT InstanceType FROM map WHERE ID=?", (map_id,)).fetchone() != (0,):
+                    parser.error(f"census map {map_id} is not a registered open world")
+            result = world_population.zone_census(conn, maps, args.csv_root)
+        world_population.write_report(args.report, result)
+        print(f"Read-only census: {len(result)} zone rows; report: {args.report}")
+        return
     if args.mode == "world-promote":
         import world_population
 

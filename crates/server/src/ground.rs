@@ -792,3 +792,7 @@ mod stv_tests;
 #[cfg(test)]
 #[path = "zephras_ground_tests.rs"]
 mod zephras_tests;
+
+#[cfg(test)]
+#[path = "housing_ground_tests.rs"]
+mod housing_tests;
