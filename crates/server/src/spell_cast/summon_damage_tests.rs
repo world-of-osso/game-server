@@ -99,6 +99,16 @@ fn class_completeness_native_command_buffs_pet_and_guardian_not_owner_stranger_o
     let expected = (DAMAGE * (1.0 + native / 100.0)).round();
     assert_eq!(spell_loss(&mut h, pet, false), expected);
     assert_eq!(spell_loss(&mut h, guardian, false), expected);
+    h.app
+        .world_mut()
+        .get_mut::<crate::hunter_pet::HunterPet>(pet)
+        .unwrap()
+        .owner = stranger;
+    assert_eq!(
+        spell_loss(&mut h, pet, false),
+        DAMAGE,
+        "ownership changes must not retain the prior bonus"
+    );
     crate::auras::remove_auras(
         h.app.world_mut(),
         owner,
@@ -198,4 +208,92 @@ fn class_completeness_native_mastery_summon_bonus_tracks_real_owner_stat_changes
     let changed = (DAMAGE * (1.0 + stats.mastery_pct / 100.0)).round();
     assert!(changed > expected);
     assert_eq!(spell_loss(&mut h, pet, false), changed);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == ELEMENTAL_BLAST_MASTERY,
+    );
+    h.advance(4);
+    assert_eq!(spell_loss(&mut h, pet, false), expected);
+}
+
+#[test]
+fn class_completeness_native_mastery_refresh_preserves_timed_aura_expiry() {
+    const SHIFTING_SANDS: u32 = 413_984;
+    const ELEMENTAL_BLAST_MASTERY: u32 = 173_184;
+    let mut h = damage_harness(
+        &[
+            BEAST_MASTERY,
+            FIREBALL,
+            SHIFTING_SANDS,
+            ELEMENTAL_BLAST_MASTERY,
+        ],
+        3,
+        true,
+    );
+    let source = world_db().unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &source.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_class_spells(&conn).unwrap());
+    let owner = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((Level(80), ActiveSpec(253)));
+    h.advance(4);
+    let other = spawn_player(&mut h.app, 3, 0.0);
+    super::cast_triggered(h.app.world_mut(), owner, SHIFTING_SANDS, Some(owner), 0);
+    super::cast_triggered(h.app.world_mut(), owner, SHIFTING_SANDS, Some(other), 0);
+    h.advance(2);
+    let before = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(owner)
+        .unwrap()
+        .0
+        .iter()
+        .find(|aura| aura.spell_id == SHIFTING_SANDS)
+        .unwrap()
+        .clone();
+    let foreign = crate::auras::has_aura(h.app.world(), other, SHIFTING_SANDS);
+    assert!(foreign);
+    h.advance(60);
+    super::cast_triggered(
+        h.app.world_mut(),
+        owner,
+        ELEMENTAL_BLAST_MASTERY,
+        Some(owner),
+        0,
+    );
+    h.advance(4);
+    let after = h
+        .app
+        .world()
+        .get::<shared::components::UnitAuras>(owner)
+        .unwrap()
+        .0
+        .iter()
+        .find(|aura| aura.spell_id == SHIFTING_SANDS)
+        .unwrap()
+        .clone();
+    assert_eq!(after.duration_ms, before.duration_ms);
+    assert_eq!(after.stacks, before.stacks);
+    assert!(after.remaining_ms < before.remaining_ms - 2_000);
+    h.advance(150);
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        owner,
+        SHIFTING_SANDS
+    ));
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        other,
+        SHIFTING_SANDS
+    ));
+    // Type540's gameplay consumer remains separately unimplemented.
 }
