@@ -294,6 +294,11 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     }
 }
 
+/// Retail CriteriaType157 AccountObtainPetThroughBattle: committed trap reward, not request.
+pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
+    record_criteria_event(world, player, CriteriaEvent::CaptureBattlePet);
+}
+
 /// TC Spell.cpp3543-3546 credits the casting Retail item after successful cast checks.
 pub(crate) fn record_item_use(world: &mut World, player: Entity, item: u32) {
     record_criteria_event(world, player, CriteriaEvent::UseItem(item));
