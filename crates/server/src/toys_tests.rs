@@ -2945,6 +2945,10 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             remaining > duration as f64 / 1000.0 - 4.0 && remaining <= duration as f64 / 1000.0
         );
         h.app
+            .world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(std::time::Duration::from_secs_f64(remaining));
+        h.app
             .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
                 std::time::Duration::from_secs_f64(remaining - 0.1),
             ));
