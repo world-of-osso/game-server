@@ -414,6 +414,11 @@ fn achievements_criteria_drowning_after_a_creature_wound_never_invents_a_creatur
     );
     let state = app.world().get::<PlayerAchievementState>(player).unwrap();
     assert_eq!(state.criteria_progress.get(&111), Some(&1));
+    assert_eq!(
+        state.criteria_progress.get(&147),
+        Some(&1),
+        "native drowning type26"
+    );
     assert!(
         !state.criteria_progress.contains_key(&455),
         "a previous nonlethal attacker did not cause drowning"
@@ -423,6 +428,7 @@ fn achievements_criteria_drowning_after_a_creature_wound_never_invents_a_creatur
     let db = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&db, character);
     assert_eq!(saved.criteria_progress.get(&111), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&147), Some(&1));
     assert!(!saved.criteria_progress.contains_key(&455));
 }
 
