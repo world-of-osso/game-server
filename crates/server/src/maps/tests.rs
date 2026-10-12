@@ -2732,7 +2732,7 @@ fn housing_finder_visit_ports_to_authored_plot_without_payment_or_grant() {
     assert!(reply.state.owned_houses.is_empty());
     assert!(reply.state.stored.is_empty());
     h.ack(&viewer);
-    assert_eq!(h.map_of(&viewer).map_id, 2735);
+    assert_eq!(h.map_of(&viewer).unwrap().map_id, 2735);
     let [x, y, z] = plot.teleport;
     let expected = crate::terrain_height::wow_to_bevy(x, y, z);
     let actual = h.app.world().get::<Position>(viewer.player).unwrap();
