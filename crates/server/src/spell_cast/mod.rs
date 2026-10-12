@@ -858,6 +858,7 @@ pub(crate) fn cast_toy_spell(
     toy: &crate::toy_catalog::Toy,
     target: Option<Entity>,
     item_level: u16,
+    destination: Option<[f32; 3]>,
 ) -> Result<(), CastFailure> {
     let spell_id = toy.snapshot.spell_id.ok_or(CastFailure::UnknownSpell)?;
     let mut spell = world
@@ -865,6 +866,8 @@ pub(crate) fn cast_toy_spell(
         .get(spell_id)
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
+    spell.cast_destination = destination;
+    validate_toy_destination(world, caster, &spell)?;
     spell.cast_item_level = Some(item_level);
     let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
     if toy.item_cooldown_ms >= 0 {
@@ -893,6 +896,42 @@ pub(crate) fn cast_toy_spell(
         );
     }
     result
+}
+
+fn validate_toy_destination(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    let cursor_target = spell
+        .effects
+        .iter()
+        .any(|effect| effect.implicit_targets.contains(&87));
+    if !cursor_target {
+        return if spell.cast_destination.is_none() {
+            Ok(())
+        } else {
+            Err(CastFailure::InvalidTarget)
+        };
+    }
+    let point = spell
+        .cast_destination
+        .map(Vec3::from_array)
+        .ok_or(CastFailure::NoTarget)?;
+    if !point.is_finite() {
+        return Err(CastFailure::InvalidTarget);
+    }
+    let origin = targets::position(world, caster).ok_or(CastFailure::InvalidTarget)?;
+    let (min, max) = targets::spell_range(spell, false);
+    let max = modify(world, caster, spell, SpellModOp::Range, max);
+    let distance = origin.distance(point);
+    if distance > max {
+        return Err(CastFailure::OutOfRange);
+    }
+    if distance < min {
+        return Err(CastFailure::TooClose);
+    }
+    Ok(())
 }
 
 fn request_cast(

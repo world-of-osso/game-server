@@ -126,11 +126,18 @@ fn learn(h: &mut Harness, slot: u8) -> Vec<ToyResult> {
 }
 
 fn activate(h: &mut Harness, item_id: u32) -> Vec<ToyResult> {
+    activate_at(h, item_id, None)
+}
+
+fn activate_at(h: &mut Harness, item_id: u32, destination: Option<[f32; 3]>) -> Vec<ToyResult> {
     h.app
         .world_mut()
         .get_mut::<MessageSender<UseToy>>(h.connection)
         .unwrap()
-        .send::<CollectionChannel>(UseToy { item_id });
+        .send::<CollectionChannel>(UseToy {
+            item_id,
+            destination,
+        });
     pump(h).0
 }
 
@@ -2895,7 +2902,17 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
         learn_effect_toy(&mut h, character, item);
-        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        let destination = if matches!(item, 89869 | 184415) {
+            let origin = h.app.world().get::<Position>(h.caster).unwrap();
+            Some([origin.x + 2.0, origin.y, origin.z])
+        } else {
+            None
+        };
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "item {item}"
+        );
         h.advance(60); // Includes the globe's authored 3000ms cast.
         assert!(
             h.inbox.failed.is_empty(),
@@ -3092,6 +3109,70 @@ fn toyfx14_area_cosmetics_census() {
             .unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
+}
+
+#[test]
+fn toyfx14_ground_toy_waits_for_a_clicked_destination() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("ground.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&path));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    learn_effect_toy(&mut h, character, 89869);
+    assert_eq!(
+        activate(&mut h, 89869)[0].error.as_deref(),
+        Some("NoTarget")
+    );
+    assert!(
+        h.inbox.go.is_empty(),
+        "a cursor-only request must not cast at the player's feet"
+    );
+    let origin = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.caster)
+        .unwrap();
+    for (destination, error) in [
+        ([f32::NAN, origin.y, origin.z], "InvalidTarget"),
+        ([origin.x + 11.0, origin.y, origin.z], "OutOfRange"),
+    ] {
+        assert_eq!(
+            activate_at(&mut h, 89869, Some(destination))[0]
+                .error
+                .as_deref(),
+            Some(error)
+        );
+        assert!(h.inbox.go.is_empty());
+    }
+    let destination = [origin.x + 3.0, origin.y, origin.z];
+    assert_eq!(activate_at(&mut h, 89869, Some(destination))[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 131171));
+    let world = h.app.world_mut();
+    let positions: Vec<_> = world
+        .query::<(&shared::components::Npc, &shared::components::Position)>()
+        .iter(world)
+        .filter(|(npc, _)| npc.template_id == 66768)
+        .map(|(_, position)| *position)
+        .collect();
+    assert_eq!(
+        positions,
+        vec![shared::components::Position {
+            x: destination[0],
+            y: destination[1],
+            z: destination[2]
+        }]
+    );
 }
 
 #[test]
