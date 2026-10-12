@@ -58,7 +58,8 @@ fn mount_journal_auth_entry_after_update_sync_loads_account_before_publish() {
         .add_systems(Update, enter_after_mount_update.after(sync_accounts));
     h.advance(1);
     assert!(h.app.world().get::<AccountMounts>(player).is_some());
-    let mut updates = Vec::new();
+    // HostClient delivers in Last of this frame and clears next frame's Last.
+    let mut updates = drain::<MountJournalUpdate>(&mut h.app, connection);
     for _ in 0..4 {
         h.advance(1);
         updates.extend(drain::<MountJournalUpdate>(&mut h.app, connection));
