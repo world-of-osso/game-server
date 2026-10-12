@@ -1354,7 +1354,7 @@ fn achievements_faction_specific_quests_grant_only_the_matching_player() {
             .collect();
         assert!(!quests.is_empty());
         for quest in quests {
-            record_quest_reward(&mut world, 42, quest);
+            record_quest_reward(&mut world, 42, quest, false);
         }
         let state = world.get::<PlayerAchievementState>(player).unwrap();
         assert_eq!(
