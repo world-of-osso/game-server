@@ -29,6 +29,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 36758fce / shared00d33e7 | 2905 | 4740 | 182 | Native429433 counters/charged missile modifiers, all7827 memberships, exit0, 602.80s |
 | 116d3eff / shared00d33e7 | 2911 | 4734 | 182 | Native467 bonus-stat negation, all7827 memberships, exit0, 606.66s |
 | 1deb60e3 / shared00d33e7 | 2928 | 4717 | 182 | Native142 physical base armor, all7827 memberships, exit0, 539.21s |
+| 1441a273 / shared00d33e7 | 2934 | 4711 | 182 | Native305 player minimum speed, all7827 memberships, exit0, 565.22s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -163,7 +164,7 @@ Aura305 uses the strongest positive native percentage as a floor after normaliza
 
 `5ccfb332` genuine RED2: Ghost Wolf2645 produced0.65/0.5/0.65 instead of1/1/1; Chi Torpedo115008's isolated native floor produced the same slowed rates instead of3/3/3. `655be822` implements the floor. At `8002244a`, six native controls pass: strongest floor, normalization/slow ordering, root/stun, removal, timed expiry to the weaker floor, faster-speed preservation and foreign-recipient isolation. Expanded fixture compile errors were not behavioral RED. Chi Torpedo applies only its floor/normalization effects at the production aura boundary; this is not whole-dash certification.
 
-Adjacent movement1/1, normalization1/1 and mount10/10 pass. Logs: `minimum-speed-{red,green,controls3}.log`, `minimum-speed-adjacent-*.log`. Non-player template-relative minimum-speed rates and backward movement remain uncertified; no new live proof. Full census pending.
+Adjacent movement1/1, normalization1/1 and mount10/10 pass. Logs: `minimum-speed-{red,green,controls3}.log`, `minimum-speed-adjacent-*.log`. Non-player template-relative minimum-speed rates and backward movement remain uncertified; no new live proof. Batch23 at `1441a273` records all7827 memberships:2934 working/4711 partial/182 broken; six memberships become working at the controlled player probe boundary.
 
 ## Retained boundaries
 
