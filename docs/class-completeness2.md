@@ -33,6 +33,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | dfc71656 / shared00d33e7 | 2965 | 4680 | 182 | Native466 final player armor, all7827 memberships, exit0, 477.51s |
 | d41f51c2 / shared00d33e7 | 2969 | 4676 | 182 | Zero-amount284/285 child linkage, all7827 memberships, exit0, 545.53s |
 | 8d143318 / shared00d33e7 | 2983 | 4662 | 182 | Native330 moving cast/channel masks, all7827 memberships, exit0, 549.22s |
+| 5e015838 / shared00d33e7 | 3000 | 4645 | 182 | Native232/234 receiver duration rule, all7827 memberships, exit0, 515.50s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -216,7 +217,7 @@ Pinned TC a352b1fa WorldObject::ModSpellDuration (Object.cpp1725–1789) applies
 
 Oppressing Roar372048's17 authored +50 fields remain a named partial gap: pinned `min(50,0)=0` cannot implement a positive-only duration extension. Positive232 amounts still participate in the pinned mixed sum; no positive-extension or sign rule is invented. Imported287297/289186 use mechanic selector1825, which cannot fit the pinned64-bit mask; they stay explicitly unsupported without modulo/bitmask reinterpretation. Neither occurs in the current class closure. Source analysis certifies only nonpositive valid232 fields and valid234 fields; runtime warning receipts preserve the gaps.
 
-Adjacent Growth/Lingering7, Polymorph13, moving-cast8 and linked-aura7 pass. Logs: `mechanic-duration-{red,green,controls}.log`, `mechanic-duration-adjacent-*.log`. This proves server state/replication-component output, not new client/live reception. Duration-by-dispel, full diminishing returns, legal talent combinations and whole Oppressing Roar remain outside this proof. Full census pending.
+Adjacent Growth/Lingering7, Polymorph13, moving-cast8 and linked-aura7 pass. Logs: `mechanic-duration-{red,green,controls}.log`, `mechanic-duration-adjacent-*.log`. This proves server state/replication-component output, not new client/live reception. Duration-by-dispel, full diminishing returns, legal talent combinations and whole Oppressing Roar remain outside this proof. Batch27 at `5e015838` records all7827 memberships:3000 working/4645 partial/182 broken. Seventeen memberships become working; all three Oppressing Roar memberships retain a232 source gaps and runtime warnings.
 
 ## Retained boundaries
 
