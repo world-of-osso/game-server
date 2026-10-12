@@ -1,6 +1,6 @@
 //! Effect50 (TRANS_DOOR / EffectTransmitted), not just summoning rituals.
 //! TC a352b1fa SpellEffects.cpp: destination, template, owner and spell duration.
-//! Only decoration, chairs and mailboxes have complete non-scripted behavior here.
+//! Decoration, chairs, mailboxes and source cooking-only foci have complete behavior.
 use std::collections::HashMap;
 use std::f32::consts::FRAC_PI_2;
 
@@ -10,7 +10,7 @@ use rusqlite::{Connection, Row};
 use shared::components::{Position, Rotation};
 use shared::protocol::{
     GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_MAILBOX,
-    GAMEOBJECT_TYPE_RITUAL, GameObjectInfo,
+    GAMEOBJECT_TYPE_RITUAL, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
 };
 
 use super::GameObjectBounds;
@@ -27,6 +27,8 @@ struct ObjectTemplate {
     chair: Option<crate::chair::Chair>,
     scripted: bool,
     spellcaster: Option<super::spellcaster::SpellcasterObject>,
+    cooking_focus: Option<(u32, f32)>,
+    extra_focus_payload: bool,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -85,16 +87,27 @@ fn template_from_row(row: &Row, conn: &Connection) -> rusqlite::Result<(u32, Obj
                     })
                 })
                 .transpose()?,
+            cooking_focus: (go_type == GAMEOBJECT_TYPE_SPELL_FOCUS)
+                .then(|| -> rusqlite::Result<_> { Ok((row.get(5)?, geo(6)?)) })
+                .transpose()?,
+            extra_focus_payload: row.get(21)?,
         },
     ))
 }
 
 pub(crate) fn load_templates(conn: &Connection) -> rusqlite::Result<SummonedObjectTemplates> {
-    let mut query = conn.prepare("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
+    let additional_focus_fields = (2..=34)
+        .map(|index| format!("t.Data{index}"))
+        .collect::<Vec<_>>()
+        .join(" | ");
+    let focus_type = GAMEOBJECT_TYPE_SPELL_FOCUS;
+    let sql = format!("SELECT t.entry,t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,t.AIName,t.ScriptName,
         d.ID,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
-        t.Data0,t.Data1,t.Data2,t.Data5,t.Data8
+        t.Data0,t.Data1,t.Data2,t.Data5,t.Data8,
+        t.type={focus_type} AND ({additional_focus_fields})<>0
         FROM tdb_gameobject_template t LEFT JOIN game_object_display_info d ON d.ID=t.displayId
-        WHERE t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)")?;
+        WHERE t.type={focus_type} OR t.entry IN (SELECT EffectMiscValue_0 FROM spell_effect WHERE Effect=50 AND DifficultyID=0)");
+    let mut query = conn.prepare(&sql)?;
     let templates = query
         .query_map([], |row| template_from_row(row, conn))?
         .collect::<rusqlite::Result<_>>()?;
@@ -141,10 +154,15 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
                 })
             });
     }
-    if !matches!(
+    let cooking_only = template
+        .cooking_focus
+        .is_some_and(|(id, radius)| id == super::cooking_focus::COOKING_FIRE && radius > 0.0)
+        && !template.extra_focus_payload;
+    let ordinary_object = matches!(
         template.info.go_type,
         GAMEOBJECT_TYPE_GENERIC | GAMEOBJECT_TYPE_CHAIR | GAMEOBJECT_TYPE_MAILBOX
-    ) {
+    );
+    if !ordinary_object && !cooking_only {
         return Some(format!(
             "gameobject {entry} type {} requires interaction runtime",
             template.info.go_type
@@ -156,6 +174,17 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
             template.info.display_id
         )
     })
+}
+
+pub(crate) fn cooking_focus_radius(world: &World, entry: u32) -> Option<f32> {
+    let template = world
+        .get_resource::<SummonedObjectTemplates>()?
+        .0
+        .get(&entry)?;
+    template
+        .cooking_focus
+        .filter(|(id, _)| *id == super::cooking_focus::COOKING_FIRE)
+        .map(|(_, radius)| radius)
 }
 
 pub(crate) fn spawn_transmitted(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {

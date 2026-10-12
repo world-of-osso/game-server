@@ -20,6 +20,7 @@ pub mod bossmod;
 pub mod creature_text;
 pub mod event_map;
 pub mod instance_script;
+pub mod kings_rest;
 pub mod movement;
 pub mod murder_row;
 pub mod smart_ai;
@@ -49,6 +50,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
+            .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(
                 FixedUpdate,
                 (
@@ -198,6 +200,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if murder_row::is_creature_script(script_name) {
         return murder_row::creature_ai(world, creature, script_name);
     }
+    if kings_rest::is_creature_script(script_name) {
+        return kings_rest::creature_ai(world, creature, script_name);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -211,6 +216,7 @@ const SMART_AI: &str = "SmartAI";
 pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
     let script_name = if the_stockade::is_creature_script(script_name)
         || murder_row::is_creature_script(script_name)
+        || kings_rest::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
@@ -363,6 +369,24 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
         Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
     }
+}
+
+/// Pure source-script interception, separate from queued reaction hooks. It must
+/// execute before committing health so lethal interception cannot produce death.
+pub(crate) fn limit_scripted_loss(
+    name: Option<&CreatureScriptName>,
+    health: f32,
+    loss: f32,
+) -> f32 {
+    if has_damage_interceptor(name) {
+        kings_rest::limit_incoming_loss(health, loss)
+    } else {
+        loss
+    }
+}
+
+pub(crate) fn has_damage_interceptor(name: Option<&CreatureScriptName>) -> bool {
+    name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT)
 }
 
 /// `Unit::DealDamage` → `DamageTaken` for a scripted creature.

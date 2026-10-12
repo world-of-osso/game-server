@@ -6,7 +6,8 @@ use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTran
 use serde::{Deserialize, Serialize};
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::{
-    HouseLayout, HousingCommand, HousingHouse, HousingPlot, HousingState, PlacedDecor, StoredDecor,
+    HouseAccess, HouseLayout, HousingCommand, HousingHouse, HousingPlot, HousingState, PlacedDecor,
+    StoredDecor,
 };
 
 use super::{INVENTORIES, InventoryData, inventory_store};
@@ -14,8 +15,12 @@ use super::{INVENTORIES, InventoryData, inventory_store};
 pub(crate) const BUILD_KEY: &str = "dcfc90fffd79ba00406ae46f5f657592";
 const STATE: TableDefinition<u8, &[u8]> = TableDefinition::new("housing_state");
 const STATE_ROW: u8 = 0;
+#[path = "persistence_housing_access.rs"]
+mod access;
 #[path = "persistence_housing_migration.rs"]
 mod migration;
+use crate::group::GroupRegistry;
+use access::require_visit;
 const NEIGHBORHOOD_LOCATIONS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("housing_neighborhood_locations");
 
@@ -56,7 +61,7 @@ struct OwnedHouse {
     owner_character_id: u64,
     neighborhood_id: u32,
     plot_id: u32,
-    access_anyone: Option<bool>,
+    house_access: Option<HouseAccess>,
     decor: Vec<PlacedDecor>,
 }
 
@@ -118,10 +123,11 @@ pub(crate) fn save_house_location(
     db: &Database,
     actor: Actor,
     house_id: u64,
+    groups: Option<&GroupRegistry>,
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let state = read_in(&txn)?;
-    require_visit(&state, actor, house_id)?;
+    require_visit(db, &state, actor, house_id, groups)?;
     let bytes = serde_json::to_vec(&HouseLocation {
         house_id,
         account_id: actor.account_id,
@@ -138,6 +144,7 @@ pub(crate) fn save_house_location(
 pub(crate) fn load_house_location(
     db: &Database,
     character_id: u64,
+    groups: Option<&GroupRegistry>,
 ) -> Result<HouseLocation, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
@@ -151,6 +158,7 @@ pub(crate) fn load_house_location(
     let location: HouseLocation = serde_json::from_slice(row.value())
         .map_err(|error| format!("Decode visited house: {error}"))?;
     require_visit(
+        db,
         &state,
         Actor {
             account_id: location.account_id,
@@ -159,6 +167,7 @@ pub(crate) fn load_house_location(
             inside_house: None,
         },
         location.house_id,
+        groups,
     )?;
     Ok(location)
 }
@@ -268,7 +277,7 @@ fn house_view(house: &OwnedHouse, actor: Actor) -> HousingHouse {
         plot_id: house.plot_id,
         owner_character_id: house.owner_character_id,
         can_edit: house.account_id == actor.account_id,
-        house_access_anyone: house.access_anyone,
+        house_access: house.house_access,
         exterior_grant_available: false,
         interior_grant_available: false,
     }
@@ -311,7 +320,7 @@ pub(crate) fn purchase(
         owner_character_id: actor.character_id,
         neighborhood_id: plot.neighborhood_id,
         plot_id: plot.plot_id,
-        access_anyone: None,
+        house_access: None,
         decor: Vec::new(),
     };
     let reply = house_view(&house, actor);
@@ -329,19 +338,11 @@ fn require_owner(state: &State, actor: Actor, house_id: u64) -> Result<(), Strin
     Ok(())
 }
 
-fn require_visit(state: &State, actor: Actor, house_id: u64) -> Result<(), String> {
-    let house = state.houses.get(&house_id).ok_or("House not found.")?;
-    if house.account_id != actor.account_id && house.access_anyone != Some(true) {
-        return Err("The owner has not allowed you to visit this house.".into());
-    }
-    Ok(())
-}
-
 pub(crate) fn set_access(
     db: &Database,
     actor: Actor,
     house_id: u64,
-    allowed: bool,
+    access: HouseAccess,
 ) -> Result<(), String> {
     let txn = db.begin_write().map_err(|error| error.to_string())?;
     let mut state = read_in(&txn)?;
@@ -350,7 +351,7 @@ pub(crate) fn set_access(
         .houses
         .get_mut(&house_id)
         .expect("validated house")
-        .access_anyone = Some(allowed);
+        .house_access = Some(access);
     commit(txn, &state)
 }
 
@@ -358,11 +359,12 @@ pub(crate) fn snapshot(
     db: &Database,
     actor: Actor,
     house_id: Option<u64>,
+    groups: Option<&GroupRegistry>,
 ) -> Result<HousingState, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
     let layout = if let Some(house_id) = house_id {
-        require_visit(&state, actor, house_id)?;
+        require_visit(db, &state, actor, house_id, groups)?;
         let house = &state.houses[&house_id];
         Some(HouseLayout {
             house_id,
@@ -424,10 +426,15 @@ pub(crate) fn populate_plots(db: &Database, plots: &mut [HousingPlot]) -> Result
     Ok(())
 }
 
-pub(crate) fn house(db: &Database, actor: Actor, house_id: u64) -> Result<HousingHouse, String> {
+pub(crate) fn house(
+    db: &Database,
+    actor: Actor,
+    house_id: u64,
+    groups: Option<&GroupRegistry>,
+) -> Result<HousingHouse, String> {
     let txn = db.begin_read().map_err(|error| error.to_string())?;
     let state = read_state(&txn.open_table(STATE).map_err(|error| error.to_string())?)?;
-    require_visit(&state, actor, house_id)?;
+    require_visit(db, &state, actor, house_id, groups)?;
     Ok(house_view(&state.houses[&house_id], actor))
 }
 
