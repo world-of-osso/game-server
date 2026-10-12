@@ -129,6 +129,34 @@ fn class_completeness_native_control_dream_whirling_stars_does_not_credit_partia
     );
 }
 
+#[test]
+fn class_completeness_native_control_dream_newly_learned_spell_has_no_prior_credit() {
+    let mut h = dream_harness(true);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            CONTROL_OF_THE_DREAM,
+            BARKSKIN,
+        ]));
+    h.advance(400);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            CONTROL_OF_THE_DREAM,
+            NATURES_SWIFTNESS,
+            BARKSKIN,
+        ]));
+    h.advance(60);
+    let receipt = cast_cooldown(&mut h, NATURES_SWIFTNESS);
+    let credit = native_cooldown(NATURES_SWIFTNESS) - receipt.duration_ms;
+    assert!(
+        (3_000..=3_250).contains(&credit),
+        "newly learned credit: {credit}ms"
+    );
+}
+
 fn charged_dream_harness(spell: u32) -> Harness {
     let mut h = harness(Vec::new(), &[CONTROL_OF_THE_DREAM, spell], 11).unwrap();
     h.advance(3);
