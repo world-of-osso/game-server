@@ -59,9 +59,10 @@ impl ImpHarness {
         )
         .unwrap();
         let spells = load_pet_levelup_spells(&conn).unwrap();
-        let mut data = load_world_data(&crate::test_data::world_db_path());
+        let prepared = crate::spell_cast::test_harness::prepare_class_world();
+        let mut data = load_world_data(&prepared.path());
         data.templates
-            .retain(|entry, _| [416, 417, 1860, 1863, 17252, 184600, 510].contains(entry));
+            .retain(|entry, _| [416, 417, 1860, 1863, 17252, 184600, 78116].contains(entry));
         let db = redb::Database::create(path).unwrap();
         persistence::create_tables(&db);
         let mut h = harness_with_plugins(Vec::new(), known, class, true, |app| {
@@ -329,7 +330,7 @@ fn class_completeness_native_water_elemental_recall_dismiss_and_record_reopen() 
     h.advance(130);
     assert!(h.h.inbox.failed.is_empty(), "{:?}", h.h.inbox.failed);
     let pet = h.pet().expect("native Water Elemental");
-    assert_eq!(h.h.app.world().get::<Npc>(pet).unwrap().template_id, 510);
+    assert_eq!(h.h.app.world().get::<Npc>(pet).unwrap().template_id, 78116);
     assert_eq!(
         h.h.app.world().get::<UnitSummonedBy>(pet).unwrap().0,
         h.h.caster.to_bits()
@@ -385,7 +386,7 @@ fn class_completeness_native_water_elemental_recall_dismiss_and_record_reopen() 
             .get::<Npc>(h.pet().unwrap())
             .unwrap()
             .template_id,
-        510
+        78116
     );
 }
 
