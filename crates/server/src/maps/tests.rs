@@ -825,6 +825,288 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 }
 
 #[test]
+fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_channel() {
+    use shared::protocol::{ArenaQueueMode, QueueForArena};
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let catalog_db = Connection::open_in_memory().unwrap();
+    catalog_db
+        .execute(
+            "ATTACH DATABASE ? AS source",
+            [crate::test_data::world_db_path().to_string_lossy().as_ref()],
+        )
+        .unwrap();
+    catalog_db
+        .execute_batch("CREATE TABLE arena_map AS SELECT * FROM source.arena_map WHERE map_id=572;")
+        .unwrap();
+    let catalog = crate::pvp::arena::Catalog::load(&catalog_db).unwrap();
+    let gates = crate::pvp::arena_objects::GateCatalog::load(&source).unwrap();
+    let objects = source_map_objects(572, &[185918, 185917, 184663, 184664]);
+    let sight = crate::pvp::arena_objects::SightCatalog::load(&source, &objects).unwrap();
+    let source_orb = objects
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 184663)
+        .unwrap()
+        .clone();
+    let store = crate::spell_cast::test_harness::world_db().unwrap();
+    let spells = crate::spell_info::SpellStore::fixture(
+        [32727, 34709]
+            .iter()
+            .map(|id| store.store.get(*id).unwrap().clone())
+            .collect(),
+    );
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(database_file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
+    let mut h = harness_with(move |app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(objects);
+        app.insert_resource(world_data);
+        app.insert_resource(spells);
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        app.add_plugins((
+            crate::pvp::PvpPlugin,
+            crate::auras::AuraPlugin,
+            crate::combat::CombatPlugin,
+            crate::death::DeathPlugin,
+        ));
+        app.insert_resource(catalog);
+        app.insert_resource(gates);
+        app.insert_resource(sight);
+    })
+    .unwrap();
+    let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
+    let players: Vec<_> = (1..=4)
+        .map(|id| h.spawn_at_level(id, 90, STORMWIND, origin + Vec3::new(id as f32, 0.0, 0.0)))
+        .collect();
+    let origins: Vec<_> = players
+        .iter()
+        .map(|who| wow(h.app.world().get::<Position>(who.player).unwrap()))
+        .collect();
+    for who in &players {
+        h.app.world_mut().entity_mut(who.player).insert((
+            crate::pvp::PlayerPvpState::default(),
+            crate::death::PlayerDeathState::default(),
+        ));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForArena>(),
+            pair::<RespondToBattlegroundInvite>(),
+            pair::<LeaveBattleground>(),
+            pair::<PvpStateUpdate>(),
+            pair::<shared::protocol::AttackSwing>(),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<QueueForArena>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(QueueForArena {
+                mode: ArenaQueueMode::Skirmish2v2,
+            });
+    }
+    let updates = h.receive_pvp_updates(5);
+    let invitations: Vec<_> = players
+        .iter()
+        .map(|who| {
+            updates[&who.connection]
+                .iter()
+                .filter_map(|u| u.snapshot.as_ref()?.battleground.clone())
+                .last()
+                .unwrap()
+        })
+        .collect();
+    let match_id = invitations[0].match_id;
+    for (who, invite) in players.iter().zip(&invitations) {
+        assert_eq!(invite.map_id, 572);
+        assert_eq!(invite.match_id, match_id);
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(RespondToBattlegroundInvite {
+                match_id,
+                accepted: true,
+            });
+    }
+    h.receive_pvp_updates(5);
+    for (who, invite) in players.iter().zip(&invitations) {
+        assert_eq!(h.map_of(who), None);
+        let travel = h.new_worlds(who);
+        assert_eq!(travel.len(), 1);
+        assert_eq!(travel[0].map_id, 572);
+        let source_id = if invite.team == shared::battleground::BgTeam::A {
+            1258
+        } else {
+            1259
+        };
+        let source_start = map_store().unwrap().safe_locs[&source_id];
+        assert!(close(
+            wow(&Position {
+                x: travel[0].position[0],
+                y: travel[0].position[1],
+                z: travel[0].position[2]
+            }),
+            source_start.position
+        ));
+        h.ack(who);
+    }
+    h.receive_pvp_updates(5);
+    let map = h.map_of(&players[0]).unwrap();
+    assert!(players.iter().all(|who| h.map_of(who) == Some(map)));
+    let object_count = |world: &mut World, kind: u8| {
+        world
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                Option<&shared::protocol::GameObjectVisible>,
+            )>()
+            .iter(world)
+            .filter(|(copy, info, visible)| {
+                **copy == map && info.go_type == kind && visible.is_none_or(|visible| visible.0)
+            })
+            .count()
+    };
+    assert_eq!(
+        object_count(h.app.world_mut(), 6),
+        0,
+        "orbs hidden during preparation"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(players[0].player)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 32727)
+    );
+    h.receive_pvp_updates(1201);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(players[0].player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap()
+            .phase,
+        shared::battleground::BgPhase::InProgress
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(players[0].player)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 32727)
+    );
+    h.receive_pvp_updates(1700);
+    assert_eq!(
+        object_count(h.app.world_mut(), 6),
+        0,
+        "before source90second activation"
+    );
+    h.receive_pvp_updates(101);
+    assert_eq!(object_count(h.app.world_mut(), 6), 2);
+    h.app
+        .world_mut()
+        .entity_mut(players[0].player)
+        .insert(bevy(source_orb.position));
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(players[0].player)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 34709)
+    );
+    assert_eq!(
+        object_count(h.app.world_mut(), 6),
+        1,
+        "physical authored orb consumed"
+    );
+    let caster = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(players[0].player)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 34709)
+        .unwrap()
+        .caster;
+    assert!(
+        h.app.world().get_entity(caster).is_ok(),
+        "hidden orb retains aura ownership"
+    );
+    let attacker = players[0].player;
+    for target in [players[1].player, players[3].player] {
+        h.app
+            .world_mut()
+            .get_mut::<Position>(target)
+            .unwrap()
+            .clone_from(&bevy(source_orb.position + Vec3::new(1.0, 0.0, 0.0)));
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::AttackSwing>>(players[0].connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::AttackSwing {
+                target: target.to_bits(),
+            });
+        h.receive_pvp_updates(50);
+    }
+    let ended = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(attacker)
+        .unwrap()
+        .battleground
+        .as_ref()
+        .unwrap()
+        .clone();
+    assert_eq!(
+        ended.outcome,
+        Some(shared::battleground::BgOutcome::Winner(
+            shared::battleground::BgTeam::A
+        ))
+    );
+    assert_eq!(ended.players.len(), 4);
+    for who in &players {
+        assert_eq!(
+            h.app.world().get::<Health>(who.player).unwrap().current,
+            h.app.world().get::<Health>(who.player).unwrap().max,
+            "source full resurrection on match completion"
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for (who, origin) in players.iter().zip(&origins) {
+        h.ack(who);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(
+            wow(h.app.world().get::<Position>(who.player).unwrap()),
+            *origin
+        ));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
     let flags = source_warsong_flags();
     let source_flags = flags.clone();
