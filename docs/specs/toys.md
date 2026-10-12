@@ -3,6 +3,7 @@
 ## Contract
 
 - Toy membership comes only from local Retail 12.1.0.69933 Toy.db2. Import every decrypted row, retain unresolved item/spell joins, and expose them as unavailable. No synthetic membership or spells.
+- Runtime content preparation retains every Toy member with authentic Item and ItemSparse rows, using the ordinary Retail item conversion without replacing existing item rows. The additive scenery/toy importer and full content rebuild must agree. Missing metadata is recorded, never synthesized; importing an item does not authorize its unsupported effects, conditions, interactions or presentation.
 - UseItem on a Retail toy learns it for the authenticated account, consuming one physical item in the same redb transaction. Duplicate learning is rejected without consumption. Unsupported activation does not prevent learning.
 - Learned state and favourite flags belong to the account, survive database reopen, and reach every online character of that account. Other accounts do not inherit them.
 - SetToyFavourite requires learned ownership. World entry and every change deliver a full ToyCollectionUpdate. Catalog entries include item/spell identity, name/icon, source, flags, expansion, learned/favourite state and an explicit unavailable reason.

@@ -465,7 +465,7 @@ def tdb_item_ids(conn):
                 "SELECT itemid FROM tdb_playercreateinfo_item",
                 f"SELECT action FROM tdb_playercreateinfo_action WHERE type = {ACTION_BUTTON_ITEM}"]
     sources += [f"SELECT Item FROM tdb_{table} WHERE ItemType = {LOOT_ITEM}" for table in TDB_LOOT_TABLES]
-    sources += [f"SELECT ID FROM item WHERE ID IN {TOY_BANNER_ITEM_IDS}",
+    sources += ["SELECT t.ItemID FROM toy t JOIN item i ON i.ID=t.ItemID",
                 "SELECT item FROM wowhead_creature_drop",
                 "SELECT Entry FROM tdb_item_loot_template",
                 "SELECT ObjectID FROM tdb_quest_objectives WHERE Type = 1"]  # QUEST_OBJECTIVE_ITEM
