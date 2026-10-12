@@ -50,6 +50,24 @@ fn bound_boss_at_difficulty(
     difficulty: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
+    bound_boss_in_state(
+        entry,
+        map_id,
+        bit,
+        difficulty,
+        catalog,
+        EncounterState::NotStarted,
+    )
+}
+
+fn bound_boss_in_state(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    difficulty: u32,
+    catalog: Option<bossmod::Catalog>,
+    initial_state: EncounterState,
+) -> (Harness, Entity, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     if let Some(catalog) = catalog {
@@ -133,6 +151,14 @@ fn bound_boss_at_difficulty(
         .map;
     app.insert_resource(instances);
     app.insert_resource(maps);
+    if initial_state != EncounterState::NotStarted {
+        assert!(instance_script::set_boss_state(
+            app.world_mut(),
+            map,
+            bit,
+            initial_state
+        ));
+    }
     let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
     let near = [
         spawn.position_x + 3.0,
@@ -317,6 +343,178 @@ fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit(
         Some(EncounterState::InProgress)
     );
     assert!(h.app.world().get_entity(kystia).is_ok());
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_not_started_intro_is_friendly_and_uninteractible() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    h.advance(1.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(boss)
+            .unwrap()
+            .0,
+        35,
+        "TC NotStarted appearance is friendly until the landing path ends"
+    );
+    let flags = h
+        .app
+        .world()
+        .get::<shared::components::UnitFlags>(boss)
+        .unwrap()
+        .0;
+    assert_ne!(flags & shared::components::UnitFlags::NOT_SELECTABLE, 0);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::NotStarted)
+    );
+    assert!(h.inbox(0).starts.is_empty());
+    assert!(h.inbox(0).engages.is_empty());
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() {
+    // Source InitializeAI explicitly handles every state other than NotStarted.
+    // This is partial combat in that source branch, NOT fresh intro acceptance.
+    let (mut h, boss, _) =
+        bound_boss_in_state(135322, 1762, 0, 1, None, EncounterState::InProgress);
+    let expected = Vec3::new(-1058.8403, 2615.1667, 810.1519);
+    assert!(h.wow_position(boss).distance(expected) < 0.001);
+    let player = h.player();
+    let boss_position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        Position {
+            x: boss_position.x + 3.0,
+            ..boss_position
+        },
+        Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    let started = crate::auras::aura_now(h.app.world());
+    h.engage(boss);
+    let mut previous_cast = None;
+    let mut admissions: std::collections::HashMap<u32, Vec<f64>> = Default::default();
+    for _ in 0..1_800 {
+        h.advance(0.05);
+        let now = crate::auras::aura_now(h.app.world()) - started;
+        let current_cast = h
+            .app
+            .world()
+            .get::<CastState>(boss)
+            .map(|cast| cast.spell_id);
+        if let Some(spell_id) = current_cast
+            && previous_cast != current_cast
+            && [265773, 265781, 265910, 265923].contains(&spell_id)
+        {
+            admissions.entry(spell_id).or_default().push(now);
+        }
+        previous_cast = current_cast;
+    }
+    let gust_cast = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(265781)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .cast_time
+        .unwrap()
+        .base_ms;
+    let tail_first = 12.5 + f64::from(gust_cast) / 1_000.0;
+    for (spell_id, first, repeat) in [
+        (265773, 9.0, 11.0),
+        (265781, 12.5, 21.5),
+        (265910, tail_first, 17.0),
+        (265923, 40.0, 41.5),
+    ] {
+        let times = admissions
+            .get(&spell_id)
+            .unwrap_or_else(|| panic!("authored spell {spell_id} never admitted"));
+        assert!(
+            (times[0] - first).abs() <= 0.1,
+            "spell {spell_id}: actual {times:?}, first {first}"
+        );
+        assert!(
+            times.len() >= 2,
+            "authored spell {spell_id} did not repeat: {times:?}"
+        );
+        for pair in times.windows(2) {
+            // Events keep ticking while casts delay execution, so never shorten a repeat.
+            assert!(
+                pair[1] - pair[0] >= repeat - 0.1,
+                "spell {spell_id}: {times:?}"
+            );
+        }
+    }
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(265773)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic)
+    );
+    assert!(
+        h.inbox(0).timeline.is_empty(),
+        "partial TC combat must not invent Retail alerts"
+    );
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_evade_retires_and_respawns_without_credit() {
+    let (mut h, boss, map) =
+        bound_boss_in_state(135322, 1762, 0, 1, None, EncounterState::InProgress);
+    h.engage(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [-1058.8403, 2615.1667, 810.1519, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.05);
+    let retirement = h
+        .app
+        .world()
+        .get::<crate::combat::DeathState>(boss)
+        .expect("TC evade must retire the population actor, not just reset combat");
+    assert!(retirement.respawn_timer <= 30.0 && retirement.respawn_timer >= 29.8);
+    assert!(h.app.world().get_entity(gold).is_err());
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+    h.advance(30.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    assert!(
+        h.wow_position(boss)
+            .distance(Vec3::new(-1058.8403, 2615.1667, 810.1519))
+            < 0.001
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(boss)
+            .unwrap()
+            .0,
+        16
+    );
 }
 
 #[test]
