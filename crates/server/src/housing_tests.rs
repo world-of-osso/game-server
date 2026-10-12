@@ -93,7 +93,7 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
     assert!(
         execute(&mut world, actor, &HousingCommand::EnterHouse { house_id })
             .unwrap_err()
-            .contains("transfer")
+            .contains("entering the world")
     );
     assert!(world.get::<crate::maps::MapTransfer>(player).is_none());
     world.entity_mut(player).insert(InMap::continent(0));
