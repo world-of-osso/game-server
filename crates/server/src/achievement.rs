@@ -565,7 +565,7 @@ fn send_requested_catalog_pages(world: &mut World) {
             QueryAchievementCatalog::Comparison {
                 target_entity,
                 query,
-            } => comparison_page(world, player, target_entity, *query),
+            } => comparison_page(world, player, target_entity, (*query).into()),
             request => catalog.page(state, request, owner.race),
         };
         if let Some(mut sender) = world.get_mut::<MessageSender<AchievementCatalogPage>>(connection)
@@ -586,7 +586,7 @@ fn comparison_page(
         Ok((target_name, page)) => AchievementCatalogPage::Comparison {
             target_entity,
             target_name,
-            page: Some(Box::new(page)),
+            page: Some(Box::new(page.try_into().expect("ordinary comparison page"))),
             error: None,
         },
         Err(error) => AchievementCatalogPage::Comparison {
