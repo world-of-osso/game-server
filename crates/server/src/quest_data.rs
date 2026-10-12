@@ -181,6 +181,8 @@ pub(crate) struct QuestItemInfo {
 pub(crate) struct QuestDb {
     /// Runtime evaluation clock, refreshed before quest requests and markers.
     pub now: Option<i64>,
+    pub world_quests: Vec<crate::world_quests::Definition>,
+    pub world_quest_windows: std::collections::BTreeMap<u32, crate::world_quests::Window>,
     pub quests: HashMap<u32, QuestTemplate>,
     /// Creature entry -> quests it starts.
     pub starters: HashMap<u32, Vec<u32>>,
@@ -560,6 +562,20 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.money_rewards = load_money_rewards(&conn)?;
     db.area_triggers = load_area_triggers(&conn)?;
     db.kill_credits = load_kill_credits(&conn)?;
+    db.world_quests = crate::world_quests::load_definitions(&conn)?;
+    for definition in &db.world_quests {
+        if !db
+            .quests
+            .get(&definition.quest_id)
+            .is_some_and(|q| q.quest_info_modifiers & 0x100 != 0)
+        {
+            error!(
+                "World quest {} lacks a loaded authentic world-quest template",
+                definition.quest_id
+            );
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+    }
     Ok(db)
 }
 

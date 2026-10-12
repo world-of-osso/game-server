@@ -71,6 +71,10 @@ pub struct QuestPlugin;
 impl Plugin for QuestPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<QuestDirty>();
+        app.insert_resource(
+            crate::world_quests::Rotation::read_env()
+                .expect("invalid world quest rotation configuration"),
+        );
         app.init_resource::<crate::maps::difficulty::ServerClock>();
         app.init_resource::<quest_requests::PendingShares>();
         app.init_resource::<crate::experience::XpAwards>();
