@@ -53,6 +53,7 @@ impl CreatureAi for AnimatedGold {
     fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
         if damage.damage >= damage.health_before && !self.molten_cast {
             ctx.do_cast_self(MOLTEN_GOLD);
+            super::movement::clear_point_movement(ctx.world, ctx.me);
             self.molten_cast = true;
         }
     }
