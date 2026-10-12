@@ -15,8 +15,9 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74,
-    76, 77, 107, 108, 109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220, 245, 246,
+    0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
+    74, 76, 77, 107, 108, 109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220, 245,
+    246,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -39,6 +40,7 @@ pub(crate) enum CriteriaEvent {
     DieAnywhere,
     KilledByCreature(u32),
     KilledByPlayer,
+    DieFromEnvironmentalDamage(u32),
     /// TC client loot type (`crate::loot::LootKind`) and looted item count.
     GetLootByType(u8, u32),
     LootMoney(u64),
@@ -112,6 +114,7 @@ impl CriteriaEvent {
             Self::DieAnywhere => 17,
             Self::KilledByCreature(_) => 20,
             Self::KilledByPlayer => 23,
+            Self::DieFromEnvironmentalDamage(_) => 26,
             Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
             Self::UseItem(_) => 41,
@@ -224,6 +227,7 @@ impl CriteriaEvent {
             | Self::ParticipateInBattleground(asset)
             | Self::DieOnMap(asset)
             | Self::KilledByCreature(asset)
+            | Self::DieFromEnvironmentalDamage(asset)
             | Self::UseItem(asset)
             | Self::EquipItem(asset)
             | Self::UseGameObject(asset)
@@ -933,6 +937,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC completion1288-1293 makes type20 statistic-only; new ordinary61917
                         // criterion111356 has no sourced completion semantics in the pinned TC.
                         || (kind == 20 && criteria_id != 111356)
+                        // TC Player.h environmental0/1/2/6; no native lava/slime/fire source.
+                        || (kind == 26 && matches!(row.get::<_, i32>(2)?, 0 | 1 | 2 | 6))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
