@@ -231,13 +231,25 @@ fn adventure_guide_actual_creature_credit_is_once_persistent_and_reset_by_month(
         1,
         "shared criteria across activities must not double credit one death"
     );
-    let character = h.character_id;
+    let credited_character = h.character_id;
     drop(h);
     let mut h = crate::bank_test_harness::harness_at(file.path(), "Guidehuntalt").unwrap();
-    h.play_as(character);
+    assert_ne!(h.character_id, credited_character);
     attach_requests(&mut h);
     prepare_real_catalog(&mut h, now);
     let restored = request(&mut h, AdventureGuideRequest::Query);
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .monthly
+            .as_ref()
+            .unwrap()
+            .counters
+            .is_empty(),
+        "new character has no kill contribution of its own"
+    );
     assert!(matches!(
         restored
             .activities
