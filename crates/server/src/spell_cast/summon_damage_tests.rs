@@ -122,6 +122,8 @@ fn class_completeness_native_command_buffs_pet_and_guardian_not_owner_stranger_o
 #[test]
 fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
     use bevy::ecs::system::RunSystemOnce;
+    use shared::protocol::CombatEventType;
+    let mut landed_damage = false;
     for _ in 0..32 {
         let mut h = damage_harness(&[RESTORATION, FIREBALL], 11, false);
         let owner = h.caster;
@@ -164,12 +166,30 @@ fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
             .world()
             .resource::<crate::combat::CombatLog>()
             .range(0.0, f64::MAX);
-        assert_eq!(
-            before - h.health(h.npc),
-            (10.0 * (1.0 + native / 100.0)).round(),
-            "actual swing receipts: {receipts:?}"
-        );
+        let receipt = receipts
+            .iter()
+            .find(|entry| {
+                entry.event.attacker == guardian.to_bits() && entry.event.target == h.npc.to_bits()
+            })
+            .expect("native guardian must produce a swing receipt");
+        let normal = (10.0 * (1.0 + native / 100.0)).round();
+        let expected = match &receipt.event.event_type {
+            CombatEventType::MeleeDamage => normal,
+            CombatEventType::CriticalHit => normal * 2.0,
+            CombatEventType::Block => {
+                normal - (normal * crate::melee::CREATURE_BLOCKED_PCT / 100.0).trunc()
+            }
+            CombatEventType::Miss | CombatEventType::Dodge | CombatEventType::Parry => 0.0,
+            other => panic!("unexpected guardian swing outcome: {other:?}"),
+        };
+        assert_eq!(receipt.event.amount, expected, "{receipts:?}");
+        assert_eq!(before - h.health(h.npc), expected, "{receipts:?}");
+        landed_damage |= expected > 0.0;
     }
+    assert!(
+        landed_damage,
+        "avoidance alone cannot prove the native owner damage modifier"
+    );
 }
 
 #[test]
