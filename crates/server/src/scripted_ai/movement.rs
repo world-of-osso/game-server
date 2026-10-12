@@ -45,6 +45,18 @@ pub(crate) fn move_point(world: &mut World, unit: Entity, id: u32, target: Posit
     }
 }
 
+/// Clear the active scripted point generator and stop its replicated gait.
+/// Walking mode remains set, as with MotionMaster::Clear / Unit::StopMoving.
+pub(crate) fn clear_point_movement(world: &mut World, unit: Entity) {
+    world
+        .entity_mut(unit)
+        .remove::<PointMovement>()
+        .insert(CreatureMotion::Still);
+    if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
+        queue.mark(unit);
+    }
+}
+
 pub(crate) fn set_walk(world: &mut World, unit: Entity, walk: bool) {
     let Ok(mut entity) = world.get_entity_mut(unit) else {
         return;
