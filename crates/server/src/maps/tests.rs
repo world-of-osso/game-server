@@ -326,6 +326,8 @@ fn housing_wire_home_map_admission_restores_visited_identity_without_component_g
     assert_eq!(place.position, position);
 }
 
+#[path = "housing_dye_wire_tests.rs"]
+mod housing_dye_wire_tests;
 #[path = "housing_editor_tests.rs"]
 mod housing_editor_tests;
 
@@ -441,7 +443,7 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         inside_house: None,
     };
     assert_eq!(
-        crate::persistence::housing_store::snapshot(db, actor, None)
+        crate::persistence::housing_store::snapshot(db, actor, None, None)
             .unwrap()
             .stored,
         vec![StoredDecor {
@@ -461,7 +463,7 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         .resource::<crate::persistence::GameDatabase>()
         .db;
     assert_eq!(
-        crate::persistence::housing_store::snapshot(db, actor, None)
+        crate::persistence::housing_store::snapshot(db, actor, None, None)
             .unwrap()
             .stored[0]
             .quantity,
