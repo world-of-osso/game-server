@@ -34,6 +34,11 @@ impl GoldUpdateQueue {
     pub(crate) fn record(&mut self, character_id: u64, gold: u64) {
         self.pending.insert(character_id, gold);
         self.changed_inventories.insert(character_id);
+        // TC Player::SetMoney: highest actual wallet on non-loading money changes.
+        self.record_criteria(
+            character_id,
+            crate::achievement::CriteriaEvent::MostMoneyOwned(gold),
+        );
     }
 
     /// Items changed without a gold change.
