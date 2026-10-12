@@ -441,7 +441,9 @@ def extract_bigwigs(source, file, addon, version):
             result['npcs'] = [int(literal(a)) for a in node.args if isinstance(literal(a), (int, float))]
         elif name == 'SetEncounterID' and node.args:
             result['encounter_id'] = static_number(node.args[0]) or 0
-    methods = list(select_methods(tree.body))
+    # Lua replaces a method when a selected Retail branch declares it again.
+    methods = {method.name.id: (method, bindings)
+               for method, bindings in select_methods(tree.body)}.values()
     handlers = {}
     registrations = [node for method, _ in methods if method.name.id == 'OnBossEnable'
                      for node in known_statements(method.body)]
@@ -455,7 +457,8 @@ def extract_bigwigs(source, file, addon, version):
                         handlers.setdefault(handler, []).append((event.lower().removeprefix('spell_'), int(value)))
     for method, bindings in methods:
         name = method.name.id
-        if name in ('OnEngage', 'OnEncounterStart'):
+        # Current Retail BossPrototype:Engage dispatches only OnEncounterStart.
+        if name == 'OnEncounterStart':
             extract_actions(method.body, result, dict(trigger='engage'), bindings=bindings)
         elif name == 'UNIT_HEALTH':
             extract_actions(method.body, result, dict(trigger='health'), bindings=bindings)
