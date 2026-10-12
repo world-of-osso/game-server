@@ -177,7 +177,8 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
       FROM item_x_item_effect x JOIN item_effect e ON e.ID = x.ItemEffectID \
       WHERE e.SpellID > 0 AND (e.TriggerType = 0 OR (e.TriggerType = 6 AND EXISTS \
       (SELECT 1 FROM spell_effect pet WHERE pet.SpellID = e.SpellID AND pet.Effect = 28 \
-       AND pet.EffectMiscValue_1 = 3221)))) u ON u.ItemID = c.ID AND u.slot = 1";
+       AND pet.EffectMiscValue_1 = 3221) OR EXISTS \
+      (SELECT 1 FROM mount m WHERE m.SourceSpellID = e.SpellID)))) u ON u.ItemID = c.ID AND u.slot = 1";
 const FIRST_STAT_COLUMN: usize = 16;
 const APPEARANCE_COLUMN: usize = FIRST_STAT_COLUMN + 10 * 3;
 

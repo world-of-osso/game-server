@@ -16,6 +16,8 @@ pub(crate) mod equipment;
 pub(crate) mod inventory_store;
 #[path = "persistence_mail.rs"]
 pub(crate) mod mail_store;
+#[path = "persistence_mounts.rs"]
+pub(crate) mod mount_store;
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
 #[path = "persistence_pets.rs"]
@@ -343,6 +345,7 @@ pub(crate) fn create_tables(db: &Database) {
     banks::create_bank_tables(&txn);
     appearance_store::create_appearance_tables(&txn);
     toy_store::create_tables(&txn);
+    mount_store::create_tables(&txn);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);

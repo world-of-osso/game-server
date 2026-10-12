@@ -3,6 +3,13 @@
 use super::*;
 
 #[test]
+fn mount_journal_chestnut_mare_item_retains_authentic_learn_spell() {
+    let templates = load_item_templates(&crate::test_data::world_db_path()).unwrap();
+    let mare = templates.retail.get(&5655).expect("Chestnut Mare item");
+    assert_eq!(mare.on_use.as_ref().map(|spell| spell.spell_id), Some(6648));
+}
+
+#[test]
 fn content_item_rows_load_inventory_attributes() {
     let path = crate::test_data::world_db_path();
     let templates = load_item_templates(&path).unwrap();
