@@ -73,6 +73,9 @@ fn update_match(
     actors: &BTreeMap<u64, Participant>,
     sources: &GameObjectSpawns,
 ) -> bool {
+    if matched.arena.is_some() {
+        return false;
+    }
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
@@ -322,7 +325,7 @@ fn enemy_team(team: BgTeam) -> BgTeam {
     }
 }
 
-fn send_match_snapshot(world: &mut World, match_id: u64) {
+pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
     let values = {
         let state = world.resource::<PvpServerState>();
         let Some(matched) = state.battleground_matches.get(&match_id) else {
@@ -335,6 +338,7 @@ fn send_match_snapshot(world: &mut World, match_id: u64) {
             matched.flags.clone(),
             matched.instance.outcome,
             matched.scoreboard.clone(),
+            matched.arena.as_ref().map(|arena| arena.snapshot.clone()),
         )
     };
     let mut connections =
@@ -360,6 +364,7 @@ fn send_match_snapshot(world: &mut World, match_id: u64) {
         snapshot.flags = values.3.clone();
         snapshot.outcome = values.4;
         snapshot.players = values.5.clone();
+        snapshot.arena = values.6.clone();
         super::pvp_invites::send_response(
             world,
             connection,
