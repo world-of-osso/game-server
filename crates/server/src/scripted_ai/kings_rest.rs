@@ -44,6 +44,9 @@ impl CreatureAi for AnimatedGold {
     fn just_appeared(&mut self, ctx: &mut Ctx) {
         ctx.do_cast_self(BREAK_TARGETING);
         ctx.set_react_state(super::ReactState::Passive);
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(super::ScriptedVictimUpdatePaused);
     }
     fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
         if damage.damage >= damage.health_before && !self.molten_cast {

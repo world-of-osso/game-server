@@ -378,11 +378,15 @@ pub(crate) fn limit_scripted_loss(
     health: f32,
     loss: f32,
 ) -> f32 {
-    if name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT) {
+    if has_damage_interceptor(name) {
         kings_rest::limit_incoming_loss(health, loss)
     } else {
         loss
     }
+}
+
+pub(crate) fn has_damage_interceptor(name: Option<&CreatureScriptName>) -> bool {
+    name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT)
 }
 
 /// `Unit::DealDamage` → `DamageTaken` for a scripted creature.
