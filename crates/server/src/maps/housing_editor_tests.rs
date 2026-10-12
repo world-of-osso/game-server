@@ -27,6 +27,11 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
         },
     );
     let mut h = housing_harness(db);
+    let source = crate::housing_acquisition::tests::collection_fixture();
+    h.app
+        .insert_resource(crate::housing::HousingAvailability(Ok(
+            crate::housing_catalog::HousingCatalog::read(&source).unwrap(),
+        )));
     let actor = store::Actor {
         account_id: 30,
         character_id: 30,
@@ -144,6 +149,55 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
     assert!(!visited.layout.as_ref().unwrap().can_edit);
     assert!(visited.stored.is_empty() && visited.owned_houses.is_empty());
     let instance_id = visited.layout.as_ref().unwrap().decor[0].instance_id;
+    let transform = DecorTransform {
+        position: [-995.0, -1.5, 1001.0],
+        yaw: 0.3,
+        pitch: 0.2,
+        roll: -0.4,
+        scale: 1.25,
+    };
+    let updated = h.housing_request(
+        &owner,
+        HousingCommand::TransformDecor {
+            house_id,
+            instance_id,
+            transform,
+        },
+    );
+    assert_eq!(updated.error, None);
+    let mut observed = Vec::new();
+    for _ in 0..6 {
+        h.advance(1);
+        observed.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<HousingReply>>(visitor.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    assert_eq!(observed.len(), 1);
+    assert_eq!(
+        observed[0].state.layout.as_ref().unwrap().decor[0].transform,
+        transform
+    );
+    assert!(!observed[0].state.layout.as_ref().unwrap().can_edit);
+    let refused_precision = h.housing_request(
+        &visitor,
+        HousingCommand::TransformDecor {
+            house_id,
+            instance_id,
+            transform: DecorTransform {
+                scale: 2.0,
+                ..transform
+            },
+        },
+    );
+    assert!(refused_precision.error.unwrap().contains("Only the owner"));
+    assert_eq!(
+        refused_precision.state.layout.unwrap().decor[0].transform,
+        transform
+    );
     let refused = h.housing_request(
         &visitor,
         HousingCommand::RemoveDecor {
