@@ -2983,6 +2983,116 @@ fn toyfx14_stationary_source_summon_census() {
 }
 
 #[test]
+fn toyfx14_area_cosmetics_preserve_authored_recipients_and_lifetimes() {
+    use shared::components::{
+        Health, ModelDisplay, Position, Rotation, UnitAuras, UnitFactionTemplate,
+    };
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, duration) in [(141300, 225826, 10000), (141301, 225828, 30000)] {
+        let (mut h, character) = setup(&directory.path().join(format!("area-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(store.clone());
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let map = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
+        let faction = *h.app.world().get::<UnitFactionTemplate>(h.caster).unwrap();
+        h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+        h.app.world_mut().entity_mut(h.npc).insert((
+            faction,
+            Position {
+                x: origin.x + 2.0,
+                ..origin
+            },
+        ));
+        let outside = h
+            .app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: origin.x - 50.0,
+                    ..origin
+                },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                map,
+                faction,
+                UnitAuras::default(),
+            ))
+            .id();
+        let model = h.app.world().get::<ModelDisplay>(h.npc).cloned();
+        let health = *h.app.world().get::<Health>(h.npc).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(40);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<UnitAuras>(h.npc)
+            .unwrap()
+            .auras
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, duration);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(outside)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert_eq!(h.app.world().get::<ModelDisplay>(h.npc), model.as_ref());
+        assert_eq!(*h.app.world().get::<Health>(h.npc).unwrap(), health);
+        h.advance((duration / 50) as usize + 10);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(h.npc)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
+fn toyfx14_area_cosmetics_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_AREA_CENSUS_REPORT");
+    for item in [141300, 141301] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
