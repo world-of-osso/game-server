@@ -35,5 +35,9 @@ Personal/spell-property summons, summon-death82/on-despawn86 hooks, unsupported 
 
 ## Proof
 
+Final code `65dee4d9` includes origin/master `fece848a`; engine `d209261b1`, pinned protocol `6ba2f5c`. Rebuilt final binaries completed both skins again: `final-modern-v2` and `final-forever`. Updated twelve inspected PNGs replace the earlier captures. Server scripted-AI scope:53 passed/0 failed/1 pre-existing population-copy loot test ignored. Private-overlay tests2/2; engine player-physics target14/14. Server and engine extension/CLI check plus workspace fmt exit0, warning-free. No full suites. Exact commands/scopes: diagnostics `final-proof-ledger.json`; independent Claude verifier unavailable (expired OAuth), no independent PASS claimed.
+
+The old private snapshot lacked16 reference tables required by merged master (first failure: `scenario`). Those absent tables were copied from a read-only source transaction; existing escort/quest/template rows were preserved. Row counts/hashes: `live/post-master-private-schema-reconciliation.json`. This is private test-data reconciliation, not a runtime fallback or canonical migration.
+
 - Diagnostics: canonical engine `data/diagnostics/smartai-coverage-2026-10-11/`; `red/green-wizzle-*`, `red/green-summon-hook-*`, `red/green-ranked-orientation-emote-*`, `green-timed-chance-max-delay-compiled.log`.
 - [Contract](specs/smartai-coverage.md), [escort fixture/setup](specs/smartai-escort.md), [runtime explanation](wiki/systems/boss-scripts.md#smartai-escort-coverage-2026-10-11).
