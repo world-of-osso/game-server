@@ -30,6 +30,20 @@ No verified first-house exterior/interior grant source is available. Do not infe
 
 The server reads build-qualified NeighborhoodMap entries and NeighborhoodPlot cornerstone/teleport coordinates from the imported catalog. Supported shipping neighborhoods are map2735/2736; record4/map2640 has no matching Map.db2 row. Plot prices retain authored copper amounts under the Retail cornerstone MoneyFrame/GetMoney contract. Names may be authentically empty; do not generate neighborhood/plot names or grants. Missing catalog imports must produce an explicit unavailable error.
 
+## Authenticated cornerstones
+
+Use NeighborhoodPlot.CornerstoneGameObjectID only as a reference to the same-build GameObjects record. Preserve that object's actual Pos, quaternion, name, type48, display and GameObjectDisplayInfo bounds. NeighborhoodPlot.CornerstonePosition is a different authored marker; never substitute it for a missing object. First copy arrival spawns available source cornerstones, ordinary later arrivals do not duplicate them. Plot payment requires that exact object in the player's copy and the existing five-yard gameobject model-box reach check, including nonfinite refusal.
+
+Pinned local GameObjects/layout44BD453C supplies all55 Founder's Point cornerstones; Razorwind's55 referenced cornerstone records are absent. Its plot records remain browsable, but absent objects cannot be purchased through a fabricated marker. No first-house grant follows from either source.
+
+Lead supplemental import, after landing runtime support (agents run this against private databases only):
+
+```text
+python3 scripts/import_housing.py --evidence /home/osso/.worktrees/housing-core-evidence/qualified-cornerstones --db /home/osso/Projects/world-of-osso/game-server/data/world.db --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
+```
+
+This authenticated evidence combines the unchanged original housing audit with decoded local GameObjects841620 and pinned DBD revision07d008f28907c00827cacadf2d7c1a40f578b6a3; hashes and rows are checked by the same importer. It neither invents TDB templates nor mutates unrelated world tables.
+
 ## Atomic ownership and basic storage
 
 The housing persistence table records account ownership, paid plot claims, storage counts and stable placed-instance IDs independently of character serialization. Purchase and inventory copper debit commit in one transaction; competing buyers cannot both claim one plot. No first-house exterior/room/decor grants are inferred.

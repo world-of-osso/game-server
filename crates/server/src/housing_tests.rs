@@ -38,6 +38,10 @@ fn housing_runtime_requires_real_cornerstone_presence_and_reports_durable_owners
     world.insert_resource(maps);
     world.insert_resource(HousingAvailability(Ok(catalog.clone())));
     world.init_resource::<crate::gold::GoldUpdateQueue>();
+    world.insert_resource(crate::game_objects::GameObjectSpawns(
+        catalog.cornerstones(),
+    ));
+    crate::maps::transfer::spawn_map_content(&mut world, copy);
     let player = world
         .spawn((
             copy,

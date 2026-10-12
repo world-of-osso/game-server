@@ -256,30 +256,11 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
 // Pinned GameObjects527268/layout44BD453C and GameObjectDisplayInfo110660.
 // No fabricated production spawn or first-house geometry enters this fixture.
 fn housing_cornerstone_fixture() -> crate::game_objects::GameObjectSpawns {
-    use crate::game_objects::{GameObjectBounds, GameObjectSpawn, GameObjectSpawns};
-    let orientation = 2.0 * 0.9025853_f32.atan2(0.43051097);
-    GameObjectSpawns(vec![GameObjectSpawn {
-        guid: 527268,
-        map_id: 2735,
-        info: GameObjectInfo {
-            entry: 527268,
-            go_type: 48,
-            display_id: 110660,
-            name: "Cornerstone - Plot 0".into(),
-            scale: 1.0,
-        },
-        position: Vec3::new(2941.2317, -214.5868, 113.15639),
-        orientation,
-        bounds: GameObjectBounds {
-            min: Vec3::new(-2.6780343, -2.6780343, -0.5331883),
-            max: Vec3::new(2.6780343, 2.6780343, 4.1304092),
-            scale: 1.0,
-            orientation,
-        },
-        spawn_difficulties: vec![0],
-        chair: None,
-        quest_object: None,
-    }])
+    let catalog = crate::housing_catalog::HousingCatalog::read(
+        &crate::housing_catalog::tests::catalog_fixture(),
+    )
+    .unwrap();
+    crate::game_objects::GameObjectSpawns(catalog.cornerstones())
 }
 
 fn cornerstones_in(world: &mut World, map: InMap) -> usize {

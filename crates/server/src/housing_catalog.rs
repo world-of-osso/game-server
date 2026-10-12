@@ -9,6 +9,9 @@ use std::collections::BTreeMap;
 const BUILD: &str = "12.1.0.69933";
 type Fields = BTreeMap<String, String>;
 
+#[path = "housing_cornerstones.rs"]
+mod cornerstones;
+
 #[derive(Clone, Debug)]
 pub(crate) struct Neighborhood {
     pub id: u32,
@@ -19,6 +22,7 @@ pub(crate) struct Neighborhood {
 pub(crate) struct HousingCatalog {
     neighborhoods: BTreeMap<u32, Neighborhood>,
     plots: BTreeMap<u32, HousingPlot>,
+    cornerstones: BTreeMap<u32, (u32, crate::game_objects::GameObjectSpawn)>,
 }
 
 impl HousingCatalog {
@@ -39,10 +43,13 @@ impl HousingCatalog {
         }
         let neighborhoods = Self::read_neighborhoods(db)?;
         let plots = Self::read_plots(db, &neighborhoods)?;
-        Ok(Self {
+        let mut catalog = Self {
             neighborhoods,
             plots,
-        })
+            cornerstones: BTreeMap::new(),
+        };
+        catalog.cornerstones = cornerstones::read_cornerstones(db, &catalog)?;
+        Ok(catalog)
     }
 
     fn read_neighborhoods(db: &Connection) -> Result<BTreeMap<u32, Neighborhood>, String> {
@@ -86,6 +93,17 @@ impl HousingCatalog {
             }
         }
         Ok(plots)
+    }
+
+    pub(crate) fn cornerstones(&self) -> Vec<crate::game_objects::GameObjectSpawn> {
+        self.cornerstones
+            .values()
+            .map(|(_, spawn)| spawn.clone())
+            .collect()
+    }
+
+    pub(crate) fn cornerstone_plot(&self, entry: u32) -> Option<u32> {
+        self.cornerstones.get(&entry).map(|(plot, _)| *plot)
     }
 
     pub(crate) fn neighborhood(&self, id: u32) -> Result<&Neighborhood, String> {
