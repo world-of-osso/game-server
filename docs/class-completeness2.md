@@ -24,6 +24,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 672a43a4 / sharedd503cd3 | 2874 | 4771 | 182 | All 7827 memberships plus exact231040s2 consumer, exit0, 705.59s |
 | 78ea6e06 / shared2a48bdc | 2878 | 4767 | 182 | All 7827 memberships plus exact441675s3 consumer, exit0, 736.94s |
 | 174a2e84 / shared2a48bdc | 2889 | 4756 | 182 | Native aura229, all7827 memberships, exit0, 696.66s |
+| a5de3082 / shared00d33e7 | 2897 | 4748 | 182 | Native aura429/raw mastery, all7827 memberships, exit0, 745.53s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -114,7 +115,7 @@ Aura429 applies the current owner's authored percentage to controlled-pet and gu
 
 CharacterStats retains raw mastery points independently of mastery percent. Attr8 MasteryAffectsPoints adds BonusCoefficient × raw points before points modifiers. Self-owned flagged aura amounts refresh after owner stats change without recreating the aura. Native173184 mastery gain/removal changes actual pet damage;413984 timed metadata/expiry survives refresh. The foreign413984 fixture applies native effects at the production aura boundary because its area selector has MaxTargets1; it is not foreign target-selection proof. Type540 gameplay and periodic tick-phase refresh remain uncertified.
 
-At `a5de3082` / shared`00d33e7`, summon controls4/4, adjacent stats/itemstats21/21, AoE5/5, Chrono6/6 and Growth/Lingering7/7 pass warning-free. Initial missing schema fields were compile failures, not behavioral RED. Logs: slot-local `data/diagnostics/class-completeness4-2026-10-12/summon-damage-integrated-controls4.log` and `summon-adjacent-*.log`. No new live claim.
+At `a5de3082` / shared`00d33e7`, summon controls4/4, adjacent stats/itemstats21/21, AoE5/5, Chrono6/6 and Growth/Lingering7/7 pass warning-free. Initial missing schema fields were compile failures, not behavioral RED. Logs: slot-local `data/diagnostics/class-completeness4-2026-10-12/summon-damage-integrated-controls4.log` and `summon-adjacent-*.log`. No new live claim. Census at `a5de3082` / shared`00d33e7` records all7827 memberships:2897 working/4748 partial/182 broken. Eight memberships move to working;429 repairs also help roots that retain other gaps. The182 broken remain170 missing imported rows and12 Mage destinations; none were fabricated or removed.
 
 ## Retained boundaries
 
