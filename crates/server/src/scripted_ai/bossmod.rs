@@ -171,7 +171,12 @@ pub fn load_catalog(conn: &Connection) -> rusqlite::Result<Catalog> {
     Ok(Catalog(catalog))
 }
 
-pub fn startup_load_catalog(mut commands: Commands) {
+pub fn startup_load_catalog(mut commands: Commands, injected: Option<Res<Catalog>>) {
+    // Process fixtures supply their catalog explicitly before Startup. Production
+    // has no injected catalog and must open its world copy successfully.
+    if injected.is_some() {
+        return;
+    }
     let conn = Connection::open_with_flags(
         crate::spell_info::WORLD_DB_PATH,
         OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -348,7 +353,7 @@ mod tests {
         ])
     }
     #[test]
-    fn bossmod_cookie_initial_countdown_actual_start_reset_and_no_invented_repeats() {
+    fn bossmod_timeline_cookie_initial_countdown_actual_start_reset_and_no_invented_repeats() {
         let mut schedule = cookie();
         assert_eq!(schedule.trigger(Trigger::Engage).len(), 1);
         schedule.tick(1000);
@@ -371,7 +376,7 @@ mod tests {
         );
     }
     #[test]
-    fn bossmod_success_boundary_and_health_phase_are_once_per_pull() {
+    fn bossmod_timeline_success_boundary_and_health_phase_are_once_per_pull() {
         let mut schedule = Schedule::new(vec![
             Rule {
                 id: 1,
