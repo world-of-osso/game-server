@@ -2,11 +2,11 @@
 
 verified: 2026-10-11
 
-[Contract](../../specs/bossmod-data.md). The importer parses Lua ASTs with pinned `luaparser==4.0.0` (Python tooling dependency, managed by uv) and never evaluates addon code. Source roots are read-only. Git SHA identifies cloned sources; installed sources carry their TOC version plus SHA256 of all Lua files.
+[Contract](../../specs/bossmod-data.md), [coverage and proof ledger](../../bossmod-data-coverage.md). The importer uses pinned `luaparser==4.0.0`, never evaluates addon Lua, and writes only a new SQLite backup copy. Each accepted rule retains addon/version/file/line provenance. Spell and SpellName must both be stamped12.1.0.69933; spell IDs must join both tables.
 
 ## Lead command
 
-Run from the feature server checkout. Choose **new** diagnostic output/report paths; input is opened read-only and backed up with SQLite's consistent backup API.
+Choose new diagnostic output/report paths; input and addon roots are read-only.
 
 ```text
 uv run scripts/bossmod_data.py \
@@ -19,15 +19,33 @@ uv run scripts/bossmod_data.py \
   --report /path/to/private/coverage.json
 ```
 
-`bossmod_encounter` retains identities, `bossmod_rule` retains action/event/provenance rows, `bossmod_import_issue` retains underivable constructs, and `bossmod_import_meta` records the pinned build/parser. Validation requires both `db2_build` stamps and an ID join between `spell` and `spell_name`. Unknown IDs become report gaps and are not inserted.
+Existing output and same-path writes are refused. SQLite's consistent backup API copies the input before new catalog tables are inserted. Canonical world data is never edited.
 
-## Supported data
+## Extraction boundary
 
-Continuation adds lexical literal bindings, nested timer-table lookups, arithmetic and DBM spell-ID aliases/elseif dispatch. All Bar/CDBar and DBM Start/TLStart/SetTimeline calls are audited per encounter even when their runtime trigger cannot be resolved. EXBoss events with missing firstSeenSec/cdSeriesSec now each carry explicit reasons. enUS warning formats are parsed from BigWigs common/default locales and DBM core templates; unresolved locale/dynamic arguments are rejected as warning gaps, never displayed as keys. Spell names come from the pinned SpellName join. Targeted importer proof:9/9 (`continue-importer-green2.log`).
+The AST extractor supports understood engage/cast handlers, Retail branches, lexical literal bindings, arithmetic, table indexing, health/stage predicates and DBM spell dispatch/aliases. Custom DBM `NewTimer` reads spellId argument14, not its name argument2. Mutable counters/tables, unknown conditions/early returns and unreachable registered-spell branches remain gaps. Selected branch assignments update their outer binding without leaking local declarations; simultaneous assignments evaluate all RHS values first.
 
-Literal BigWigs/LittleWigs `OnEngage` bars; `SPELL_CAST_START`/`SPELL_CAST_SUCCESS` registered handlers; Retail-vs-Classic branch selection; literal stage/health conditions; simple source-creature predicates. Unknown conditions, role/target warnings, duration expressions and else-stage inference remain gaps. Warning color translates to built-in severity: red=High, orange/purple=Medium, cyan/green/blue/yellow=Low. This is a documented UI translation, not an authored numerical BigWigs enum. Warning text expressions remain inspectable keys, not executed format strings.
+`bossmod_encounter` stores identities. `bossmod_rule` stores only eligible runtime actions. `bossmod_static_source` separately retains audited timer expressions, literal lookup paths and original EXBoss native timeline configuration declarations. Runtime normalization is never executed. `bossmod_import_issue` and the encounter-grouped report retain explicit reasons for missing trigger/duration/locale inputs; `bossmod_import_meta` records the pinned build/parser.
 
-Literal DBM timer constructors/start calls and spell-dispatch warnings are parsed where their event/condition is known. EXBoss EncounterData supplies spell-bound warning text and native numerical severity. `durationRules` classifies already-existing Blizzard events; those durations are **not** initial/repeat cooldowns. Current EXBoss firstSeenSec/cdSeriesSec are absent. Current raid modules largely depend on Blizzard timeline callbacks; no fixed schedule is claimed for them.
+Current DBM/BigWigs raid sources largely consume Blizzard timeline durations, not fixed initial/repeat cooldowns. EXBoss `firstSeenSec`/`cdSeriesSec` are absent; durationRules classify received native events. Raw defaults, lookup leaves and observed durations cannot substitute for those inputs. [Coverage](../../bossmod-data-coverage.md#actual-input-boundaries) records the outstanding whole-goal boundary.
+
+## Locale text
+
+BigWigs common enUS and module default-locale declarations, plus DBM enUS warning templates, are read statically. Locale guards select enUS, not whichever translation appears last. Resolvable formats substitute pinned SpellName rows. Unknown count/target arguments and unavailable enUS labels are rejected as warnings with reasons; neither a locale key nor an invented translation is transported.
+
+BigWigs color→severity is the documented UI translation cyan/green/blue/yellow=Low, orange/purple=Medium, red=High. DBM special warnings/announces map to High/Low; these are UI translations, not authored numerical Blizzard enums. EXBoss numerical severity retains its native0/1/2 value.
+
+## Runtime authority
+
+`bossmod_authority` selects the sole addon with schedulable timers for an encounter. Conflicting schedules abort import rather than choosing an arbitrary priority. `bossmod_binding` joins declared map/NPC/encounter IDs against DB2 and local TDB spawns only in the copied database.
+
+Server `scripted_ai::bossmod` loads that catalog, maintains independent alert countdowns and consumes central authoritative CombatLog CastStart/CastSuccess at the authored boundary. SmartAI/EventMap still execute combat, but do not supply alert clocks or blanket Low warnings. Cast messages carry required rendered `warning_text`; the client renders that text verbatim with the validated spell icon. Lifecycle messages and snapshots retain the ordered, copy-scoped encounter channel.
+
+## Zevrim root cause and native proof
+
+Authentic Zevrim SmartAI rows use target5 (`SMART_TARGET_HOSTILE_RANDOM`). The old target resolver returned no targets, so it never attempted22478. Threat-list random resolution now respects distance/player/primary-power filters; the real-combat test proves admitted CastState22478, resolved effects, authored warning/reset, copy isolation and evade retirement. A cast-start warning is observed at admission, not inferred merely from completed-effect delivery.
+
+[Current acceptance](../../bossmod-data-coverage.md#private-native-acceptance) records private5906 Modern/Forever Hydrospawn and Zevrim proof, eight inspected PNGs, post-master binary/data hashes, owned process cleanup and exclusions. Logged in on map0; entered instances by online port. No timing/warning injection or shared-realm operation occurred. Rendering/actor/balance completeness is not claimed.
 
 ## Development proof
 
@@ -35,22 +53,11 @@ Literal DBM timer constructors/start calls and spell-dispatch warnings are parse
 uv run --with luaparser==4.0.0 python -m unittest discover -s scripts/tests -p test_bossmod_data.py
 ```
 
-The report separates encounters identified from encounters with timers. Identifying an encounter or importing warnings does not certify its schedule. Runtime/live gates remain open.
-
-## Current integration boundary
-
-`bossmod_authority` selects the sole addon with statically extracted timers for an encounter. Conflicting addon schedules abort import rather than choosing a priority. `bossmod_binding` joins addon-declared map/NPC/encounter identities against DB2 and local TDB spawns; it supplements the existing lifecycle registry only in the copied database.
-
-Server `scripted_ai::bossmod` loads that authority, keeps independent countdowns, and consumes central authoritative combat-log CastStart/CastSuccess events. SmartAI/EventMap projections and blanket Low cast warnings are removed; those schedulers still drive combat but are not alternate alert sources. The existing Cast timeline message now carries required rendered warning_text. Catalog warning_text is transported verbatim to the client; the UI retains the spell icon but renders authored enUS text rather than replacing it with the generic spell label. Unknown locale/count/target arguments remain explicit import gaps.
-
-Continuation: the hosted Hydrospawn/Zevrim test now passes, including Zevrim's admitted CastState22478, real resolved effect, authored warning/reset and other-copy isolation. Root cause was missing SMART_TARGET_HOSTILE_RANDOM (5): authentic Zevrim rows resolved to zero targets, so no cast was attempted. Target resolution now follows TrinityCore a352b1fa SmartScript::GetTargets with threat, distance, player and primary-power filters. Proof: `continue-zevrim-green.log` in the diagnostic directory. Earlier revision aab754da had timeline6/7 with Zevrim red. Initial source bars and Hydrospawn22419 warning/reset were observed by the real-combat test before the second encounter assertion fails. This is not two-encounter or native acceptance. No private server/client was launched and no PNG was produced.
-
-Historical diagnostics (superseded by the target-resolution fix above) had two distinct boundaries: AoE cast log entries with no owned source/explicit target are not delivered to the player inbox, and a cast-start addon alert does not imply a completed effect. The next diagnostic must observe actual CastState admission for start-triggered rules rather than infer it from completed-effect delivery. Further fixes paused after repeated failed iterations; the question tool is unavailable in this noninteractive session.
-
-Final copy import identifies DBM24/BigWigs20/LittleWigs446/EXBossData37 encounters; only LittleWigs343 have literal schedules. There are191 authenticated hosted bindings. DBM/BigWigs/EXBoss data requiring native Blizzard timeline input remain explicit gaps, not fabricated cooldowns.
+Current targeted importer17/17 and server timeline7/7 pass; client model/view, actual UDP order/native geometry, check/fmt and the changed protocol suite pass. Independent verification is artifact/source inspection, not independent command execution. Exact counts, revisions and logs live in the [coverage ledger](../../bossmod-data-coverage.md#proof).
 
 ## Sources
 
-- `scripts/bossmod_data.py` and `scripts/tests/test_bossmod_data.py` — extraction/copy contract.
-- `crates/server/src/scripted_ai/bossmod.rs` and `tests/data_bosses.rs` — current runtime and failing acceptance boundary.
-- Read-only addon roots and exact versions/file/line receipts are retained by `bossmod_encounter`, `bossmod_rule` and the generated diagnostic coverage report.
+- `scripts/bossmod_data.py`, `scripts/tests/test_bossmod_data.py` — static extraction/copy/locale contracts.
+- `crates/server/src/scripted_ai/bossmod.rs`, `tests/data_bosses.rs`, `tests/bossmod_diremaul.sql` — real combat/copy boundary and authored fixtures.
+- DBM `DBM-Core/modules/objects/Timer.lua:1192` — custom timer spellId parameter; source revisions and addon file/line receipts in [coverage](../../bossmod-data-coverage.md#reproducible-source-receipts).
+- [Client warning/timeline contract](../../../../game-engine/docs/specs/encounter-timeline.md) — native presentation and shared wire boundary.
