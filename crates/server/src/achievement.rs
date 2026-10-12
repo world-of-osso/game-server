@@ -66,11 +66,19 @@ struct AchievementTracker {
     last_processed_level: u8,
 }
 
+/// Committed gameplay credit from systems that do not own an exclusive World.
+#[derive(Message, Clone, Copy)]
+pub(crate) struct CriteriaCredit {
+    pub player: Entity,
+    pub event: CriteriaEvent,
+}
+
 pub struct AchievementPlugin;
 
 impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::maps::ServerClock>();
+        app.add_message::<CriteriaCredit>();
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(
             Update,
@@ -78,6 +86,7 @@ impl Plugin for AchievementPlugin {
                 send_initial_achievement_snapshot,
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
+                process_committed_criteria_credits,
                 dungeon::send_entry_progress,
                 scenario::send_entry_progress,
                 send_requested_catalog_pages,
@@ -197,6 +206,17 @@ fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent
         && let Some(connection) = connection_for_player(world, player)
     {
         send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+fn process_committed_criteria_credits(
+    mut credits: MessageReader<CriteriaCredit>,
+    mut commands: Commands,
+) {
+    for credit in credits.read().copied() {
+        commands.queue(move |world: &mut World| {
+            record_criteria_event(world, credit.player, credit.event);
+        });
     }
 }
 

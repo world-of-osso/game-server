@@ -8,13 +8,14 @@ use lightyear::connection::host::HostClient;
 use lightyear::prelude::{AppMessageExt, Connected, Message, PeerId, RemoteId};
 use shared::components::{CharacterAppearance, EquipmentAppearance};
 use shared::protocol::{
-    AbandonQuest, DestroyItem, EquipItem, EquipmentSnapshot, InventoryDelta, InventoryError,
-    InventorySnapshot, LogXpGain, PlayerXpUpdate, QuestFailed, QuestFailedReason,
-    QuestGiverAcceptQuest, QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello,
-    QuestGiverOfferReward, QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails,
-    QuestGiverQuestList, QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus,
-    QuestGiverStatusEntry, QuestGiverStatusQuery, QuestMarkerClass, QuestRewardItem,
-    SetQuestWatched, SortBags, SplitItem, SwapItem, UseItem, XpGainReason,
+    AbandonQuest, AchievementCatalogPage, AchievementStateUpdate, DestroyItem, EquipItem,
+    EquipmentSnapshot, InventoryDelta, InventoryError, InventorySnapshot, LogXpGain,
+    PlayerXpUpdate, QueryAchievementCatalog, QuestFailed, QuestFailedReason, QuestGiverAcceptQuest,
+    QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello, QuestGiverOfferReward,
+    QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails, QuestGiverQuestList,
+    QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus, QuestGiverStatusEntry,
+    QuestGiverStatusQuery, QuestMarkerClass, QuestRewardItem, SetQuestWatched, SortBags, SplitItem,
+    SwapItem, UseItem, XpGainReason,
 };
 
 use super::*;
@@ -321,6 +322,114 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
             .iter()
             .all(|update| update.completed.is_none())
     );
+}
+
+#[test]
+fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_balance() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use crate::currency::{CurrencyPlugin, PlayerCurrencies};
+    use shared::currency::{CurrencyWallet, currency_by_id};
+    use shared::protocol::{CurrencyStateUpdate, EarnCurrency, SpendCurrency};
+
+    let mut app = setup_app_with(|app| {
+        for_currency_messages(app);
+        app.add_plugins((CurrencyPlugin, AchievementPlugin));
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    })
+    .expect("real quest database");
+    let client = spawn_named_client(&mut app, 1, "Currproof");
+    add_message_pair::<EarnCurrency>(&mut app, client.connection);
+    add_message_pair::<SpendCurrency>(&mut app, client.connection);
+    add_message_pair::<CurrencyStateUpdate>(&mut app, client.connection);
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    add_message_pair::<QueryAchievementCatalog>(&mut app, client.connection);
+    add_message_pair::<AchievementCatalogPage>(&mut app, client.connection);
+    let mut wallet = CurrencyWallet::default();
+    wallet.add(4, 990, currency_by_id(4).unwrap()).unwrap();
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert((PlayerCurrencies(wallet), PlayerAchievementState::default()));
+    enter_world(&mut app, &client);
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&41095)
+    );
+    // Valor's authored weekly cap is1000. Only10 of requested100 are granted.
+    request(
+        &mut app,
+        &client,
+        EarnCurrency {
+            currency_id: 4,
+            amount: 100,
+        },
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .criteria_progress
+            .get(&41095),
+        Some(&10)
+    );
+    request(
+        &mut app,
+        &client,
+        SpendCurrency {
+            currency_id: 4,
+            amount: 25,
+        },
+    );
+    request(
+        &mut app,
+        &client,
+        EarnCurrency {
+            currency_id: 4,
+            amount: 100,
+        },
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .criteria_progress
+            .get(&41095),
+        Some(&10)
+    );
+    // Failed grants never become achievement progress; request-only PvP gains remain forbidden.
+    request(
+        &mut app,
+        &client,
+        EarnCurrency {
+            currency_id: 1792,
+            amount: 100,
+        },
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerCurrencies>(client.player)
+            .unwrap()
+            .0
+            .get(1792),
+        0
+    );
+    let saved = persistence::load_achievements(
+        &app.world().resource::<GameDatabase>().db,
+        client.character_id,
+    );
+    assert_eq!(saved.criteria_progress.get(&41095), Some(&10));
+}
+
+fn for_currency_messages(app: &mut App) {
+    register::<shared::protocol::EarnCurrency>(app);
+    register::<shared::protocol::SpendCurrency>(app);
+    register::<shared::protocol::CurrencyStateUpdate>(app);
+    register::<AchievementStateUpdate>(app);
+    register::<QueryAchievementCatalog>(app);
+    register::<AchievementCatalogPage>(app);
 }
 
 /// `setup_app` plus the plugins `add_plugins` adds before the app is finished.

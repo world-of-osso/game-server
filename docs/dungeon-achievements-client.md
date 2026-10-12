@@ -42,6 +42,14 @@ Retail sources:
 - `Blizzard_AchievementUI/Mainline/Blizzard_AchievementUI.lua:572` builds category names/parents; `:1814` reads achievement name/points/date/description/icon; `:1952` reads criterion text/completion/current/required; `:2728` requests a category/index row.
 - `Blizzard_APIDocumentationGenerated/AchievementInfoDocumentation.lua:5` names `C_AchievementInfo`; `:64-78` defines validity lookup. Category/achievement/criterion list APIs used by this pinned UI are globals (`GetCategoryInfo`, `GetAchievementInfo`, `GetAchievementCriteriaInfo`), not falsely attributed to that namespace.
 
+## Criteria coverage — 2026-10-11
+
+Pinned census: `scripts/achievement_census.py --db2 <69933-dir> --modifiers <ModifierTree.csv> --world-db <world.db> --output <report.json>`. SQLite is opened read-only. Every Achievement row records descendant CriteriaTree/Criteria IDs, criterion types, referenced ModifierTree IDs/types and explicit blockers. Counts are structural all-faction unions, not playable-content or full Retail evaluation certification.
+
+Type12 is CurrencyGained (not zone quests). TrinityCore a352b1fa CriteriaHandler.cpp599-600 accumulates awarded quantity; capped requests credit only the actual wallet increase, after the currency persistence boundary. Spending, failed awards and already-owned login balances produce no gain credit. Account contributions add earned quantities across characters; statistics retain raw quantities. Currency registry/content limitations remain independent of structural criteria support. Type11 is CompleteQuestsInZone.
+
+Baseline3388 trackable achievements (2338 account/1050 character),105 statistics. Batch12 predicts3489 (+101); recensus and runtime test establish the current count. Conditional/modifier/timer/world-state restrictions remain unevaluated.
+
 ## Bounds
 
 Fixed pages: 32 categories, 8 achievements, 16 criterion lines. Embedded achievement criteria use the same 16-line page and continuation. Names/criterion text are UTF-8 prefix-capped to 256 bytes; achievement descriptions to 2048 bytes. Category response worst-case text is 8 × (256 + 2048 + 16 × 256) = 51,200 bytes plus bounded numeric/encoding overhead; 56,397 bytes with maximum-width numeric fields in the bincode wire test, below 64 KiB. The pinned build's served criterion labels are at most 181 bytes, so the cap does not cut any currently reachable achievement criterion line. Search additionally carries at most256 Unicode characters (up to1024 UTF-8 bytes); other requests carry enum tags, scope and u32 IDs. Summary category totals cover the finite eligible source catalog and embed at most three earned rows. Dungeon encounters use the 32-bit encounter mask (validated maximum 32 rows per map/difficulty), with names capped to 256 bytes. No client-controlled page sizes or unbounded vectors from a catalog request.

@@ -17,6 +17,7 @@ pub struct CurrencyPlugin;
 
 impl Plugin for CurrencyPlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<crate::achievement::CriteriaCredit>();
         app.add_systems(Update, send_initial_currency_snapshot);
         app.add_systems(Update, process_currency_requests::<EarnCurrency>);
         app.add_systems(Update, process_currency_requests::<SpendCurrency>);
@@ -51,10 +52,15 @@ fn send_initial_currency_snapshot(
 }
 
 trait CurrencyRequest: lightyear::prelude::Message {
+    fn gained_currency(&self) -> Option<u32>;
     fn apply(wallet: &mut CurrencyWallet, request: &Self) -> Result<String, String>;
 }
 
 impl CurrencyRequest for EarnCurrency {
+    fn gained_currency(&self) -> Option<u32> {
+        Some(self.currency_id)
+    }
+
     fn apply(wallet: &mut CurrencyWallet, request: &Self) -> Result<String, String> {
         if matches!(
             request.currency_id,
@@ -70,6 +76,10 @@ impl CurrencyRequest for EarnCurrency {
 }
 
 impl CurrencyRequest for SpendCurrency {
+    fn gained_currency(&self) -> Option<u32> {
+        None
+    }
+
     fn apply(wallet: &mut CurrencyWallet, request: &Self) -> Result<String, String> {
         spend_currency(wallet, request.currency_id, request.amount)
     }
@@ -84,11 +94,12 @@ fn process_currency_requests<R: CurrencyRequest>(
     mut pvp_states: Query<&mut crate::pvp::PlayerPvpState>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<CurrencyStateUpdate>>,
+    mut credits: MessageWriter<crate::achievement::CriteriaCredit>,
 ) {
     let Some(db) = db else { return };
     for (conn_entity, link, in_world, mut receiver) in receivers.iter_mut() {
         for request in receiver.receive() {
-            handle_currency_request(
+            if let Some(credit) = handle_currency_request(
                 CurrencyRequestTarget {
                     conn_entity,
                     player_entity: link.0,
@@ -99,7 +110,9 @@ fn process_currency_requests<R: CurrencyRequest>(
                 &mut pvp_states,
                 &db,
                 &mut senders,
-            );
+            ) {
+                credits.write(credit);
+            }
         }
     }
 }
@@ -117,15 +130,17 @@ fn handle_currency_request<R: CurrencyRequest>(
     pvp_states: &mut Query<&mut crate::pvp::PlayerPvpState>,
     db: &GameDatabase,
     senders: &mut Query<&mut MessageSender<CurrencyStateUpdate>>,
-) {
+) -> Option<crate::achievement::CriteriaCredit> {
     let Ok(mut wallet) = currencies.get_mut(target.player_entity) else {
         send_currency_error(
             target.conn_entity,
             senders,
             "currencies unavailable for player",
         );
-        return;
+        return None;
     };
+    let gained_currency = request.gained_currency();
+    let previous = gained_currency.map(|id| wallet.0.get(id));
     match R::apply(&mut wallet.0, request) {
         Ok(message) => {
             persistence::save_currencies(&db.db, target.character_id, &wallet.0);
@@ -138,9 +153,16 @@ fn handle_currency_request<R: CurrencyRequest>(
                 persistence::save_pvp(&db.db, target.character_id, &pvp_state.progress);
             }
             send_currency_update(target.conn_entity, &wallet.0, Some(message), None, senders);
+            let currency = gained_currency?;
+            let amount = wallet.0.get(currency).saturating_sub(previous?);
+            (amount != 0).then_some(crate::achievement::CriteriaCredit {
+                player: target.player_entity,
+                event: crate::achievement::CriteriaEvent::CurrencyGained(currency, amount),
+            })
         }
         Err(error) => {
             send_currency_update(target.conn_entity, &wallet.0, None, Some(error), senders);
+            None
         }
     }
 }
