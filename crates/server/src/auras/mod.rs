@@ -608,7 +608,9 @@ fn build_instance(
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
         let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
-        let duration_supported = !mechanic_duration::positive_source_gap(effect);
+        let duration_gap = mechanic_duration::positive_source_gap(effect)
+            || mechanic_duration::invalid_mechanic_source_gap(effect);
+        let duration_supported = !duration_gap;
         let handled =
             handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
         if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
@@ -616,23 +618,33 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
         if logged.0.insert((aura.spell_id, effect.aura_type)) {
-            if linked::is_linked(effect.aura_type) {
-                warn!(
-                    "Spell {}: aura type {} nonzero linked amount {} for child {} remains a source gap; tracked only",
-                    aura.spell_id, effect.aura_type, effect.amount, effect.trigger_spell
-                );
-            } else if mechanic_duration::positive_source_gap(effect) {
-                warn!(
-                    "Spell {}: aura type {} positive duration amount {} remains a source gap; pinned rule cannot extend positive-only values",
-                    aura.spell_id, effect.aura_type, effect.amount
-                );
-            } else {
-                warn!(
-                    "Spell {}: aura type {} has no handler; tracked only",
-                    aura.spell_id, effect.aura_type
-                );
-            }
+            let reason = describe_unhandled_aura(effect);
+            warn!(
+                "Spell {}: aura type {} {reason}; tracked only",
+                aura.spell_id, effect.aura_type
+            );
         }
+    }
+}
+
+fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if linked::is_linked(effect.aura_type) {
+        format!(
+            "nonzero linked amount {} for child {} remains a source gap",
+            effect.amount, effect.trigger_spell
+        )
+    } else if mechanic_duration::invalid_mechanic_source_gap(effect) {
+        format!(
+            "duration mechanic {} does not fit the pinned mask; source gap",
+            effect.misc_values[0]
+        )
+    } else if mechanic_duration::positive_source_gap(effect) {
+        format!(
+            "positive duration amount {} remains a source gap; pinned rule cannot extend positive-only values",
+            effect.amount
+        )
+    } else {
+        "has no handler".into()
     }
 }
 

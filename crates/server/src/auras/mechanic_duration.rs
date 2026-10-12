@@ -32,6 +32,27 @@ fn applied_mechanic_mask(spell: &SpellInfo, effect_mask: u32) -> u64 {
         })
 }
 
+pub(super) fn invalid_mechanic_source_gap(effect: &AuraEffectState) -> bool {
+    let kind = matches!(
+        effect.aura_type,
+        handlers::MECHANIC_DURATION_MOD | handlers::MECHANIC_DURATION_MOD_NOT_STACK
+    );
+    kind && !(0..u64::BITS as i32).contains(&effect.misc_values[0])
+}
+
+fn matches_duration_mechanic(effect: &AuraEffectState, mechanic_mask: u64) -> bool {
+    if !matches!(
+        effect.aura_type,
+        handlers::MECHANIC_DURATION_MOD | handlers::MECHANIC_DURATION_MOD_NOT_STACK
+    ) {
+        return false;
+    }
+    if invalid_mechanic_source_gap(effect) {
+        return false;
+    }
+    mechanic_mask & mechanic_bit(effect.misc_values[0] as u32) != 0
+}
+
 fn matching_duration_modifiers(auras: &ActiveAuras, mechanic_mask: u64) -> i32 {
     let effects = auras
         .iter()
@@ -40,17 +61,7 @@ fn matching_duration_modifiers(auras: &ActiveAuras, mechanic_mask: u64) -> i32 {
                 .iter()
                 .map(move |effect| (aura.stack_multiplier(), effect))
         })
-        .filter(|(_, effect)| {
-            if !matches!(
-                effect.aura_type,
-                handlers::MECHANIC_DURATION_MOD | handlers::MECHANIC_DURATION_MOD_NOT_STACK
-            ) {
-                return false;
-            }
-            let mechanic =
-                u32::try_from(effect.misc_values[0]).expect("Negative native duration mechanic");
-            mechanic_mask & mechanic_bit(mechanic) != 0
-        });
+        .filter(|(_, effect)| matches_duration_mechanic(effect, mechanic_mask));
     let (total, strongest) = effects.fold(
         (0.0_f32, 0.0_f32),
         |(total, strongest), (stacks, effect)| {
