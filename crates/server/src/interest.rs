@@ -194,10 +194,10 @@ impl InterestIndex {
         observer.sees(entity, position, map)
             && (entity == observer.player
                 || (!self.hidden.contains(&entity)
-                    && self
-                        .private_owners
-                        .get(&entity)
-                        .is_none_or(|owner| *owner == observer.player)
+                    && private_object_visible(
+                        self.private_owners.get(&entity).copied(),
+                        observer.player,
+                    )
                     && self
                         .invisibility
                         .get(&observer.player)
@@ -564,6 +564,7 @@ fn update_target_visibility(
     };
 
     let target_state = index.life_states.get(&entity).copied().unwrap_or_default();
+    let private_owner = index.private_owners.get(&entity).copied();
     let hidden = index.hidden.contains(&entity);
     let life_states = &index.life_states;
     let invisibility = &index.invisibility;
@@ -577,6 +578,7 @@ fn update_target_visibility(
         let should_be_visible = observer.sees(entity, &position, map)
             && (entity == observer.player
                 || (!hidden
+                    && private_object_visible(private_owner, observer.player)
                     && visible_in_death_phase
                     && invisibility
                         .get(&observer.player)
@@ -593,6 +595,10 @@ fn update_target_visibility(
             commands,
         );
     }
+}
+
+fn private_object_visible(owner: Option<Entity>, observer: Entity) -> bool {
+    owner.is_none_or(|owner| owner == observer)
 }
 
 fn apply_target_visibility_transition(
