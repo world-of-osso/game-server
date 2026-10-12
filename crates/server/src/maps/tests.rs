@@ -826,21 +826,25 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 
 #[test]
 fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_channel() {
-    exercise_arena_channel(ArenaQueueMode::Skirmish2v2);
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false);
 }
 #[test]
 fn rated_arena_groups_play_then_persist_reference_rating_without_queue_only_awards() {
-    exercise_arena_channel(ArenaQueueMode::Rated2v2);
+    exercise_arena_channel(ArenaQueueMode::Rated2v2, false);
 }
 #[test]
 fn six_arena_players_complete_skirmish_three_v_three_over_real_channels() {
-    exercise_arena_channel(ArenaQueueMode::Skirmish3v3);
+    exercise_arena_channel(ArenaQueueMode::Skirmish3v3, false);
 }
 #[test]
 fn six_arena_players_complete_rated_three_v_three_and_persist_played_results() {
-    exercise_arena_channel(ArenaQueueMode::Rated3v3);
+    exercise_arena_channel(ArenaQueueMode::Rated3v3, false);
 }
-fn exercise_arena_channel(mode: ArenaQueueMode) {
+#[test]
+fn arena_alive_forfeits_end_the_match_without_fabricating_scoreboard_deaths() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, true);
+}
+fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
     let team_size = match mode {
@@ -1107,6 +1111,10 @@ fn exercise_arena_channel(mode: ArenaQueueMode) {
         h.app.world().get_entity(caster).is_ok(),
         "hidden orb retains aura ownership"
     );
+    if forfeit {
+        exercise_arena_forfeit(&mut h, &players, &origins, match_id);
+        return;
+    }
     let attacker = players[0].player;
     for target in players.iter().skip(1).step_by(2).map(|who| who.player) {
         h.app
@@ -1199,6 +1207,67 @@ fn exercise_arena_channel(mode: ArenaQueueMode) {
     h.receive_pvp_updates(5);
     for (who, origin) in players.iter().zip(&origins) {
         h.ack(who);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(
+            wow(h.app.world().get::<Position>(who.player).unwrap()),
+            *origin
+        ));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+fn exercise_arena_forfeit(h: &mut Harness, players: &[Traveler], origins: &[Vec3], match_id: u64) {
+    for who in players.iter().skip(1).step_by(2) {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in players.iter().skip(1).step_by(2) {
+        h.ack(who);
+    }
+    h.receive_pvp_updates(5);
+    let ended = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(players[0].player)
+        .unwrap()
+        .battleground
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        ended.outcome,
+        Some(shared::battleground::BgOutcome::Winner(
+            shared::battleground::BgTeam::A
+        ))
+    );
+    assert_eq!(ended.players.len(), 4);
+    assert!(
+        ended.players.iter().all(|score| score.deaths == 0),
+        "leaving alive is not a combat death: {:?}",
+        ended.players
+    );
+    for who in players.iter().step_by(2) {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in players.iter().step_by(2) {
+        h.ack(who);
+    }
+    for (who, origin) in players.iter().zip(origins) {
         assert_eq!(h.map_of(who), Some(STORMWIND));
         assert!(close(
             wow(h.app.world().get::<Position>(who.player).unwrap()),

@@ -186,11 +186,10 @@ fn update_match(
     }
     if matched.instance.phase == BgPhase::InProgress {
         for score in &mut matched.scoreboard {
-            if !arena
-                .snapshot
-                .units
-                .iter()
-                .any(|unit| unit.character_id == score.character_id && unit.health > 0)
+            // TC Battleground.cpp:1359 counts combat deaths, not living departures.
+            if actors
+                .get(&score.character_id)
+                .is_some_and(|actor| actor.map == map && actor.unit.health == 0)
             {
                 score.deaths = 1;
             }
