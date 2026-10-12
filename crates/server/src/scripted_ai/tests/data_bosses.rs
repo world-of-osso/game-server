@@ -2,8 +2,20 @@
 use super::*;
 
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
+    bound_boss_with_catalog(entry, map_id, bit, None)
+}
+
+fn bound_boss_with_catalog(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    catalog: Option<bossmod::Catalog>,
+) -> (Harness, Entity, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
+    if let Some(catalog) = catalog {
+        app.insert_resource(catalog);
+    }
     let path = world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
@@ -39,21 +51,10 @@ fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
             }
         }
     }
-    let mut spell_ids = vec![133];
-    if let Some(rows) = scripts.0.get(&entry) {
-        spell_ids.extend(
-            rows.iter()
-                .filter(|row| row.action_type == 11)
-                .map(|row| row.action_params[0]),
-        );
-    }
+    // Use production's complete DB2 store, including absence of legacy SAI IDs.
+    // A script's unknown spell must fail normal admission, not panic the fixture.
     let all = crate::spell_cast::test_harness::world_db().unwrap();
-    app.insert_resource(SpellStore::fixture(
-        spell_ids
-            .iter()
-            .map(|id| all.store.get(*id).unwrap().clone())
-            .collect(),
-    ));
+    app.insert_resource(all.store.clone());
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
@@ -126,35 +127,117 @@ fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
-fn boss_timeline_data_bound_skum_uses_its_authored_smartai_deadline() {
-    use shared::protocol::EncounterTimelineEvent;
+fn boss_timeline_data_bound_skum_has_no_smartai_alert_fallback() {
     let (mut h, boss, _) = bound_boss(3674, 43, 4);
     h.engage(boss);
-    h.advance(0.1);
-    let timer = h
-        .inbox(0)
-        .timeline
-        .iter()
-        .find_map(|event| match event {
-            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
-                timers.iter().find(|timer| timer.spell_id == 6254)
-            }
-            _ => None,
-        })
-        .expect("data-bound Skum selected3–4s Knockdown timer")
-        .clone();
-    assert!((3000..=4000).contains(&timer.remaining_ms));
+    h.advance(5.0);
+    assert!(h.inbox(0).timeline.is_empty());
     assert!(h.inbox(1).timeline.is_empty());
-    h.advance(timer.remaining_ms as f32 / 1000.0 - 0.25);
     assert!(
-        !h.inbox(0)
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(6254)),
+        "Skum combat casts must remain independent of alert authority"
+    );
+}
+
+#[test]
+fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_warnings() {
+    use shared::protocol::{EncounterSeverity, EncounterTimelineEvent};
+    for (entry, encounter, bit, spell, initial, repeat, severity) in [
+        (13280, 344, 1, 22419, 6900, 6100, EncounterSeverity::High),
+        (11490, 343, 0, 22478, 3700, 8500, EncounterSeverity::Medium),
+    ] {
+        let catalog_db = Connection::open_in_memory().unwrap();
+        catalog_db
+            .execute_batch(include_str!("bossmod_diremaul.sql"))
+            .unwrap();
+        let catalog = bossmod::load_catalog(&catalog_db).unwrap();
+        let (mut h, boss, _) = bound_boss_with_catalog(entry, 429, bit, Some(catalog));
+        h.engage(boss);
+        h.advance(0.1);
+        assert_eq!(h.inbox(0).starts[0].encounter_id, encounter);
+        let initial_timer = h
+            .inbox(0)
             .timeline
             .iter()
-            .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
-    );
-    h.advance(0.3);
-    assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
-        EncounterTimelineEvent::Cast { caster, spell_id:6254, .. } if *caster == boss.to_bits())));
+            .find_map(|event| match event {
+                EncounterTimelineEvent::Timers { timers, .. } => {
+                    timers.iter().find(|timer| timer.spell_id == spell)
+                }
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(initial_timer.duration_ms, initial);
+        assert!(
+            initial_timer.remaining_ms <= initial && initial_timer.remaining_ms >= initial - 100
+        );
+        assert!(
+            !h.inbox(0)
+                .timeline
+                .iter()
+                .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+        );
+        let mut admitted_casts = Vec::new();
+        for _ in 0..320 {
+            h.advance(0.05);
+            if let Some(cast) = h.app.world().get::<CastState>(boss) {
+                if admitted_casts.last() != Some(&cast.spell_id) {
+                    admitted_casts.push(cast.spell_id);
+                }
+            }
+        }
+        if entry == 11490 {
+            assert!(
+                admitted_casts.contains(&spell),
+                "Zevrim's real SmartAI cast must enter CastState before its start warning"
+            );
+        }
+        assert!(
+            h.inbox(0).log.iter().any(|event| matches!(
+                event.kind,
+                CombatLogKind::Damage | CombatLogKind::AuraApplied
+            ) && event.spell_id == Some(spell)),
+            "entry {entry} spell {spell}: actual spell effect must resolve, not an injected warning"
+        );
+        assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
+            EncounterTimelineEvent::Cast { caster, spell_id, severity:alert_severity, warning_text }
+            if *caster == boss.to_bits() && *spell_id == spell && *alert_severity == severity
+                && warning_text == if entry == 11490 { "Casting Intense Pain" } else { "Riptide" })));
+        assert!(
+            h.inbox(0).timeline.iter().any(|event| match event {
+                EncounterTimelineEvent::Timers { timers, .. } => timers
+                    .iter()
+                    .any(|timer| timer.spell_id == spell && timer.duration_ms == repeat),
+                _ => false,
+            }),
+            "cast must reset to addon delay, not the SmartAI repeat range"
+        );
+        assert!(
+            h.inbox(1).timeline.is_empty(),
+            "other copy cannot receive alerts"
+        );
+        crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+        h.advance(0.1);
+        assert!(!h.inbox(0).ends.last().unwrap().success);
+        let warnings_before = h
+            .inbox(0)
+            .timeline
+            .iter()
+            .filter(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+            .count();
+        h.advance(5.0);
+        assert_eq!(
+            h.inbox(0)
+                .timeline
+                .iter()
+                .filter(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+                .count(),
+            warnings_before,
+            "evade must retire the alert schedule"
+        );
+    }
 }
 
 #[test]
