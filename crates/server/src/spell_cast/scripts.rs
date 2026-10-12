@@ -49,7 +49,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
 
 use bevy::prelude::*;
 
-use super::targets::{Relation, relation_matches};
+use super::targets::{self, Relation, relation_matches};
 use crate::auras::mount::{FLIGHT_STYLE_STEADY, FlightStyle, set_flight_style};
 use crate::spell_info::SpellInfo;
 
@@ -404,7 +404,13 @@ fn track_switch_plan(
 ) -> super::TargetPlan {
     let map = world.get::<crate::maps::InMap>(caster).copied();
     let origin = targets::position(world, caster).expect("validated caster position");
-    let range = spell.range.expect("source97372 range6").max_friendly;
+    let range = spell
+        .misc
+        .as_ref()
+        .expect("source97372 misc")
+        .range
+        .expect("source97372 range6")
+        .max_friendly;
     let mut query = world.query::<(
         Entity,
         &shared::components::Npc,
