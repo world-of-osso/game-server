@@ -275,6 +275,68 @@ impl Harness {
     }
 }
 
+#[test]
+fn crafting_broker_opens_customer_service_and_revalidates_range() {
+    let mut h = harness(HUMAN_TEMPLATE).unwrap();
+    let (name, flags, faction): (String, u64, u32) = h
+        .conn
+        .query_row(
+            "SELECT name,npcflag,faction FROM tdb_creature_template WHERE entry=215258",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    let broker = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 215258,
+                name,
+            },
+            NpcFlags(flags),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitFactionTemplate(faction),
+        ))
+        .id();
+    h.interact(broker);
+    let events = h.take::<InteractionOpened>();
+    let InteractionKind::Gossip(menu) = &events[0].kind else {
+        panic!("broker must open authored gossip")
+    };
+    assert_eq!(menu.menu_id, 30243);
+    assert_eq!(menu.options[0].text, "I'd like to create a crafting order.");
+    h.select(broker, menu.options[0].option_id);
+    assert_eq!(
+        h.take::<InteractionOpened>(),
+        vec![opened(
+            broker,
+            InteractionKind::Role(NpcRole::CraftingOrders)
+        )]
+    );
+    assert!(find_interactable_crafting_broker(h.app.world(), h.player, broker).is_ok());
+    h.place_player(broker, INTERACTION_DISTANCE + 1.0);
+    assert_eq!(
+        find_interactable_crafting_broker(h.app.world(), h.player, broker).unwrap_err(),
+        InteractionError::TooFarAway
+    );
+    h.advance();
+    assert_eq!(
+        h.take::<InteractionClosed>(),
+        vec![InteractionClosed {
+            npc: broker.to_bits()
+        }]
+    );
+}
+
 fn opened(npc: Entity, kind: InteractionKind) -> InteractionOpened {
     InteractionOpened {
         npc: npc.to_bits(),
