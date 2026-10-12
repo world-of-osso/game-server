@@ -369,6 +369,17 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
     );
     assert_eq!(
         app.world()
+            .get::<PlayerCurrencies>(client.player)
+            .unwrap()
+            .0
+            .get(4),
+        1000
+    );
+    // The committed credit crosses the currency system's queued-message boundary.
+    app.update();
+    app.update();
+    assert_eq!(
+        app.world()
             .get::<PlayerAchievementState>(client.player)
             .unwrap()
             .criteria_progress
