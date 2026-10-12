@@ -208,13 +208,16 @@ fn process_level_achievement_updates(world: &mut World) {
     }
 }
 
-/// TC a352b1fa CriteriaHandler.cpp:601-604 reads GetBaseSkillValue;
-/// Changed includes newly loaded skill lines, so login restores historical ranks.
+/// TC a352b1fa CriteriaHandler.cpp:601-604 reads GetBaseSkillValue and 623-626
+/// GetPureMaxSkillValue; Changed includes newly loaded skill lines, so login restores them.
 fn process_skill_achievement_updates(world: &mut World) {
     let updates: Vec<_> = world.query_filtered::<(Entity, &crate::profession::PlayerProfessions), Changed<crate::profession::PlayerProfessions>>()
         .iter(world).flat_map(|(player, professions)| professions.lines.iter()
             .filter(|line| line.rank != 0)
-            .map(move |line| (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)))).collect();
+            .flat_map(move |line| [
+                (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)),
+                (player, CriteriaEvent::SkillMaxRank(line.skill_line, line.max_rank)),
+            ])).collect();
     for (player, event) in updates {
         record_criteria_event(world, player, event);
     }

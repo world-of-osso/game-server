@@ -28,6 +28,8 @@ pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
     SkillRank(u32, u16),
+    /// TC GetPureMaxSkillValue of a known skill line.
+    SkillMaxRank(u32, u16),
     CurrencyGained(u32, u32),
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
@@ -79,6 +81,7 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
             Self::SkillRank(_, _) => 7,
+            Self::SkillMaxRank(_, _) => 40,
             Self::CurrencyGained(_, _) => 12,
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
@@ -146,6 +149,7 @@ impl CriteriaEvent {
                 .mythic
                 .is_some_and(|requirements| requirements.matches(completion)),
             Self::SkillRank(asset, _)
+            | Self::SkillMaxRank(asset, _)
             | Self::CurrencyGained(asset, _)
             | Self::ReputationGained(asset, _)
             | Self::AcquireItem(asset, _)
@@ -521,6 +525,7 @@ impl AchievementCatalog {
                 | CriteriaEvent::RewardedQuestCount(0)
                 | CriteriaEvent::RewardedQuestsInZone(_, 0)
                 | CriteriaEvent::BankTabsOwned(_, 0)
+                | CriteriaEvent::SkillMaxRank(_, 0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -528,7 +533,9 @@ impl AchievementCatalog {
         let counter = state.criteria_progress.entry(id).or_default();
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
-            CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
+            CriteriaEvent::SkillRank(_, rank) | CriteriaEvent::SkillMaxRank(_, rank) => {
+                u64::from(rank)
+            }
             CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
@@ -627,7 +634,17 @@ impl AchievementCatalog {
         match tree.operator {
             TreeOperator::Single => {
                 // Authored amount0 still requires one real credit (e.g. LearnOrKnowSpell).
-                let required = tree.amount.max(1);
+                // TC CriteriaHandler.cpp:1278-1279: AchieveSkillStep amounts are 75-point steps.
+                let step = if self
+                    .criteria
+                    .get(&tree.criteria_id)
+                    .is_some_and(|row| row.kind == 40)
+                {
+                    75
+                } else {
+                    1
+                };
+                let required = tree.amount.max(1) * step;
                 TreeProgress {
                     current: counter.unwrap_or(0).min(required),
                     required,
@@ -836,7 +853,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
                         || (matches!(kind, 9 | 14 | 62 | 67 | 74 | 107 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
-                        || (matches!(kind, 7 | 75 | 112) && row.get::<_, bool>(9)?)
+                        || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
                                 .pet_creatures
