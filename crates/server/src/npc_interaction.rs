@@ -260,7 +260,8 @@ impl InteractionWorld<'_, '_> {
             shared::protocol::GAMEOBJECT_TYPE_HOUSING_PLOT => ObjectUse::HousingUiLink,
             _ if info.is_battleground_flag()
                 || info.is_battleground_orb()
-                || info.is_battleground_capture_point() =>
+                || info.is_battleground_capture_point()
+                || info.is_battleground_banner() =>
             {
                 ObjectUse::BattlegroundFlag
             }
