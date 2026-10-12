@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Golden partial TC combat](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): explicit lead timing authorization separates exact pinned TC combat events from unavailable Retail12.1 timeline inputs; stale alerts rejected, friendly intro remains closed, InitializeAI/FAIL/30s evade lifecycle ported. Moving Gold stop, authenticated model geometry and last-definition-wins Retail boss-mod extraction have focused proof. Full current union gate/native/remaining mechanics pending; no complete boss claimed.
+
 - 2026-10-12 — [Kings' Rest source admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): Golden primary-only SQL preparation from pinned instance/header/script and local journal/TDB; no companion credit or canonical mutation. Missing emerge/intro pipeline and mutable-damage ordering remain named gaps, not a whole-boss port.
 
 - 2026-10-12 — [Murder Row mirror callbacks](systems/boss-scripts.md#murder-row-continuation-2026-10-12): source aura23 callback, random destination offset and wild creature-spawn lifecycle implemented after the inherited mirror test reproduced missing summons. Infusion remains a named source gap; no full-encounter or native acceptance claimed.
