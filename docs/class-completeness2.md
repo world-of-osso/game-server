@@ -126,6 +126,8 @@ CharacterStats retains raw mastery points independently of mastery percent. Attr
 
 At `a5de3082` / shared`00d33e7`, summon controls4/4, adjacent stats/itemstats21/21, AoE5/5, Chrono6/6 and Growth/Lingering7/7 pass warning-free. Initial missing schema fields were compile failures, not behavioral RED. Logs: slot-local `data/diagnostics/class-completeness4-2026-10-12/summon-damage-integrated-controls4.log` and `summon-adjacent-*.log`. No new live claim. Census at `a5de3082` / shared`00d33e7` records all7827 memberships:2897 working/4748 partial/182 broken. Eight memberships move to working;429 repairs also help roots that retain other gaps. The182 broken remain170 missing imported rows and12 Mage destinations; none were fabricated or removed.
 
+Post-mainline fixture correction: `7892dbac` records a native blocked guardian swing13 versus the old unconditional18 assertion. Combat code did not change; +100 hit chance never excluded creature dodge/parry/block/crit. `d6ead749` validates32 actual swing receipts against their recorded outcome and native owner multiplier, and requires damaging hits rather than accepting avoidance-only evidence. Summon4/4 passes against shared`80bec38`; production combat/RNG is unchanged. Logs: `integration-guardian-{diagnostic,controls}.log`.
+
 ## Control of the Dream — batch19
 
 Native434249's s1 caps unused-ready credit at15 seconds. The next cooldown of the named Druid major abilities subtracts that real elapsed time; active cooldown time does not count. Charge abilities count only time at full charges, using exact natural completion timestamps or the actual restoration timestamp. The credit shortens the next charge deadline, not the nominal rate or every subsequent queued recharge.
@@ -218,6 +220,14 @@ Pinned TC a352b1fa WorldObject::ModSpellDuration (Object.cpp1725–1789) applies
 Oppressing Roar372048's17 authored +50 fields remain a named partial gap: pinned `min(50,0)=0` cannot implement a positive-only duration extension. Positive232 amounts still participate in the pinned mixed sum; no positive-extension or sign rule is invented. Imported287297/289186 use mechanic selector1825, which cannot fit the pinned64-bit mask; they stay explicitly unsupported without modulo/bitmask reinterpretation. Neither occurs in the current class closure. Source analysis certifies only nonpositive valid232 fields and valid234 fields; runtime warning receipts preserve the gaps.
 
 Adjacent Growth/Lingering7, Polymorph13, moving-cast8 and linked-aura7 pass. Logs: `mechanic-duration-{red,green,controls}.log`, `mechanic-duration-adjacent-*.log`. This proves server state/replication-component output, not new client/live reception. Duration-by-dispel, full diminishing returns, legal talent combinations and whole Oppressing Roar remain outside this proof. Batch27 at `5e015838` records all7827 memberships:3000 working/4645 partial/182 broken. Seventeen memberships become working; all three Oppressing Roar memberships retain a232 source gaps and runtime warnings.
+
+## Mainline integration — 2026-10-12
+
+Server `40f54418` integrates `c9062b6e`; engine `a2b4c01e6` integrates `4f71f6142`; protocol advances to `80bec38`. Only wiki-index conflicts required resolution; both sides were preserved with the prescribed union tool. Cargo dependency/lock content matches mainline. Active leased slots remain retained for the open goal.
+
+At server `d6ead749`/shared`80bec38`,129 targeted server cases pass, including corrected native guardian outcomes. The first `warlock_pet_tests` selector ran zero tests and is not proof; qualified `pet_control::warlock_tests` proves nine lifecycle cases. Server cargo check and workspace fmt pass. Engine core/appearance seven matching cases pass, extension cargo check runs through the maintained depot native command/locks, and changed engine Rust files pass rustfmt check. No new live/client proof or full suite was run. Per-command logs: `integration-oct12-*`, `integration2-oct12-*`, `integration-warlock-qualified.log`, `integration-server-{check,fmt}.log`, `integration-engine-{core-full,check,rustfmt}.log`.
+
+Current-source post-integration census remains pending; prior3000/4645/182 receipts retain their exact pre-integration revision. The full spell/talent goal is still open.
 
 ## Retained boundaries
 
