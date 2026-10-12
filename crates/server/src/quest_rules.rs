@@ -151,6 +151,13 @@ fn chain_ok(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
 }
 
 fn reward_locked(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
+    if quest.quest_info_modifiers & 0x100 != 0 {
+        return db.world_quest_windows.get(&quest.id).is_none_or(|window| {
+            log.completed_at
+                .get(&quest.id)
+                .is_some_and(|&time| time >= window.starts_at)
+        });
+    }
     if !log.is_rewarded(quest.id) || quest.is_repeatable() {
         return false;
     }
