@@ -12,6 +12,7 @@ import retail_content
 
 
 def add_class_summon_templates(conn):
+    retail_content.create_retail_map_table(conn)
     retail_content.create_difficulty_table(conn)
     conn.create_function("health_expansion", 1, retail_content.health_expansion, deterministic=True)
     before = {row[0] for row in conn.execute("SELECT entry FROM content_creature_template")}
