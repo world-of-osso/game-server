@@ -76,15 +76,15 @@ fn mount_journal_auth_entry_after_update_sync_loads_account_before_publish() {
     h.advance(4);
     h.app.insert_resource(LateEntry(connection));
     h.app
-        .add_systems(Update, enter_after_mount_update.after(sync_accounts));
+        .add_systems(Update, enter_after_mount_update.after(update_mount_journal));
     h.advance(1);
-    assert!(h.app.world().get::<AccountMounts>(player).is_some());
-    // HostClient delivers in Last of this frame and clears next frame's Last.
+    // HostClient delivers in Last of each frame and clears next frame's Last.
     let mut updates = drain::<MountJournalUpdate>(&mut h.app, connection);
     for _ in 0..4 {
         h.advance(1);
         updates.extend(drain::<MountJournalUpdate>(&mut h.app, connection));
     }
+    assert!(h.app.world().get::<AccountMounts>(player).is_some());
     assert!(
         updates
             .iter()
