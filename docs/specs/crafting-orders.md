@@ -2,7 +2,7 @@
 
 Server lifecycle in `crates/server/src/crafting_orders/`, using imported Retail CraftingOrder rows and the existing effect24 cast pipeline. [Implementation and provenance](../wiki/systems/crafting-orders.md).
 
-Order catalog/filter skill_line uses authored SkillLineAbility.SkillupSkillLineID when nonzero, otherwise SkillLine, matching the client's selected profession tier.
+Order catalog/filter skill_line uses authored SkillLineAbility.SkillupSkillLineID when nonzero, otherwise SkillLine, matching the client's selected profession tier. Query skill_line0 disables the profession filter for both source recipe catalog and order rows; kind and customer/guild/personal identity filtering remain authoritative.
 
 ## Customer service integration
 

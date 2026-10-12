@@ -393,8 +393,15 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
         .unwrap()
         .spells
         .clear();
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(h.player)
+        .unwrap()
+        .lines
+        .clear();
+    // Customer broker asks for all professions without requiring a learned skill.
     h.send::<Request, ProfessionChannel>(Request::Query {
-        skill_line: 2540,
+        skill_line: 0,
         kind: Kind::Public,
         mine: true,
     });
@@ -481,6 +488,15 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
     let order = reply.snapshot.unwrap().orders.pop().unwrap();
     assert!(order.can_cancel);
     assert!(!order.can_claim);
+    h.send::<Request, ProfessionChannel>(Request::Query {
+        skill_line: 0,
+        kind: Kind::Public,
+        mine: true,
+    });
+    let snapshot = h.take::<Reply>().pop().unwrap().snapshot.unwrap();
+    assert_eq!(snapshot.skill_line, 0);
+    assert!(snapshot.orders.iter().any(|row| row.id == order.id));
+    assert!(snapshot.recipes.iter().any(|row| row.spell_id == RECIPE));
     h.send::<Request, ProfessionChannel>(Request::Cancel { order_id: order.id });
     let reply = h.take::<Reply>().pop().unwrap();
     assert!(reply.error.is_none());

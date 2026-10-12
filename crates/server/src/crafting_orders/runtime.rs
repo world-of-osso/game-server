@@ -229,7 +229,7 @@ fn load_view_snapshot(
         .resource::<super::catalog::OrderCatalog>()
         .0
         .values()
-        .filter(|recipe| recipe.skill_line == view.skill)
+        .filter(|recipe| view.skill == 0 || recipe.skill_line == view.skill)
         .map(|recipe| shared::protocol::CraftingOrderRecipeSnapshot {
             spell_id: recipe.spell_id,
             skill_line: recipe.skill_line,
