@@ -17,10 +17,10 @@ struct Actor {
 
 pub(super) fn update_matches(world: &mut World) {
     let now = world.resource::<Time>().elapsed_secs_f64();
-    let mut query = world.query::<(&ClientId, &InMap, &Health, &Player, &Level)>();
+    let mut query = world.query::<(Entity, &ClientId, &InMap, &Health, &Player, &Level)>();
     let actors: BTreeMap<_, _> = query
         .iter(world)
-        .map(|(id, map, health, player, level)| {
+        .map(|(entity, id, map, health, player, level)| {
             (
                 id.0,
                 Actor {
@@ -28,11 +28,12 @@ pub(super) fn update_matches(world: &mut World) {
                     level: level.0,
                     unit: ArenaUnitSnapshot {
                         character_id: id.0,
+                        entity: entity.to_bits(),
                         name: player.name.clone(),
                         class: player.class,
                         team: BgTeam::A,
-                        health: health.current.max(0.0) as u32,
-                        max_health: health.max.max(0.0) as u32,
+                        health: health.current.max(0.0).ceil() as u32,
+                        max_health: health.max.max(0.0).ceil() as u32,
                     },
                 },
             )
