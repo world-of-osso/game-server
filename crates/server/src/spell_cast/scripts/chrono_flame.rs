@@ -35,24 +35,34 @@ fn history_seconds(world: &World, caster: Entity) -> f64 {
 
 /// Retain only this active learner's effective damage/healing, not overheal,
 /// overkill, misses or another actor's events. State dies with the caster entity.
-pub(crate) fn record_health_change(world: &mut World, event: &CombatLogEvent) {
+fn parse_health_change(event: &CombatLogEvent, at: f64) -> Option<(Entity, HealthChange)> {
     let healing = match event.kind {
         CombatLogKind::Damage => false,
         CombatLogKind::Heal => true,
-        _ => return,
+        _ => return None,
     };
-    let (Some(actor), Some(target)) = (event.source.and_then(Entity::try_from_bits), event.target)
-    else {
+    let actor = event.source.and_then(Entity::try_from_bits)?;
+    let target = event.target?;
+    let amount = (event.amount - event.overflow).max(0) as f32;
+    (amount > 0.0).then_some((
+        actor,
+        HealthChange {
+            target,
+            healing,
+            at,
+            amount,
+        },
+    ))
+}
+
+pub(crate) fn record_health_change(world: &mut World, event: &CombatLogEvent) {
+    let at = crate::spell_cast::now(world);
+    let Some((actor, change)) = parse_health_change(event, at) else {
         return;
     };
     if !crate::auras::has_aura(world, actor, PASSIVE) {
         return;
     }
-    let amount = (event.amount - event.overflow).max(0) as f32;
-    if amount == 0.0 {
-        return;
-    }
-    let at = crate::spell_cast::now(world);
     let cutoff = at - history_seconds(world, actor);
     if world.get::<RecentHealthChanges>(actor).is_none() {
         world
@@ -65,12 +75,7 @@ pub(crate) fn record_health_change(world: &mut World, event: &CombatLogEvent) {
     while history.0.front().is_some_and(|entry| entry.at < cutoff) {
         history.0.pop_front();
     }
-    history.0.push_back(HealthChange {
-        target,
-        healing,
-        at,
-        amount,
-    });
+    history.0.push_back(change);
 }
 
 fn recent_amount(world: &World, caster: Entity, target: Entity, healing: bool) -> f32 {
@@ -136,23 +141,14 @@ pub(super) fn check_children(world: &World) -> Result<(), CastFailure> {
     Ok(())
 }
 
-pub(super) fn repeat_landed_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let healing = crate::spell_cast::targets::relation_matches(
-        world,
-        caster,
-        target,
-        crate::spell_cast::targets::Relation::Ally,
-    );
-    if !crate::auras::has_aura(world, caster, PASSIVE) {
-        return;
-    }
-    // Native Living Flame children can land after the root due to missiles.
-    // Read history from the actual child hit, including that primary hit; Retail
-    // historical inclusion/latency parity is not independently measured.
-    let amount = repeat_amount(world, caster, target, healing);
-    if amount <= 0.0 {
-        return;
-    }
+fn resolve_repeat(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    depth: u8,
+    healing: bool,
+    amount: f32,
+) {
     let id = if healing { ARCANE_HEAL } else { ARCANE_DAMAGE };
     let spell = world
         .resource::<SpellStore>()
@@ -171,4 +167,24 @@ pub(super) fn repeat_landed_flame(world: &mut World, caster: Entity, target: Ent
     } else {
         effects::deal_copied_damage(world, &ctx, target, amount);
     }
+}
+
+pub(super) fn repeat_landed_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let healing = crate::spell_cast::targets::relation_matches(
+        world,
+        caster,
+        target,
+        crate::spell_cast::targets::Relation::Ally,
+    );
+    if !crate::auras::has_aura(world, caster, PASSIVE) {
+        return;
+    }
+    // Native Living Flame children can land after the root due to missiles.
+    // Read history from the actual child hit, including that primary hit; Retail
+    // historical inclusion/latency parity is not independently measured.
+    let amount = repeat_amount(world, caster, target, healing);
+    if amount <= 0.0 {
+        return;
+    }
+    resolve_repeat(world, caster, target, depth, healing, amount);
 }
