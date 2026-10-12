@@ -324,6 +324,34 @@ pub(crate) fn record_toy_ownership(world: &mut World, player: Entity, account: u
     record_criteria_events(world, player, &events);
 }
 
+/// Actual XP-driven level transitions of existing owned pets, never seeded journal levels.
+pub(crate) fn record_pet_level_changes(
+    world: &mut World,
+    player: Entity,
+    before: &shared::pet_battle::PetJournal,
+    after: &shared::pet_battle::PetJournal,
+) {
+    let catalog = world.resource::<crate::battle_pets::PetCatalog>();
+    let events: Vec<_> = after
+        .pets
+        .iter()
+        .filter_map(|pet| {
+            let old = before.get(pet.id)?;
+            let creature = catalog.creature_id(pet.species_id)?;
+            (creature != 0 && pet.level > old.level).then_some((old.level, pet.level))
+        })
+        .flat_map(|(old, new)| {
+            ((old + 1)..=new).flat_map(|level| {
+                [
+                    CriteriaEvent::BattlePetReachedLevel(level),
+                    CriteriaEvent::ActivelyEarnedPetLevel(level),
+                ]
+            })
+        })
+        .collect();
+    record_criteria_events(world, player, &events);
+}
+
 /// Retail CriteriaType157 AccountObtainPetThroughBattle: committed trap reward, not request.
 pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::CaptureBattlePet);

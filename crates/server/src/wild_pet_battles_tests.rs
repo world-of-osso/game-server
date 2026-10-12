@@ -32,7 +32,11 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
     crate::persistence::create_tables(&database);
     let (character_id, _) =
         crate::persistence::create_character(&database, 42, "Petcatcher", 1, 1).unwrap();
-    crate::battle_pets::save_journal(&database, 42, &journal());
+    let mut owned = journal();
+    // Valid level2/near-threshold XP setup; the actual terminal reward raises pet41 to3.
+    owned.pets[0].level = 2;
+    owned.pets[0].xp = shared::pet_battle::xp_to_next_level(2) - 1;
+    crate::battle_pets::save_journal(&database, 42, &owned);
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -104,6 +108,17 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
         ))
         .id();
     app.update();
+    assert!(
+        !app.world()
+            .get::<crate::achievement::PlayerAchievementState>(owner)
+            .unwrap()
+            .account
+            .as_ref()
+            .unwrap()
+            .earned_ids
+            .contains(&7433),
+        "seeded starting level is not XP credit"
+    );
     assert!(
         start_encounter(app.world_mut(), connection, owner, creature.to_bits())
             .unwrap_err()
@@ -222,7 +237,23 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
             .get(&19749),
         Some(&1)
     );
-    assert_eq!(captured.get(41).unwrap().level, 2);
+    assert_eq!(captured.get(41).unwrap().level, 3);
+    let state = app
+        .world()
+        .get::<crate::achievement::PlayerAchievementState>(owner)
+        .unwrap();
+    assert_eq!(state.criteria_progress.get(&20980), Some(&1));
+    assert_eq!(state.criteria_progress.get(&21043), Some(&1));
+    assert!(state.account.as_ref().unwrap().earned_ids.contains(&7433));
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<crate::achievement::PlayerAchievementState>(owner)
+            .unwrap()
+            .criteria_progress
+            .get(&20980),
+        Some(&1)
+    );
     drop(app);
     let database = redb::Database::open(&path).unwrap();
     assert_eq!(crate::battle_pets::load_journal(&database, 42), captured);

@@ -35,6 +35,8 @@ pub(crate) enum CriteriaEvent {
     OwnToys(u32),
     WinPetBattle,
     CaptureBattlePet,
+    BattlePetReachedLevel(u8),
+    ActivelyEarnedPetLevel(u8),
     Login,
     ExploreAreaBit(u32),
     TriggerGameEvent(u32),
@@ -69,6 +71,8 @@ impl CriteriaEvent {
             Self::OwnToys(_) => 186,
             Self::WinPetBattle => 158,
             Self::CaptureBattlePet => 157,
+            Self::BattlePetReachedLevel(_) => 160,
+            Self::ActivelyEarnedPetLevel(_) => 162,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
             Self::TriggerGameEvent(_) => 73,
@@ -91,6 +95,9 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
+                u32::from(level) == criteria.asset
+            }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::CompleteDailyQuest
             | Self::OwnUniquePets(_)
@@ -463,6 +470,8 @@ impl AchievementCatalog {
                             | 130
                             | 157
                             | 158
+                            | 160
+                            | 162
                             | 165
                             | 216
                     )
@@ -785,6 +794,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
+                        || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
                         || (matches!(kind, 14 | 74 | 130 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)
                         || (kind == 96
