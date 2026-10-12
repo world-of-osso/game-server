@@ -6,6 +6,40 @@ use shared::protocol::CurrencyStateUpdate;
 use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
 
 #[test]
+fn arena_skirmish_pairing_requires_four_or_six_unique_eligible_players() {
+    use shared::protocol::ArenaQueueMode;
+    let mut database = rusqlite::Connection::open_in_memory().unwrap();
+    database.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
+    let catalog = arena::Catalog::load(&mut database).unwrap();
+    for (mode, count) in [
+        (ArenaQueueMode::Skirmish2v2, 4),
+        (ArenaQueueMode::Skirmish3v3, 6),
+    ] {
+        let mut state = PvpServerState::default();
+        let mut players = vec![PlayerPvpState::default(); count];
+        assert!(arena::queue_player(&mut players[0], &mut state, &catalog, 1, 9, mode).is_err());
+        for (index, player) in players.iter_mut().enumerate() {
+            arena::queue_player(player, &mut state, &catalog, index as u64 + 1, 90, mode).unwrap();
+            if index + 1 < count {
+                assert!(arena::form_match(&mut state, &catalog, mode).is_none());
+            }
+        }
+        assert!(arena::queue_player(&mut players[0], &mut state, &catalog, 1, 90, mode).is_err());
+        let id = arena::form_match(&mut state, &catalog, mode).unwrap();
+        let matched = &state.battleground_matches[&id];
+        assert_eq!(matched.instance.team_a_players.len(), count / 2);
+        assert_eq!(matched.instance.team_b_players.len(), count / 2);
+        assert!(matched.accepted.is_empty());
+        assert_eq!(
+            matched.instance.phase,
+            shared::battleground::BgPhase::Waiting
+        );
+        assert_eq!(matched.arena.as_ref().unwrap().source.map_id, 572);
+        assert!(arena::form_match(&mut state, &catalog, mode).is_none());
+    }
+}
+
+#[test]
 fn queue_for_battleground_sets_queue_state() {
     let mut player_state = PlayerPvpState::default();
     let mut state = PvpServerState::default();
@@ -106,6 +140,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             flags: Default::default(),
             scoreboard: Vec::new(),
             flag_positions: [None, None],
+            arena: None,
         },
     );
     respond_to_battleground_invitation(&mut state, 17, 1, true).unwrap();

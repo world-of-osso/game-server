@@ -91,6 +91,7 @@ fn build_queue_snapshot(queue: &PlayerPvpQueue) -> PvpQueueSnapshot {
                 battleground_id: *battleground_id,
                 name: name.clone(),
             },
+            PlayerPvpQueue::Arena { mode } => PvpQueueKindSnapshot::Arena { mode: *mode },
             PlayerPvpQueue::RatedBracket { bracket } => PvpQueueKindSnapshot::RatedBracket {
                 bracket: bracket.clone(),
             },
@@ -101,6 +102,7 @@ fn build_queue_snapshot(queue: &PlayerPvpQueue) -> PvpQueueSnapshot {
 pub(super) fn queue_label(queue: &PlayerPvpQueue) -> String {
     match queue {
         PlayerPvpQueue::Battleground { name, .. } => name.clone(),
+        PlayerPvpQueue::Arena { mode } => format!("{mode:?}"),
         PlayerPvpQueue::RatedBracket { bracket } => bracket_label(bracket).into(),
     }
 }

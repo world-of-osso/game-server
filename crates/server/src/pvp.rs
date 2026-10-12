@@ -24,6 +24,9 @@ pub(crate) mod pvp_talents;
 #[path = "pvp_war_mode.rs"]
 mod pvp_war_mode;
 
+#[path = "pvp_arena.rs"]
+pub(crate) mod arena;
+
 #[path = "pvp_entry.rs"]
 mod pvp_entry;
 #[path = "pvp_invites.rs"]
@@ -78,8 +81,16 @@ impl Default for PlayerPvpProgress {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlayerPvpQueue {
-    Battleground { battleground_id: u32, name: String },
-    RatedBracket { bracket: PvpBracketSnapshot },
+    Battleground {
+        battleground_id: u32,
+        name: String,
+    },
+    RatedBracket {
+        bracket: PvpBracketSnapshot,
+    },
+    Arena {
+        mode: shared::protocol::ArenaQueueMode,
+    },
 }
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default)]
@@ -124,12 +135,14 @@ struct InvitedBattleground {
     flags: shared::battleground::FlagObjective,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     flag_positions: [Option<Vec3>; 2],
+    arena: Option<arena::MatchState>,
 }
 
 #[derive(Resource, Default)]
 struct PvpServerState {
     battleground_queue: BgQueue,
     rated_queues: Vec<u64>,
+    arena_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<(u64, u8)>>,
     battleground_matches: BTreeMap<u64, InvitedBattleground>,
     next_battleground_match: u64,
 }
@@ -149,6 +162,7 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             flags: Default::default(),
             scoreboard: Vec::new(),
             flag_positions: [None, None],
+            arena: None,
         },
     );
     Some(match_id)
@@ -196,6 +210,11 @@ pub struct PvpPlugin;
 impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
+        app.init_resource::<arena::Catalog>();
+        app.add_systems(
+            Update,
+            arena::receive_queue_requests.before(process_battleground_invitation_responses),
+        );
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
@@ -515,6 +534,11 @@ fn dequeue_player(
         PlayerPvpQueue::RatedBracket { .. } => {
             state.rated_queues.retain(|entry| *entry != character_id);
         }
+        PlayerPvpQueue::Arena { .. } => {
+            for queue in state.arena_queues.values_mut() {
+                queue.retain(|(id, _)| *id != character_id);
+            }
+        }
     }
     Ok(format!("left {}", queue_label(&queue)))
 }
@@ -566,6 +590,7 @@ fn resolve_battleground_matches(
                 outcome: invitation.instance.outcome,
                 players: invitation.scoreboard.clone(),
                 honor_reward: None,
+                arena: None,
             });
             send_pvp_update(
                 conn_entity,
