@@ -8,6 +8,7 @@ pub(crate) struct Rewards {
     pub xp_multiplier: f32,
     pub currencies: Vec<WorldQuestNumericReward>,
     pub reputation: Vec<WorldQuestNumericReward>,
+    pub reputation_caps: HashMap<u32, u8>,
 }
 
 pub(crate) fn load(conn: &rusqlite::Connection, quests: &mut QuestDb) -> rusqlite::Result<()> {
@@ -46,7 +47,7 @@ fn load_numeric_rewards(
     rewards: &mut HashMap<u32, Rewards>,
 ) -> rusqlite::Result<()> {
     let mut statement =
-        conn.prepare("SELECT quest_id,kind,reward_id,amount FROM content_world_quest_reward")?;
+        conn.prepare("SELECT quest_id,kind,reward_id,amount,cap FROM content_world_quest_reward")?;
     for row in statement.query_map([], |r| {
         Ok((
             r.get::<_, u32>(0)?,
@@ -55,17 +56,64 @@ fn load_numeric_rewards(
                 id: r.get(2)?,
                 amount: r.get(3)?,
             },
+            r.get::<_, u8>(4)?,
         ))
     })? {
-        let (id, kind, reward) = row?;
+        let (id, kind, reward, cap) = row?;
+        if cap > 7 {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
         let data = rewards.get_mut(&id).ok_or(rusqlite::Error::InvalidQuery)?;
         match kind.as_str() {
             "currency" => data.currencies.push(reward),
-            "reputation" => data.reputation.push(reward),
+            "reputation" => {
+                data.reputation_caps.insert(reward.id, cap);
+                data.reputation.push(reward);
+            }
             _ => return Err(rusqlite::Error::InvalidQuery),
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+#[test]
+fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losses() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest_reward(quest_id INTEGER,kind TEXT,reward_id INTEGER,amount INTEGER,cap INTEGER); INSERT INTO content_world_quest_reward VALUES(45068,'reputation',1090,75,7)").unwrap();
+    let mut rewards = HashMap::from([(45068, Rewards::default())]);
+    load_numeric_rewards(&conn, &mut rewards).unwrap();
+    let db = crate::persistence::temp_database();
+    let registry = shared::reputation::default_faction_registry();
+    let mut reputation = shared::reputation::CharacterReputation::new_for_race(&registry, 1);
+    reputation.modify_rep(1090, 51000, shared::reputation::RepGainSource::QuestTurnIn);
+    assert_eq!(
+        reputation.get_standing(1090),
+        shared::reputation::Standing::Exalted
+    );
+    crate::persistence::save_reputation(&db, 31, &reputation);
+    let settlement = load_settlement(&db, 31, 1, Some(&rewards[&45068]))
+        .unwrap()
+        .unwrap();
+    let txn = db.begin_write().unwrap();
+    settlement.persist_in(&txn, 31);
+    txn.commit().unwrap();
+    let persisted =
+        crate::persistence::load_reputation(&db, 31, || panic!("persisted reputation required"));
+    assert_eq!(
+        persisted.get_value(1090),
+        63000,
+        "TDB cap7 blocks gains while already Exalted"
+    );
+    rewards.get_mut(&45068).unwrap().reputation[0].amount = -75;
+    let settlement = load_settlement(&db, 31, 1, Some(&rewards[&45068]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        settlement.reputation.get_value(1090),
+        62925,
+        "caps never block negative rewards"
+    );
 }
 
 pub(crate) struct Settlement {
@@ -92,6 +140,15 @@ pub(crate) fn load_settlement(
         shared::reputation::CharacterReputation::new_for_race(&registry, race)
     });
     for reward in &rewards.reputation {
+        // Pinned Player.cpp6645: a positive reward stops at its authored standing
+        // cap; zero means unlimited and losses never use the cap.
+        let capped = rewards
+            .reputation_caps
+            .get(&reward.id)
+            .is_some_and(|&cap| cap != 0 && reputation.get_standing(reward.id) as u8 >= cap);
+        if reward.amount > 0 && capped {
+            continue;
+        }
         reputation.modify_rep(
             reward.id,
             reward.amount,
