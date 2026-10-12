@@ -1,6 +1,6 @@
 import sqlite3
 import unittest
-from encounter_cpp_bindings import prepare_bindings, binding_sql
+from encounter_cpp_bindings import GOLDEN_PRIMARY, prepare_bindings, binding_sql
 
 
 class PrimaryActorTests(unittest.TestCase):
@@ -32,6 +32,17 @@ class PrimaryActorTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT map_id,creature_entry,encounter_id,bit FROM raid_encounter_creature ORDER BY map_id').fetchall(),
                          [(409,12118,663,0),(2813,234648,3101,0)])
         self.assertEqual(self.db.execute('SELECT count(*) FROM raid_encounter_creature WHERE creature_entry=234660').fetchone()[0], 0)
+
+    def test_golden_primary_does_not_grant_animated_gold_credit(self):
+        self.db.executescript('''
+            INSERT INTO dungeon_encounter VALUES(2139,1762,0);
+            INSERT INTO tdb_creature_template VALUES(135322,'boss_the_golden_serpent');
+            INSERT INTO tdb_creature_template VALUES(135406,'npc_animated_gold');
+        ''')
+        self.db.executescript(binding_sql(prepare_bindings(self.db, [GOLDEN_PRIMARY])))
+        self.assertEqual(self.db.execute('SELECT creature_entry,encounter_id,bit FROM raid_encounter_creature WHERE map_id=1762').fetchall(), [(135322,2139,0)])
+        self.assertEqual(self.db.execute('SELECT count(*) FROM raid_encounter_creature WHERE creature_entry=135406').fetchone()[0],0)
+        self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(),[(12118,)])
 
     def test_source_identity_drift_refused_before_mutation(self):
         binding = dict(map_id=2813,entry=234648,encounter_id=3101,bit=1,
