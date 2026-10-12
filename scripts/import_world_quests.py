@@ -91,14 +91,14 @@ def insert_templates(conn, quests):
         COALESCE(CAST({difficulty} * q.RewardMoneyMultiplier AS INTEGER),0)
         FROM tdb_quest_template q LEFT JOIN content_tuning_level l ON l.ID=q.ContentTuningID
         LEFT JOIN quest_money_reward m ON m.ID=l.maxlevel WHERE q.ID IN ({quests})""")
-    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_objective (quest_id INTEGER, objective_id INTEGER, ordinal INTEGER, kind INTEGER, object_id INTEGER, amount INTEGER, flags INTEGER, weight REAL, description TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_objective (quest_id INTEGER, objective_id INTEGER, ordinal INTEGER, kind INTEGER, object_id INTEGER, amount INTEGER, flags INTEGER, weight REAL, description TEXT, flags2 INTEGER)')
     conn.execute('DELETE FROM content_world_quest_objective')
-    rows = conn.execute(f'''SELECT QuestID,ID,Type,ObjectID,Amount,Flags,ProgressBarWeight,Description
+    rows = conn.execute(f'''SELECT QuestID,ID,Type,ObjectID,Amount,Flags,ProgressBarWeight,Description,Flags2
         FROM tdb_quest_objectives WHERE QuestID IN ({quests}) ORDER BY QuestID,"Order",StorageIndex,ID''').fetchall()
     ordinals = defaultdict(int)
-    for quest, objective, kind, object_id, amount, flags, weight, description in rows:
-        conn.execute('INSERT INTO content_world_quest_objective VALUES (?,?,?,?,?,?,?,?,?)',
-                     (quest,objective,ordinals[quest],kind,object_id,amount,flags,weight,description or ''))
+    for quest, objective, kind, object_id, amount, flags, weight, description, flags2 in rows:
+        conn.execute('INSERT INTO content_world_quest_objective VALUES (?,?,?,?,?,?,?,?,?,?)',
+                     (quest,objective,ordinals[quest],kind,object_id,amount,flags,weight,description or '',flags2))
         ordinals[quest] += 1
 
 

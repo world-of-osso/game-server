@@ -252,7 +252,11 @@ pub(crate) fn objective_counts(
         .enumerate()
         .map(|(index, objective)| {
             let current = match objective.kind {
-                ObjectiveKind::Item => bag_count(objective.object_id),
+                ObjectiveKind::Item
+                    if !crate::world_quest_objectives::rule(quest, index).quest_bound_item() =>
+                {
+                    bag_count(objective.object_id)
+                }
                 _ => active.counts.get(index).copied().unwrap_or(0),
             };
             current.min(objective.required)

@@ -9,6 +9,7 @@ const SEQUENCED: u32 = 0x2;
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub(crate) struct ObjectiveRule {
     pub flags: u32,
+    pub flags2: u32,
     pub weight: f32,
 }
 
@@ -20,7 +21,7 @@ pub(crate) fn load(
     if !installed {
         return Ok(());
     }
-    let mut statement=conn.prepare("SELECT o.quest_id,o.kind,o.object_id,o.amount,o.flags,o.weight,o.description,COALESCE(c.name,''),COALESCE(i.name,'') FROM content_world_quest_objective o JOIN content_world_quest q ON q.quest_id=o.quest_id LEFT JOIN tdb_creature_template c ON o.kind=0 AND c.entry=o.object_id LEFT JOIN content_item i ON o.kind=1 AND i.ID=o.object_id ORDER BY o.quest_id,o.ordinal")?;
+    let mut statement=conn.prepare("SELECT o.quest_id,o.kind,o.object_id,o.amount,o.flags,o.flags2,o.weight,o.description,COALESCE(c.name,''),COALESCE(i.name,'') FROM content_world_quest_objective o JOIN content_world_quest q ON q.quest_id=o.quest_id LEFT JOIN tdb_creature_template c ON o.kind=0 AND c.entry=o.object_id LEFT JOIN content_item i ON o.kind=1 AND i.ID=o.object_id ORDER BY o.quest_id,o.ordinal")?;
     let rows = statement.query_map([], |row| {
         Ok((
             row.get::<_, u32>(0)?,
@@ -29,11 +30,12 @@ pub(crate) fn load(
             row.get::<_, u32>(3)?,
             ObjectiveRule {
                 flags: row.get(4)?,
-                weight: row.get(5)?,
+                flags2: row.get(5)?,
+                weight: row.get(6)?,
             },
-            row.get::<_, String>(6)?,
             row.get::<_, String>(7)?,
             row.get::<_, String>(8)?,
+            row.get::<_, String>(9)?,
         ))
     })?;
     for row in rows {
@@ -88,6 +90,9 @@ pub(crate) fn load(
 }
 
 impl ObjectiveRule {
+    pub(crate) fn quest_bound_item(self) -> bool {
+        self.flags2 & 1 != 0
+    }
     pub(crate) fn required(self) -> bool {
         self.flags & (OPTIONAL | CONTRIBUTOR) == 0
     }
