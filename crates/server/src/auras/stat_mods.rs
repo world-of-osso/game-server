@@ -255,6 +255,22 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     (acc.stats, acc.combat)
 }
 
+/// TC a352b1fa SpellAuraEffects.cpp3981 validates one Stats index; negatives are not "all".
+fn add_bonus_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount: f32) {
+    let stat = match index {
+        0 => &mut stats.strength,
+        1 => &mut stats.agility,
+        2 => &mut stats.stamina,
+        3 => &mut stats.intellect,
+        4 => &mut stats.spirit,
+        _ => {
+            warn!("Aura467 spell{spell} has invalid Stats index{index}");
+            return;
+        }
+    };
+    *stat += amount;
+}
+
 fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
     let stacks = aura.stack_multiplier();
     for effect in &aura.effects {
@@ -267,6 +283,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_STAT => add_to_stats(&mut stats.primary_flat, amount, |index| {
                 misc < 0 || misc as usize == index
             }),
+            MOD_STAT_BONUS_PCT => {
+                add_bonus_stat_percent(&mut stats.primary_bonus_pct, aura.spell_id, misc, amount)
+            }
             // MiscValueB is a stat bitmask; 0 is every stat (TrinityCore
             // `HandleModTotalPercentStat`).
             MOD_TOTAL_STAT_PERCENTAGE => {
