@@ -50,7 +50,63 @@ pub(super) fn update_matches(world: &mut World) {
     super::arena_objects::update_gates(world, now);
     super::arena_sight::update_sight(world, now);
     for id in changed {
+        finish_match(world, id);
         super::pvp_objective::send_match_snapshot(world, id);
+    }
+}
+fn finish_match(world: &mut World, id: u64) {
+    let matched = &world.resource::<PvpServerState>().battleground_matches[&id];
+    if matched.instance.phase != BgPhase::Ended {
+        return;
+    }
+    let players: Vec<_> = matched
+        .arena
+        .as_ref()
+        .expect("arena match")
+        .snapshot
+        .units
+        .iter()
+        .map(|unit| Entity::try_from_bits(unit.entity).expect("server arena entity"))
+        .collect();
+    for &player in &players {
+        crate::combat::combat_stop(world, player);
+        crate::spell_cast::cancel_cast(world, player);
+        if world
+            .get::<Health>(player)
+            .is_some_and(|health| health.current <= 0.0)
+        {
+            crate::death::resurrect_player_fully(world, player);
+        }
+    }
+    let health: BTreeMap<_, _> = players
+        .iter()
+        .filter_map(|player| {
+            world.get::<Health>(*player).map(|health| {
+                (
+                    player.to_bits(),
+                    (
+                        health.current.max(0.0).ceil() as u32,
+                        health.max.max(0.0).ceil() as u32,
+                    ),
+                )
+            })
+        })
+        .collect();
+    let mut state = world.resource_mut::<PvpServerState>();
+    for unit in &mut state
+        .battleground_matches
+        .get_mut(&id)
+        .expect("finished arena")
+        .arena
+        .as_mut()
+        .expect("arena")
+        .snapshot
+        .units
+    {
+        if let Some((current, max)) = health.get(&unit.entity) {
+            unit.health = *current;
+            unit.max_health = *max;
+        }
     }
 }
 fn update_match(
