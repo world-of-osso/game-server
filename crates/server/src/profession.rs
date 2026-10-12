@@ -15,6 +15,7 @@
 
 mod data;
 mod gathering;
+pub(crate) mod specializations;
 mod trainer;
 pub(crate) use gathering::GatherProgress;
 
@@ -43,6 +44,8 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use data::ACQUIRE_AUTOMATIC_SKILL_RANK;
 
 pub const EFFECT_CREATE_ITEM: u32 = 24;
+const EFFECT_QUALITY_CRAFT: u32 = 288;
+const EFFECT_RECRAFT: u32 = 297;
 pub const EFFECT_LEARN_SPELL: u32 = 36;
 pub const EFFECT_SKILL_STEP: u32 = 44;
 pub const EFFECT_SKILL: u32 = 118;
@@ -285,7 +288,7 @@ pub struct ProfessionPlugin;
 
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(TrainerPlugin)
+        app.add_plugins((TrainerPlugin, specializations::SpecializationsPlugin))
             .add_systems(Update, receive_craft_requests)
             .add_systems(
                 FixedUpdate,
@@ -381,6 +384,23 @@ pub(crate) fn effect_create_item(
     target: Entity,
 ) {
     let count = effect.base_points.round().max(1.0) as u32;
+    if let Some(result) = crate::crafting_orders::complete_effect(
+        world,
+        ctx.caster,
+        ctx.spell.id,
+        effect.item_type,
+        count,
+    ) {
+        if let Err(error) = result {
+            warn!("Crafting order {} failed: {error}", ctx.spell.id);
+            return;
+        }
+        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 1..=1000);
+        with_learner(world, ctx.caster, |learner, profs| {
+            learner.craft_skill_up(profs, ctx.spell.id, roll)
+        });
+        return;
+    }
     if let Err(error) = store_created_item(world, target, effect.item_type, count) {
         warn!("Spell {}: CREATE_ITEM failed: {error}", ctx.spell.id);
         return;
@@ -466,6 +486,15 @@ fn with_bags<R>(world: &World, player: Entity, apply: impl FnOnce(&Bags) -> R) -
     Some(apply(&bags))
 }
 
+pub(crate) fn new_order_item(
+    world: &World,
+    player: Entity,
+    item_id: u32,
+    count: u32,
+) -> Result<InventoryItemData, String> {
+    with_bags(world, player, |bags| bags.new_item(item_id, count)).ok_or("crafter has no bags")?
+}
+
 fn store_created_item(
     world: &mut World,
     player: Entity,
@@ -496,10 +525,26 @@ pub(crate) fn check_cast_items(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
+    let needs_quality_operation = spell
+        .effects
+        .iter()
+        .any(|effect| matches!(effect.effect, EFFECT_QUALITY_CRAFT | EFFECT_RECRAFT));
+    if needs_quality_operation {
+        return Err(CastFailure::Unsupported(
+            "Quality crafting/recrafting is unavailable: authentic operation evaluator is missing"
+                .into(),
+        ));
+    }
     let Some(data) = world.get_resource::<ProfessionData>() else {
         return Ok(());
     };
-    let reagents = data.reagents(spell.id);
+    let order_reagents = crate::crafting_orders::cast_requirements(world, caster, spell)
+        .transpose()
+        .map_err(CastFailure::Unsupported)?;
+    let order_cast = order_reagents.is_some();
+    let reagents = order_reagents
+        .as_deref()
+        .unwrap_or_else(|| data.reagents(spell.id));
     let tools = data.tools(spell.id);
     let created: Vec<(u32, u32)> = spell
         .effects
@@ -526,7 +571,7 @@ pub(crate) fn check_cast_items(
             check_tools(data, &model, tools, bags)?;
         }
         // The model is only checked, never saved: store the created items in it.
-        for (item, count) in created {
+        for (item, count) in created.into_iter().filter(|_| !order_cast) {
             let item = bags
                 .new_item(item, count)
                 .map_err(CastFailure::Unsupported)?;
@@ -565,6 +610,10 @@ fn check_tools(
 
 /// `Spell::TakeReagents`: remove the spell's reagents from the caster's bags.
 pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // Order reagents are consumed atomically with result/commission delivery at effect24.
+    if crate::crafting_orders::is_order_cast(world, caster, spell.id) {
+        return;
+    }
     let Some(reagents) = world
         .get_resource::<ProfessionData>()
         .map(|data| data.reagents(spell.id).to_vec())

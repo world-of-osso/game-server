@@ -401,7 +401,7 @@ impl AchievementCatalog {
     /// Account counters are rebuilt from durable per-character contributions.
     /// Absolute facts (levels/quests/ranks/exploration/reputation) use max;
     /// event counters (kills/casts/targets/encounters) add across characters.
-    pub(super) fn aggregate(
+    pub(crate) fn aggregate(
         &self,
         contributions: impl Iterator<Item = PlayerAchievementState>,
     ) -> PlayerAchievementState {
@@ -486,9 +486,22 @@ impl AchievementCatalog {
         state: &mut PlayerAchievementState,
         event: CriteriaEvent,
     ) -> bool {
+        self.update_roots_event(std::iter::once(root), state, event)
+    }
+
+    /// Multiple visible activities may share criteria; one actual event counts once.
+    pub(crate) fn update_roots_event(
+        &self,
+        roots: impl Iterator<Item = u32>,
+        state: &mut PlayerAchievementState,
+        event: CriteriaEvent,
+    ) -> bool {
+        let ids: BTreeSet<_> = roots
+            .flat_map(|root| self.criterion_tree_ids(root))
+            .map(|tree_id| self.trees[&tree_id].criteria_id)
+            .collect();
         let mut changed = false;
-        for tree_id in self.criterion_tree_ids(root) {
-            let id = self.trees[&tree_id].criteria_id;
+        for id in ids {
             if self
                 .criteria
                 .get(&id)
