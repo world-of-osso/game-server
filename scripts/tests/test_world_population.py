@@ -84,6 +84,8 @@ class WorldPopulationTest(unittest.TestCase):
             with closing(sqlite3.connect(f"file:{SOURCE}?mode=ro", uri=True)) as source:
                 with closing(sqlite3.connect(path)) as copy:
                     source.backup(copy)
+            with closing(sqlite3.connect(path)) as db:
+                original_count = db.execute("SELECT count(*) FROM content_creature WHERE map=2444").fetchone()[0]
             for destination, maps in [(path, "36"), (Path(directory) / "world.db", "2444")]:
                 result = self.run_import(destination, report, maps)
                 self.assertNotEqual(0, result.returncode)
@@ -94,7 +96,7 @@ class WorldPopulationTest(unittest.TestCase):
             os.link(path, hard)
             self.assertNotEqual(0, self.run_import(hard, report).returncode)
             with closing(sqlite3.connect(path)) as db:
-                self.assertEqual(0, db.execute("SELECT count(*) FROM content_creature WHERE map=2444").fetchone()[0])
+                self.assertEqual(original_count, db.execute("SELECT count(*) FROM content_creature WHERE map=2444").fetchone()[0])
 
 
 if __name__ == "__main__":
