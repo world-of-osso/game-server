@@ -45,6 +45,7 @@ pub(crate) enum CriteriaEvent {
     LearnToy(u32),
     OwnToys(u32),
     WinPetBattle,
+    PetBattleAchievementPoints(u32),
     CaptureBattlePet,
     BattlePetReachedLevel(u8),
     ActivelyEarnedPetLevel(u8),
@@ -97,6 +98,7 @@ impl CriteriaEvent {
             Self::LearnToy(_) => 185,
             Self::OwnToys(_) => 186,
             Self::WinPetBattle => 158,
+            Self::PetBattleAchievementPoints(_) => 81,
             Self::CaptureBattlePet => 157,
             Self::BattlePetReachedLevel(_) => 160,
             Self::ActivelyEarnedPetLevel(_) => 162,
@@ -141,6 +143,7 @@ impl CriteriaEvent {
             | Self::OwnUniquePets(_)
             | Self::OwnToys(_)
             | Self::WinPetBattle
+            | Self::PetBattleAchievementPoints(_)
             | Self::CaptureBattlePet
             | Self::Login
             | Self::CompleteAnyScenario
@@ -363,6 +366,7 @@ impl AchievementCatalog {
     ) -> Vec<AchievementToastSnapshot> {
         let mut toasts = Vec::new();
         loop {
+            self.set_pet_battle_points(state);
             let completed =
                 self.find_completed_definitions(state, completed_map, race, account_scope);
             if completed.is_empty() {
@@ -526,6 +530,7 @@ impl AchievementCatalog {
                 | CriteriaEvent::RewardedQuestsInZone(_, 0)
                 | CriteriaEvent::BankTabsOwned(_, 0)
                 | CriteriaEvent::SkillMaxRank(_, 0)
+                | CriteriaEvent::PetBattleAchievementPoints(0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -547,7 +552,8 @@ impl AchievementCatalog {
             | CriteriaEvent::OwnUniquePets(count)
             | CriteriaEvent::OwnToys(count)
             | CriteriaEvent::RewardedQuestCount(count)
-            | CriteriaEvent::BankTabsOwned(_, count) => u64::from(count),
+            | CriteriaEvent::BankTabsOwned(_, count)
+            | CriteriaEvent::PetBattleAchievementPoints(count) => u64::from(count),
             CriteriaEvent::RewardedQuestsInZone(_, count) => (*counter).max(u64::from(count)),
             CriteriaEvent::MoneyEarnedFromQuesting(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
@@ -557,6 +563,21 @@ impl AchievementCatalog {
             | CriteriaEvent::LootItem(_, amount) => counter.saturating_add(u64::from(amount)),
             _ => counter.saturating_add(1),
         };
+    }
+
+    /// Type81 counts the points of every earned Pet Battles achievement, including those
+    /// this grant pass just earned, so the loop reaches a fixed point.
+    fn set_pet_battle_points(&self, state: &mut PlayerAchievementState) {
+        let points = self.window.pet_battle_points(|id| {
+            state.earned_ids.contains(&id)
+                || state
+                    .account
+                    .as_deref()
+                    .is_some_and(|account| account.earned_ids.contains(&id))
+        });
+        for &id in self.event_criteria.get(&81).into_iter().flatten() {
+            Self::update_counter(state, id, CriteriaEvent::PetBattleAchievementPoints(points));
+        }
     }
 
     pub(super) fn set_account_unique_pet_count(
@@ -852,7 +873,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 62 | 67 | 74 | 107 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 62 | 67 | 74 | 81 | 107 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
