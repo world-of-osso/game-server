@@ -61,6 +61,7 @@ pub(crate) fn load(conn: &rusqlite::Connection) -> rusqlite::Result<MountCatalog
         Ok(MountJournalEntry {
             mount_id: row.get(0)?,
             spell_id: row.get(1)?,
+            teaching_items: Vec::new(),
             name: row.get(2)?,
             description: row.get(3)?,
             source_text: row.get(4)?,
@@ -88,6 +89,12 @@ pub(crate) fn load(conn: &rusqlite::Connection) -> rusqlite::Result<MountCatalog
     for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
         let (item, mount) = row?;
         catalog.learn_items.insert(item, mount);
+        catalog
+            .entries
+            .get_mut(&mount)
+            .expect("authentic teaching mount")
+            .teaching_items
+            .push(item);
     }
     Ok(catalog)
 }
