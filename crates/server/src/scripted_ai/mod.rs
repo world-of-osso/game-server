@@ -441,6 +441,19 @@ impl Ctx<'_> {
         match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
+                if let Some(map) = self.map()
+                    && instance_script::is_active_boss(self.world, map, self.me)
+                {
+                    instance_script::send_to_players(
+                        self.world,
+                        map,
+                        shared::protocol::EncounterTimelineEvent::Cast {
+                            caster: self.me.to_bits(),
+                            spell_id,
+                            severity: shared::protocol::EncounterSeverity::Low,
+                        },
+                    );
+                }
                 true
             }
             Err(failure) => {

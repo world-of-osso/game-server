@@ -201,6 +201,13 @@ impl GroupRegistry {
             .is_some_and(|(_, group)| group.is_raid)
     }
 
+    /// Roster identity, including runtime companions that have no persisted character.
+    pub(crate) fn member_identity(&self, member: CharacterId) -> Option<(&str, u8)> {
+        self.profiles
+            .get(&member)
+            .map(|profile| (profile.name.as_str(), profile.class))
+    }
+
     /// Every member of the character's group (including itself); empty when ungrouped.
     pub fn group_members(&self, member: CharacterId) -> Vec<CharacterId> {
         self.group_of(member)
