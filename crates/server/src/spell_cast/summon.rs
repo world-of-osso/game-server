@@ -357,12 +357,6 @@ fn spawn_summon(
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
     let private_owner = private_summon_owner(world, owner, properties.flags);
-    if properties.flags & ONLY_VISIBLE_TO_SUMMONER != 0 {
-        info!(
-            "private summon entry={} flags={} caster={} private_owner={private_owner:?}",
-            template.entry, properties.flags, owner
-        );
-    }
     let mut entity = world.spawn((
         (
             Position {
