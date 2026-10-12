@@ -106,10 +106,19 @@ fn deephaul_source_starts_flag_and_cart_paths_have_real_walkable_approaches() {
         );
     }
     let flag:Vec3 = db.query_row("SELECT position_x,position_y,position_z FROM tdb_gameobject WHERE map=2656 AND id=422413",[],|row| Ok(Vec3::new(row.get(0)?,row.get(1)?,row.get(2)?))).unwrap();
-    assert!(
-        probe_cart_approach(&mut ground, 2656, flag).is_some(),
-        "flag player approach missing"
-    );
+    let flag_approach =
+        probe_cart_approach(&mut ground, 2656, flag).expect("flag player approach missing");
+    assert!(Vec3::from_array(flag_approach).distance(flag) < 5.0);
+    let capture_approaches: Vec<_> = shared::battleground::DEEPHAUL_CAPTURE_TRIGGERS
+        .iter()
+        .map(|trigger| {
+            let center = Vec3::from_array(*trigger);
+            let approach = probe_cart_approach(&mut ground, 2656, center)
+                .expect("capture trigger player floor missing");
+            assert!(Vec3::from_array(approach).distance(center) < 5.0);
+            approach
+        })
+        .collect();
     let mut statement = db.prepare("SELECT PathId,PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId IN (21469000,21734600) ORDER BY PathId,NodeId").unwrap();
     let rows = statement
         .query_map([], |row| {
@@ -138,7 +147,7 @@ fn deephaul_source_starts_flag_and_cart_paths_have_real_walkable_approaches() {
                     )
                 });
                 assert!(Vec3::from_array(at).distance(center) < 30.0);
-                approaches.push(at);
+                approaches.push(serde_json::json!({"path":definition.path,"center":center.to_array(),"approach":at}));
             }
             previous = node;
         }
@@ -149,7 +158,8 @@ fn deephaul_source_starts_flag_and_cart_paths_have_real_walkable_approaches() {
         approaches.len()
     );
     if let Some(path) = std::env::var_os("DEEPHAUL_APPROACH_RECEIPT") {
-        std::fs::write(path, serde_json::to_vec_pretty(&approaches).unwrap()).unwrap();
+        let receipt = serde_json::json!({"cart_approaches":approaches,"flag_approach":flag_approach,"capture_approaches":capture_approaches});
+        std::fs::write(path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
     }
 }
 
