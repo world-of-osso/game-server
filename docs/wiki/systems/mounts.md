@@ -4,6 +4,24 @@ Player mounts cast as spells (Retail "Steady Flight" and Skyriding flight physic
 
 ## Content
 
+### Mount Journal
+
+Contract: [Mount Journal authority](../../specs/mount-journal.md). `mount_journal.rs` reads authentic Mount/ItemEffect/creature/vehicle/capability joins; `persistence_mounts.rs` stores Mount ID→favourite outside frozen character serialization. Direct learn items and inventory consumption commit atomically. Existing profession/class learned source spells add ownership; cast validation consults the account collection without injecting fake class spells.
+
+One exclusive Update step initializes accounts, publishes context changes, then handles favourite/summon/random/dismiss requests. Auth can apply deferred InWorld/PlayerLink before or after that step, but no journal reader runs before initialization. Both the original PostUpdate publication crash and an early world-entry request crash were reproduced by file-backed/HostClient regressions; initialization/publication/request orchestration now shares that boundary. HostClient delivers in Last, so tests observe the initial update before next-frame clearing.
+
+Summon uses `cast_for_player`, and dismount uses `cancel_mount_aura`; existing riding/area/flight rules remain authoritative. Random candidates are owned usable favourites. Authored visibility flags and capability/positive-swim/FlightCapability/non-control passenger-seat categories are transmitted to the native journal; these categories are data-derived, not a claim of unpublished client classification parity.
+
+Verified2026-10-12 after merging master99f61aec: 173 targeted `mount`/`merchant::`/`auction` server tests pass; private UDP5901 native runs pass in both skins for paid Katie Hunter item5655→Mount18, alternate-character persistence and two-account AH listing/buyout/mail/UseItem of unbound item44413→Mount275. World.db is read-only; existing1694 mount rows need no new import.
+
+### Vendor acquisition
+
+`merchant/mount_costs.rs` loads pinned build69933 ItemExtendedCost rows selected by TDB1210 teaching-mount offers. The catalog replaces matching imported mount rows with exact TDB offers, preserves ordinary offers and checks the catalog slot on purchase. Cost Money overrides item BuyPrice. Item/currency amounts multiply by purchase count; `_100_Scaler` currency precision divides raw counts by100 exactly. Missing metadata disables the whole affected cost, never substitutes IDs or invents names. [Data provenance and reproduction](../../mount-vendor-costs.md).
+
+Detached inventory/wallet copies stage payment before delivery. One redb write commits gold, consumed items, delivered items and currency; only then does the server replace PlayerCurrencies and enqueue gold/bag/currency updates. Mount ItemSparse reputation requirements use CharacterReputation standing for listing usability and purchase rejection. Existing faction filtering remains. No serialized character fields, global currency definitions or reputation discounts change.
+
+Targeted HostClient tests: eight `merchant_mount_cost_tests.rs` tests passed at e94f73a3; original gold-only purchase→learn/no-transmog passed at bf0ad0c5. [Proof and unrelated fixture gap](../../mount-vendor-costs.md#development-proof). Native client and integration acceptance belong to the main Mount Journal goal.
+
 ### Data
 
 `world.db` gets the Retail DB2 tables `mount`, `mount_capability`, `mount_type_x_capability` and `mount_x_display` (`scripts/db2.py`; run `python3 scripts/db2.py fetch && python3 scripts/db2.py import` to add them to an existing `world.db`). `MountStore` loads them at startup with the aura spell part of the PlayerConditions they name.
