@@ -198,7 +198,7 @@ impl Baker {
             position,
         );
         let triangles = if self.m2_only {
-            self.global_m2_triangles(&model.root, &placement, world)
+            self.load_global_m2_triangles(&model.root, &placement, world)
         } else {
             transformed(&model.geometry.triangles, world).collect()
         };
@@ -235,7 +235,7 @@ impl Baker {
         Ok(Some(geometry))
     }
 
-    fn global_m2_triangles(
+    fn load_global_m2_triangles(
         &mut self,
         root: &wmo::WmoRoot,
         placement: &Placement,
