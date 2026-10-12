@@ -69,6 +69,16 @@ end
                     dict(lookup_path=[6306, 2, 49.5], seconds=80)])])
         self.assertEqual(len([r for r in result['rules'] if r['action'] == 'timer']), 2)
 
+    def test_unknown_else_guards_and_mutable_counts_never_become_fixed_timers(self):
+        guarded = SOURCE.replace('if self:Retail() then',
+            'if self:IsTank() then\n  self:Message(args.spellId, "orange")\n elseif spellId == 6306 then')
+        result = bm.extract_bigwigs(guarded, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual([r['delay_ms'] for r in result['rules'] if r['action']=='timer'], [2400])
+        counted = 'local count = 1\nlocal timers = {2.4, 13.3}\n' + SOURCE.replace(
+            'self:CDBar(args.spellId, 13.3)', 'count = count + 1\n  self:CDBar(args.spellId, timers[count])')
+        result = bm.extract_bigwigs(counted, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual([r['delay_ms'] for r in result['rules'] if r['action']=='timer'], [2400])
+
     def test_unreachable_dynamic_timers_are_audited_not_scheduled(self):
         source = SOURCE + '''function mod:Dynamic(eventInfo)
  self:Bar(6306, eventInfo.duration)
