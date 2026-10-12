@@ -48,7 +48,7 @@ Sources: `crates/server/src/scripted_ai/smart_{ai,timed,paths,escort,targets,lif
 
 [Whole-goal census and fixed work order](../../encounter-coverage.md) distinguishes structural coverage from completion. Pinned TC primary Kystia3101 binds234648, never companion234660. [Contract](../../specs/boss-scripts.md) tracks remaining callbacks/data gaps; `scripts/encounter_cpp_bindings.py` prepares lead-owned SQL only.
 
-Nibbles' friendly phase returns before TC UpdateVictim. The server's independent pre-AI victim updater instead discarded its now-friendly threat and forced Returning, cancelling Light Infusion. The real fixed-schedule reproduction asserts this boundary. `ScriptedVictimUpdatePaused` gives that source control flow explicit ownership: phase entry pauses the generic updater and reset resumes it; re-corruption callbacks remain open. No faction-check removal, passive-state substitution or invented timer.
+Nibbles' friendly phase returns before TC UpdateVictim. The server's independent pre-AI victim updater instead discarded its now-friendly threat and forced Returning, cancelling Light Infusion. The real fixed-schedule reproduction asserts this boundary. `ScriptedVictimUpdatePaused` gives that source control flow explicit ownership: phase entry pauses the generic updater, and reset/authored re-corruption resume it. Full cycle remains blocked by the local15s Light/20s Destabilized source boundary: Illicit's exact0x40020 flags do not bypass caster auras. Callback wiring is not full-cycle proof; the named acceptance gate remains failing. No timers/flags overridden. No faction-check removal, passive-state substitution or invented timer.
 
 ## Wailing Caverns — Lord Cobrahn (2026-10-11)
 
