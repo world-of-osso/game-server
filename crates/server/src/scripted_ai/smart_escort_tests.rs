@@ -48,6 +48,8 @@ fn erland() -> (tempfile::TempDir, World, SmartAi, Entity, Entity) {
         states: vec![EventState::default(); events.len()],
         events,
         phase: 0,
+        timeline_dirty: true,
+        timeline_age_ms: 0,
         boss: None,
         stored_targets: HashMap::new(),
         timed_list: None,
