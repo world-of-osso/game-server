@@ -1,6 +1,6 @@
 # World quests
 
-Contract and World of Osso rotation policy: [engine world-quest spec](../../game-engine/docs/specs/world-quests.md). This is incomplete feature work, not deployed behavior.
+Contract and World of Osso rotation policy: [engine world-quest spec](../../game-engine/docs/specs/world-quests.md). Implemented for the currently representable subset; whole coverage remains open at106 authentic objective shapes. Not deployed to the shared realm.
 
 ## Private import
 
@@ -20,4 +20,4 @@ The matching WoWDBDefs layouts decode3,909 AreaPOI,1,070 AreaPOIState and154 Man
 
 `world_quests.rs` computes half-open per-zone windows from the policy; `quest_time.rs` refreshes them with the realm ServerClock and removes expired task logs/watches. Definitions load from `content_world_quest`; invalid/zero durations and missing runtime quest templates fail loading. No table means the import has not been installed, not a substitute activation source.
 
-Area entry accepts and tracks; departure untracks without discarding progress. Existing objective credit automatically settles complete tasks. The reward transaction persists quest history, items/money and imported currency/reputation together; XP uses pinned QuestXP rather than synthetic quest XP. Numeric reward amounts follow TrinityCore Player.cpp6627–6638 (override/100 or QuestFactionReward difficulty). WorldQuestAvailability publishes per-character eligible windows, authentic geometry centers, expiry and rewards previews. Native pins/tooltips/task tracking and UDP5861 both-skin proof remain open. Rotation tests do not establish those behaviors.
+Area entry accepts and tracks; departure untracks without discarding progress. Existing objective credit automatically settles complete tasks. The reward transaction persists quest history, items/money and imported currency/reputation together; XP uses pinned QuestXP rather than synthetic quest XP. Numeric reward amounts follow TrinityCore Player.cpp6627–6638 (override/100 or QuestFactionReward difficulty). WorldQuestAvailability publishes per-character eligible windows, authentic geometry centers, expiry and rewards previews. Native pins/tooltips, task progress/timers and toasts are integrated. Private5861 both-skin86941 completion uses administrator-supplied authentic items, not natural gathering; terrain/death-state limitations remain explicit in the engine investigation. Unsupported objective shapes are an implementation gap, not an approved exclusion policy. Rotation tests do not establish those behaviors.
