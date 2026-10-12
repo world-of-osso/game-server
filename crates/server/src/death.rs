@@ -144,7 +144,7 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
         let Some(template) = world_data.templates.get(&spawn.template_entry) else {
             continue;
         };
-        if !NpcFlags::from_azerothcore(template.npc_flags).contains(NpcFlags::SPIRIT_HEALER) {
+        if !NpcFlags(template.npc_flags).contains(NpcFlags::SPIRIT_HEALER) {
             continue;
         }
         let (x, y, z) = crate::terrain_height::wow_to_bevy(
