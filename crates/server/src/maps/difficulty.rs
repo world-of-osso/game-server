@@ -475,6 +475,19 @@ mod admin_game_object_tests {
     }
 
     #[test]
+    fn game_object_info_reports_actual_visibility_sender_ids() {
+        let mut world = World::new();
+        let object = spawn_mailbox(&mut world, InMap::continent(0), 197134);
+        let sender = world.spawn_empty().id();
+        let mut visibility = crate::interest::NetworkVisibility::default();
+        visibility.gain_visibility(sender);
+        world.entity_mut(object).insert(visibility);
+        let response = serde_json::to_value(lookup(&mut world, 197134)).unwrap();
+        let line = response["GameObjectInfoList"]["lines"][0].as_str().unwrap();
+        assert!(line.ends_with(&format!("visible_senders=[{}]", sender.to_bits())));
+    }
+
+    #[test]
     fn game_object_info_reports_missing_object_in_requested_map_copy() {
         let mut world = World::new();
         spawn_mailbox(&mut world, InMap::continent(1), 197134);
@@ -501,6 +514,7 @@ pub(crate) struct AdminInstances<'w, 's> {
             &'static shared::protocol::GameObjectInfo,
             &'static shared::components::Position,
             &'static InMap,
+            Option<&'static crate::interest::NetworkVisibility>,
         ),
         Without<crate::persistence::ClientId>,
     >,
@@ -638,14 +652,19 @@ impl AdminInstances<'_, '_> {
                 let lines: Vec<_> = self
                     .game_objects
                     .iter()
-                    .filter(|(_, info, _, in_map)| **in_map == map && info.entry == *entry)
-                    .map(|(entity, info, position, _)| {
+                    .filter(|(_, info, _, in_map, _)| **in_map == map && info.entry == *entry)
+                    .map(|(entity, info, position, _, visibility)| {
                         let world = crate::game_objects::wow_position(position);
-                        format!(
+                        let mut line = format!(
                             "{} (entity {}) entry {} display {} map {} instance {} world ({}, {}, {})",
                             info.name, entity.to_bits(), info.entry, info.display_id,
                             map_id, instance_id, world.x, world.y, world.z
-                        )
+                        );
+                        if let Some(visibility) = visibility {
+                            let senders: Vec<_> = visibility.visible_senders().map(Entity::to_bits).collect();
+                            line.push_str(&format!(" visible_senders={senders:?}"));
+                        }
+                        line
                     })
                     .collect();
                 if lines.is_empty() {
