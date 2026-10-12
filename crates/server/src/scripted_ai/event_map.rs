@@ -44,6 +44,12 @@ impl EventMap {
         self.insert(self.time + delay_ms, event_id);
     }
 
+    /// `RescheduleEvent`: cancel every queued event of this id before scheduling.
+    pub fn reschedule(&mut self, event_id: u32, delay_ms: u64) {
+        self.events.retain(|&(_, id)| id != event_id);
+        self.schedule(event_id, delay_ms);
+    }
+
     /// `ScheduleEvent(eventId, minTime, maxTime)`.
     pub fn schedule_range(&mut self, event_id: u32, min_ms: u64, max_ms: u64) {
         self.schedule(event_id, rand_ms(min_ms, max_ms));

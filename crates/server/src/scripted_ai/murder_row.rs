@@ -7,8 +7,9 @@
 use bevy::prelude::*;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
-use super::{CreatureAi, Ctx, instance_script};
+use super::{CreatureAi, Ctx, EventMap, instance_script};
 use crate::maps::{InMap, InstanceManager, MapStore};
+use shared::components::{Health, ModelDisplay, Npc, UnitFactionTemplate};
 
 const SCRIPT: &str = "boss_kystia_manaheart";
 const NIBBLES_SCRIPT: &str = "boss_kystia_manaheart_nibbles";
@@ -24,6 +25,17 @@ const SPELL_FEL_NOVA: u32 = 1223906;
 pub(crate) const SPELL_FEL_CRAZED: u32 = 474365;
 const SPELL_FELSHIELD: u32 = 1217989;
 const SPELL_ILLICIT_INFUSION_VISUAL: u32 = 1217464;
+const NPC_KYSTIA: u32 = 234648;
+const NPC_NIBBLES: u32 = 234660;
+const EVENT_FEL_SPRAY: u32 = 4;
+const EVENT_CORRODING_SPITTLE: u32 = 5;
+const EVENT_CHECK_HEALTH: u32 = 6;
+const SPELL_FEL_SPRAY: u32 = 1253811;
+const SPELL_CORRODING_SPITTLE: u32 = 1228198;
+const SPELL_ILLICIT_INFUSION: u32 = 1230289;
+const SPELL_LIGHT_INFUSION: u32 = 1230304;
+const FACTION_FRIENDLY: u32 = 35;
+const DISPLAY_FRIENDLY: u32 = 128332;
 
 pub fn is_creature_script(script_name: &str) -> bool {
     matches!(script_name, SCRIPT | NIBBLES_SCRIPT)
@@ -43,7 +55,7 @@ pub fn creature_ai(
         return None;
     }
     if script_name == NIBBLES_SCRIPT {
-        return Some(Box::new(Nibbles));
+        return Some(Box::new(Nibbles::default()));
     }
     // Only an authenticated primary-actor binding grants encounter completion.
     let boss = instance_script::bound_boss(world, creature)?;
@@ -99,14 +111,129 @@ struct KystiaManaheart {
     heroic: bool,
 }
 
+fn find_instance_actor(ctx: &mut Ctx, entry: u32) -> Option<Entity> {
+    let map = ctx.map()?;
+    ctx.world
+        .query::<(Entity, &Npc, &InMap)>()
+        .iter(ctx.world)
+        .find_map(|(unit, npc, unit_map)| {
+            (npc.template_id == entry && *unit_map == map).then_some(unit)
+        })
+}
+
 /// TC's companion constructor sets unkillable; DATA_NIBBLES is not a completion boss.
-struct Nibbles;
+#[derive(Default)]
+struct Nibbles {
+    events: EventMap,
+}
+
+impl Nibbles {
+    fn check_health(&mut self, ctx: &mut Ctx) {
+        let threshold = crate::spell_cast::scripts::script_effect_value(
+            ctx.world,
+            ctx.me,
+            SPELL_ILLICIT_INFUSION,
+            0,
+        );
+        let health = ctx.world.get::<Health>(ctx.me).expect("Nibbles health");
+        if health.current * 100.0 / health.max < threshold {
+            self.start_light_infusion(ctx);
+            self.events.reschedule(EVENT_CHECK_HEALTH, 15_000);
+        }
+        // Pinned source schedules15s above and then repeats1s; both are retained.
+        self.events.repeat(1_000);
+    }
+
+    fn start_light_infusion(&mut self, ctx: &mut Ctx) {
+        let me = ctx.me;
+        crate::auras::remove_auras(
+            ctx.world,
+            me,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == SPELL_ILLICIT_INFUSION,
+        );
+        crate::spell_cast::cancel_cast(ctx.world, me);
+        super::attack_stop(ctx.world, me);
+        ctx.world.entity_mut(me).insert((
+            UnitFactionTemplate(FACTION_FRIENDLY),
+            ModelDisplay {
+                display_id: DISPLAY_FRIENDLY,
+            },
+        ));
+        if let Some(kystia) = find_instance_actor(ctx, NPC_KYSTIA) {
+            ctx.do_cast_at(Some(kystia), SPELL_LIGHT_INFUSION, false);
+            ctx.talk(0);
+        }
+    }
+
+    fn execute_event(&mut self, ctx: &mut Ctx, event_id: u32) {
+        match event_id {
+            EVENT_FEL_SPRAY => {
+                let target = ctx.select_target_random(0.0, false);
+                if target.is_some() {
+                    ctx.do_cast_at(target, SPELL_FEL_SPRAY, false);
+                }
+                ctx.talk(1);
+                self.events.repeat(51_000);
+            }
+            EVENT_CORRODING_SPITTLE => {
+                let target = ctx.select_target_random(0.0, false);
+                if target.is_some() {
+                    ctx.do_cast_at(target, SPELL_CORRODING_SPITTLE, false);
+                }
+                self.events.repeat(14_500);
+            }
+            EVENT_CHECK_HEALTH => self.check_health(ctx),
+            _ => {}
+        }
+    }
+}
 
 impl CreatureAi for Nibbles {
     fn reset(&mut self, ctx: &mut Ctx) {
+        self.events.reset();
         ctx.world
             .entity_mut(ctx.me)
             .insert(crate::combat::Unkillable);
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        if let Some(map) = ctx.map() {
+            instance_script::send_engage_unit_with_priority(ctx.world, map, ctx.me, 2);
+        }
+        if let Some(kystia) = find_instance_actor(ctx, NPC_KYSTIA) {
+            ctx.do_zone_in_combat(kystia);
+        }
+        self.events.schedule(EVENT_CHECK_HEALTH, 1_000);
+        self.events.schedule(EVENT_FEL_SPRAY, 8_000);
+        self.events.schedule(EVENT_CORRODING_SPITTLE, 4_500);
+    }
+
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        if let Some(map) = ctx.map() {
+            instance_script::send_disengage_unit(ctx.world, map, ctx.me);
+        }
+        self.reset(ctx);
+    }
+
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        let friendly = ctx
+            .world
+            .get::<UnitFactionTemplate>(ctx.me)
+            .is_some_and(|faction| faction.0 == FACTION_FRIENDLY);
+        if friendly || !ctx.update_victim() {
+            return;
+        }
+        self.events.update(u64::from(diff_ms));
+        if ctx.is_casting() {
+            return;
+        }
+        while let Some(event) = self.events.execute_event() {
+            self.execute_event(ctx, event);
+            if ctx.is_casting() {
+                return;
+            }
+        }
     }
 }
 
@@ -151,6 +278,9 @@ impl CreatureAi for KystiaManaheart {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         ctx.talk(0);
+        if let Some(nibbles) = find_instance_actor(ctx, NPC_NIBBLES) {
+            ctx.do_zone_in_combat(nibbles);
+        }
         self.boss.events.schedule(EVENT_CHAOS_BARRAGE, 1_000);
         self.boss.events.schedule(EVENT_MIRROR_IMAGES, 14_000);
         if self.heroic {
@@ -166,6 +296,9 @@ impl CreatureAi for KystiaManaheart {
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
         ctx.talk(6);
         self.boss.reset(ctx);
+        if let Some(nibbles) = find_instance_actor(ctx, NPC_NIBBLES) {
+            crate::creature_aggro::enter_evade_mode(ctx.world, nibbles);
+        }
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
