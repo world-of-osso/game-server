@@ -206,24 +206,7 @@ fn process_exploration_achievement_updates(world: &mut World) {
         .map(|(_, link, _)| link.0)
         .collect();
     for player in players {
-        if world
-            .get::<crate::death::PlayerDeathState>(player)
-            .is_some_and(|life| life.state != shared::protocol::DeathState::Alive)
-            || world.get::<crate::taxi::TaxiFlight>(player).is_some()
-        {
-            continue;
-        }
-        let Some(position) = world.get::<shared::components::Position>(player).copied() else {
-            continue;
-        };
-        let Some(map) = world.get::<InMap>(player).copied() else {
-            continue;
-        };
-        let area = world
-            .resource_mut::<crate::ground::GroundMap>()
-            .area_at(map.map_id, Vec3::new(position.x, position.y, position.z));
-        let bit = area.and_then(|area| world.get_resource::<AchievementCatalog>()?.area_bit(area));
-        let Some(bit) = bit else {
+        let Some(bit) = detect_explorable_area_bit(world, player) else {
             continue;
         };
         let Some(mut state) = world.get_mut::<PlayerAchievementState>(player) else {
@@ -239,6 +222,22 @@ fn process_exploration_achievement_updates(world: &mut World) {
             send_updates(world, connection, snapshot, toasts);
         }
     }
+}
+
+fn detect_explorable_area_bit(world: &mut World, player: Entity) -> Option<u32> {
+    let is_dead = world
+        .get::<crate::death::PlayerDeathState>(player)
+        .is_some_and(|life| life.state != shared::death::DeathState::Alive);
+    let on_taxi = world.get::<crate::taxi::TaxiFlight>(player).is_some();
+    if is_dead || on_taxi {
+        return None;
+    }
+    let position = *world.get::<shared::components::Position>(player)?;
+    let map = *world.get::<InMap>(player)?;
+    let area = world
+        .resource_mut::<crate::ground::GroundMap>()
+        .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))?;
+    world.get_resource::<AchievementCatalog>()?.area_bit(area)
 }
 
 /// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
