@@ -18,10 +18,18 @@ fn achievements_criteria_knowledge_skill_line_counts_distinct_actual_spells_and_
                 appearance: Default::default(),
             },
             PlayerAchievementState::default(),
-            KnownSpells::fixture(vec![22717, 22717, 60116]),
+            KnownSpells::fixture(vec![22717, 22717, 60116, 2538, 2538, 2540]),
         ))
         .id();
     app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&7221),
+        Some(&2)
+    );
     assert_eq!(
         app.world()
             .get::<PlayerAchievementState>(player)
@@ -41,8 +49,16 @@ fn achievements_criteria_knowledge_skill_line_counts_distinct_actual_spells_and_
     );
     app.world_mut()
         .entity_mut(player)
-        .insert(KnownSpells::fixture(vec![60116]));
+        .insert(KnownSpells::fixture(vec![60116, 2540]));
     app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&7221),
+        Some(&1)
+    );
     assert_eq!(
         app.world()
             .get::<PlayerAchievementState>(player)
