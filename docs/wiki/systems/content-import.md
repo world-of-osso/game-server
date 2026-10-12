@@ -2,6 +2,12 @@
 
 Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. Raw dump tables keep their Wrath IDs verbatim. `scripts/content_policy.py` derives the Retail-first `content_*` tables that the server should read (policy chosen 2026-09-23, option 4 below). This page records the imported tables, the policy and its drop counts, and the ID measurements that motivated it.
 
+## Zone quest/service promotion (2026-10-11)
+
+The same `world-promote` transaction now adds missing TDB quests attributed by AreaTable continent/QuestSortID or by selected-map giver/ender relations. It reuses `retail_content`'s template/objective/text/POI/reward converters and vendor importer; existing quests and authored relations are not rebuilt. QuestV2 membership and the existing four creature/GO and six item slots are required. Unsupported objective types or overflowing slot counts exclude the entire new quest, rather than silently making it completable. Completion-event/area-trigger flags retain their existing exploration requirement. Missing source giver/ender placements remain missing: no synthetic NPCs, links or quest objectives.
+
+Vendors use authored TDB item rows with present Retail items; currency rows and absent items are reported and excluded. Trainer services already read `tdb_creature_trainer`/`tdb_trainer`/`tdb_trainer_spell` directly; flight masters use the source NPC flag and existing DB2 taxi nodes/paths. Promotion supplies their authentic placements/templates, not invented service relations. Strict world phase/difficulty and positive-only GO event filters remain unchanged. Existing shared templates, unrelated rows and same-map overlays remain protected.
+
 ## Open-world population (2026-10-11)
 
 `content_policy.py --mode world-promote --maps <explicit IDs>` bypasses full policy regeneration and overlay clearing. `world_population.py` reuses the instance import functions with open-world difficulty0 and strict unflagged phase0/169/no groups/no terrain swap. TDB-owned GUIDs use +20m; authored placements outside that namespace survive even on a promoted map, with their addons/formations/events. Shared templates, existing waypoint rows and unrelated pools are restored by indexed snapshots inside the same transaction. Copy-only destination protections are shared with the instance importer.

@@ -5,6 +5,7 @@ from pathlib import Path
 import sqlite3
 
 import import_instance_population as population
+import retail_content as retail
 
 # PhasingHandler::InitDbPhaseShift (TrinityCore a352b1fa): no conditional or
 # inverse phases without a phase runtime. Only unflagged default phases here.
@@ -80,12 +81,51 @@ def apply_population(conn, report, maps):
     snapshots = protect_unrelated_dependencies(conn, map_list)
     population.apply_population(conn, report, map_list=map_list, base_phase=BASE_PHASE)
     restore_rows(conn, snapshots)
+    promote_zone_services(conn, report, map_list)
     conn.execute("DROP TABLE temp.world_shared_creature")
     conn.execute("DROP TABLE temp.world_shared_object")
     for kind in ("creature", "gameobject"):
         conn.execute(f"DROP TABLE temp.world_owned_{kind}_guid")
         conn.execute(f"DROP TABLE temp.world_overlay_{kind}")
     return maps
+
+
+def promote_zone_services(conn, report, map_list):
+    """Reuse Retail quest/vendor conversion without rebuilding existing quests/overlays."""
+    conn.execute("CREATE TEMP TABLE retail_entry AS SELECT DISTINCT id AS entry FROM temp.instance_creature")
+    retail.retail_relations(conn)
+    conn.execute(f"""CREATE TEMP TABLE zone_quest_candidate AS
+        SELECT DISTINCT quest AS ID FROM temp.retail_relation
+        UNION SELECT ID FROM tdb_quest_template WHERE QuestSortID IN
+            (SELECT ID FROM area_table WHERE ContinentID IN ({map_list}))""")
+    conn.execute("""CREATE TEMP TABLE retail_quest AS SELECT q.ID FROM tdb_quest_template q
+        JOIN temp.zone_quest_candidate z ON z.ID=q.ID
+        WHERE q.ID IN (SELECT ID FROM quest_v2)
+          AND q.ID NOT IN (SELECT ID FROM content_quest_template)
+          AND NOT EXISTS (SELECT 1 FROM tdb_quest_objectives o WHERE o.QuestID=q.ID
+              AND o.Type NOT IN (0,1,2,6,10))
+          AND (SELECT count(*) FROM tdb_quest_objectives WHERE QuestID=q.ID AND Type IN(0,2))<=4
+          AND (SELECT count(*) FROM tdb_quest_objectives WHERE QuestID=q.ID AND Type=1)<=6""")
+    for (quest,) in conn.execute("""SELECT ID FROM temp.zone_quest_candidate
+            WHERE ID NOT IN (SELECT ID FROM content_quest_template)
+              AND ID NOT IN (SELECT ID FROM temp.retail_quest) ORDER BY ID""").fetchall():
+        report.drop("tdb_quest_template", f"ID={quest}", quest,
+                    "absent QuestV2/template or unsupported objective type/slot capacity; not promoted")
+    quests = "SELECT ID FROM temp.retail_quest"
+    conn.execute(f"CREATE TEMP TABLE azerothcore_quest AS SELECT * FROM content_quest_template WHERE ID IN ({quests})")
+    retail.insert_quest_templates(conn, quests, report)
+    retail.map_quest_objectives(conn, quests, report)
+    retail.build_quest_children(conn, quests, report)
+    retail.map_quest_exploration(conn, quests, report)
+    # Add source relations only. Existing authored relations and quest decisions survive.
+    for table in retail.RELATION_TABLES:
+        conn.execute(f"""INSERT OR IGNORE INTO content_{table}(id,quest)
+            SELECT id,quest FROM temp.retail_relation WHERE tbl=?
+              AND quest IN (SELECT ID FROM content_quest_template)""", (table,))
+    retail.build_vendors(conn, report)
+    for table in ("retail_entry", "retail_gameobject_entry", "retail_relation", "zone_quest_candidate",
+                  "retail_quest", "azerothcore_quest"):
+        conn.execute(f"DROP TABLE temp.{table}")
 
 
 def import_database(path, maps):
