@@ -1,4 +1,4 @@
-//! Controlled pets: hunter tame/call/revive, authored warlock demons, persisted current pet,
+//! Controlled pets: hunter tame/call/revive, authored warlock demons and Mage elemental, persisted current pet,
 //! shared spawn/follow/dismiss and demon death removal. TrinityCore a352b1fa:
 //! `spell_hun_tame_beast` (spell_hunter.cpp:1255-1321), `Spell::EffectTameCreature`,
 //! `EffectSummonPet`, `EffectDismissPet` (SpellEffects.cpp:2606-2728, 3586-3598), the
@@ -45,6 +45,8 @@ use crate::world_data::{CreatureTemplate, WorldData};
 /// `CLASS_HUNTER`.
 const CLASS_HUNTER: u8 = 3;
 const CLASS_WARLOCK: u8 = 9;
+const CLASS_MAGE: u8 = 8;
+const SUMMON_WATER_ELEMENTAL: u32 = 31687;
 const SUMMON_IMP: u32 = 688;
 /// Local Retail SUMMON_PET spells; creature entries remain SpellEffect MiscValue data.
 const DEMON_SUMMONS: [u32; 7] = [SUMMON_IMP, 691, 697, 712, 30146, 365349, 366222];
@@ -81,7 +83,7 @@ impl Plugin for HunterPetPlugin {
             .add_systems(FixedUpdate, remove_ownerless_pets)
             .add_systems(
                 FixedUpdate,
-                remove_dead_demons.after(crate::combat::auto_attack_system),
+                remove_dead_summoned_pets.after(crate::combat::auto_attack_system),
             );
     }
 }
@@ -303,11 +305,12 @@ fn check_summon_pet(
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
     if effect.misc_values[0] != 0 {
-        if !DEMON_SUMMONS.contains(&spell.id)
-            || world.get::<Player>(caster).map(|player| player.class) != Some(CLASS_WARLOCK)
-        {
+        let class = world.get::<Player>(caster).map(|player| player.class);
+        let demon = DEMON_SUMMONS.contains(&spell.id) && class == Some(CLASS_WARLOCK);
+        let elemental = spell.id == SUMMON_WATER_ELEMENTAL && class == Some(CLASS_MAGE);
+        if !(demon || elemental) {
             return Err(CastFailure::Unsupported(
-                "Unsupported controlled demon summon".into(),
+                "Unsupported controlled pet summon".into(),
             ));
         }
         let entry = effect.misc_values[0] as u32;
@@ -462,7 +465,7 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
         return;
     }
     if entry != 0 {
-        summon_demon(world, owner, entry, at, facing);
+        summon_authored_pet(world, owner, entry, at, facing);
         return;
     }
     let slot = effect_slot(effect);
@@ -476,11 +479,11 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
 
 /// `Player::SummonPet` loads an existing record or creates a SUMMON_PET from its
 /// creature template at the owner's level, then saves it as current. CheckCast admits
-/// the locally sourced permanent demon spell IDs; timed guardians use their own path.
-fn summon_demon(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
-    let stored = create_or_reuse_demon_record(world, owner, entry);
+/// sourced demon spells and Mage31687; timed guardians use their own path.
+fn summon_authored_pet(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
+    let stored = create_or_reuse_summon_record(world, owner, entry);
     if init_pet_stable(world, owner).is_none() {
-        error!("Demon summon owner {owner} has no in-world character");
+        error!("Summoned pet owner {owner} has no in-world character");
         return;
     }
     if let Some(pet) = summoned_pet(world, owner) {
@@ -494,7 +497,7 @@ fn summon_demon(world: &mut World, owner: Entity, entry: u32, at: Position, faci
     put_pet_out(world, owner, 0, at, facing);
 }
 
-fn create_or_reuse_demon_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
+fn create_or_reuse_summon_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
     let level = world.get::<Level>(owner).expect("summoning player level").0;
     let existing = world
         .get::<PetStable>(owner)
@@ -642,9 +645,12 @@ pub(crate) fn effect_dismiss_pet(
 }
 
 /// TC a352b1fa PetHandler.cpp:217-238: command 3 deletes hunter pets, but
-/// keeps a summoned demon's record for its next explicit summon.
+/// keeps a SUMMON_PET record for its next explicit summon.
 pub(crate) fn abandon_or_dismiss_pet(world: &mut World, pet: Entity) {
-    if world.get::<SummonedDemon>(pet).is_none() {
+    let summoned = world
+        .get::<HunterPet>(pet)
+        .is_some_and(|pet| is_summoned_pet_owner(world, pet.owner));
+    if world.get::<SummonedDemon>(pet).is_none() && !summoned {
         let Some((owner, slot)) = world
             .get::<HunterPet>(pet)
             .map(|pet| (pet.owner, usize::from(pet.slot)))
@@ -734,11 +740,12 @@ fn spawn_pet(
     let demon = world
         .get::<Player>(owner)
         .is_some_and(|player| player.class == CLASS_WARLOCK);
-    if demon {
+    let summoned = is_summoned_pet_owner(world, owner);
+    if summoned {
         // Pet::LoadPetFromDB: SUMMON_PET always takes the owner's level.
         stored.level = world.get::<Level>(owner).expect("summoning player level").0;
     }
-    let (health, classification) = {
+    let (health, classification, mana) = {
         let data = world.get_resource::<WorldData>()?;
         let Some(template) = data.template_for(stored.creature_entry, 0) else {
             error!(
@@ -751,21 +758,29 @@ fn spawn_pet(
             pet_max_health(data, template, stored.level),
             CreatureClassification::from_rank(template.rank)
                 .expect("creature_template.rank is validated when loaded"),
+            world
+                .get::<Player>(owner)
+                .filter(|player| player.class == CLASS_MAGE)
+                .map(|_| authored_pet_mana(data, template, stored.level)),
         )
     };
     let map = *world.get::<InMap>(owner)?;
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
-    let power = if demon {
-        demon_spell_power(world)
-    } else {
-        PowerType::Focus
+    let power = match world.get::<Player>(owner)?.class {
+        CLASS_HUNTER => PowerType::Focus,
+        CLASS_WARLOCK => demon_spell_power(world),
+        CLASS_MAGE => PowerType::Mana,
+        class => {
+            error!("Unsupported controlled pet owner class {class}");
+            return None;
+        }
     };
     let pools = PowerPools::from_table(world.resource::<PowerTypeTable>(), vec![power]);
     let current_health = stored.health.unwrap_or(health).clamp(0.0, health);
     stored.health = Some(current_health);
-    if !demon && stored.specialization.is_none() {
+    if !summoned && stored.specialization.is_none() {
         stored.specialization = default_pet_specialization(world, stored.family);
     }
     let mut pet = world.spawn((
@@ -809,6 +824,9 @@ fn spawn_pet(
     if demon {
         pet.insert(SummonedDemon);
     }
+    if let Some(max) = mana {
+        pet.insert(shared::components::Mana { current: max, max });
+    }
     if replicate {
         pet.insert((
             Replicate::to_clients(NetworkTarget::All),
@@ -816,6 +834,20 @@ fn spawn_pet(
         ));
     }
     Some((pet.id(), stored))
+}
+
+pub(crate) fn is_summoned_pet_owner(world: &World, owner: Entity) -> bool {
+    world
+        .get::<Player>(owner)
+        .is_some_and(|player| matches!(player.class, CLASS_WARLOCK | CLASS_MAGE))
+}
+
+fn authored_pet_mana(data: &WorldData, template: &CreatureTemplate, level: u8) -> f32 {
+    let base = data
+        .class_level_base_mana
+        .get(&(level, template.unit_class))
+        .expect("controlled mana pet class/level base mana imported");
+    (*base as f32 * template.mana_modifier).round()
 }
 
 /// The admitted local demon families15/16/17/23/29 all use SpellPower.PowerType3.
@@ -953,12 +985,15 @@ fn remove_ownerless_pets(
 
 /// Pet::Update: a non-hunter corpse is removed with PET_SAVE_NOT_IN_SLOT.
 /// Keep the record for another explicit summon, but never restore it at login.
-fn remove_dead_demons(world: &mut World) {
+fn remove_dead_summoned_pets(world: &mut World) {
     let dead: Vec<Entity> = world
-        .query_filtered::<(Entity, &Health), With<SummonedDemon>>()
+        .query_filtered::<(Entity, &Health, Option<&HunterPet>, Option<&SummonedDemon>), Or<(With<HunterPet>, With<SummonedDemon>)>>()
         .iter(world)
-        .filter(|(_, health)| health.current <= 0.0)
-        .map(|(pet, _)| pet)
+        .filter(|(_, health, pet, demon)| {
+            let summoned = demon.is_some() || pet.is_some_and(|pet| is_summoned_pet_owner(world, pet.owner));
+            health.current <= 0.0 && summoned
+        })
+        .map(|(pet, ..)| pet)
         .collect();
     for pet in dead {
         remove_pet(world, pet);
