@@ -212,12 +212,14 @@ pub(crate) fn spawn_creature(
                 template.armor,
             ),
         };
-        let display_id = choose_display_id(template, spawn, rng);
+        let (display_id, display_scale) = choose_display(template, spawn, rng);
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn((
             bundle,
             map,
+            NativeObjectScale(display_scale),
+            shared::components::UnitScale(display_scale),
             crate::creature_ai::HomeOrientation(spawn.orientation + std::f32::consts::FRAC_PI_2),
         ));
         if let Some((scaling, tuning)) = scaling {
@@ -560,34 +562,45 @@ fn creature_bundle(
     )
 }
 
+/// Native object multiplier retained when aura61 is applied or removed.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct NativeObjectScale(pub f32);
+
 /// `CreatureModel::DefaultInvisibleModel`: a trigger without an invisible model of its own.
 const DEFAULT_INVISIBLE_DISPLAY: u32 = 11_686;
 
 /// ObjectMgr::ChooseDisplayId (ObjectMgr.cpp:1601-1613): the spawn's modelid, else a model of the
 /// template by Probability, except that triggers take their first invisible model.
-fn choose_display_id(
+fn choose_display(
     template: &CreatureTemplate,
     spawn: &CreatureSpawn,
     rng: &mut impl rand::Rng,
-) -> u32 {
-    spawn
-        .display_id
-        .unwrap_or_else(|| template_display_id(template, rng))
+) -> (u32, f32) {
+    match spawn.display_id {
+        Some(display_id) => (display_id, 1.0),
+        None => template_display(template, rng),
+    }
 }
 
 /// `ObjectMgr::ChooseDisplayId` without spawn data: a model of the template by
 /// Probability; triggers take their first invisible model.
 pub(crate) fn template_display_id(template: &CreatureTemplate, rng: &mut impl rand::Rng) -> u32 {
+    template_display(template, rng).0
+}
+
+fn template_display(template: &CreatureTemplate, rng: &mut impl rand::Rng) -> (u32, f32) {
     if !template.trigger
         && let Some(model) = random_valid_model(&template.models, rng)
     {
-        return model.display_id;
+        return (model.display_id, model.display_scale);
     }
     template
         .models
         .iter()
         .find(|model| model.is_trigger)
-        .map_or(DEFAULT_INVISIBLE_DISPLAY, |model| model.display_id)
+        .map_or((DEFAULT_INVISIBLE_DISPLAY, 1.0), |model| {
+            (model.display_id, model.display_scale)
+        })
 }
 
 /// CreatureTemplate::GetRandomValidModel (Creature.cpp:113-128): one model regardless of its
@@ -742,6 +755,7 @@ mod tests {
             unit_flags: 0,
             models: vec![CreatureModelInfo {
                 display_id,
+                display_scale: 1.0,
                 probability: 1.0,
                 is_trigger: false,
             }],
@@ -950,9 +964,42 @@ mod tests {
         assert_eq!(count, angles.len());
     }
 
+    #[test]
+    fn authored_model_scale_survives_spawn_and_aura_reconciliation() {
+        use shared::components::UnitScale;
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE content_creature_template_model (
+                CreatureID INTEGER, Idx INTEGER, CreatureDisplayID INTEGER,
+                DisplayScale REAL, Probability REAL);
+             CREATE TABLE creature_display_info (ID INTEGER, ModelID INTEGER);
+             CREATE TABLE creature_model_data (ID INTEGER, FileDataID INTEGER);
+             INSERT INTO content_creature_template_model VALUES (40923,0,116569,0.45,0);",
+        )
+        .unwrap();
+        let spawn = make_spawn(40923, 0.0, 0.0, 0.0);
+        let mut data = make_world_data(vec![make_template(40923, 1.0, 116569)], vec![spawn]);
+        data.templates.get_mut(&40923).unwrap().models.clear();
+        crate::world_data::load_template_models(&conn, &mut data.templates);
+        let mut app = run_spawn_system(data);
+        let (entity, display) = app
+            .world_mut()
+            .query::<(Entity, &ModelDisplay)>()
+            .single(app.world())
+            .unwrap();
+        assert_eq!(display.display_id, 116569);
+        assert_eq!(app.world().get::<UnitScale>(entity), Some(&UnitScale(0.45)));
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(crate::auras::ActiveAuras::default());
+        crate::auras::auras_changed(app.world_mut(), entity);
+        assert_eq!(app.world().get::<UnitScale>(entity), Some(&UnitScale(0.45)));
+    }
+
     fn model(display_id: u32, probability: f32, is_trigger: bool) -> CreatureModelInfo {
         CreatureModelInfo {
             display_id,
+            display_scale: 1.0,
             probability,
             is_trigger,
         }
@@ -960,7 +1007,7 @@ mod tests {
 
     fn choose_with_seed(template: &CreatureTemplate, spawn: &CreatureSpawn) -> u32 {
         let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(1);
-        choose_display_id(template, spawn, &mut rng)
+        choose_display(template, spawn, &mut rng).0
     }
 
     #[test]
