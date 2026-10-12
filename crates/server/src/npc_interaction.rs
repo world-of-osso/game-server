@@ -253,7 +253,12 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
             shared::protocol::GAMEOBJECT_TYPE_KEYSTONE_RECEPTACLE => ObjectUse::Challenge,
-            _ if info.is_battleground_flag() => ObjectUse::BattlegroundFlag,
+            _ if info.is_battleground_flag()
+                || info.is_battleground_orb()
+                || info.is_battleground_capture_point() =>
+            {
+                ObjectUse::BattlegroundFlag
+            }
             crate::game_objects::GAMEOBJECT_TYPE_CHEST
             | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
             _ => return Err(InteractionError::InvalidTarget),
@@ -470,7 +475,7 @@ fn process_game_object_uses(
                 Ok((object, ObjectUse::BattlegroundFlag)) => {
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
-                        crate::pvp::use_battleground_flag(world, connection, player, object);
+                        crate::pvp::use_battleground_object(world, connection, player, object);
                     });
                     continue;
                 }
