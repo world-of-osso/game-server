@@ -291,6 +291,8 @@ pub(crate) fn create_tables(db: &Database) {
         .expect("Failed to create equipment table");
     let _ = txn.open_table(inventory_store::INVENTORY_LAYOUTS);
     let _ = txn.open_table(inventory_store::BAG_SLOTS);
+    txn.open_table(inventory_store::NONVISUAL_EQUIPMENT)
+        .expect("create nonvisual equipment table");
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
     txn.open_table(inventory_store::ITEM_DURABILITIES)
         .expect("create item durability table");

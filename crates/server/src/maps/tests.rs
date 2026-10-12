@@ -2315,7 +2315,37 @@ fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
             },
         ))
         .id();
+    let history_file = tempfile::NamedTempFile::new().unwrap();
+    world.insert_resource(crate::persistence::GameDatabase {
+        db: redb::Database::create(history_file.path()).unwrap(),
+    });
     crate::combat::mark_npc_dead_world(&mut world, lucifron);
+    {
+        use redb::ReadableDatabase;
+        let txn = world
+            .resource::<crate::persistence::GameDatabase>()
+            .db
+            .begin_read()
+            .unwrap();
+        let table = txn
+            .open_table(::server::raid_history_store::FIRST_KILLS)
+            .unwrap();
+        for id in [71, 72] {
+            let key = format!("character:{id}:409:9:663");
+            let record: ::server::raid_history_store::FirstKill =
+                serde_json::from_slice(table.get(key.as_str()).unwrap().unwrap().value()).unwrap();
+            assert_eq!(record.first_kill_at, SUNDAY_NOON);
+            assert_eq!(
+                record
+                    .participants
+                    .iter()
+                    .map(|p| p.character_id.as_str())
+                    .collect::<Vec<_>>(),
+                vec!["71", "72"]
+            );
+        }
+        assert!(table.get("character:73:409:9:663").unwrap().is_none());
+    }
     let instances = world.resource::<InstanceManager>();
     for id in [71, 72] {
         let lock = instances
