@@ -513,6 +513,8 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
         ),
         food_before + 2
     );
+    // Automatic settlement queues XP in PostUpdate; the XP system drains it next frame.
+    app.update();
     let gains = received::<LogXpGain>(&mut app, &client);
     assert_eq!(
         gains
