@@ -1,4 +1,21 @@
 use super::*;
+
+#[test]
+fn zero_amount_leaf_requires_a_real_positive_credit_and_reports_one_of_one() {
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    // Authenticated tree3742/criterion6155: LearnOrKnowSpell32298, authored amount0.
+    state.criteria_progress.insert(6155, 0);
+    let before = catalog.tree_progress(3742, &state);
+    assert!(!before.completed);
+    assert_eq!((before.current, before.required), (0, 1));
+    catalog.update(&mut state, CriteriaEvent::LearnSpell(32298), None, 1);
+    let after = catalog.tree_progress(3742, &state);
+    assert!(after.completed);
+    assert_eq!((after.current, after.required), (1, 1));
+}
+
 use rusqlite::Connection;
 
 fn catalog() -> AchievementCatalog {
