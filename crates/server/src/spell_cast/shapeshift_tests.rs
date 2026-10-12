@@ -26,6 +26,7 @@ fn druid() -> Harness {
             PREDATORY_SWIFTNESS,
             MOONKIN,
             MOONFIRE,
+            164812, // Native Moonfire's damage child.
             WRATH,
             SKELETON,
         ],
