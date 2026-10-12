@@ -145,6 +145,7 @@ mod charge_snapshot_tests;
 pub(crate) mod homebind;
 pub(crate) mod teleport;
 mod teleport_positions;
+pub(crate) mod toy_scripts;
 
 pub struct SpellCastPlugin;
 
@@ -1199,6 +1200,7 @@ fn validate_start(
         return Err(CastFailure::CrowdControlled(block));
     }
     validate_caster_state(world, caster, spell)?;
+    toy_scripts::check_cast(world, caster, spell)?;
     teleport::check_destination(world, caster, spell)?;
     if world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
