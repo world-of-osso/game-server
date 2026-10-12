@@ -41,6 +41,29 @@ fn achievements_criteria_native_penance_healing_counts_effective_and_raw_peaks_a
     h.app.insert_resource(GameDatabase { db });
     bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
     *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 0.0,
+        max: 1000.0,
+    };
+    h.cast_and_deliver(47540, Some(ally));
+    assert!(!h.inbox.failed.is_empty(), "native dead-target refusal");
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4943)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(ally)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5375)
+    );
+    h.inbox.failed.clear();
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
         current: 950.0,
         max: 1000.0,
     };
