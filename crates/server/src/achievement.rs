@@ -224,14 +224,32 @@ fn process_skill_achievement_updates(world: &mut World) {
 }
 
 /// TC CriteriaHandler.cpp687/1530-1535: knowing the authored spell is a boolean fact.
+/// Owned account mounts are known spells on every character: TC CollectionMgr::AddMount
+/// (CollectionMgr.cpp:414-443) LearnSpells each one at login and when learned.
 fn process_known_spell_achievement_updates(world: &mut World) {
-    let mut query = world.query_filtered::<(Entity, &crate::class_progression::KnownSpells), Changed<crate::class_progression::KnownSpells>>();
+    let mut query = world.query_filtered::<(
+        Entity,
+        Option<&crate::class_progression::KnownSpells>,
+        Option<&crate::mount_journal::AccountMounts>,
+    ), (
+        With<Player>,
+        Or<(
+            Changed<crate::class_progression::KnownSpells>,
+            Changed<crate::mount_journal::AccountMounts>,
+        )>,
+    )>();
     let Some(catalog) = world.get_resource::<AchievementCatalog>() else {
         return;
     };
     let updates: Vec<_> = query
         .iter(world)
-        .map(|(player, known)| (player, catalog.known_spell_events(known.iter())))
+        .map(|(player, known, mounts)| {
+            let spells = known
+                .into_iter()
+                .flat_map(|known| known.iter())
+                .chain(crate::mount_journal::owned_spells(world, mounts));
+            (player, catalog.known_spell_events(spells))
+        })
         .collect();
     for (player, events) in updates {
         record_criteria_events(world, player, &events);

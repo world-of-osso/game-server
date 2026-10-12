@@ -88,8 +88,15 @@ fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
             .criteria_progress
             .contains_key(&1874)
     );
-    // Purchase money is setup; the authored merchant transaction is the acquisition event.
+    // Purchase money and the authored Exalted Cenarion Expedition942 gate (item_sparse
+    // MinFactionID/MinReputation) are setup; the merchant transaction is the acquisition.
     h.set_gold(20_000_000);
+    let mut reputation = shared::reputation::CharacterReputation::default();
+    reputation.set_rep(
+        942,
+        shared::reputation::threshold_for_standing(shared::reputation::Standing::Exalted),
+    );
+    h.app.world_mut().entity_mut(h.player).insert(reputation);
     h.buy(vendor, slot, 33999, 1);
     assert!(h.take::<MerchantFailed>().is_empty());
     assert_eq!(
@@ -101,9 +108,10 @@ fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
             .get(&1874),
         Some(&1)
     );
-    //893 also requires knowing the mount spell(type34), not merely owning the item.
+    // Tree5192 is MeetsAtLeast8 amount1 (TC IsCompletedCriteriaTree): acquiring 33999
+    // or knowing 43927 completes Cenarion War Hippogryph893.
     assert!(
-        !h.app
+        h.app
             .world()
             .get::<PlayerAchievementState>(h.player)
             .unwrap()

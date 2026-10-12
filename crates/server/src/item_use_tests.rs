@@ -252,9 +252,11 @@ fn achievements_criteria_item_use_delayed_cast_credits_only_execution() {
     );
 }
 
+/// Alliance Reins44225 teach an account Mount Journal entry; TC CollectionMgr::AddMount
+/// LearnSpells the mount, so LearnOrKnowSpell34 credits it.
 #[test]
 fn achievements_criteria_mount_item_use_learns_authored_spell_and_completes() {
-    let mut eater = eater_with_spells(&[44226], 1, &[55884, 60116], MAGE)
+    let mut eater = eater_with_spells(&[44225], 1, &[55884, 60114], MAGE)
         .expect("authentic armored bear item/spells");
     let conn = rusqlite::Connection::open(world_db()).unwrap();
     eater
@@ -264,31 +266,16 @@ fn achievements_criteria_mount_item_use_learns_authored_spell_and_completes() {
     eater
         .h
         .app
-        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+        .insert_resource(crate::mount_journal::load(&conn).unwrap());
     bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
-    bevy::app::Plugin::build(
-        &crate::class_progression::ClassProgressionPlugin,
-        &mut eater.h.app,
-    );
     let player = eater.h.caster;
     eater.h.app.world_mut().entity_mut(player).insert((
         crate::persistence::ClientId(eater.character_id),
-        crate::profession::PlayerProfessions::default(),
         crate::achievement::PlayerAchievementState::default(),
         crate::class_progression::KnownSpells::fixture(vec![]),
     ));
-    use_slot(&mut eater, 0);
-    assert_eq!(count_of(&eater, 44226), 0);
-    assert!(
-        eater
-            .h
-            .app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(player)
-            .unwrap()
-            .contains(60116)
-    );
-    assert!(
+    eater.h.advance(1);
+    let earned = |eater: &Eater| {
         eater
             .h
             .app
@@ -297,10 +284,21 @@ fn achievements_criteria_mount_item_use_learns_authored_spell_and_completes() {
             .unwrap()
             .account
             .as_ref()
-            .unwrap()
-            .earned_ids
-            .contains(&2076)
-    );
+            .is_some_and(|account| account.earned_ids.contains(&2076))
+    };
+    assert!(!earned(&eater));
+    use_slot(&mut eater, 0);
+    let refused = errors(&mut eater);
+    assert!(refused.is_empty(), "{refused:?}");
+    assert_eq!(count_of(&eater, 44225), 0);
+    eater.h.advance(2);
+    assert!(crate::mount_journal::knows_spell(
+        eater.h.app.world(),
+        player,
+        60114
+    ));
+    // Armored Brown Bear2076 tree11216 MeetsAtLeast1: LearnOrKnowSpell34 60114 or 60116.
+    assert!(earned(&eater));
 }
 
 struct Eater {
