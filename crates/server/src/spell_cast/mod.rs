@@ -143,11 +143,11 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
-mod school_costs;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
-pub(crate) pub(crate) mod teleport;
+mod school_costs;
+pub(crate) mod teleport;
 mod teleport_positions;
 
 pub struct SpellCastPlugin;

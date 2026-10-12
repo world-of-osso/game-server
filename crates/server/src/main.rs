@@ -58,6 +58,7 @@ mod interest;
 mod inventory;
 mod item_stats;
 mod item_templates;
+mod knockback;
 mod level_scaling;
 mod lfg;
 mod line_of_sight;
@@ -111,7 +112,6 @@ mod stats;
 mod system_timings;
 mod tame;
 mod taxi;
-mod knockback;
 mod teleport;
 mod terrain_height;
 #[cfg(test)]

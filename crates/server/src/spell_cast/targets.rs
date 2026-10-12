@@ -419,7 +419,14 @@ pub fn select_targets(
                 } else {
                     center.unwrap_or(caster_pos)
                 };
-                units.extend(entry_area_units(world, caster, spell, effect, origin, radius(effect, slot)));
+                units.extend(entry_area_units(
+                    world,
+                    caster,
+                    spell,
+                    effect,
+                    origin,
+                    radius(effect, slot),
+                ));
             }
             Selector::ConeEntry => {
                 selected_any = true;
@@ -525,15 +532,31 @@ fn within_directed_shape(
 }
 
 /// Source7/8: spherical same-copy area with authored entry conditions, not faction substitution.
-fn entry_area_units(world: &mut World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect, origin: Vec3, radius: f32) -> Vec<Entity> {
+fn entry_area_units(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    origin: Vec3,
+    radius: f32,
+) -> Vec<Entity> {
     let map = world.get::<crate::maps::InMap>(caster).copied();
-    let targets: Vec<_> = world.query::<(Entity, &Position, &Health, &crate::maps::InMap)>().iter(world)
+    let targets: Vec<_> = world
+        .query::<(Entity, &Position, &Health, &crate::maps::InMap)>()
+        .iter(world)
         .filter(|(_, position, health, copy)| {
             let position = Vec3::new(position.x, position.y, position.z);
-            health.current > 0.0 && Some(**copy) == map && position.distance_squared(origin) <= radius * radius
-        }).map(|(entity, ..)| entity).collect();
+            health.current > 0.0
+                && Some(**copy) == map
+                && position.distance_squared(origin) <= radius * radius
+        })
+        .map(|(entity, ..)| entity)
+        .collect();
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
-    targets.into_iter().filter(|&target| conditions.target_meets(world, spell.id, effect.index, target)).collect()
+    targets
+        .into_iter()
+        .filter(|&target| conditions.target_meets(world, spell.id, effect.index, target))
+        .collect()
 }
 
 /// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):
