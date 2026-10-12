@@ -6,7 +6,7 @@ pub(crate) fn collection_fixture() -> Connection {
     let db = crate::housing_catalog::tests::catalog_fixture();
     db.execute(
         "INSERT INTO housing_catalog_record VALUES (?, 'HouseDecor', 1693, ?)",
-        params![BUILD_KEY, r#"{"ItemID":"245259"}"#],
+        params![BUILD_KEY, r#"{"ItemID":"245259","ModelType":"1","InitialRotation_0":"0.0","InitialRotation_1":"0.0","InitialRotation_2":"0.0","InitialScale":"1.0"}"#],
     )
     .unwrap();
     // Sampled pinned source rows, including the zero player condition/extended cost.

@@ -14,6 +14,8 @@ use super::{INVENTORIES, InventoryData, inventory_store};
 pub(crate) const BUILD_KEY: &str = "dcfc90fffd79ba00406ae46f5f657592";
 const STATE: TableDefinition<u8, &[u8]> = TableDefinition::new("housing_state");
 const STATE_ROW: u8 = 0;
+#[path = "persistence_housing_migration.rs"]
+mod migration;
 const NEIGHBORHOOD_LOCATIONS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("housing_neighborhood_locations");
 
@@ -60,6 +62,7 @@ struct OwnedHouse {
 
 #[derive(Serialize, Deserialize)]
 struct State {
+    schema_version: u64,
     build_key: String,
     next_house_id: u64,
     next_instance_id: u64,
@@ -70,6 +73,7 @@ struct State {
 impl State {
     fn new() -> Self {
         Self {
+            schema_version: migration::SCHEMA_VERSION,
             build_key: BUILD_KEY.into(),
             next_house_id: 1,
             next_instance_id: 1,
@@ -85,15 +89,28 @@ pub(crate) fn create_tables(txn: &WriteTransaction) {
     txn.open_table(NEIGHBORHOOD_LOCATIONS)
         .expect("create housing neighborhood locations");
     let mut table = txn.open_table(STATE).expect("create housing state table");
-    let exists = table
+    let existing = table
         .get(STATE_ROW)
         .expect("read housing initialization")
-        .is_some();
-    if !exists {
+        .map(|row| row.value().to_vec());
+    if existing.is_none() {
         let bytes = serde_json::to_vec(&State::new()).expect("encode new housing state");
         table
             .insert(STATE_ROW, bytes.as_slice())
             .expect("initialize empty housing state");
+    }
+    drop(table);
+    if let Some(bytes) = existing {
+        let version = migration::version(&bytes).expect("read housing schema version");
+        if version != migration::SCHEMA_VERSION {
+            let source = rusqlite::Connection::open_with_flags(
+                crate::spell_info::WORLD_DB_PATH,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .expect("open housing migration source");
+            migration::migrate(txn, &source)
+                .expect("migrate housing transforms from authenticated source");
+        }
     }
 }
 
@@ -189,6 +206,12 @@ fn read_state(table: &impl ReadableTable<u8, &'static [u8]>) -> Result<State, St
         .ok_or("Housing state has not been initialized.")?;
     let state: State = serde_json::from_slice(row.value())
         .map_err(|error| format!("Decode housing state: {error}"))?;
+    if state.schema_version != migration::SCHEMA_VERSION {
+        return Err(format!(
+            "Unsupported housing schema {}.",
+            state.schema_version
+        ));
+    }
     if state.build_key != BUILD_KEY {
         return Err(format!(
             "Housing state build {} does not match {BUILD_KEY}.",
@@ -481,6 +504,7 @@ fn edit_house_id(command: &HousingCommand) -> Result<u64, String> {
         HousingCommand::PlaceDecor { house_id, .. }
         | HousingCommand::MoveDecor { house_id, .. }
         | HousingCommand::RotateDecor { house_id, .. }
+        | HousingCommand::TransformDecor { house_id, .. }
         | HousingCommand::RemoveDecor { house_id, .. } => Ok(*house_id),
         _ => Err("Not a basic decor edit.".into()),
     }
@@ -500,6 +524,17 @@ fn validate_yaw(yaw: f32) -> Result<(), String> {
     } else {
         Err("Decor rotation must be finite.".into())
     }
+}
+
+fn validate_transform(transform: &shared::protocol::DecorTransform) -> Result<(), String> {
+    validate_position(&transform.position)?;
+    for radians in [transform.yaw, transform.pitch, transform.roll] {
+        validate_yaw(radians)?;
+    }
+    if !transform.scale.is_finite() || transform.scale <= 0.0 {
+        return Err("Decor scale must be finite and positive.".into());
+    }
+    Ok(())
 }
 
 pub(crate) fn edit(db: &Database, actor: Actor, command: &HousingCommand) -> Result<(), String> {
@@ -541,8 +576,7 @@ fn apply_edit(
             transform,
             ..
         } => {
-            validate_position(&transform.position)?;
-            validate_yaw(transform.yaw)?;
+            validate_transform(transform)?;
             let storage = state
                 .storage
                 .get_mut(&account)
@@ -586,6 +620,14 @@ fn apply_edit(
         } => {
             validate_yaw(*yaw)?;
             find_decor(state, house_id, *instance_id)?.transform.yaw = *yaw;
+        }
+        HousingCommand::TransformDecor {
+            instance_id,
+            transform,
+            ..
+        } => {
+            validate_transform(transform)?;
+            find_decor(state, house_id, *instance_id)?.transform = *transform;
         }
         HousingCommand::RemoveDecor { instance_id, .. } => {
             let house = state.houses.get_mut(&house_id).expect("validated house");

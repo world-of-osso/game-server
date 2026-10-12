@@ -71,3 +71,9 @@ Native controls, playable terrain, component placement, item collection integrat
 ## Behavioral proof
 
 Focused `scripts/tests/test_import_housing.py`: exact authored fireplace/plot data; unknown-field retention; no ownership/currency invention; idempotence; unrelated table preservation; wrong build/key and altered CSV/DB2 refusal; transactional rollback across tables.
+
+## Precision transforms and persistence schema1
+
+Expert commits atomically retain full Y-up position, yaw/pitch/roll in radians and positive finite uniform scale. Owner/in-house authority and stored/placed conservation remain unchanged; accepted full transforms publish to same-copy observers. WMO decor retains its authenticated InitialScale (Retail NoWMOScale); no arbitrary outdoor bounds or scale extrema are invented. Basic edits preserve the other axes and scale.
+
+Startup migrates pre-precision redb schema0 exactly once within initialization's transaction: preserve saved position/yaw and derive pitch, roll and scale from the same-build HouseDecor InitialRotation/InitialScale. Source degrees/Z-up convert to engine radians/Y-up; missing or invalid source aborts without replacing the row. Schema1 runtime has no legacy transform decoder. Reopening schema1 never resets later precision edits. No canonical world.db mutation is needed; source catalog promotion remains lead-owned.

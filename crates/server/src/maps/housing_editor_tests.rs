@@ -103,6 +103,9 @@ fn housing_editor_wire_updates_a_same_house_visitor_without_leaking_owner_storag
                 transform: DecorTransform {
                     position: [-996.0, -2.0, 1000.0],
                     yaw: 0.0,
+                    pitch: 0.0,
+                    roll: 0.0,
+                    scale: 1.0,
                 },
             },
         });
