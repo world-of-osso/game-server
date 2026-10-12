@@ -46,6 +46,7 @@ pub(super) fn update_matches(world: &mut World) {
             .filter_map(|(id, matched)| update_match(matched, &actors, now).then_some(*id))
             .collect::<Vec<_>>()
     });
+    super::arena_preparation::sync_preparation(world);
     super::arena_objects::update_gates(world, now);
     super::arena_sight::update_sight(world, now);
     for id in changed {
