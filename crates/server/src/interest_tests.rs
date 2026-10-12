@@ -112,7 +112,7 @@ fn typed_invisibility_detection_rechecks_stationary_and_new_observers() {
 #[test]
 fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_expiry() {
     use crate::auras::{AuraApplication, AuraSource, RemoveReason, apply_aura, remove_auras};
-    use shared::components::{Level, Player, Rotation, UnitFactionTemplate};
+    use shared::components::{Health, Level, Player, Rotation, UnitFactionTemplate};
     let harness = crate::spell_cast::test_harness::harness_with_plugins(
         Vec::new(),
         &[5215, 34709],
@@ -128,6 +128,10 @@ fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_
     let player = app.world().get::<PlayerLink>(connection).unwrap().0;
     app.world_mut().entity_mut(player).insert((
         Level(20),
+        Health {
+            current: 4240.0,
+            max: 4240.0,
+        },
         Player {
             name: "Observer".into(),
             race: 1,
@@ -144,6 +148,10 @@ fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_
     let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
     app.world_mut().entity_mut(target).insert((
         Level(20),
+        Health {
+            current: 4240.0,
+            max: 4240.0,
+        },
         Player {
             name: "Prowler".into(),
             race: 2,
@@ -174,7 +182,7 @@ fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_
     run_fixed_ticks(&mut app, 1);
     assert!(
         !visible(&app),
-        "source Prowl hides a player beyond detection range"
+        "source Prowl hides a living player beyond detection range"
     );
     assert!(!crate::spell_cast::targets::relation_matches(
         app.world(),

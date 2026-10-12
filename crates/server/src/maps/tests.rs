@@ -826,25 +826,53 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 
 #[test]
 fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_channel() {
-    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false);
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 572);
 }
 #[test]
 fn rated_arena_groups_play_then_persist_reference_rating_without_queue_only_awards() {
-    exercise_arena_channel(ArenaQueueMode::Rated2v2, false);
+    exercise_arena_channel(ArenaQueueMode::Rated2v2, false, 572);
 }
 #[test]
 fn six_arena_players_complete_skirmish_three_v_three_over_real_channels() {
-    exercise_arena_channel(ArenaQueueMode::Skirmish3v3, false);
+    exercise_arena_channel(ArenaQueueMode::Skirmish3v3, false, 572);
 }
 #[test]
 fn six_arena_players_complete_rated_three_v_three_and_persist_played_results() {
-    exercise_arena_channel(ArenaQueueMode::Rated3v3, false);
+    exercise_arena_channel(ArenaQueueMode::Rated3v3, false, 572);
 }
 #[test]
 fn arena_alive_forfeits_end_the_match_without_fabricating_scoreboard_deaths() {
-    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, true);
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, true, 572);
 }
-fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
+
+#[test]
+fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_return() {
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps: Vec<u32> = source
+        .prepare("SELECT map_id FROM arena_map WHERE min_level>0 AND max_level>=90 ORDER BY map_id")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(
+        maps.len(),
+        16,
+        "local BattlemasterList/Map/WDT source census"
+    );
+    for map_id in maps {
+        exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, map_id);
+        println!(
+            "SOURCE_ARENA_MAP_PASS {map_id}: authored starts/gates, preparation, physical orb, scored elimination, exact returns"
+        );
+    }
+}
+
+fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
     let team_size = match mode {
@@ -870,11 +898,32 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
         )
         .unwrap();
     catalog_db
-        .execute_batch("CREATE TABLE arena_map AS SELECT * FROM source.arena_map WHERE map_id=572;")
+        .execute(
+            "CREATE TABLE arena_map AS SELECT * FROM source.arena_map WHERE map_id=?",
+            [map_id],
+        )
+        .unwrap();
+    let (start_a, start_b): (u32, u32) = catalog_db
+        .query_row("SELECT start_a,start_b FROM arena_map", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
         .unwrap();
     let catalog = crate::pvp::arena::Catalog::load(&catalog_db).unwrap();
     let gates = crate::pvp::arena_objects::GateCatalog::load(&source).unwrap();
-    let objects = source_map_objects(572, &[185918, 185917, 184663, 184664]);
+    let gate_actions: Vec<(u32, String, u32)> = source
+        .prepare("SELECT entry,action,despawn_secs FROM arena_gate WHERE map_id=?")
+        .unwrap()
+        .query_map([map_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(!gate_actions.is_empty(), "map{map_id} source gates");
+    let entries: Vec<_> = gate_actions
+        .iter()
+        .map(|(entry, _, _)| *entry)
+        .chain([184663, 184664])
+        .collect();
+    let objects = source_map_objects(map_id, &entries);
     let sight = crate::pvp::arena_objects::SightCatalog::load(&source, &objects).unwrap();
     let source_orb = objects
         .0
@@ -1007,7 +1056,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
         .collect();
     let match_id = invitations[0].match_id;
     for (who, invite) in players.iter().zip(&invitations) {
-        assert_eq!(invite.map_id, 572);
+        assert_eq!(invite.map_id, map_id);
         assert_eq!(invite.match_id, match_id);
         h.app
             .world_mut()
@@ -1023,11 +1072,11 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
         assert_eq!(h.map_of(who), None);
         let travel = h.new_worlds(who);
         assert_eq!(travel.len(), 1);
-        assert_eq!(travel[0].map_id, 572);
+        assert_eq!(travel[0].map_id, map_id);
         let source_id = if invite.team == shared::battleground::BgTeam::A {
-            1258
+            start_a
         } else {
-            1259
+            start_b
         };
         let source_start = map_store().unwrap().safe_locs[&source_id];
         assert!(close(
@@ -1082,6 +1131,35 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
             .iter()
             .any(|a| a.spell_id == 32727)
     );
+    let source_gates: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &InMap, &shared::protocol::GameObjectInfo)>()
+        .iter(h.app.world())
+        .filter(|(_, copy, info)| {
+            **copy == map
+                && gate_actions
+                    .iter()
+                    .any(|(entry, _, _)| *entry == info.entry)
+        })
+        .map(|(entity, _, info)| (entity, info.entry))
+        .collect();
+    for (entry, _, _) in &gate_actions {
+        assert!(
+            source_gates.iter().any(|(_, actual)| actual == entry),
+            "map{map_id} missing source gate{entry}"
+        );
+    }
+    for (gate, _) in &source_gates {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::protocol::GameObjectAnimation>(*gate)
+                .unwrap()
+                .animation_id,
+            147
+        );
+    }
     let preparing = players[0].player;
     assert_eq!(
         crate::spell_cast::powers::power_value(
@@ -1141,6 +1219,28 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
             .iter()
             .any(|a| a.spell_id == 32727)
     );
+    for (gate, entry) in &source_gates {
+        let (_, action, _) = gate_actions
+            .iter()
+            .find(|(source, _, _)| source == entry)
+            .unwrap();
+        if action == "delete" {
+            assert!(
+                h.app.world().get_entity(*gate).is_err(),
+                "map{map_id} source wall removed at start"
+            );
+        } else {
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<shared::protocol::GameObjectAnimation>(*gate)
+                    .unwrap()
+                    .animation_id,
+                148,
+                "map{map_id} source door open"
+            );
+        }
+    }
     h.receive_pvp_updates(1700);
     assert_eq!(
         object_count(h.app.world_mut(), 6),
@@ -1149,6 +1249,17 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool) {
     );
     h.receive_pvp_updates(101);
     assert_eq!(object_count(h.app.world_mut(), 6), 2);
+    for (gate, entry) in &source_gates {
+        let (_, action, despawn) = gate_actions
+            .iter()
+            .find(|(source, _, _)| source == entry)
+            .unwrap();
+        assert_eq!(
+            h.app.world().get_entity(*gate).is_ok(),
+            action != "delete" && *despawn == 0,
+            "map{map_id} gate{entry} source lifetime"
+        );
+    }
     h.app
         .world_mut()
         .entity_mut(players[0].player)
