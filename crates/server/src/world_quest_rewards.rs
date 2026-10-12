@@ -69,7 +69,7 @@ fn load_numeric_rewards(
 }
 
 pub(crate) struct Settlement {
-    wallet: shared::currency::CurrencyWallet,
+    pub(crate) wallet: shared::currency::CurrencyWallet,
     reputation: shared::reputation::CharacterReputation,
 }
 

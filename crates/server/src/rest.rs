@@ -361,7 +361,7 @@ fn collect_innkeeper_positions(world_data: &WorldData) -> Vec<Vec3> {
         let Some(template) = world_data.templates.get(&spawn.template_entry) else {
             continue;
         };
-        if template.npc_flags & NPC_FLAG_INNKEEPER == 0 {
+        if template.npc_flags & u64::from(NPC_FLAG_INNKEEPER) == 0 {
             continue;
         }
         let (x, y, z) = crate::terrain_height::wow_to_bevy(
@@ -462,7 +462,7 @@ mod tests {
             min_level: 1,
             max_level: 1,
             faction: 0,
-            npc_flags,
+            npc_flags: u64::from(npc_flags),
             speed_walk: 1.0,
             speed_run: 1.0,
             health_modifier: 1.0,
@@ -478,6 +478,7 @@ mod tests {
             unit_flags: 0,
             models: vec![CreatureModelInfo {
                 display_id: 1,
+                display_scale: 1.0,
                 probability: 1.0,
                 is_trigger: false,
             }],

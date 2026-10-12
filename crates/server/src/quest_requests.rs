@@ -131,6 +131,14 @@ pub(super) struct QuestUnits<'w, 's> {
     players: Query<'w, 's, (&'static Player, &'static Level, &'static Position)>,
     npcs: Query<'w, 's, (&'static Npc, &'static Position, Has<DeathState>)>,
     lives: Query<'w, 's, &'static crate::death::PlayerDeathState>,
+    profession_states: Query<
+        'w,
+        's,
+        (
+            &'static crate::profession::PlayerProfessions,
+            &'static crate::currency::PlayerCurrencies,
+        ),
+    >,
 }
 
 /// Bag and gold side effects: inventory deltas and gold replication.
@@ -140,6 +148,7 @@ pub(super) struct QuestSideEffects<'w> {
     inventories: ResMut<'w, GoldUpdateQueue>,
     dirty: ResMut<'w, QuestDirty>,
     xp: ResMut<'w, XpAwards>,
+    specializations: Option<Res<'w, crate::profession::specializations::SpecializationData>>,
 }
 
 /// Everything a request touches besides storage.
@@ -896,7 +905,7 @@ impl<'a> QuestSession<'a, '_, '_> {
             return Err(failed(quest_id, QuestFailedReason::ObjectivesIncomplete));
         }
         let items = self.granted_items(quest, choice_index)?;
-        let numeric = crate::world_quest_rewards::load_settlement(
+        let mut numeric = crate::world_quest_rewards::load_settlement(
             self.db,
             self.character(),
             self.requester.player.race,
@@ -913,6 +922,10 @@ impl<'a> QuestSession<'a, '_, '_> {
         };
         if self.free_cells() < items.len() {
             return Err(failed(quest_id, QuestFailedReason::InventoryFull));
+        }
+        let knowledge = self.load_reward_knowledge(quest, numeric.as_ref())?;
+        if let (Some(settlement), Some(wallet)) = (&mut numeric, &knowledge) {
+            settlement.wallet = wallet.clone();
         }
         take_quest_items(self.db, &mut inventory, quest);
         for &(item_id, count) in &items {
@@ -932,11 +945,16 @@ impl<'a> QuestSession<'a, '_, '_> {
             &log,
             self.reward_appearances(quest, &items),
             numeric,
+            knowledge.as_ref(),
         );
         self.queue_script_quest_hook(npc, quest_id, true);
         let character = self.character();
+        let has_knowledge_reward = knowledge.is_some();
         self.io.commands.queue(move |world: &mut World| {
             crate::achievement::record_quest_reward(world, character, quest_id);
+            if has_knowledge_reward {
+                crate::profession::specializations::reload_knowledge_wallet(world, character);
+            }
         });
         // `RewardQuest`: no XP at the cap.
         let level = self.requester.player.level;
@@ -976,12 +994,55 @@ impl<'a> QuestSession<'a, '_, '_> {
         Ok(())
     }
 
+    fn load_reward_knowledge(
+        &self,
+        quest: &QuestTemplate,
+        numeric: Option<&crate::world_quest_rewards::Settlement>,
+    ) -> Result<Option<shared::currency::CurrencyWallet>, QuestFailed> {
+        if quest.profession_knowledge_rewards.is_empty() {
+            return Ok(None);
+        }
+        let catalog = self
+            .io
+            .effects
+            .specializations
+            .as_deref()
+            .ok_or(failed(quest.id, QuestFailedReason::DontHaveRequirement))?;
+        let (_, _, link) = self
+            .io
+            .units
+            .connections
+            .get(self.requester.connection)
+            .map_err(|_| failed(quest.id, QuestFailedReason::DontHaveRequirement))?;
+        let (professions, currencies) = self
+            .io
+            .units
+            .profession_states
+            .get(link.0)
+            .map_err(|_| failed(quest.id, QuestFailedReason::DontHaveRequirement))?;
+        let wallet = match numeric {
+            Some(settlement) => &settlement.wallet,
+            None => &currencies.0,
+        };
+        crate::profession::specializations::award_knowledge(catalog, professions, wallet, quest.id)
+            .map(Some)
+            .map_err(|error| {
+                warn!(
+                    "Quest {} knowledge reward refused for character {}: {error}",
+                    quest.id,
+                    self.character()
+                );
+                failed(quest.id, QuestFailedReason::DontHaveRequirement)
+            })
+    }
+
     fn persist_reward(
         &mut self,
         inventory: &InventoryData,
         log: &QuestLogData,
         appearances: Vec<u32>,
         numeric: Option<crate::world_quest_rewards::Settlement>,
+        knowledge: Option<&shared::currency::CurrencyWallet>,
     ) {
         let character = self.character();
         let account = persistence::find_account_id_for_character(self.db, character)
@@ -998,6 +1059,9 @@ impl<'a> QuestSession<'a, '_, '_> {
             .expect("write rewarded quest log");
         if let Some(settlement) = &numeric {
             settlement.persist_in(&txn, character);
+        }
+        if let Some(wallet) = knowledge {
+            crate::profession::specializations::write_currency_wallet(&txn, character, wallet);
         }
         txn.commit().expect("commit quest reward");
         if let Some(settlement) = numeric {

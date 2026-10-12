@@ -22,6 +22,7 @@ mod collection;
 mod combat;
 mod combat_refs;
 mod conditions;
+mod crafting_orders;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;
@@ -223,6 +224,7 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(death::DeathPlugin)
         .add_plugins(pvp::PvpPlugin)
         .add_plugins(profession::ProfessionPlugin)
+        .add_plugins(crafting_orders::CraftingOrdersPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(rest::RestPlugin)
         .add_plugins(stand_state::StandStatePlugin)
