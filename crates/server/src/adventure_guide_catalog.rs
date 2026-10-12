@@ -32,7 +32,7 @@ struct Suggestion {
     #[serde(rename = "RewardDescription_lang")]
     reward: String,
     #[serde(rename = "ButtonText_lang")]
-    _button: String,
+    button: String,
     #[serde(rename = "TextureFileDataID")]
     texture: u32,
     #[serde(rename = "PlayerConditionID")]
@@ -239,7 +239,7 @@ mod tests {
             suggestions: vec![Suggestion {
                 id: 7, name: "Hillsbrad Foothills".into(),
                 description: "Join the Forsaken war machine as it marches on Hillsbrad Foothills for the Horde!".into(),
-                reward: String::new(), _button: "Start Quest".into(), texture: 236779,
+                reward: String::new(), button: "Start Quest".into(), texture: 236779,
                 condition: 33200, bonus0: 33600, bonus1: 33200, action: 3, flags: 0, priority: 250,
             }],
             tags: vec![], activity_tags: BTreeMap::new(),
