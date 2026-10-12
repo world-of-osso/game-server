@@ -62,6 +62,16 @@ def retail_condition(node):
     if isinstance(node, lua.ULNotOp):
         value = retail_condition(node.operand)
         return None if value is None else not value
+    if isinstance(node, (lua.AndLoOp, lua.OrLoOp)):
+        left, right = retail_condition(node.left), retail_condition(node.right)
+        if isinstance(node, lua.AndLoOp):
+            return False if left is False or right is False else True if left is True and right is True else None
+        return True if left is True or right is True else False if left is False and right is False else None
+    if isinstance(node, (lua.EqToOp, lua.NotEqToOp)) and expression(node.left) == 'GetLocale()':
+        language = literal(node.right)
+        if isinstance(language, str):
+            matches = language == 'enUS'
+            return matches if isinstance(node, lua.EqToOp) else not matches
     return None
 
 
@@ -93,9 +103,14 @@ def static_value(node, bindings, context):
     if isinstance(node, lua.Table):
         values, index = {}, 1
         for entry in node.fields:
-            key = entry.key.id if isinstance(entry.key, lua.Name) else literal(entry.key)
-            if key is None:
+            if entry.key is None:
                 key, index = index, index + 1
+            elif isinstance(entry.key, lua.Name) and not entry.between_brackets:
+                key = entry.key.id
+            else:
+                key = static_value(entry.key, bindings, context)
+                if not isinstance(key, (int, float, str, bool)):
+                    return None
             values[key] = static_value(entry.value, bindings, context)
         return values
     if isinstance(node, lua.Index):
@@ -114,8 +129,8 @@ def static_value(node, bindings, context):
 
 
 def bind_assignment(node, bindings, context):
-    for target, value in zip(node.targets, node.values):
-        bindings[expression(target)] = static_value(value, bindings, context)
+    values = [static_value(value, bindings, context) for value in node.values]
+    bindings.update((expression(target), value) for target, value in zip(node.targets, values))
 
 
 def top_constants(block):
@@ -152,7 +167,7 @@ def audit_timer_calls(tree, result, timer_vars=None):
             for target, value in zip(node.targets, node.values):
                 if isinstance(target, lua.Name) and 'timer' in target.id.lower() and isinstance(value, lua.Table):
                     result['timer_tables'].append(dict(name=target.id, source_line=line(node),
-                        values=list(flatten_timer_table(static_value(value, {}, {})))))
+                        values=list(flatten_timer_table(static_value(value, {}, {}) or {}))))
                     issue(result, node, 'timer lookup table requires authored lookup index/phase/duration input: ' + target.id)
         name = method_name(node)
         is_dbm_timer = timer_vars and isinstance(node, lua.Invoke) and expression(node.source) in timer_vars and timer_vars[expression(node.source)][2] == 'timer'
@@ -226,7 +241,10 @@ def branch_context(test, context, result):
         if method_name(test.left) == 'MobId' and value in result['npcs']:
             return context.copy()
         if expression(test.left) in ('spellId', 'args.spellId') and value is not None:
-            return dict(context, trigger_spell_id=int(value))
+            registered = context.get('trigger_spell_id')
+            if registered is None or registered == int(value):
+                return dict(context, trigger_spell_id=int(value))
+            return None
     return None
 
 
@@ -238,6 +256,14 @@ def disjoint_dispatch(test, next_test):
             and static_number(test.right) != static_number(next_test.right))
 
 
+def apply_branch_bindings(parent, child, block):
+    locals = {expression(target) for node in all_nodes(block) if isinstance(node, lua.LocalAssign)
+              for target in node.targets}
+    for name in assigned_names(block) - locals:
+        if name in parent:
+            parent[name] = child.get(name)
+
+
 def extract_actions(block, result, context, timer_vars=None, bindings=None):
     bindings = dict(bindings or {})
     for node in block.body:
@@ -246,14 +272,19 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
             continue
         if isinstance(node, (lua.If, lua.ElseIf)):
             choice = retail_condition(node.test)
-            if choice is True:
-                extract_actions(node.body, result, context, timer_vars, bindings)
-            elif choice is False:
-                if isinstance(node.orelse, lua.Block):
-                    extract_actions(node.orelse, result, context, timer_vars, bindings)
-                elif isinstance(node.orelse, lua.ElseIf):
-                    extract_actions(lua.Block(body=[node.orelse]), result, context, timer_vars, bindings)
+            chosen = node.body if choice is True else node.orelse if choice is False else None
+            if choice is not None:
+                if isinstance(chosen, lua.ElseIf):
+                    chosen = lua.Block(body=[chosen])
+                if isinstance(chosen, lua.Block):
+                    child, stopped = extract_actions(chosen, result, context, timer_vars, bindings)
+                    apply_branch_bindings(bindings, child, chosen)
+                    if stopped:
+                        return bindings, True
             else:
+                if any(isinstance(n, lua.Return) for n in all_nodes(node)):
+                    issue(result, node, 'conditional early return requires unresolved guard: ' + expression(node.test))
+                    return bindings, True
                 branch = branch_context(node.test, context, result)
                 if branch is not None:
                     extract_actions(node.body, result, branch, timer_vars, bindings)
@@ -265,10 +296,18 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
                     extract_actions(lua.Block(body=[node.orelse]), result, context, timer_vars, bindings)
                 elif node.orelse:
                     issue(result, node, 'conditional else branch requires preceding guard to be false')
+                for name in assigned_names(lua.Block(body=[node])):
+                    if name in bindings:
+                        bindings[name] = None
             continue
         if isinstance(node, lua.Do):
-            extract_actions(node.body, result, context, timer_vars, bindings)
+            child, stopped = extract_actions(node.body, result, context, timer_vars, bindings)
+            apply_branch_bindings(bindings, child, node.body)
+            if stopped:
+                return bindings, True
             continue
+        if isinstance(node, lua.Return):
+            return bindings, True
         name = method_name(node)
         if not name:
             continue
@@ -311,21 +350,62 @@ def extract_actions(block, result, context, timer_vars=None, bindings=None):
             else:
                 add_rule(result, node, context, action='warning', spell_id=spell,
                          severity=severity, warning_key=key)
+    return bindings, False
 
 
-def select_methods(block):
-    """Resolve addon build branches, preserving function bodies for event analysis."""
+def assigned_names(block):
+    return {expression(target) for node in all_nodes(block)
+            if isinstance(node, lua.Assign) and not isinstance(node, lua.LocalAssign)
+            for target in node.targets if isinstance(target, lua.Name)}
+
+
+def select_methods(block, bindings=None, mutable=None):
+    """Capture lexical constants at each method declaration, not end of file."""
+    bindings = dict(bindings or {})
+    mutable = assigned_names(block) if mutable is None else mutable
     for node in block.body:
-        if isinstance(node, lua.Method):
-            yield node
+        if isinstance(node, lua.LocalAssign):
+            bind_assignment(node, bindings, {})
+            for name in mutable.intersection(bindings):
+                bindings[name] = None
+        elif isinstance(node, lua.Method):
+            yield node, bindings.copy()
         elif isinstance(node, lua.Do):
-            yield from select_methods(node.body)
+            yield from select_methods(node.body, bindings, mutable)
         elif isinstance(node, lua.If):
             choice = retail_condition(node.test)
             if choice is True:
-                yield from select_methods(node.body)
+                yield from select_methods(node.body, bindings, mutable)
             elif choice is False and isinstance(node.orelse, lua.Block):
-                yield from select_methods(node.orelse)
+                yield from select_methods(node.orelse, bindings, mutable)
+
+
+def known_statements(block, module_exists=False):
+    """Only selected Retail/enUS branches can register handlers or locale data."""
+    for node in block.body:
+        if isinstance(node, (lua.If, lua.ElseIf)):
+            if module_exists and expression(node.test) == 'not mod':
+                continue
+            choice = retail_condition(node.test)
+            if choice is True:
+                yield from known_statements(node.body, module_exists)
+                if any(isinstance(n, lua.Return) for n in all_nodes(node.body)):
+                    return
+            elif choice is False:
+                if isinstance(node.orelse, lua.Block):
+                    yield from known_statements(node.orelse, module_exists)
+                    if any(isinstance(n, lua.Return) for n in all_nodes(node.orelse)):
+                        return
+                elif isinstance(node.orelse, lua.ElseIf):
+                    yield from known_statements(lua.Block(body=[node.orelse]), module_exists)
+            elif any(isinstance(n, lua.Return) for n in all_nodes(node)):
+                return
+        elif isinstance(node, lua.Do):
+            yield from known_statements(node.body, module_exists)
+        elif isinstance(node, lua.Return):
+            return
+        else:
+            yield node
 
 
 def extract_bigwigs(source, file, addon, version):
@@ -339,9 +419,11 @@ def extract_bigwigs(source, file, addon, version):
             result['npcs'] = [int(literal(a)) for a in node.args if isinstance(literal(a), (int, float))]
         elif name == 'SetEncounterID' and node.args:
             result['encounter_id'] = static_number(node.args[0]) or 0
-    bindings = top_constants(tree.body)
+    methods = list(select_methods(tree.body))
     handlers = {}
-    for node in all_nodes(tree):
+    registrations = [node for method, _ in methods if method.name.id == 'OnBossEnable'
+                     for node in known_statements(method.body)]
+    for node in registrations:
         if method_name(node) == 'Log' and len(node.args) >= 3:
             event, handler = literal(node.args[0]), literal(node.args[1])
             if event in ('SPELL_CAST_START', 'SPELL_CAST_SUCCESS') and handler:
@@ -349,7 +431,7 @@ def extract_bigwigs(source, file, addon, version):
                     value = static_number(spell)
                     if value and value > 0:
                         handlers.setdefault(handler, []).append((event.lower().removeprefix('spell_'), int(value)))
-    for method in select_methods(tree.body):
+    for method, bindings in methods:
         name = method.name.id
         if name in ('OnEngage', 'OnEncounterStart'):
             extract_actions(method.body, result, dict(trigger='engage'), bindings=bindings)
@@ -390,8 +472,7 @@ def extract_dbm(source, file, addon, version):
             if spell and spell > 0:
                 severity = 2 if 'SpecialWarning' in ctor else 0
                 variables[node.targets[0].id] = (int(spell), None, 'warning', severity, ctor)
-    bindings = top_constants(tree.body)
-    for method in select_methods(tree.body):
+    for method, bindings in select_methods(tree.body):
         name = method.name.id
         if name in ('OnCombatStart', 'OnLimitedCombatStart'):
             extract_actions(method.body, result, dict(trigger='engage'), variables, bindings)
@@ -464,7 +545,8 @@ def locale_literals(source, prefix):
     """Read literal locale assignments; calls and computed strings stay unresolved."""
     values = {}
     tree = ast.parse(source)
-    for node in all_nodes(tree):
+    module_exists = any(method_name(node) in ('NewBoss', 'NewMod') for node in all_nodes(tree))
+    for node in known_statements(tree.body, module_exists):
         if isinstance(node, lua.Assign):
             for target, value in zip(node.targets, node.values):
                 key = expression(target)
@@ -476,8 +558,9 @@ def locale_literals(source, prefix):
                         for name, (text, _) in table_value(value).items():
                             if isinstance(text, str):
                                 values[prefix + key[1:] + '.' + str(name)] = text
-        if method_name(node) == 'SetDefaultLocale' and node.args and isinstance(node.args[0], lua.Table):
-            for name, (text, _) in table_value(node.args[0]).items():
+        call = node.values[0] if isinstance(node, lua.LocalAssign) and node.values else node
+        if method_name(call) == 'SetDefaultLocale' and call.args and isinstance(call.args[0], lua.Table):
+            for name, (text, _) in table_value(call.args[0]).items():
                 if isinstance(text, str):
                     values['L.' + str(name)] = text
     return values
@@ -520,7 +603,7 @@ def render_warnings(result, spell_names, locales):
                 try:
                     text = template % name
                 except (TypeError, ValueError):
-                    pass
+                    text = None
         elif name and key and result['addon'] == 'EXBossData':
             # EncounterData labels are plain data, never parse them as Lua.
             if key.isascii() and key.strip():

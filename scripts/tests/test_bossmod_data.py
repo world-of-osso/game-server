@@ -79,6 +79,40 @@ end
         result = bm.extract_bigwigs(counted, 'Cookie.lua', 'LittleWigs', 'pinned')
         self.assertEqual([r['delay_ms'] for r in result['rules'] if r['action']=='timer'], [2400])
 
+    def test_handler_early_returns_and_branch_assignments(self):
+        early = SOURCE.replace('self:CDBar(6306, 2.4)', 'if self:IsTank() then return end\n self:CDBar(6306, 2.4)')
+        result = bm.extract_bigwigs(early, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertFalse(any(r['trigger']=='engage' and r['action']=='timer' for r in result['rules']))
+        assigned = SOURCE.replace('self:CDBar(6306, 2.4)', 'local delay = 5\n if self:Retail() then delay = 10 end\n self:CDBar(6306, delay)')
+        result = bm.extract_bigwigs(assigned, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual(result['rules'][0]['delay_ms'], 10000)
+
+    def test_lexical_captures_table_keys_and_simultaneous_assignment(self):
+        capture = 'local delay = 2\n' + SOURCE.replace('self:CDBar(6306, 2.4)', 'self:CDBar(6306, delay)') + 'local delay = 13\n'
+        result = bm.extract_bigwigs(capture, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual(result['rules'][0]['delay_ms'], 2000)
+        keyed = SOURCE.replace('self:CDBar(6306, 2.4)', 'local timers = {[1+1]=13}\n self:CDBar(6306, timers[1])')
+        result = bm.extract_bigwigs(keyed, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertFalse(any(r['trigger']=='engage' and r['action']=='timer' for r in result['rules']))
+        swapped = SOURCE.replace('self:CDBar(6306, 2.4)', 'local a,b=2,13\n a,b=b,a\n self:CDBar(6306,b)')
+        result = bm.extract_bigwigs(swapped, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual(result['rules'][0]['delay_ms'], 2000)
+
+    def test_registered_events_follow_retail_guards_and_cannot_change_spell(self):
+        guarded = SOURCE.replace('self:Log("SPELL_CAST_START", "AcidSplash", 6306)',
+            'if self:Classic() then self:Log("SPELL_CAST_START", "AcidSplash", 6306) end')
+        result = bm.extract_bigwigs(guarded, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertFalse(any(r['trigger']=='cast_start' for r in result['rules']))
+        contradiction = SOURCE.replace('if self:Retail() then', 'if args.spellId == 17228 then')
+        result = bm.extract_bigwigs(contradiction, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertFalse(any(r['action']=='timer' and r['trigger']=='cast_start' for r in result['rules']))
+
+    def test_locale_only_enus_assignments_override_default(self):
+        source = 'L.warn="English"\nif GetLocale()=="deDE" then L.warn="Deutsch" end\nif GetLocale()=="enUS" then L.warn="US English" end'
+        self.assertEqual(bm.locale_literals(source, 'L')['L.warn'], 'US English')
+        default = 'L.warn="English"\nif GetLocale()=="deDE" then L.warn="Deutsch" end'
+        self.assertEqual(bm.locale_literals(default, 'L')['L.warn'], 'English')
+
     def test_unreachable_dynamic_timers_are_audited_not_scheduled(self):
         source = SOURCE + '''function mod:Dynamic(eventInfo)
  self:Bar(6306, eventInfo.duration)
