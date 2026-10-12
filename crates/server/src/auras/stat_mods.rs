@@ -282,6 +282,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_CRIT_PCT => stats.crit_pct += amount,
+            // HandleModRating truncates each effect before ApplyRatingMod. Do not
+            // triple-count the same rating for damage/healing/damage-taken bits.
+            MOD_RATING if misc == VERSATILITY_RATING_MASK => {
+                stats.ratings_flat.versatility += effect.amount.trunc() * stacks;
+            }
             // Retail 12.x haste is one stat: melee, ranged and spell haste
             // auras all add to it.
             MOD_MELEE_HASTE
