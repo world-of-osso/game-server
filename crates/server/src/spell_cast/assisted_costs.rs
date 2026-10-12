@@ -73,6 +73,27 @@ mod tests {
     use shared::components::PowerType;
 
     #[test]
+    fn cooldown_assist_effective_cost_snapshot_applies_native_base_mana_and_aura_modifier() {
+        use shared::components::Mana;
+        // Purify527:1.3% of base mana10000. Mental Agility341167 halves it.
+        for (known, expected_cost, affordable) in
+            [(vec![527], 130.0, false), (vec![527, 341167], 65.0, true)]
+        {
+            let mut h = harness(Vec::new(), &known, 5).unwrap();
+            h.advance(1);
+            h.app.world_mut().get_mut::<Mana>(h.caster).unwrap().current = 80.0;
+            let snapshot = read_snapshot(h.app.world(), h.caster);
+            let reading = snapshot
+                .spells
+                .iter()
+                .find(|reading| reading.spell_id == 527)
+                .unwrap();
+            assert!((reading.costs.as_ref().unwrap()[0].amount - expected_cost).abs() < 0.001);
+            assert_eq!(reading.affordable, affordable);
+        }
+    }
+
+    #[test]
     fn cooldown_assist_cost_snapshot_matches_native_cost_admission_and_updates() {
         let mut h = harness(Vec::new(), &[12294], 1).unwrap();
         for rage in [200.0, 300.0, 500.0] {
