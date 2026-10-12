@@ -338,19 +338,17 @@ pub(crate) fn spawn_map_content(world: &mut World, map: InMap) {
         world.resource::<MapStore>(),
         map,
     );
+    let difficulty_id = content.difficulty_id;
     let mut queue = CommandQueue::default();
     {
         let mut commands = Commands::new(&mut queue, world);
-        if let Some(objects) = world.get_resource::<crate::game_objects::GameObjectSpawns>() {
-            crate::game_objects::spawn_map_game_objects(
-                &mut commands,
-                objects,
-                map,
-                content.difficulty_id,
-            );
-        }
+        // Creature spawning queues this copy's pool selection/state. Gathering-node
+        // commands consume that state, so both must share this order at world-port ack.
         if let Some(world_data) = world.get_resource::<crate::world_data::WorldData>() {
             crate::zones::spawn_map_creatures(&mut commands, world_data, content, true);
+        }
+        if let Some(objects) = world.get_resource::<crate::game_objects::GameObjectSpawns>() {
+            crate::game_objects::spawn_map_game_objects(&mut commands, objects, map, difficulty_id);
         }
     }
     queue.apply(world);
