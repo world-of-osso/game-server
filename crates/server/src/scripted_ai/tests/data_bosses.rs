@@ -207,6 +207,42 @@ fn encounter_coverage_kystia_mirror_tick_spawns_authored_copy_in_the_same_instan
 }
 
 #[test]
+fn encounter_coverage_mirror_respawn_cast_is_not_an_ordinary_reset_cast() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let mirror = crate::zones::summon_creature(
+        h.app.world_mut(),
+        kystia,
+        255050,
+        [8860.0, -4840.0, 13.0, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    assert_eq!(*h.app.world().get::<InMap>(mirror).unwrap(), map);
+    assert!(
+        h.has_aura(mirror, 1264106),
+        "appearance must run sourced Respawn11 cast"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        mirror,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1264106,
+    );
+    super::super::dispatch(h.app.world_mut(), mirror, Hook::Reset);
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(mirror, 1264106),
+        "ordinary reset must not replay Respawn11"
+    );
+    super::super::reinitialize(h.app.world_mut(), mirror);
+    h.advance(0.1);
+    assert!(
+        h.has_aura(mirror, 1264106),
+        "respawn must run appearance again"
+    );
+}
+
+#[test]
 fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let conn =

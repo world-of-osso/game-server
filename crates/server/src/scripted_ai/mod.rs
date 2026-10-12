@@ -273,7 +273,11 @@ fn initialize_ai(world: &mut World, creature: Entity) {
             ai: Some(ai),
             pending: VecDeque::new(),
         });
-    dispatch(world, creature, Hook::Reset);
+    // SmartAI initializes event timers in its constructor and dispatches RESET
+    // after RESPAWN in JustAppeared. Other CreatureAI implementations reset here.
+    if name != SMART_AI && !name.is_empty() {
+        dispatch(world, creature, Hook::Reset);
+    }
     dispatch(world, creature, Hook::JustAppeared);
 }
 

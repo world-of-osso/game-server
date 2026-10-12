@@ -36,6 +36,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] Auras added: 18 MOD_INVISIBILITY (hidden from observers without matching [typed detection](invisibility-detection.md)), 93 MOD_UNATTACKABLE (`NON_ATTACKABLE_2`, attack stopped in a dungeon), 54 MOD_HIT_CHANCE, 252 MOD_SPEED_SLOW_ALL (attack and cast time ×(100−amount)/100).
 
 ### SmartAI combat casts
+- [x] Appearance/respawn initializes event timers, dispatches source `SMART_EVENT_RESPAWN`11 with authored map/zone conditions, then resets script timers; ordinary Reset/evade does not replay respawn actions (TC SmartAI.cpp494–519). Source cast flags are unchanged.
 - [x] `SMART_EVENT_UPDATE_IC` advances initial and repeat min/max timers only while engaged; a due cast waits for any active cast to finish.
 - [x] `SMART_TARGET_VICTIM` resolves the current victim. `SMARTCAST_COMBAT_MOVE` disables chase after an accepted cast, including between casts; a rejected cast restores chase/melee and retries on the next update without rerolling event chance.
 - [x] New AI starts with combat movement enabled; Reset restores initial timers without changing movement permission. Real Kobold Geomancer 476 rows cast Fireball 20793, with a 0 ms initial delay and 3000–5000 ms repeat.
