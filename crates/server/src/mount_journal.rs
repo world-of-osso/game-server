@@ -27,15 +27,10 @@ impl Plugin for MountJournalPlugin {
         app.add_systems(Startup, load_catalog)
             .add_systems(
                 Update,
-                (
-                    sync_accounts,
-                    receive_favourites,
-                    receive_summons,
-                    receive_dismissals,
-                )
-                    .chain(),
+                (receive_favourites, receive_summons, receive_dismissals).chain(),
             )
-            .add_systems(PostUpdate, publish_mount_changes);
+            // Auth world entry applies deferred PlayerLink/InWorld during Update.
+            .add_systems(PostUpdate, (sync_accounts, publish_mount_changes).chain());
     }
 }
 
