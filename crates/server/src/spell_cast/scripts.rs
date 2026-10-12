@@ -117,6 +117,9 @@ pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::murder_row::SPELL_FEL_NOVA_SELECTOR, 0) => {
+            Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
+        }
         (batch17::CONFLAGRATE, 0) => Some(batch17::conflagrate),
         (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),
         (batch17::BLOOD_BOIL, 0) => Some(batch17::apply_blood_plague),
@@ -304,6 +307,9 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        crate::scripted_ai::murder_row::SPELL_BLINK => {
+            Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
+        }
         batch20::BARBED_SHOT => Some(batch20::grant_barbed_focus),
         batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
         batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),

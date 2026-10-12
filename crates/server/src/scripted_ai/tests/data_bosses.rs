@@ -189,16 +189,14 @@ fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle(
     );
     // Mirror is due14s, but TC waits for the11.5s Chaos cast to finish14.5s.
     h.advance(6.8);
-    assert_eq!(
-        h.casts(0, boss, 1264095),
-        0,
+    assert!(
+        !h.has_aura(boss, 1264095),
         "Mirror Images interrupted Chaos Barrage"
     );
     h.advance(0.3);
-    assert_eq!(
-        h.casts(0, boss, 1264095),
-        1,
-        "due Mirror Images did not follow cast completion"
+    assert!(
+        h.has_aura(boss, 1264095),
+        "due Mirror Images aura did not follow cast completion"
     );
     assert_eq!(
         h.casts(0, boss, 474240),
@@ -247,23 +245,37 @@ fn encounter_coverage_kystia_heroic_fel_nova_schedule_and_evade_retirement() {
     h.engage(boss);
     // Due12s, admitted only after the11.5s Chaos cast completes14.5s.
     h.advance(14.4);
-    assert_eq!(h.casts(0, boss, 474240), 0);
+    let nova_hits = |h: &Harness| {
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Damage
+                    && e.source == Some(boss.to_bits())
+                    && e.spell_id == Some(1223906)
+            })
+            .count()
+    };
+    assert_eq!(nova_hits(&h), 0);
     h.advance(0.3);
-    assert_eq!(
-        h.casts(0, boss, 474240),
-        1,
-        "Heroic due Fel Nova selector missing"
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(boss)
+        .expect("Heroic selector→Blink→Fel Nova must start the sourced cast");
+    assert_eq!(cast.spell_id, 1223906);
+    assert_eq!(cast.duration, 3.5, "DB2 CastingTimeIndex22 is3500ms");
+    h.advance(3.5);
+    assert!(
+        nova_hits(&h) > 0,
+        "Heroic Fel Nova must deal actual DB2 damage"
     );
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
     h.advance(0.05);
     assert!(!h.inbox(0).ends.last().unwrap().success);
-    let casts = h.casts(0, boss, 474240);
+    let hits = nova_hits(&h);
     h.advance(16.0);
-    assert_eq!(
-        h.casts(0, boss, 474240),
-        casts,
-        "evaded boss retained its15s schedule"
-    );
+    assert_eq!(nova_hits(&h), hits, "evaded boss retained its15s schedule");
 }
 
 #[test]
