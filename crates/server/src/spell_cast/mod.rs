@@ -1857,7 +1857,7 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        let mut dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             spell.cast_destination.map(|point| targets::Dest {
                 position: Vec3::from_array(point),
                 orientation: targets::orientation(world, caster),
@@ -1865,6 +1865,9 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
+        if let Some(dest) = &mut dest {
+            scripts::relocate_destination(spell.id, effect, dest);
+        }
         plan.push(PlannedEffect {
             index,
             units,

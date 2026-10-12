@@ -118,6 +118,20 @@ const DEFLECTING_SPIKES: u32 = 321_028;
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
 pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
+/// Source OnDestinationTargetSelect hooks, keyed by spell/effect/target selector.
+pub(super) fn relocate_destination(
+    spell_id: u32,
+    effect: &crate::spell_info::SpellEffect,
+    dest: &mut super::targets::Dest,
+) {
+    if spell_id == crate::scripted_ai::murder_row::SPELL_MIRROR_IMAGE
+        && effect.index == 0
+        && effect.implicit_targets.contains(&87)
+    {
+        crate::scripted_ai::murder_row::relocate_mirror_destination(dest);
+    }
+}
+
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (crate::scripted_ai::murder_row::SPELL_FEL_NOVA_SELECTOR, 0) => {

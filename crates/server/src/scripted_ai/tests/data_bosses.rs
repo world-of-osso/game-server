@@ -33,7 +33,8 @@ fn bound_boss_at_difficulty(
     let mut templates = crate::world_data::load_templates(&conn, &expected);
     templates.retain(|id, _| *id == entry || (entry == 234648 && [234660, 255050].contains(id)));
     crate::world_data::load_template_models(&conn, &mut templates);
-    let difficulty_templates = crate::world_data::load_difficulty_templates(&conn, &expected, &templates);
+    let difficulty_templates =
+        crate::world_data::load_difficulty_templates(&conn, &expected, &templates);
     let hp = conn
         .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
         .unwrap()
@@ -139,13 +140,16 @@ fn spawn_authored_actor(
     let actor = crate::zones::spawn_creature(
         &mut commands,
         wd,
-        wd.template_for(entry, difficulty).expect("authored fixture difficulty"),
+        wd.template_for(entry, difficulty)
+            .expect("authored fixture difficulty"),
         map,
         false,
         &spawn,
         &mut rand::thread_rng(),
     );
-    commands.entity(actor).insert(crate::zones::CreatureDifficulty(difficulty));
+    commands
+        .entity(actor)
+        .insert(crate::zones::CreatureDifficulty(difficulty));
     queue.apply(app.world_mut());
     (actor, spawn)
 }
@@ -154,23 +158,45 @@ fn spawn_authored_actor(
 fn encounter_coverage_kystia_mirror_tick_spawns_authored_copy_in_the_same_instance() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let player = h.player();
-    h.app.world_mut().entity_mut(player).insert(Health { current: 1_000_000_000.0, max: 1_000_000_000.0 });
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
     h.engage(kystia);
     h.advance(14.7);
     assert!(h.has_aura(kystia, 1264095));
     assert!(h.creatures_of(255050).is_empty());
     h.advance(2.2);
     let mirrors = h.creatures_of(255050);
-    assert!(!mirrors.is_empty(), "sourced Mirror Images periodic23 callback must summon255050");
+    assert!(
+        !mirrors.is_empty(),
+        "sourced Mirror Images periodic23 callback must summon255050"
+    );
     let center = *h.app.world().get::<Position>(kystia).unwrap();
     for mirror in mirrors {
         assert_eq!(*h.app.world().get::<InMap>(mirror).unwrap(), map);
-        assert_eq!(h.app.world().get::<crate::zones::TempSummon>(mirror).unwrap().summoner, kystia);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::zones::TempSummon>(mirror)
+                .unwrap()
+                .summoner,
+            kystia
+        );
         let p = h.app.world().get::<Position>(mirror).unwrap();
-        assert!((-30.0..=25.0).contains(&(p.x-center.x)));
-        assert!((-26.0..=15.0).contains(&(p.z-center.z)));
-        assert!(h.has_aura(mirror, 1264106), "authored SmartAI RESPawn11 must cast Felstorm");
+        assert!((-30.0..=25.0).contains(&(p.x - center.x)));
+        assert!((-26.0..=15.0).contains(&(p.z - center.z)));
+        assert!(
+            h.has_aura(mirror, 1264106),
+            "authored SmartAI Respawn11 must cast Felstorm"
+        );
     }
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), kystia);
+    h.advance(0.1);
+    assert!(
+        h.creatures_of(255050).is_empty(),
+        "evade must retire owned mirrors"
+    );
 }
 
 #[test]

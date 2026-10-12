@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Murder Row mirror callbacks](systems/boss-scripts.md#murder-row-continuation-2026-10-12): source aura23 callback, random destination offset and wild creature-spawn lifecycle implemented after the inherited mirror test reproduced missing summons. Infusion remains a named source gap; no full-encounter or native acceptance claimed.
+
 - 2026-10-12 — [Encounter coverage](../encounter-coverage.md): complete hosted identity census and source-related work order; partial Kystia/Nibbles port. Friendly phase generic-evade boundary reproduced; scripted victim-update ownership preserves the source's skipped UpdateVictim. No full boss/instance certification.
 
 - 2026-10-12 — [Toy scaled/state-kit proof](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11): all four actual journal/native scaled identities pass both skins; Sealamp116424 and Spire236744 authored state models/attachment scales start once and disappear with natural180-second actor expiry.21 local assets authenticated;11 scoped core tests/native builds. Prepared320 is not complete-effect certification; remaining native/per-toy boundaries explicit.

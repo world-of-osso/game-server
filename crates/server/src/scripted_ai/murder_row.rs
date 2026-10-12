@@ -1,8 +1,7 @@
 //! Murder Row Kystia combat events from TrinityCore a352b1fa
 //! src/server/scripts/QuelThalas/MurderRow/boss_kystia_manaheart.cpp.
-//! This ports the authored primary-actor schedule, not the whole encounter:
-//! Nibbles, infusion/channel callbacks, shields, mirror destinations and
-//! door/boundary behavior remain tracked source gaps.
+//! Partial encounter port: primary/companion events, shields and mirror callbacks.
+//! Infusion completion, Fel Spray damage and door/boundary behavior remain gaps.
 
 use bevy::prelude::*;
 
@@ -19,6 +18,7 @@ const EVENT_MIRROR_IMAGES: u32 = 2;
 const EVENT_FEL_NOVA: u32 = 3;
 const SPELL_CHAOS_BARRAGE: u32 = 1230298;
 const SPELL_MIRROR_IMAGES: u32 = 1264095;
+pub(crate) const SPELL_MIRROR_IMAGE: u32 = 1264098;
 pub(crate) const SPELL_FEL_NOVA_SELECTOR: u32 = 474240;
 pub(crate) const SPELL_BLINK: u32 = 474183;
 const SPELL_FEL_NOVA: u32 = 1223906;
@@ -122,6 +122,13 @@ struct KystiaManaheart {
 pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::AuraScripts>) {
     use crate::auras::scripts::AuraScript;
     scripts.0.insert(
+        SPELL_MIRROR_IMAGES,
+        AuraScript {
+            on_periodic: Some(cast_mirror_image),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         SPELL_LIGHT_INFUSION,
         AuraScript {
             on_apply: Some(apply_destabilized),
@@ -135,6 +142,31 @@ pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::A
             ..Default::default()
         },
     );
+}
+
+/// TC spell_kystia_manaheart_mirror_images::HandlePeriodicEffect, effect0/aura23.
+fn cast_mirror_image(
+    world: &mut World,
+    target: Entity,
+    aura: &crate::auras::AuraInstance,
+    index: u8,
+) {
+    if index == 0
+        && aura.effects.iter().any(|effect| {
+            effect.index == index
+                && effect.aura_type == crate::auras::handlers::PERIODIC_TRIGGER_SPELL
+        })
+    {
+        cast_ignoring_in_progress(world, target, target, SPELL_MIRROR_IMAGE);
+    }
+}
+
+/// TC spell_kystia_manaheart_mirror_image::SetDest. WoW y is negative engine z.
+pub(crate) fn relocate_mirror_destination(dest: &mut crate::spell_cast::targets::Dest) {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    dest.position.x += rng.gen_range(-30.0..=25.0);
+    dest.position.z -= rng.gen_range(-15.0..=26.0);
 }
 
 fn cast_ignoring_in_progress(world: &mut World, caster: Entity, target: Entity, spell: u32) {
