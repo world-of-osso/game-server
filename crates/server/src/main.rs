@@ -54,6 +54,9 @@ mod guild_bank;
 mod housing;
 mod housing_acquisition;
 mod housing_catalog;
+#[cfg(test)]
+mod housing_quest_tests;
+mod housing_quests;
 mod hunter_pet;
 mod ignore_list;
 mod inspect;
