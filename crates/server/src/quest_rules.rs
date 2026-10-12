@@ -416,6 +416,45 @@ pub(crate) fn credit_area_trigger(db: &QuestDb, log: &mut QuestLogData, quests: 
     changed
 }
 
+/// Pinned ItemAddedQuestCheck before StoreNewItem: authored bound objectives
+/// store credit. Only a single updated non-source objective suppresses creation.
+pub(crate) fn credit_bound_item(
+    db: &QuestDb,
+    log: &mut QuestLogData,
+    item_id: u32,
+    amount: u32,
+) -> (bool, bool) {
+    let mut updated = Vec::new();
+    for active in &mut log.active {
+        let Some(quest) = db.quests.get(&active.quest_id) else {
+            continue;
+        };
+        if active.failed
+            || active
+                .expires_at
+                .is_some_and(|end| db.now.is_some_and(|now| now >= end))
+        {
+            continue;
+        }
+        active.counts.resize(quest.objectives.len(), 0);
+        for (index, objective) in quest.objectives.iter().enumerate() {
+            let matches = objective.kind == ObjectiveKind::Item && objective.object_id == item_id;
+            let rule = crate::world_quest_objectives::rule(quest, index);
+            if !matches || !rule.quest_bound_item() || active.counts[index] >= objective.required {
+                continue;
+            }
+            if !crate::world_quest_objectives::creditable(quest, &active.counts, index) {
+                continue;
+            }
+            active.counts[index] = active.counts[index]
+                .saturating_add(amount)
+                .min(objective.required);
+            updated.push(quest.start_item != item_id);
+        }
+    }
+    (!updated.is_empty(), updated.as_slice() == [true])
+}
+
 /// AzerothCore `Player::HasQuestForItem`: a quest in the log still needs more
 /// of `item_id` for one of its item objectives.
 pub(crate) fn quest_needs_item(
@@ -426,11 +465,17 @@ pub(crate) fn quest_needs_item(
 ) -> bool {
     log.active.iter().any(|active| {
         db.quests.get(&active.quest_id).is_some_and(|quest| {
-            quest.objectives.iter().any(|objective| {
-                objective.kind == ObjectiveKind::Item
-                    && objective.object_id == item_id
-                    && bag_count(item_id) < objective.required
-            })
+            let counts = objective_counts(quest, active, &bag_count);
+            quest
+                .objectives
+                .iter()
+                .enumerate()
+                .any(|(index, objective)| {
+                    objective.kind == ObjectiveKind::Item
+                        && objective.object_id == item_id
+                        && counts[index] < objective.required
+                        && crate::world_quest_objectives::creditable(quest, &counts, index)
+                })
         })
     })
 }

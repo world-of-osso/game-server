@@ -279,6 +279,99 @@ fn lootable(corpse: Entity, lootable: bool) -> CorpseLootable {
 }
 
 #[test]
+fn world_quest_bound_loot_persists_credit_without_creating_a_bag_item_or_replaying() {
+    use crate::persistence::quest_store::{
+        ActiveQuestData, QuestLogData, load_quest_log, save_quest_log,
+    };
+    use crate::quest_data::{ObjectiveDef, ObjectiveKind, QuestDb, QuestTemplate};
+    use crate::world_quest_objectives::ObjectiveRule;
+    let mut h = harness(true).unwrap();
+    let mut quests = QuestDb::default();
+    quests.quests.insert(
+        80295,
+        QuestTemplate {
+            id: 80295,
+            objectives: vec![ObjectiveDef {
+                kind: ObjectiveKind::Item,
+                object_id: MELTED_CANDLE,
+                required: 2,
+                text: "Bound item".into(),
+            }],
+            world_objective_rules: Some(vec![ObjectiveRule {
+                flags2: 1,
+                ..Default::default()
+            }]),
+            ..Default::default()
+        },
+    );
+    h.app.insert_resource(quests);
+    h.app.init_resource::<crate::quest::QuestDirty>();
+    let log = QuestLogData {
+        active: vec![ActiveQuestData {
+            quest_id: 80295,
+            counts: vec![0],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    save_quest_log(db, h.looter.character_id, &log);
+    let corpse = h.kill_kobold();
+    h.stock(corpse);
+    h.open(corpse, false);
+    h.take_slot(corpse, 1);
+    assert!(h.failures().is_empty());
+    assert_eq!(
+        h.count_of(MELTED_CANDLE),
+        0,
+        "bound objective suppresses item creation"
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        load_quest_log(db, h.looter.character_id)
+            .active(80295)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    assert!(
+        h.app
+            .world()
+            .resource::<crate::quest::QuestDirty>()
+            .0
+            .contains(&h.looter.character_id)
+    );
+    h.take_slot(corpse, 1);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        load_quest_log(db, h.looter.character_id)
+            .active(80295)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    let other = h.kill_kobold();
+    h.stock(other);
+    h.open(other, false);
+    h.take_slot(other, 1);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        load_quest_log(db, h.looter.character_id)
+            .active(80295)
+            .unwrap()
+            .counts,
+        vec![2]
+    );
+    assert_eq!(h.count_of(MELTED_CANDLE), 0);
+    assert!(!crate::quest_rules::quest_needs_item(
+        h.app.world().resource::<QuestDb>(),
+        &load_quest_log(db, h.looter.character_id),
+        MELTED_CANDLE,
+        |_| 0
+    ));
+}
+
+#[test]
 fn killing_a_kobold_vermin_gives_its_killer_lootable_coins() {
     let Some(mut h) = harness(true) else { return };
     let kobold = h.kill_kobold();

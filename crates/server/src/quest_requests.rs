@@ -1093,8 +1093,9 @@ impl<'a> QuestSession<'a, '_, '_> {
 
 /// `RewardQuest` destroys the required items and the provided start item.
 fn take_quest_items(db: &Database, inventory: &mut InventoryData, quest: &QuestTemplate) {
-    for objective in &quest.objectives {
-        if objective.kind == ObjectiveKind::Item {
+    for (index, objective) in quest.objectives.iter().enumerate() {
+        let bound = crate::world_quest_objectives::rule(quest, index).quest_bound_item();
+        if objective.kind == ObjectiveKind::Item && !bound {
             remove_items(db, inventory, objective.object_id, objective.required);
         }
     }
