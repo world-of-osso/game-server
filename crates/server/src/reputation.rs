@@ -234,7 +234,7 @@ fn send_reputation_error(
     });
 }
 
-fn build_reputation_snapshot(
+pub(crate) fn build_reputation_snapshot(
     reputation: &CharacterReputation,
     registry: &FactionRegistry,
 ) -> ReputationSnapshot {

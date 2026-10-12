@@ -1,6 +1,9 @@
 //! Authored game-object and spell-credit objectives through server requests.
 // TC a352b1fa SpellEffects.cpp: EffectKillCreditPersonal (90), EffectKillCredit (134).
 use super::*;
+
+#[path = "world_quest_talk_tests.rs"]
+mod world_quest_talk_tests;
 use shared::components::{Health, UnitFactionTemplate};
 use shared::protocol::{
     CloseInteraction, InteractNpc, InteractionClosed, InteractionFailed, InteractionOpened,
@@ -59,7 +62,7 @@ fn spell_credit_app() -> App {
     .expect("authentic quest data required");
     let data = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(crate::spell_info::SpellStore::fixture(
-        [94940, 37221, 37320, 37322, 37323, 89040]
+        [94940, 37221, 37320, 37322, 37323, 89040, 420847]
             .into_iter()
             .map(|id| data.store.get(id).unwrap().clone())
             .collect(),
@@ -70,6 +73,97 @@ fn spell_credit_app() -> App {
     );
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
     app
+}
+
+#[test]
+fn world_quest_gain_aura_criteria_credits_only_the_authoritative_applied_aura() {
+    use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
+    use crate::quest_data::{ObjectiveDef, ObjectiveKind, QuestTemplate};
+    let mut app = spell_credit_app();
+    let client = spawn_client(&mut app, 80);
+    app.world_mut().entity_mut(client.player).insert(Health {
+        current: 100.,
+        max: 100.,
+    });
+    enter_world(&mut app, &client);
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        quests.task_criteria.insert(163995, (69, 420847));
+        quests.quests.insert(
+            82521,
+            QuestTemplate {
+                id: 82521,
+                objectives: vec![
+                    ObjectiveDef {
+                        kind: ObjectiveKind::CriteriaTree,
+                        object_id: 163995,
+                        required: 1,
+                        text: "Obtain stacks of Unseeming Shift".into(),
+                    },
+                    ObjectiveDef {
+                        kind: ObjectiveKind::Monster,
+                        object_id: 420847,
+                        required: 1,
+                        text: "Kind isolation".into(),
+                    },
+                ],
+                ..Default::default()
+            },
+        );
+    }
+    save_quest_log(
+        db(&app),
+        client.character_id,
+        &QuestLogData {
+            active: vec![ActiveQuestData {
+                quest_id: 82521,
+                counts: vec![0; 2],
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    );
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: client.player,
+            target: client.player,
+            spell_id: 420847,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(
+        app.world()
+            .get::<crate::auras::ActiveAuras>(client.player)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 420847)
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82521)
+            .unwrap()
+            .counts,
+        vec![1, 0]
+    );
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: client.player,
+            target: client.player,
+            spell_id: 420847,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82521)
+            .unwrap()
+            .counts,
+        vec![1, 0]
+    );
 }
 
 #[test]

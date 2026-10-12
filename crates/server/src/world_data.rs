@@ -79,7 +79,7 @@ pub struct TemplateTuning {
 #[derive(Clone)]
 pub struct CreatureModelInfo {
     pub display_id: u32,
-    /// The selected creature_template_model.DisplayScale, in addition to client DB2 scale.
+    /// Authored creature_template_model.DisplayScale, independent of object and client DB2 scale.
     pub display_scale: f32,
     /// Weight of the model among the template's (`GetRandomValidModel`).
     pub probability: f32,
@@ -975,6 +975,7 @@ fn startup_load_world_data(mut commands: Commands) {
         "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
     );
     commands.insert_resource(scenarios);
+    commands.insert_resource(crate::adventure_guide::load_catalog(&conn, &achievements));
     commands.insert_resource(achievements);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");

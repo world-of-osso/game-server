@@ -71,6 +71,10 @@ pub struct QuestPlugin;
 impl Plugin for QuestPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<QuestDirty>();
+        app.insert_resource(
+            crate::world_quests::Rotation::read_env()
+                .expect("invalid world quest rotation configuration"),
+        );
         app.init_resource::<crate::maps::difficulty::ServerClock>();
         app.init_resource::<quest_requests::PendingShares>();
         app.init_resource::<crate::experience::XpAwards>();
@@ -89,7 +93,9 @@ impl Plugin for QuestPlugin {
                 credit_quest_kills,
                 credit_quest_area_triggers,
                 mark_quest_inputs_changed,
+                quest_requests::process_world_quests,
                 send_quest_updates,
+                crate::world_quest_availability::publish,
             )
                 .chain()
                 .before(crate::inventory::InventoryDeltas)
@@ -155,7 +161,16 @@ fn send_initial_quest_log(
 /// player of a dead creature (`creature_tap`): a grouped player needs to be alive or
 /// without a corpse.
 fn credit_quest_kills(
-    killed: Query<(&Npc, &CreatureTap, &Position, &crate::maps::InMap), Added<DeathState>>,
+    killed: Query<
+        (
+            &Npc,
+            &CreatureTap,
+            &Position,
+            &crate::maps::InMap,
+            Option<&crate::zones::CreatureDifficulty>,
+        ),
+        Added<DeathState>,
+    >,
     players: RewardPlayers,
     lives: Query<(&ClientId, Option<&PlayerDeathState>), With<Player>>,
     groups: Option<Res<GroupRegistry>>,
@@ -174,14 +189,26 @@ fn credit_quest_kills(
                 id.0 == character && death.is_none_or(|death| death.state == PlayerLifeState::Alive)
             })
     };
-    for (npc, tap, position, map) in &killed {
+    for (npc, tap, position, map, difficulty) in &killed {
         for character_id in
             rewarded_characters(&tap.tappers, (map, position), &players, groups.as_deref())
                 .into_iter()
                 .filter(|&character| gets_credit(character))
         {
             let mut log = load_quest_log(db, character_id);
-            if credit_killed_creature(quests, &mut log, npc.template_id) {
+            let mut changed = credit_killed_creature(quests, &mut log, npc.template_id);
+            let mode = difficulty.map_or(0, |difficulty| difficulty.0);
+            if let Some(labels) = quests.creature_labels.get(&(npc.template_id, mode)) {
+                for &label in labels {
+                    changed |= crate::quest_rules::credit_objective(
+                        quests,
+                        &mut log,
+                        crate::quest_data::ObjectiveKind::KillWithLabel,
+                        label,
+                    );
+                }
+            }
+            if changed {
                 save_quest_log(db, character_id, &log);
                 dirty.0.insert(character_id);
             }
@@ -234,6 +261,57 @@ fn query_event_recipients(
         &players,
         world.get_resource::<GroupRegistry>(),
     ))
+}
+
+/// Combat owns death emission; never accept a client-provided PvP credit request.
+pub(crate) fn record_player_kill(world: &mut World, killer: Entity, victim: Entity) {
+    if killer == victim {
+        return;
+    }
+    let (Some(killer_player), Some(victim_player), Some(character)) = (
+        world.get::<Player>(killer),
+        world.get::<Player>(victim),
+        world.get::<ClientId>(killer),
+    ) else {
+        return;
+    };
+    let character = character.0;
+    let same_team = crate::taxi::team_for_race(killer_player.race)
+        .zip(crate::taxi::team_for_race(victim_player.race))
+        .is_some_and(|(killer, victim)| killer == victim);
+    let (Some(db), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut log = load_quest_log(&db.db, character);
+    if crate::quest_rules::credit_player_kill(quests, &mut log, same_team) {
+        save_quest_log(&db.db, character, &log);
+        world.resource_mut::<QuestDirty>().0.insert(character);
+    }
+}
+
+/// Pinned CriteriaType69 GainAura: task-local single-leaf completion only.
+pub(crate) fn record_gain_aura(world: &mut World, player: Entity, spell: u32) {
+    let Some(quests) = world.get_resource::<QuestDb>() else {
+        return;
+    };
+    let roots: Vec<u32> = quests
+        .task_criteria
+        .iter()
+        .filter_map(|(&root, &binding)| (binding == (69, spell)).then_some(root))
+        .collect();
+    for root in roots {
+        event_credit(
+            world,
+            player,
+            player,
+            crate::quest_data::ObjectiveKind::CriteriaTree,
+            root,
+            false,
+        );
+    }
 }
 
 /// Spell/script event credit; personal events do not award nearby party members.

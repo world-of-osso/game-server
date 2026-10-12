@@ -9,7 +9,19 @@
 - 2026-10-11 — [Class completeness continuation](../class-completeness2.md): native ground/rectangle selectors, retail ritual metadata, controlled elemental lifecycle and persisted owned-item unlocks; batch12 receipts and source/threshold limits recorded. Whole13-class/40-spec and remaining-class live acceptance stay open.
 
 - 2026-10-11 — [Level80 class completeness](systems/spell-casting.md#level80-class-completeness):7827 native memberships/all13/all40 build-union cast/passive receipts;2841 working-boundary/4607 partial/379 broken. Source-derived537 owner/label,457 category charge haste/progress,416 masked truncated cooldowns; signed Rune/Runic generation and full/partial-school miss cost boundaries. Real-row RED/GREEN, targeted resource controls, no full suite/DB write/master merge/UDP5000. [Contract](../specs/class-completeness.md) and [proof limits](../class-completeness.md) retain legal-build, missing-data and underivable mechanic gaps.
+- 2026-10-11 — [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11): source items/costumes/kits/scenery, clicked ground points, real sight witnesses and focused-search recipient retention; private both-skin proofs and explicit320 prepared-candidate versus full-effect boundary. Source-scaled scenery live proof remains pending.
+
+- 2026-10-12 — [Mount Journal](systems/mounts.md#mount-journal): post-merge targeted mount/merchant/auction tests and both-skin native vendor and two-account AH acceptance; [contract](../specs/mount-journal.md) closed.
+- 2026-10-12 — [Mount vendor acquisition](systems/mounts.md#vendor-acquisition): authenticated mount-only ExtendedCost, exact currency precision, atomic payment/delivery and ItemSparse reputation authority; [pinned data/gaps](../mount-vendor-costs.md). Main owns native/integration acceptance.
+
+- 2026-10-11 — [Mount Journal](systems/mounts.md#mount-journal): read-only catalog, account item/favourite persistence and spell-backed requests; both auth-entry crash boundaries reproduced and fixed through one initialized Update step. Native/final acceptance remains tracked by the contract.
+- 2026-10-11 — [Adventure Guide](../specs/adventure-guide.md): copy-only catalogs, signed priorities, current-month account contributions and query/tracking. Five scoped service tests pass; both-skin persisted Track and authored display-only TrainingGrounds852 rendered. Check/fmt pass; unsupported gates/criteria/month/reward bindings remain explicit.
 - 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
+- 2026-10-11 — [Boss-mod continuation](../bossmod-data-coverage.md): target5 root fix gives real Zevrim CastState/effects; lexical/guard/locale/custom-timer regressions17PASS, timeline7PASS, changed protocol1729PASS and check/fmt pass. Rendered addon warnings and both-skin private5906 Hydrospawn/Zevrim bars/warnings proved in eight inspected PNGs. DBM/EXBoss native input clocks remain explicit gaps; no fabricated timers or shared realm changes.
+
+- 2026-10-11 — [Boss-mod runtime boundary](systems/bossmod-data.md#current-integration-boundary): sole-source copied catalogs,191 hosted bindings,343 literal LittleWigs schedules and central server CastStart/CastSuccess reconciliation. Importer5PASS, timeline6PASS/1FAIL, check and changed-file rustfmt pass. No native/PNG proof; warning text transport, dynamic raid timeline inputs and cast-start fixture observation remain open. Not ready.
+
+- 2026-10-11 — [Boss-mod data import](systems/bossmod-data.md): non-executing Lua AST extraction, Retail branch selection, literal timers/health/phases/warnings, pinned Spell/SpellName validation and copy-only SQLite. Four behavioral tests pass; server reconciliation and private native proof remain open.
 
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
 
@@ -910,3 +922,5 @@ Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [
 ## 2026-10-11 — profession specialization runtime
 
 Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.
+
+- 2026-10-12: [Release tick profiling](investigations/server-tick-lag.md#release-catalog-copy-regression-2026-10-12): idle objective tick copied the full gameobject catalog; restrict reads to mapped match flag homes, preserving gameplay.
