@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Boss-mod runtime boundary](systems/bossmod-data.md#current-integration-boundary): sole-source copied catalogs,191 hosted bindings,343 literal LittleWigs schedules and central server CastStart/CastSuccess reconciliation. Importer5PASS, timeline6PASS/1FAIL, check and changed-file rustfmt pass. No native/PNG proof; warning text transport, dynamic raid timeline inputs and cast-start fixture observation remain open. Not ready.
+
 - 2026-10-11 — [Boss-mod data import](systems/bossmod-data.md): non-executing Lua AST extraction, Retail branch selection, literal timers/health/phases/warnings, pinned Spell/SpellName validation and copy-only SQLite. Four behavioral tests pass; server reconciliation and private native proof remain open.
 
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
