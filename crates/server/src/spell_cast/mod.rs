@@ -139,6 +139,7 @@ const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
+mod assisted_costs;
 pub(crate) mod homebind;
 pub(crate) mod teleport;
 mod teleport_positions;
@@ -176,6 +177,7 @@ impl Plugin for SpellCastPlugin {
                     start_queued_casts,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
+                    assisted_costs::publish,
                 )
                     .chain(),
             )
