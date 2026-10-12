@@ -117,13 +117,6 @@ impl BossHogger {
 }
 
 impl BossScript for BossHogger {
-    fn timeline_spell(&self, event_id: u32) -> Option<u32> {
-        match event_id {
-            hogger::EVENT_VICIOUS_SLICE => Some(hogger::SPELL_VICIOUS_SLICE),
-            hogger::EVENT_MADDENING_CALL => Some(hogger::SPELL_MADDENING_CALL),
-            _ => None,
-        }
-    }
     fn boss_ai(&mut self) -> &mut BossAi {
         &mut self.boss
     }
@@ -257,14 +250,6 @@ impl BossLordOverheat {
 }
 
 impl BossScript for BossLordOverheat {
-    fn timeline_spell(&self, event_id: u32) -> Option<u32> {
-        match event_id {
-            overheat::EVENT_FIREBALL => Some(overheat::SPELL_FIREBALL),
-            overheat::EVENT_OVERHEAT => Some(overheat::SPELL_OVERHEAT),
-            overheat::EVENT_RAIN_OF_FIRE => Some(overheat::SPELL_RAIN_OF_FIRE),
-            _ => None,
-        }
-    }
     fn boss_ai(&mut self) -> &mut BossAi {
         &mut self.boss
     }
@@ -367,15 +352,6 @@ impl BossRandolphMoloch {
 }
 
 impl BossScript for BossRandolphMoloch {
-    fn timeline_spell(&self, event_id: u32) -> Option<u32> {
-        match event_id {
-            moloch::EVENT_WILDLY_STABBING => Some(moloch::SPELL_WILDLY_STABBING),
-            moloch::EVENT_SWEEP => Some(moloch::SPELL_SWEEP),
-            moloch::EVENT_VANISH => Some(moloch::SPELL_VANISH),
-            moloch::EVENT_JUST_VANISHED => Some(moloch::SPELL_SHADOWSTEP),
-            _ => None,
-        }
-    }
     fn boss_ai(&mut self) -> &mut BossAi {
         &mut self.boss
     }

@@ -209,6 +209,20 @@ fn attack_swing_at_an_uninteractible_hostile_is_refused() {
 }
 
 #[test]
+fn faction_reaction_attack_swing_honors_authored_non_attackable_and_pc_immune_flags() {
+    // TC UnitFlags: NON_ATTACKABLE0x2, IMMUNE_TO_PC0x100, NOT_SELECTABLE0x02000000.
+    for flag in [0x2, 0x100, shared::components::UnitFlags::NOT_SELECTABLE] {
+        let mut h = attack_harness().expect("authentic hostile kobold fixture");
+        let npc = h.npc;
+        h.app
+            .world_mut()
+            .entity_mut(npc)
+            .insert(shared::components::UnitFlags(flag));
+        assert_refused(h);
+    }
+}
+
+#[test]
 fn attack_swing_at_an_unknown_unit_answers_a_stop_without_victim() {
     let Some(mut h) = attack_harness() else {
         return;

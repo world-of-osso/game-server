@@ -82,6 +82,16 @@ fn skyborne_imported_templates_have_authored_reactions() {
 }
 
 #[test]
+fn retail_vendor_is_neutral_with_authored_hostile_friendly_and_critter_controls() {
+    let templates = world_db_faction_templates().expect("authentic Retail faction templates");
+    assert_eq!(templates.reaction(HUMAN, 2007), Reaction::Neutral);
+    assert_eq!(templates.reaction(2007, HUMAN), Reaction::Neutral);
+    assert!(templates.can_attack(player(HUMAN), npc(CRITTER)));
+    assert!(templates.can_attack(player(HUMAN), npc(KOBOLD)));
+    assert!(!templates.can_attack(player(HUMAN), npc(STORMWIND_GUARD)));
+}
+
+#[test]
 fn stormwind_guard_is_friendly_with_human_player() {
     let Some(templates) = world_db_faction_templates() else {
         return;

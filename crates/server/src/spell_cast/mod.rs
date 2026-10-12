@@ -567,6 +567,7 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
 /// wall clock; damage also counts on the damage meters.
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
+    crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
     let mut players: Vec<Entity> = Vec::new();
     for unit in [event.source, event.target]
@@ -858,6 +859,7 @@ pub(crate) fn cast_toy_spell(
     toy: &crate::toy_catalog::Toy,
     target: Option<Entity>,
     item_level: u16,
+    request: &shared::protocol::UseToy,
 ) -> Result<(), CastFailure> {
     let spell_id = toy.snapshot.spell_id.ok_or(CastFailure::UnknownSpell)?;
     let mut spell = world
@@ -865,6 +867,8 @@ pub(crate) fn cast_toy_spell(
         .get(spell_id)
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
+    spell.cast_destination = request.destination;
+    validate_toy_destination(world, caster, &spell)?;
     spell.cast_item_level = Some(item_level);
     let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
     if toy.item_cooldown_ms >= 0 {
@@ -879,7 +883,7 @@ pub(crate) fn cast_toy_spell(
             .get_or_insert_with(Default::default)
             .category = toy.category;
     }
-    let result = start_cast(world, caster, &spell, target, None);
+    let result = start_cast(world, caster, &spell, target, request.witness);
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -893,6 +897,47 @@ pub(crate) fn cast_toy_spell(
         );
     }
     result
+}
+
+pub(crate) fn requires_target_witness(spell: &SpellInfo) -> bool {
+    targets::explicit_requirement(spell.effects.iter()).is_some()
+        && attributes(spell, 2) & SPELL_ATTR2_IGNORE_LINE_OF_SIGHT == 0
+}
+
+fn validate_toy_destination(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    let cursor_target = spell
+        .effects
+        .iter()
+        .any(|effect| effect.implicit_targets.contains(&87));
+    if !cursor_target {
+        return if spell.cast_destination.is_none() {
+            Ok(())
+        } else {
+            Err(CastFailure::InvalidTarget)
+        };
+    }
+    let point = spell
+        .cast_destination
+        .map(Vec3::from_array)
+        .ok_or(CastFailure::NoTarget)?;
+    if !point.is_finite() {
+        return Err(CastFailure::InvalidTarget);
+    }
+    let origin = targets::position(world, caster).ok_or(CastFailure::InvalidTarget)?;
+    let (min, max) = targets::spell_range(spell, false);
+    let max = modify(world, caster, spell, SpellModOp::Range, max);
+    let distance = origin.distance(point);
+    if distance > max {
+        return Err(CastFailure::OutOfRange);
+    }
+    if distance < min {
+        return Err(CastFailure::TooClose);
+    }
+    Ok(())
 }
 
 fn request_cast(
