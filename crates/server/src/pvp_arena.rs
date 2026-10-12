@@ -67,8 +67,8 @@ impl MatchState {
 }
 fn team_size(mode: ArenaQueueMode) -> Option<u8> {
     match mode {
-        ArenaQueueMode::Skirmish2v2 => Some(2),
-        ArenaQueueMode::Skirmish3v3 => Some(3),
+        ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Rated2v2 => Some(2),
+        ArenaQueueMode::Skirmish3v3 | ArenaQueueMode::Rated3v3 => Some(3),
         ArenaQueueMode::SoloShuffle => None,
     }
 }
@@ -80,6 +80,11 @@ pub(super) fn queue_player(
     level: u8,
     mode: ArenaQueueMode,
 ) -> Result<String, String> {
+    if matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3) {
+        return Err(
+            "rated arena requires a full group and its leader's rated queue request".into(),
+        );
+    }
     if team_size(mode).is_none() {
         return Err(
             "Solo Shuffle six-player DB2 rows exist; round and role policy is unavailable".into(),
@@ -153,6 +158,7 @@ pub(super) fn form_match(
             preparation_remaining_secs: None,
             shadow_sight_available: false,
             units: Vec::new(),
+            rating_changes: Vec::new(),
         },
     };
     let template = arena.template();
