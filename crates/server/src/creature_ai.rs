@@ -59,7 +59,11 @@ type Roaming = (
     Without<crate::scripted_ai::movement::ScriptedPath>,
 );
 /// Active creatures that are not confused: chase and leash run.
-type ActiveUncontrolled = (Without<GridDormant>, Without<Confused>, Without<crate::knockback::KnockbackFlight>);
+type ActiveUncontrolled = (
+    Without<GridDormant>,
+    Without<Confused>,
+    Without<crate::knockback::KnockbackFlight>,
+);
 
 pub struct CreatureAiPlugin;
 
@@ -1172,7 +1176,14 @@ fn confused_movement_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
-    mut query: Query<ConfusedMover, (Without<DeathState>, Without<GridDormant>, Without<crate::knockback::KnockbackFlight>)>,
+    mut query: Query<
+        ConfusedMover,
+        (
+            Without<DeathState>,
+            Without<GridDormant>,
+            Without<crate::knockback::KnockbackFlight>,
+        ),
+    >,
 ) {
     let dt = time.delta_secs();
     for (entity, mut pos, spawn, mut confused, mods, map, bearing) in &mut query {
