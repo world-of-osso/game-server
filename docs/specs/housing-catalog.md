@@ -13,10 +13,11 @@
 From game-server after landing the housing-core importer:
 
 ```text
-python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/housing-audit-2026-10-11 --db /home/osso/Projects/world-of-osso/game-server/data/world.db --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
+python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/housing-core-2026-10-12/qualified-sources --db /home/osso/Projects/world-of-osso/game-server/data/world.db --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
+python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/housing-core-2026-10-12/qualified-sources --db /home/osso/Projects/world-of-osso/game-engine/data/cache/housing.sqlite --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
 ```
 
-The same command with an isolated output database verifies the actual 35-table export. It also records three absent initiative tables and 54 unreadable records. Static catalogs are not proof of playable neighborhoods, Housing Dashboard, decor acquisition, editor or visitor replication.
+This combined export includes the original audit, authenticated cornerstones and catalog acquisition sources:47 tables/70,552 rows/54 unreadable records. It supersedes the older35-table and cornerstone-only imports; each import replaces this build's records, so do not run an older export afterward. The same command with an isolated output database verifies the export. Static catalogs are not proof of playable neighborhoods, Housing Dashboard, decor acquisition, editor or visitor replication.
 
 ## Housing map metadata
 
@@ -46,13 +47,7 @@ Use NeighborhoodPlot.CornerstoneGameObjectID only as a reference to the same-bui
 
 Pinned local GameObjects/layout44BD453C supplies all55 Founder's Point cornerstones; Razorwind's55 referenced cornerstone records are absent. Its plot records remain browsable, but absent objects cannot be purchased through a fabricated marker. No first-house grant follows from either source.
 
-Lead supplemental import, after landing runtime support (agents run this against private databases only):
-
-```text
-python3 scripts/import_housing.py --evidence /home/osso/.worktrees/housing-core-evidence/qualified-cornerstones --db /home/osso/Projects/world-of-osso/game-server/data/world.db --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
-```
-
-This authenticated evidence combines the unchanged original housing audit with decoded local GameObjects841620 and pinned DBD revision07d008f28907c00827cacadf2d7c1a40f578b6a3; hashes and rows are checked by the same importer. It neither invents TDB templates nor mutates unrelated world tables.
+The [combined lead import](#lead-import-canonical-database-mutation-agents-must-not-run) includes decoded local GameObjects841620 and pinned DBD revision07d008f28907c00827cacadf2d7c1a40f578b6a3 alongside the original audit and acquisition sources; hashes and rows are checked by the same importer. It neither invents TDB templates nor mutates unrelated world tables.
 
 ## Atomic ownership and basic storage
 
