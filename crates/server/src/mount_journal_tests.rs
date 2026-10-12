@@ -50,6 +50,9 @@ fn mount_journal_auth_entry_after_update_sync_loads_account_before_publish() {
     let connection = spawn_peer_connection(&mut h.app, player, 2);
     h.app.world_mut().entity_mut(connection).remove::<InWorld>();
     install_connection(h.app.world_mut(), connection);
+    // Production authenticates and exchanges the roster before selecting a character;
+    // let the HostClient channel components initialize while still out of world.
+    h.advance(4);
     h.app.insert_resource(LateEntry(connection));
     h.app
         .add_systems(Update, enter_after_mount_update.after(sync_accounts));
