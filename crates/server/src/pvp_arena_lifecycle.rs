@@ -178,8 +178,7 @@ fn update_match(
                 deaths: 0,
                 damage_done: 0,
                 healing_done: 0,
-                flag_captures: 0,
-                flag_returns: 0,
+                objective_scores: Vec::new(),
                 honorable_kills: None,
                 honor_level: None,
             })
