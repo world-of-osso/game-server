@@ -3,6 +3,7 @@ use super::test_harness::*;
 use crate::auras::{AuraApplication, AuraSource, RemoveReason};
 use crate::combat::AutoAttack;
 use crate::stats::CharacterStats;
+use bevy::prelude::Entity;
 use shared::components::{Health, PowerType};
 use shared::protocol::CombatLogKind;
 
