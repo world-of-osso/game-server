@@ -54,7 +54,9 @@ def receipt(duration=604800):
 
 
 def areas():
-    return {"blobs": [{"ID": 7, "QuestID": 52847, "MapID": 0, "UiMapID": 14, "NumPoints": 4},
+    return {"xp": [dict(ID=30, **{f'Difficulty_{n}': 1234 if n == 5 else 0 for n in range(10)})],
+            "faction_rewards": {1: [0,10,25,75,150,250,350,500,1000,0], 2: [0,-10,-25,-75,-150,-250,-350,-500,-1000,0]},
+            "blobs": [{"ID": 7, "QuestID": 52847, "MapID": 0, "UiMapID": 14, "NumPoints": 4},
                       {"ID": 8, "QuestID": 52848, "MapID": 0, "UiMapID": 14, "NumPoints": 1}],
             "points": [{"ID": n, "QuestPOIBlobID": 7, "X": x, "Y": y, "Z": 0}
                        for n, (x, y) in enumerate([(-1065,-2486),(-1057,-2486),(-1057,-2478),(-1065,-2478)])]
@@ -92,6 +94,9 @@ class WorldQuestImportTests(unittest.TestCase):
             source = json.loads(conn.execute("SELECT source_template_json FROM content_world_quest").fetchone()[0])
             self.assertEqual((source["RewardCurrencyID1"],source["RewardCurrencyQty1"]),(1717,1))
             self.assertEqual((source["RewardFactionID1"],source["RewardFactionOverride1"],source["RewardFactionCapIn1"]),(2159,7500,7))
+            self.assertEqual(conn.execute('SELECT kind,reward_id,amount,cap FROM content_world_quest_reward ORDER BY kind').fetchall(),
+                             [('currency',1717,1,0), ('reputation',2159,75,7)])
+            self.assertEqual(conn.execute('SELECT amount FROM content_world_quest_xp WHERE level=30 AND difficulty=5').fetchone(), (1234,))
             self.assertEqual(conn.execute("SELECT X,Y FROM content_quest_poi_points").fetchall(), [(-1061,-2482)])
             self.assertEqual(conn.execute("SELECT MapID,WorldMapAreaId FROM content_quest_poi").fetchall(), [(0,14)])
             self.assertEqual(import_definitions(conn, receipt(), areas()), [52847])

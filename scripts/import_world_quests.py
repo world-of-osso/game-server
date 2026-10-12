@@ -17,10 +17,17 @@ from content_common import Report
 WORLD_QUEST_MODIFIER = 0x100
 
 
-def read_areas(directory):
-    return {key: [dict((k, int(v)) for k, v in row.items())
-                  for row in csv.DictReader((Path(directory) / filename).open())]
-            for key, filename in [('blobs', 'QuestPOIBlob.csv'), ('points', 'QuestPOIPoint.csv')]}
+def read_areas(directory, faction_reward_db2):
+    from db2_casc import decode
+    poi = {key: [dict((k, int(v)) for k, v in row.items())
+                 for row in csv.DictReader((Path(directory) / filename).open())]
+           for key, filename in [('blobs', 'QuestPOIBlob.csv'), ('points', 'QuestPOIPoint.csv'), ('xp', 'QuestXP.csv')]}
+    header, rows = decode(Path(faction_reward_db2).read_bytes())
+    if header['layout_hash'] != 572521898:
+        raise ValueError('QuestFactionReward layout differs from pinned 12.1.0.69933')
+    poi['faction_rewards'] = {row_id: [v if v < 32768 else v - 65536 for v in values[1:]]
+                              for row_id, values in rows.items()}
+    return poi
 
 
 def polygon_areas(poi):
@@ -46,10 +53,10 @@ def supported_objectives(conn, quest):
     rows = conn.execute('SELECT Type,ObjectID,Amount FROM tdb_quest_objectives WHERE QuestID=?', (quest,)).fetchall()
     counts = defaultdict(int)
     for kind, object_id, amount in rows:
-        if kind not in (0, 1, 2, 7) or amount <= 0 or object_id <= 0:
+        if kind not in (0, 1, 2) or amount <= 0 or object_id <= 0:
             return False
         counts[kind] += 1
-    return bool(rows) and counts[0] + counts[2] <= 4 and counts[1] <= 6 and counts[7] <= 1
+    return bool(rows) and counts[0] + counts[2] <= 4 and counts[1] <= 6
 
 
 def select_definitions(conn, receipt, areas, policy_duration):
@@ -101,6 +108,31 @@ def insert_pins(conn, quests):
         SELECT QuestID,Idx1,Idx2,X,Y,VerifiedBuild FROM tdb_quest_poi_points WHERE QuestID IN ({quests})""")
 
 
+def insert_source_rewards(conn, templates, poi):
+    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_reward (quest_id INTEGER, kind TEXT, reward_id INTEGER, amount INTEGER, cap INTEGER)')
+    conn.execute('DELETE FROM content_world_quest_reward')
+    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_xp (level INTEGER, difficulty INTEGER, amount INTEGER)')
+    conn.execute('DELETE FROM content_world_quest_xp')
+    conn.executemany('INSERT INTO content_world_quest_xp VALUES (?,?,?)',
+                     [(row['ID'], n, row[f'Difficulty_{n}']) for row in poi.get('xp', []) for n in range(10)])
+    for quest, raw in templates.items():
+        source = json.loads(raw)
+        for n in range(1, 5):
+            currency, amount = source.get(f'RewardCurrencyID{n}', 0), source.get(f'RewardCurrencyQty{n}', 0)
+            if currency and amount:
+                conn.execute('INSERT INTO content_world_quest_reward VALUES (?,?,?,?,?)', (quest, 'currency', currency, amount, 0))
+        for n in range(1, 6):
+            faction = source.get(f'RewardFactionID{n}', 0)
+            if not faction:
+                continue
+            override = source.get(f'RewardFactionOverride{n}', 0)
+            index = source.get(f'RewardFactionValue{n}', 0)
+            amount = int(override / 100) if override else poi['faction_rewards'][2 if index < 0 else 1][abs(index)]
+            if faction and amount:
+                conn.execute('INSERT INTO content_world_quest_reward VALUES (?,?,?,?,?)',
+                             (quest, 'reputation', faction, amount, source.get(f'RewardFactionCapIn{n}', 7)))
+
+
 def import_definitions(conn, receipt, poi, policy_duration=86400):
     world_ids = {row[0] for row in conn.execute('SELECT q.ID FROM tdb_quest_template q JOIN quest_info i ON i.ID=q.QuestInfoID WHERE i.Modifiers & 256 != 0')}
     areas = polygon_areas(dict(poi, blobs=[blob for blob in poi['blobs'] if blob['QuestID'] in world_ids]))
@@ -132,6 +164,16 @@ def import_definitions(conn, receipt, poi, policy_duration=86400):
         statement = conn.execute(f"SELECT * FROM tdb_quest_template WHERE ID IN ({quests})")
         columns = [column[0] for column in statement.description]
         templates = {row[0]: json.dumps(dict(zip(columns,row))) for row in statement.fetchall()}
+        insert_source_rewards(conn, templates, poi)
+        for table in ('quest_template_addon', 'quest_offer_reward', 'quest_request_items'):
+            installed = conn.execute("SELECT count(*) FROM sqlite_master WHERE name=?", ('tdb_' + table,)).fetchone()[0]
+            if not installed:
+                continue
+            target = [row[1] for row in conn.execute(f'PRAGMA table_info(content_{table})')]
+            source = {row[1] for row in conn.execute(f'PRAGMA table_info(tdb_{table})')}
+            columns = ','.join(name for name in target if name in source)
+            conn.execute(f'DELETE FROM content_{table} WHERE ID IN ({quests})')
+            conn.execute(f'INSERT INTO content_{table} ({columns}) SELECT {columns} FROM tdb_{table} WHERE ID IN ({quests})')
         conn.executemany('INSERT INTO content_world_quest (quest_id,zone_id,duration_seconds,managed_world_state_id,source_template_json,duration_source) VALUES (?,?,?,?,?,?)',
                          [(*row[:4],templates[row[0]],row[4]) for row in definitions])
     return [row[0] for row in definitions]
@@ -151,6 +193,22 @@ def copy_and_import(source, output, receipt, poi, policy_duration=86400):
             return import_definitions(private, receipt, poi, policy_duration)
 
 
+def census(conn, poi):
+    world_ids = {row[0] for row in conn.execute('SELECT q.ID FROM tdb_quest_template q JOIN quest_info i ON i.ID=q.QuestInfoID WHERE i.Modifiers &256 !=0')}
+    blobs = [blob for blob in poi['blobs'] if blob['QuestID'] in world_ids]
+    blob_ids = {blob['QuestID'] for blob in blobs}
+    area_ids = set(polygon_areas(dict(poi, blobs=blobs)))
+    admitted = {row[0] for row in conn.execute('SELECT quest_id FROM content_world_quest')}
+    durations = dict(conn.execute('SELECT duration_source,count(*) FROM content_world_quest GROUP BY duration_source'))
+    raw = [json.loads(row[0]) for row in conn.execute('SELECT source_template_json FROM content_world_quest')]
+    no_rewards = sum(not (row['RewardXPDifficulty'] or row['RewardMoneyDifficulty']
+                         or any(row.get(f'RewardItem{n}', 0) for n in range(1,5))
+                         or conn.execute('SELECT count(*) FROM content_world_quest_reward WHERE quest_id=?', (row['ID'],)).fetchone()[0]) for row in raw)
+    return dict(total=len(world_ids), no_poi_blob=len(world_ids-blob_ids), point_only=len(blob_ids-area_ids),
+                polygon_quests=len(area_ids), unsupported_objectives=len(area_ids-admitted), admitted=len(admitted),
+                authentic_durations=durations.get('authentic',0), policy_durations=durations.get('policy',0), no_reward_data=no_rewards)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-db", required=True, type=Path)
@@ -158,10 +216,14 @@ def main():
     parser.add_argument("--duration-receipt", required=True, type=Path)
     parser.add_argument('--poi-db2-dir', required=True, type=Path)
     parser.add_argument('--policy-duration', type=int, default=86400)
+    parser.add_argument('--faction-reward-db2', required=True, type=Path)
     args = parser.parse_args()
     receipt = json.loads(args.duration_receipt.read_text())
-    imported = copy_and_import(args.source_db, args.output_db, receipt, read_areas(args.poi_db2_dir), args.policy_duration)
-    print(json.dumps({"output": str(args.output_db), "imported": imported}))
+    poi = read_areas(args.poi_db2_dir, args.faction_reward_db2)
+    imported = copy_and_import(args.source_db, args.output_db, receipt, poi, args.policy_duration)
+    with closing(sqlite3.connect(f'{args.output_db.resolve().as_uri()}?mode=ro', uri=True)) as conn:
+        counts = census(conn, poi)
+    print(json.dumps({'output': str(args.output_db), 'imported': imported, 'census': counts}))
 
 
 if __name__ == "__main__":
