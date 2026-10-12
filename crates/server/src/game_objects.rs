@@ -51,7 +51,7 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      JOIN game_object_display_info d ON d.ID = t.displayId \
      WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10, 50)";
 
-/// Battleground objective spawns use difficulty0; the shared rules name each one.
+/// Battleground objective spawns use difficulty 0; the shared rules name each one.
 fn battleground_objective_clause() -> String {
     shared::battleground::all_templates()
         .iter()
