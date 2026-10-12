@@ -11,6 +11,17 @@ fn bound_boss_with_catalog(
     bit: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
+    let difficulty = if map_id == 409 { 3 } else { 1 };
+    bound_boss_at_difficulty(entry, map_id, bit, difficulty, catalog)
+}
+
+fn bound_boss_at_difficulty(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    difficulty: u32,
+    catalog: Option<bossmod::Catalog>,
+) -> (Harness, Entity, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     if let Some(catalog) = catalog {
@@ -58,7 +69,6 @@ fn bound_boss_with_catalog(
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
-    let difficulty = if map_id == 409 { 3 } else { 1 };
     let mut instances = crate::maps::InstanceManager::default();
     let entrant = crate::maps::instances::InstanceEntrant {
         character_id: 2001,
@@ -140,14 +150,30 @@ fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle(
     h.advance(0.9);
     assert_eq!(h.casts(0, boss, 1230298), 0);
     h.advance(0.2);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(boss)
+        .expect("authored1s Chaos Barrage missing");
+    assert_eq!(cast.spell_id, 1230298);
+    assert_eq!(cast.duration, 3.0, "DB2 CastingTimeIndex14 is3000ms");
     assert_eq!(
         h.casts(0, boss, 1230298),
-        1,
-        "authored1s Chaos Barrage missing"
+        0,
+        "source trigger flags do not bypass cast time"
     );
-    h.advance(3.3);
-    assert_eq!(h.casts(0, boss, 1230298), 1);
+    h.advance(2.8);
+    assert_eq!(h.casts(0, boss, 1230298), 0);
     h.advance(0.2);
+    assert_eq!(h.casts(0, boss, 1230298), 1);
+    h.advance(0.3);
+    assert!(h.app.world().get::<CastState>(boss).is_none());
+    h.advance(0.2);
+    assert_eq!(
+        h.app.world().get::<CastState>(boss).unwrap().spell_id,
+        1230298
+    );
+    h.advance(3.0);
     assert_eq!(
         h.casts(0, boss, 1230298),
         2,
@@ -160,6 +186,24 @@ fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle(
             .log
             .iter()
             .all(|e| e.source != Some(boss.to_bits()))
+    );
+    // Mirror is due14s, but TC waits for the11.5s Chaos cast to finish14.5s.
+    h.advance(6.8);
+    assert_eq!(
+        h.casts(0, boss, 1264095),
+        0,
+        "Mirror Images interrupted Chaos Barrage"
+    );
+    h.advance(0.3);
+    assert_eq!(
+        h.casts(0, boss, 1264095),
+        1,
+        "due Mirror Images did not follow cast completion"
+    );
+    assert_eq!(
+        h.casts(0, boss, 474240),
+        0,
+        "Normal must not schedule Fel Nova"
     );
     h.hit_pct(boss, 200.0);
     h.advance(0.05);
@@ -174,6 +218,52 @@ fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle(
     let casts = h.casts(0, boss, 1230298);
     h.advance(4.0);
     assert_eq!(h.casts(0, boss, 1230298), casts, "dead boss cast again");
+}
+
+#[test]
+fn encounter_coverage_kystia_source_trigger_flags_do_not_bypass_school_lockout() {
+    let (mut h, boss, _) = bound_boss(234648, 2813, 0);
+    let now = h.app.world().resource::<Time>().elapsed_secs_f64();
+    let mut history = crate::spell_cast::SpellHistory::default();
+    history.lock_schools(127, now + 30.0);
+    h.app.world_mut().entity_mut(boss).insert(history);
+    h.engage(boss);
+    h.advance(1.1);
+    assert_eq!(
+        h.casts(0, boss, 1230298),
+        0,
+        "TC ignores only cast-in-progress, not school lockout"
+    );
+}
+
+#[test]
+fn encounter_coverage_kystia_heroic_fel_nova_schedule_and_evade_retirement() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(234648, 2813, 0, 2, None);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(boss);
+    // Due12s, admitted only after the11.5s Chaos cast completes14.5s.
+    h.advance(14.4);
+    assert_eq!(h.casts(0, boss, 474240), 0);
+    h.advance(0.3);
+    assert_eq!(
+        h.casts(0, boss, 474240),
+        1,
+        "Heroic due Fel Nova selector missing"
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.05);
+    assert!(!h.inbox(0).ends.last().unwrap().success);
+    let casts = h.casts(0, boss, 474240);
+    h.advance(16.0);
+    assert_eq!(
+        h.casts(0, boss, 474240),
+        casts,
+        "evaded boss retained its15s schedule"
+    );
 }
 
 #[test]
