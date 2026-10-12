@@ -292,6 +292,42 @@ fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
 }
 
 #[test]
+fn class_completeness_probe_native_warlock_rituals_use_retail_template_spells() {
+    let prepared = prepare_class_world();
+    for (id, entry, casters, completion) in [(698, 194108, 3, 62330), (342601, 177193, 5, 342607)] {
+        let mut h = census_harness(9, &prepared.path());
+        let spec = Spec {
+            id: 265,
+            class: 9,
+            spells: Vec::new(),
+        };
+        let spell = Spell {
+            id,
+            passive: false,
+            origin: vec!["talent".into()],
+        };
+        let receipt = record_case(&mut h, &spec, &spell);
+        assert_eq!(
+            receipt["failed"],
+            json!([]),
+            "native ritual {id}: {receipt}"
+        );
+        let world = h.app.world_mut();
+        let rituals: Vec<_> = world
+            .query::<(
+                &shared::protocol::GameObjectInfo,
+                &crate::meeting_stone::ritual::Ritual,
+            )>()
+            .iter(world)
+            .filter(|(info, _)| info.entry == entry)
+            .collect();
+        assert_eq!(rituals.len(), 1);
+        assert_eq!(rituals[0].1.casters, casters);
+        assert_eq!(rituals[0].1.spell, completion);
+    }
+}
+
+#[test]
 fn class_completeness_probe_native_rewind_uses_ungrouped_player_state() {
     let prepared = prepare_class_world();
     let mut h = census_harness(13, &prepared.path());
