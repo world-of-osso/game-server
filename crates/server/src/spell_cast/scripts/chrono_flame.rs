@@ -136,19 +136,19 @@ pub(super) fn check_children(world: &World) -> Result<(), CastFailure> {
     Ok(())
 }
 
-pub(super) fn cast_chrono_flames(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+pub(super) fn repeat_landed_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let healing = crate::spell_cast::targets::relation_matches(
         world,
         caster,
         target,
         crate::spell_cast::targets::Relation::Ally,
     );
-    super::living_flame(world, caster, target, depth);
     if !crate::auras::has_aura(world, caster, PASSIVE) {
         return;
     }
-    // Literal last-five-seconds includes the primary hit just resolved. This
-    // landing order is source-derived, not independently measured Retail timing.
+    // Native Living Flame children can land after the root due to missiles.
+    // Read history from the actual child hit, including that primary hit; Retail
+    // historical inclusion/latency parity is not independently measured.
     let amount = repeat_amount(world, caster, target, healing);
     if amount <= 0.0 {
         return;
