@@ -364,6 +364,7 @@ fn record_helper_persists_layout_instances_character_and_inventory() {
         }],
         equipped: vec![],
         bag_slots: vec![],
+        nonvisual_equipped: Vec::new(),
         instances: HashMap::from([(501, ItemInstanceData { soulbound: true })]),
         item_durability: HashMap::from([(501, (44, 55))]),
         definition_sources: HashMap::from([(501, shared::item_data::ItemDefinitionSource::Retail)]),

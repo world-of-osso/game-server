@@ -81,6 +81,13 @@ INSERT INTO "character_loadout_item" VALUES(36434,2377,280400);
 INSERT INTO "character_loadout_item" VALUES(36897,2375,876);
 INSERT INTO "character_loadout_item" VALUES(36899,2373,2092);
 INSERT INTO "character_loadout_item" VALUES(36901,2374,2092);
+CREATE TABLE chr_classes (ID INTEGER PRIMARY KEY, ArmorTypeMask INTEGER NOT NULL);
+INSERT INTO "chr_classes" VALUES(1,113);
+INSERT INTO "chr_classes" VALUES(3,41);
+INSERT INTO "chr_classes" VALUES(4,37);
+INSERT INTO "chr_classes" VALUES(7,2665);
+INSERT INTO "chr_classes" VALUES(8,35);
+INSERT INTO "chr_classes" VALUES(11,2341);
 CREATE TABLE content_item(
   ID INT,
   Name TEXT,
@@ -1018,6 +1025,13 @@ CREATE TABLE spell_effect (
   ImplicitTarget_1 INTEGER NOT NULL DEFAULT 0,
   SpellID INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE spell_equipped_items (
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  EquippedItemClass INTEGER NOT NULL DEFAULT 0,
+  EquippedItemInvTypes INTEGER NOT NULL DEFAULT 0,
+  EquippedItemSubclass INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE spell_name (
   ID INTEGER PRIMARY KEY,
   Name_lang TEXT NOT NULL DEFAULT ''
@@ -1327,6 +1341,7 @@ CREATE TABLE tdb_playercreateinfo_item (
   PRIMARY KEY (race, class, itemid)
 );
 CREATE INDEX spell_effect_spell_id ON spell_effect(SpellID);
+CREATE INDEX spell_equipped_items_spell_id ON spell_equipped_items(SpellID);
 CREATE INDEX item_modified_appearance_item_id ON item_modified_appearance(ItemID);
 CREATE UNIQUE INDEX content_item_id ON content_item(ID);
 CREATE UNIQUE INDEX skyborne_content_item_id ON skyborne_content_item(ID);

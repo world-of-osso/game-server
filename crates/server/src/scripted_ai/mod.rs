@@ -54,7 +54,10 @@ impl Plugin for ScriptedAiPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                movement::point_movement_system.before(crate::creature_ai::chase_system),
+                (
+                    smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
+                    movement::point_movement_system.before(crate::creature_ai::chase_system),
+                ),
             );
     }
 }
@@ -95,9 +98,18 @@ pub enum Hook {
     },
     EnterEvadeMode,
     JustSummoned(Entity),
+    IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
     UpdateAi(u32),
+    QuestAccepted {
+        player: Entity,
+        quest_id: u32,
+    },
+    QuestRewarded {
+        player: Entity,
+        quest_id: u32,
+    },
     /// `SpellHit(caster, spellInfo)`.
     SpellHit {
         caster: Entity,
@@ -118,9 +130,12 @@ pub trait CreatureAi: Send + Sync + 'static {
         self.reset(ctx);
     }
     fn just_summoned(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
+    fn is_summoned_by(&mut self, _ctx: &mut Ctx, _summoner: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
     fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
+    fn quest_accepted(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
+    fn quest_rewarded(&mut self, _ctx: &mut Ctx, _player: Entity, _quest_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
     fn update_ai(&mut self, ctx: &mut Ctx, _diff_ms: u32) {
         ctx.update_victim();
@@ -308,9 +323,12 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         }
         Hook::EnterEvadeMode => ai.enter_evade_mode(&mut ctx),
         Hook::JustSummoned(summon) => ai.just_summoned(&mut ctx, summon),
+        Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
+        Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
+        Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
         Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
     }
 }
@@ -423,6 +441,19 @@ impl Ctx<'_> {
         match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
+                if let Some(map) = self.map()
+                    && instance_script::is_active_boss(self.world, map, self.me)
+                {
+                    instance_script::send_to_players(
+                        self.world,
+                        map,
+                        shared::protocol::EncounterTimelineEvent::Cast {
+                            caster: self.me.to_bits(),
+                            spell_id,
+                            severity: shared::protocol::EncounterSeverity::Low,
+                        },
+                    );
+                }
                 true
             }
             Err(failure) => {
@@ -504,9 +535,7 @@ impl Ctx<'_> {
     /// `WorldObject::SummonCreature(entry, pos)` (TEMPSUMMON_MANUAL_DESPAWN) at a
     /// WoW position `[x, y, z, o]`; the summoner's `JustSummoned` follows.
     pub fn summon_creature(&mut self, entry: u32, position: [f32; 4]) -> Option<Entity> {
-        let summon = crate::zones::summon_creature(self.world, self.me, entry, position)?;
-        dispatch(self.world, self.me, Hook::JustSummoned(summon));
-        Some(summon)
+        crate::zones::summon_creature(self.world, self.me, entry, position)
     }
 
     /// `MotionMaster::MovePoint(id, pos)` of `unit`, walking when it walks.
