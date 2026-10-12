@@ -90,6 +90,7 @@ impl Plugin for AchievementPlugin {
                 send_initial_achievement_snapshot,
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
+                process_known_spell_achievement_updates,
                 process_reputation_achievement_updates,
                 process_committed_criteria_credits,
                 process_inventory_acquisition_credits,
@@ -165,6 +166,15 @@ fn process_skill_achievement_updates(world: &mut World) {
         .iter(world).flat_map(|(player, professions)| professions.lines.iter()
             .filter(|line| line.rank != 0)
             .map(move |line| (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)))).collect();
+    for (player, event) in updates {
+        record_criteria_event(world, player, event);
+    }
+}
+
+/// TC CriteriaHandler.cpp687/1530-1535: knowing the authored spell is a boolean fact.
+fn process_known_spell_achievement_updates(world: &mut World) {
+    let updates: Vec<_> = world.query_filtered::<(Entity, &crate::class_progression::KnownSpells), Changed<crate::class_progression::KnownSpells>>()
+        .iter(world).flat_map(|(player, known)| known.iter().map(move |spell| (player, CriteriaEvent::LearnSpell(spell)))).collect();
     for (player, event) in updates {
         record_criteria_event(world, player, event);
     }

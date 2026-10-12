@@ -2,6 +2,102 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cast_never() {
+    use crate::class_progression::{ClassProgressionPlugin, KnownSpells};
+    use crate::profession::PlayerProfessions;
+    let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[42426, 32298],
+        1,
+        false,
+        |app| {
+            app.add_plugins((AchievementPlugin, ClassProgressionPlugin));
+        },
+    )
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Learnproof", 1, 1).unwrap();
+    h.app.insert_resource(GameDatabase { db });
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(h.connection)
+        .unwrap()
+        .character_id = character;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::persistence::ClientId(character),
+        PlayerAchievementState::default(),
+        PlayerProfessions::default(),
+        KnownSpells::fixture(vec![42426]),
+    ));
+    h.app.update();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 42426, Some(h.caster), u8::MAX);
+    for _ in 0..3 {
+        h.app.update();
+    }
+    assert!(
+        !h.app
+            .world()
+            .get::<KnownSpells>(h.caster)
+            .unwrap()
+            .contains(32298)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&6155)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 42426, Some(h.caster), 0);
+    for _ in 0..3 {
+        h.app.update();
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<KnownSpells>(h.caster)
+            .unwrap()
+            .contains(32298)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6155),
+        Some(&1)
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 42426, Some(h.caster), 0);
+    for _ in 0..3 {
+        h.app.update();
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&6155),
+        Some(&1)
+    );
+    assert_eq!(
+        persistence::load_achievements(&h.app.world().resource::<GameDatabase>().db, character)
+            .criteria_progress
+            .get(&6155),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_criteria_reputation_tracks_signed_changes_and_grants_real_timbers() {
     use shared::components::CharacterAppearance;
     use shared::reputation::CharacterReputation;
