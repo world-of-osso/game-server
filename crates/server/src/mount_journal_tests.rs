@@ -93,6 +93,35 @@ fn mount_journal_auth_entry_after_update_sync_loads_account_before_publish() {
 }
 
 #[test]
+fn mount_journal_request_at_world_entry_initializes_account_before_refusal() {
+    let mut h = setup();
+    let player = spawn_player(&mut h.app, 1, 0.0);
+    let connection = spawn_peer_connection(&mut h.app, player, 2);
+    h.app.world_mut().entity_mut(connection).remove::<InWorld>();
+    install_connection(h.app.world_mut(), connection);
+    h.advance(4);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<SummonMount>>(connection)
+        .unwrap()
+        .send::<CollectionChannel>(SummonMount { mount_id: 18 });
+    h.advance(1);
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(InWorld { character_id: 2 });
+    h.advance(1);
+    assert!(h.app.world().get::<AccountMounts>(player).is_some());
+    let updates = drain::<MountJournalUpdate>(&mut h.app, connection);
+    assert!(
+        updates
+            .iter()
+            .any(|update| update.error.as_deref() == Some("You have not collected this mount."))
+    );
+    assert!(h.app.world().get::<Mounted>(player).is_none());
+}
+
+#[test]
 fn mount_journal_random_favourite_uses_real_spell_and_rejects_combat_and_unowned_mounts() {
     let mut h = setup();
     let player = h.caster;
