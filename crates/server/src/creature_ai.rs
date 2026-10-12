@@ -50,7 +50,13 @@ const RETRY_CONFUSED_SECS: f32 = 0.1;
 
 /// Living, active creatures that are not confused: their wander, waypoint and
 /// formation movement runs.
-type Roaming = (Without<DeathState>, Without<GridDormant>, Without<Confused>);
+type Roaming = (
+    Without<DeathState>,
+    Without<GridDormant>,
+    Without<Confused>,
+    Without<crate::scripted_ai::movement::PointMovement>,
+    Without<crate::scripted_ai::movement::ScriptedPath>,
+);
 /// Active creatures that are not confused: chase and leash run.
 type ActiveUncontrolled = (Without<GridDormant>, Without<Confused>);
 
@@ -90,6 +96,10 @@ pub struct SpawnPoint {
     /// `creature_template.speed_run`: chase and evade-home speed multiplier.
     pub speed_run: f32,
 }
+
+/// The creature's original home facing in Bevy radians, independent of current rotation.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct HomeOrientation(pub f32);
 
 /// State machine for random-wander creatures (movement_type=1).
 /// Coordinates are in Bevy space (X-right, Y-up, Z-back).
@@ -806,6 +816,7 @@ pub(crate) fn chase_system(
             // In reach: `ChaseMovementGenerator` turns it to face the target (`SetInFront`).
             stride.facing = facing_along(target_pos.x - pos.x, target_pos.z - pos.z);
         }
+        bevy::log::debug!(?entity, from = ?*pos, to = ?next_position, ?state, driver = "chase", "combat movement");
         queues.apply(entity, &mut pos, bearing, stride);
     }
 }
@@ -1241,13 +1252,31 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
 /// Returning).
 fn leash_check_system(
     query: Query<
-        (Entity, &Position, &SpawnPoint, &CreatureState),
+        (
+            Entity,
+            &Position,
+            &SpawnPoint,
+            &CreatureState,
+            Option<&crate::scripted_ai::movement::ScriptedPath>,
+        ),
         (ActiveUncontrolled, Without<crate::followers::Follower>),
     >,
     mut commands: Commands,
 ) {
-    for (entity, pos, spawn, state) in &query {
-        if matches!(*state, CreatureState::Pursuing { .. }) && beyond_leash(pos, spawn) {
+    for (entity, pos, spawn, state, escort) in &query {
+        let beyond_home = match escort {
+            Some(escort) => (pos.x - escort.home.x).hypot(pos.z - escort.home.z) > LEASH_DISTANCE,
+            None => beyond_leash(pos, spawn),
+        };
+        if matches!(*state, CreatureState::Pursuing { .. }) && beyond_home {
+            bevy::log::debug!(
+                ?entity,
+                ?pos,
+                ?spawn,
+                ?state,
+                driver = "spawn_leash",
+                "enter evade"
+            );
             commands.queue(move |world: &mut World| {
                 crate::creature_aggro::enter_evade_mode(world, entity);
             });
@@ -1280,24 +1309,41 @@ fn return_to_spawn_system(
             Bearing,
             Option<&mut shared::components::Health>,
             Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
+            Option<&crate::scripted_ai::movement::ScriptedPath>,
         ),
         Without<GridDormant>,
     >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, mana, addon_auras, pose, map, bearing, health, regen) in
-        &mut query
+    for (
+        entity,
+        mut pos,
+        spawn,
+        mut state,
+        mana,
+        addon_auras,
+        pose,
+        map,
+        bearing,
+        health,
+        regen,
+        escort,
+    ) in &mut query
     {
         if *state != CreatureState::Returning {
             continue;
         }
+        bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let home = Position {
-            x: spawn.x,
-            y: spawn.y,
-            z: spawn.z,
-        };
+        let home = escort.map_or(
+            Position {
+                x: spawn.x,
+                y: spawn.y,
+                z: spawn.z,
+            },
+            |escort| escort.home,
+        );
         let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
