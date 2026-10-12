@@ -58,6 +58,8 @@ enum Selector {
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
     AreaAroundDest(Relation),
+    ///8 UNIT_DEST_AREA_ENTRY, filtered by actual implicit target conditions.
+    AreaEntryAtDest,
     /// Area center = the explicit target's position, the radius behind it.
     DestTargetBack,
     /// The caster's channel target.
@@ -103,6 +105,7 @@ fn selector(id: u32) -> Option<Selector> {
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
+        8 => Selector::AreaEntryAtDest,
         28 => Selector::DynObj(Enemy),
         29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
@@ -389,6 +392,21 @@ pub fn select_targets(
                     radius(effect, slot),
                 ));
             }
+            Selector::AreaEntryAtDest => {
+                selected_any = true;
+                let dest = center
+                    .or_else(|| spell.cast_destination.map(Vec3::from_array))
+                    .unwrap_or(caster_pos);
+                let candidates =
+                    area_units(world, caster, dest, radius(effect, slot), Relation::Any, 0);
+                units.extend(filter_entry_targets(
+                    world,
+                    candidates,
+                    spell.id,
+                    effect.index,
+                    max_targets,
+                ));
+            }
             Selector::AreaAroundDest(relation) => {
                 selected_any = true;
                 let dest = center
@@ -411,6 +429,24 @@ pub fn select_targets(
     }
     units.dedup();
     Ok(units)
+}
+
+fn filter_entry_targets(
+    world: &World,
+    candidates: Vec<Entity>,
+    spell_id: u32,
+    effect_index: u8,
+    max_targets: u32,
+) -> Vec<Entity> {
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    let mut selected: Vec<Entity> = candidates
+        .into_iter()
+        .filter(|&unit| conditions.target_meets(world, spell_id, effect_index, unit))
+        .collect();
+    if max_targets != 0 {
+        selected.truncate(max_targets as usize);
+    }
+    selected
 }
 
 ///104/134 select hostile units along the caster-to-destination direction.
