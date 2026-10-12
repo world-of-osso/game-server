@@ -28,6 +28,14 @@ CREATE TABLE `world_state` (
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB;
 INSERT INTO `world_state` VALUES (17303,3,'489,726,2106',NULL,'','Warsong Gulch/Twin Peaks - Max flag captures (new)');
+CREATE TABLE `npc_spellclick_spells` (
+  `npc_entry` int unsigned NOT NULL,
+  `spell_id` int unsigned NOT NULL,
+  `cast_flags` tinyint unsigned NOT NULL,
+  `user_type` smallint unsigned NOT NULL,
+  PRIMARY KEY (`npc_entry`,`spell_id`)
+) ENGINE=InnoDB;
+INSERT INTO `npc_spellclick_spells` VALUES (60283,124491,1,0);
 '''
 
 
@@ -48,6 +56,7 @@ class BattlegroundImportTests(unittest.TestCase):
                 self.assertEqual(conn.execute('SELECT * FROM tdb_battleground_template').fetchall(), [(1014,7051,7050,0,1,'','Warsong Gulch')])
                 self.assertEqual(conn.execute('SELECT DefaultValue,MapIDs FROM tdb_world_state WHERE ID=17303').fetchone(), (3,'489,726,2106'))
                 self.assertEqual(conn.execute('SELECT value FROM unrelated').fetchall(), [('keep',)])
+                self.assertEqual(conn.execute('SELECT * FROM tdb_npc_spellclick_spells').fetchall(), [(60283,124491,1,0)])
 
 
 if __name__ == '__main__':

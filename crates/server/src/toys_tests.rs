@@ -2,7 +2,7 @@ use super::*;
 use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::spell_cast::test_harness::*;
 use shared::components::{CombatStatus, Level};
-use shared::protocol::{InventoryChannel, InventoryError, UseItem};
+use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
@@ -59,6 +59,9 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+    h.app.init_resource::<crate::group::GroupRegistry>();
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app
@@ -3027,6 +3030,10 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             .unwrap();
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
     for (item, spell, entry, display, duration) in [
+        (170197, 438546, 218978, 117639, 60000),
+        (104331, 148627, 73781, 51525, 60000),
+        (119039, 176310, 88280, 51525, 60000),
+        (170196, 304505, 156052, 92597, 60000),
         (89869, 131171, 66768, 45436, 150000),
         (141299, 225824, 114846, 73493, 60000),
         (184415, 345799, 175582, 99948, 180000),
@@ -3077,6 +3084,17 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             world.get::<ModelDisplay>(actor).unwrap().display_id,
             display
         );
+        let expected_scale = if matches!(item, 170196 | 170197) {
+            0.6
+        } else {
+            1.0
+        };
+        let scale = world
+            .get::<shared::components::UnitScale>(actor)
+            .copied()
+            .unwrap_or_default()
+            .0;
+        assert!((scale - expected_scale).abs() < 0.00001, "item {item}");
         assert_eq!(
             world.get::<UnitSummonedBy>(actor).unwrap().0,
             h.caster.to_bits()
@@ -3129,7 +3147,9 @@ fn toyfx14_stationary_source_summon_census() {
     let directory = tempfile::tempdir().unwrap();
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX14_SUMMON_CENSUS_REPORT");
-    for item in [89869, 141299, 184415, 272339, 279590] {
+    for item in [
+        104331, 119039, 170196, 170197, 89869, 141299, 184415, 272339, 279590,
+    ] {
         let toy = report["toys"]
             .as_array()
             .unwrap()
@@ -3622,6 +3642,265 @@ fn toyfx14_scaled_scenery_census() {
     }
 }
 
+#[derive(Resource, Default)]
+struct ToyChatCapture(std::collections::HashMap<Entity, Vec<ChatMessage>>);
+
+fn capture_toy_chat(
+    mut receivers: Query<(Entity, &mut MessageReceiver<ChatMessage>)>,
+    mut captured: ResMut<ToyChatCapture>,
+) {
+    for (connection, mut receiver) in &mut receivers {
+        captured
+            .0
+            .entry(connection)
+            .or_default()
+            .extend(receiver.receive());
+    }
+}
+
+#[test]
+fn toyfx14_dice_learn_emote_and_roll_to_only_the_authored_audience() {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use crate::persistence::ClientId;
+    use shared::components::{Health, Player, Position};
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&source).unwrap().0;
+    for (item, spell, text_id, maximum, count, sex, in_party) in [
+        (36863, 47770, 26147, 100, 1, 0, false),
+        (36863, 47770, 26147, 100, 1, 1, true),
+        (36862, 47776, 26152, 6, 2, 0, true),
+        (36862, 47776, 26152, 6, 2, 1, false),
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("dice.redb"));
+        h.app.insert_resource(store.clone());
+        h.app.init_resource::<GroupRegistry>();
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        h.app
+            .world_mut()
+            .get_mut::<Player>(h.caster)
+            .unwrap()
+            .appearance
+            .sex = sex;
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        let mut peers = Vec::new();
+        for (peer, x, map, name) in [
+            (2, 35.0, 0, "Near"),
+            (3, 500.0, 0, "Far"),
+            (4, 3.0, 1, "OtherMap"),
+            (5, 500.0, 1, "PartyFar"),
+        ] {
+            let player = spawn_player(&mut h.app, 8, x);
+            h.app.world_mut().get_mut::<Player>(player).unwrap().name = name.into();
+            h.app
+                .world_mut()
+                .entity_mut(player)
+                .insert((ClientId(100 + peer), crate::maps::InMap::continent(map)));
+            let connection = spawn_peer_connection(&mut h.app, player, peer);
+            h.app.world_mut().entity_mut(connection).insert((
+                MessageSender::<ChatMessage>::default(),
+                MessageReceiver::<ChatMessage>::default(),
+            ));
+            peers.push((player, connection));
+        }
+        if in_party {
+            let online = OnlineView::from([
+                (
+                    character,
+                    OnlineMember {
+                        entity: h.caster.to_bits(),
+                        name: "Caster".into(),
+                        class: 8,
+                        level: 80,
+                        portrait: default(),
+                        dungeon_difficulty: 1,
+                        raid_difficulty: default(),
+                    },
+                ),
+                (
+                    105,
+                    OnlineMember {
+                        entity: peers[3].0.to_bits(),
+                        name: "PartyFar".into(),
+                        class: 8,
+                        level: 80,
+                        portrait: default(),
+                        dungeon_difficulty: 1,
+                        raid_difficulty: default(),
+                    },
+                ),
+            ]);
+            let mut groups = h.app.world_mut().resource_mut::<GroupRegistry>();
+            groups.invite(character, "PartyFar", &online);
+            groups.respond_invite(105, true);
+            assert_eq!(groups.group_members(character).len(), 2);
+        }
+        let health = h.app.world().get::<Health>(h.caster).unwrap().current;
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(20);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        assert_eq!(
+            h.app.world().get::<Health>(h.caster).unwrap().current,
+            health
+        );
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&origin));
+        let text: (String, String) = source
+            .query_row(
+                "SELECT MaleText, FemaleText FROM content_broadcast_text WHERE ID=?",
+                [text_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        let expected_emote = if sex == 1 { text.1 } else { text.0 };
+        let captured = &h.app.world().resource::<ToyChatCapture>().0;
+        let caster_chat = captured.get(&h.connection).unwrap();
+        let emotes: Vec<_> = caster_chat
+            .iter()
+            .filter(|message| message.channel == ChatType::Emote)
+            .collect();
+        assert_eq!(emotes.len(), 1);
+        assert_eq!(emotes[0].sender, "Caster");
+        assert_eq!(emotes[0].content, expected_emote);
+        let rolls: Vec<_> = caster_chat
+            .iter()
+            .filter(|message| message.channel == ChatType::System)
+            .collect();
+        assert_eq!(rolls.len(), count);
+        for roll in &rolls {
+            let value = roll
+                .content
+                .strip_prefix("Caster rolls ")
+                .unwrap()
+                .strip_suffix(&format!(" (1-{maximum})"))
+                .unwrap()
+                .parse::<u32>()
+                .unwrap();
+            assert!((1..=maximum).contains(&value));
+        }
+        let near = captured.get(&peers[0].1).unwrap();
+        assert_eq!(near.len(), 1);
+        assert_eq!(near[0].sender, emotes[0].sender);
+        assert_eq!(near[0].content, emotes[0].content);
+        assert_eq!(near[0].channel, emotes[0].channel);
+        assert!(captured.get(&peers[1].1).is_none_or(Vec::is_empty));
+        assert!(captured.get(&peers[2].1).is_none_or(Vec::is_empty));
+        let party_chat = captured.get(&peers[3].1);
+        if in_party {
+            let party_chat = party_chat.unwrap();
+            assert_eq!(party_chat.len(), count);
+            for (received, expected) in party_chat.iter().zip(&rolls) {
+                assert_eq!(received.sender, expected.sender);
+                assert_eq!(received.content, expected.content);
+                assert_eq!(received.channel, expected.channel);
+            }
+        } else {
+            assert!(party_chat.is_none_or(Vec::is_empty));
+        }
+        let before: usize = captured.values().map(Vec::len).sum();
+        assert!(
+            activate(&mut h, item)[0].error.is_some(),
+            "source10s cooldown"
+        );
+        h.advance(5);
+        let after: usize = h
+            .app
+            .world()
+            .resource::<ToyChatCapture>()
+            .0
+            .values()
+            .map(Vec::len)
+            .sum();
+        assert_eq!(after, before, "rejected repeat must not emote or roll");
+    }
+}
+
+#[test]
+fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for missing in ["text", "group", "identity", "amount", "extra effect"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("dice-refusal.redb"));
+        let mut altered = store.get(47770).unwrap().clone();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        match missing {
+            "text" => {
+                h.app
+                    .world_mut()
+                    .remove_resource::<crate::spell_cast::toy_scripts::DiceTexts>();
+            }
+            "group" => {
+                h.app
+                    .world_mut()
+                    .remove_resource::<crate::group::GroupRegistry>();
+            }
+            "identity" => {
+                h.app.world_mut().entity_mut(h.caster).remove::<ClientId>();
+            }
+            "amount" => {
+                altered.effects[0].base_points = 1.0;
+            }
+            "extra effect" => {
+                altered.effects.push(crate::spell_info::SpellEffect {
+                    index: 1,
+                    effect: 10,
+                    implicit_targets: [1, 0],
+                    base_points: 100.0,
+                    ..default()
+                });
+            }
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![altered]));
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        learn_effect_toy(&mut h, character, 36863);
+        assert!(activate(&mut h, 36863)[0].error.is_some(), "{missing}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{missing} must not deliver SpellGo");
+        assert!(
+            h.inbox.cooldowns.is_empty(),
+            "{missing} must not start cooldown"
+        );
+        assert!(
+            h.app
+                .world()
+                .resource::<ToyChatCapture>()
+                .0
+                .values()
+                .all(Vec::is_empty),
+            "{missing} must not emit an emote or roll"
+        );
+    }
+}
+
 #[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
@@ -3636,6 +3915,8 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
+    world.insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+    world.init_resource::<crate::group::GroupRegistry>();
     world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());

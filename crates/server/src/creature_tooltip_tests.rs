@@ -99,6 +99,7 @@ fn defias_thug_tooltip_lists_its_loot_table_without_greys() {
     assert_eq!(tooltips.len(), 1);
     let tooltip = &tooltips[0];
     assert_eq!(tooltip.entry, DEFIAS_THUG);
+    assert_eq!(tooltip.name, "Defias Thug");
     assert_eq!(tooltip.subname, "");
     assert_eq!(tooltip.creature_type, 7, "Humanoid");
     let listed: Vec<(&str, f32)> = tooltip
@@ -146,6 +147,7 @@ fn weaponsmith_tooltip_lists_the_items_she_sells() {
     let tooltips = h.query(CORINA_STEELE);
 
     let tooltip = &tooltips[0];
+    assert_eq!(tooltip.name, "Corina Steele");
     assert_eq!(tooltip.subname, "Weaponsmith");
     assert!(tooltip.drops.is_empty());
     assert_eq!(

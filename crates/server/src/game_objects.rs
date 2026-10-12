@@ -50,8 +50,19 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
      WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10, 50) \
-     OR (g.map = ?7 AND t.type = ?8 AND t.entry IN (?9, ?10)) \
-     OR (g.map IN (SELECT map_id FROM arena_map) AND t.type IN (0,6,35)) ORDER BY g.guid";
+     OR (g.map IN (SELECT map_id FROM arena_map) AND t.type IN (0,6,35))";
+
+/// Battleground objective spawns use difficulty 0; the shared rules name each one.
+fn battleground_objective_clause() -> String {
+    shared::battleground::all_templates()
+        .iter()
+        .flat_map(|template| {
+            shared::battleground::objective_object_entries(template.map_id)
+                .into_iter()
+                .map(move |entry| format!(" OR (g.map = {} AND g.id = {entry})", template.map_id))
+        })
+        .collect()
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -142,7 +153,11 @@ fn spawn_from_row(row: &Row, locks: &locks::LockDb) -> rusqlite::Result<GameObje
 
 pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObjectSpawns> {
     let locks = locks::load_locks(conn.path().ok_or(rusqlite::Error::InvalidQuery)?)?;
-    let mut statement = conn.prepare(SPAWN_QUERY)?;
+    let query = format!(
+        "{SPAWN_QUERY}{} ORDER BY g.guid",
+        battleground_objective_clause()
+    );
+    let mut statement = conn.prepare(&query)?;
     let rows = statement.query_map(
         rusqlite::params![
             GAMEOBJECT_TYPE_GUILD_BANK,
@@ -151,10 +166,6 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
             GAMEOBJECT_TYPE_GENERIC,
             GAMEOBJECT_TYPE_SPELL_FOCUS,
             GAMEOBJECT_TYPE_CHAIR,
-            shared::battleground::warsong_gulch().map_id,
-            shared::protocol::GAMEOBJECT_TYPE_BATTLEGROUND_FLAG,
-            shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
-            shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
         ],
         |row| spawn_from_row(row, &locks),
     )?;

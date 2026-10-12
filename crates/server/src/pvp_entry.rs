@@ -4,11 +4,6 @@ use shared::battleground::{BgTeam, template_by_id};
 use super::{PlayerPvpState, PvpServerState};
 use crate::maps::{InMap, InstanceManager, MapStore, TeleportOptions, WorldLocation};
 
-// TDB1210 battleground_template1014, confirmed against local safe-location rows.
-const WARSONG_GULCH: u32 = 1014;
-const ALLIANCE_ENTRY: u32 = 7051;
-const HORDE_ENTRY: u32 = 7050;
-
 pub(super) fn enter_battleground(
     world: &mut World,
     state: &mut PvpServerState,
@@ -24,22 +19,19 @@ pub(super) fn enter_battleground(
     let sources = world
         .get_resource::<crate::game_objects::GameObjectSpawns>()
         .ok_or("gameobject catalog unavailable")?;
-    let required: &[u32] = if arena.is_some() {
-        &[]
+    let required = if arena.is_some() {
+        Vec::new()
     } else {
-        &[
-            shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
-            shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
-        ]
+        authored_object_entries(destination.map_id)?
     };
-    for &entry in required {
+    for entry in required {
         if !sources
             .0
             .iter()
             .any(|spawn| spawn.map_id == destination.map_id && spawn.info.entry == entry)
         {
             return Err(format!(
-                "authored battleground flag {entry} is absent; rebuild Retail source content"
+                "authored battleground object {entry} is absent; rebuild Retail source content"
             ));
         }
     }
@@ -77,15 +69,17 @@ fn entry_location(
         .get::<PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
         .ok_or("player has no battleground invitation")?;
-    let starts = match arena_starts {
-        Some(starts) => starts,
-        None if invitation.battleground_id == WARSONG_GULCH => [ALLIANCE_ENTRY, HORDE_ENTRY],
-        None => return Err("this battleground has no implemented entry lifecycle".into()),
-    };
-    let location_id = match invitation.team {
-        BgTeam::A => starts[0],
-        BgTeam::B => starts[1],
-    };
+    let starts = arena_starts
+        .or_else(|| shared::battleground::flag_rules(invitation.map_id).map(|rules| rules.starts))
+        .or_else(|| shared::battleground::node_rules(invitation.map_id).map(|rules| rules.starts))
+        .or_else(|| shared::battleground::eye_rules(invitation.map_id).map(|rules| rules.starts))
+        .or_else(|| (invitation.map_id == 998).then_some(shared::battleground::KOTMOGU_STARTS))
+        .or_else(|| (invitation.map_id == 727).then_some(shared::battleground::SILVERSHARD_STARTS))
+        .ok_or("this battleground has no implemented entry lifecycle")?;
+    let location_id = starts[match invitation.team {
+        BgTeam::A => 0,
+        BgTeam::B => 1,
+    }];
     let store = world
         .get_resource::<MapStore>()
         .ok_or("map catalog is unavailable")?;
@@ -98,6 +92,14 @@ fn entry_location(
         return Err("battleground start location disagrees with its map".into());
     }
     Ok(destination)
+}
+
+fn authored_object_entries(map_id: u32) -> Result<Vec<u32>, String> {
+    let entries = shared::battleground::objective_object_entries(map_id);
+    if !shared::battleground::has_implemented_objectives(map_id) {
+        return Err("this battleground has no implemented objectives".into());
+    }
+    Ok(entries)
 }
 
 fn create_match_map(
@@ -123,6 +125,15 @@ fn create_match_map(
         .chain(&invitation.instance.team_b_players)
         .copied()
         .collect();
+    let carts = if template.map_id == 727 {
+        Some(super::pvp_silvershard::CartRuntime::from_source(
+            world
+                .get_resource::<crate::world_data::WorldData>()
+                .ok_or("creature catalog unavailable")?,
+        )?)
+    } else {
+        None
+    };
     let capacity = u32::from(template.team_size) * 2;
     let arena = invitation.arena.is_some();
     let now = crate::maps::difficulty::now(world);
@@ -146,6 +157,14 @@ fn create_match_map(
     if arena {
         super::arena_objects::prepare_map(world, map);
         super::arena_sight::prepare_map(world, map);
+    }
+    if let Some(mut carts) = carts {
+        carts.synchronize(world, map);
+        state
+            .battleground_matches
+            .get_mut(&match_id)
+            .expect("validated match")
+            .silvershard = Some(carts);
     }
     Ok(map)
 }

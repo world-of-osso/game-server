@@ -911,6 +911,11 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::npc_interaction::load_gossip_catalog(&conn).expect("Failed to load gossip menus");
     commands.insert_resource(gossip);
     commands.insert_resource(
+        crate::npc_interaction::load_spellclick_catalog(&conn).expect(
+            "Failed to load source spellclick rows; run add_battleground_summon_templates.py",
+        ),
+    );
+    commands.insert_resource(
         crate::transmog::TransmogCatalog::load(&conn)
             .expect("Failed to load transmog source catalog"),
     );
