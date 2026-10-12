@@ -290,3 +290,60 @@ fn mount_journal_spell_learning_and_favourites_publish_only_to_same_account() {
             .all(|mount| !mount.collected && !mount.favourite)
     }));
 }
+
+#[test]
+fn relog_crash_retires_old_world_link_before_mount_journal_next_frame() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.insert_resource(GameDatabase {
+        db: crate::persistence::temp_database(),
+    });
+    app.init_resource::<MountCatalog>();
+    let old_player = app.world_mut().spawn(crate::persistence::ClientId(32)).id();
+    let new_player = app.world_mut().spawn(crate::persistence::ClientId(32)).id();
+    let old_connection = app
+        .world_mut()
+        .spawn((
+            Authenticated { account_id: 3 },
+            InWorld { character_id: 32 },
+            PlayerLink(old_player),
+        ))
+        .id();
+    let new_connection = app
+        .world_mut()
+        .spawn((
+            Authenticated { account_id: 3 },
+            InWorld { character_id: 32 },
+            PlayerLink(new_player),
+        ))
+        .id();
+    install_connection(app.world_mut(), old_connection);
+    install_connection(app.world_mut(), new_connection);
+    app.add_systems(Update, update_mount_journal);
+    // Selection retires the old player while its transport is still delivering
+    // ForcedDisconnect. Network retirement removes the player in PostUpdate.
+    app.add_systems(
+        PostUpdate,
+        move |mut commands: Commands, mut retired: Local<bool>| {
+            if !*retired {
+                crate::networking::queue_player_despawn(&mut commands, old_player);
+                *retired = true;
+            } else {
+                commands.entity(old_player).try_despawn();
+            }
+        },
+    );
+    app.update();
+    app.update();
+    // The next real exclusive reader must not dereference a dead player link.
+    app.update();
+    assert!(app.world().get_entity(old_player).is_err());
+    assert!(app.world().get::<PlayerLink>(old_connection).is_none());
+    assert!(app.world().get::<InWorld>(old_connection).is_none());
+    assert_eq!(
+        app.world().get::<PlayerLink>(new_connection).unwrap().0,
+        new_player
+    );
+    assert!(app.world().get::<AccountMounts>(new_player).is_some());
+    assert!(app.world().get::<InWorld>(new_connection).is_some());
+}
