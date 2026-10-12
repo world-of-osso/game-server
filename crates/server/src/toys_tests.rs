@@ -519,24 +519,23 @@ fn toyfx_cosmetic_dummy_and_script_deliver_spell_go() {
 
 #[test]
 fn toyfx_screen_effect_replicates_and_cancel_removes_it() {
-    // Shadescale170187 has no runtime content_item, so its actual UseToy must
-    // remain unavailable. The authentic on-use spell proves the aura mechanism.
+    // Source item import makes Shadescale170187 usable through actual learning/UseToy.
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
     assert!(
         snapshot(h.app.world(), 1)
             .toys
             .iter()
-            .find(|t| t.item_id == 170187)
+            .find(|toy| toy.item_id == 170187)
             .unwrap()
             .unavailable_reason
-            .as_deref()
-            .unwrap()
-            .contains("content_item")
+            .is_none()
     );
-    assert!(toy_catalog::unsupported_types(h.app.world(), 304370).is_empty());
-    h.cast_and_deliver(304370, None);
+    learn_effect_toy(&mut h, character, 170187);
+    assert_eq!(activate(&mut h, 170187)[0].error, None);
+    h.advance(40);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 304370));
     let auras = h
         .app
         .world()
@@ -797,23 +796,22 @@ fn toyfx2_scale_toy_applies_replicates_and_reverts() {
 #[test]
 fn toyfx2_feather_fall_authentic_toy_spell_lifecycle() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, _) = setup(&dir.path().join("toys.redb"));
-    //113542 has no runtime item: do not invent one or count it as usable.
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    // Imported Whispers113542 now learns/activates through the real item boundary.
     assert!(
         snapshot(h.app.world(), 1)
             .toys
             .iter()
-            .find(|t| t.item_id == 113542)
+            .find(|toy| toy.item_id == 113542)
             .unwrap()
             .unavailable_reason
-            .as_deref()
-            .unwrap()
-            .contains("content_item")
+            .is_none()
     );
-    assert!(toy_catalog::unsupported_types(h.app.world(), 167273).is_empty());
-    h.cast_and_deliver(167273, None);
+    learn_effect_toy(&mut h, character, 113542);
+    assert_eq!(activate(&mut h, 113542)[0].error, None);
     h.advance(40); // Authentic one-second cast, not an immediate aura fixture.
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 167273));
     assert!(
         h.app
             .world()

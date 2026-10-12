@@ -78,13 +78,17 @@ Actual1973/16739 RED learns the item but UseToy refuses aura56 (`orb-deception-r
 |Blood Elf10|17829|17830|
 |Draenei11|17827|17828|
 
-The table is now implemented; actual20-variant learning/use/cancellation and unmapped-race GREEN is pending. Unlisted source races remain explicitly unavailable before cast/cooldown under the existing zero-entry no-op rule; TC's default does not supply a display, and no extra counterpart model is inferred. Native profiles/assets, both-skin actual Orb use/restoration and prepared re-census are separate pending boundaries. Source capsule: `orb-deception-source.json` under the continuation evidence root. No canonical imports.
+The table is implemented; actual20-variant learning/use/cancellation, unchanged original race/sex and unmapped-Goblin refusal/no-cooldown GREEN passes507.88s (`orb-deception-green3.log`,20a0a624). Initial fixture incorrectly created Dwarf Mage; it now takes each race's first supported class from the existing creation table, without changing toy rules. Unlisted source races remain explicitly unavailable before cast/cooldown under the existing zero-entry no-op rule; TC's default does not supply a display, and no extra counterpart model is inferred. Native profiles/assets, both-skin actual Orb use/restoration and prepared re-census are separate pending boundaries. Source capsule: `orb-deception-source.json` under the continuation evidence root. No canonical imports.
 
 ## Remaining mechanic incidence
 
 Whole catalog overlapping blockers: aura4=273,summon28=243,dummy3=156,script77=61,transmitted-object50=52,periodic226=35,area-trigger179=25,puppet control3=24,vehicle control4=16,transform56=14. Missing item rows must not hide these counts. Aura233 is accepted server state but authentic viewer-local payload resolution remains unimplemented; enum and aura replication are insufficient proof.
 
 Source gaps retained: procedural cloak Type17 payload, Scoots ModifierTree303980, zero-entry transforms, remote-control/vehicle scripts, custom interaction/narrative/teleport destinations. Full per-toy identities/reasons are in the census receipts; gaps are not no-op implementations.
+
+## Canonical import fixture regression (2026-10-12)
+
+Lead applied source item/template import to canonical world.db; observed content_item59044 includes170187 and113542. Old ScreenEffect/FeatherFall tests still asserted missing content_item and failed at unavailable_reasonNone; both REDs reproduced against that exact linked database. Tests now perform real bag learning/UseToy, SpellGo, authored aura replication and cancellation for Shadescale170187/304370 and Whispers113542/167273. No ad-hoc item or generic-spell bypass; targeted/full requested toys GREEN pending.
 
 ## Import command
 
