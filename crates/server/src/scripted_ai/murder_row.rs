@@ -1,8 +1,8 @@
 //! Murder Row Kystia combat events from TrinityCore a352b1fa
 //! src/server/scripts/QuelThalas/MurderRow/boss_kystia_manaheart.cpp.
 //! This ports the authored primary-actor schedule, not the whole encounter:
-//! Nibbles, infusion/channel callbacks, shields, mirror destinations, Fel Nova's
-//! scripted chain and door/boundary behavior remain tracked source gaps.
+//! Nibbles, infusion/channel callbacks, shields, mirror destinations and
+//! door/boundary behavior remain tracked source gaps.
 
 use bevy::prelude::*;
 
@@ -17,7 +17,9 @@ const EVENT_MIRROR_IMAGES: u32 = 2;
 const EVENT_FEL_NOVA: u32 = 3;
 const SPELL_CHAOS_BARRAGE: u32 = 1230298;
 const SPELL_MIRROR_IMAGES: u32 = 1264095;
-const SPELL_FEL_NOVA_SELECTOR: u32 = 474240;
+pub(crate) const SPELL_FEL_NOVA_SELECTOR: u32 = 474240;
+pub(crate) const SPELL_BLINK: u32 = 474183;
+const SPELL_FEL_NOVA: u32 = 1223906;
 
 pub fn is_creature_script(script_name: &str) -> bool {
     script_name == SCRIPT
@@ -43,6 +45,25 @@ pub fn creature_ai(
         .and_then(|manager| manager.copy_difficulty(*map))
         .is_some_and(|difficulty| matches!(difficulty.difficulty_id, 2 | 8 | 23));
     Some(Box::new(KystiaManaheart { boss, heroic }))
+}
+
+/// TC spell_kystia_manaheart_fel_nova_selector::HandleHitTarget.
+pub(crate) fn cast_blink_at_selected_target(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    _depth: u8,
+) {
+    Ctx { world, me: caster }.do_cast_at(Some(target), SPELL_BLINK, false);
+}
+
+/// TC spell_kystia_manaheart_blink::HandleCast (AfterCast).
+pub(crate) fn cast_fel_nova_after_blink(
+    world: &mut World,
+    caster: Entity,
+    _spell: &crate::spell_info::SpellInfo,
+) {
+    Ctx { world, me: caster }.do_cast_self(SPELL_FEL_NOVA);
 }
 
 struct KystiaManaheart {

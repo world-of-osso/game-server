@@ -4,7 +4,7 @@
 
 - [x] Census every hosted DungeonEncounter difficulty record and Journal-only encounter, preserving unknown/ambiguous identities and separating structural admissions from behavioral proof: [coverage](../encounter-coverage.md).
 - [x] Order work using locally authenticated Midnight Season2 relations, then Normal leveling LFG ContentTuning.MinLevelSquish, then remaining maps by descending expansion. This does not activate a Mythic+ season.
-- [ ] Complete Murder Row/Kystia3101 from pinned TC a352b1fa: primary Chaos Barrage1s/3500ms, Mirror Images14s/30500ms and Heroic+ Fel Nova12s/15s are ported; companion/infusion phases, shield stacks, authored spell scripts, doors/boundary and loot remain open.
+- [ ] Complete Murder Row/Kystia3101 from pinned TC a352b1fa: primary Chaos Barrage1s/3500ms, Mirror Images14s/30500ms and Heroic+ Fel Nova12s/15s are ported; selector→Blink→Fel Nova spell hooks are ported too. Companion/infusion phases, shield stacks, mirror-image callbacks, doors/boundary and loot remain open. Cast onset and completion must respect local DB2 cast times (Chaos Barrage3000ms, Fel Nova3500ms); source flags ignore only cast-in-progress, not school lockouts or cast time.
 - [ ] Certify every boss through engage/casts/phase/death/credit/loot/lockout, and both native skins per completed instance. No complete instance claimed by this continuation.
  (server)
 
