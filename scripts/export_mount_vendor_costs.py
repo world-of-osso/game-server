@@ -31,6 +31,7 @@ def export(world, db2, reader, output):
     """).fetchall()
     ids = sorted({offer[3] for offer in offers})
     unavailable = set()
+    unavailable_items = set()
     result = []
     for cost_id in ids:
         values, _, _ = rows[cost_id]
@@ -52,6 +53,13 @@ def export(world, db2, reader, output):
                         unavailable.add(identifier)
                     elif metadata[0] & 0x8 and amount % 100:
                         raise ValueError(f"cost {cost_id}: fractional currency {identifier}: {amount}/100")
+                if kind == "item" and identifier:
+                    metadata = connection.execute(
+                        "SELECT 1 FROM content_item c JOIN item i ON i.ID=c.ID WHERE c.ID=?",
+                        (identifier,),
+                    ).fetchone()
+                    if metadata is None:
+                        unavailable_items.add(identifier)
                 row.extend((identifier, amount))
         result.append(row)
     with output.open("w", newline="") as stream:
@@ -72,6 +80,7 @@ def export(world, db2, reader, output):
         "selected_offers": len(offers),
         "selected_costs": len(ids),
         "unavailable_currency_metadata": sorted(unavailable),
+        "unavailable_item_metadata": sorted(unavailable_items),
         "currency_counts": "Raw DB2 precision; CurrencyTypes.Flags_0 & 0x8 divides by 100 exactly.",
     }
     output.with_suffix(".provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")

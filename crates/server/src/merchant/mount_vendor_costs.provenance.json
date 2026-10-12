@@ -12,5 +12,8 @@
     392,
     3252
   ],
+  "unavailable_item_metadata": [
+    124669
+  ],
   "currency_counts": "Raw DB2 precision; CurrencyTypes.Flags_0 & 0x8 divides by 100 exactly."
 }
