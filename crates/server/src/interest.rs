@@ -21,6 +21,10 @@ const INTEREST_BUCKET_SIZE: f32 = INTEREST_RADIUS;
 /// A 100 yd square of one map copy.
 type InterestBucket = (InMap, i32, i32);
 
+/// TC private object GUID for the source OnlyVisibleToSummoner flag.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PrivateObjectOwner(pub Entity);
+
 #[derive(Component, Default)]
 pub(crate) struct NetworkVisibility {
     visible_senders: EntityHashSet,
@@ -165,6 +169,7 @@ struct InterestIndex {
     /// Targets no player sees (decayed corpses).
     hidden: EntityHashSet,
     life_states: EntityHashMap<DeathState>,
+    private_owners: EntityHashMap<Entity>,
 }
 
 impl InterestIndex {
@@ -189,6 +194,10 @@ impl InterestIndex {
         observer.sees(entity, position, map)
             && (entity == observer.player
                 || (!self.hidden.contains(&entity)
+                    && self
+                        .private_owners
+                        .get(&entity)
+                        .is_none_or(|owner| *owner == observer.player)
                     && self
                         .invisibility
                         .get(&observer.player)
@@ -219,6 +228,7 @@ impl InterestIndex {
 
     fn remove_target(&mut self, entity: Entity) {
         self.life_states.remove(&entity);
+        self.private_owners.remove(&entity);
         self.invisibility.remove(&entity);
         if let Some(bucket) = self.target_buckets.remove(&entity) {
             let remove_bucket = self.buckets.get_mut(&bucket).is_some_and(|entities| {
@@ -356,13 +366,21 @@ fn on_replication_client_added(
 
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
-    positions: Query<(&Position, Option<&InMap>, Option<&DeathState>)>,
+    positions: Query<(
+        &Position,
+        Option<&InMap>,
+        Option<&DeathState>,
+        Option<&PrivateObjectOwner>,
+    )>,
     connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
-    if let Ok((position, map, life_state)) = positions.get(trigger.entity) {
+    if let Ok((position, map, life_state, private_owner)) = positions.get(trigger.entity) {
+        if let Some(owner) = private_owner {
+            index.private_owners.insert(trigger.entity, owner.0);
+        }
         if let Some(state) = life_state {
             index.update_life_state(trigger.entity, *state);
         }
