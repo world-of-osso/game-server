@@ -625,6 +625,21 @@ INSERT INTO "item_x_item_effect" VALUES(43,5,159);
 INSERT INTO "item_x_item_effect" VALUES(467,429,4536);
 INSERT INTO "item_x_item_effect" VALUES(471,433,4540);
 INSERT INTO "item_x_item_effect" VALUES(869,834,6948);
+CREATE TABLE mount (
+  Name_lang TEXT NOT NULL DEFAULT '',
+  SourceText_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  MountTypeID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  SourceTypeEnum INTEGER NOT NULL DEFAULT 0,
+  SourceSpellID INTEGER NOT NULL DEFAULT 0,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  MountFlyRideHeight REAL NOT NULL DEFAULT 0,
+  UiModelSceneID INTEGER NOT NULL DEFAULT 0,
+  MountSpecialRiderAnimKitID INTEGER NOT NULL DEFAULT 0,
+  MountSpecialSpellVisualKitID INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE skyborne_content_item(
   ID INT,
   Name TEXT,
@@ -1343,6 +1358,7 @@ CREATE TABLE tdb_playercreateinfo_item (
 CREATE INDEX spell_effect_spell_id ON spell_effect(SpellID);
 CREATE INDEX spell_equipped_items_spell_id ON spell_equipped_items(SpellID);
 CREATE INDEX item_modified_appearance_item_id ON item_modified_appearance(ItemID);
+CREATE INDEX mount_source_spell_id ON mount(SourceSpellID);
 CREATE UNIQUE INDEX content_item_id ON content_item(ID);
 CREATE UNIQUE INDEX skyborne_content_item_id ON skyborne_content_item(ID);
 COMMIT;

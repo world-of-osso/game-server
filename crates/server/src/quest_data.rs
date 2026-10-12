@@ -22,6 +22,7 @@ const QUEST_FLAGS_WEEKLY: u32 = 0x8000;
 /// `FlagsEx` bit (TrinityCore `QUEST_FLAGS_EX_LEGENDARY`, QuestDef.h:260).
 const QUEST_FLAGS_EX_LEGENDARY: u32 = 0x100;
 /// `QuestInfo.Modifiers` bits (`Quest::IsImportant` / `Quest::IsMeta`, QuestDef.cpp:509-523).
+const QUEST_INFO_MODIFIER_WORLD_QUEST: u32 = 0x100;
 const QUEST_INFO_MODIFIER_IMPORTANT: u32 = 0x400;
 const QUEST_INFO_MODIFIER_META: u32 = 0x800;
 /// `QuestInfo.Type` `QuestTagType::CovenantCalling` (QuestDef.h:349).
@@ -39,6 +40,12 @@ const QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT: u32 = 0x2;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ObjectiveKind {
     Monster,
+    ProgressBar,
+    TalkTo,
+    PlayerKills,
+    CriteriaTree,
+    AreaTriggerEnter,
+    KillWithLabel,
     GameObject,
     Item,
     /// Set by entering one of the quest's `areatrigger_involvedrelation` triggers.
@@ -49,6 +56,12 @@ impl ObjectiveKind {
     pub fn protocol(self) -> Option<QuestObjectiveKind> {
         match self {
             Self::Monster => Some(QuestObjectiveKind::Monster),
+            Self::ProgressBar => Some(QuestObjectiveKind::ProgressBar),
+            Self::TalkTo => Some(QuestObjectiveKind::TalkTo),
+            Self::PlayerKills => Some(QuestObjectiveKind::PlayerKills),
+            Self::CriteriaTree => Some(QuestObjectiveKind::CriteriaTree),
+            Self::AreaTriggerEnter => Some(QuestObjectiveKind::AreaTriggerEnter),
+            Self::KillWithLabel => Some(QuestObjectiveKind::KillWithLabel),
             Self::GameObject => Some(QuestObjectiveKind::GameObject),
             Self::Item => Some(QuestObjectiveKind::Item),
             Self::ExplorationOrEvent => None,
@@ -125,6 +138,7 @@ pub(crate) struct QuestTemplate {
     pub reward_items: Vec<(u32, u32)>,
     pub choice_items: Vec<(u32, u32)>,
     pub objectives: Vec<ObjectiveDef>,
+    pub world_objective_rules: Option<Vec<crate::world_quest_objectives::ObjectiveRule>>,
     pub description: String,
     pub objectives_text: String,
     pub completion_log: String,
@@ -183,6 +197,11 @@ pub(crate) struct QuestItemInfo {
 pub(crate) struct QuestDb {
     /// Runtime evaluation clock, refreshed before quest requests and markers.
     pub now: Option<i64>,
+    pub world_quests: Vec<crate::world_quests::Definition>,
+    pub world_quest_areas: HashMap<u32, Vec<crate::world_quests::Area>>,
+    pub world_quest_rewards: HashMap<u32, crate::world_quest_rewards::Rewards>,
+    pub world_quest_xp: HashMap<(u8, u8), u32>,
+    pub world_quest_windows: std::collections::BTreeMap<u32, crate::world_quests::Window>,
     pub quests: HashMap<u32, QuestTemplate>,
     /// Creature entry -> quests it starts.
     pub starters: HashMap<u32, Vec<u32>>,
@@ -202,6 +221,10 @@ pub(crate) struct QuestDb {
     pub area_triggers: HashMap<u32, Vec<QuestAreaTrigger>>,
     /// Creature entry -> its `KillCredit1`/`KillCredit2` entries (`Player::KilledMonster`).
     pub kill_credits: HashMap<u32, Vec<u32>>,
+    /// Authenticated CreatureLabel membership by entry and selected difficulty mode.
+    pub creature_labels: HashMap<(u32, u32), Vec<u32>>,
+    /// Single amount-one leaf task trees: root -> (authenticated criterion type, asset).
+    pub task_criteria: HashMap<u32, (u32, u32)>,
 }
 
 /// An `AreaTrigger.db2` row that explores quests.
@@ -364,6 +387,7 @@ fn quest_from_row(
         reward_items: item_pairs(row, "RewardItem", "RewardAmount", 4)?,
         choice_items: item_pairs(row, "RewardChoiceItemID", "RewardChoiceItemQuantity", 6)?,
         objectives: objectives_from_row(row, names)?,
+        world_objective_rules: None,
         description: text(row, "QuestDescription")?,
         objectives_text: text(row, "LogDescription")?,
         completion_log: text(row, "QuestCompletionLog")?,
@@ -558,6 +582,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
         }
     }
     load_reconstruction_metadata(&conn, &mut db)?;
+    crate::world_quest_objectives::load(&conn, &mut db)?;
     link_quests(&mut db, &links);
     db.starters = load_relations(&conn, "content_creature_queststarter")?;
     db.enders = load_relations(&conn, "content_creature_questender")?;
@@ -570,7 +595,31 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.money_rewards = load_money_rewards(&conn)?;
     db.area_triggers = load_area_triggers(&conn)?;
     db.kill_credits = load_kill_credits(&conn)?;
+    db.world_quests = load_world_quest_definitions(&conn, &db)?;
+    db.world_quest_areas = crate::world_quests::load_areas(&conn)?;
+    crate::world_quest_rewards::load(&conn, &mut db)?;
     Ok(db)
+}
+
+fn load_world_quest_definitions(
+    conn: &Connection,
+    db: &QuestDb,
+) -> rusqlite::Result<Vec<crate::world_quests::Definition>> {
+    let definitions = crate::world_quests::load_definitions(conn)?;
+    for definition in &definitions {
+        let has_world_quest_template = db
+            .quests
+            .get(&definition.quest_id)
+            .is_some_and(|quest| quest.quest_info_modifiers & QUEST_INFO_MODIFIER_WORLD_QUEST != 0);
+        if !has_world_quest_template {
+            error!(
+                "World quest {} lacks a loaded authentic world-quest template",
+                definition.quest_id
+            );
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+    }
+    Ok(definitions)
 }
 
 /// Optional source overlay metadata; base Retail/Wrath rows retain their existing rules.

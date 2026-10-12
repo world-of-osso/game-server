@@ -235,6 +235,37 @@ pub(super) fn process_quest_requests(
     }
 }
 
+pub(super) fn process_world_quests(
+    store: QuestStore,
+    mut io: QuestIo,
+    maps: Query<&crate::maps::InMap>,
+) {
+    let Some((db, quests)) = store.get() else {
+        return;
+    };
+    let connections: Vec<_> = io
+        .units
+        .connections
+        .iter()
+        .map(|(connection, _, link)| (connection, link.0))
+        .collect();
+    for (connection, player_entity) in connections {
+        let Some(requester) = resolve_requester(&io.units, connection) else {
+            continue;
+        };
+        let Ok(map) = maps.get(player_entity) else {
+            continue;
+        };
+        let mut session = QuestSession {
+            db,
+            quests,
+            requester,
+            io: &mut io,
+        };
+        session.visit_world_quests(map.map_id);
+    }
+}
+
 fn resolve_requester(units: &QuestUnits, connection: Entity) -> Option<Requester> {
     let (_, in_world, link) = units.connections.get(connection).ok()?;
     let (player, level, position) = units.players.get(link.0).ok()?;
@@ -248,6 +279,57 @@ fn resolve_requester(units: &QuestUnits, connection: Entity) -> Option<Requester
 }
 
 impl<'a> QuestSession<'a, '_, '_> {
+    fn visit_world_quests(&mut self, map_id: u32) {
+        let position = self.requester.position;
+        let (world_x, world_y, _) =
+            crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+        let windows: Vec<_> = self.quests.world_quest_windows.values().copied().collect();
+        for window in windows {
+            let quest_id = window.quest_id;
+            let inside = self
+                .quests
+                .world_quest_areas
+                .get(&quest_id)
+                .is_some_and(|areas| {
+                    areas
+                        .iter()
+                        .any(|area| area.contains(map_id, world_x, world_y))
+                });
+            let (mut log, mut inventory) = self.load();
+            if log.active(quest_id).is_none() {
+                if !inside {
+                    continue;
+                }
+                if self
+                    .accept_log(quest_id, &mut log, &mut inventory, Some(window.expires_at))
+                    .is_err()
+                {
+                    continue;
+                }
+            }
+            let watched = log.watched.contains(&quest_id);
+            if watched != inside {
+                if inside {
+                    log.watched.push(quest_id);
+                } else {
+                    log.watched.retain(|&id| id != quest_id);
+                }
+                self.save_log(&log);
+            }
+            if is_complete_in_log(self.quests, &log, quest_id, |id| {
+                bag_count(self.db, &inventory, id)
+            }) {
+                if let Err(error) = self.choose_reward(0, quest_id, None) {
+                    send(
+                        &mut self.io.senders.failed,
+                        self.requester.connection,
+                        error,
+                    );
+                }
+            }
+        }
+    }
+
     fn handle(&mut self, request: QuestRequest) -> QuestResult {
         match request {
             QuestRequest::Status(query) => {
@@ -257,8 +339,12 @@ impl<'a> QuestSession<'a, '_, '_> {
             QuestRequest::Hello(hello) => self.hello(hello.npc),
             QuestRequest::Query(query) => self.query(query.npc, query.quest_id),
             QuestRequest::Accept(accept) => self.accept(accept.npc, accept.quest_id),
-            QuestRequest::Complete(complete) => self.complete(complete.npc, complete.quest_id),
+            QuestRequest::Complete(complete) => {
+                self.require_giver_quest(complete.quest_id)?;
+                self.complete(complete.npc, complete.quest_id)
+            }
             QuestRequest::Choose(choose) => {
+                self.require_giver_quest(choose.quest_id)?;
                 self.choose_reward(choose.npc, choose.quest_id, choose.choice_index)
             }
             QuestRequest::Abandon(abandon) => self.abandon(abandon.quest_id),
@@ -272,6 +358,13 @@ impl<'a> QuestSession<'a, '_, '_> {
                 Ok(())
             }
         }
+    }
+
+    fn require_giver_quest(&self, quest_id: u32) -> QuestResult {
+        if self.quest(quest_id)?.quest_info_modifiers & 0x100 != 0 {
+            return Err(failed(quest_id, QuestFailedReason::NotAvailable));
+        }
+        Ok(())
     }
 
     fn push_result(
@@ -733,8 +826,19 @@ impl<'a> QuestSession<'a, '_, '_> {
 
     /// The quest is in the log and this giver ends it.
     fn turn_in_target(&self, npc: u64, quest_id: u32, log: &QuestLogData) -> QuestResult {
+        let quest = self.quest(quest_id)?;
+        if quest.quest_info_modifiers & 0x100 != 0 {
+            let now = self.quests.now.expect("world quest clock initialized");
+            if !self.quests.world_quest_windows.contains_key(&quest_id)
+                || log.active(quest_id).is_none_or(|active| {
+                    active.failed || active.expires_at.is_none_or(|end| now >= end)
+                })
+            {
+                return Err(failed(quest_id, QuestFailedReason::NotAvailable));
+            }
+            return Ok(());
+        }
         let entry = self.giver(npc, quest_id)?;
-        self.quest(quest_id)?;
         if !ends(self.quests, entry, quest_id) {
             return Err(failed(quest_id, QuestFailedReason::NotAvailable));
         }
@@ -801,6 +905,16 @@ impl<'a> QuestSession<'a, '_, '_> {
             return Err(failed(quest_id, QuestFailedReason::ObjectivesIncomplete));
         }
         let items = self.granted_items(quest, choice_index)?;
+        let mut numeric = crate::world_quest_rewards::load_settlement(
+            self.db,
+            self.character(),
+            self.requester.player.race,
+            self.quests.world_quest_rewards.get(&quest_id),
+        )
+        .map_err(|error| {
+            warn!("Quest {quest_id} reward rejected: {error}");
+            failed(quest_id, QuestFailedReason::NotAvailable)
+        })?;
         let money = quest_money(self.quests, quest, self.requester.player);
         let gold = inventory.gold.checked_add_signed(i64::from(money));
         let Some(gold) = gold else {
@@ -809,7 +923,10 @@ impl<'a> QuestSession<'a, '_, '_> {
         if self.free_cells() < items.len() {
             return Err(failed(quest_id, QuestFailedReason::InventoryFull));
         }
-        let knowledge = self.load_reward_knowledge(quest)?;
+        let knowledge = self.load_reward_knowledge(quest, numeric.as_ref())?;
+        if let (Some(settlement), Some(wallet)) = (&mut numeric, &knowledge) {
+            settlement.wallet = wallet.clone();
+        }
         take_quest_items(self.db, &mut inventory, quest);
         for &(item_id, count) in &items {
             grant_item(&mut inventory, self.db, self.quests, item_id, count);
@@ -827,6 +944,7 @@ impl<'a> QuestSession<'a, '_, '_> {
             &inventory,
             &log,
             self.reward_appearances(quest, &items),
+            numeric,
             knowledge.as_ref(),
         );
         self.queue_script_quest_hook(npc, quest_id, true);
@@ -840,7 +958,9 @@ impl<'a> QuestSession<'a, '_, '_> {
         });
         // `RewardQuest`: no XP at the cap.
         let level = self.requester.player.level;
-        let xp = if level >= MAX_LEVEL {
+        let xp = if quest.quest_info_modifiers & 0x100 != 0 {
+            crate::world_quest_rewards::xp(self.quests, quest, level)
+        } else if level >= MAX_LEVEL {
             0
         } else {
             match quest.captured_reward_xp {
@@ -877,6 +997,7 @@ impl<'a> QuestSession<'a, '_, '_> {
     fn load_reward_knowledge(
         &self,
         quest: &QuestTemplate,
+        numeric: Option<&crate::world_quest_rewards::Settlement>,
     ) -> Result<Option<shared::currency::CurrencyWallet>, QuestFailed> {
         if quest.profession_knowledge_rewards.is_empty() {
             return Ok(None);
@@ -899,21 +1020,20 @@ impl<'a> QuestSession<'a, '_, '_> {
             .profession_states
             .get(link.0)
             .map_err(|_| failed(quest.id, QuestFailedReason::DontHaveRequirement))?;
-        crate::profession::specializations::award_knowledge(
-            catalog,
-            professions,
-            &currencies.0,
-            quest.id,
-        )
-        .map(Some)
-        .map_err(|error| {
-            warn!(
-                "Quest {} knowledge reward refused for character {}: {error}",
-                quest.id,
-                self.character()
-            );
-            failed(quest.id, QuestFailedReason::DontHaveRequirement)
-        })
+        let wallet = match numeric {
+            Some(settlement) => &settlement.wallet,
+            None => &currencies.0,
+        };
+        crate::profession::specializations::award_knowledge(catalog, professions, wallet, quest.id)
+            .map(Some)
+            .map_err(|error| {
+                warn!(
+                    "Quest {} knowledge reward refused for character {}: {error}",
+                    quest.id,
+                    self.character()
+                );
+                failed(quest.id, QuestFailedReason::DontHaveRequirement)
+            })
     }
 
     fn persist_reward(
@@ -921,6 +1041,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         inventory: &InventoryData,
         log: &QuestLogData,
         appearances: Vec<u32>,
+        numeric: Option<crate::world_quest_rewards::Settlement>,
         knowledge: Option<&shared::currency::CurrencyWallet>,
     ) {
         let character = self.character();
@@ -936,10 +1057,19 @@ impl<'a> QuestSession<'a, '_, '_> {
             .expect("open quest logs")
             .insert(character, bitcode::encode(log).as_slice())
             .expect("write rewarded quest log");
+        if let Some(settlement) = &numeric {
+            settlement.persist_in(&txn, character);
+        }
         if let Some(wallet) = knowledge {
             crate::profession::specializations::write_currency_wallet(&txn, character, wallet);
         }
         txn.commit().expect("commit quest reward");
+        if let Some(settlement) = numeric {
+            let connection = self.requester.connection;
+            self.io
+                .commands
+                .queue(move |world: &mut World| settlement.publish(world, connection));
+        }
         self.io
             .effects
             .inventories
@@ -1027,8 +1157,9 @@ impl<'a> QuestSession<'a, '_, '_> {
 
 /// `RewardQuest` destroys the required items and the provided start item.
 fn take_quest_items(db: &Database, inventory: &mut InventoryData, quest: &QuestTemplate) {
-    for objective in &quest.objectives {
-        if objective.kind == ObjectiveKind::Item {
+    for (index, objective) in quest.objectives.iter().enumerate() {
+        let bound = crate::world_quest_objectives::rule(quest, index).quest_bound_item();
+        if objective.kind == ObjectiveKind::Item && !bound {
             remove_items(db, inventory, objective.object_id, objective.required);
         }
     }
