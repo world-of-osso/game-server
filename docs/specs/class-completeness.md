@@ -8,6 +8,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Preserve exact missing effect/aura types and source/state prerequisites; never close unidentified Dummy fields with no-ops or guessed coefficients.
 - [x] Census uses authored production destinations/maps, actor identity and group state rather than reporting absent fixture startup resources as product gaps.
 - [x] Native target24 selects hostile units within the authored caster-facing cone/radius.
+- [ ] Native Chrono Flames retains Living Flame's damage/heal branch and repeats caster-to-target effective health changes over its authored history window, with native spec percentage, spell-power/versatility cap and Overclock modifier. No other actor, target, miss, overkill or overheal contributes. Source-derived landing order is not an independently observed Retail timing certificate.
 - [x] Native effect values apply authored RealPointsPerLevel only outside expected-stat/coefficient scaling, with native level bounds.
 - [ ] Owned bag item-target locks require native lock eligibility and a persisted per-GUID unlock; do not consume the item or fabricate loot. Retail threshold parity remains uncertified where pinned reference behavior conflicts with caster-aware native values.
 - [x] Native target119 offers resurrection to eligible party/raid corpse owners at their body positions, using authored restoration percentages.
