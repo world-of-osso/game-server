@@ -97,6 +97,38 @@ fn class_completeness_native_control_dream_counts_only_time_after_actual_recover
     );
 }
 
+#[test]
+fn class_completeness_native_control_dream_whirling_stars_does_not_credit_partial_charges() {
+    const ALIGNMENT: u32 = 194_223;
+    const WHIRLING_STARS: u32 = 468_743;
+    let mut h = harness(
+        Vec::new(),
+        &[CONTROL_OF_THE_DREAM, ALIGNMENT, WHIRLING_STARS],
+        11,
+    )
+    .unwrap();
+    h.advance(400);
+    let first = cast_charge(&mut h, ALIGNMENT);
+    assert_eq!(first.max, 2);
+    assert_eq!(first.current, 1);
+    assert_eq!(first.remaining_ms, first.recharge_ms - native_cap_ms());
+    h.advance(400);
+    let second = cast_charge(&mut h, ALIGNMENT);
+    assert_eq!(second.current, 0);
+    let elapsed_ms = first.remaining_ms - second.remaining_ms;
+    assert!(
+        (20_000..=20_250).contains(&elapsed_ms),
+        "running clock: {elapsed_ms}ms"
+    );
+    h.advance(((second.remaining_ms + second.recharge_ms) / 50 + 60) as usize);
+    let full = cast_charge(&mut h, ALIGNMENT);
+    let reduction = full.recharge_ms - full.remaining_ms;
+    assert!(
+        (3_000..=3_250).contains(&reduction),
+        "full recovery: {reduction}ms"
+    );
+}
+
 fn charged_dream_harness(spell: u32) -> Harness {
     let mut h = harness(Vec::new(), &[CONTROL_OF_THE_DREAM, spell], 11).unwrap();
     h.advance(3);
