@@ -418,6 +418,8 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         eye: None,
         kotmogu: None,
         silvershard: None,
+        seething: None,
+        deephaul: None,
         scoreboard: Vec::new(),
         flag_positions: [None, None],
     };
