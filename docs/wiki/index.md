@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Shared AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229) — native per-effect229 school/multiplicative reduction; five damage/lifecycle controls, flag/leech and class-wide proof limits.
+
 - [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; [baseline](../class-completeness.md), [continuation](../class-completeness2.md): authored census startup, native selectors/portals/rituals, controlled elemental lifecycle and persisted item-target unlocks; whole spell/talent coverage remains open.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
 

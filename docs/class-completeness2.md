@@ -1,6 +1,6 @@
 # Class completeness continuation
 
-Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes / 40 specs; probe dispatch is not whole ability, legal talent build, or rotation certification. [Baseline](class-completeness.md), [contract](specs/class-completeness.md).
+Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes / 40 specs; probe dispatch is not whole ability, legal talent build, or rotation certification. [Baseline](class-completeness.md), [contract](specs/class-completeness.md).
 
 ## Census milestones
 
@@ -22,6 +22,7 @@ Verified: 2026-10-11. Full spell/talent goal remains open across all 13 classes 
 | 42c85bc2 / shared6ba2f5cd | 2860 | 4785 | 182 | All 7827 memberships plus fresh source-gap analysis, exit0, 539.22s |
 | 8fcddcd9 / sharedd503cd3 | 2870 | 4775 | 182 | All 7827 memberships, current explicitly proved named consumers, exit0, 622.23s |
 | 672a43a4 / sharedd503cd3 | 2874 | 4771 | 182 | All 7827 memberships plus exact231040s2 consumer, exit0, 705.59s |
+| 78ea6e06 / shared2a48bdc | 2878 | 4767 | 182 | All 7827 memberships plus exact441675s3 consumer, exit0, 736.94s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -76,8 +77,14 @@ Native231040s2 extends Regrowth8936 only for self casts. Its independent index0 
 
 Native441675 already supplies20 raw Energy and200 raw Rage maximums through its two aura35 effects. Its index2 states that Frenzied Regeneration also increases maximum health by10%. Native RED6c23385f records public maximum health1110 rather than1221 during own22842. GREEN78ea6e06 passes three native health/resource/lifecycle controls. The named consumer folds into the existing max-health stat path only while the learner carries that aura; foreign recipients/casters do not activate it. Cancellation and native expiry restore health maxima, retaining valid current health and the existing native max-power bonuses. This controlled field/lifecycle proof does not certify other percentage-stacking or healing-snapshot interactions.
 
+## AoE avoidance shared aura229
+
+Native1966 Feint reduces area damage by its own−40% field; native1297073 supplies an independent−4% field. RED45f1900b records1000 versus600 damage. Implementation7af44e07/531a4005 reduces damage at the actual effect boundary rather than marking every sibling effect as AoE. Native school-mask overlap, multiplicative factors, cancellation/expiry, single-target sibling exclusion and real periodic ticks pass five controls atf90da7e3. Amounts and selectors remain authored; no guessed coefficients. Initial expanded fixtures omitted their native tick catalog/aura rows; those failures are fixture gaps, not new product regressions. Final current targeted log: slot-local `data/diagnostics/class-completeness4-2026-10-12/feint-controls2.log`.
+
+Pinned TC a352b1fa `Spell.cpp::DoEffectOnLaunchTarget`, `SpellAuraEffects.cpp` periodic damage/leech and `Unit.cpp::CalculateAOEAvoidance` define per-effect area/cone or area-aura selection, TreatAsArea/TreatAsNPCAoe flags, school-mask factors and integer truncation. Periodic IgnoreDamageTakenModifiers bypasses avoidance. Flags and periodic leech are source-backed paths, not yet separately behavior-certified by these five controls. Creature-only avoidance aura310 and other Feint effects are not certified. Census regeneration follows this batch; whole class/talent acceptance remains open.
+
 ## Retained boundaries
 
-At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. Required live coverage remains open for twelve classes; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
+At the seventh census, 170 memberships have no imported SpellStore row; 12 still lack authentic fixed destinations. Other selectors, ritual/controlled-pet/item-lock behavior, Dummy/proc consumers and talent legality remain missing. No memberships removed or coefficients invented. Required live coverage remains open for eleven classes; Monk's native117418 cone damage363, target aura123154 and cast receipt were observed in both Modern/Forever on private UDP5841 (`fb_class2monk`). Native server88c21ec5/protocol6ba2f5cd and matching engine-s4 artifacts; own client/server PIDs stopped after captures. PNGs: `monk-modern.png`, `monk-forever.png` in the requested directory. These are cone-mechanic receipts, not whole Fists-of-Fury/channel/rotation parity.
 
 Diagnostics, native source receipts, logs and frozen protocol snapshots: `game-engine/data/diagnostics/class-completeness2-2026-10-11/`. Handoff: `/home/osso/.worktrees/handoff-class-completeness2.md`. PNG destination: `/syncthing/AgentShared/2026-10-11/class-completeness2/`.
