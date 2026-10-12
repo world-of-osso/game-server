@@ -390,6 +390,21 @@ fn silvershard_source_world() -> (
     conn.execute_batch("CREATE TABLE IF NOT EXISTS tdb_npc_spellclick_spells (npc_entry INTEGER,spell_id INTEGER,cast_flags INTEGER,user_type INTEGER,PRIMARY KEY(npc_entry,spell_id));
         INSERT OR REPLACE INTO tdb_npc_spellclick_spells VALUES (60283,124491,1,0);").unwrap();
     drop(conn);
+    let promoted = std::process::Command::new("python3")
+        .args([
+            "../../scripts/promote_battlegrounds.py",
+            "--maps",
+            "727",
+            "--db",
+        ])
+        .arg(copy.path())
+        .output()
+        .unwrap();
+    assert!(
+        promoted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&promoted.stderr)
+    );
     let output = std::process::Command::new("python3")
         .args(["../../scripts/add_battleground_summon_templates.py", "--db"])
         .arg(copy.path())
@@ -411,28 +426,69 @@ fn silvershard_channel_spellclick_waits_three_seconds_then_switches_only_its_cop
     let mut entered = enter_source_match(&template, shared::battleground::SILVERSHARD_STARTS);
     let actor = &entered.players[0];
     let h = &mut entered.h;
-    // TDB source4000143, same source template/flags as the runtime population.
+    // Real promoted source4000143, spawned through the production copied-map loader.
     let at = Vec3::new(715.642, 100.165, 320.284);
-    let switch = h
-        .app
-        .world_mut()
-        .spawn((
-            shared::components::Npc {
-                template_id: 60283,
-                name: "Track Switch".into(),
-            },
-            shared::protocol::NpcFlags(16777216),
-            bevy(at),
-            entered.copy,
-            crate::pvp::TrackSwitch(6467),
-            shared::components::Health {
-                current: 100.0,
-                max: 100.0,
-            },
-            shared::components::UnitFactionTemplate(35),
-        ))
-        .id();
+    let switch = {
+        let world = h.app.world_mut();
+        let mut query = world.query::<(Entity, &shared::components::Npc, &InMap, &Position)>();
+        query
+            .iter(world)
+            .find(|(_, npc, map, position)| {
+                npc.template_id == 60283 && **map == entered.copy && close(wow(position), at)
+            })
+            .map(|(entity, _, _, _)| entity)
+            .expect("authentic eastern Track Switch")
+    };
     h.walk_to(actor, at);
+    // Identical geometry in another copy cannot supply a spellclick target.
+    let other_copy = InMap {
+        instance_id: entered.copy.instance_id + 1,
+        ..entered.copy
+    };
+    h.app.world_mut().entity_mut(switch).insert(other_copy);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: switch.to_bits(),
+        });
+    h.receive_pvp_updates(3);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    assert!(battleground(h, actor).world_states.contains(&(6467, 2)));
+    h.app.world_mut().entity_mut(switch).insert(entered.copy);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
+        .unwrap()
+        .send::<InteractionChannel>(shared::protocol::InteractNpc {
+            npc: switch.to_bits(),
+        });
+    h.receive_pvp_updates(3);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_some()
+    );
+    h.advance(40);
+    crate::spell_cast::cancel_cast(h.app.world_mut(), actor.player);
+    h.advance(24);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    assert!(
+        battleground(h, actor).world_states.contains(&(6467, 2)),
+        "cancelled cast never changes track"
+    );
     h.app
         .world_mut()
         .get_mut::<MessageSender<shared::protocol::InteractNpc>>(actor.connection)
