@@ -203,7 +203,7 @@ pub(crate) fn browse(
     Ok(store::all(db)?
         .into_iter()
         .filter(|order| {
-            order.skill_line == skill
+            (skill == 0 || order.skill_line == skill)
                 && order.kind == kind
                 && if mine {
                     order.customer == viewer
