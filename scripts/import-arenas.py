@@ -78,7 +78,8 @@ def promote_dalaran_spouts(db):
     source_columns = {row[1] for row in db.execute('PRAGMA table_info(tdb_creature)')}
     columns = [row[1] for row in db.execute('PRAGMA table_info(content_creature)') if row[1] in source_columns or row[1]=='id1']
     names = ','.join(f'"{column}"' for column in columns)
-    values = ','.join(f'g.guid+{RETAIL_GUID_OFFSET}' if column=='guid' else 'g.id' if column=='id1' else f'g."{column}"' for column in columns)
+    # TDB NULL means no spawn override; the target's0 sentinel means inherit the template.
+    values = ','.join(f'g.guid+{RETAIL_GUID_OFFSET}' if column=='guid' else 'g.id' if column=='id1' else f'COALESCE(g."{column}",0)' if column in ('npcflag','unit_flags') else f'g."{column}"' for column in columns)
     template_source = {row[1] for row in db.execute('PRAGMA table_info(tdb_creature_template)')}
     template_columns = [row[1] for row in db.execute('PRAGMA table_info(content_creature_template)') if row[1] in template_source and row[1]!='entry']
     assignments = ','.join(f'"{column}"=(SELECT "{column}" FROM tdb_creature_template WHERE entry=28567)' for column in template_columns)
