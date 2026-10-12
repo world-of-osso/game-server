@@ -1,10 +1,10 @@
-//! TC a352b1fa spell_item.cpp dice scripts and Player::DoRandomRoll.
+//! TC a352b1fa spell_item.cpp dice/compass scripts and Player::DoRandomRoll.
 //! BroadcastText26147/26152 and GlobalStrings RANDOM_ROLL_RESULT are authored text.
 use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use rusqlite::Connection;
-use shared::components::{Player, Position};
+use shared::components::{Player, Position, Rotation};
 use shared::protocol::{ChatMessage, ChatType};
 
 use crate::group::GroupRegistry;
@@ -18,6 +18,9 @@ use super::effects::{CastEffectHandler, EffectCtx};
 
 /// TC worldserver.conf.dist ListenRange.TextEmote, not the ordinary /say range.
 const TEXT_EMOTE_RANGE: f32 = 40.0;
+const UNUSUAL_COMPASS: u32 = 64385;
+const EFFECT_DUMMY: u32 = 3;
+const EFFECT_SCRIPT: u32 = 77;
 
 #[derive(Resource)]
 pub(crate) struct DiceTexts(HashMap<u32, (String, String)>);
@@ -54,31 +57,34 @@ fn dice_plan(spell: u32) -> Option<DicePlan> {
     }
 }
 
-fn is_dice_effect(effect: &SpellEffect) -> bool {
-    let caster_script = matches!(
-        (
-            effect.index,
-            effect.effect,
-            effect.aura,
-            effect.implicit_targets
-        ),
-        (0, 77, 0, [1, 0])
-    );
+fn is_caster_script_effect(effect: &SpellEffect, effect_type: u32) -> bool {
+    let caster_script = (
+        effect.index,
+        effect.effect,
+        effect.aura,
+        effect.implicit_targets,
+    ) == (0, effect_type, 0, [1, 0]);
     let no_trigger_payload = effect.trigger_spell == 0 && effect.misc_values == [0, 0];
     let no_gameplay_payload =
         effect.base_points == 0.0 && effect.item_type == 0 && effect.mechanic == 0;
     caster_script && no_trigger_payload && no_gameplay_payload
 }
 
-fn has_source_signature(spell: &SpellInfo) -> bool {
+fn has_source_signature(spell: &SpellInfo, effect_type: u32) -> bool {
     let mut effects = spell.effects.iter().filter(|effect| effect.effect != 0);
-    let source_effect = effects.next().is_some_and(is_dice_effect);
+    let source_effect = effects
+        .next()
+        .is_some_and(|effect| is_caster_script_effect(effect, effect_type));
     source_effect && effects.next().is_none()
 }
 
 pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
+    if spell.id == UNUSUAL_COMPASS {
+        return (!has_source_signature(spell, EFFECT_DUMMY))
+            .then(|| "compass source effect signature differs".into());
+    }
     let plan = dice_plan(spell.id)?;
-    if !has_source_signature(spell) {
+    if !has_source_signature(spell, EFFECT_SCRIPT) {
         return Some("dice source effect signature differs".into());
     }
     if !world.contains_resource::<GroupRegistry>() {
@@ -97,7 +103,10 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
-    dice_plan(spell).is_some() && is_dice_effect(effect)
+    if spell == UNUSUAL_COMPASS {
+        return is_caster_script_effect(effect, EFFECT_DUMMY);
+    }
+    dice_plan(spell).is_some() && is_caster_script_effect(effect, EFFECT_SCRIPT)
 }
 
 pub(crate) fn check_cast(
@@ -105,6 +114,15 @@ pub(crate) fn check_cast(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
+    if spell.id == UNUSUAL_COMPASS {
+        if let Some(reason) = unsupported(world, spell) {
+            return Err(CastFailure::Unsupported(reason));
+        }
+        return world
+            .get::<Rotation>(caster)
+            .map(|_| ())
+            .ok_or(CastFailure::InvalidTarget);
+    }
     if dice_plan(spell.id).is_none() {
         return Ok(());
     }
@@ -123,8 +141,19 @@ pub(crate) fn check_cast(
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<CastEffectHandler> {
+    if spell == UNUSUAL_COMPASS && index == 0 {
+        return Some(turn_compass_caster_randomly);
+    }
     (dice_plan(spell).is_some() && index == 0)
         .then_some(emit_dice_emote_and_rolls as CastEffectHandler)
+}
+
+fn turn_compass_caster_randomly(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
+    let orientation = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..=std::f32::consts::TAU);
+    world
+        .get_mut::<Rotation>(ctx.caster)
+        .expect("validated compass rotation")
+        .y = orientation + std::f32::consts::FRAC_PI_2;
 }
 
 fn emit_dice_emote_and_rolls(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {

@@ -3938,6 +3938,54 @@ fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
 }
 
 #[test]
+fn toyfx18_compass_refuses_missing_rotation_or_changed_source_payload() {
+    use shared::components::{Position, Rotation};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for missing in ["rotation", "amount", "trigger", "target", "extra effect"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("compass-refusal.redb"));
+        h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+            x: 0.0,
+            y: 0.7,
+            z: 0.0,
+        });
+        let mut spell = store.get(64385).unwrap().clone();
+        match missing {
+            "rotation" => {
+                h.app.world_mut().entity_mut(h.caster).remove::<Rotation>();
+            }
+            "amount" => spell.effects[0].base_points = 1.0,
+            "trigger" => spell.effects[0].trigger_spell = 116,
+            "target" => spell.effects[0].implicit_targets = [6, 0],
+            "extra effect" => spell.effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        let position = *h.app.world().get::<Position>(h.caster).unwrap();
+        let rotation = h.app.world().get::<Rotation>(h.caster).copied();
+        learn_effect_toy(&mut h, character, 45984);
+        assert!(activate(&mut h, 45984)[0].error.is_some(), "{missing}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{missing}");
+        assert!(h.inbox.cooldowns.is_empty(), "{missing}");
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+        assert_eq!(h.app.world().get::<Rotation>(h.caster).copied(), rotation);
+    }
+}
+
+#[test]
 fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
     use crate::auras::ActiveAuras;
     use shared::components::{Position, Rotation, UnitScale};
