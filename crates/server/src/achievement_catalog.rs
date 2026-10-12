@@ -26,6 +26,7 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
+    UseItem(u32),
     UseGameObject(u32),
     KnowSkillLineSpells(u32, u32),
     KnowPetCreature(u32),
@@ -54,6 +55,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
+            Self::UseItem(_) => 41,
             Self::UseGameObject(_) => 68,
             Self::KnowSkillLineSpells(_, _) => 75,
             Self::KnowPetCreature(_) => 96,
@@ -98,6 +100,7 @@ impl CriteriaEvent {
             | Self::TriggerGameEvent(asset)
             | Self::GainAura(asset)
             | Self::WinBattleground(asset)
+            | Self::UseItem(asset)
             | Self::UseGameObject(asset)
             | Self::KnowPetCreature(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
@@ -420,7 +423,21 @@ impl AchievementCatalog {
                 *counter = if self.criteria.get(&id).is_some_and(|row| {
                     matches!(
                         row.kind,
-                        0 | 1 | 12 | 28 | 29 | 36 | 42 | 68 | 69 | 73 | 74 | 130 | 158 | 165 | 216
+                        0 | 1
+                            | 12
+                            | 28
+                            | 29
+                            | 36
+                            | 41
+                            | 42
+                            | 68
+                            | 69
+                            | 73
+                            | 74
+                            | 130
+                            | 158
+                            | 165
+                            | 216
                     )
                 }) {
                     counter.saturating_add(value)
@@ -683,6 +700,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
                     || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 27 | 36 | 42 | 46 | 68 | 73 | 165)
+                        // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
+                        || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (matches!(kind, 74 | 130 | 158) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)

@@ -72,6 +72,71 @@ const BREAD_FOOD: u32 = 1_291_822;
 const WATER: u32 = 159;
 const WATER_DRINK: u32 = 1_291_950;
 
+#[test]
+fn achievements_criteria_item_use_counts_accepted_native_uses_not_refusals() {
+    let mut eater = eater(&[WATER], 2).expect("real water data");
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    let player = eater.h.caster;
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    use_slot(&mut eater, 1);
+    assert_eq!(count_of(&eater, WATER), 2);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 1);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 1);
+    eater.h.advance(10);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+    let character = eater.character_id;
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_achievements(db, character)
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+}
+
 struct Eater {
     h: Harness,
     character_id: u64,
