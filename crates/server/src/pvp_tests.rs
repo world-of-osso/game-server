@@ -328,6 +328,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
     let mut world = World::new();
     world.insert_resource(load_achievement_catalog(&conn).unwrap());
     world.init_resource::<crate::maps::ServerClock>();
+    world.init_resource::<Time<Fixed>>();
     let map = InMap {
         map_id: 2106,
         instance_id: 17,
