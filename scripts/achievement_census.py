@@ -11,7 +11,7 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 12, 27, 28, 29, 34, 36, 43, 46, 69, 73, 74, 130, 158, 165, 216}
+BASE_TYPES = {0, 1, 5, 7, 8, 12, 27, 28, 29, 34, 36, 42, 43, 46, 69, 73, 74, 130, 158, 165, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 

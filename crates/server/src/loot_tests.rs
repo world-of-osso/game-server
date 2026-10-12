@@ -63,6 +63,10 @@ struct Looter {
 }
 
 fn harness(tables: bool) -> Option<Harness> {
+    harness_with_plugins(tables, |_| {})
+}
+
+fn harness_with_plugins(tables: bool, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let path = world_db_path()?;
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut app = App::new();
@@ -86,6 +90,7 @@ fn harness(tables: bool) -> Option<Harness> {
     if tables {
         app.insert_resource(load_loot_tables(&conn).unwrap());
     }
+    extra(&mut app);
     app.finish();
     app.cleanup();
     let looter = spawn_looter(&mut app, "Looter", 1);
@@ -641,4 +646,78 @@ fn source_requirements_loot_unique_limit_counts_retail_only() {
                 .is_some()
         );
     }
+}
+
+#[test]
+fn achievements_criteria_loot_item_counts_only_committed_loot_slots() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut h = harness_with_plugins(false, |app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app.world_mut().entity_mut(h.looter.player).insert((
+        PlayerAchievementState::default(),
+        shared::components::Level(30),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.looter.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    h.settle();
+    let corpse = h.kill_kobold();
+    h.app.world_mut().entity_mut(corpse).insert(CorpseLoot {
+        looters: [(
+            h.looter.character_id,
+            vec![Some(LootContent::Item {
+                item_id: 6308,
+                name: "Raw Bristle Whisker Catfish".into(),
+                quality: 1,
+                count: 3,
+            })],
+        )]
+        .into(),
+    });
+    h.take_slot(corpse, 0);
+    assert_eq!(h.count_of(6308), 0);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.looter.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&15886)
+    );
+    h.open(corpse, false);
+    h.take_slot(corpse, 0);
+    assert_eq!(h.count_of(6308), 3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.looter.player)
+            .unwrap()
+            .criteria_progress
+            .get(&15886),
+        Some(&3)
+    );
+    h.take_slot(corpse, 0);
+    h.settle();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.looter.player)
+            .unwrap()
+            .criteria_progress
+            .get(&15886),
+        Some(&3)
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_achievements(db, h.looter.character_id)
+            .criteria_progress
+            .get(&15886),
+        Some(&3)
+    );
 }

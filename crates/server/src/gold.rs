@@ -25,6 +25,7 @@ pub(crate) struct GoldUpdateQueue {
     pending: HashMap<u64, u64>,
     changed_inventories: HashSet<u64>,
     acquired_items: Vec<(u64, u32, u32)>,
+    looted_items: Vec<(u64, u32, u32)>,
 }
 
 impl GoldUpdateQueue {
@@ -41,6 +42,15 @@ impl GoldUpdateQueue {
     /// A committed Retail acquisition, not an inventory move or a requested grant.
     pub(crate) fn record_acquisition(&mut self, character: u64, item: u32, count: u32) {
         self.acquired_items.push((character, item, count));
+    }
+
+    /// A committed loot-slot award, including group rolls, never a vendor/craft/move.
+    pub(crate) fn record_looted_item(&mut self, character: u64, item: u32, count: u32) {
+        self.looted_items.push((character, item, count));
+    }
+
+    pub(crate) fn take_looted_items(&mut self) -> Vec<(u64, u32, u32)> {
+        std::mem::take(&mut self.looted_items)
     }
 
     pub(crate) fn take_acquisitions(&mut self) -> Vec<(u64, u32, u32)> {
