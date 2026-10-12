@@ -124,6 +124,7 @@ struct InvitedBattleground {
     flags: Option<shared::battleground::FlagBattle>,
     nodes: Option<shared::battleground::NodeBattle>,
     eye: Option<shared::battleground::EyeBattle>,
+    kotmogu: Option<shared::battleground::KotmoguBattle>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
@@ -143,6 +144,9 @@ impl InvitedBattleground {
         }
         if let Some(eye) = &self.eye {
             return eye.world_states(&self.instance);
+        }
+        if let Some(orbs) = &self.kotmogu {
+            return orbs.world_states(&self.instance);
         }
         self.flags
             .as_ref()
@@ -177,6 +181,7 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
                 .map(shared::battleground::NodeBattle::new),
             eye: shared::battleground::eye_rules(template.map_id)
                 .map(shared::battleground::EyeBattle::new),
+            kotmogu: (template.map_id == 998).then(shared::battleground::KotmoguBattle::new),
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },

@@ -13,7 +13,11 @@ struct EnteredMatch {
 
 /// Source-minimum roster queue, invitation, acceptance and safe-location entry over the channel.
 fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
-    let objects = source_battleground_objects(template.map_id);
+    let objects = if template.map_id == 998 {
+        source_kotmogu_objects()
+    } else {
+        source_battleground_objects(template.map_id)
+    };
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
@@ -35,6 +39,7 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
     for who in &players {
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
+            shared::components::Level(template.bracket.min_level),
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
         ));
         h.app.world_mut().entity_mut(who.connection).insert((
@@ -175,7 +180,8 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
         assert_eq!(result.score_a, score);
         assert_eq!(result.honor_reward, None);
         assert_eq!(result.players.len(), players.len());
-        assert!(result.world_states.contains(&(1776, score as i32)));
+        let score_state = if copy.map_id == 998 { 6303 } else { 1776 };
+        assert!(result.world_states.contains(&(score_state, score as i32)));
         h.app
             .world_mut()
             .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
@@ -249,6 +255,107 @@ fn arathi_channel_objectives_scoreboard_victory_and_origin_return() {
 #[test]
 fn gilneas_channel_objectives_scoreboard_victory_and_origin_return() {
     node_match(shared::battleground::battle_for_gilneas());
+}
+
+fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let objects = shared::battleground::KOTMOGU_ORBS.iter().map(|orb| {
+        conn.query_row(
+            "SELECT t.type,t.displayId,t.name,t.size,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5
+             FROM tdb_gameobject_template t JOIN game_object_display_info d ON d.ID=t.displayId WHERE t.entry=?",
+            [orb.entry], |row| {
+                let scale = row.get::<_, f64>(3)? as f32;
+                let number = |index| row.get::<_, f64>(index).map(|value| value as f32);
+                Ok(crate::game_objects::GameObjectSpawn {
+                    guid: 90_000_000 + orb.entry,
+                    map_id: 998,
+                    info: GameObjectInfo { entry: orb.entry, go_type: row.get(0)?, display_id: row.get(1)?, name: row.get(2)?, scale },
+                    position: Vec3::from_array(orb.position), orientation: 0.0,
+                    bounds: crate::game_objects::GameObjectBounds {
+                        min: Vec3::new(number(4)?,number(5)?,number(6)?),
+                        max: Vec3::new(number(7)?,number(8)?,number(9)?),
+                        scale, orientation: 0.0,
+                    },
+                    spawn_difficulties: vec![0], chair: None, quest_object: None,
+                })
+            },
+        ).unwrap()
+    }).collect();
+    crate::game_objects::GameObjectSpawns(objects)
+}
+
+#[test]
+fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
+    let template = shared::battleground::temple_of_kotmogu();
+    let mut entered = enter_source_match(&template, shared::battleground::KOTMOGU_STARTS);
+    let actor = &entered.players[0];
+    let (h, copy) = (&mut entered.h, entered.copy);
+    use_second_frames(h);
+    let orb = &shared::battleground::KOTMOGU_ORBS[0];
+    let (object, home) = objects_in(h, copy, orb.entry)[0];
+    h.walk_to(actor, home);
+    use_object(h, actor, object);
+    let taken = battleground(h, actor);
+    assert!(taken.world_states.contains(&(6964, 1)));
+    assert!(objects_in(h, copy, orb.entry).is_empty());
+    let row = battleground(h, actor)
+        .players
+        .iter()
+        .find(|row| row.character_id == 1)
+        .unwrap();
+    assert_eq!(
+        row.objective_scores.iter().find(|(stat, _)| *stat == 418),
+        Some(&(418, 1))
+    );
+    h.walk_to(actor, Vec3::new(1783.41, 1333.56, 6.0));
+    h.advance(5);
+    let result = battleground(h, actor);
+    assert!(result.score_a >= 6);
+    assert!(result.world_states.contains(&(6303, result.score_a as i32)));
+    let row = result
+        .players
+        .iter()
+        .find(|row| row.character_id == 1)
+        .unwrap();
+    assert_eq!(
+        row.objective_scores
+            .iter()
+            .find(|(stat, _)| *stat == 419)
+            .unwrap()
+            .1,
+        result.score_a
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(actor.player)
+        .unwrap()
+        .current = 0.0;
+    h.advance(1);
+    let returned = objects_in(h, copy, orb.entry);
+    assert_eq!(returned.len(), 1);
+    assert!(close(returned[0].1, home));
+    assert!(battleground(h, actor).world_states.contains(&(6717, 1)));
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(actor.player)
+        .unwrap()
+        .current = 100.0;
+    for orb in &shared::battleground::KOTMOGU_ORBS {
+        let (object, home) = objects_in(h, copy, orb.entry)[0];
+        h.walk_to(actor, home);
+        use_object(h, actor, object);
+        // Only one orb: unavailable second pickup leaves the second orb at home.
+        if orb.entry != 212094 {
+            assert_eq!(objects_in(h, copy, orb.entry).len(), 1);
+        }
+    }
+    h.walk_to(actor, Vec3::new(1783.41, 1333.56, 6.0));
+    h.advance(1300);
+    win_leave_and_return(&mut entered, 1500);
 }
 
 /// Four Alliance players hold the towers by presence; the carrier scores at a held tower's

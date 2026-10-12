@@ -97,6 +97,9 @@ fn update_match(
     if matched.eye.is_some() {
         return update_eye(world, matched, actors, map, &template, delta_ms) || changed;
     }
+    if matched.kotmogu.is_some() {
+        return update_kotmogu(world, matched, actors, map, &template, delta_ms) || changed;
+    }
     let Some(battle) = matched.flags.as_mut() else {
         return changed;
     };
@@ -128,7 +131,12 @@ fn update_match(
         if actor.position.distance(homes[team_index(team)].position) <= CAPTURE_RADIUS
             && battle.capture(team, carrier, &mut matched.instance, &template)
         {
-            credit(&mut matched.scoreboard, carrier, battle.rules.capture_stat);
+            credit(
+                &mut matched.scoreboard,
+                carrier,
+                battle.rules.capture_stat,
+                1,
+            );
             let home = &homes[team_index(enemy)];
             spawn_flag(world, map, home, home.position);
             matched.flag_positions[team_index(enemy)] = None;
@@ -178,7 +186,7 @@ fn update_eye(
                 };
                 let at = actor.position.to_array();
                 if eye.capture(carrier, team, at, &mut matched.instance, template) {
-                    credit(&mut matched.scoreboard, carrier, eye.rules.capture_stat);
+                    credit(&mut matched.scoreboard, carrier, eye.rules.capture_stat, 1);
                 }
             }
             _ => {
@@ -190,12 +198,50 @@ fn update_eye(
         }
     }
     if eye.flag_site() != before.1 {
-        place_eye_flag(world, map, eye.rules.flag_entry, eye.flag_site());
+        place_objective(world, map, eye.rules.flag_entry, eye.flag_site());
     }
     before.0 != eye.world_states(&matched.instance)
 }
 
-fn credit(scoreboard: &mut [BattlegroundPlayerScoreSnapshot], character_id: u64, stat: u32) {
+fn update_kotmogu(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let players: Vec<_> = actors
+        .iter()
+        .filter(|(_, actor)| actor.map == map && actor.alive)
+        .map(|(id, actor)| (*id, actor.position.to_array()))
+        .collect();
+    let orbs = matched.kotmogu.as_mut().expect("Kotmogu match");
+    let before = (orbs.world_states(&matched.instance), orbs.holders());
+    let points = orbs.advance(delta_ms, &players, &mut matched.instance, template);
+    for (character, points) in points {
+        credit(
+            &mut matched.scoreboard,
+            character,
+            shared::battleground::ORB_VICTORY_POINTS_STAT,
+            points,
+        );
+    }
+    let held = orbs.holders();
+    for (entry, _, _) in before.1 {
+        if !held.iter().any(|(taken, _, _)| *taken == entry) {
+            place_objective(world, map, entry, Some(FlagSite::Home));
+        }
+    }
+    before.0 != orbs.world_states(&matched.instance)
+}
+
+fn credit(
+    scoreboard: &mut [BattlegroundPlayerScoreSnapshot],
+    character_id: u64,
+    stat: u32,
+    amount: u32,
+) {
     let counter = scoreboard
         .iter_mut()
         .find(|score| score.character_id == character_id)
@@ -206,7 +252,7 @@ fn credit(scoreboard: &mut [BattlegroundPlayerScoreSnapshot], character_id: u64,
                 .find(|(id, _)| *id == stat)
         })
         .expect("participant row carries every source column of its map");
-    counter.1 += 1;
+    counter.1 += amount;
 }
 
 fn roster_ready(
@@ -369,7 +415,7 @@ fn assault_capture_point(
         .as_mut()
         .ok_or("match has no capture points")?;
     let stat = nodes.assault(entry, team)?;
-    credit(&mut matched.scoreboard, character_id, stat);
+    credit(&mut matched.scoreboard, character_id, stat, 1);
     Ok("capture point state updated".into())
 }
 
@@ -386,12 +432,23 @@ fn pickup_or_return_flag(
     let (team, character_id, matched) = active_match(world, state, player, object)?;
     let map = matched.map.expect("active match has a map");
     let position = wow_position(world.get::<Position>(player).expect("positioned player"));
+    if let Some(orbs) = matched.kotmogu.as_mut() {
+        orbs.pickup(entry, character_id, team)?;
+        credit(
+            &mut matched.scoreboard,
+            character_id,
+            shared::battleground::ORB_POSSESSIONS_STAT,
+            1,
+        );
+        world.despawn(object);
+        return Ok("Orb of Power picked up".into());
+    }
     if let Some(eye) = matched.eye.as_mut() {
         if entry != eye.rules.flag_entry || !eye.pickup(team, character_id) {
             return Err("the flag is not available".into());
         }
         matched.flag_positions[0] = Some(position);
-        place_eye_flag(world, map, eye.rules.flag_entry, eye.flag_site());
+        place_objective(world, map, eye.rules.flag_entry, eye.flag_site());
         return Ok("flag picked up".into());
     }
     let owner = match entry {
@@ -411,8 +468,8 @@ fn pickup_or_return_flag(
     Ok("enemy flag picked up".into())
 }
 
-/// Show the Netherstorm flag where the rules place it: home, on the ground or nowhere.
-fn place_eye_flag(world: &mut World, map: InMap, entry: u32, site: Option<FlagSite>) {
+/// Show an authored objective where its rules place it: home, ground or nowhere.
+fn place_objective(world: &mut World, map: InMap, entry: u32, site: Option<FlagSite>) {
     let mut objects = world.query::<(Entity, &GameObjectInfo, &InMap)>();
     let shown: Vec<_> = objects
         .iter(world)
@@ -429,7 +486,7 @@ fn place_eye_flag(world: &mut World, map: InMap, entry: u32, site: Option<FlagSi
         .iter()
         .find(|spawn| spawn.map_id == map.map_id && spawn.info.entry == entry)
         .cloned()
-        .expect("entry requires the authored flag");
+        .expect("entry requires the authored objective");
     let position = match site {
         FlagSite::Home => home.position,
         FlagSite::Dropped(at) => Vec3::from_array(at),
@@ -456,7 +513,7 @@ fn return_own_flag(
     let home = &homes[team_index(owner)];
     spawn_flag(world, map, home, home.position);
     matched.flag_positions[team_index(owner)] = None;
-    credit(&mut matched.scoreboard, character_id, return_stat);
+    credit(&mut matched.scoreboard, character_id, return_stat, 1);
     Ok("own flag returned".into())
 }
 

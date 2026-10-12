@@ -4,6 +4,10 @@
 
 Finish one Retail Mainline match: queue → invite/accept → isolated map entry → map objective → scoreboard → sourced honor → return to origin. Extend `pvp.rs` and shared `battleground*.rs`; Modern and Forever share behavior. No synthetic identifiers, timings or rewards; no agent world.db writes.
 
+## Kotmogu continuation — active 2026-10-12
+
+Queue 699/map 998 uses TDB starts 4059/4060, source minimum four-player roster and authored Orb of Power templates 212094/212091/212093/212092 at pinned TrinityCore OnInit summon positions. Normal in-map object use picks up one orb per player; the visible orb disappears while held. Five-second source region ticks measure Victory Points 419; pickup measures Orb Possessions 418. A dead or departed carrier restores the orb directly to its source home. WorldStates 6303/6304 and 17388 carry authoritative score and 1500 limit; all four orbs retain their source possession WorldStates. Simultaneous limit is a draw. Origin return uses the existing isolated map lifecycle. Server channel tests use real TDB template/display data and source positions; content publication and both-skin private live proof remain pending. Orb combat auras/kill-credit integration is not certified.
+
 ## Coverage expansion — active 2026-10-12
 
 - [ ] Extend the complete lifecycle to random/epic Arathi Basin, Battle for Gilneas, Twin Peaks, Eye of the Storm, Temple of Kotmogu, Silvershard Mines, Seething Shore, Deephaul Ravine, Alterac Valley and Isle of Conquest. Source-backed objectives, WorldState IDs, victory rules, map-specific scoreboard columns and end/leave are required per map.
