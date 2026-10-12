@@ -854,6 +854,11 @@ fn send_updates(
     }
 }
 
+/// TC Player::SummonIfPossible26094 credits a valid acceptance before TeleportTo.
+pub(crate) fn record_accepted_summon(world: &mut World, player: Entity) {
+    record_criteria_event(world, player, CriteriaEvent::AcceptSummon);
+}
+
 /// Successful scripted encounter boundary. A scripted defeat (Hogger's surrender
 /// included) credits its creature criteria even when no corpse is produced.
 pub(crate) fn record_encounter_defeat(

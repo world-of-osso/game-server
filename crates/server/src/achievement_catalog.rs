@@ -16,8 +16,8 @@ use super::PlayerAchievementState;
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
-    66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 130, 151, 152, 157, 158, 160, 162, 165, 216,
-    219, 220, 245, 246,
+    66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162, 165,
+    216, 219, 220, 245, 246,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -90,6 +90,7 @@ pub(crate) enum CriteriaEvent {
     LearnTaxiNode(u32),
     BuyTaxi,
     WinDuel,
+    AcceptSummon,
     LoseDuel,
     GotHaircut,
     MoneySpentAtBarberShop(u64),
@@ -166,6 +167,7 @@ impl CriteriaEvent {
             Self::LearnTaxiNode(_) => 262,
             Self::BuyTaxi => 108,
             Self::WinDuel => 76,
+            Self::AcceptSummon => 114,
             Self::LoseDuel => 77,
             Self::GotHaircut => 48,
             Self::MoneySpentAtBarberShop(_) => 65,
@@ -211,6 +213,7 @@ impl CriteriaEvent {
             | Self::AbandonQuest
             | Self::BuyTaxi
             | Self::WinDuel
+            | Self::AcceptSummon
             | Self::LoseDuel
             | Self::GotHaircut
             | Self::MoneySpentAtBarberShop(_)
@@ -984,7 +987,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 17 | 23 | 48 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 17 | 23 | 48 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

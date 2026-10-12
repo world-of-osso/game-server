@@ -162,6 +162,7 @@ fn respond_to_summon(world: &mut World, player: Entity, accept: bool) {
         return;
     }
     crate::taxi::finish_flight(world.entity_mut(player));
+    crate::achievement::record_accepted_summon(world, player);
     crate::maps::teleport_to(world, player, pending.location, TeleportOptions::default());
     info!(
         "{player} accepted a summon to map {}",
