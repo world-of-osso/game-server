@@ -420,11 +420,22 @@ pub(super) fn expire_auctions(
         .map(|auction| auction.auction_id)
         .collect();
     for auction_id in expired {
-        let Some(auction) = state.auctions.get(&auction_id) else {
+        let Some(auction) = state.auctions.get(&auction_id).cloned() else {
             continue;
         };
-        match expire_single_auction(&db.db, auction) {
+        match expire_single_auction(&db.db, &auction) {
             Ok(()) => {
+                if let (Some(winner), Some(price)) =
+                    (auction.current_bidder_character_id, auction.current_bid)
+                {
+                    state
+                        .pending_criteria
+                        .extend(super::operations::auction_sale_events(
+                            &auction,
+                            Some(winner),
+                            price,
+                        ));
+                }
                 state.auctions.remove(&auction_id);
             }
             Err(error) => error!(auction_id, %error, "auction expiry settlement failed"),
