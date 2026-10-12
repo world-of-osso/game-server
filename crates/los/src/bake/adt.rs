@@ -34,7 +34,9 @@ pub fn wdt_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
     if u32_at(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO != 0 {
         return Err("global-WMO map: no tiles".into());
     }
-    let maid = find_reversed(wdt, b"MAID").ok_or("WDT has no MAID")?;
+    let Some(maid) = find_reversed(wdt, b"MAID") else {
+        return terrainless_legacy_tiles(wdt);
+    };
     (0..64 * 64)
         .map(|index| {
             let base = index * MAID_ENTRY_SIZE;
@@ -46,7 +48,23 @@ pub fn wdt_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
         .collect()
 }
 
-/// The WDT's global-WMO MODF; unlike ADT MODF its model id is always an FDID.
+fn terrainless_legacy_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
+    let main = find_reversed(wdt, b"MAIN").ok_or("WDT has no MAIN or MAID")?;
+    if main.len() != 64 * 64 * 8 {
+        return Err("WDT MAIN has invalid size".into());
+    }
+    let has_terrain = main
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .any(|entry| entry[0] & 1 != 0);
+    if has_terrain {
+        return Err("WDT has active terrain but no MAID".into());
+    }
+    Ok(vec![TileFiles::default(); 64 * 64])
+}
+
+/// The WDT's global-WMO MODF: either a FileDataID or a legacy MWMO name index.
 pub fn global_wmo(wdt: &[u8]) -> Result<Option<Placement>> {
     let mphd = find_reversed(wdt, b"MPHD").ok_or("WDT has no MPHD")?;
     if u32_at(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO == 0 {
@@ -55,7 +73,7 @@ pub fn global_wmo(wdt: &[u8]) -> Result<Option<Placement>> {
     let entry = find_reversed(wdt, b"MODF").ok_or("global WDT has no MODF")?;
     let flags = u16_at(entry, 56)?;
     Ok(Some(Placement {
-        model: ModelRef::Fdid(u32_at(entry, 0)?),
+        model: global_wmo_model(wdt, entry, flags)?,
         unique_id: u32_at(entry, 4)?,
         position: f32x3_at(entry, 8)?,
         rotation: f32x3_at(entry, 20)?,
@@ -66,6 +84,21 @@ pub fn global_wmo(wdt: &[u8]) -> Result<Option<Placement>> {
         },
         doodad_set: u16_at(entry, 58)?,
     }))
+}
+
+fn global_wmo_model(wdt: &[u8], entry: &[u8], flags: u16) -> Result<ModelRef> {
+    let name_id = u32_at(entry, 0)?;
+    if flags & MODF_FLAG_FILEDATAID != 0 {
+        return Ok(ModelRef::Fdid(name_id));
+    }
+    let names = find_reversed(wdt, b"MWMO").ok_or("legacy global WDT has no MWMO")?;
+    let name = names
+        .split(|&byte| byte == 0)
+        .nth(name_id as usize)
+        .filter(|name| !name.is_empty())
+        .ok_or("global WDT MODF name index outside MWMO")?;
+    let path = std::str::from_utf8(name).map_err(|error| format!("MWMO path: {error}"))?;
+    Ok(ModelRef::Path(path.to_lowercase().replace('\\', "/")))
 }
 
 /// Bevy world position of an ADT MODF/MDDF placement position
