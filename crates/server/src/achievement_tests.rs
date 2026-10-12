@@ -2,6 +2,101 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_exploration_uses_real_terrain_and_survives_reopen() {
+    use shared::components::{CharacterAppearance, Position};
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 17, "Exploreproof", 1, 1).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let ground = crate::ground::GroundMap::new(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
+        maps.maps
+            .iter()
+            .map(|(&id, map)| (id, map.wdt_file_data_id))
+            .collect(),
+    );
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(ground);
+    app.insert_resource(GameDatabase { db });
+    // Goldshire's real MCNK AreaID87 maps to WorldMapOverlay122/criterion1147.
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(-9460.0, 65.0, 60.0);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Exploreproof".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Level(1),
+            Position { x, y, z },
+            InMap::continent(0),
+            PlayerAchievementState::default(),
+            crate::death::PlayerDeathState::default(),
+        ))
+        .id();
+    assert_eq!(
+        app.world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .area_at(0, Vec3::new(x, y, z)),
+        Some(87)
+    );
+    let connection = app
+        .world_mut()
+        .spawn((Authenticated { account_id: 17 }, PlayerLink(player)))
+        .id();
+    app.update();
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&1147)
+    );
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&1147),
+        Some(&1)
+    );
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&1147),
+        Some(&1)
+    );
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&502)
+    );
+    drop(app);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&1147),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_criteria_login_credits_authenticated_world_entry_once_and_survives_reopen() {
     use shared::components::CharacterAppearance;
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();

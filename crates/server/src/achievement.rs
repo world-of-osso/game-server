@@ -35,6 +35,9 @@ pub struct PlayerAchievementState {
     /// Pre-support reputation quantities were not valid signed Retail progress.
     #[serde(default)]
     pub signed_reputation: bool,
+    /// Retail AreaTable.AreaBit facts; distinct AreaIDs can share one explored bit.
+    #[serde(default)]
+    pub explored_area_bits: BTreeSet<u32>,
     /// Presentation-only aggregate; never serialized into character contributions.
     #[serde(skip)]
     pub account: Option<Box<PlayerAchievementState>>,
@@ -92,6 +95,7 @@ impl Plugin for AchievementPlugin {
                 process_skill_achievement_updates,
                 process_known_spell_achievement_updates,
                 process_reputation_achievement_updates,
+                process_exploration_achievement_updates,
                 process_committed_criteria_credits,
                 process_inventory_acquisition_credits,
                 dungeon::send_entry_progress,
@@ -188,6 +192,52 @@ fn process_reputation_achievement_updates(world: &mut World) {
             .map(move |(faction, value)| (player, CriteriaEvent::ReputationGained(faction, value as u32)))).collect();
     for (player, event) in updates {
         record_criteria_event(world, player, event);
+    }
+}
+
+/// TC Player::CheckAreaExplore: living, non-taxi players discover the authored terrain area.
+fn process_exploration_achievement_updates(world: &mut World) {
+    if !world.contains_resource::<crate::ground::GroundMap>() {
+        return;
+    }
+    let players: Vec<_> = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .map(|(_, link, _)| link.0)
+        .collect();
+    for player in players {
+        if world
+            .get::<crate::death::PlayerDeathState>(player)
+            .is_some_and(|life| life.state != shared::protocol::DeathState::Alive)
+            || world.get::<crate::taxi::TaxiFlight>(player).is_some()
+        {
+            continue;
+        }
+        let Some(position) = world.get::<shared::components::Position>(player).copied() else {
+            continue;
+        };
+        let Some(map) = world.get::<InMap>(player).copied() else {
+            continue;
+        };
+        let area = world
+            .resource_mut::<crate::ground::GroundMap>()
+            .area_at(map.map_id, Vec3::new(position.x, position.y, position.z));
+        let bit = area.and_then(|area| world.get_resource::<AchievementCatalog>()?.area_bit(area));
+        let Some(bit) = bit else {
+            continue;
+        };
+        let Some(mut state) = world.get_mut::<PlayerAchievementState>(player) else {
+            continue;
+        };
+        if !state.explored_area_bits.insert(bit) {
+            continue;
+        }
+        if let Some((snapshot, toasts)) =
+            update_player_events(world, player, &[CriteriaEvent::ExploreAreaBit(bit)], None)
+            && let Some(connection) = connection_for_player(world, player)
+        {
+            send_updates(world, connection, snapshot, toasts);
+        }
     }
 }
 

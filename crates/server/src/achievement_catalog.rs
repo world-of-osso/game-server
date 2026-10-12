@@ -27,6 +27,7 @@ pub(crate) enum CriteriaEvent {
     AcquireItem(u32, u32),
     WinPetBattle,
     Login,
+    ExploreAreaBit(u32),
     CompleteMythicPlus(MythicCompletion),
     CompleteQuest(u32),
     CastSpell(u32),
@@ -46,6 +47,7 @@ impl CriteriaEvent {
             Self::AcquireItem(_, _) => 36,
             Self::WinPetBattle => 158,
             Self::Login => 74,
+            Self::ExploreAreaBit(_) => 43,
             Self::CompleteMythicPlus(_) => 216,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
@@ -61,6 +63,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::WinPetBattle | Self::Login => criteria.asset == 0,
             Self::CompleteMythicPlus(completion) => criteria
                 .mythic
@@ -111,6 +114,8 @@ impl MythicRequirements {
 
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
+#[path = "achievement_overlays.rs"]
+mod overlays;
 
 #[derive(Debug, Clone)]
 struct Criteria {
@@ -118,6 +123,7 @@ struct Criteria {
     asset: u32,
     supported: bool,
     mythic: Option<MythicRequirements>,
+    exploration_bits: Vec<u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -173,6 +179,7 @@ pub(crate) struct AchievementCatalog {
     pub children: HashMap<u32, Vec<u32>>,
     event_criteria: HashMap<u32, Vec<u32>>,
     faction_groups: HashMap<u32, u32>,
+    area_bits: HashMap<u32, u32>,
 }
 
 #[derive(Debug, Default)]
@@ -183,6 +190,10 @@ pub(crate) struct TreeProgress {
 }
 
 impl AchievementCatalog {
+    pub(super) fn area_bit(&self, area: u32) -> Option<u32> {
+        self.area_bits.get(&area).copied()
+    }
+
     pub(super) fn tracks(&self, event: CriteriaEvent) -> bool {
         self.event_criteria
             .get(&event.kind())
@@ -370,7 +381,9 @@ impl AchievementCatalog {
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
             CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
-            CriteriaEvent::CompleteQuest(_) | CriteriaEvent::LearnSpell(_) => 1,
+            CriteriaEvent::CompleteQuest(_)
+            | CriteriaEvent::LearnSpell(_)
+            | CriteriaEvent::ExploreAreaBit(_) => 1,
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::CurrencyGained(_, amount) | CriteriaEvent::AcquireItem(_, amount) => {
                 counter.saturating_add(u64::from(amount))
@@ -540,6 +553,11 @@ impl AchievementCatalog {
 
 pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<AchievementCatalog> {
     let mut catalog = AchievementCatalog::default();
+    let mut areas =
+        conn.prepare("SELECT ID, AreaBit FROM area_table WHERE ID != 0 AND AreaBit >= 0")?;
+    catalog.area_bits = areas
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
     load_criteria(conn, &mut catalog)?;
     load_trees(conn, &mut catalog)?;
     load_definitions(conn, &mut catalog)?;
@@ -573,6 +591,15 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             None
         };
+        let exploration_bits: Vec<_> = if kind == 43 {
+            overlays::areas(row.get::<_, i32>(2)? as u32)
+                .into_iter()
+                .flatten()
+                .filter_map(|area| catalog.area_bit(area))
+                .collect()
+        } else {
+            Vec::new()
+        };
         let supported_mythic =
             mythic.is_some() && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
@@ -580,11 +607,13 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             Criteria {
                 kind,
                 mythic,
+                exploration_bits: exploration_bits.clone(),
                 asset: row.get::<_, i32>(2)? as u32,
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_mythic
                     || ((matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
+                        || (kind == 43 && !exploration_bits.is_empty())
                         || (matches!(kind, 74 | 158) && row.get::<_, i32>(2)? == 0)
                         || (kind == 7 && row.get::<_, bool>(9)?)
                         || (matches!(kind, 28 | 34) && row.get::<_, bool>(8)?)
