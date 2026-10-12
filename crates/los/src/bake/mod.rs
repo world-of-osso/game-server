@@ -30,7 +30,8 @@ pub const DEFAULT_THICKNESS_CUTOFF: f32 = 1.0;
 #[derive(Default)]
 pub struct CollectedGeometry {
     pub triangles: Vec<[Vec3; 3]>,
-    /// M2 collision hulls are obstacles: runtime GroundMap has no M2 floor support.
+    /// Navigation's M2 obstacle classification. The dedicated ground bake does not
+    /// change navigation's walkable-span policy.
     pub obstacles: Vec<[Vec3; 3]>,
 }
 pub type GlobalGeometry = Vec<((u32, u32), CollectedGeometry)>;
@@ -93,6 +94,7 @@ pub struct Baker {
     listfile: Option<rusqlite::Connection>,
     pub cutoff: f32,
     collision: bool,
+    m2_only: bool,
     m2s: HashMap<u32, Option<Rc<ModelGeometry>>>,
     wmos: HashMap<u32, Option<Rc<WmoModel>>>,
     /// Dropped thin doodads by model, counted once per (placement unique id, model): the
@@ -116,6 +118,7 @@ impl Baker {
             listfile,
             cutoff,
             collision: false,
+            m2_only: false,
             m2s: HashMap::new(),
             wmos: HashMap::new(),
             dropped: HashMap::new(),
@@ -128,6 +131,16 @@ impl Baker {
     pub fn for_navigation(data: &Path) -> Self {
         Self {
             collision: true,
+            ..Self::new(data, 0.0)
+        }
+    }
+
+    /// Authored M2 collision hulls only, without LOS thickness/material filtering.
+    /// WMO doodad sets use the same composed transforms as navigation and rendering.
+    pub fn for_m2_floors(data: &Path) -> Self {
+        Self {
+            collision: true,
+            m2_only: true,
             ..Self::new(data, 0.0)
         }
     }
@@ -302,7 +315,11 @@ impl Baker {
         let root = self
             .read("terrain", &format!("{}.adt", files.root))
             .map_err(|err| format!("terrain/{}.adt: {err}", files.root))?;
-        let terrain = adt::terrain_triangles(&root)?;
+        let terrain = if self.m2_only {
+            Vec::new()
+        } else {
+            adt::terrain_triangles(&root)?
+        };
         let mut build = TileBuild {
             tile: (row, col),
             border: if self.collision { 2.0 } else { 0.0 },
@@ -313,7 +330,7 @@ impl Baker {
             triangles: terrain,
             obstacles: Vec::new(),
         };
-        if self.collision {
+        if self.collision && !self.m2_only {
             self.collect_neighbour_terrain(tiles, &mut build)?;
         }
         self.collect_placed_geometry(tiles, &mut build)?;
@@ -427,7 +444,7 @@ impl Baker {
             return;
         };
         let Some(model) = self.wmo(fdid) else { return };
-        if overlaps_tile(&model.geometry, world, build.tile, build.border) {
+        if !self.m2_only && overlaps_tile(&model.geometry, world, build.tile, build.border) {
             build.stats.wmo_triangles += build.add(&model.geometry.triangles, world);
             build.stats.alpha_or_blended_triangles += model.geometry.dropped_triangles;
         }
@@ -468,7 +485,7 @@ impl Baker {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
             let before = build.triangles.len();
             build.stats.doodad_triangles += build.add(&model.triangles, doodad.world);
-            if self.collision {
+            if self.collision && !self.m2_only {
                 build
                     .obstacles
                     .extend_from_slice(&build.triangles[before..]);
