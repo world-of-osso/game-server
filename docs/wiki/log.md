@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Native form admission](../class-completeness6.md#native-form-admission--batch28): aura275 native mask bypass and distinct form failures; RED3→GREEN10. Census2981/4664/182 retains32 required-form prerequisites and improves13 memberships. Lead gate diagnoses preserve live-target, level-scaling and placement requirements.
+
 - 2026-10-12 — [Receiver mechanic durations](../class-completeness2.md#receiver-mechanic-durations--batch27): native232/234 stronger-negative matching, integer AddPct, applied-effect masks and finite/harmful exemptions; RED5→twelve controls and35 adjacent controls. Positive-only Oppressing Roar and invalid selector1825 remain explicit source gaps.
 
 - 2026-10-12 — [Masked moving casts/channels](../class-completeness2.md#masked-moving-casts-and-channels--batch26): native330 admission and dynamic CastState permission, family/recipient masks and native Attr13 veto; RED4→eight controls and22 adjacent controls. Full Hover, empowerment and client/live movement remain uncertified.
