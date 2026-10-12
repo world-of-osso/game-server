@@ -16,7 +16,7 @@ use super::{
     validate_target,
 };
 use crate::creature_ai::CreatureState;
-use crate::spell_info::SpellStore;
+use crate::spell_info::{SpellInfo, SpellStore};
 
 /// Triggered casts resolve without proc events (`TRIGGERED_DISALLOW_PROC_EVENTS`).
 const TRIGGERED_DEPTH: u8 = 1;
@@ -36,13 +36,7 @@ pub(crate) fn creature_cast(
     target: Option<Entity>,
     triggered: bool,
 ) -> Result<(), CastFailure> {
-    let spell = world
-        .get_resource::<SpellStore>()
-        .and_then(|store| store.get(spell_id))
-        .cloned()
-        .ok_or(CastFailure::UnknownSpell)?;
-    let needs_unit = targets::explicit_requirement(handled_effects(&spell)).is_some();
-    let explicit = target.or_else(|| needs_unit.then(|| victim(world, caster)).flatten());
+    let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
     if !triggered {
         return start_cast(world, caster, &spell, explicit, None);
     }
@@ -57,6 +51,35 @@ pub(crate) fn creature_cast(
     );
     super::missiles::launch(world, caster, &spell, plan, TRIGGERED_DEPTH);
     Ok(())
+}
+
+/// TC TRIGGERED_IGNORE_CAST_IN_PROGRESS: retain cast time, costs, cooldowns,
+/// caster-aura and school checks; only permit a concurrent scripted cast.
+pub(crate) fn creature_cast_ignoring_in_progress(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let target = super::validate_start(world, caster, &spell, explicit, None, true)?;
+    super::begin_validated_cast(world, caster, &spell, target)
+}
+
+fn load_creature_cast(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(SpellInfo, Option<Entity>), CastFailure> {
+    let spell = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .cloned()
+        .ok_or(CastFailure::UnknownSpell)?;
+    let needs_unit = targets::explicit_requirement(handled_effects(&spell)).is_some();
+    let explicit = target.or_else(|| needs_unit.then(|| victim(world, caster)).flatten());
+    Ok((spell, explicit))
 }
 
 /// `AISpellInfoType::target` (`UnitAI::FillAISpellInfo`), which `DoCast(spellId)`

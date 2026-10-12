@@ -530,7 +530,7 @@ pub(crate) fn load_templates(
 
 /// `content_creature_template_difficulty` rows: the entry's template with that
 /// difficulty's levels, ContentTuning, scaling expansion, level delta and modifiers.
-fn load_difficulty_templates(
+pub(crate) fn load_difficulty_templates(
     conn: &Connection,
     expected: &ExpectedStats,
     templates: &HashMap<u32, CreatureTemplate>,
