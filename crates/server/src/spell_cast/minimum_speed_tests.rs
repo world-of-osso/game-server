@@ -89,9 +89,12 @@ fn class_completeness_native_minimum_speed_expiry_restores_weaker_floor() {
         .store
         .get(CHI_TORPEDO)
         .unwrap()
+        .misc
+        .duration
+        .unwrap()
         .duration_ms;
     h.advance((duration / 50) as usize + 2);
-    assert!(auras_of(&h, caster, CHI_TORPEDO).is_empty());
+    assert!(!crate::auras::has_aura(h.app.world(), caster, CHI_TORPEDO));
     assert_eq!(speeds(&h), [1.0; 3]);
 }
 
