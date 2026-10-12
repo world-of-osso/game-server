@@ -27,7 +27,7 @@ fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
     let store = map_store().expect("authentic map metadata");
     let mut manager = InstanceManager::default();
     let player = entrant(9820, None);
-    for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+    for map_id in [2444, 2552, 2601, 2222, 1643, 1642, 530, 571, 646, 860] {
         assert_eq!(
             manager.player_cannot_enter(store, map_id, player, 80, SUNDAY_NOON),
             None,
@@ -61,6 +61,432 @@ const STOCKADE_EXIT_TRIGGER: Vec3 = Vec3::new(48.0937, 0.933267, -13.7769);
 const STOCKADE_GRAVEYARD: Vec3 = Vec3::new(-8786.88, 829.083, 97.6504);
 /// Ratchet, Northern Barrens (Kalimdor).
 const RATCHET: Vec3 = Vec3::new(-956.0, -3754.0, 5.0);
+
+#[test]
+fn housing_map_rows_keep_authored_identity_without_public_admission() {
+    let store = map_store().expect("authentic world map catalog");
+    let mut manager = InstanceManager::default();
+    let entrant = InstanceEntrant {
+        character_id: 30,
+        leader: 30,
+        group: None,
+        difficulty_id: 0,
+        ..Default::default()
+    };
+    let now = instances::Now {
+        elapsed: 0.0,
+        unix: 0,
+    };
+    for (id, name, wdt) in [
+        (2735, "Founder's Point", 5660542),
+        (2736, "Razorwind Shores", 5660543),
+        (2783, "Home Interior", 5890928),
+    ] {
+        let entry = store.map(id).expect("housing map row must load");
+        assert_eq!(entry.id, id);
+        assert_eq!(entry.name, name);
+        assert_eq!(entry.wdt_file_data_id, wdt);
+        assert!(!entry.is_dungeon());
+        assert_eq!(
+            manager.create_map(store, id, entrant, now),
+            Err(TransferAbortReason::MapNotAllowed)
+        );
+    }
+}
+
+#[test]
+fn housing_copies_require_authority_and_isolate_properties_without_difficulty() {
+    let store = map_store().expect("authentic world map catalog");
+    let mut manager = InstanceManager::default();
+    let owner = entrant(30, None);
+    let visitor = entrant(31, None);
+    let stranger = entrant(32, None);
+    let first = manager
+        .authorize_housing_entry(store, 2783, 1, owner.character_id)
+        .unwrap();
+    let second = manager
+        .authorize_housing_entry(store, 2783, 2, visitor.character_id)
+        .unwrap();
+    assert_ne!(first.map, second.map);
+    assert!(first.created && second.created);
+    assert!(manager.copy_difficulty(first.map).is_none());
+    assert!(manager.lock_copies_in_use().is_empty());
+    assert_eq!(
+        manager.create_map(store, 2783, owner, at(0.0)).unwrap().map,
+        first.map
+    );
+    assert_eq!(
+        manager
+            .create_map(store, 2783, visitor, at(0.0))
+            .unwrap()
+            .map,
+        second.map
+    );
+    assert_eq!(
+        manager.create_map(store, 2783, stranger, at(0.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        manager.cannot_enter(first.map, stranger, SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        manager.cannot_enter(first.map, visitor, SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    let visit = manager
+        .authorize_housing_entry(store, 2783, 1, visitor.character_id)
+        .unwrap();
+    assert_eq!(visit.map, first.map);
+    assert!(!visit.created);
+    assert_eq!(manager.cannot_enter(first.map, visitor, SUNDAY_NOON), None);
+    assert_eq!(
+        manager.player_cannot_enter(store, 2783, owner, 80, SUNDAY_NOON),
+        None
+    );
+    assert_eq!(
+        manager.player_cannot_enter(store, 2783, stranger, 80, SUNDAY_NOON),
+        Some(TransferAbortReason::MapNotAllowed)
+    );
+    manager.revoke_housing_entry(owner.character_id);
+    assert_eq!(
+        manager.create_map(store, 2783, owner, at(0.0)),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+    assert_eq!(
+        manager.authorize_housing_entry(store, STOCKADE, 1, owner.character_id),
+        Err(TransferAbortReason::MapNotAllowed)
+    );
+}
+
+#[test]
+fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("housing.redb");
+    let db = redb::Database::create(&path).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let mut h = housing_harness(db);
+    let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(owner.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    let refused = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    assert!(refused.error.unwrap().contains("Enter this neighborhood"));
+    let entering = h.housing_request(
+        &owner,
+        HousingCommand::EnterNeighborhood { neighborhood_id: 1 },
+    );
+    assert_eq!(entering.error, None);
+    assert_eq!(entering.state.plots.len(), 1);
+    assert_eq!(h.map_of(&owner), None);
+    assert_eq!(h.new_worlds(&owner).last().unwrap().map_id, 2735);
+    h.ack(&owner);
+    let neighborhood_map = h.map_of(&owner).unwrap();
+    assert_eq!(neighborhood_map.map_id, 2735);
+    assert_eq!(cornerstones_in(h.app.world_mut(), neighborhood_map), 1);
+    let visitor = h.spawn(31, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(visitor.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    assert_eq!(
+        h.housing_request(
+            &visitor,
+            HousingCommand::EnterNeighborhood { neighborhood_id: 1 }
+        )
+        .error,
+        None
+    );
+    h.ack(&visitor);
+    assert_eq!(h.map_of(&visitor), Some(neighborhood_map));
+    assert_eq!(cornerstones_in(h.app.world_mut(), neighborhood_map), 1);
+    let distant = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    assert!(distant.error.unwrap().contains("cornerstone"));
+    let cornerstone = Vec3::new(2942.744, -214.26563, 113.11285);
+    h.walk_to(&owner, cornerstone);
+    let bought = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    assert_eq!(bought.error, None);
+    assert_eq!(bought.state.owned_houses.len(), 1);
+    assert_eq!(
+        bought.state.plots[0].house_id,
+        Some(bought.state.owned_houses[0].house_id)
+    );
+    let position = bevy(cornerstone);
+    drop(h);
+    let db = redb::Database::open(&path).unwrap();
+    assert_eq!(crate::persistence::load_inventory(&db, 30).gold, 10_000_000);
+    let mut restarted = housing_harness(db);
+    let place = restarted
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                1,
+                RaidDifficulty::default(),
+                2735,
+                position,
+            )
+        })
+        .unwrap()
+        .expect("persisted housing admission must survive a fresh manager and reopened database");
+    assert_eq!(place.map.map_id, 2735);
+    assert_ne!(place.map.instance_id, 0);
+    assert_eq!(place.position, position);
+    assert_eq!(cornerstones_in(restarted.app.world_mut(), place.map), 1);
+}
+
+#[test]
+fn housing_wire_home_map_admission_restores_visited_identity_without_component_grants() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("visited-house.redb");
+    let db = redb::Database::create(&path).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let mut h = housing_harness(db);
+    let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(owner.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    assert_eq!(
+        h.housing_request(
+            &owner,
+            HousingCommand::EnterNeighborhood { neighborhood_id: 1 }
+        )
+        .error,
+        None
+    );
+    h.ack(&owner);
+    h.walk_to(&owner, Vec3::new(2942.744, -214.26563, 113.11285));
+    let bought = h.housing_request(&owner, HousingCommand::PurchasePlot { plot_id: 417 });
+    let house = &bought.state.owned_houses[0];
+    let house_id = house.house_id;
+    assert!(!house.interior_grant_available && !house.exterior_grant_available);
+    let entered = h.housing_request(&owner, HousingCommand::EnterHouse { house_id });
+    assert_eq!(
+        entered.error, None,
+        "raw authored Home Interior map admission is not a component grant"
+    );
+    assert_eq!(h.map_of(&owner), None);
+    assert_eq!(h.new_worlds(&owner).last().unwrap().map_id, 2783);
+    h.ack(&owner);
+    let map = h.map_of(&owner).unwrap();
+    assert_eq!(map.map_id, 2783);
+    let position = bevy(Vec3::new(-1000.0, -1000.0, 0.1));
+    assert_eq!(
+        *h.app.world().get::<Position>(owner.player).unwrap(),
+        position
+    );
+    let layout = h.housing_request(&owner, HousingCommand::ReloadLayout { house_id });
+    assert!(layout.state.layout.unwrap().can_edit);
+    drop(h);
+    let mut restarted = housing_harness(redb::Database::open(&path).unwrap());
+    let place = restarted
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                1,
+                RaidDifficulty::default(),
+                2783,
+                position,
+            )
+        })
+        .unwrap()
+        .expect("persisted visited-house identity must survive restart");
+    assert_eq!(place.map.map_id, 2783);
+    assert_eq!(
+        restarted
+            .app
+            .world()
+            .resource::<InstanceManager>()
+            .housing_property(place.map),
+        Some(house_id)
+    );
+    assert_eq!(place.position, position);
+}
+
+#[path = "housing_editor_tests.rs"]
+mod housing_editor_tests;
+
+fn cornerstones_in(world: &mut World, map: InMap) -> usize {
+    let mut objects = world.query::<(&InMap, &GameObjectInfo, &Position)>();
+    objects
+        .iter(world)
+        .filter(|(copy, info, position)| {
+            **copy == map
+                && info.entry == 527268
+                && crate::game_objects::wow_position(position)
+                    .distance(Vec3::new(2941.2317, -214.5868, 113.15639))
+                    < 0.001
+        })
+        .count()
+}
+
+#[test]
+fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_storage() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("collection.redb")).unwrap();
+    crate::persistence::create_tables(&db);
+    let (character_id, _) =
+        crate::persistence::create_character(&db, 30, "Bookcaseuser", 1, 1).unwrap();
+    crate::persistence::save_inventory(
+        &db,
+        character_id,
+        &crate::persistence::InventoryData {
+            gold: 500_000,
+            items: vec![crate::persistence::InventoryItemData {
+                item_guid: 100,
+                item_id: 245259,
+                name: "Small Val'sharah Bookcase".into(),
+                quality: 2,
+                required_level: 0,
+                stack_count: 1,
+                vendor_sell_price: 10_000,
+                unique_auction: false,
+            }],
+        },
+    );
+    let mut h = housing_harness(db);
+    h.app.insert_resource(
+        crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap(),
+    );
+    h.app
+        .insert_resource(crate::housing_acquisition::HousingCollectionRules(Ok(
+            crate::housing_acquisition::read_collection_rules(
+                &crate::housing_acquisition::tests::collection_fixture(),
+            )
+            .unwrap(),
+        )));
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![
+            crate::spell_info::SpellInfo {
+                id: 1238340,
+                effects: vec![crate::spell_info::SpellEffect {
+                    effect: 324,
+                    misc_values: [1693, 0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        ]));
+    h.app
+        .add_systems(Update, crate::inventory::process_use_requests);
+    let owner = h.spawn(character_id, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app.world_mut().entity_mut(owner.connection).insert((
+        Authenticated { account_id: 30 },
+        pair::<UseItem>(),
+        pair::<HousingReply>(),
+        pair::<InventoryError>(),
+    ));
+    let use_item = UseItem {
+        location: ItemLocation::Bag { bag: 0, slot: 0 },
+        target: None,
+    };
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(owner.connection)
+        .unwrap()
+        .send::<InventoryChannel>(use_item.clone());
+    let mut errors = Vec::new();
+    for _ in 0..5 {
+        h.advance(1);
+        errors.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<InventoryError>>(owner.connection)
+                .unwrap()
+                .receive(),
+        );
+    }
+    assert!(errors.is_empty(), "normal bookcase use refused: {errors:?}");
+    let db = &h
+        .app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .db;
+    assert!(
+        crate::persistence::load_inventory(db, character_id)
+            .items
+            .is_empty()
+    );
+    assert_eq!(
+        crate::persistence::load_inventory(db, character_id).gold,
+        500_000
+    );
+    let actor = crate::persistence::housing_store::Actor {
+        account_id: 30,
+        character_id,
+        neighborhood_id: None,
+        inside_house: None,
+    };
+    assert_eq!(
+        crate::persistence::housing_store::snapshot(db, actor, None)
+            .unwrap()
+            .stored,
+        vec![StoredDecor {
+            decor_id: 1693,
+            quantity: 1
+        }]
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseItem>>(owner.connection)
+        .unwrap()
+        .send::<InventoryChannel>(use_item);
+    h.advance(5);
+    let db = &h
+        .app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .db;
+    assert_eq!(
+        crate::persistence::housing_store::snapshot(db, actor, None)
+            .unwrap()
+            .stored[0]
+            .quantity,
+        1
+    );
+}
+
+fn housing_harness(db: redb::Database) -> Harness {
+    let catalog = crate::housing_catalog::HousingCatalog::read(
+        &crate::housing_catalog::tests::catalog_fixture(),
+    )
+    .unwrap();
+    harness_with(move |app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        // Production world startup replaces the generic population through Commands.
+        // Housing must survive that replacement without fixture-injected map objects.
+        app.add_systems(Startup, |mut commands: Commands| {
+            commands.insert_resource(crate::game_objects::GameObjectSpawns::default());
+        });
+        app.add_systems(Update, crate::housing::process_requests);
+    })
+    .unwrap()
+}
 
 fn map_store() -> Option<&'static MapStore> {
     static STORE: OnceLock<Option<MapStore>> = OnceLock::new();
@@ -501,6 +927,34 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
 const TRAVELER_LEVEL: u8 = 80;
 
 impl Harness {
+    fn housing_request(&mut self, who: &Traveler, command: HousingCommand) -> HousingReply {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<HousingRequest>>(who.connection)
+            .unwrap()
+            .send::<HousingChannel>(HousingRequest {
+                request_id: 1,
+                command,
+            });
+        let mut replies = Vec::new();
+        for _ in 0..6 {
+            self.advance(1);
+            replies.extend(
+                self.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<HousingReply>>(who.connection)
+                    .unwrap()
+                    .receive(),
+            );
+        }
+        assert_eq!(
+            replies.len(),
+            1,
+            "exactly one authoritative reply per request"
+        );
+        replies.remove(0)
+    }
+
     fn spawn(&mut self, character_id: u64, map: InMap, at: Vec3) -> Traveler {
         self.spawn_at_level(character_id, TRAVELER_LEVEL, map, at)
     }
@@ -2273,5 +2727,57 @@ fn raid_entry_only_leader_sets_raid_selections_over_the_real_message_receiver_ou
             primary: 15,
             legacy: 6
         }
+    );
+}
+
+#[test]
+fn housing_finder_visit_ports_to_authored_plot_without_payment_or_grant() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = redb::Database::create(dir.path().join("plot-visit.redb")).unwrap();
+    crate::persistence::create_tables(&db);
+    crate::persistence::save_inventory(
+        &db,
+        30,
+        &crate::persistence::InventoryData {
+            gold: 20_000_000,
+            items: vec![],
+        },
+    );
+    let mut h = housing_harness(db);
+    let viewer = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(viewer.connection)
+        .insert((pair::<HousingRequest>(), pair::<HousingReply>()));
+    let plot = h
+        .app
+        .world()
+        .resource::<crate::housing::HousingAvailability>()
+        .0
+        .as_ref()
+        .unwrap()
+        .plot(417)
+        .unwrap()
+        .clone();
+    let reply = h.housing_request(&viewer, HousingCommand::VisitPlot { plot_id: 417 });
+    assert_eq!(reply.error, None);
+    assert!(reply.state.owned_houses.is_empty());
+    assert!(reply.state.stored.is_empty());
+    h.ack(&viewer);
+    assert_eq!(h.map_of(&viewer).unwrap().map_id, 2735);
+    let [x, y, z] = plot.teleport;
+    let expected = crate::terrain_height::wow_to_bevy(x, y, z);
+    let actual = h.app.world().get::<Position>(viewer.player).unwrap();
+    assert_eq!((actual.x, actual.y, actual.z), expected);
+    assert_eq!(
+        crate::persistence::load_inventory(
+            &h.app
+                .world()
+                .resource::<crate::persistence::GameDatabase>()
+                .db,
+            30
+        )
+        .gold,
+        20_000_000
     );
 }
