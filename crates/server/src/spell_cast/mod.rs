@@ -528,20 +528,7 @@ fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool 
 
 /// Aura gain/removal/expiry updates the server cast and its replicated movement flag.
 pub(crate) fn refresh_cast_movement_permission(world: &mut World, caster: Entity) {
-    let Some((spell_id, cast_type)) = world
-        .get::<CastState>(caster)
-        .map(|cast| (cast.spell_id, cast.cast_type))
-    else {
-        return;
-    };
-    let Some(spell) = world
-        .get_resource::<SpellStore>()
-        .and_then(|store| store.get(spell_id))
-        .cloned()
-    else {
-        warn!(
-            "Cannot refresh movement permission for active cast {spell_id}: missing SpellStore row"
-        );
+    let Some((spell, cast_type)) = read_active_cast_spell(world, caster) else {
         return;
     };
     let allowed = match cast_type {
@@ -552,6 +539,23 @@ pub(crate) fn refresh_cast_movement_permission(world: &mut World, caster: Entity
     if cast.cast_while_moving != allowed {
         cast.cast_while_moving = allowed;
     }
+}
+
+fn read_active_cast_spell(world: &World, caster: Entity) -> Option<(SpellInfo, CastType)> {
+    let (spell_id, cast_type) = world
+        .get::<CastState>(caster)
+        .map(|cast| (cast.spell_id, cast.cast_type))?;
+    let Some(spell) = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .cloned()
+    else {
+        warn!(
+            "Cannot refresh movement permission for active cast {spell_id}: missing SpellStore row"
+        );
+        return None;
+    };
+    Some((spell, cast_type))
 }
 
 fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
