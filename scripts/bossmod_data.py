@@ -130,24 +130,30 @@ def static_value(node, bindings, context):
 
 def bind_assignment(node, bindings, context):
     values = [static_value(value, bindings, context) for value in node.values]
-    bindings.update((expression(target), value) for target, value in zip(node.targets, values))
+    for index, target in enumerate(node.targets):
+        value = values[index] if index < len(values) else None
+        if isinstance(target, lua.Index):
+            root = target
+            while isinstance(root, lua.Index):
+                root = root.value
+            bindings[expression(root)] = None
+        else:
+            bindings[expression(target)] = value
 
 
-def top_constants(block):
+def extract_exboss_timeline(source):
+    """Preserve the authored config declaration, never its runtime normalization."""
+    tree = ast.parse(source)
     bindings = {}
-    for node in block.body:
+    for node in tree.body.body:
         if isinstance(node, lua.LocalAssign):
             bind_assignment(node, bindings, {})
-    # A counter/table assigned by any handler is not a constant across calls.
-    for node in all_nodes(block):
-        if isinstance(node, lua.Assign) and not isinstance(node, lua.LocalAssign):
-            for target in node.targets:
-                root = target
-                while isinstance(root, lua.Index):
-                    root = root.value
-                if isinstance(root, lua.Name) and root.id in bindings:
-                    bindings[root.id] = None
-    return bindings
+            if any(isinstance(target, lua.Name) and target.id == 'encounterTriggers' for target in node.targets):
+                config = bindings.get('encounterTriggers')
+                if not isinstance(config, dict):
+                    raise ValueError('encounterTriggers declaration has unresolved keys or values')
+                return config
+    raise ValueError('encounterTriggers declaration absent')
 
 
 def flatten_timer_table(values, path=()):
@@ -359,10 +365,23 @@ def assigned_names(block):
             for target in node.targets if isinstance(target, lua.Name)}
 
 
+def mutated_roots(block):
+    names = set()
+    for node in all_nodes(block):
+        if isinstance(node, lua.Assign) and not isinstance(node, lua.LocalAssign):
+            for target in node.targets:
+                root = target
+                while isinstance(root, lua.Index):
+                    root = root.value
+                if isinstance(root, lua.Name):
+                    names.add(root.id)
+    return names
+
+
 def select_methods(block, bindings=None, mutable=None):
     """Capture lexical constants at each method declaration, not end of file."""
     bindings = dict(bindings or {})
-    mutable = assigned_names(block) if mutable is None else mutable
+    mutable = mutated_roots(block) if mutable is None else mutable
     for node in block.body:
         if isinstance(node, lua.LocalAssign):
             bind_assignment(node, bindings, {})
@@ -725,8 +744,7 @@ def import_sources(db, roots):
                 locales.update(locale_literals((root/'DBM-Core/localization.en.lua').read_text(), 'DBM'))
             dynamic = {}
             if addon == 'EXBossData':
-                dynamic_tree = ast.parse((root/'FixedTimelineBosses.lua').read_text())
-                dynamic = top_constants(dynamic_tree.body).get('encounterTriggers', {})
+                dynamic = extract_exboss_timeline((root/'FixedTimelineBosses.lua').read_text())
             paths = [root/'EncounterData.lua'] if addon == 'EXBossData' else sorted(root.rglob('*.lua'))
             for path in paths:
                 file = str(path.relative_to(root))
