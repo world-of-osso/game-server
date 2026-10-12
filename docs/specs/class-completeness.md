@@ -8,6 +8,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Preserve exact missing effect/aura types and source/state prerequisites; never close unidentified Dummy fields with no-ops or guessed coefficients.
 - [x] Census uses authored production destinations/maps, actor identity and group state rather than reporting absent fixture startup resources as product gaps.
 - [x] Native target24 selects hostile units within the authored caster-facing cone/radius.
+- [x] Native effect values apply authored RealPointsPerLevel only outside expected-stat/coefficient scaling, with native level bounds.
+- [ ] Owned bag item-target locks require native lock eligibility and a persisted per-GUID unlock; do not consume the item or fabricate loot. Retail threshold parity remains uncertified where pinned reference behavior conflicts with caster-aware native values.
 - [x] Native target119 offers resurrection to eligible party/raid corpse owners at their body positions, using authored restoration percentages.
 - [x] Native targets72/86/91 use random directions and authored radii around the caster or prior destination.
 - [x] Unspawned class/spec/talent summon templates/models/addons are retained from authentic TDB rows without creating world spawns.
@@ -29,6 +31,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `spell_cast/hit.rs`: whole-spell miss and pre-payment school immunity.
 - `auras/handlers.rs`, `auras/mod.rs`: native handler dispatch, owner/label damage and school-mask union.
 - `spell_cast/class_completeness_probe.rs`: opt-in controlled native-row census.
+- `spell_cast/open_lock.rs`, `game_objects/locks.rs`, `persistence_inventory.rs`: native bag-item lock metadata, ordered alternatives and per-GUID unlock state.
 
 ## Tests asserting this spec
 

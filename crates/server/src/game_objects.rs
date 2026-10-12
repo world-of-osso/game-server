@@ -18,7 +18,7 @@
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
 mod identity_conditions;
-mod locks;
+pub(crate) mod locks;
 pub(crate) mod quest_object;
 pub(crate) mod spellcaster;
 pub(crate) mod summoned;

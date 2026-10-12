@@ -290,6 +290,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::INVENTORY_LAYOUTS);
     let _ = txn.open_table(inventory_store::BAG_SLOTS);
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
+    txn.open_table(inventory_store::ITEM_UNLOCKED)
+        .expect("create item unlock state table");
     txn.open_table(inventory_store::ITEM_DURABILITIES)
         .expect("create item durability table");
     txn.open_table(inventory_store::ITEM_DEFINITION_SOURCES)

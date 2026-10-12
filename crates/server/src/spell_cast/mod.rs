@@ -81,6 +81,7 @@ mod guardian;
 mod guardian_tests;
 mod hit;
 mod missiles;
+mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]
@@ -152,7 +153,7 @@ pub struct SpellCastPlugin;
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<disenchant::DisenchantData>()
-            .add_systems(Startup, disenchant::load_startup)
+            .add_systems(Startup, (disenchant::load_startup, open_lock::load_startup))
             .init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
             .init_resource::<teleport_positions::SpellTargetPositions>()
@@ -233,6 +234,7 @@ pub enum CastFailure {
     Totems(String),
     /// A created item does not fit in the bags.
     InventoryFull,
+    LowCastLevel,
     CantBeDisenchanted,
     CantBeDisenchantedSkill,
     DisenchantNotKnown,
@@ -281,6 +283,8 @@ impl CastFailure {
             Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
             Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
             Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
+            // Existing wire contract has no LOW_CASTLEVEL variant.
+            Self::LowCastLevel => (R::InvalidTarget, Some("SPELL_FAILED_LOW_CASTLEVEL".into())),
             Self::CantBeDisenchanted => (R::CantBeDisenchanted, None),
             Self::CantBeDisenchantedSkill => (R::CantBeDisenchantedSkill, None),
             Self::Pet(failure) => failure.to_contract(),
@@ -933,7 +937,10 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
-    let explicit = if disenchant::is_disenchant(&spell) {
+    let explicit = if disenchant::is_disenchant(&spell)
+        || (request.target_item_guid.is_some()
+            && spell.effects.iter().any(open_lock::is_item_effect))
+    {
         None
     } else {
         explicit
@@ -1203,6 +1210,19 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    if open_lock::is_item_cast(spell) {
+        open_lock::check_cast(world, caster, spell)?;
+        return Ok(None);
+    }
+    if spell.effects.iter().any(open_lock::is_item_effect)
+        && explicit.is_none_or(|target| {
+            world
+                .get::<shared::protocol::GameObjectInfo>(target)
+                .is_none()
+        })
+    {
+        return Err(CastFailure::InvalidTarget);
+    }
     if crate::gathering::is_gathering(spell) {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         crate::gathering::check_target(world, caster, spell, target)?;
@@ -1561,6 +1581,7 @@ pub(crate) fn execute_cast(
         explicit.is_some_and(|target| !plan.iter().any(|effect| effect.units.contains(&target)));
     let costs = discount_missed_rune_costs(costs, discounted_player && primary_missed);
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
+    open_lock::unlock_cast(world, caster, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);
@@ -1676,6 +1697,20 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    if open_lock::is_item_cast(spell) {
+        return Ok(spell
+            .effects
+            .iter()
+            .enumerate()
+            .filter(|(_, effect)| open_lock::is_item_effect(effect))
+            .map(|(index, _)| PlannedEffect {
+                index,
+                units: Vec::new(),
+                dest: None,
+                chain_multipliers: Vec::new(),
+            })
+            .collect());
+    }
     if crate::gathering::is_gathering(spell) {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         return Ok(spell
@@ -1822,6 +1857,11 @@ fn resolve_effects(
                     None => aura_masks.push((unit, 1 << effect.index)),
                 }
             }
+            continue;
+        }
+        // Item unlock is persisted before the cast success receipt; it has no
+        // unit target and must not enter the gathering-node effect handler.
+        if open_lock::is_item_cast(spell) && open_lock::is_item_effect(effect) {
             continue;
         }
         if let Some(handler) = scripts::cast_effect(spell.id, effect.index)

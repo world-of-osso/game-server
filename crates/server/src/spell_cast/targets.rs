@@ -132,7 +132,9 @@ fn selector(id: u32) -> Option<Selector> {
 /// First implicit target ID of `effect` that has no selector.
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
-        let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
+        let item_target = id == 26
+            && (effect.effect == super::disenchant::EFFECT_DISENCHANT
+                || super::open_lock::is_item_effect(effect));
         let gathering_target = id == 23 && effect.effect == 33;
         let unsupported_back =
             id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
