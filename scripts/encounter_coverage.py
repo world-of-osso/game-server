@@ -33,7 +33,8 @@ PARTIAL_GAPS = {
     'boss_the_golden_serpent': [
         'TC script schedule (partial; Retail 12.1 timeline inputs unavailable); Retail alerts disabled',
         'source friendly intro remains closed: missing emerge271598, gravity/flying and authored paths not converted',
-        'follow/absorption/announcement, molten area geometry/effects and source-empty loot unproved',
+        'Molten Gold source static sphere/Player enter-exit and periodic damage supported; native area visuals unproved',
+        'follow/absorption/announcement and source-empty loot unproved',
         'ordinary balance, full instance and both-skin native acceptance unproved'],
 }
 PORTS = {'boss_hogger': [86604, 86620, 86736],
