@@ -252,6 +252,7 @@ fn encounter_coverage_mirror_respawn_cast_is_not_an_ordinary_reset_cast() {
 #[test]
 fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    h.engage(kystia);
     let mirror = crate::zones::summon_creature(
         h.app.world_mut(),
         kystia,
@@ -274,7 +275,7 @@ fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit(
     );
     assert_eq!(
         super::super::instance_script::get_boss_state(h.app.world_mut(), map, 0),
-        Some(EncounterState::NotStarted)
+        Some(EncounterState::InProgress)
     );
     assert!(h.app.world().get_entity(kystia).is_ok());
 }
