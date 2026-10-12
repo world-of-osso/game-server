@@ -2,6 +2,7 @@ mod achievement;
 mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
+mod adventure_guide;
 mod appearance_collection;
 mod area_table;
 mod auction_house;
@@ -69,6 +70,7 @@ mod melee;
 mod merchant;
 mod messaging;
 mod mirror_timers;
+mod mount_journal;
 mod mythic_plus;
 mod navigation;
 mod networking;
@@ -127,6 +129,10 @@ mod who;
 mod wild_pet_battles;
 mod world_data;
 mod world_map;
+mod world_quest_availability;
+mod world_quest_objectives;
+mod world_quest_rewards;
+mod world_quests;
 mod world_time;
 mod xp_data;
 mod zones;
@@ -177,7 +183,8 @@ fn log_plugin() -> bevy::log::LogPlugin {
 fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
-        .add_plugins(achievement::AchievementPlugin);
+        .add_plugins(achievement::AchievementPlugin)
+        .add_plugins(adventure_guide::AdventureGuidePlugin);
     add_social_plugins(app);
     add_progression_plugins(app);
     add_world_plugins(app);

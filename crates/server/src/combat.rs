@@ -244,17 +244,20 @@ impl AttackRules<'_, '_> {
     }
 
     fn valid_attack_target(&self, attacker: Entity, victim: Entity) -> bool {
-        let uninteractible = self
+        let player_controlled = self
+            .unit_faction(attacker)
+            .is_some_and(|unit| unit.is_player);
+        let blocked_by_flags = self
             .unit_flags
             .get(victim)
-            .is_ok_and(|flags| !flags.is_selectable());
+            .is_ok_and(|flags| !flags.can_be_attacked_by(player_controlled));
         let dueling = self
             .factions
             .get(attacker)
             .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, victim));
         attacker != victim
             && !self.dead(victim)
-            && !uninteractible
+            && !blocked_by_flags
             && (dueling
                 || match (self.unit_faction(attacker), self.unit_faction(victim)) {
                     (Some(attacker), Some(victim)) => self.templates.can_attack(attacker, victim),
@@ -967,7 +970,7 @@ fn try_swing(
         return None;
     };
     // Typed detection was checked for this attacker before the swing.
-    let attackable = flags.is_none_or(|flags| flags.is_attackable());
+    let attackable = flags.is_none_or(|flags| flags.can_be_attacked_by(!attacker.creature));
     if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
         return None;
     }

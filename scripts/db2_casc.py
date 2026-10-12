@@ -109,6 +109,7 @@ def decode(
     record_ids=None,
     inline_arrays=None,
     field_types=None,
+    relationship_column=None,
 ):
     """(header, {id: [raw uint32 per column]}) for every record, copies included.
 
@@ -121,12 +122,17 @@ def decode(
     non-inline ID, before array flattening. inline_arrays indexes stored fields
     and declares element counts. Sparse field_types uses those same field indexes:
     INTEGER sign-extends the metadata width, REAL reinterprets float32, and omitted
-    fields stay UNSIGNED. Types/arrays must come from the matching DBD schema."""
+    fields stay UNSIGNED. Types/arrays must come from the matching DBD schema.
+    relationship_column declares an inline parent column in the expanded output;
+    the relationship map verifies that column instead of appending a duplicate.
+    A non-inline parent (no column declared) is appended as the last column."""
     # Selected-row imports must resolve every requested ID from readable records.
     # Retain master decoding of decrypted sections and warnings for zero-filled ones.
     inline_arrays = inline_arrays or {}
     header = read_header(data)
     if header["flags"] & 1:
+        if relationship_column is not None:
+            raise ValueError("inline relationship validation is not supported for sparse DB2")
         return header, decode_sparse(
             data, header, text_columns, inline_arrays, field_types or {}, record_ids
         )
@@ -251,7 +257,7 @@ def decode(
             for value in fields:
                 values.extend(value if isinstance(value, tuple) else (value,))
             if relations:
-                values.append(related.get(record, 0))
+                values = join_relationship(values, related.get(record, 0), relationship_column)
             rows[record_id] = values
         id_column = 0 if ids else header["id_index"]
         copy_at = ids_at + id_list
@@ -262,6 +268,16 @@ def decode(
                 new_id if i == id_column else v for i, v in enumerate(rows[source_id])
             ]
     return header, select_rows(rows, record_ids)
+
+
+def join_relationship(values, foreign_id, inline_column):
+    if inline_column is None:
+        return [*values, foreign_id]
+    if not 0 <= inline_column < len(values):
+        raise ValueError(f"inline relationship column {inline_column} is outside the row")
+    if values[inline_column] != foreign_id:
+        raise ValueError(f"inline relationship {values[inline_column]} differs from mapped parent {foreign_id}")
+    return values
 
 
 def select_rows(rows, record_ids):

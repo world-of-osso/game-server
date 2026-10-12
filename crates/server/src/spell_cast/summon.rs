@@ -109,6 +109,8 @@ pub struct SummonedCreature {
     pub spell_id: u32,
     pub properties_id: u32,
     pub properties: SummonProperties,
+    /// Template-model display multiplier; MOD_SCALE remains separate object scaling.
+    pub display_scale: f32,
     pub expires_at: Option<f64>,
 }
 
@@ -193,11 +195,20 @@ struct SummonTemplate {
     faction: u32,
     classification: CreatureClassification,
     display_id: u32,
+    display_scale: f32,
 }
 
 fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTemplate> {
     let data = world.get_resource::<crate::world_data::WorldData>()?;
     let template = data.template_for(entry, 0)?;
+    let display_id = crate::zones::template_display_id(template, &mut rand::thread_rng());
+    // TC Unit::SetDisplayId: GetModelWithDisplayId supplies the display multiplier;
+    // DEFAULT_PLAYER_DISPLAY_SCALE is1 when no template model matches.
+    let display_scale = template
+        .models
+        .iter()
+        .find(|model| model.display_id == display_id)
+        .map_or(1.0, |model| model.display_scale);
     Some(SummonTemplate {
         entry,
         name: template.name.clone(),
@@ -205,7 +216,8 @@ fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTe
         faction: u32::from(template.faction),
         classification: CreatureClassification::from_rank(template.rank)
             .expect("validated creature rank"),
-        display_id: crate::zones::template_display_id(template, &mut rand::thread_rng()),
+        display_id,
+        display_scale,
     })
 }
 
@@ -259,6 +271,7 @@ fn spawn_summon(
                 max: health,
             },
             ModelDisplay { display_id },
+            shared::components::UnitScale(template.display_scale),
             zone,
             map,
         ),
@@ -276,6 +289,7 @@ fn spawn_summon(
                 spell_id: ctx.spell.id,
                 properties_id,
                 properties,
+                display_scale: template.display_scale,
                 expires_at,
             },
         ),

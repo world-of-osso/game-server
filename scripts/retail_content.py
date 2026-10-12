@@ -246,6 +246,11 @@ TOY_SCENERY_SUMMON_ENTRIES = (
     65298, 65387, 144025, 144026, 181826, 182459, 182461, 193182,
     201798, 208477, 214220, 220620, 233144, 233145, 233146, 233148,
     233149, 233150, 121762, 183727,
+    # Source-defined stationary scarecrow, light globe, vesper and arena banners.
+    # No interaction/control/AI contract: docs/toy-effects14-coverage.md.
+    66768, 114846, 175582, 263908, 270689,
+    # Source-defined scaled scenery, with independent display/object scale.
+    156086, 241494, 246171, 267634,
 )
 TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
@@ -491,7 +496,7 @@ def tdb_item_ids(conn):
                 "SELECT itemid FROM tdb_playercreateinfo_item",
                 f"SELECT action FROM tdb_playercreateinfo_action WHERE type = {ACTION_BUTTON_ITEM}"]
     sources += [f"SELECT Item FROM tdb_{table} WHERE ItemType = {LOOT_ITEM}" for table in TDB_LOOT_TABLES]
-    sources += [f"SELECT ID FROM item WHERE ID IN {TOY_BANNER_ITEM_IDS}",
+    sources += ["SELECT t.ItemID FROM toy t JOIN item i ON i.ID=t.ItemID",
                 "SELECT item FROM wowhead_creature_drop",
                 "SELECT Entry FROM tdb_item_loot_template",
                 "SELECT ObjectID FROM tdb_quest_objectives WHERE Type = 1"]  # QUEST_OBJECTIVE_ITEM
