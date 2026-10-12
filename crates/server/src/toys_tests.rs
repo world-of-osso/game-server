@@ -1228,6 +1228,8 @@ fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
         activate_at(&mut h, 33219, Some([2.0, 0.0, 0.0]))[0].error,
         None
     );
+    h.advance(60); // Native Goblin Gumbo has a two-second cast before object creation.
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 42753));
     let world = h.app.world_mut();
     let spawned: Vec<_> = world
         .query::<&shared::protocol::GameObjectInfo>()
