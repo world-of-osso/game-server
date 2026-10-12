@@ -44,6 +44,8 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use data::ACQUIRE_AUTOMATIC_SKILL_RANK;
 
 pub const EFFECT_CREATE_ITEM: u32 = 24;
+const EFFECT_QUALITY_CRAFT: u32 = 288;
+const EFFECT_RECRAFT: u32 = 297;
 pub const EFFECT_LEARN_SPELL: u32 = 36;
 pub const EFFECT_SKILL_STEP: u32 = 44;
 pub const EFFECT_SKILL: u32 = 118;
@@ -509,6 +511,16 @@ pub(crate) fn check_cast_items(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
+    let needs_quality_operation = spell
+        .effects
+        .iter()
+        .any(|effect| matches!(effect.effect, EFFECT_QUALITY_CRAFT | EFFECT_RECRAFT));
+    if needs_quality_operation {
+        return Err(CastFailure::Unsupported(
+            "Quality crafting/recrafting is unavailable: authentic operation evaluator is missing"
+                .into(),
+        ));
+    }
     let Some(data) = world.get_resource::<ProfessionData>() else {
         return Ok(());
     };
