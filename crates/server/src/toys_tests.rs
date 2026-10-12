@@ -3393,6 +3393,105 @@ fn toyfx14_gaze_requires_and_preserves_the_actual_baked_sight_witness() {
 }
 
 #[test]
+fn toyfx14_scaled_scenery_preserves_source_display_scale_and_aura_object_scale() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitScale};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, display, scale) in [
+        (170476, 304620, 156086, 92605, 0.35),
+        (238852, 1227383, 241494, 127931, 0.75),
+        (246227, 1240408, 246171, 131280, 0.5),
+        (276229, 1299034, 267634, 145135, 1.5),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("scaled-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.insert_resource(store.clone());
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        let destination = (item == 246227).then_some([origin.x + 2.0, origin.y, origin.z]);
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "item {item}"
+        );
+        h.advance(50);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let actors: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, _)| entity)
+            .collect();
+        assert_eq!(actors.len(), 1);
+        let actor = actors[0];
+        assert_eq!(
+            world.get::<ModelDisplay>(actor).unwrap().display_id,
+            display
+        );
+        assert_eq!(
+            world.get::<UnitScale>(actor).copied().unwrap_or_default().0,
+            scale
+        );
+        // A real scale aura must compose with display scale, not overwrite it.
+        let growth = store.get(62736).unwrap(); // Elixir of Giant Growth: +30% object scale.
+        assert_eq!(growth.effects[0].aura, crate::auras::handlers::MOD_SCALE);
+        let effect = &growth.effects[0];
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: actor,
+                spell_id: 62736,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(
+            (world.get::<UnitScale>(actor).unwrap().0 - scale * (1.0 + effect.base_points / 100.0))
+                .abs()
+                < 0.00001
+        );
+        crate::auras::remove_auras(world, actor, crate::auras::RemoveReason::Cancelled, |a| {
+            a.spell_id == 62736
+        });
+        assert_eq!(world.get::<UnitScale>(actor).unwrap().0, scale);
+    }
+}
+
+#[test]
+fn toyfx14_scaled_scenery_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX14_SCALE_CENSUS_REPORT");
+    for item in [170476, 238852, 246227, 276229] {
+        let toy = report["toys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|toy| toy["item_id"] == item)
+            .unwrap();
+        assert!(toy["unavailable"].is_null(), "{toy}");
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
