@@ -180,6 +180,87 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_gain_aura_credits_new_application_not_refresh_or_dead_target() {
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[61863], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    h.app.update();
+    let application = crate::auras::AuraApplication {
+        caster: h.npc,
+        target: h.caster,
+        spell_id: 61863,
+        effect_mask: 1,
+        source: crate::auras::AuraSource::Cast,
+    };
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.caster)
+        .unwrap()
+        .current = 0.0;
+    crate::auras::apply_aura(h.app.world_mut(), &application);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&9098)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.caster)
+        .unwrap()
+        .current = 1000.0;
+    crate::auras::apply_aura(h.app.world_mut(), &application);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 61863)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&9098),
+        Some(&1)
+    );
+    crate::auras::apply_aura(h.app.world_mut(), &application);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&9098),
+        Some(&1)
+    );
+    h.app.update();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&9098),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_criteria_game_event_credits_authentic_send_event_caster_only() {
     let mut h = crate::spell_cast::test_harness::harness_with_plugins(
         vec![],
