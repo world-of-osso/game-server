@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
-TC instance_murder_row.cpp explicitly assigns completion to Kystia, not Nibbles.
-This resolves that Journal multi-actor join without treating every actor death
-as encounter success. The lead applies the generated SQL to a reviewed copy.
+Pinned TC instance/header rows identify Kystia and Golden Serpent primaries.
+Companions never acquire completion credit. The lead applies generated SQL to
+reviewed copies; structural binding is not mechanic or native certification.
 """
 import argparse
 import hashlib
@@ -22,6 +22,13 @@ SOURCES = {
 }
 PRIMARY = dict(map_id=2813, entry=234648, encounter_id=3101, bit=0,
                script='boss_kystia_manaheart', journal_id=2679, actor_id=5847, display_id=124578)
+GOLDEN_SOURCES = {
+    'Zandalar/KingsRest/boss_golden_serpent.cpp': 'f72bf8ec35669d5d2c861b5e6b0e1f713590ca37a869293c35a9262e4dd8cc51',
+    'Zandalar/KingsRest/instance_kings_rest.cpp': 'b8f1aca56c4d4577acb3340be4759eda1d04eb9b1ad4f028ef8d077e7b636a16',
+    'Zandalar/KingsRest/kings_rest.h': '671801740347d9bd6b0ae426ff72f252d86589ca07758acd3cd709e1a159944a',
+}
+GOLDEN_PRIMARY = dict(map_id=1762, entry=135322, encounter_id=2139, bit=0,
+                      script='boss_the_golden_serpent', journal_id=2165, actor_id=4904, display_id=84202)
 
 
 def prepare_bindings(connection, bindings):
@@ -56,25 +63,26 @@ def binding_sql(bindings):
     return '\n'.join(statements+['COMMIT;'])+'\n'
 
 
-def validate_source_files(source):
-    for name, expected in SOURCES.items():
+def validate_source_files(source, sources=SOURCES):
+    for name, expected in sources.items():
         path = source / name
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual != expected:
             raise ValueError(f'pinned TC source hash changed: {path}')
 
 
-def validate_journal(journal, creatures):
+def validate_journal(journal, creatures, primary=PRIMARY):
     encounters = read_journal(journal,0xB88D11CC,13,{2:2})
     actors = read_journal(creatures,0x81A3C769,9)
-    if not any(r[4] == PRIMARY['journal_id'] and r[6] & 0xFFFF == PRIMARY['encounter_id'] for r in encounters):
-        raise ValueError('missing Kystia journal encounter relation')
-    if not any(r[2] == PRIMARY['actor_id'] and r[3] & 0xFFFF == PRIMARY['journal_id'] and r[4] & 0xFFFFFFFF == PRIMARY['display_id'] for r in actors):
-        raise ValueError('missing Kystia journal primary actor relation')
+    if not any(r[4] == primary['journal_id'] and r[6] & 0xFFFF == primary['encounter_id'] for r in encounters):
+        raise ValueError(f"missing journal encounter relation: {primary['encounter_id']}")
+    if not any(r[2] == primary['actor_id'] and r[3] & 0xFFFF == primary['journal_id'] and r[4] & 0xFFFFFFFF == primary['display_id'] for r in actors):
+        raise ValueError(f"missing journal primary actor relation: {primary['entry']}")
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     parser.add_argument('--tc-dir',type=Path,required=True)
     parser.add_argument('--journal',type=Path,required=True)
@@ -82,13 +90,14 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--report',type=Path,required=True)
     args=parser.parse_args()
-    validate_source_files(args.tc_dir)
-    validate_journal(args.journal,args.creatures)
+    primary,sources = (GOLDEN_PRIMARY,GOLDEN_SOURCES) if args.encounter == 'golden-serpent' else (PRIMARY,SOURCES)
+    validate_source_files(args.tc_dir,sources)
+    validate_journal(args.journal,args.creatures,primary)
     with closing(sqlite3.connect(args.db.resolve().as_uri()+'?mode=ro',uri=True)) as conn:
-        rows=prepare_bindings(conn,[PRIMARY])
+        rows=prepare_bindings(conn,[primary])
     args.output.write_text(binding_sql(rows))
-    args.report.write_text(json.dumps(dict(build='12.1.0.69933',tc_revision='a352b1fa',source_sha256=SOURCES,
-                                         primary_actor=PRIMARY,bindings=rows),indent=2)+'\n')
+    args.report.write_text(json.dumps(dict(build='12.1.0.69933',tc_revision='a352b1fa',source_sha256=sources,
+                                         primary_actor=primary,bindings=rows),indent=2)+'\n')
     print(f'Prepared {len(rows)} primary-actor binding; no database modified')
 
 
