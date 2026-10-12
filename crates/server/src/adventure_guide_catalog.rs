@@ -32,7 +32,7 @@ struct Suggestion {
     #[serde(rename = "RewardDescription_lang")]
     reward: String,
     #[serde(rename = "ButtonText_lang")]
-    button: String,
+    _button: String,
     #[serde(rename = "TextureFileDataID")]
     texture: u32,
     #[serde(rename = "PlayerConditionID")]
@@ -224,5 +224,35 @@ impl CatalogData {
             });
         }
         (visible, census)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn eligible_authored_suggestion_keeps_card_without_unsupported_activation() {
+        // Authored AdventureJournal7; all three condition results are test inputs.
+        let catalog = CatalogData {
+            activities: vec![], supported_indices: vec![], supported_roots: BTreeSet::new(),
+            suggestions: vec![Suggestion {
+                id: 7, name: "Hillsbrad Foothills".into(),
+                description: "Join the Forsaken war machine as it marches on Hillsbrad Foothills for the Horde!".into(),
+                reward: String::new(), _button: "Start Quest".into(), texture: 236779,
+                condition: 33200, bonus0: 33600, bonus1: 33200, action: 3, flags: 0, priority: 250,
+            }],
+            tags: vec![], activity_tags: BTreeMap::new(),
+            conditions: BTreeMap::from([(33200, ConditionRule::Always), (33600, ConditionRule::Always)]),
+            activity_conditions: BTreeMap::new(),
+        };
+        let (rows, census) = catalog.suggestions(80);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            (&*rows[0].name, rows[0].texture_fdid),
+            ("Hillsbrad Foothills", 236779)
+        );
+        assert!(rows[0].button_text.is_empty());
+        assert_eq!(census.unsupported_actions, 1);
     }
 }
