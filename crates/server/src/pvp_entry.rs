@@ -4,11 +4,6 @@ use shared::battleground::{BgTeam, template_by_id};
 use super::{PlayerPvpState, PvpServerState};
 use crate::maps::{InMap, InstanceManager, MapStore, TeleportOptions, WorldLocation};
 
-// TDB1210 battleground_template1014, confirmed against local safe-location rows.
-const WARSONG_GULCH: u32 = 1014;
-const ALLIANCE_ENTRY: u32 = 7051;
-const HORDE_ENTRY: u32 = 7050;
-
 pub(super) fn enter_battleground(
     world: &mut World,
     state: &mut PvpServerState,
@@ -54,13 +49,10 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
         .get::<PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
         .ok_or("player has no battleground invitation")?;
-    let starts = if invitation.battleground_id == WARSONG_GULCH {
-        [ALLIANCE_ENTRY, HORDE_ENTRY]
-    } else {
-        shared::battleground::node_rules(invitation.map_id)
-            .ok_or("this battleground has no implemented entry lifecycle")?
-            .starts
-    };
+    let starts = shared::battleground::flag_rules(invitation.map_id)
+        .map(|rules| rules.starts)
+        .or_else(|| shared::battleground::node_rules(invitation.map_id).map(|rules| rules.starts))
+        .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
         BgTeam::B => 1,
@@ -80,16 +72,11 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
 }
 
 fn authored_object_entries(map_id: u32) -> Result<Vec<u32>, String> {
-    if let Some(rules) = shared::battleground::node_rules(map_id) {
-        return Ok(rules.nodes.iter().map(|node| node.entry).collect());
+    let entries = shared::battleground::objective_object_entries(map_id);
+    if entries.is_empty() {
+        return Err("this battleground has no implemented objectives".into());
     }
-    if map_id == shared::battleground::warsong_gulch().map_id {
-        return Ok(vec![
-            shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
-            shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
-        ]);
-    }
-    Err("this battleground has no implemented objectives".into())
+    Ok(entries)
 }
 
 fn create_match_map(

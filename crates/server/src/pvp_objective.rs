@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::battleground::{BgPhase, BgTeam, FlagState, template_by_id};
+use shared::battleground::{BgPhase, BgTeam, FlagObjective, FlagState, template_by_id};
 use shared::components::{Health, Level, Player, Position};
 use shared::protocol::{
     BattlegroundPlayerScoreSnapshot, GameObjectInfo, WARSONG_ALLIANCE_FLAG_ENTRY,
@@ -86,26 +86,32 @@ fn update_match(
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }
+    let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
     if let Some(nodes) = matched.nodes.as_mut() {
         let before = nodes.world_states(&matched.instance);
-        let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
         nodes.advance(delta_ms, &mut matched.instance, &template);
         return changed || before != nodes.world_states(&matched.instance);
+    }
+    let Some(battle) = matched.flags.as_mut() else {
+        return changed;
+    };
+    battle.advance(delta_ms, &mut matched.instance);
+    if matched.instance.phase != BgPhase::InProgress {
+        return true;
     }
     let Some(homes) = flag_homes(sources, map) else {
         return changed;
     };
     for team in [BgTeam::A, BgTeam::B] {
         let enemy = enemy_team(team);
-        let flag = flag_state(matched, enemy);
-        let FlagState::Carried { carrier } = flag else {
+        let FlagState::Carried { carrier } = flag_state(&battle.flags, enemy) else {
             continue;
         };
         let actor = actors
             .get(&carrier)
             .filter(|actor| actor.map == map && actor.alive);
         let Some(actor) = actor else {
-            matched.flags.drop_flag(team);
+            battle.flags.drop_flag(team);
             if let Some(position) = matched.flag_positions[team_index(enemy)] {
                 spawn_flag(world, map, &homes[team_index(enemy)], position);
             }
@@ -113,18 +119,11 @@ fn update_match(
             continue;
         };
         matched.flag_positions[team_index(enemy)] = Some(actor.position);
+        // Capture triggers30/31 sit exactly on the authored flag homes (TDB areatrigger).
         if actor.position.distance(homes[team_index(team)].position) <= CAPTURE_RADIUS
-            && matched
-                .flags
-                .capture(team, carrier, &mut matched.instance, &template)
+            && battle.capture(team, carrier, &mut matched.instance, &template)
         {
-            if let Some(score) = matched
-                .scoreboard
-                .iter_mut()
-                .find(|score| score.character_id == carrier)
-            {
-                score.flag_captures += 1;
-            }
+            credit(&mut matched.scoreboard, carrier, battle.rules.capture_stat);
             let home = &homes[team_index(enemy)];
             spawn_flag(world, map, home, home.position);
             matched.flag_positions[team_index(enemy)] = None;
@@ -132,6 +131,20 @@ fn update_match(
         }
     }
     changed
+}
+
+fn credit(scoreboard: &mut [BattlegroundPlayerScoreSnapshot], character_id: u64, stat: u32) {
+    let counter = scoreboard
+        .iter_mut()
+        .find(|score| score.character_id == character_id)
+        .and_then(|score| {
+            score
+                .objective_scores
+                .iter_mut()
+                .find(|(id, _)| *id == stat)
+        })
+        .expect("participant row carries every source column of its map");
+    counter.1 += 1;
 }
 
 fn roster_ready(
@@ -177,11 +190,10 @@ fn build_scoreboard(
                 deaths: 0,
                 damage_done: 0,
                 healing_done: 0,
-                flag_captures: 0,
-                flag_returns: 0,
-                objective_scores: shared::battleground::node_rules(map_id(matched))
-                    .map(|rules| vec![(rules.assault_stat, 0), (rules.defense_stat, 0)])
-                    .unwrap_or_default(),
+                objective_scores: shared::battleground::pvp_stat_columns(map_id(matched))
+                    .iter()
+                    .map(|column| (column.stat, 0))
+                    .collect(),
                 honorable_kills: None,
                 honor_level: None,
             })
@@ -284,17 +296,7 @@ fn assault_capture_point(
         .as_mut()
         .ok_or("match has no capture points")?;
     let stat = nodes.assault(entry, snapshot.team)?;
-    let score = matched
-        .scoreboard
-        .iter_mut()
-        .find(|score| score.character_id == character_id)
-        .ok_or("participant scoreboard row missing")?;
-    let counter = score
-        .objective_scores
-        .iter_mut()
-        .find(|(id, _)| *id == stat)
-        .ok_or("source objective scoreboard column missing")?;
-    counter.1 += 1;
+    credit(&mut matched.scoreboard, character_id, stat);
     Ok("capture point state updated".into())
 }
 
@@ -318,7 +320,7 @@ fn pickup_or_return_flag(
     let owner = match info.entry {
         WARSONG_ALLIANCE_FLAG_ENTRY => BgTeam::A,
         WARSONG_HORDE_FLAG_ENTRY => BgTeam::B,
-        _ => return Err("not a Warsong flag".into()),
+        _ => return Err("not a battleground team flag".into()),
     };
     let matched = state
         .battleground_matches
@@ -337,7 +339,8 @@ fn pickup_or_return_flag(
     if owner == snapshot.team {
         return return_own_flag(world, matched, map, object, owner, character_id);
     }
-    if !matched.flags.pickup(snapshot.team, character_id) {
+    let battle = matched.flags.as_mut().ok_or("match has no team flags")?;
+    if !battle.flags.pickup(snapshot.team, character_id) {
         return Err("enemy flag is not available".into());
     }
     matched.flag_positions[team_index(owner)] = Some(wow_position(
@@ -355,29 +358,25 @@ fn return_own_flag(
     owner: BgTeam,
     character_id: u64,
 ) -> Result<String, String> {
-    if !matched.flags.return_flag(owner) {
+    let battle = matched.flags.as_mut().ok_or("match has no team flags")?;
+    if !battle.flags.return_flag(owner) {
         return Err("your flag is not dropped".into());
     }
+    let return_stat = battle.rules.return_stat;
     let sources = world.resource::<GameObjectSpawns>();
     let homes = flag_homes(sources, map).ok_or("authored flag homes missing")?;
     world.despawn(object);
     let home = &homes[team_index(owner)];
     spawn_flag(world, map, home, home.position);
     matched.flag_positions[team_index(owner)] = None;
-    if let Some(score) = matched
-        .scoreboard
-        .iter_mut()
-        .find(|score| score.character_id == character_id)
-    {
-        score.flag_returns += 1;
-    }
+    credit(&mut matched.scoreboard, character_id, return_stat);
     Ok("own flag returned".into())
 }
 
-fn flag_state(matched: &InvitedBattleground, owner: BgTeam) -> FlagState {
+fn flag_state(flags: &FlagObjective, owner: BgTeam) -> FlagState {
     match owner {
-        BgTeam::A => matched.flags.flag_a,
-        BgTeam::B => matched.flags.flag_b,
+        BgTeam::A => flags.flag_a,
+        BgTeam::B => flags.flag_b,
     }
 }
 fn team_index(team: BgTeam) -> usize {
@@ -403,14 +402,10 @@ fn send_match_snapshot(world: &mut World, match_id: u64) {
             matched.instance.phase,
             matched.instance.score_a.score,
             matched.instance.score_b.score,
-            matched.flags.clone(),
+            matched.flag_objective(),
             matched.instance.outcome,
             matched.scoreboard.clone(),
-            matched
-                .nodes
-                .as_ref()
-                .map(|nodes| nodes.world_states(&matched.instance))
-                .unwrap_or_default(),
+            matched.world_states(),
         )
     };
     let mut connections =
