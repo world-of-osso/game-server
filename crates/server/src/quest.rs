@@ -271,6 +271,72 @@ pub(crate) fn event_credit(
     }
 }
 
+/// SmartAI `FailQuest` / `AreaExploredOrEventHappens`: persist the script result.
+/// Completion only changes authored exploration/event objectives, never item/kill counts.
+pub(crate) fn persist_scripted_quest_result(
+    world: &mut World,
+    player: Entity,
+    quest_id: u32,
+    failed: bool,
+) {
+    let Some(character) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let (Some(database), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut log = load_quest_log(&database.db, character);
+    let changed = apply_scripted_quest_result(quests, &mut log, quest_id, failed);
+    if changed {
+        save_quest_log(&database.db, character, &log);
+        world.resource_mut::<QuestDirty>().0.insert(character);
+    }
+}
+
+fn apply_scripted_quest_result(
+    quests: &QuestDb,
+    log: &mut QuestLogData,
+    quest_id: u32,
+    failed: bool,
+) -> bool {
+    // SmartScript.cpp:2581 action152 does not replay rewards.
+    if log.is_rewarded(quest_id) {
+        return false;
+    }
+    if failed {
+        let Some(active) = log
+            .active
+            .iter_mut()
+            .find(|active| active.quest_id == quest_id)
+        else {
+            return false;
+        };
+        let changed = !active.failed;
+        active.failed = true;
+        return changed;
+    }
+    let Some(quest) = quests.quests.get(&quest_id) else {
+        return false;
+    };
+    const COMPLETION_FLAGS: u32 = 0x2 | 0x4;
+    const TRACKING_EVENT: u32 = 0x400;
+    if quest.flags & COMPLETION_FLAGS != 0 {
+        return log.active(quest_id).is_some_and(|active| !active.failed)
+            && credit_area_trigger(quests, log, &[quest_id]);
+    }
+    if quest.flags & TRACKING_EVENT == 0 {
+        return false;
+    }
+    // Pinned CompleteQuest automatically rewards invisible server-side flags,
+    // including those never accepted into the player's visible log.
+    log.remove(quest_id);
+    log.mark_rewarded(quest_id);
+    true
+}
+
 /// The quest area triggers the player stands in on its current map.
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct QuestTriggerPresence {

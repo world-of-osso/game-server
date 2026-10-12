@@ -662,7 +662,27 @@ impl<'a> QuestSession<'a, '_, '_> {
     fn accept(&mut self, npc: u64, quest_id: u32) -> QuestResult {
         let (mut log, mut inventory) = self.load();
         self.offerable(npc, quest_id, &log)?;
-        self.accept_log(quest_id, &mut log, &mut inventory, None)
+        self.accept_log(quest_id, &mut log, &mut inventory, None)?;
+        self.queue_script_quest_hook(npc, quest_id, false);
+        Ok(())
+    }
+
+    fn queue_script_quest_hook(&mut self, npc: u64, quest_id: u32, rewarded: bool) {
+        let connection = self.requester.connection;
+        self.io.commands.queue(move |world: &mut World| {
+            let Some(player) = world.get::<PlayerLink>(connection).map(|link| link.0) else {
+                return;
+            };
+            let Some(creature) = Entity::try_from_bits(npc) else {
+                return;
+            };
+            let hook = if rewarded {
+                crate::scripted_ai::Hook::QuestRewarded { player, quest_id }
+            } else {
+                crate::scripted_ai::Hook::QuestAccepted { player, quest_id }
+            };
+            crate::scripted_ai::dispatch(world, creature, hook);
+        });
     }
 
     fn accept_log(
@@ -794,6 +814,7 @@ impl<'a> QuestSession<'a, '_, '_> {
                 .unwrap_or_else(crate::persistence::quest_store::unix_now),
         );
         self.persist_reward(&inventory, &log, self.reward_appearances(quest, &items));
+        self.queue_script_quest_hook(npc, quest_id, true);
         let character = self.character();
         self.io.commands.queue(move |world: &mut World| {
             crate::achievement::record_quest_reward(world, character, quest_id);
