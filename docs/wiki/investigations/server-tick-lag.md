@@ -62,6 +62,12 @@ Incremental server-crate rebuild (one file touched, loaded machine): debug opt-l
 - `persistence::tests::periodic_save_writes_every_changed_player_with_map_and_corpse`
 - `frame_stats::tests::*` — window reset and lost ticks past the clamp
 
+## Release catalog-copy regression (2026-10-12)
+
+Release master `cb1a89e` on private UDP5882 with a SQLite backup of canonical world.db reproduced idle work means 20.9–23.4 ms, maxima 50.7–64.8 ms and 1–2 overruns per 10 seconds after startup. Existing `system-timings` profiling measured `pvp_objective::update_battleground_objectives` at 11.97 ms/run: it cloned the complete `GameObjectSpawns` resource every fixed tick, including when no battleground existed. `perf` was not installed; tracing used a diagnostic release snapshot only.
+
+The objective tick now reads only the two flag homes for each mapped match. No catalog clone occurs when there are no matches; each active match retains the same authored flag positions, roster start, drop and capture logic. Creature activation, respawn clocks and script activation are unchanged. Behavioral regression: `pvp::tests::objective_tick_without_matches_needs_no_world_object_catalog`; release measurements exercise the full production-population boundary. Durable logs and harness: `game-engine/data/diagnostics/server-tick-perf-2026-10-12/`; final numbers in `/home/osso/.worktrees/handoff-server-tick-perf.md`.
+
 ## Sources
 
 - [crates/server/src/frame_stats.rs](../../../crates/server/src/frame_stats.rs) — frame work and fixed-step report
