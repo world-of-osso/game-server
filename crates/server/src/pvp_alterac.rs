@@ -274,24 +274,33 @@ pub(crate) fn record_player_death(world: &mut World, player: Entity) {
         .expect("accepted player")
         .match_id;
     let changed = world.resource_scope(|_, mut state: Mut<PvpServerState>| {
-        let matched = state
-            .battleground_matches
-            .get_mut(&match_id)
-            .expect("accepted match");
-        if matched.alterac.is_none() || matched.instance.phase != BgPhase::InProgress {
-            return false;
-        }
-        matched.instance.deduct_reinforcements(team, 1);
-        if let Some(row) = matched
-            .scoreboard
-            .iter_mut()
-            .find(|row| row.character_id == character)
-        {
-            row.deaths += 1;
-        }
-        true
+        apply_player_loss(&mut state, match_id, character, team)
     });
     if changed {
         super::pvp_objective::send_match_snapshot(world, match_id);
     }
+}
+
+fn apply_player_loss(
+    state: &mut PvpServerState,
+    match_id: u64,
+    character: u64,
+    team: BgTeam,
+) -> bool {
+    let matched = state
+        .battleground_matches
+        .get_mut(&match_id)
+        .expect("accepted match");
+    if matched.alterac.is_none() || matched.instance.phase != BgPhase::InProgress {
+        return false;
+    }
+    matched.instance.deduct_reinforcements(team, 1);
+    if let Some(row) = matched
+        .scoreboard
+        .iter_mut()
+        .find(|row| row.character_id == character)
+    {
+        row.deaths += 1;
+    }
+    true
 }
