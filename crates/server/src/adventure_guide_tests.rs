@@ -43,7 +43,7 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let criteria = crate::achievement::load_achievement_catalog(&conn).unwrap();
     let catalog = load_catalog(&conn, &criteria);
-    assert!(matches!(catalog, AdventureCatalog::Ready(_)));
+    assert!(matches!(catalog, AdventureCatalog::Ready(_)), "{catalog:?}");
     h.app.insert_resource(criteria);
     h.app.insert_resource(catalog);
     h.app.insert_resource(crate::maps::ServerClock {
@@ -177,7 +177,7 @@ fn adventure_guide_actual_creature_credit_is_once_persistent_and_reset_by_month(
         .single()
         .unwrap()
         .timestamp();
-    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalhunter").unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Guidehunter").unwrap();
     attach_requests(&mut h);
     prepare_real_catalog(&mut h, now);
     request(&mut h, AdventureGuideRequest::Query);
@@ -237,7 +237,7 @@ fn adventure_guide_actual_creature_credit_is_once_persistent_and_reset_by_month(
     );
     let character = h.character_id;
     drop(h);
-    let mut h = crate::bank_test_harness::harness_at(file.path(), "Journalhunteralt").unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Guidehuntalt").unwrap();
     h.play_as(character);
     attach_requests(&mut h);
     prepare_real_catalog(&mut h, now);
