@@ -570,6 +570,11 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 
 #[test]
 fn achievements_criteria_native_player_death_records_once_with_actual_killer_and_map() {
+    prove_death_criteria(false);
+    prove_death_criteria(true);
+}
+
+fn prove_death_criteria(player_killer: bool) {
     use shared::components::Npc;
     let mut h =
         crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
@@ -614,8 +619,17 @@ fn achievements_criteria_native_player_death_records_once_with_actual_killer_and
             .criteria_progress
             .contains_key(&111)
     );
-    // Relocated source creature448 kills through native Unit::Kill, not a seeded counter.
-    crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+    let killer = if player_killer {
+        let killer = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 3.0);
+        h.app.world_mut().entity_mut(killer).insert(map);
+        killer
+    } else {
+        h.npc
+    };
+    let killer_criterion = if player_killer { 5594 } else { 455 };
+    let other_killer_criterion = if player_killer { 455 } else { 5594 };
+    // Native Unit::Kill reaches the accepted death transition, not a seeded counter.
+    crate::combat::kill_unit(h.app.world_mut(), killer, h.caster);
     h.advance(3);
     assert_eq!(h.health(h.caster), 0.0);
     assert_eq!(
@@ -626,7 +640,7 @@ fn achievements_criteria_native_player_death_records_once_with_actual_killer_and
             .state,
         shared::death::DeathState::Dead
     );
-    for criterion in [111, 943, 455] {
+    for criterion in [111, 943, killer_criterion] {
         assert_eq!(
             h.app
                 .world()
@@ -644,14 +658,14 @@ fn achievements_criteria_native_player_death_records_once_with_actual_killer_and
             .get::<PlayerAchievementState>(h.caster)
             .unwrap()
             .criteria_progress
-            .contains_key(&5594)
+            .contains_key(&other_killer_criterion)
     );
     h.app
         .world_mut()
         .write_message(crate::death::PlayerDeathTransition { player: h.caster });
-    crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+    crate::combat::kill_unit(h.app.world_mut(), killer, h.caster);
     h.advance(3);
-    for criterion in [111, 943, 455] {
+    for criterion in [111, 943, killer_criterion] {
         assert_eq!(
             h.app
                 .world()
@@ -665,7 +679,7 @@ fn achievements_criteria_native_player_death_records_once_with_actual_killer_and
     drop(h);
     let db = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&db, character);
-    for criterion in [111, 943, 455] {
+    for criterion in [111, 943, killer_criterion] {
         assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
     }
 }
