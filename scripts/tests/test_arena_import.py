@@ -2,6 +2,7 @@ import importlib.util
 import sqlite3
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'import-arenas.py'
@@ -13,7 +14,7 @@ class ArenaImportTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('arena_import', SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        with sqlite3.connect(':memory:') as db:
+        with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''
                 CREATE TABLE map(ID INTEGER,InstanceType INTEGER,WdtFileDataID INTEGER);
                 CREATE TABLE tdb_battleground_template(ID INTEGER,AllianceStartLoc INTEGER,HordeStartLoc INTEGER,Weight INTEGER);
@@ -41,7 +42,7 @@ class ArenaContentTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('arena_import_content', SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        with sqlite3.connect(':memory:') as db:
+        with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''
                 CREATE TABLE arena_map(map_id INTEGER);
                 INSERT INTO arena_map VALUES(572);
@@ -68,7 +69,7 @@ class DalaranSpoutImportTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('arena_spouts', SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        with sqlite3.connect(':memory:') as db:
+        with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''
                 CREATE TABLE arena_map(map_id INTEGER); INSERT INTO arena_map VALUES(617);
                 CREATE TABLE tdb_creature(guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,StringId TEXT,terrainSwapMap INTEGER,phaseUseFlags INTEGER,PhaseId INTEGER,PhaseGroup INTEGER);
@@ -88,10 +89,16 @@ class DalaranSpoutImportTest(unittest.TestCase):
                 CREATE TABLE content_creature_template_model(CreatureID INTEGER,Idx INTEGER,CreatureDisplayID INTEGER,DisplayScale REAL,Probability REAL,VerifiedBuild INTEGER);
                 INSERT INTO content_creature_template_model VALUES(456,0,99,1,1,1);
             ''')
+            # TDB NULL override means inherit template; the target encodes that sentinel as0.
+            db.executescript('''ALTER TABLE tdb_creature ADD COLUMN npcflag INTEGER;
+                ALTER TABLE tdb_creature ADD COLUMN unit_flags INTEGER;
+                ALTER TABLE content_creature ADD COLUMN npcflag INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE content_creature ADD COLUMN unit_flags INTEGER NOT NULL DEFAULT 0;''')
             self.assertEqual(module.import_spouts(db), 3)
             self.assertEqual(module.promote_dalaran_spouts(db), 3)
-            self.assertEqual(db.execute('SELECT * FROM content_creature WHERE guid IN(123,124) ORDER BY guid').fetchall(), [(123,456,0,5,6,7),(124,15214,617,1,2,3)])
+            self.assertEqual(db.execute('SELECT guid,id1,map,position_x,position_y,position_z FROM content_creature WHERE guid IN(123,124) ORDER BY guid').fetchall(), [(123,456,0,5,6,7),(124,15214,617,1,2,3)])
             self.assertEqual(db.execute('SELECT guid,id1,position_z FROM content_creature WHERE id1=28567 ORDER BY guid').fetchall(), [(22000002,28567,16.0872),(22000004,28567,7.19796),(22000005,28567,16.0948)])
+            self.assertEqual(db.execute('SELECT npcflag,unit_flags FROM content_creature WHERE id1=28567').fetchall(), [(0,0)]*3)
             self.assertEqual(db.execute('SELECT unit_flags FROM content_creature_template WHERE entry=28567').fetchone()[0], 33817344)
             self.assertEqual(db.execute('SELECT CreatureDisplayID,Probability FROM content_creature_template_model WHERE CreatureID=28567 ORDER BY Idx').fetchall(), [(169,0),(11686,1)])
             self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=456').fetchall(), [(456,0,99,1,1,1)])
