@@ -21,9 +21,10 @@ pub(super) fn require_visit(
         Some(access) => {
             access.anyone
                 || (access.neighbors && is_neighbor(state, actor, house))
-                || (access.guild && same_guild(&txn, house.owner_character_id, actor.character_id)?)
+                || (access.guild
+                    && read_same_guild(&txn, house.owner_character_id, actor.character_id)?)
                 || (access.friends
-                    && is_owner_friend(&txn, house.owner_character_id, actor.character_id)?)
+                    && read_owner_friend(&txn, house.owner_character_id, actor.character_id)?)
                 || (access.party
                     && groups.is_some_and(|groups| {
                         groups.is_in_same_group(house.owner_character_id, actor.character_id)
@@ -43,7 +44,7 @@ fn is_neighbor(state: &State, actor: Actor, house: &OwnedHouse) -> bool {
     })
 }
 
-fn same_guild(txn: &ReadTransaction, owner: u64, visitor: u64) -> Result<bool, String> {
+fn read_same_guild(txn: &ReadTransaction, owner: u64, visitor: u64) -> Result<bool, String> {
     let table = txn
         .open_table(CHARACTER_GUILDS)
         .map_err(|e| e.to_string())?;
@@ -61,7 +62,7 @@ fn same_guild(txn: &ReadTransaction, owner: u64, visitor: u64) -> Result<bool, S
     Ok(matches!((guild(owner)?, guild(visitor)?), (Some(a), Some(b)) if a != 0 && a == b))
 }
 
-fn is_owner_friend(txn: &ReadTransaction, owner: u64, visitor: u64) -> Result<bool, String> {
+fn read_owner_friend(txn: &ReadTransaction, owner: u64, visitor: u64) -> Result<bool, String> {
     let friends = txn.open_table(FRIENDS).map_err(|e| e.to_string())?;
     let Some(row) = friends.get(owner).map_err(|e| e.to_string())? else {
         return Ok(false);
