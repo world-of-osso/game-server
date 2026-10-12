@@ -1,6 +1,6 @@
 # World quests
 
-Contract and World of Osso rotation policy: [engine world-quest spec](../../game-engine/docs/specs/world-quests.md). Implemented for the currently representable subset; whole coverage remains open at8 polygon quests:3 criteria trees,3 area-trigger tasks and2 labels absent from local CreatureLabel data. Not deployed to the shared realm.
+Contract and World of Osso rotation policy: [engine world-quest spec](../../game-engine/docs/specs/world-quests.md). Implemented for the currently representable subset; whole coverage remains open at5 polygon quests:3 area-trigger tasks and2 labels absent from local CreatureLabel data. Not deployed to the shared realm.
 
 ## Private import
 
@@ -12,9 +12,13 @@ It maps TDB objectives and static POIs, preserving authentic race masks and raw 
 
 ## Objective coverage (verified2026-10-11)
 
-Private `polygon-world-v5.db` admits236/244 polygon quests, all policy durations;12 lack supported reward data. Dynamic objectives preserve authored ordering, optional/hidden/contributor/sequenced flags, weights and Flags2. Types0/1/2/3/9/15/21 are admitted when their required source joins resolve. Sequence gates reject premature credit and recognize derived progress-bar completion. Successful authoritative NPC openings credit TalkTo; combat deaths credit personal player-kill objectives. CreatureLabel FDID3055733/layout25B2B438 joins TDB CreatureDifficultyID to entry and difficulty mode; only real tapped creature deaths credit labels, not KillCredit aliases or scripted kill credits. Labels4346/4348 have no local rows, leaving86938/86945 excluded.
+Private `polygon-world-v6.db` admits239/244 polygon quests, all policy durations;12 lack supported reward data. Dynamic objectives preserve authored ordering, optional/hidden/contributor/sequenced flags, weights and Flags2. Types0/1/2/3/9/14/15/21 are admitted when their required source joins resolve. Sequence gates reject premature credit and recognize derived progress-bar completion. Successful authoritative NPC openings credit TalkTo; combat deaths credit personal player-kill objectives. CreatureLabel FDID3055733/layout25B2B438 joins TDB CreatureDifficultyID to entry and difficulty mode; only real tapped creature deaths credit labels, not KillCredit aliases or scripted kill credits. Labels4346/4348 have no local rows, leaving86938/86945 excluded.
 
 Quest-bound item objectives persist counts instead of reading bag counts; validated loot acquisition suppresses item creation for a single updated non-source bound objective. Completed bound objectives stop quest-only drops; reward settlement does not consume unrelated bag copies. Real request/temp-redb tests cover capped loot, replay and difficulty-specific label credit. Other item-acquisition routes and fresh live proof remain unverified.
+
+The3 authored criteria trees are unconditional All→Single amount-one leaves. Persist their completion in the active task objective counter, never lifetime achievement state: creature/script credit225891/227455 and authoritative GainAura420847. Other criteria-tree shapes are not certified. Type19 source is `AreaTrigger::HandleUnitEnter`→template entry, not static trigger-position IDs or task polygons (`reference/AreaTrigger.cpp:167–170,1017`); all six required template bindings are absent from inspected local data. Trigger quests82468/86610/91804 remain excluded, without fabricated geometry.
+
+Imported reputation caps apply before positive settlement (`Player.cpp:6645`); cap0 is unlimited, losses remain allowed. Real redb regression verifies quest45068's cap7 does not award beyond already-Exalted standing. Numeric and profession-knowledge rewards share the staged wallet in the merged transaction; ordinary master knowledge-only batch behavior is unchanged and outside this task's proof.
 
 ## Source-area audit
 
