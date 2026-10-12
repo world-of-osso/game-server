@@ -30,6 +30,65 @@ end
 '''
 
 class BossmodImportTests(unittest.TestCase):
+    def test_static_timer_tables_calls_and_dbm_dispatch(self):
+        source = '''local mod = DBM:NewMod(1, "DBM", 1)
+mod:SetEncounterID(343)
+mod:SetCreatureID(11490)
+mod:SetZone(429)
+local initial = 3.7
+local timers = { [1] = { [22478] = 8.5 } }
+local timerPain = mod:NewTimer(12, 22478)
+function mod:OnCombatStart()
+ timerPain:Start(initial)
+end
+function mod:SPELL_CAST_START(args)
+ local spellId = args.spellId
+ if spellId == 22478 then
+  timerPain:Start(timers[1][spellId])
+ elseif spellId == 17228 then
+  timerPain:Start(17)
+ end
+end
+'''
+        result = bm.extract_dbm(source, 'Zevrim.lua', 'DBM', 'pinned')
+        self.assertEqual(result['map_id'], 429)
+        self.assertEqual([(r['trigger'], r['trigger_spell_id'], r['delay_ms']) for r in result['rules']],
+                         [('engage', None, 3700), ('cast_start', 22478, 8500), ('cast_start', 17228, 17000)])
+        bw = SOURCE.replace('self:CDBar(6306, 2.4)', 'local timers = { [1] = { 2.4, 13.3 } }\n self:CDBar(6306, timers[1][1])')
+        result = bm.extract_bigwigs(bw, 'Cookie.lua', 'LittleWigs', 'pinned')
+        self.assertEqual(result['rules'][0]['delay_ms'], 2400)
+
+    def test_unreachable_dynamic_timers_are_audited_not_scheduled(self):
+        source = SOURCE + '''function mod:Dynamic(eventInfo)
+ self:Bar(6306, eventInfo.duration)
+end
+'''
+        result = bm.extract_bigwigs(source, 'Cookie.lua', 'BigWigs', 'pinned')
+        self.assertTrue(any('eventInfo.duration' in gap['reason'] for gap in result['issues']))
+        self.assertEqual(len([r for r in result['rules'] if r['action'] == 'timer']), 2)
+
+    def test_enus_warning_format_uses_pinned_spell_name(self):
+        result = bm.extract_bigwigs(SOURCE.replace('self:Message(args.spellId, "orange")',
+            'self:Message(args.spellId, "orange", CL.casting:format(args.spellName))'),
+            'Cookie.lua', 'LittleWigs', 'pinned')
+        bm.render_warnings(result, {6306: 'Acid Splash'}, {'CL.casting': 'Casting %s'})
+        warning = next(r for r in result['rules'] if r['action'] == 'warning')
+        self.assertEqual(warning['warning_text'], 'Casting Acid Splash')
+        self.assertEqual(warning['warning_key'], 'CL.casting:format(args.spellName)')
+        unresolved = bm.extract_bigwigs(SOURCE.replace('self:Message(args.spellId, "orange")',
+            'self:Message(args.spellId, "orange", L.missing)'), 'Cookie.lua', 'LittleWigs', 'pinned')
+        bm.render_warnings(unresolved, {6306: 'Acid Splash'}, {})
+        self.assertFalse(any(r['action'] == 'warning' for r in unresolved['rules']))
+        self.assertTrue(any('locale' in gap['reason'] for gap in unresolved['issues']))
+
+    def test_exboss_missing_times_are_per_encounter_gaps(self):
+        source = '''local EncounterData = { maps = { [429] = {bosses = { [343] = {
+ events = { [12] = {spellID = 22478, castType = "begincast", firstSeenSec = nil, cdSeriesSec = nil} }
+ } }} } }'''
+        result = bm.extract_exboss(source, 'EncounterData.lua', 'EXBossData', 'pinned')[0]
+        self.assertTrue(any('firstSeenSec' in gap['reason'] for gap in result['issues']))
+        self.assertFalse(any(r['action'] == 'timer' for r in result['rules']))
+
     def test_retail_initial_repeat_warning_and_provenance(self):
         result = bm.extract_bigwigs(SOURCE, "Cookie.lua", "LittleWigs", "abc123")
         self.assertEqual(result['encounter_id'], 2986)

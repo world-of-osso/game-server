@@ -23,6 +23,8 @@ uv run scripts/bossmod_data.py \
 
 ## Supported data
 
+Continuation adds lexical literal bindings, nested timer-table lookups, arithmetic and DBM spell-ID aliases/elseif dispatch. All Bar/CDBar and DBM Start/TLStart/SetTimeline calls are audited per encounter even when their runtime trigger cannot be resolved. EXBoss events with missing firstSeenSec/cdSeriesSec now each carry explicit reasons. enUS warning formats are parsed from BigWigs common/default locales and DBM core templates; unresolved locale/dynamic arguments are rejected as warning gaps, never displayed as keys. Spell names come from the pinned SpellName join. Targeted importer proof:9/9 (`continue-importer-green2.log`).
+
 Literal BigWigs/LittleWigs `OnEngage` bars; `SPELL_CAST_START`/`SPELL_CAST_SUCCESS` registered handlers; Retail-vs-Classic branch selection; literal stage/health conditions; simple source-creature predicates. Unknown conditions, role/target warnings, duration expressions and else-stage inference remain gaps. Warning color translates to built-in severity: red=High, orange/purple=Medium, cyan/green/blue/yellow=Low. This is a documented UI translation, not an authored numerical BigWigs enum. Warning text expressions remain inspectable keys, not executed format strings.
 
 Literal DBM timer constructors/start calls and spell-dispatch warnings are parsed where their event/condition is known. EXBoss EncounterData supplies spell-bound warning text and native numerical severity. `durationRules` classifies already-existing Blizzard events; those durations are **not** initial/repeat cooldowns. Current EXBoss firstSeenSec/cdSeriesSec are absent. Current raid modules largely depend on Blizzard timeline callbacks; no fixed schedule is claimed for them.
