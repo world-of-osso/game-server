@@ -121,10 +121,29 @@ struct InvitedBattleground {
     accepted: BTreeSet<u64>,
     map: Option<crate::maps::InMap>,
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
-    flags: shared::battleground::FlagObjective,
+    flags: Option<shared::battleground::FlagBattle>,
     nodes: Option<shared::battleground::NodeBattle>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     flag_positions: [Option<Vec3>; 2],
+}
+
+impl InvitedBattleground {
+    fn flag_objective(&self) -> shared::battleground::FlagObjective {
+        self.flags
+            .as_ref()
+            .map(|battle| battle.flags.clone())
+            .unwrap_or_default()
+    }
+
+    fn world_states(&self) -> Vec<(u32, i32)> {
+        if let Some(nodes) = &self.nodes {
+            return nodes.world_states(&self.instance);
+        }
+        self.flags
+            .as_ref()
+            .map(|battle| battle.world_states(&self.instance))
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Resource, Default)]
@@ -147,7 +166,8 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
-            flags: Default::default(),
+            flags: shared::battleground::flag_rules(template.map_id)
+                .map(shared::battleground::FlagBattle::new),
             nodes: shared::battleground::node_rules(template.map_id)
                 .map(shared::battleground::NodeBattle::new),
             scoreboard: Vec::new(),
@@ -565,12 +585,8 @@ fn resolve_battleground_matches(
                 invitation_time_left_secs: None,
                 score_a: invitation.instance.score_a.score,
                 score_b: invitation.instance.score_b.score,
-                flags: invitation.flags.clone(),
-                world_states: invitation
-                    .nodes
-                    .as_ref()
-                    .map(|nodes| nodes.world_states(&invitation.instance))
-                    .unwrap_or_default(),
+                flags: invitation.flag_objective(),
+                world_states: invitation.world_states(),
                 outcome: invitation.instance.outcome,
                 players: invitation.scoreboard.clone(),
                 honor_reward: None,
