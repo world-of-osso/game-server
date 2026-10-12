@@ -199,25 +199,70 @@ fn spawn_wild_summon(
         );
         return;
     };
-    let duration = super::duration_ms(world, ctx.caster, ctx.spell);
-    let expires_at =
-        (duration > 0).then(|| crate::auras::aura_now(world) + f64::from(duration) / 1000.0);
-    let display_scale = world.get::<shared::components::UnitScale>(actor).unwrap().0;
+    let display_scale = read_actor_display_scale(world, actor);
+    let metadata = snapshot_summon_metadata(world, ctx, properties_id, properties, display_scale);
     let mut entity = world.entity_mut(actor);
     entity.insert((
+        // Model DisplayScale is a separate factor, not native object scale.
+        // Current authored wild templates have native object scale1, like the
+        // existing guardian path; do not multiply the model factor twice.
+        crate::zones::NativeObjectScale(1.0),
         UnitSummonedBy(ctx.caster.to_bits()),
-        SummonedCreature {
-            owner: ctx.caster,
-            spell_id: ctx.spell.id,
-            properties_id,
-            properties,
-            display_scale,
-            expires_at,
-        },
+        metadata,
     ));
     if properties.faction != 0 {
         entity.insert(UnitFactionTemplate(properties.faction));
     }
+    drop(entity);
+    crate::auras::auras_changed(world, actor);
+}
+
+fn snapshot_summon_metadata(
+    world: &World,
+    ctx: &EffectCtx,
+    properties_id: u32,
+    properties: SummonProperties,
+    display_scale: f32,
+) -> SummonedCreature {
+    let duration = super::duration_ms(world, ctx.caster, ctx.spell);
+    let expires_at =
+        (duration > 0).then(|| crate::auras::aura_now(world) + f64::from(duration) / 1000.0);
+    SummonedCreature {
+        owner: ctx.caster,
+        spell_id: ctx.spell.id,
+        properties_id,
+        properties,
+        display_scale,
+        expires_at,
+    }
+}
+
+fn read_actor_display_scale(world: &World, actor: Entity) -> f32 {
+    let entry = world
+        .get::<Npc>(actor)
+        .expect("spawned wild summon NPC")
+        .template_id;
+    let display = world
+        .get::<ModelDisplay>(actor)
+        .expect("spawned wild summon display");
+    let difficulty = world
+        .get::<crate::zones::CreatureDifficulty>(actor)
+        .map_or(0, |difficulty| difficulty.0);
+    let template = world
+        .resource::<crate::world_data::WorldData>()
+        .template_for(entry, difficulty)
+        .expect("spawned wild summon template");
+    model_display_scale(template, display.display_id)
+}
+
+/// TC Unit::SetDisplayId: GetModelWithDisplayId supplies the display multiplier;
+/// DEFAULT_PLAYER_DISPLAY_SCALE is1 when no template model matches.
+fn model_display_scale(template: &crate::world_data::CreatureTemplate, display_id: u32) -> f32 {
+    template
+        .models
+        .iter()
+        .find(|model| model.display_id == display_id)
+        .map_or(1.0, |model| model.display_scale)
 }
 
 fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonProperties) {
@@ -250,13 +295,7 @@ fn read_summon_template(world: &World, entry: u32, level: u8) -> Option<SummonTe
     let data = world.get_resource::<crate::world_data::WorldData>()?;
     let template = data.template_for(entry, 0)?;
     let display_id = crate::zones::template_display_id(template, &mut rand::thread_rng());
-    // TC Unit::SetDisplayId: GetModelWithDisplayId supplies the display multiplier;
-    // DEFAULT_PLAYER_DISPLAY_SCALE is1 when no template model matches.
-    let display_scale = template
-        .models
-        .iter()
-        .find(|model| model.display_id == display_id)
-        .map_or(1.0, |model| model.display_scale);
+    let display_scale = model_display_scale(template, display_id);
     Some(SummonTemplate {
         entry,
         name: template.name.clone(),
@@ -292,9 +331,13 @@ fn spawn_summon(
             .get::<UnitFactionTemplate>(owner)
             .map_or(template.faction, |faction| faction.0)
     };
-    let duration = super::duration_ms(world, owner, ctx.spell);
-    let expires_at =
-        (duration > 0).then(|| crate::auras::aura_now(world) + f64::from(duration) / 1000.0);
+    let metadata = snapshot_summon_metadata(
+        world,
+        ctx,
+        properties_id,
+        properties,
+        template.display_scale,
+    );
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
@@ -332,14 +375,7 @@ fn spawn_summon(
             CreatureMotion::Still,
             MovementSpeed(0.0),
             crate::networking::CombatTarget::default(),
-            SummonedCreature {
-                owner,
-                spell_id: ctx.spell.id,
-                properties_id,
-                properties,
-                display_scale: template.display_scale,
-                expires_at,
-            },
+            metadata,
         ),
     ));
     let actor = entity.id();
