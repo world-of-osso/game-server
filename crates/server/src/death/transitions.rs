@@ -37,7 +37,7 @@ pub(super) struct PlayerDeathParams<'w, 's> {
     counters: ResMut<'w, DeathTransitionCounters>,
 }
 
-pub(super) fn process_player_death_transitions(
+pub(crate) fn process_player_death_transitions(
     mut transitions: MessageReader<PlayerDeathTransition>,
     mut params: PlayerDeathParams,
 ) {

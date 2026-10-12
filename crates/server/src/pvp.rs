@@ -229,7 +229,10 @@ impl Plugin for PvpPlugin {
             arena::receive_queue_requests.before(process_battleground_invitation_responses),
         );
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
-        app.add_systems(FixedUpdate, arena::update_matches);
+        app.add_systems(
+            FixedUpdate,
+            arena::update_matches.after(crate::death::process_player_death_transitions),
+        );
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);
