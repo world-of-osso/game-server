@@ -66,6 +66,7 @@ class WorldQuestImportTests(unittest.TestCase):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)
             poi = areas()
+            poi['blobs'].append({'ID': 99, 'QuestID': 999, 'MapID': 0, 'UiMapID': 14, 'NumPoints': 1})
             poi["blobs"][0]["QuestID"] = 52848
             poi["blobs"][1]["QuestID"] = 52847
             conn.execute("INSERT INTO tdb_quest_objectives VALUES (52848,340073,0,138122,1,'',0,0)")

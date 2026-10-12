@@ -102,7 +102,8 @@ def insert_pins(conn, quests):
 
 
 def import_definitions(conn, receipt, poi, policy_duration=86400):
-    areas = polygon_areas(poi)
+    world_ids = {row[0] for row in conn.execute('SELECT q.ID FROM tdb_quest_template q JOIN quest_info i ON i.ID=q.QuestInfoID WHERE i.Modifiers & 256 != 0')}
+    areas = polygon_areas(dict(poi, blobs=[blob for blob in poi['blobs'] if blob['QuestID'] in world_ids]))
     definitions = select_definitions(conn, receipt, areas, policy_duration)
     conn.execute("CREATE TEMP TABLE IF NOT EXISTS world_quest_selection (ID INTEGER PRIMARY KEY)")
     conn.execute("DELETE FROM world_quest_selection")
