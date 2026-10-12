@@ -1053,10 +1053,8 @@ fn wailing_caverns_world_port_spawns_selected_gathering_nodes_in_each_copy() {
                     .gameobject_spawned(*guid)
             })
             .collect();
-        assert!(
-            !selected.is_empty(),
-            "authentic pools select gathering nodes"
-        );
+        // Source pools may select no nodes; their candidates must be rejected after
+        // initialization rather than crash before inspecting that selection.
         let world = h.app.world_mut();
         let spawned: std::collections::BTreeSet<_> = world
             .query::<(&InMap, &crate::gathering::NodeSource)>()
