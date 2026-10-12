@@ -325,6 +325,8 @@ pub struct MapStore {
     pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
     pub safe_locs: HashMap<u32, WorldLocation>,
+    /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
+    pub safe_loc_transports: HashMap<u32, u32>,
     /// `graveyard_zone`: ghost zone → WorldSafeLocs ids.
     pub graveyard_zones: HashMap<u32, Vec<u32>>,
     /// `instance_template.parent` by dungeon map.
@@ -503,6 +505,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         instance_parents: load_instance_parents(conn)?,
         instance_scripts: load_instance_scripts(conn)?,
         safe_locs,
+        safe_loc_transports: load_safe_loc_transports(conn)?,
     })
 }
 
@@ -764,6 +767,13 @@ fn load_safe_locs(conn: &Connection) -> rusqlite::Result<HashMap<u32, WorldLocat
         ))
     })?;
     rows.collect()
+}
+
+fn load_safe_loc_transports(conn: &Connection) -> rusqlite::Result<HashMap<u32, u32>> {
+    let mut statement = conn.prepare("SELECT ID, TransportSpawnId FROM tdb_world_safe_locs WHERE TransportSpawnId IS NOT NULL AND TransportSpawnId <> 0")?;
+    statement
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect()
 }
 
 const AREA_TRIGGER_QUERY: &str = "SELECT a.ID, a.ContinentID, a.Pos_0, a.Pos_1, a.Pos_2, \
