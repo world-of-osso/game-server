@@ -4000,6 +4000,7 @@ fn toyfx16_cooking_recipe_needs_a_live_same_map_focus_before_spending_reagents()
         .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
     h.app.world_mut().entity_mut(h.caster).insert((
         ClientId(character),
+        shared::components::UnitScale(1.0),
         crate::profession::PlayerProfessions {
             lines: vec![],
             spells: vec![2538],
@@ -4024,8 +4025,8 @@ fn toyfx16_cooking_recipe_needs_a_live_same_map_focus_before_spending_reagents()
     let before = persistence::load_inventory(db, character);
     let refused = crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538);
     assert!(
-        refused.is_err(),
-        "real cooking incorrectly succeeded without a Cooking Fire"
+        matches!(refused, Err(crate::spell_cast::CastFailure::Unsupported(ref reason)) if reason == "Requires Cooking Fire"),
+        "real cooking incorrectly succeeded without a Cooking Fire: {refused:?}"
     );
     assert_eq!(
         persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character),
@@ -4087,7 +4088,28 @@ fn toyfx16_cooking_recipe_needs_a_live_same_map_focus_before_spending_reagents()
             );
         }
     }
+    let before_interruption =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character);
+    assert!(crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538).is_ok());
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_some()
+    );
     h.app.world_mut().despawn(object);
+    h.advance(100);
+    assert_eq!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character,),
+        before_interruption,
+        "lost focus during the source cooking cast consumed reagents"
+    );
+    assert!(
+        h.inbox
+            .failed
+            .iter()
+            .any(|failed| failed.detail.as_deref() == Some("Requires Cooking Fire"))
+    );
     assert!(crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538).is_err());
 }
 
