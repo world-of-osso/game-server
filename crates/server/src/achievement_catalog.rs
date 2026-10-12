@@ -16,7 +16,7 @@ use super::PlayerAchievementState;
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73, 74, 76, 77, 107, 108,
-    130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220,
+    109, 130, 151, 152, 157, 158, 160, 162, 165, 216, 219, 220,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -34,6 +34,8 @@ pub(crate) enum CriteriaEvent {
     ReputationGained(u32, u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
+    /// TC client loot type (`crate::loot::LootKind`) and looted item count.
+    GetLootByType(u8, u32),
     LootMoney(u64),
     UseItem(u32),
     EquipItem(u32),
@@ -97,6 +99,7 @@ impl CriteriaEvent {
             Self::ReputationGained(_, _) => 46,
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
+            Self::GetLootByType(_, _) => 109,
             Self::LootMoney(_) => 67,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
@@ -155,6 +158,7 @@ impl CriteriaEvent {
                 u32::from(level) == criteria.asset
             }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
+            Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::LootMoney(_)
             | Self::CompleteDailyQuest
             | Self::MoneyEarnedFromQuesting(_)
@@ -595,7 +599,8 @@ impl AchievementCatalog {
             CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
             CriteriaEvent::CurrencyGained(_, amount)
             | CriteriaEvent::AcquireItem(_, amount)
-            | CriteriaEvent::LootItem(_, amount) => counter.saturating_add(u64::from(amount)),
+            | CriteriaEvent::LootItem(_, amount)
+            | CriteriaEvent::GetLootByType(_, amount) => counter.saturating_add(u64::from(amount)),
             _ => counter.saturating_add(1),
         };
     }
@@ -908,6 +913,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 262 && row.get::<_, bool>(13)?)
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
+                        // Loot types `crate::loot::LootKind` produces; no fishing3.
+                        || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
                         || (matches!(kind, 9 | 14 | 48 | 59 | 62 | 63 | 65 | 67 | 74 | 76 | 77 | 81 | 107 | 108 | 130 | 219 | 220 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)

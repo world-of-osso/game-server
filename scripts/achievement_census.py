@@ -11,7 +11,7 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 14, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 48, 57, 59, 62, 63, 65, 67, 68, 69, 73, 74, 75, 76, 77, 81, 96, 107, 108, 112, 130, 151, 152, 156, 157, 158, 160, 162, 165, 185, 186, 216, 219, 220, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 14, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 48, 57, 59, 62, 63, 65, 67, 68, 69, 73, 74, 75, 76, 77, 81, 96, 107, 108, 109, 112, 130, 151, 152, 156, 157, 158, 160, 162, 165, 185, 186, 216, 219, 220, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -70,6 +70,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind == 262 and asset not in taxi_nodes:
             continue
+        if kind == 109 and asset not in (1, 4, 6, 9):
+            continue  # Loot types the server produces; no fishing3.
         if kind == 260 and asset not in (0, 2):
             continue  # TC counts Character0 and Account2 bank tabs only.
         if kind == 96 and asset not in pet_creatures:
