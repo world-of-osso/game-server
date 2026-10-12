@@ -513,6 +513,16 @@ fn learning_tailoring_takes_gold_and_learns_classic_tailoring_with_bolt_of_linen
 }
 
 #[test]
+fn learning_tailoring_sets_parent_line_maximum_from_lower_authored_tier() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    // Tailoring197 is enabled at ParentTierIndex4; SkillTiers462 authors only Value1=75,
+    // so TC GetValueForTierIndex(3) falls back to 75.
+    let parent = h.line(TAILORING_SKILL).unwrap();
+    assert_eq!((parent.step, parent.rank, parent.max_rank), (4, 1, 75));
+}
+
+#[test]
 fn tailoring_purchase_without_ten_copper_fails_and_changes_nothing() {
     let Some(mut h) = harness(10) else { return };
     h.set_gold(9);

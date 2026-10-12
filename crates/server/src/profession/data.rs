@@ -142,8 +142,9 @@ impl ProfessionData {
             .is_some_and(|line| line.category == SKILL_CATEGORY_PROFESSION && line.parent == 0)
     }
 
-    /// `SkillTiers.Value[step - 1]` of the skill's `SkillRaceClassInfo` row for
-    /// race/class; `None` without a row or tier (TrinityCore `EffectSkill` returns).
+    /// TrinityCore `SkillTiersEntry::GetValueForTierIndex(step - 1)` (ObjectMgr.cpp:7955-7964)
+    /// of the skill's `SkillRaceClassInfo` row for race/class: an unset tier falls back to
+    /// the nearest lower set one. `None` without a row or tier (`EffectSkill` returns).
     pub fn tier_cap(&self, skill: u32, step: u16, race: u8, class: u8) -> Option<u16> {
         let index = usize::from(step.checked_sub(1)?);
         let row = self
@@ -151,7 +152,14 @@ impl ProfessionData {
             .get(&skill)?
             .iter()
             .find(|row| row.fits(race, class))?;
-        self.tiers.get(&row.tier)?.get(index).copied()
+        let values = self.tiers.get(&row.tier)?;
+        let index = index.min(values.len() - 1);
+        values[..=index]
+            .iter()
+            .rev()
+            .find(|value| **value != 0)
+            .or(values.first())
+            .copied()
     }
 
     /// Whether the race/class's `SkillRaceClassInfo` row of `skill` has
