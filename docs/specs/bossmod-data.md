@@ -34,8 +34,10 @@ Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred S
 ## Known gaps (current cycle)
 
 - [ ] Dynamic Blizzard timeline callbacks, observed duration classification and variable/count-indexed timer arrays need their real triggering data; they cannot be substituted with invented intervals.
-- [ ] Complete server/client integration and native acceptance.
+- [ ] Complete server/client integration and native acceptance. Hosted reconciliation test currently fails for Zevrim22478: its completed effect is absent from the fixture inbox; actual cast-start observation remains unproved. Six other timeline tests pass. This branch is not ready.
 - [ ] DBM/BigWigs extraction coverage beyond literal supported constructs.
+- [ ] Render stored warning text expressions/keys; current unchanged wire message displays the spell label and imported severity only.
+- [ ] Complete independent verification; the available delegation backend cannot refresh its OAuth session.
 
 ## Out of scope
 

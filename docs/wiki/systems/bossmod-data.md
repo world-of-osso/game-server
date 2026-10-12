@@ -34,3 +34,21 @@ uv run --with luaparser==4.0.0 python -m unittest discover -s scripts/tests -p t
 ```
 
 The report separates encounters identified from encounters with timers. Identifying an encounter or importing warnings does not certify its schedule. Runtime/live gates remain open.
+
+## Current integration boundary
+
+`bossmod_authority` selects the sole addon with statically extracted timers for an encounter. Conflicting addon schedules abort import rather than choosing a priority. `bossmod_binding` joins addon-declared map/NPC/encounter identities against DB2 and local TDB spawns; it supplements the existing lifecycle registry only in the copied database.
+
+Server `scripted_ai::bossmod` loads that authority, keeps independent countdowns, and consumes central authoritative combat-log CastStart/CastSuccess events. SmartAI/EventMap projections and blanket Low cast warnings are removed; those schedulers still drive combat but are not alternate alert sources. Existing client timeline messages/UI are reused. Warning keys are retained in the catalog but not rendered through the unchanged protocol.
+
+At revision aab754da: importer5/5 passes; timeline6/7 passes, with hosted Zevrim22478 proof red. Initial source bars and Hydrospawn22419 warning/reset were observed by the real-combat test before the second encounter assertion fails. This is not two-encounter or native acceptance. No private server/client was launched and no PNG was produced.
+
+The observed fixture issue has two distinct boundaries: AoE cast log entries with no owned source/explicit target are not delivered to the player inbox, and a cast-start addon alert does not imply a completed effect. The next diagnostic must observe actual CastState admission for start-triggered rules rather than infer it from completed-effect delivery. Further fixes paused after repeated failed iterations; the question tool is unavailable in this noninteractive session.
+
+Final copy import identifies DBM24/BigWigs20/LittleWigs446/EXBossData37 encounters; only LittleWigs343 have literal schedules. There are191 authenticated hosted bindings. DBM/BigWigs/EXBoss data requiring native Blizzard timeline input remain explicit gaps, not fabricated cooldowns.
+
+## Sources
+
+- `scripts/bossmod_data.py` and `scripts/tests/test_bossmod_data.py` — extraction/copy contract.
+- `crates/server/src/scripted_ai/bossmod.rs` and `tests/data_bosses.rs` — current runtime and failing acceptance boundary.
+- Read-only addon roots and exact versions/file/line receipts are retained by `bossmod_encounter`, `bossmod_rule` and the generated diagnostic coverage report.
