@@ -181,6 +181,67 @@ fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
 }
 
 #[test]
+fn encounter_coverage_nibbles_health_check_starts_authored_light_infusion_phase() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(0.1);
+    assert!(
+        h.inbox(0)
+            .engages
+            .iter()
+            .any(|frame| frame.unit == nibbles.to_bits() && frame.target_frame_priority == 2)
+    );
+    h.hit_pct(nibbles, 2_000.0);
+    h.advance(0.8);
+    assert_ne!(
+        h.app.world().get::<UnitFactionTemplate>(nibbles).unwrap().0,
+        35,
+        "source health check is not due before1s"
+    );
+    h.advance(0.2);
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(nibbles).unwrap().0,
+        35
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(nibbles)
+            .unwrap()
+            .display_id,
+        128332
+    );
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(nibbles)
+        .expect("Light Infusion must start at the1s health check");
+    assert_eq!(cast.spell_id, 1230304);
+    assert_eq!(cast.duration, 2.0, "local CastingTimeIndex5 is2000ms");
+    h.advance(2.2);
+    let channel = h
+        .app
+        .world()
+        .get::<CastState>(nibbles)
+        .expect("Light Infusion must become the authored channel");
+    assert_eq!(channel.spell_id, 1230304);
+    assert_eq!(channel.cast_type, CastType::Channel);
+    assert_eq!(channel.duration, 15.0, "local DurationIndex8 is15000ms");
+    assert!(
+        h.inbox(1).engages.is_empty(),
+        "companion frame cannot leak to another copy"
+    );
+}
+
+#[test]
 fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle() {
     // TC a352b1fa boss_kystia_manaheart.cpp: 1s initial, 3500ms repeat.
     // Primary actor only completes encounter3101; Nibbles never grants boss credit.

@@ -360,12 +360,16 @@ fn update_instance_lock(world: &mut World, map: InMap, encounter_id: u32, diffic
 
 /// `SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, unit, priority)`.
 pub fn send_engage_unit(world: &mut World, map: InMap, unit: Entity) {
+    send_engage_unit_with_priority(world, map, unit, BOSS_FRAME_PRIORITY);
+}
+
+pub fn send_engage_unit_with_priority(world: &mut World, map: InMap, unit: Entity, priority: u8) {
     send_to_players(
         world,
         map,
         EncounterEngageUnit {
             unit: unit.to_bits(),
-            target_frame_priority: BOSS_FRAME_PRIORITY,
+            target_frame_priority: priority,
         },
     );
     super::bossmod::engage(world, unit);
