@@ -622,10 +622,10 @@ fn load_trees(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::
 }
 
 fn load_definitions(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
-    // Statistic definitions remain outside achievement grants.
-    const COUNTER: u32 = 0x1;
+    // Counters are statistics; Guild-flag definitions require a guild actor, not a player.
+    const NON_PLAYER_GRANTS: u32 = 0x1 | 0x4000;
     let mut query = conn.prepare("SELECT ID, Title_lang, Points, CriteriaTree, Instance_ID, Faction FROM achievement WHERE CriteriaTree != 0 AND (Flags & ?1) = 0")?;
-    let rows = query.query_map([COUNTER], |row| {
+    let rows = query.query_map([NON_PLAYER_GRANTS], |row| {
         let map_id: i32 = row.get(4)?;
         Ok(AchievementDef {
             id: row.get(0)?,
