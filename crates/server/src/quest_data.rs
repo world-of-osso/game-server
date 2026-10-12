@@ -559,6 +559,29 @@ struct ContentNames {
     items: HashMap<u32, QuestItemInfo>,
 }
 
+#[cfg(test)]
+#[test]
+#[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
+fn zone_population_real_copy_loads_quests_givers_and_objectives() {
+    let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
+    let db = load_quest_db(Path::new(&path)).expect("promoted quest content loads");
+    for (id, title, giver) in [
+        (36626, "Host Howell", 86065),
+        (48677, "Wicker Worship", 127296),
+        (82747, "Crossroads Plaza", 224544),
+    ] {
+        let quest = db.quests.get(&id).expect("new zone quest");
+        assert_eq!(quest.title, title);
+        assert!(db.starters[&giver].contains(&id));
+        assert!(!quest.completion_blocked);
+    }
+    let wolves = &db.quests[&47947];
+    assert_eq!(wolves.title, "Big Bad Wolves");
+    assert!(wolves.objectives.iter().any(|o| {
+        o.kind == ObjectiveKind::Monster && o.object_id == 124814 && o.required == 10
+    }));
+}
+
 pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let mut names = ContentNames {

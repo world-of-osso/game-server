@@ -32,10 +32,10 @@ const MIN_UNLOAD_DELAY_SECS: f64 = 1.0;
 /// World maps with local terrain and promoted TDB1210 content, plus the existing
 /// Eastern Kingdoms, Kalimdor and Zephras realms. Other world maps remain refused.
 /// See docs/world-population-counts.md for source/terrain/exclusion evidence.
-pub const HOSTED_CONTINENTS: [u32; 34] = [
-    0, 1, 870, 1064, 1116, 1220, 1265, 1464, 1479, 1481, 1502, 1642, 1643, 1669, 1860, 1865, 2081,
-    2127, 2175, 2222, 2241, 2268, 2297, 2374, 2444, 2454, 2552, 2570, 2601, 2694, 2738, 2771, 2785,
-    2991,
+pub const HOSTED_CONTINENTS: [u32; 46] = [
+    0, 1, 369, 530, 571, 609, 646, 648, 654, 730, 732, 860, 861, 870, 974, 1064, 1116, 1220, 1265,
+    1464, 1479, 1481, 1502, 1642, 1643, 1669, 1860, 1865, 2081, 2127, 2175, 2222, 2241, 2268, 2297,
+    2374, 2444, 2454, 2552, 2570, 2601, 2694, 2738, 2771, 2785, 2991,
 ];
 
 /// Who a player enters instances with: its character, its group and the group's

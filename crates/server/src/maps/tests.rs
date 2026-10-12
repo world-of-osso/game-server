@@ -27,7 +27,7 @@ fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
     let store = map_store().expect("authentic map metadata");
     let mut manager = InstanceManager::default();
     let player = entrant(9820, None);
-    for map_id in [2444, 2552, 2601, 2222, 1643, 1642] {
+    for map_id in [2444, 2552, 2601, 2222, 1643, 1642, 530, 571, 646, 860] {
         assert_eq!(
             manager.player_cannot_enter(store, map_id, player, 80, SUNDAY_NOON),
             None,
