@@ -32,6 +32,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 1441a273 / shared00d33e7 | 2934 | 4711 | 182 | Native305 player minimum speed, all7827 memberships, exit0, 565.22s |
 | dfc71656 / shared00d33e7 | 2965 | 4680 | 182 | Native466 final player armor, all7827 memberships, exit0, 477.51s |
 | d41f51c2 / shared00d33e7 | 2969 | 4676 | 182 | Zero-amount284/285 child linkage, all7827 memberships, exit0, 545.53s |
+| 8d143318 / shared00d33e7 | 2983 | 4662 | 182 | Native330 moving cast/channel masks, all7827 memberships, exit0, 549.22s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -205,7 +206,7 @@ Pinned TC a352b1fa Unit::CanCastSpellWhileMoving (Unit.cpp3298–3313) treats330
 
 Eight controls pass: real moving Lightning Bolt damage, real moving Disintegrate channel/ticks, gain/removal/expiry during an active cast, foreign family, empty mask within the same family, foreign recipient and the Attr13 veto. The empty-mask and veto controls isolate native metadata on a real Lightning Bolt fixture; they are not native empower execution proof. Tests assert server CastState (the replicated component) and actual cast outcomes, not newly captured client-side replication/live UI. Hover applies only its330 field here, not dash geometry or complete ability parity.
 
-Adjacent ordinary movement cancellation2, Disintegrate1, queue/override11 and Blooming8 pass. Logs: `cast-mobility-{red2,green,controls}.log`, `cast-mobility-adjacent-*.log`. Other movement-exception aura types, charged-buff consumption, empowerment, legal builds and native live movement remain uncertified. Full census pending.
+Adjacent ordinary movement cancellation2, Disintegrate1, queue/override11 and Blooming8 pass. Logs: `cast-mobility-{red2,green,controls}.log`, `cast-mobility-adjacent-*.log`. Other movement-exception aura types, charged-buff consumption, empowerment, legal builds and native live movement remain uncertified. Batch26 at `8d143318` records all7827 memberships:2983 working/4662 partial/182 broken. Fourteen memberships move to the working probe boundary; remaining330 roots retain their separate gaps.
 
 ## Retained boundaries
 
