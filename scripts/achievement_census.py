@@ -11,7 +11,7 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 48, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 96, 107, 108, 109, 110, 112, 114, 130, 151, 152, 156, 157, 158, 160, 162, 165, 185, 186, 216, 219, 220, 225, 245, 246, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 48, 54, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 96, 107, 108, 109, 110, 112, 114, 130, 151, 152, 156, 157, 158, 160, 162, 165, 185, 186, 216, 219, 220, 225, 245, 246, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -52,6 +52,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind in (28, 29, 34, 69, 110) and asset not in spells:
             continue
+        if kind == 54 and asset not in (34, 101, 86, 87, 59):
+            continue  # TC TextEmotes for the five native emotes, not animation IDs.
         if kind == 26 and asset not in (0, 1, 2, 6):
             continue  # Native fatigue/drowning/falling/void only, no lava/slime/fire producer.
         if kind == 20 and row_id == 111356:
