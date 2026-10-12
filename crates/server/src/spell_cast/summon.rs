@@ -158,18 +158,66 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         );
         return;
     }
+    let Some(dest) = ctx.dest else {
+        warn!("Spell {}: summon has no destination", ctx.spell.id);
+        return;
+    };
     let entry = effect.misc_values[0] as u32;
+    if properties.control == CONTROL_WILD && properties.title == 0 {
+        spawn_wild_summon(world, ctx, properties_id, properties, entry, dest);
+        return;
+    }
     let level = world.get::<Level>(ctx.caster).map_or(1, |level| level.0);
     let Some(template) = read_summon_template(world, entry, level) else {
         warn!("Spell {}: missing summon creature {entry}", ctx.spell.id);
         return;
     };
-    let Some(dest) = ctx.dest else {
-        warn!("Spell {}: summon has no destination", ctx.spell.id);
-        return;
-    };
     replace_slotted_summon(world, ctx.caster, properties);
     spawn_summon(world, ctx, properties_id, properties, &template, dest);
+}
+
+/// TC EffectSummonType's wild/default branch uses Map::SummonCreature,
+/// not guardian stats: keep the map difficulty and normal AI lifecycle.
+fn spawn_wild_summon(
+    world: &mut World,
+    ctx: &EffectCtx,
+    properties_id: u32,
+    properties: SummonProperties,
+    entry: u32,
+    dest: super::targets::Dest,
+) {
+    let position = [
+        dest.position.x,
+        -dest.position.z,
+        dest.position.y,
+        dest.orientation,
+    ];
+    let Some(actor) = crate::zones::summon_creature(world, ctx.caster, entry, position) else {
+        warn!(
+            "Spell {}: unable to summon wild creature {entry}",
+            ctx.spell.id
+        );
+        return;
+    };
+    let duration = super::duration_ms(world, ctx.caster, ctx.spell);
+    let expires_at =
+        (duration > 0).then(|| crate::auras::aura_now(world) + f64::from(duration) / 1000.0);
+    let display_scale = world.get::<shared::components::UnitScale>(actor).unwrap().0;
+    let mut entity = world.entity_mut(actor);
+    entity.insert((
+        UnitSummonedBy(ctx.caster.to_bits()),
+        SummonedCreature {
+            owner: ctx.caster,
+            spell_id: ctx.spell.id,
+            properties_id,
+            properties,
+            display_scale,
+            expires_at,
+        },
+    ));
+    if properties.faction != 0 {
+        entity.insert(UnitFactionTemplate(properties.faction));
+    }
 }
 
 fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonProperties) {
