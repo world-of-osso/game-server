@@ -123,7 +123,9 @@ struct InvitedBattleground {
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
     flags: Option<shared::battleground::FlagBattle>,
     nodes: Option<shared::battleground::NodeBattle>,
+    eye: Option<shared::battleground::EyeBattle>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
 }
 
@@ -138,6 +140,9 @@ impl InvitedBattleground {
     fn world_states(&self) -> Vec<(u32, i32)> {
         if let Some(nodes) = &self.nodes {
             return nodes.world_states(&self.instance);
+        }
+        if let Some(eye) = &self.eye {
+            return eye.world_states(&self.instance);
         }
         self.flags
             .as_ref()
@@ -170,6 +175,8 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
                 .map(shared::battleground::FlagBattle::new),
             nodes: shared::battleground::node_rules(template.map_id)
                 .map(shared::battleground::NodeBattle::new),
+            eye: shared::battleground::eye_rules(template.map_id)
+                .map(shared::battleground::EyeBattle::new),
             scoreboard: Vec::new(),
             flag_positions: [None, None],
         },

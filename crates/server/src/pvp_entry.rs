@@ -52,6 +52,7 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
     let starts = shared::battleground::flag_rules(invitation.map_id)
         .map(|rules| rules.starts)
         .or_else(|| shared::battleground::node_rules(invitation.map_id).map(|rules| rules.starts))
+        .or_else(|| shared::battleground::eye_rules(invitation.map_id).map(|rules| rules.starts))
         .ok_or("this battleground has no implemented entry lifecycle")?;
     let location_id = starts[match invitation.team {
         BgTeam::A => 0,
