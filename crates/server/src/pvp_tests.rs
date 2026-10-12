@@ -203,6 +203,119 @@ fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates(
     );
 }
 
+fn arena_player_state(
+    team: shared::battleground::BgTeam,
+    phase: shared::battleground::BgPhase,
+) -> PlayerPvpState {
+    PlayerPvpState {
+        battleground: Some(shared::protocol::BattlegroundSnapshot {
+            match_id: 1,
+            battleground_id: 8,
+            name: "Ruins of Lordaeron".into(),
+            map_id: 572,
+            team,
+            phase,
+            accepted: true,
+            invitation_time_left_secs: None,
+            score_a: 0,
+            score_b: 0,
+            flags: Default::default(),
+            outcome: None,
+            players: Vec::new(),
+            honor_reward: None,
+            arena: Some(shared::protocol::ArenaMatchSnapshot {
+                mode: shared::protocol::ArenaQueueMode::Skirmish2v2,
+                preparation_remaining_secs: None,
+                shadow_sight_available: false,
+                units: Vec::new(),
+            }),
+        }),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn arena_opponents_of_same_race_attack_only_after_preparation_and_never_attack_teammates() {
+    use crate::spell_cast::targets::{Relation, is_friendly, is_hostile, relation_matches};
+    use shared::battleground::{BgPhase, BgTeam};
+    use shared::components::{Health, Player, UnitFactionTemplate};
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    let map = crate::maps::InMap {
+        map_id: 572,
+        instance_id: 1,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((map, arena_player_state(BgTeam::A, BgPhase::Waiting)));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        map,
+        UnitFactionTemplate(1),
+        Player {
+            name: "fb_arena_enemy".into(),
+            race: 1,
+            class: 1,
+            appearance: Default::default(),
+        },
+        arena_player_state(BgTeam::B, BgPhase::Waiting),
+    ));
+    let health = h.app.world().get::<Health>(h.npc).unwrap().current;
+    h.attack(h.npc);
+    h.advance(5);
+    assert_eq!(h.app.world().get::<Health>(h.npc).unwrap().current, health);
+    for entity in [h.caster, h.npc] {
+        h.app
+            .world_mut()
+            .get_mut::<PlayerPvpState>(entity)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .phase = BgPhase::InProgress;
+    }
+    assert!(
+        is_hostile(h.app.world(), h.caster, h.npc),
+        "same-race arena opponents are hostile"
+    );
+    assert!(!is_friendly(h.app.world(), h.caster, h.npc));
+    assert!(relation_matches(
+        h.app.world(),
+        h.caster,
+        h.npc,
+        Relation::Enemy
+    ));
+    h.attack(h.npc);
+    h.advance(20);
+    assert!(
+        h.app.world().get::<Health>(h.npc).unwrap().current < health,
+        "actual HostClient attack caused damage"
+    );
+    h.stop_attack();
+    h.advance(3);
+    h.app
+        .world_mut()
+        .get_mut::<PlayerPvpState>(h.npc)
+        .unwrap()
+        .battleground
+        .as_mut()
+        .unwrap()
+        .team = BgTeam::A;
+    assert!(is_friendly(h.app.world(), h.caster, h.npc));
+    assert!(!relation_matches(
+        h.app.world(),
+        h.caster,
+        h.npc,
+        Relation::Enemy
+    ));
+    let teammate_health = h.app.world().get::<Health>(h.npc).unwrap().current;
+    h.attack(h.npc);
+    h.advance(20);
+    assert_eq!(
+        h.app.world().get::<Health>(h.npc).unwrap().current,
+        teammate_health
+    );
+}
+
 #[test]
 fn queue_for_battleground_sets_queue_state() {
     let mut player_state = PlayerPvpState::default();

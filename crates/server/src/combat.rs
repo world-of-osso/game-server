@@ -219,6 +219,9 @@ struct AttackRules<'w, 's> {
         ),
     >,
     health: Query<'w, 's, &'static Health>,
+    arenas: Query<'w, 's, &'static crate::pvp::PlayerPvpState>,
+    maps: Query<'w, 's, &'static crate::maps::InMap>,
+    summon_owners: Query<'w, 's, &'static shared::components::UnitSummonedBy>,
     unit_flags: Query<'w, 's, &'static shared::components::UnitFlags>,
     templates: Res<'w, FactionTemplates>,
 }
@@ -243,6 +246,22 @@ impl AttackRules<'_, '_> {
             })
     }
 
+    fn arena_relation(
+        &self,
+        attacker: Entity,
+        victim: Entity,
+    ) -> Option<crate::pvp::arena_combat::ArenaRelation> {
+        let controller = |entity| match self.summon_owners.get(entity) {
+            Ok(owner) => Entity::try_from_bits(owner.0).expect("server-owned summon controller"),
+            Err(_) => entity,
+        };
+        crate::pvp::arena_combat::relation_between(
+            self.arenas.get(controller(attacker)).ok(),
+            self.arenas.get(controller(victim)).ok(),
+            self.maps.get(attacker).copied().ok(),
+            self.maps.get(victim).copied().ok(),
+        )
+    }
     fn valid_attack_target(&self, attacker: Entity, victim: Entity) -> bool {
         let uninteractible = self
             .unit_flags
@@ -252,14 +271,22 @@ impl AttackRules<'_, '_> {
             .factions
             .get(attacker)
             .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, victim));
-        attacker != victim
-            && !self.dead(victim)
-            && !uninteractible
-            && (dueling
-                || match (self.unit_faction(attacker), self.unit_faction(victim)) {
-                    (Some(attacker), Some(victim)) => self.templates.can_attack(attacker, victim),
-                    _ => false,
-                })
+        let permitted = match self.arena_relation(attacker, victim) {
+            Some(relation) => matches!(
+                relation,
+                crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: true }
+            ),
+            None => {
+                dueling
+                    || match (self.unit_faction(attacker), self.unit_faction(victim)) {
+                        (Some(attacker), Some(victim)) => {
+                            self.templates.can_attack(attacker, victim)
+                        }
+                        _ => false,
+                    }
+            }
+        };
+        attacker != victim && !self.dead(victim) && !uninteractible && permitted
     }
 }
 
