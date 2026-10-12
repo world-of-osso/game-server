@@ -52,11 +52,12 @@ fn native_threshold(world: &World, caster: Entity) -> Option<u32> {
         .iter()
         .find(|aura| aura.spell_id == BLOOMING_INFUSION && aura.caster == caster)?;
     let amount = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
+    let threshold = amount as u32;
     assert!(
-        amount > 0.0,
+        threshold > 0,
         "Blooming Infusion requires a positive authored cast count"
     );
-    Some(amount as u32)
+    Some(threshold)
 }
 
 pub(super) fn check_children(
@@ -97,9 +98,9 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let Some(child) = generated_buff(world, caster, spell.id) else {
         return;
     };
-    let Some(mut casts) = world.get_mut::<InfusionCasts>(caster) else {
-        return;
-    };
+    let mut casts = world
+        .get_mut::<InfusionCasts>(caster)
+        .expect("own Blooming Infusion cast state");
     let counter = if child == OFFENSIVE_INFUSION {
         &mut casts.regrowth
     } else {
