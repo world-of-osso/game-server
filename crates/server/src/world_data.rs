@@ -24,6 +24,8 @@ pub struct CreatureTemplate {
     pub family: u32,
     /// `type_flags`: Retail `CreatureTypeFlags` of the difficulty row (TAMEABLE, TAMEABLE_EXOTIC …).
     pub type_flags: u32,
+    /// Source creature_template.flags_extra, including dungeon-boss/knockback immunity.
+    pub flags_extra: u32,
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
@@ -472,6 +474,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         creature_type: row.get::<_, i64>(10)? as u8,
         family: row.get::<_, i64>(28)? as u32,
         type_flags: row.get::<_, i64>(29)? as u32,
+        flags_extra: row.get::<_, i64>(11)? as u32,
         rank: classification_rank(row, 8)?,
         experience_modifier: row.get(9)?,
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER

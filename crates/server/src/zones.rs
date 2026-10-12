@@ -736,6 +736,7 @@ mod tests {
             creature_type: 1,
             family: 0,
             type_flags: 0,
+            flags_extra: 0,
             min_level: 1,
             max_level: 1,
             faction: 0,

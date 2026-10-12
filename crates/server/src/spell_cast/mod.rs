@@ -144,13 +144,17 @@ mod assisted_costs;
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
 mod school_costs;
-pub(crate) mod teleport;
+mod knockback;
+#[cfg(test)]
+mod knockback_tests;
+pub(crate) pub(crate) mod teleport;
 mod teleport_positions;
 
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(crate::knockback::KnockbackPlugin);
         app.init_resource::<disenchant::DisenchantData>()
             .add_systems(Startup, disenchant::load_startup)
             .init_resource::<UnhandledEffects>()
