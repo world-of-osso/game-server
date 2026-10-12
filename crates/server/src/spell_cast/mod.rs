@@ -569,26 +569,39 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
+    if event.kind == CombatLogKind::Death {
+        let source = event
+            .source
+            .and_then(Entity::try_from_bits)
+            .map(|unit| combat_event_owner(world, unit));
+        let target = event.target.and_then(Entity::try_from_bits);
+        if let (Some(killer), Some(victim)) = (source, target) {
+            crate::quest::record_player_kill(world, killer, victim);
+        }
+    }
     let mut players: Vec<Entity> = Vec::new();
     for unit in [event.source, event.target]
         .into_iter()
         .flatten()
         .filter_map(Entity::try_from_bits)
     {
-        let player = world.get::<crate::followers::Follower>(unit).map_or_else(
-            || {
-                world
-                    .get::<crate::hunter_pet::HunterPet>(unit)
-                    .map_or(unit, |pet| pet.owner)
-            },
-            |follower| follower.owner,
-        );
+        let player = combat_event_owner(world, unit);
         if !players.contains(&player) {
             players.push(player);
         }
     }
     for player in players {
         send_to_owner(world, player, event.clone());
+    }
+}
+
+fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+    if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
+        return follower.owner;
+    }
+    match world.get::<crate::hunter_pet::HunterPet>(unit) {
+        Some(pet) => pet.owner,
+        None => unit,
     }
 }
 
@@ -1077,6 +1090,7 @@ fn start_queued_casts(world: &mut World) {
 /// casters are exempt.
 pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool {
     if world.get::<Npc>(caster).is_some()
+        || crate::mount_journal::knows_spell(world, caster, spell_id)
         || world
             .get::<crate::profession::PlayerProfessions>(caster)
             .is_some_and(|professions| professions.knows(spell_id))

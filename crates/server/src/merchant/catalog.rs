@@ -3,10 +3,11 @@
 //! Loading follows AzerothCore `ObjectMgr::LoadVendors` (ObjectMgr.cpp:9911):
 //! rows in `slot, item` order, a negative `item` inlines that vendor's list
 //! (`LoadReferenceVendor`), and rows with a `maxcount` but no `incrtime` (or the
-//! reverse) are ignored. Rows with a Wrath `ExtendedCost` are skipped: Retail
-//! `ItemExtendedCost` is not imported, so their honor/token prices are unknown.
+//! reverse) are ignored. Mount offers use exact TDB1210 rows and authenticated
+//! Retail ItemExtendedCost; other ExtendedCost offers remain omitted.
 use std::collections::{HashMap, HashSet};
 
+use super::mount_costs::{self, MountCost, ReputationRequirement};
 use bevy::prelude::*;
 use rusqlite::Connection;
 
@@ -44,6 +45,8 @@ pub struct VendorCatalog {
     pub vendors: HashMap<u32, Vec<VendorSlot>>,
     /// Every `content_item` row, by item id.
     pub goods: HashMap<u32, VendorGoods>,
+    pub(super) mount_costs: HashMap<(u32, u32), MountCost>,
+    pub(super) mount_reputation: HashMap<u32, ReputationRequirement>,
 }
 
 impl VendorCatalog {
@@ -52,22 +55,42 @@ impl VendorCatalog {
     }
 }
 
-type RawRows = HashMap<u32, Vec<(i64, u32, u32)>>;
+type RawRows = HashMap<u32, Vec<(i64, u32, u32, u32)>>;
 
 pub fn load_vendor_catalog(conn: &Connection) -> rusqlite::Result<VendorCatalog> {
     let goods = load_goods(conn)?;
     let raw = load_raw_rows(conn)?;
+    let costs = mount_costs::load_costs(conn)?;
+    let mount_reputation = mount_costs::load_reputation(conn)?;
+    let mut mount_costs = HashMap::new();
     let vendors = raw
         .keys()
         .map(|&entry| {
             let mut slots = Vec::new();
             expand(&raw, entry, &mut HashSet::new(), &mut slots);
-            slots.retain(|slot| goods.contains_key(&slot.item_id));
+            slots.retain(|(slot, cost)| {
+                goods.contains_key(&slot.item_id) && (*cost == 0 || costs.contains_key(cost))
+            });
             slots.truncate(MAX_VENDOR_ITEMS);
+            let slots = slots
+                .into_iter()
+                .enumerate()
+                .map(|(index, (slot, cost))| {
+                    if let Some(cost) = costs.get(&cost) {
+                        mount_costs.insert((entry, index as u32), cost.clone());
+                    }
+                    slot
+                })
+                .collect();
             (entry, slots)
         })
         .collect();
-    Ok(VendorCatalog { vendors, goods })
+    Ok(VendorCatalog {
+        vendors,
+        goods,
+        mount_costs,
+        mount_reputation,
+    })
 }
 
 fn load_goods(conn: &Connection) -> rusqlite::Result<HashMap<u32, VendorGoods>> {
@@ -105,15 +128,20 @@ fn load_goods_from_table(
 }
 
 fn load_raw_rows(conn: &Connection) -> rusqlite::Result<RawRows> {
-    let mut statement = conn.prepare(
-        "SELECT entry, item, maxcount, incrtime FROM content_npc_vendor \
-         WHERE ExtendedCost = 0 ORDER BY entry, slot, item",
-    )?;
+    let mut statement = conn.prepare(&format!(
+        "WITH mount_items AS ({}), mount_offers AS (\
+         SELECT * FROM tdb_npc_vendor WHERE type=1 AND item IN (SELECT ItemID FROM mount_items)) \
+         SELECT entry, item, maxcount, incrtime, ExtendedCost FROM (\
+         SELECT entry, slot, item, maxcount, incrtime, ExtendedCost FROM content_npc_vendor c \
+         WHERE ExtendedCost=0 AND NOT EXISTS (SELECT 1 FROM mount_offers m WHERE m.entry=c.entry AND m.item=c.item) \
+         UNION ALL SELECT entry, slot, item, maxcount, incrtime, ExtendedCost FROM mount_offers) \
+         ORDER BY entry, slot, item, ExtendedCost", mount_costs::MOUNT_ITEMS
+    ))?;
     let mut raw = RawRows::new();
     let rows = statement.query_map([], |row| {
         Ok((
             row.get::<_, u32>(0)?,
-            (row.get(1)?, row.get(2)?, row.get(3)?),
+            (row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?),
         ))
     })?;
     for row in rows {
@@ -124,11 +152,11 @@ fn load_raw_rows(conn: &Connection) -> rusqlite::Result<RawRows> {
 }
 
 /// Append `entry`'s slots, inlining referenced vendors once each.
-fn expand(raw: &RawRows, entry: u32, seen: &mut HashSet<u32>, out: &mut Vec<VendorSlot>) {
+fn expand(raw: &RawRows, entry: u32, seen: &mut HashSet<u32>, out: &mut Vec<(VendorSlot, u32)>) {
     if !seen.insert(entry) {
         return;
     }
-    for &(item, maxcount, incrtime) in raw.get(&entry).into_iter().flatten() {
+    for &(item, maxcount, incrtime, cost) in raw.get(&entry).into_iter().flatten() {
         if item < 0 {
             expand(raw, item.unsigned_abs() as u32, seen, out);
             continue;
@@ -136,10 +164,13 @@ fn expand(raw: &RawRows, entry: u32, seen: &mut HashSet<u32>, out: &mut Vec<Vend
         if (maxcount == 0) != (incrtime == 0) {
             continue;
         }
-        out.push(VendorSlot {
-            item_id: item as u32,
-            maxcount,
-            incrtime,
-        });
+        out.push((
+            VendorSlot {
+                item_id: item as u32,
+                maxcount,
+                incrtime,
+            },
+            cost,
+        ));
     }
 }

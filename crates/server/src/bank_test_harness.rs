@@ -144,6 +144,7 @@ fn spawn_connection(app: &mut App, peer: u64, character_id: u64, name: &str) -> 
                 max: 100.0,
             },
             UnitFactionTemplate(HUMAN_TEMPLATE),
+            crate::maps::InMap::continent(0),
         ))
         .id();
     let connection = app
@@ -376,6 +377,7 @@ impl Harness {
                     max: 100.0,
                 },
                 UnitFactionTemplate(faction),
+                crate::maps::InMap::continent(0),
             ))
             .id();
         self.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
