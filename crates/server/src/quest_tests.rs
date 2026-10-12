@@ -236,6 +236,54 @@ fn setup_app() -> Option<App> {
 }
 
 #[test]
+fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_daily() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic quest data");
+    let client = spawn_client(&mut app, 10);
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(PlayerAchievementState::default());
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    enter_world(&mut app, &client);
+    let giver = spawn_npc(&mut app, 37675, 0.0);
+    accept(&mut app, &client, giver, 24629);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    turn_in(&mut app, &client, giver, 24629, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    assert!(
+        !persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .contains_key(&4984)
+    );
+    // Authored objective37990 receives native creature credit; not a perfume-use claim.
+    kill(&mut app, &client, 37990, 10);
+    turn_in(&mut app, &client, giver, 24629, None);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(24629));
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&4984),
+        Some(&1)
+    );
+    turn_in(&mut app, &client, giver, 24629, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    app.update();
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&4984),
+        Some(&1)
+    );
+}
+
+#[test]
 fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     use shared::protocol::AchievementStateUpdate;
@@ -299,6 +347,10 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
     let saved = persistence::load_achievements(db(&app), client.character_id);
     assert!(saved.earned_ids.contains(&2357));
     assert_eq!(saved.criteria_progress[&8905], 1);
+    assert!(
+        !saved.criteria_progress.contains_key(&4984),
+        "ordinary reward must not count as daily"
+    );
     assert!(saved.earned_at.contains_key(&2357));
     app.world_mut()
         .entity_mut(client.connection)

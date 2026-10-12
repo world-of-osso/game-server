@@ -288,7 +288,7 @@ fn detect_explorable_area_bit(world: &mut World, player: Entity) -> Option<u32> 
 
 /// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
 /// never reach this boundary; login reconstructs missed credit from rewarded quests.
-pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32) {
+pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32, daily: bool) {
     let owner = world
         .query_filtered::<(Entity, &PlayerLink, &InWorld), With<Authenticated>>()
         .iter(world)
@@ -298,11 +298,15 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     let Some((connection, player)) = owner else {
         return;
     };
-    scenario::record(world, player, CriteriaEvent::CompleteQuest(quest));
-    crate::adventure_guide::record(world, player, CriteriaEvent::CompleteQuest(quest));
-    if let Some((snapshot, toasts)) =
-        update_player_events(world, player, &[CriteriaEvent::CompleteQuest(quest)], None)
-    {
+    let mut events = vec![CriteriaEvent::CompleteQuest(quest)];
+    if daily {
+        events.push(CriteriaEvent::CompleteDailyQuest);
+    }
+    for &event in &events {
+        scenario::record(world, player, event);
+        crate::adventure_guide::record(world, player, event);
+    }
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) {
         send_updates(world, connection, snapshot, toasts);
     }
 }
