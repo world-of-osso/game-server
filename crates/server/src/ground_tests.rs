@@ -24,6 +24,134 @@ fn client_data_dir() -> PathBuf {
 /// `world/maps/azeroth/azeroth.wdt`.
 const AZEROTH_WDT_FDID: u32 = 775_971;
 
+#[test]
+fn silvershard_track_switch_approach_uses_real_floor_not_npc_pivot() {
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(727, 810604)]));
+    // Source4000143's exact pivot has no walkable WMO face at its authored height.
+    // The neighboring collision floor is a valid player approach within interaction range.
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(715.642, 100.165, 320.284);
+    assert_eq!(
+        ground.ground_at(727, Vec3::new(x, y, z)),
+        GroundProbe::Supported(0.0)
+    );
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(719.642, 100.165, 321.0);
+    let GroundProbe::Supported(height) = ground.ground_at(727, Vec3::new(x, y, z)) else {
+        panic!("missing approach floor beside source Track Switch");
+    };
+    assert!((height - 320.82416).abs() < 0.01, "approach floor {height}");
+}
+
+fn probe_silvershard_cart_approach(ground: &mut GroundMap, center: Vec3) -> Option<[f32; 3]> {
+    // Player feet alongside a cart, not its model pivot or the center of its rail.
+    for radius in [1.0, 2.0, 4.0, 8.0, 12.0] {
+        for (dx, dy) in [
+            (1.0, 0.0),
+            (-1.0, 0.0),
+            (0.0, 1.0),
+            (0.0, -1.0),
+            (1.0, 1.0),
+            (-1.0, 1.0),
+            (1.0, -1.0),
+            (-1.0, -1.0),
+        ] {
+            let x = center.x + radius * dx;
+            let y = center.y + radius * dy;
+            let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, center.z + 1.0);
+            let GroundProbe::Supported(height) = ground.ground_at(727, Vec3::new(bx, by, bz))
+            else {
+                continue;
+            };
+            if height < center.z - 3.0 {
+                continue;
+            }
+            return Some([x, y, height + 0.1]);
+        }
+    }
+    None
+}
+
+fn sample_cart_segment(start: Vec3, end: Vec3) -> impl Iterator<Item = Vec3> {
+    let count = start.distance(end).ceil().max(1.0) as u32;
+    (0..=count).map(move |index| start.lerp(end, index as f32 / count as f32))
+}
+
+#[test]
+fn silvershard_authored_cart_routes_have_walkable_control_approaches() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut statement = db.prepare("SELECT PathId,PositionX,PositionY,PositionZ FROM tdb_waypoint_path_node WHERE PathId BETWEEN 6014000 AND 6014011 ORDER BY PathId,NodeId").unwrap();
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                Vec3::new(row.get(1)?, row.get(2)?, row.get(3)?),
+            ))
+        })
+        .unwrap();
+    let mut routes = std::collections::BTreeMap::<u32, Vec<Vec3>>::new();
+    for row in rows {
+        let (id, position) = row.unwrap();
+        routes.entry(id).or_default().push(position);
+    }
+    assert_eq!(routes.len(), 12);
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(727, 810604)]));
+    let mut approaches = Vec::new();
+    let mut append = |path, center: Vec3| {
+        let approach = probe_silvershard_cart_approach(&mut ground, center).unwrap_or_else(|| {
+            panic!("no grounded control approach on source path {path} at {center:?}")
+        });
+        assert!((Vec3::from_array(approach) - center).length() < 25.0);
+        approaches
+            .push(serde_json::json!({"path":path,"center":center.to_array(),"approach":approach}));
+    };
+    for definition in shared::battleground::SILVERSHARD_CARTS {
+        let start = Vec3::from_array(definition.spawn);
+        let end = routes[&definition.initial_path][0];
+        for center in sample_cart_segment(start, end) {
+            append(definition.initial_path, center);
+        }
+    }
+    // TC switch branches connect these authored paths, including one-node connectors.
+    for (from, to) in [
+        (0, 1),
+        (2, 3),
+        (2, 5),
+        (3, 4),
+        (5, 6),
+        (7, 8),
+        (7, 10),
+        (8, 9),
+        (10, 11),
+    ] {
+        let from = 6014000 + from;
+        let to = 6014000 + to;
+        let start = *routes[&from].last().unwrap();
+        let end = routes[&to][0];
+        for center in sample_cart_segment(start, end) {
+            append(to, center);
+        }
+    }
+    for (path, nodes) in routes {
+        assert!(!nodes.is_empty());
+        // The authored depot connector paths can contain one node.
+        for node in &nodes {
+            append(path, *node);
+        }
+        for segment in nodes.windows(2) {
+            for center in sample_cart_segment(segment[0], segment[1]) {
+                append(path, center);
+            }
+        }
+    }
+    if let Some(path) = std::env::var_os("BATTLEGROUND_APPROACH_REPORT") {
+        std::fs::write(path, serde_json::to_vec_pretty(&approaches).unwrap()).unwrap();
+    }
+    assert!(approaches.len() > 1000);
+}
+
 fn client_ground() -> GroundMap {
     GroundMap::new(
         &client_data_dir(),

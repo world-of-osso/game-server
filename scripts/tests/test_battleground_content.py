@@ -12,11 +12,11 @@ class BattlegroundContentTests(unittest.TestCase):
     def test_mainline_warsong_spawns_at_authored_none_difficulty(self):
         conn = sqlite3.connect(':memory:')
         conn.execute('CREATE TABLE map (ID INTEGER, InstanceType INTEGER)')
-        conn.executemany('INSERT INTO map VALUES (?, ?)', [(0, 0), (1, 0), (34, 1), (670, 1), (2106, 3), (2107, 3), (761, 3), (726, 3), (566, 3), (998, 3)])
+        conn.executemany('INSERT INTO map VALUES (?, ?)', [(0, 0), (1, 0), (34, 1), (670, 1), (2106, 3), (2107, 3), (761, 3), (726, 3), (566, 3), (998, 3), (727, 3)])
         conn.execute('CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER)')
         conn.executemany('INSERT INTO map_difficulty VALUES (?, ?)', [(34, 1), (670, 1)])
         retail_content.create_retail_map_table(conn)
-        for map_id in (2106, 2107, 761, 726, 566, 998):
+        for map_id in (2106, 2107, 761, 726, 566, 998, 727):
             self.assertEqual(conn.execute('SELECT difficulty FROM temp.retail_map WHERE map_id=?', (map_id,)).fetchall(), [(0,)])
 
     def test_mainline_warsong_creature_keeps_authored_coordinates(self):
