@@ -232,12 +232,12 @@ fn despawn_case(h: &mut Harness, retained: &HashSet<Entity>) {
     }
 }
 
-fn census_harness(class: u8) -> Harness {
+fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
     let data = world_db().unwrap();
     let mut h = harness(Vec::new(), &[], class).unwrap();
     h.app.insert_resource(data.store.clone());
     h.app
-        .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+        .insert_resource(crate::world_data::load_world_data(world_path));
     // Cargo executes tests from the crate directory; production's relative
     // data/world.db startup path is not this fixture's authored database.
     let conn = rusqlite::Connection::open_with_flags(
@@ -262,7 +262,8 @@ fn census_harness(class: u8) -> Harness {
 
 #[test]
 fn class_completeness_probe_native_rewind_uses_ungrouped_player_state() {
-    let mut h = census_harness(13);
+    let prepared = prepare_class_world();
+    let mut h = census_harness(13, &prepared.path());
     let spec = Spec {
         id: 1468,
         class: 13,
@@ -284,7 +285,8 @@ fn class_completeness_probe_native_rewind_uses_ungrouped_player_state() {
 
 #[test]
 fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
-    let mut h = census_harness(8);
+    let prepared = prepare_class_world();
+    let mut h = census_harness(8, &prepared.path());
     let spec = Spec {
         id: 62,
         class: 8,
@@ -321,9 +323,10 @@ fn class_completeness_level80_probe() {
     let manifest: Manifest =
         serde_json::from_str(&std::fs::read_to_string(input).unwrap()).unwrap();
     let mut file = std::fs::File::create(output).unwrap();
+    let prepared = prepare_class_world();
     let mut records = 0;
     for spec in &manifest.specs {
-        let mut h = census_harness(spec.class);
+        let mut h = census_harness(spec.class, &prepared.path());
         let retained: HashSet<_> = h
             .app
             .world_mut()
