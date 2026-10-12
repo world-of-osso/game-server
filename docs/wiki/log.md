@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Boss-mod continuation](../bossmod-data-coverage.md): target5 root fix gives real Zevrim CastState/effects; lexical/guard/locale/custom-timer regressions17PASS, timeline7PASS, changed protocol1729PASS and check/fmt pass. Rendered addon warnings and both-skin private5906 Hydrospawn/Zevrim bars/warnings proved in eight inspected PNGs. DBM/EXBoss native input clocks remain explicit gaps; no fabricated timers or shared realm changes.
+
 - 2026-10-11 — [Boss-mod runtime boundary](systems/bossmod-data.md#current-integration-boundary): sole-source copied catalogs,191 hosted bindings,343 literal LittleWigs schedules and central server CastStart/CastSuccess reconciliation. Importer5PASS, timeline6PASS/1FAIL, check and changed-file rustfmt pass. No native/PNG proof; warning text transport, dynamic raid timeline inputs and cast-start fixture observation remain open. Not ready.
 
 - 2026-10-11 — [Boss-mod data import](systems/bossmod-data.md): non-executing Lua AST extraction, Retail branch selection, literal timers/health/phases/warnings, pinned Spell/SpellName validation and copy-only SQLite. Four behavioral tests pass; server reconciliation and private native proof remain open.
