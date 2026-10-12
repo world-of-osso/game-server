@@ -79,5 +79,5 @@ fn class_completeness_native_pick_lock_accepts_owned_bag_item_without_consuming_
         1,
     )
     .unwrap();
-    assert_eq!(model.bag_item(guid).unwrap().count, 1);
+    assert_eq!(model.bag_item(guid).unwrap().stack_count, 1);
 }
