@@ -952,8 +952,8 @@ fn startup_load_world_data(mut commands: Commands) {
     info!("Loaded {} game object spawns", game_objects.0.len());
     commands.insert_resource(game_objects);
     commands.insert_resource(
-        crate::pvp::load_azerite_templates(&conn)
-            .expect("Failed to load source Seething Azerite templates/displays"),
+        crate::pvp::load_battleground_objects(&conn)
+            .expect("Failed to load source scripted battleground templates/displays"),
     );
     let gathering = crate::gathering::load_data(&conn)
         .expect("Failed to load gathering metadata; apply scripts/gathering_metadata.py");

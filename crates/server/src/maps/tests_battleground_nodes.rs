@@ -12,6 +12,141 @@ struct EnteredMatch {
 }
 
 #[test]
+fn deephaul_channel_real_carts_crystal_drop_capture_victory_and_origin_return() {
+    let template = shared::battleground::deephaul_ravine();
+    let mut entered = enter_source_match(&template, shared::battleground::DEEPHAUL_STARTS);
+    let alliance: Vec<_> = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .filter(|(_, team)| **team == BgTeam::A)
+        .map(|(who, _)| who)
+        .collect();
+    let (h, copy) = (&mut entered.h, entered.copy);
+    use_second_frames(h);
+    assert_eq!(deephaul_carts_in(h, copy).len(), 2);
+    assert!(objects_in(h, copy, shared::battleground::DEEPHAUL_FLAG_ENTRY).is_empty());
+    h.advance(15);
+    let actor = alliance[0];
+    let (flag, home) = objects_in(h, copy, shared::battleground::DEEPHAUL_FLAG_ENTRY)[0];
+    h.walk_to(actor, home);
+    h.app.world_mut().entity_mut(flag).insert(InMap {
+        instance_id: copy.instance_id + 1,
+        ..copy
+    });
+    use_object(h, actor, flag);
+    assert!(battleground(h, actor).world_states.contains(&(1545, 1)));
+    h.app.world_mut().entity_mut(flag).insert(copy);
+    use_object(h, actor, flag);
+    assert!(battleground(h, actor).world_states.contains(&(1545, 2)));
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(actor.player)
+        .unwrap()
+        .current = 0.0;
+    h.advance(1);
+    let dropped = objects_in(h, copy, shared::battleground::DEEPHAUL_DROP_ENTRY);
+    assert_eq!(dropped.len(), 1);
+    assert!(close(dropped[0].1, home));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<GameObjectInfo>(dropped[0].0)
+            .unwrap()
+            .go_type,
+        37
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(actor.player)
+        .unwrap()
+        .current = 100.0;
+    let teammate = alliance[1];
+    h.walk_to(teammate, dropped[0].1);
+    use_object(h, teammate, dropped[0].0);
+    assert!(battleground(h, teammate).world_states.contains(&(1545, 2)));
+    assert!(objects_in(h, copy, shared::battleground::DEEPHAUL_DROP_ENTRY).is_empty());
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(teammate.player)
+        .unwrap()
+        .current = 0.0;
+    h.advance(1);
+    assert_eq!(
+        objects_in(h, copy, shared::battleground::DEEPHAUL_DROP_ENTRY).len(),
+        1
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(teammate.player)
+        .unwrap()
+        .current = 100.0;
+    h.advance(10);
+    assert!(objects_in(h, copy, shared::battleground::DEEPHAUL_DROP_ENTRY).is_empty());
+    let (flag, home) = objects_in(h, copy, shared::battleground::DEEPHAUL_FLAG_ENTRY)[0];
+    h.walk_to(actor, home);
+    use_object(h, actor, flag);
+    h.walk_to(
+        actor,
+        Vec3::from_array(shared::battleground::DEEPHAUL_CAPTURE_TRIGGERS[0]),
+    );
+    h.advance(1);
+    assert!(
+        battleground(h, actor)
+            .players
+            .iter()
+            .find(|row| row.character_id == 1)
+            .unwrap()
+            .objective_scores
+            .contains(&(1020, 1))
+    );
+    h.advance(30);
+    assert_eq!(
+        objects_in(h, copy, shared::battleground::DEEPHAUL_FLAG_ENTRY).len(),
+        1
+    );
+    let mut delivered = false;
+    let mut respawned = false;
+    for _ in 0..2000 {
+        let carts = deephaul_carts_in(h, copy);
+        for (index, who) in alliance.iter().enumerate() {
+            if let Some((_, at)) = carts.get(index % 2) {
+                h.app.world_mut().entity_mut(who.player).insert(bevy(*at));
+            }
+        }
+        h.advance(1);
+        let count = deephaul_carts_in(h, copy).len();
+        delivered |= count == 0;
+        respawned |= delivered && count == 2;
+        if battleground(h, actor).phase == BgPhase::Ended {
+            break;
+        }
+    }
+    assert!(
+        delivered && respawned,
+        "source paired delivery and two-second replacement"
+    );
+    assert!(battleground(h, actor).players.iter().any(|row| {
+        row.team == BgTeam::A
+            && row
+                .objective_scores
+                .iter()
+                .any(|(stat, value)| *stat == 1021 && *value > 0)
+    }));
+    win_leave_and_return(&mut entered, 1500);
+}
+
+fn deephaul_carts_in(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
+    let world = h.app.world_mut();
+    let mut query = world.query::<(Entity, &shared::components::Npc, &InMap, &Position)>();
+    query
+        .iter(world)
+        .filter(|(_, npc, map, _)| [214690, 217346].contains(&npc.template_id) && **map == copy)
+        .map(|(entity, _, _, at)| (entity, wow(at)))
+        .collect()
+}
+
+#[test]
 fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return() {
     let template = shared::battleground::seething_shore();
     let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
@@ -221,6 +356,11 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
             app.insert_resource(crate::spell_cast::test_harness::power_table(data));
             app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
         }
+        if template.map_id == 2656 {
+            let (world_data, templates) = deephaul_source_world();
+            app.insert_resource(world_data);
+            app.insert_resource(templates);
+        }
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.add_plugins((
             crate::pvp::PvpPlugin,
@@ -383,6 +523,7 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
             998 => 6303,
             727 => 6437,
             1803 => 13845,
+            2656 => 24958,
             _ => 1776,
         };
         assert!(result.world_states.contains(&(score_state, score as i32)));
@@ -562,7 +703,38 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     win_leave_and_return(&mut entered, 1500);
 }
 
-fn seething_source_world() -> (crate::world_data::WorldData, crate::pvp::AzeriteTemplates) {
+fn deephaul_source_world() -> (
+    crate::world_data::WorldData,
+    crate::pvp::BattlegroundObjectTemplates,
+) {
+    let copy = tempfile::NamedTempFile::new().unwrap();
+    std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
+    for (script, maps) in [
+        ("../../scripts/promote_battlegrounds.py", Some("2656")),
+        ("../../scripts/add_battleground_summon_templates.py", None),
+    ] {
+        let mut command = std::process::Command::new("python3");
+        command.arg(script);
+        if let Some(maps) = maps {
+            command.args(["--maps", maps]);
+        }
+        let output = command.arg("--db").arg(copy.path()).output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let conn = Connection::open_with_flags(copy.path(), rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .unwrap();
+    let templates = crate::pvp::load_battleground_objects(&conn).unwrap();
+    (crate::world_data::load_world_data(copy.path()), templates)
+}
+
+fn seething_source_world() -> (
+    crate::world_data::WorldData,
+    crate::pvp::BattlegroundObjectTemplates,
+) {
     let copy = tempfile::NamedTempFile::new().unwrap();
     std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
     let promoted = std::process::Command::new("python3")
@@ -582,7 +754,7 @@ fn seething_source_world() -> (crate::world_data::WorldData, crate::pvp::Azerite
     );
     let conn = Connection::open_with_flags(copy.path(), rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
         .unwrap();
-    let templates = crate::pvp::load_azerite_templates(&conn).unwrap();
+    let templates = crate::pvp::load_battleground_objects(&conn).unwrap();
     (crate::world_data::load_world_data(copy.path()), templates)
 }
 
