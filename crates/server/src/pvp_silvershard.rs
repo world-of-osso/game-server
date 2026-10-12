@@ -78,6 +78,67 @@ impl CartRuntime {
     }
 }
 
+#[derive(Component)]
+pub(crate) struct TrackSwitch(pub u32);
+
+pub(crate) fn insert_track_switch(entity: &mut EntityCommands, spawn: &CreatureSpawn) {
+    if spawn.map != 727 || spawn.template_entry != 60283 {
+        return;
+    }
+    // Promoted TDB1210 source GUIDs use the content namespace offset.
+    const RETAIL_GUID_OFFSET: u32 = 20_000_000;
+    let state = match spawn.guid.checked_sub(RETAIL_GUID_OFFSET) {
+        Some(4000143) => 6467,
+        Some(4000144) => 6468,
+        _ => return,
+    };
+    entity.insert(TrackSwitch(state));
+}
+
+/// TC97372 hits the nearest source Track Switch; only an active same-copy participant changes it.
+pub(crate) fn change_track(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    let Some(state) = world.get::<TrackSwitch>(target).map(|switch| switch.0) else {
+        return;
+    };
+    let Some(map) = world
+        .get::<InMap>(target)
+        .copied()
+        .filter(|map| Some(*map) == world.get::<InMap>(caster).copied())
+    else {
+        return;
+    };
+    let Some(id) = world
+        .get::<crate::persistence::ClientId>(caster)
+        .map(|id| id.0)
+    else {
+        return;
+    };
+    let changed = world.resource_scope(|_, mut matches: Mut<super::PvpServerState>| {
+        matches
+            .battleground_matches
+            .iter_mut()
+            .find_map(|(match_id, matched)| {
+                let participant = matched.instance.team_a_players.contains(&id)
+                    || matched.instance.team_b_players.contains(&id);
+                if matched.map != Some(map)
+                    || !participant
+                    || matched.instance.phase != shared::battleground::BgPhase::InProgress
+                {
+                    return None;
+                }
+                let carts = matched.silvershard.as_mut()?;
+                carts
+                    .battle
+                    .switch_track(state)
+                    .expect("source Track Switch state");
+                Some(*match_id)
+            })
+    });
+    if let Some(match_id) = changed {
+        super::pvp_objective::send_match_snapshot(world, match_id);
+    }
+}
+
 fn spawn_cart(world: &mut World, map: InMap, index: usize, at: [f32; 3]) -> Entity {
     let definition = &SILVERSHARD_CARTS[index];
     // Script summon, not an invented static source placement.
@@ -132,6 +193,7 @@ fn move_cart(world: &mut World, entity: Entity, at: [f32; 3]) {
             z: 0.0,
         },
         shared::components::MovementSpeed(2.0),
+        shared::components::CreatureMotion::Walk,
     ));
     crate::interest::mark_interest_position_changed(
         world.get_resource::<crate::interest::InterestDirtyQueue>(),
