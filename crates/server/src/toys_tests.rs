@@ -3912,14 +3912,14 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
     )
     .unwrap();
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for (item, spell, entry) in [
-        (70722, 99767, 208935),
-        (104309, 148553, 223229),
-        (116435, 171549, 236014),
-        (116757, 171760, 236110),
-        (182780, 340241, 357706),
-        (184404, 345745, 364811),
-        (199892, 388258, 381360),
+    for (item, spell, entry, display, scale) in [
+        (70722, 99767, 208935, 10726, 0.25),
+        (104309, 148553, 223229, 14358, 0.5),
+        (116435, 171549, 236014, 30040, 0.5),
+        (116757, 171760, 236110, 7385, 1.0),
+        (182780, 340241, 357706, 67291, 0.5),
+        (184404, 345745, 364811, 67976, 0.5),
+        (199892, 388258, 381360, 75335, 0.7),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("linked-fire.redb"));
@@ -3955,6 +3955,26 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
             .find(|(_, info)| info.entry == entry)
             .unwrap()
             .0;
+        let info = world.get::<GameObjectInfo>(fire).unwrap();
+        assert_eq!(
+            (info.go_type, info.display_id, info.scale),
+            (8, display, scale)
+        );
+        let lifetime = world
+            .get::<crate::game_objects::summoned::SummonedObject>(fire)
+            .unwrap();
+        assert_eq!((lifetime.owner, lifetime.spell_id), (h.caster, spell));
+        let source_ms = store
+            .get(spell)
+            .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
+            .duration
+            .unwrap()
+            .duration_ms;
+        let remaining = lifetime.expires_at.unwrap() - crate::spell_cast::now(world);
+        assert!(remaining > f64::from(source_ms / 1000) - 10.0);
         let traps: Vec<_> = world
             .query::<(Entity, &GameObjectInfo)>()
             .iter(world)
