@@ -65,6 +65,8 @@ pub(crate) enum CriteriaEvent {
     RewardedQuestsInZone(u32, u32),
     RewardedQuestCount(u32),
     AbandonQuest,
+    /// Purchased tabs of TC BankType (0 Character, 2 Account).
+    BankTabsOwned(u32, u32),
     CastSpell(u32),
     BeSpellTarget(u32),
     LearnSpell(u32),
@@ -110,6 +112,7 @@ impl CriteriaEvent {
             Self::CompleteQuestInZone(_) | Self::RewardedQuestsInZone(_, _) => 11,
             Self::RewardedQuestCount(_) => 9,
             Self::AbandonQuest => 107,
+            Self::BankTabsOwned(_, _) => 260,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
             Self::LearnSpell(_) => 34,
@@ -165,6 +168,7 @@ impl CriteriaEvent {
             | Self::CompleteScenario(asset)
             | Self::CompleteQuestInZone(asset)
             | Self::RewardedQuestsInZone(asset, _)
+            | Self::BankTabsOwned(asset, _)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -516,6 +520,7 @@ impl AchievementCatalog {
                 | CriteriaEvent::OwnToys(0)
                 | CriteriaEvent::RewardedQuestCount(0)
                 | CriteriaEvent::RewardedQuestsInZone(_, 0)
+                | CriteriaEvent::BankTabsOwned(_, 0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -534,7 +539,8 @@ impl AchievementCatalog {
             | CriteriaEvent::LearnTradeskillSkillLine(_, count)
             | CriteriaEvent::OwnUniquePets(count)
             | CriteriaEvent::OwnToys(count)
-            | CriteriaEvent::RewardedQuestCount(count) => u64::from(count),
+            | CriteriaEvent::RewardedQuestCount(count)
+            | CriteriaEvent::BankTabsOwned(_, count) => u64::from(count),
             CriteriaEvent::RewardedQuestsInZone(_, count) => (*counter).max(u64::from(count)),
             CriteriaEvent::MoneyEarnedFromQuesting(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
@@ -826,6 +832,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
                         || (kind == 11 && row.get::<_, bool>(12)?)
+                        // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
+                        || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
                         || (matches!(kind, 9 | 14 | 62 | 67 | 74 | 107 | 130 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 75 | 112) && row.get::<_, bool>(9)?)

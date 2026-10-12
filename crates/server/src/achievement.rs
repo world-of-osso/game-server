@@ -113,15 +113,17 @@ impl Plugin for AchievementPlugin {
 
 fn send_initial_achievement_snapshot(world: &mut World) {
     let connections: Vec<_> = world
-        .query_filtered::<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>()
+        .query_filtered::<(Entity, &PlayerLink, &InWorld, &Authenticated), Added<InWorld>>()
         .iter(world)
-        .map(|(connection, link, in_world)| (connection, link.0, in_world.character_id))
+        .map(|(connection, link, in_world, auth)| {
+            (connection, link.0, in_world.character_id, auth.account_id)
+        })
         .collect();
-    for (connection, player, character) in connections {
+    for (connection, player, character, account) in connections {
         let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
             continue;
         };
-        let events = load_login_events(world, character, level);
+        let events = load_login_events(world, character, account, level);
         let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) else {
             continue;
         };
@@ -137,9 +139,20 @@ fn send_initial_achievement_snapshot(world: &mut World) {
     }
 }
 
-fn load_login_events(world: &World, character: u64, level: u8) -> Vec<CriteriaEvent> {
+fn load_login_events(world: &World, character: u64, account: u64, level: u8) -> Vec<CriteriaEvent> {
     let mut events = vec![CriteriaEvent::Login, CriteriaEvent::ReachLevel(level)];
     if let Some(db) = world.get_resource::<GameDatabase>() {
+        // TC BankTabPurchased login case: current tab counts of both banks.
+        let tabs = [
+            (
+                0,
+                persistence::banks::load_character_bank(&db.db, character),
+            ),
+            (2, persistence::banks::load_account_bank(&db.db, account)),
+        ];
+        events.extend(
+            tabs.map(|(bank, data)| CriteriaEvent::BankTabsOwned(bank, data.tabs.len() as u32)),
+        );
         let rewarded = persistence::quest_store::load_quest_log(&db.db, character).rewarded;
         events.extend(rewarded_quest_facts(world, &rewarded, true));
         events.extend(rewarded.into_iter().map(CriteriaEvent::CompleteQuest));
