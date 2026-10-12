@@ -210,12 +210,12 @@ fn apply_house_command(
         HousingCommand::PurchasePlot { plot_id } => purchase_plot(world, actor, context, *plot_id)?,
         HousingCommand::EnterHouse { house_id } => enter_house(world, actor, context, *house_id)?,
         HousingCommand::LeaveHouse => leave_house(world, actor, context)?,
-        HousingCommand::SetHouseAccessAnyone { house_id, allowed } => {
+        HousingCommand::SaveHouseAccess { house_id, access } => {
             store::set_access(
                 &world.resource::<GameDatabase>().db,
                 context,
                 *house_id,
-                *allowed,
+                *access,
             )?;
         }
         HousingCommand::RedeemDecor { item_guid } => collect_decor(world, actor, *item_guid)?,
@@ -236,6 +236,7 @@ fn apply_house_command(
                 &world.resource::<GameDatabase>().db,
                 context,
                 Some(*house_id),
+                world.get_resource::<crate::group::GroupRegistry>(),
             )?
             .layout
             .ok_or("House layout is unavailable.")?;
@@ -253,7 +254,12 @@ fn apply_house_command(
             store::edit(&world.resource::<GameDatabase>().db, context, command)?;
         }
         HousingCommand::ReloadLayout { house_id } => {
-            store::house(&world.resource::<GameDatabase>().db, context, *house_id)?;
+            store::house(
+                &world.resource::<GameDatabase>().db,
+                context,
+                *house_id,
+                world.get_resource::<crate::group::GroupRegistry>(),
+            )?;
         }
         HousingCommand::ListPlots { .. }
         | HousingCommand::EnterNeighborhood { .. }
@@ -298,17 +304,32 @@ fn enter_house(
     context: store::Actor,
     house_id: u64,
 ) -> Result<(), String> {
-    store::house(&world.resource::<GameDatabase>().db, context, house_id)?;
+    store::house(
+        &world.resource::<GameDatabase>().db,
+        context,
+        house_id,
+        world.get_resource::<crate::group::GroupRegistry>(),
+    )?;
     let entry = catalog(world)?.home_entry()?;
     transfer_property(world, actor, entry, house_id)?;
-    store::save_house_location(&world.resource::<GameDatabase>().db, context, house_id)
+    store::save_house_location(
+        &world.resource::<GameDatabase>().db,
+        context,
+        house_id,
+        world.get_resource::<crate::group::GroupRegistry>(),
+    )
 }
 
 fn leave_house(world: &mut World, actor: Actor, context: store::Actor) -> Result<(), String> {
     let house_id = context
         .inside_house
         .ok_or("Enter a house before leaving it.")?;
-    let house = store::house(&world.resource::<GameDatabase>().db, context, house_id)?;
+    let house = store::house(
+        &world.resource::<GameDatabase>().db,
+        context,
+        house_id,
+        world.get_resource::<crate::group::GroupRegistry>(),
+    )?;
     visit_plot(world, actor, house.plot_id).map(|_| ())
 }
 
@@ -580,7 +601,12 @@ fn read_snapshot(
 ) -> Result<HousingState, String> {
     let context = actor_context(world, actor)?;
     let db = &world.resource::<GameDatabase>().db;
-    let mut state = store::snapshot(db, context, house.or(context.inside_house))?;
+    let mut state = store::snapshot(
+        db,
+        context,
+        house.or(context.inside_house),
+        world.get_resource::<crate::group::GroupRegistry>(),
+    )?;
     if let Some(neighborhood) = neighborhood.or(context.neighborhood_id) {
         state.plots = catalog(world)?.plots(neighborhood)?;
         store::populate_plots(db, &mut state.plots)?;
