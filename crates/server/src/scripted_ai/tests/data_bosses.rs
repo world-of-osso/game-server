@@ -489,7 +489,9 @@ fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is
         chain_multiplier: 1.0,
     };
     deal_damage(h.app.world_mut(), &ctx, gold, 100_000.0, false, true);
-    assert_eq!(h.health(gold).current, 1.0);
+    // At1HP the source clamps the lethal loss to0 BEFORE its authored heal136.
+    // Do not clamp again after the heal or invent a permanently-one-HP actor.
+    assert_eq!(h.health(gold).current, h.health(gold).max);
     assert!(h.has_aura(gold, 265915));
     assert!(
         h.app
