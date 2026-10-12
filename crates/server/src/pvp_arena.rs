@@ -91,7 +91,7 @@ pub(super) fn queue_player(
     }
     if team_size(mode).is_none() {
         return Err(
-            "Solo Shuffle six-player DB2 rows exist; round and role policy is unavailable".into(),
+            "Solo Shuffle six-player roles are sourced; complete 12.1 round reset and preparation policy is unverified".into(),
         );
     }
     if player.battleground.is_some() || player.queue.is_some() {
