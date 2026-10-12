@@ -1,4 +1,6 @@
 use super::*;
+#[path = "persistence_housing_dye_tests.rs"]
+mod dye_tests;
 use crate::persistence::{INVENTORIES, InventoryData, InventoryItemData};
 use redb::Database;
 use shared::protocol::{DecorTransform, HousingCommand, HousingPlot};
@@ -381,6 +383,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         &db,
         owner,
         &HousingCommand::PlaceDecor {
+            variant_id: None,
             house_id: house.house_id,
             decor_id: 1693,
             transform: DecorTransform {
@@ -408,6 +411,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
             &db,
             owner,
             &HousingCommand::PlaceDecor {
+                variant_id: None,
                 house_id: house.house_id,
                 decor_id: 1693,
                 transform: DecorTransform {
