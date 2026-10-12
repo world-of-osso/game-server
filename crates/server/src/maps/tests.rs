@@ -1084,7 +1084,11 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
 fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
     let flags = source_warsong_flags();
     let source_flags = flags.clone();
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(database_file.path()).unwrap();
+    crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
         app.insert_resource(flags);
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.add_plugins((
@@ -1312,6 +1316,86 @@ fn ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map() {
             .resource::<InstanceManager>()
             .copy_difficulty(shared_map)
             .is_none()
+    );
+}
+
+#[test]
+fn wailing_caverns_world_port_spawns_selected_gathering_nodes_in_each_copy() {
+    let path = crate::test_data::world_db_path();
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut h = harness_with_content_and(|app| {
+        app.init_resource::<crate::spawn_pools::PoolSpawns>();
+        app.insert_resource(crate::gathering::load_data(&conn).unwrap());
+    })
+    .expect("authentic Wailing Caverns world data");
+    let destination = WorldLocation {
+        map_id: 43,
+        position: Vec3::new(-151.139, 414.367, -72.6294),
+        orientation: 0.0,
+    };
+    let pooled_guids: Vec<_> = h
+        .app
+        .world()
+        .resource::<crate::game_objects::GameObjectSpawns>()
+        .0
+        .iter()
+        .filter(|spawn| spawn.map_id == 43 && spawn.info.go_type == GAMEOBJECT_TYPE_GATHERING_NODE)
+        .filter(|spawn| {
+            h.app
+                .world()
+                .resource::<crate::world_data::WorldData>()
+                .pools
+                .gameobject_pool(spawn.guid)
+                .is_some()
+        })
+        .map(|spawn| spawn.guid)
+        .collect();
+    assert!(
+        !pooled_guids.is_empty(),
+        "source map43 must contain pooled gathering nodes"
+    );
+    let mut copies = Vec::new();
+    for character in [101, 102] {
+        let player = h.spawn(character, STORMWIND, STOCKADE_EXIT_TARGET);
+        assert!(transfer::teleport_to(
+            h.app.world_mut(),
+            player.player,
+            destination,
+            Default::default()
+        ));
+        assert_eq!(h.new_worlds(&player).pop().unwrap().map_id, 43);
+        assert_eq!(h.map_of(&player), None);
+        h.ack(&player);
+        let map = h.map_of(&player).expect("ack enters Wailing Caverns copy");
+        assert_eq!(map.map_id, 43);
+        assert_ne!(map.instance_id, 0);
+        let selected: std::collections::BTreeSet<_> = pooled_guids
+            .iter()
+            .copied()
+            .filter(|guid| {
+                h.app.world().resource::<crate::spawn_pools::PoolSpawns>().0[&map]
+                    .spawns
+                    .gameobject_spawned(*guid)
+            })
+            .collect();
+        // Source pools may select no nodes; their candidates must be rejected after
+        // initialization rather than crash before inspecting that selection.
+        let world = h.app.world_mut();
+        let spawned: std::collections::BTreeSet<_> = world
+            .query::<(&InMap, &crate::gathering::NodeSource)>()
+            .iter(world)
+            .filter(|(copy, node)| **copy == map && pooled_guids.contains(&node.0.guid))
+            .map(|(_, node)| node.0.guid)
+            .collect();
+        assert_eq!(
+            spawned, selected,
+            "only selected real nodes spawn into their own copy"
+        );
+        copies.push(map);
+    }
+    assert_ne!(
+        copies[0], copies[1],
+        "unrelated entrants get isolated copies"
     );
 }
 

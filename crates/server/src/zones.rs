@@ -75,15 +75,14 @@ pub(crate) fn spawn_map_creatures(
     replicate: bool,
 ) -> u32 {
     let map = content.map;
-    let Some(indices) = world_data.spawns_by_map.get(&(map.map_id as u16)) else {
-        return 0;
-    };
+    let indices = world_data.spawns_by_map.get(&(map.map_id as u16));
     let (pool_spawns, picked) = world_data
         .pools
         .init_map(map.map_id as u16, &mut rand::thread_rng());
     let picked: HashSet<u32> = picked.into_iter().collect();
     let spawns = indices
-        .iter()
+        .into_iter()
+        .flatten()
         .map(|&idx| &world_data.spawns[idx])
         .filter(|spawn| {
             (world_data.pools.creature_pool(spawn.guid).is_none() || picked.contains(&spawn.guid))
@@ -216,7 +215,11 @@ pub(crate) fn spawn_creature(
         let display_id = choose_display_id(template, spawn, rng);
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
-        let mut entity = commands.spawn((bundle, map));
+        let mut entity = commands.spawn((
+            bundle,
+            map,
+            crate::creature_ai::HomeOrientation(spawn.orientation + std::f32::consts::FRAC_PI_2),
+        ));
         if let Some((scaling, tuning)) = scaling {
             entity.insert((scaling, ScaledStats(tuning.stats.clone())));
         }
@@ -369,6 +372,16 @@ pub(crate) fn summon_creature(
     });
     queue.apply(world);
     if let Some(summon) = summon {
+        crate::scripted_ai::dispatch(
+            world,
+            summon,
+            crate::scripted_ai::Hook::IsSummonedBy(summoner),
+        );
+        crate::scripted_ai::dispatch(
+            world,
+            summoner,
+            crate::scripted_ai::Hook::JustSummoned(summon),
+        );
         info!("{summoner} summoned creature {entry} as {summon} at {position:?}");
     }
     summon
