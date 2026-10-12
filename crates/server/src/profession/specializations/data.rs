@@ -115,7 +115,9 @@ fn load_node_metadata(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, NodeM
             let description = match sources.resolve(definition, &text) {
                 Ok(description) => description,
                 Err(reason) => {
-                    tracing::warn!(definition, %reason, "Profession description unavailable");
+                    bevy::log::warn!(
+                        "Profession definition {definition} description unavailable: {reason}"
+                    );
                     format!("Description unavailable (definition {definition}): {reason}")
                 }
             };
