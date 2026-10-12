@@ -20,6 +20,12 @@ Replace `--check` with `--db /absolute/private-world.db` for a lead-owned stagin
 | ProfTraitTree | 4542085 | D2C4C5BD | 138 / 138 |
 | CraftingOrder | 4529122 | 05F8699D | 2047 / 2047 |
 | CurrencyTypes | 1095531 | exact pinned CSV header | 1523 exported rows |
+| ProfessionTrait | 4505298 | 306455FE | 6993 / 6993 |
+| ProfessionTraitXEffect | 4505494 | 97A0A286 | 6001 / 6001 |
+| ProfessionEffect | 4505297 | 04C16FA9 | 249 / 382 |
+| ProfessionEffectType | 4556715 | 39C33588 | 31 / 31 |
+
+Description bindings join TraitDefinition→ProfessionTrait→ProfessionTraitXEffect→ProfessionEffect→ProfessionEffectType.EnumID. Definition36464/trait6203/effect1 preserves Amount1 and Name_lang Skill. ProfessionTraitXEffect's duplicate relationship parent is validated before removal; its unresolved Field_10_0_0_44649_003 is preserved, not renamed. Effect copy rows and localized names are retained. This source binding does not implement quality math.
 
 CurrencyTypes.csv is the local-CASC export retained by the PvP source investigation, now included in the same import corpus. Knowledge2025 is explicitly named Dragon Isles Leatherworking Knowledge, with MaxQty0, MaxEarnablePerWeek0 and both flag words0. This allows source-backed character-wallet acquisition and caps without making profession currencies available to the generic client EarnCurrency request.
 

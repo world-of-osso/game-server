@@ -22,7 +22,7 @@ class ProfessionDataTests(unittest.TestCase):
                 db.execute('CREATE TABLE untouched (value TEXT)')
                 db.execute("INSERT INTO untouched VALUES ('keep')")
             report = mod.import_data(database, SOURCE)
-            self.assertEqual([r['rows'] for r in report], [27, 91, 1403, 104, 15, 915, 5929, 138, 2047, 1523])
+            self.assertEqual([r['rows'] for r in report], [27, 91, 1403, 104, 15, 915, 5929, 138, 2047, 1523, 6993, 6001, 382, 31])
             with closing(sqlite3.connect(database)) as db:
                 self.assertEqual(db.execute('SELECT CraftSkillBonusPercent, ReCraftSkillBonusPercent, ConcentrationSkillCurveID, ConcentrationDifficultyCurveID FROM crafting_difficulty WHERE ID=1').fetchone(), (25.0, 6.25, 77360, 77361))
                 self.assertEqual(db.execute('SELECT "Order", CraftingQualityID, QualityPercentage, CraftingDifficultyID FROM crafting_difficulty_quality WHERE ID=2').fetchone(), (1, 2, 50.0, 1))
@@ -31,6 +31,7 @@ class ProfessionDataTests(unittest.TestCase):
                 self.assertEqual(db.execute('SELECT RequiredPointsInThisNode, Flags FROM prof_trait_perk_node WHERE ID=2181').fetchone(), (5, 0))
                 self.assertEqual(db.execute('SELECT SkillLineAbilityID, CraftingOrderHouseID FROM crafting_order WHERE ID=624').fetchone(), (48716, 1))
                 self.assertEqual(db.execute('SELECT Name_lang, MaxQty, MaxEarnablePerWeek, Flags_0, Flags_1 FROM currency_types WHERE ID=2025').fetchone(), ('Dragon Isles Leatherworking Knowledge', 0, 0, 0, 0))
+                self.assertEqual(db.execute('SELECT p.ID, e.Amount, t.Name_lang FROM profession_trait p JOIN profession_trait_x_effect x ON x.ProfessionTraitID=p.ID JOIN profession_effect e ON e.ID=x.ProfessionEffectID JOIN profession_effect_type t ON t.EnumID=e.ProfessionEffectTypeEnumID WHERE p.TraitDefinitionID=36464').fetchone(), (6203, 1.0, 'Skill'))
                 self.assertEqual(db.execute('SELECT value FROM untouched').fetchone(), ('keep',))
                 before = tuple(db.iterdump())
             self.assertEqual(report, mod.import_data(database, SOURCE))
