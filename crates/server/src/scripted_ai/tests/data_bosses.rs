@@ -126,35 +126,102 @@ fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
-fn boss_timeline_data_bound_skum_uses_its_authored_smartai_deadline() {
-    use shared::protocol::EncounterTimelineEvent;
+fn boss_timeline_data_bound_skum_has_no_smartai_alert_fallback() {
     let (mut h, boss, _) = bound_boss(3674, 43, 4);
     h.engage(boss);
-    h.advance(0.1);
-    let timer = h
-        .inbox(0)
-        .timeline
-        .iter()
-        .find_map(|event| match event {
-            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
-                timers.iter().find(|timer| timer.spell_id == 6254)
-            }
-            _ => None,
-        })
-        .expect("data-bound Skum selected3–4s Knockdown timer")
-        .clone();
-    assert!((3000..=4000).contains(&timer.remaining_ms));
+    h.advance(5.0);
+    assert!(h.inbox(0).timeline.is_empty());
     assert!(h.inbox(1).timeline.is_empty());
-    h.advance(timer.remaining_ms as f32 / 1000.0 - 0.25);
     assert!(
-        !h.inbox(0)
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(6254)),
+        "Skum combat casts must remain independent of alert authority"
+    );
+}
+
+#[test]
+fn bossmod_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_warnings() {
+    use shared::protocol::{EncounterSeverity, EncounterTimelineEvent};
+    for (entry, encounter, bit, spell, initial, repeat) in [
+        (13280, 344, 1, 22421, 5700, 8500),
+        (11490, 343, 0, 22478, 3700, 8500),
+    ] {
+        let (mut h, boss, _) = bound_boss(entry, 429, bit);
+        let catalog_db = Connection::open_in_memory().unwrap();
+        catalog_db
+            .execute_batch(include_str!("bossmod_diremaul.sql"))
+            .unwrap();
+        h.app
+            .insert_resource(bossmod::load_catalog(&catalog_db).unwrap());
+        h.engage(boss);
+        h.advance(0.1);
+        assert_eq!(h.inbox(0).starts[0].encounter_id, encounter);
+        let initial_timer = h
+            .inbox(0)
             .timeline
             .iter()
-            .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
-    );
-    h.advance(0.3);
-    assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
-        EncounterTimelineEvent::Cast { caster, spell_id:6254, .. } if *caster == boss.to_bits())));
+            .find_map(|event| match event {
+                EncounterTimelineEvent::Timers { timers, .. } => {
+                    timers.iter().find(|timer| timer.spell_id == spell)
+                }
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(initial_timer.duration_ms, initial);
+        assert!(
+            initial_timer.remaining_ms <= initial && initial_timer.remaining_ms >= initial - 100
+        );
+        assert!(
+            !h.inbox(0)
+                .timeline
+                .iter()
+                .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+        );
+        h.advance(16.0);
+        assert!(
+            h.inbox(0).log.iter().any(
+                |event| event.kind == CombatLogKind::CastStart && event.spell_id == Some(spell)
+            ),
+            "real admitted cast must exist before its addon warning"
+        );
+        assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
+            EncounterTimelineEvent::Cast { caster, spell_id, severity:EncounterSeverity::Medium }
+            if *caster == boss.to_bits() && *spell_id == spell)));
+        assert!(
+            h.inbox(0).timeline.iter().any(|event| match event {
+                EncounterTimelineEvent::Timers { timers, .. } => timers
+                    .iter()
+                    .any(|timer| timer.spell_id == spell && timer.duration_ms == repeat),
+                _ => false,
+            }),
+            "cast must reset to addon delay, not the SmartAI repeat range"
+        );
+        assert!(
+            h.inbox(1).timeline.is_empty(),
+            "other copy cannot receive alerts"
+        );
+        crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+        h.advance(0.1);
+        assert!(!h.inbox(0).ends.last().unwrap().success);
+        let warnings_before = h
+            .inbox(0)
+            .timeline
+            .iter()
+            .filter(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+            .count();
+        h.advance(5.0);
+        assert_eq!(
+            h.inbox(0)
+                .timeline
+                .iter()
+                .filter(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+                .count(),
+            warnings_before,
+            "evade must retire the alert schedule"
+        );
+    }
 }
 
 #[test]
