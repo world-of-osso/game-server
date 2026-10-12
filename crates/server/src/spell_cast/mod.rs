@@ -108,6 +108,8 @@ mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
 #[cfg(test)]
+mod melee_crit_taken_tests;
+#[cfg(test)]
 mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;
