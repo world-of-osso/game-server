@@ -103,6 +103,10 @@ fn map_store() -> Option<&'static MapStore> {
 }
 
 fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
+    source_map_objects(2106, &[227740, 227741])
+}
+
+fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::GameObjectSpawns {
     let source = Connection::open_with_flags(
         crate::test_data::world_db_path(),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -117,16 +121,24 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
     )
     .expect("game_object_locks.json beside world.db; run scripts/import_game_object_locks.py");
     let target = Connection::open(dir.path().join("world.db")).unwrap();
-    target.execute_batch("CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
+    target.execute_batch("CREATE TABLE arena_map(map_id INTEGER);
+        CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
         CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
         CREATE TABLE game_object_display_info (ID INTEGER,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
+    target
+        .execute("INSERT INTO arena_map VALUES(?)", [map_id])
+        .unwrap();
     let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
         g.spawntimesecs,t.Data3,t.Data5,t.Data6
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
-        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=2106 AND g.id IN (227740,227741) ORDER BY g.guid").unwrap();
-    let mut rows = query.query([]).unwrap();
+        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=? ORDER BY g.guid").unwrap();
+    let mut rows = query.query([map_id]).unwrap();
     while let Some(row) = rows.next().unwrap() {
+        let entry: u32 = row.get(1).unwrap();
+        if !entries.contains(&entry) {
+            continue;
+        }
         let values: Vec<rusqlite::types::Value> =
             (0..24).map(|index| row.get(index).unwrap()).collect();
         let mut spawn = values[..8].to_vec();
@@ -156,6 +168,34 @@ fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
             .unwrap();
     }
     crate::game_objects::load_game_object_spawns(&target).unwrap()
+}
+
+#[test]
+fn arena_source_doors_and_shadow_sight_are_loaded_for_zero_difficulty_copy() {
+    let objects = source_map_objects(572, &[185918, 185917, 184663, 184664]);
+    assert_eq!(objects.0.len(), 4);
+    assert_eq!(
+        objects
+            .0
+            .iter()
+            .filter(|spawn| spawn.info.go_type == 0)
+            .count(),
+        2
+    );
+    assert_eq!(
+        objects
+            .0
+            .iter()
+            .filter(|spawn| spawn.info.go_type == 6)
+            .count(),
+        2
+    );
+    assert!(
+        objects
+            .0
+            .iter()
+            .all(|spawn| spawn.spawn_difficulties == vec![0])
+    );
 }
 
 #[test]
