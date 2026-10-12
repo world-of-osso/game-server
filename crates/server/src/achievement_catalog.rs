@@ -17,7 +17,7 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
     66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162, 165,
-    13, 54, 55, 103, 105, 216, 219, 220, 245, 246,
+    13, 54, 55, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -28,6 +28,9 @@ const ACHIEVEMENT_FLAG_ACCOUNT: u32 = 0x0002_0000;
 pub(crate) enum CriteriaEvent {
     KillCreature(u32),
     ReachLevel(u8),
+    ActivelyReachLevel(u8),
+    ReachMaxLevel,
+    GainLevels(u8),
     SkillRank(u32, u16),
     /// TC GetPureMaxSkillValue of a known skill line.
     SkillMaxRank(u32, u16),
@@ -121,6 +124,9 @@ impl CriteriaEvent {
         match self {
             Self::KillCreature(_) => 0,
             Self::ReachLevel(_) => 5,
+            Self::ActivelyReachLevel(_) => 196,
+            Self::ReachMaxLevel => 221,
+            Self::GainLevels(_) => 253,
             Self::SkillRank(_, _) => 7,
             Self::SkillMaxRank(_, _) => 40,
             Self::CurrencyGained(_, _) => 12,
@@ -209,13 +215,16 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
+            Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
             Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
                 u32::from(level) == criteria.asset
             }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
             Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::FulfillCraftingOrderType(kind) => u32::from(kind) == criteria.asset,
-            Self::LootMoney(_)
+            Self::ReachMaxLevel
+            | Self::GainLevels(_)
+            | Self::LootMoney(_)
             | Self::DamageDealt(_)
             | Self::HighestDamageDone(_)
             | Self::HighestDamageTaken(_)
@@ -675,7 +684,8 @@ impl AchievementCatalog {
             CriteriaEvent::SkillRank(_, rank) | CriteriaEvent::SkillMaxRank(_, rank) => {
                 u64::from(rank)
             }
-            CriteriaEvent::CompleteQuest(_)
+            CriteriaEvent::ActivelyReachLevel(_)
+            | CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
             | CriteriaEvent::EnterTopLevelArea(_)
@@ -704,6 +714,7 @@ impl AchievementCatalog {
             | CriteriaEvent::MoneyEarnedFromAuctions(amount) => counter.saturating_add(amount),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::LootMoney(amount) => counter.saturating_add(amount),
+            CriteriaEvent::GainLevels(amount) => counter.saturating_add(u64::from(amount)),
             CriteriaEvent::CurrencyGained(_, amount)
             | CriteriaEvent::AcquireItem(_, amount)
             | CriteriaEvent::LootItem(_, amount)
@@ -1021,6 +1032,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel.
                         // TDB1210 has no criteria_data overlay for these unconditional rows.
                         || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59))
+                        || (kind == 196 && (1..=i32::from(crate::experience::MAX_LEVEL)).contains(&row.get::<_, i32>(2)?))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
@@ -1033,7 +1045,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
