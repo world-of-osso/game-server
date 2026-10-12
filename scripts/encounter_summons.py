@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Admit Kystia's sourced summoned mirror template into an independent COPY.
+"""Admit source-selected encounter summon templates into independent COPIES.
 
-No placements, guessed stats, loot or spell schedules are inserted. Lead applies
-this script to a reviewed copy. Sources: local TDB1210 template255050, models and
-explicit difficulty1 row; DB2 Mirror Image1264098 effect0 references255050.
+No placements, guessed stats, loot or schedules. Kystia: local TDB255050/models/
+Normal1 and DB2 summon1264098. Golden Serpent: pinned Spit Gold removal summons
+TDB135406, its actual base0 row and models; no new difficulty row is fabricated.
 """
 import argparse
 import sqlite3
@@ -13,6 +13,7 @@ from pathlib import Path
 import retail_content
 
 MIRROR = 255050
+ANIMATED_GOLD = 135406
 
 
 def import_mirror_template(connection):
@@ -45,8 +46,23 @@ def import_mirror_template(connection):
     return MIRROR
 
 
+def import_animated_gold_template(connection):
+    row = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?',(ANIMATED_GOLD,)).fetchone()
+    if row != ('','npc_animated_gold'):
+        raise ValueError('Animated Gold source AI identity changed')
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=? AND DifficultyID=0',(ANIMATED_GOLD,))
+    if connection.execute('SELECT count(*) FROM temp.tdb_difficulty').fetchone()[0] != 1:
+        raise ValueError('Missing authored Animated Gold base difficulty0')
+    retail_content.insert_tdb_templates(connection,str(ANIMATED_GOLD))
+    connection.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(ANIMATED_GOLD,))
+    return ANIMATED_GOLD
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
@@ -56,8 +72,8 @@ def main():
         parser.error('copy must be an existing independent regular file')
     with closing(sqlite3.connect(args.db)) as conn:
         with conn:
-            mirror=import_mirror_template(conn)
-    print(f'Imported sourced mirror template/model/difficulty:{mirror}; no placement inserted')
+            entry = import_animated_gold_template(conn) if args.encounter == 'golden-serpent' else import_mirror_template(conn)
+    print(f'Imported sourced encounter summon template/model:{entry}; no placement inserted')
 
 
 if __name__ == '__main__':

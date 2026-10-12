@@ -1204,6 +1204,7 @@ fn validate_start(
     }
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
+    crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
     if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
@@ -1659,6 +1660,7 @@ fn execute_cast(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
+    crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;

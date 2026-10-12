@@ -436,6 +436,7 @@ type AutoAttackTargets<'w, 's> = Query<
         CanAvoid<'static>,
         Option<&'static shared::components::PlayerStandState>,
         Has<Unkillable>,
+        Option<&'static crate::scripted_ai::CreatureScriptName>,
     ),
 >;
 
@@ -907,7 +908,7 @@ fn melee_damage_splits(
     attacker: Entity,
 ) -> Vec<crate::auras::damage_transfer::Split> {
     let candidates = match targets.get_mut(victim) {
-        Ok((_, _, _, _, _, _, _, _, _, avoidance, _, _)) => {
+        Ok((_, _, _, _, _, _, _, _, _, avoidance, _, _, _)) => {
             crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
         }
         Err(_) => return Vec::new(),
@@ -919,7 +920,7 @@ fn melee_damage_splits(
         {
             continue;
         }
-        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _, _)) =
+        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _, _, _)) =
             targets.get_mut(split.recipient)
         else {
             continue;
@@ -977,6 +978,7 @@ fn try_swing(
         mut avoidance,
         stand_state,
         unkillable,
+        script_name,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -1073,19 +1075,35 @@ fn try_swing(
     });
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let overkill = crate::level_scaling::damage_overkill(damage, scaled_loss, health.current);
+    let incoming_loss = health_loss(training_dummy, scaled_loss);
+    let scripted_loss =
+        crate::scripted_ai::limit_scripted_loss(script_name, health.current, incoming_loss);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel,
         attacker.entity,
         health.current,
         limit_unkillable_loss(
             health.current,
-            health_loss(training_dummy, scaled_loss),
+            scripted_loss,
             unkillable && attacker.entity != target_entity,
         ),
     );
-    let rescue =
-        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss);
-    let became_lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
+    let intercepted = crate::scripted_ai::has_damage_interceptor(script_name);
+    // Interception reactions may heal (Molten Gold136). Keep health uncommitted
+    // until the exclusive-world hook executes; never undo an applied death.
+    if intercepted {
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            commit_intercepted_melee_loss(world, attacker_entity, target_entity, incoming_loss);
+        });
+    }
+    let rescue = if intercepted {
+        None
+    } else {
+        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss)
+    };
+    let became_lethal =
+        !intercepted && rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
     if let Some(instance) = rescue {
         commands.queue(move |world: &mut World| {
             crate::auras::remove_instance(
@@ -1096,7 +1114,7 @@ fn try_swing(
             )
         });
     }
-    if is_npc && loss > 0.0 {
+    if is_npc && incoming_loss > 0.0 && !intercepted {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
             crate::creature_tap::record_damage(
@@ -1111,7 +1129,7 @@ fn try_swing(
                 target_entity,
                 Some(attacker_entity),
                 health_before,
-                loss,
+                incoming_loss,
             );
         });
     }
@@ -1354,6 +1372,38 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     deal_health_damage(world, attacker, victim, damage, 1, None, 0.0);
 }
 
+/// Source-script melee interception resolves in the exclusive-world boundary:
+/// snapshot → adjust loss → reaction → health commit → tap/death.
+fn commit_intercepted_melee_loss(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    incoming: f32,
+) {
+    let Some(health) = world.get::<Health>(victim) else {
+        return;
+    };
+    if health.current <= 0.0 {
+        return;
+    }
+    let before = health.current;
+    let loss = crate::scripted_ai::limit_scripted_loss(
+        world.get::<crate::scripted_ai::CreatureScriptName>(victim),
+        before,
+        incoming,
+    );
+    crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming);
+    let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    if loss > 0.0 {
+        crate::creature_tap::record_damage(world, victim, attacker, before, loss);
+    }
+    mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
+    if lethal {
+        mark_npc_dead_world(world, victim);
+        crate::spell_cast::log_event(world, death_log_event(attacker, victim));
+    }
+}
+
 /// Health application for an already-mitigated direct or redirected hit.
 pub(crate) fn deal_health_damage(
     world: &mut World,
@@ -1376,8 +1426,17 @@ pub(crate) fn deal_health_damage(
         return;
     };
     let before = health.current;
+    let incoming_loss = loss;
+    let scripted_loss = crate::scripted_ai::limit_scripted_loss(
+        world.get::<crate::scripted_ai::CreatureScriptName>(victim),
+        before,
+        incoming_loss,
+    );
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
-    let loss = limit_unkillable_loss(before, loss, protected);
+    let loss = limit_unkillable_loss(before, scripted_loss, protected);
+    if incoming_loss > 0.0 {
+        crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming_loss);
+    }
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
@@ -1409,7 +1468,6 @@ pub(crate) fn deal_health_damage(
     );
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
-        crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, loss);
     }
     if !lethal {
         return;
