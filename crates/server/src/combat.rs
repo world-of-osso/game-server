@@ -853,7 +853,14 @@ fn roll_outcome(
     } else {
         chances.miss
     };
-    chances.miss = (base_miss - hit_modifier).clamp(0.0, 100.0);
+    // Creature miss_pct already includes its own aura54; players must subtract
+    // their caster modifier here too (Unit::MeleeSpellMissChance, Unit.cpp12525).
+    let player_hit_modifier = if attacker.creature {
+        0.0
+    } else {
+        attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
+    };
+    chances.miss = (base_miss - player_hit_modifier - hit_modifier).clamp(0.0, 100.0);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
