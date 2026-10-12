@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::battleground::{BgPhase, BgTeam, FlagObjective, FlagState, template_by_id};
+use shared::battleground::{
+    BgPhase, BgTeam, BgTemplate, FlagObjective, FlagSite, FlagState, template_by_id,
+};
 use shared::components::{Health, Level, Player, Position};
 use shared::protocol::{
     BattlegroundPlayerScoreSnapshot, GameObjectInfo, WARSONG_ALLIANCE_FLAG_ENTRY,
@@ -92,6 +94,9 @@ fn update_match(
         nodes.advance(delta_ms, &mut matched.instance, &template);
         return changed || before != nodes.world_states(&matched.instance);
     }
+    if matched.eye.is_some() {
+        return update_eye(world, matched, actors, map, &template, delta_ms) || changed;
+    }
     let Some(battle) = matched.flags.as_mut() else {
         return changed;
     };
@@ -131,6 +136,63 @@ fn update_match(
         }
     }
     changed
+}
+
+/// Presence heartbeats and timers, then the carrier: alive on the map it may score at a
+/// trigger, otherwise the flag drops where it was last carried.
+fn update_eye(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let present: Vec<_> = [
+        (BgTeam::A, &matched.instance.team_a_players),
+        (BgTeam::B, &matched.instance.team_b_players),
+    ]
+    .into_iter()
+    .flat_map(|(team, ids)| {
+        ids.iter().filter_map(move |id| {
+            let actor = actors.get(id).filter(|a| a.map == map && a.alive)?;
+            Some((team, actor.position.to_array()))
+        })
+    })
+    .collect();
+    let eye = matched.eye.as_mut().expect("Eye of the Storm match");
+    let before = (eye.world_states(&matched.instance), eye.flag_site());
+    eye.advance(delta_ms, &present, &mut matched.instance, template);
+    if let Some(carrier) = eye
+        .carrier()
+        .filter(|_| matched.instance.phase == BgPhase::InProgress)
+    {
+        let actor = actors.get(&carrier).filter(|actor| actor.map == map);
+        match actor {
+            Some(actor) if actor.alive => {
+                matched.flag_positions[0] = Some(actor.position);
+                let team = if matched.instance.team_a_players.contains(&carrier) {
+                    BgTeam::A
+                } else {
+                    BgTeam::B
+                };
+                let at = actor.position.to_array();
+                if eye.capture(carrier, team, at, &mut matched.instance, template) {
+                    credit(&mut matched.scoreboard, carrier, eye.rules.capture_stat);
+                }
+            }
+            _ => {
+                let at = actor
+                    .map(|actor| actor.position)
+                    .or(matched.flag_positions[0]);
+                eye.drop_flag(at.expect("carried position recorded at pickup").to_array());
+            }
+        }
+    }
+    if eye.flag_site() != before.1 {
+        place_eye_flag(world, map, eye.rules.flag_entry, eye.flag_site());
+    }
+    before.0 != eye.world_states(&matched.instance)
 }
 
 fn credit(scoreboard: &mut [BattlegroundPlayerScoreSnapshot], character_id: u64, stat: u32) {
@@ -261,12 +323,13 @@ pub(crate) fn use_battleground_object(
     }
 }
 
-fn assault_capture_point(
+/// The user's team and character in its accepted, in-progress match on the object's map.
+fn active_match<'a>(
     world: &World,
-    state: &mut PvpServerState,
+    state: &'a mut PvpServerState,
     player: Entity,
     object: Entity,
-) -> Result<String, String> {
+) -> Result<(BgTeam, u64, &'a mut InvitedBattleground), String> {
     let snapshot = world
         .get::<PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
@@ -275,27 +338,37 @@ fn assault_capture_point(
         .get::<ClientId>(player)
         .ok_or("player character missing")?
         .0;
-    let entry = world
-        .get::<GameObjectInfo>(object)
-        .ok_or("capture point is no longer available")?
-        .entry;
     let matched = state
         .battleground_matches
         .get_mut(&snapshot.match_id)
-        .ok_or("match missing")?;
+        .ok_or("battleground match missing")?;
     let map = matched.map.ok_or("battleground map missing")?;
     if world.get::<InMap>(player) != Some(&map)
         || world.get::<InMap>(object) != Some(&map)
         || matched.instance.phase != BgPhase::InProgress
         || !matched.accepted.contains(&character_id)
     {
-        return Err("capture point is not usable in this player's active match".into());
+        return Err("object is not usable in this player's active match".into());
     }
+    Ok((snapshot.team, character_id, matched))
+}
+
+fn assault_capture_point(
+    world: &World,
+    state: &mut PvpServerState,
+    player: Entity,
+    object: Entity,
+) -> Result<String, String> {
+    let entry = world
+        .get::<GameObjectInfo>(object)
+        .ok_or("capture point is no longer available")?
+        .entry;
+    let (team, character_id, matched) = active_match(world, state, player, object)?;
     let nodes = matched
         .nodes
         .as_mut()
         .ok_or("match has no capture points")?;
-    let stat = nodes.assault(entry, snapshot.team)?;
+    let stat = nodes.assault(entry, team)?;
     credit(&mut matched.scoreboard, character_id, stat);
     Ok("capture point state updated".into())
 }
@@ -306,48 +379,62 @@ fn pickup_or_return_flag(
     player: Entity,
     object: Entity,
 ) -> Result<String, String> {
-    let snapshot = world
-        .get::<PlayerPvpState>(player)
-        .and_then(|player| player.battleground.clone())
-        .ok_or("player is not in a battleground")?;
-    let character_id = world
-        .get::<ClientId>(player)
-        .ok_or("player character missing")?
-        .0;
-    let info = world
+    let entry = world
         .get::<GameObjectInfo>(object)
-        .ok_or("flag is no longer available")?;
-    let owner = match info.entry {
+        .ok_or("flag is no longer available")?
+        .entry;
+    let (team, character_id, matched) = active_match(world, state, player, object)?;
+    let map = matched.map.expect("active match has a map");
+    let position = wow_position(world.get::<Position>(player).expect("positioned player"));
+    if let Some(eye) = matched.eye.as_mut() {
+        if entry != eye.rules.flag_entry || !eye.pickup(team, character_id) {
+            return Err("the flag is not available".into());
+        }
+        matched.flag_positions[0] = Some(position);
+        place_eye_flag(world, map, eye.rules.flag_entry, eye.flag_site());
+        return Ok("flag picked up".into());
+    }
+    let owner = match entry {
         WARSONG_ALLIANCE_FLAG_ENTRY => BgTeam::A,
         WARSONG_HORDE_FLAG_ENTRY => BgTeam::B,
         _ => return Err("not a battleground team flag".into()),
     };
-    let matched = state
-        .battleground_matches
-        .get_mut(&snapshot.match_id)
-        .ok_or("battleground match missing")?;
-    let map = matched.map.ok_or("battleground map missing")?;
-    if world.get::<InMap>(player) != Some(&map)
-        || world.get::<InMap>(object) != Some(&map)
-        || matched.instance.phase != BgPhase::InProgress
-    {
-        return Err("flag is not usable in this player's active match".into());
-    }
-    if !matched.accepted.contains(&character_id) {
-        return Err("player has not accepted this match".into());
-    }
-    if owner == snapshot.team {
+    if owner == team {
         return return_own_flag(world, matched, map, object, owner, character_id);
     }
     let battle = matched.flags.as_mut().ok_or("match has no team flags")?;
-    if !battle.flags.pickup(snapshot.team, character_id) {
+    if !battle.flags.pickup(team, character_id) {
         return Err("enemy flag is not available".into());
     }
-    matched.flag_positions[team_index(owner)] = Some(wow_position(
-        world.get::<Position>(player).expect("positioned player"),
-    ));
+    matched.flag_positions[team_index(owner)] = Some(position);
     world.despawn(object);
     Ok("enemy flag picked up".into())
+}
+
+/// Show the Netherstorm flag where the rules place it: home, on the ground or nowhere.
+fn place_eye_flag(world: &mut World, map: InMap, entry: u32, site: Option<FlagSite>) {
+    let mut objects = world.query::<(Entity, &GameObjectInfo, &InMap)>();
+    let shown: Vec<_> = objects
+        .iter(world)
+        .filter(|(_, info, at)| info.entry == entry && **at == map)
+        .map(|(object, ..)| object)
+        .collect();
+    for object in shown {
+        world.despawn(object);
+    }
+    let Some(site) = site else { return };
+    let home = world
+        .resource::<GameObjectSpawns>()
+        .0
+        .iter()
+        .find(|spawn| spawn.map_id == map.map_id && spawn.info.entry == entry)
+        .cloned()
+        .expect("entry requires the authored flag");
+    let position = match site {
+        FlagSite::Home => home.position,
+        FlagSite::Dropped(at) => Vec3::from_array(at),
+    };
+    spawn_flag(world, map, &home, position);
 }
 
 fn return_own_flag(
