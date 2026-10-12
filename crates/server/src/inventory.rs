@@ -99,6 +99,7 @@ pub(crate) fn load_model(
         .items
         .iter()
         .chain(record.equipped.iter().map(|entry| &entry.item))
+        .chain(record.nonvisual_equipped.iter().map(|(_, item)| item))
         .chain(record.bag_slots.iter().map(|entry| &entry.item))
     {
         let source = record.definition_sources[&item.item_guid];

@@ -1,7 +1,7 @@
 //! Real-DB tests against data/world.db: characters created with the Retail kit.
 
-use shared::components::{CharacterAppearance, EquipmentVisualSlot as Slot};
-use shared::protocol::EquipmentSlot;
+use shared::components::CharacterAppearance;
+use shared::protocol::EquipmentSlot as Slot;
 
 use super::*;
 use crate::persistence::inventory_store::load_inventory_record;
@@ -39,20 +39,28 @@ fn create(kit: &OwnedKit, name: &str, race: u8, class: u8) -> Created {
     let mut equipped: Vec<_> = record
         .equipped
         .iter()
-        .map(|entry| (entry.slot, entry.item.item_id))
+        .map(|entry| (Slot::from_visual_slot(entry.slot), entry.item.item_id))
         .collect();
-    equipped.sort_by_key(|&(slot, _)| EquipmentSlot::from_visual_slot(slot));
+    equipped.sort_by_key(|&(slot, _)| slot);
     let mut appearance: Vec<_> = data
         .equipment_appearance
         .entries
         .iter()
-        .map(|entry| (entry.slot, entry.item_id.unwrap()))
+        .map(|entry| (Slot::from_visual_slot(entry.slot), entry.item_id.unwrap()))
         .collect();
-    appearance.sort_by_key(|&(slot, _)| EquipmentSlot::from_visual_slot(slot));
+    appearance.sort_by_key(|&(slot, _)| slot);
     assert_eq!(
         appearance, equipped,
         "character list shows the equipped items"
     );
+    for (id, item) in &record.nonvisual_equipped {
+        let slot = Slot::ALL
+            .into_iter()
+            .find(|slot| slot.inv_slot_id() == *id && slot.visual_slot().is_none())
+            .expect("stored nonvisual equipment slot");
+        equipped.push((slot, item.item_id));
+    }
+    equipped.sort_by_key(|&(slot, _)| slot);
     let mut backpack: Vec<_> = record
         .placements
         .iter()
@@ -174,8 +182,8 @@ fn human_rogue_keeps_the_second_dagger_in_the_backpack() {
 }
 
 /// Loadout 1288 (Human Death Knight, level 8): four Deathweave Bags equip into bag
-/// slots 1-4 (`StoreNewItemInBestSlots` -> `FindEquipSlot` INVTYPE_BAG), jewelry (no
-/// neck/finger storage), ten Black Mushrooms (food: 10 for a Death Knight);
+/// slots 1-4 (`StoreNewItemInBestSlots` -> `FindEquipSlot` INVTYPE_BAG); the choker and
+/// two rings equip, leaving ten Black Mushrooms (food: 10 for a Death Knight);
 /// playercreateinfo_item (0, 6, 40582, -1) removes the Scourgestone.
 #[test]
 fn human_death_knight_gets_plate_bags_jewelry_and_ten_mushrooms() {
@@ -188,6 +196,7 @@ fn human_death_knight_gets_plate_bags_jewelry_and_ten_mushrooms() {
             level: 8,
             equipped: vec![
                 (Slot::Head, 34652),
+                (Slot::Neck, 34657),
                 (Slot::Shoulder, 34655),
                 (Slot::Chest, 34650),
                 (Slot::Waist, 34651),
@@ -195,15 +204,12 @@ fn human_death_knight_gets_plate_bags_jewelry_and_ten_mushrooms() {
                 (Slot::Feet, 34648),
                 (Slot::Wrist, 34653),
                 (Slot::Hands, 34649),
+                (Slot::Finger1, 34658),
+                (Slot::Finger2, 38147),
                 (Slot::Back, 34659),
             ],
             bags: vec![(1, 38145), (2, 38145), (3, 38145), (4, 38145)],
-            backpack: vec![
-                (0, 34657, 1), // Choker of Damnation
-                (1, 34658, 1), // Plague Band
-                (2, 38147, 1), // Corrupted Band
-                (3, 41751, 10),
-            ],
+            backpack: vec![(0, 41751, 10)],
             // Rune Strike, Death Coil, Death and Decay, Blood Boil, Death Grip; button 2's
             // spell 45477 is not in Retail SpellName, so IsActionButtonDataValid drops it.
             bar: spells(&[
@@ -284,7 +290,8 @@ fn pandaren_monk_gets_four_sugarcane_stalks() {
 }
 
 /// Loadout 1647 (Dracthyr Evoker, level 10): Evokers get no weapon; the four Large
-/// Green Bags equip into bag slots 1-4, rings, amulet and trinkets stay in the backpack.
+/// Green Bags equip into bag slots 1-4; rings, amulet and trinkets equip, leaving
+/// only the Hearthstone in the backpack.
 #[test]
 fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
     let Some(kit) = OwnedKit::from_world_db() else {
@@ -296,11 +303,16 @@ fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
         created.equipped,
         vec![
             (Slot::Head, 188820),
+            (Slot::Neck, 188814),
             (Slot::Chest, 188822),
             (Slot::Legs, 188819),
             (Slot::Feet, 188824),
             (Slot::Wrist, 188823),
             (Slot::Hands, 188821),
+            (Slot::Finger1, 188812),
+            (Slot::Finger2, 188813),
+            (Slot::Trinket1, 188816),
+            (Slot::Trinket2, 188817),
             (Slot::Back, 188815),
         ]
     );
@@ -308,17 +320,7 @@ fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
         created.bags,
         vec![(1, 188213), (2, 188213), (3, 188213), (4, 188213)]
     );
-    assert_eq!(
-        created.backpack,
-        vec![
-            (0, 188812, 1),
-            (1, 188813, 1),
-            (2, 188814, 1),
-            (3, 188816, 1),
-            (4, 188817, 1),
-            (5, HEARTHSTONE, 1),
-        ]
-    );
+    assert_eq!(created.backpack, vec![(0, HEARTHSTONE, 1)]);
     assert_eq!(
         created.bar,
         spells(&[
@@ -333,7 +335,10 @@ fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
 
 /// Loadout 1346 (Night Elf Demon Hunter, level 8): one Warglaive equips, the second
 /// waits in the backpack (no dual wield); the four Demon Hide Satchels equip into bag
-/// slots 1-4; Illidari Rations are food, 4.
+/// slots 1-4. InventoryType 2 equips the Illidari Chain in Neck, 11 equips the
+/// Illidari Ring/Band in Finger1/2, and 12 equips Demon Trophy/Charm of Demonic Fire
+/// in Trinket1/2 (TrinityCore a352b1fa Player::StoreNewItemInBestSlots/FindEquipSlot).
+/// The backpack holds the second warglaive, four Illidari Rations and Hearthstone.
 #[test]
 fn night_elf_demon_hunter_equips_one_warglaive() {
     let Some(kit) = OwnedKit::from_world_db() else {
@@ -345,6 +350,7 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
         created.equipped,
         vec![
             (Slot::Head, 133320),
+            (Slot::Neck, 112461),
             (Slot::Shoulder, 133318),
             (Slot::Chest, 133322),
             (Slot::Waist, 133325),
@@ -352,6 +358,10 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
             (Slot::Feet, 133324),
             (Slot::Wrist, 133323),
             (Slot::Hands, 133321),
+            (Slot::Finger1, 112459),
+            (Slot::Finger2, 112460),
+            (Slot::Trinket1, 123959),
+            (Slot::Trinket2, 123960),
             (Slot::Back, 112462),
             (Slot::MainHand, 112458),
         ]
@@ -362,16 +372,7 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
     );
     assert_eq!(
         created.backpack,
-        vec![
-            (0, 112459, 1),
-            (1, 112460, 1),
-            (2, 112461, 1),
-            (3, 129181, 1),
-            (4, 123959, 1),
-            (5, 123960, 1),
-            (6, 132752, 4),
-            (7, HEARTHSTONE, 1),
-        ]
+        vec![(0, 129181, 1), (1, 132752, 4), (2, HEARTHSTONE, 1)]
     );
     assert_eq!(
         created.bar,

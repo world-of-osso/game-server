@@ -93,7 +93,7 @@ pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses
         .unwrap_or_default()
 }
 
-/// Authored compatibility data preserves the eight existing saved boss ordinals.
+/// Authored compatibility data preserves the existing saved boss ordinals, including Azure.
 /// It is part of the registry, not a retry/fallback when imported bindings are missing.
 fn compatibility_catalog(map_id: u32) -> InstanceScript {
     let mut script = InstanceScript {
@@ -312,6 +312,7 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
             update_instance_lock(world, map, encounter_id, difficulty_id);
             crate::achievement::record_encounter_defeat(world, map, encounter_id, difficulty_id);
             crate::mythic_plus::record_boss(world, map, encounter_id);
+            crate::raid_history::record_first_kill(world, map, encounter_id, difficulty_id);
         }
         EncounterState::NotStarted if previous == EncounterState::InProgress => send_to_players(
             world,
@@ -391,7 +392,7 @@ pub fn players_in_map(world: &mut World, map: InMap) -> Vec<Entity> {
 }
 
 /// `Map::SendToPlayers` on the encounter channel.
-fn send_to_players<M: lightyear::prelude::Message + Clone>(
+pub(super) fn send_to_players<M: lightyear::prelude::Message + Clone>(
     world: &mut World,
     map: InMap,
     message: M,
@@ -403,6 +404,25 @@ fn send_to_players<M: lightyear::prelude::Message + Clone>(
             sender.send::<EncounterChannel>(message.clone());
         }
     }
+}
+
+/// A live instance boss, not an ordinary creature with a similar spell.
+pub(super) fn is_active_boss(world: &World, map: InMap, unit: Entity) -> bool {
+    let Some(npc) = world.get::<shared::components::Npc>(unit) else {
+        return false;
+    };
+    world
+        .get_resource::<InstanceScripts>()
+        .and_then(|scripts| scripts.0.get(&map))
+        .is_some_and(|script| {
+            script.boss_creatures.iter().any(|&(entry, id)| {
+                entry == npc.template_id
+                    && script
+                        .bosses
+                        .get(id as usize)
+                        .is_some_and(|boss| boss.state == EncounterState::InProgress)
+            })
+        })
 }
 
 #[cfg(test)]

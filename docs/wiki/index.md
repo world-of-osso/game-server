@@ -1,6 +1,12 @@
 # Wiki Index
 
 - [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native build-union dispatch/resource census; [baseline](../class-completeness.md), [continuation](../class-completeness2.md): authored census startup, native selectors/portals/rituals, controlled elemental lifecycle and persisted item-target unlocks; whole spell/talent coverage remains open.
+- [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
+- [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
+- [Static armory snapshots](systems/site-snapshots.md) — public-only offline JSON, local PNG icons, attributable future M+ completion and raid first-kill/guild credit; no listener or production publishing.
+
+- [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
+- [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.
@@ -24,6 +30,9 @@
 - [Authoritative transmog](systems/transmog-apply.md) — authored service/gossip, atomic target-price/modifier/binding persistence, projection and private both-skin native proof; dynamic-price/conditional/illusion/outfit boundaries explicit.
 
 - [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11) — observer detection, authored spell-area quest masks, both-skin Jaga loot/turn-in and post-reward hiding; Vin/Rendan data-route gaps explicit.
+- [Cobrahn encounter](systems/boss-scripts.md#wailing-caverns--lord-cobrahn-2026-10-11) — local SmartAI lifecycle, both-skin native entry/pull/death/credit; actor appearance and population-copy loot blocked.
+
+- [Private terrain destinations](investigations/private-terrain-destinations.md) — cooldown-assist/Erland stale setup heights, build-qualified fixture source and unchanged collision semantics.
 
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 

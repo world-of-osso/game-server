@@ -341,19 +341,31 @@ pub(crate) fn spawn_map_content(world: &mut World, map: InMap) {
     let mut queue = CommandQueue::default();
     {
         let mut commands = Commands::new(&mut queue, world);
-        if let Some(objects) = world.get_resource::<crate::game_objects::GameObjectSpawns>() {
-            crate::game_objects::spawn_map_game_objects(
-                &mut commands,
-                objects,
-                map,
-                content.difficulty_id,
-            );
-        }
-        if let Some(world_data) = world.get_resource::<crate::world_data::WorldData>() {
-            crate::zones::spawn_map_creatures(&mut commands, world_data, content, true);
-        }
+        queue_map_content(
+            &mut commands,
+            world.get_resource::<crate::world_data::WorldData>(),
+            world.get_resource::<crate::game_objects::GameObjectSpawns>(),
+            content,
+        );
     }
     queue.apply(world);
+}
+
+/// All instance entry paths queue pool selection before any gathering-node consumer.
+pub(crate) fn queue_map_content(
+    commands: &mut Commands,
+    world_data: Option<&crate::world_data::WorldData>,
+    objects: Option<&crate::game_objects::GameObjectSpawns>,
+    content: crate::zones::MapContent,
+) {
+    let map = content.map;
+    let difficulty_id = content.difficulty_id;
+    if let Some(world_data) = world_data {
+        crate::zones::spawn_map_creatures(commands, world_data, content, true);
+    }
+    if let Some(objects) = objects {
+        crate::game_objects::spawn_map_game_objects(commands, objects, map, difficulty_id);
+    }
 }
 
 /// What a created copy spawns: its difficulty and the bosses its lock keeps dead.
