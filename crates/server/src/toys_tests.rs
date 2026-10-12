@@ -3902,6 +3902,42 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
 }
 
 #[test]
+fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
+    use shared::components::{Health, Position, Rotation};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("compass.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+        x: 0.0,
+        y: -10.0,
+        z: 0.0,
+    });
+    let position = *h.app.world().get::<Position>(h.caster).unwrap();
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    let other_rotation = h.app.world().get::<Rotation>(h.npc).copied();
+    learn_effect_toy(&mut h, character, 45984);
+    assert_eq!(activate(&mut h, 45984)[0].error, None);
+    h.advance(15);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 64385));
+    let rotation = h.app.world().get::<Rotation>(h.caster).unwrap();
+    let source_orientation = rotation.y - std::f32::consts::FRAC_PI_2;
+    assert!((0.0..=std::f32::consts::TAU).contains(&source_orientation));
+    assert_eq!((rotation.x, rotation.z), (0.0, 0.0));
+    assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+    assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+    assert_eq!(
+        h.app.world().get::<Rotation>(h.npc).copied(),
+        other_rotation
+    );
+}
+
+#[test]
 fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
     use crate::auras::ActiveAuras;
     use shared::components::{Position, Rotation, UnitScale};
