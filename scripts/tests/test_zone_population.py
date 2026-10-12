@@ -31,6 +31,7 @@ class ZonePopulationTest(unittest.TestCase):
                     self.assertEqual(source_title, db.execute("SELECT LogTitle FROM content_quest_template WHERE ID=?", (quest,)).fetchone())
                     self.assertEqual([(giver, quest)], db.execute("SELECT id,quest FROM content_creature_queststarter WHERE id=? AND quest=?", (giver, quest)).fetchall())
                     self.assertTrue(db.execute("SELECT 1 FROM content_creature WHERE id1=?", (giver,)).fetchone())
+                self.assertEqual(None, db.execute("SELECT unit_flags FROM content_creature WHERE id1=127080 AND map=1643 LIMIT 1").fetchone()[0])
                 self.assertEqual(0, db.execute("SELECT count(*) FROM content_creature c JOIN creature a ON a.guid=c.guid AND a.map=c.map AND a.id1=c.id1 WHERE c.map IN(530,571)").fetchone()[0])
                 self.assertEqual(db.execute("SELECT * FROM tdb_creature_template_model WHERE CreatureID=139612").fetchall(), db.execute("SELECT * FROM content_creature_template_model WHERE CreatureID=139612").fetchall())
                 source_rows = db.execute("SELECT guid+20000000,id,position_x,position_y,position_z FROM tdb_creature WHERE map=646 AND phaseUseFlags=0 AND PhaseId IN(0,169) AND PhaseGroup=0 AND terrainSwapMap=-1 AND instr(','||replace(spawnDifficulties,' ','')||',',',0,')>0").fetchall()
