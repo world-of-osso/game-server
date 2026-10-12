@@ -72,6 +72,7 @@ pub(crate) fn decode_saved_achievement_state(bytes: &[u8]) -> (PlayerAchievement
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 struct AchievementTracker {
     last_processed_level: u8,
+    last_processed_zone: Option<u32>,
 }
 
 /// Committed gameplay credit from systems that do not own an exclusive World.
@@ -100,6 +101,7 @@ impl Plugin for AchievementPlugin {
                 process_equipped_achievement_updates,
                 process_reputation_achievement_updates,
                 process_exploration_achievement_updates,
+                process_top_level_area_achievement_updates,
                 process_committed_criteria_credits,
                 process_inventory_acquisition_credits,
                 dungeon::send_entry_progress,
@@ -135,6 +137,7 @@ fn send_initial_achievement_snapshot(world: &mut World) {
         send_updates(world, connection, snapshot, Vec::new());
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
+            last_processed_zone: None,
         });
     }
 }
@@ -199,9 +202,10 @@ fn process_level_achievement_updates(world: &mut World) {
             continue;
         };
         crate::adventure_guide::record(world, player, CriteriaEvent::ReachLevel(level));
-        world.entity_mut(player).insert(AchievementTracker {
-            last_processed_level: level,
-        });
+        world
+            .get_mut::<AchievementTracker>(player)
+            .unwrap()
+            .last_processed_level = level;
         if let Some(connection) = connection_for_player(world, player) {
             send_updates(world, connection, snapshot, toasts);
         }
@@ -348,12 +352,56 @@ fn detect_explorable_area_bit(world: &mut World, player: Entity) -> Option<u32> 
     if is_dead || on_taxi {
         return None;
     }
+    let (area, _) = load_player_terrain_area(world, player)?;
+    world.get_resource::<AchievementCatalog>()?.area_bit(area)
+}
+
+fn load_player_terrain_area(world: &mut World, player: Entity) -> Option<(u32, u32)> {
     let position = *world.get::<shared::components::Position>(player)?;
     let map = *world.get::<InMap>(player)?;
     let area = world
         .resource_mut::<crate::ground::GroundMap>()
         .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))?;
-    world.get_resource::<AchievementCatalog>()?.area_bit(area)
+    Some((area, map.map_id))
+}
+
+fn process_top_level_area_achievement_updates(world: &mut World) {
+    if !world.contains_resource::<crate::ground::GroundMap>() {
+        return;
+    }
+    if !world.contains_resource::<crate::area_table::AreaTable>() {
+        return;
+    }
+    let players: Vec<_> = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .map(|(_, link, _)| link.0)
+        .collect();
+    for player in players {
+        update_top_level_area_credit(world, player);
+    }
+}
+
+fn update_top_level_area_credit(world: &mut World, player: Entity) {
+    let zone = load_player_terrain_area(world, player).and_then(|(area, map)| {
+        world
+            .resource::<crate::area_table::AreaTable>()
+            .zone_id(area, map)
+    });
+    let Some(tracker) = world.get::<AchievementTracker>(player) else {
+        return;
+    };
+    if tracker.last_processed_zone == zone {
+        return;
+    }
+    world
+        .get_mut::<AchievementTracker>(player)
+        .unwrap()
+        .last_processed_zone = zone;
+    if let Some(zone) = zone {
+        // TC Player::UpdateZone7590 does not impose exploration's alive/non-taxi restriction.
+        record_criteria_event(world, player, CriteriaEvent::EnterTopLevelArea(zone));
+    }
 }
 
 /// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
