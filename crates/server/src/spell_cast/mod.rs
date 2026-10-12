@@ -496,18 +496,62 @@ pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
 
 /// Moving leaves the cast bar alone (`Spell::CheckMovement`: no
 /// `SpellInterruptFlags::Movement`).
-fn cast_allows_moving(spell: &SpellInfo) -> bool {
-    spell
+fn cast_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    let intrinsic = spell
         .interrupts
         .as_ref()
-        .is_none_or(|interrupts| interrupts.interrupt_flags & SPELL_INTERRUPT_MOVEMENT == 0)
+        .is_none_or(|interrupts| interrupts.interrupt_flags & SPELL_INTERRUPT_MOVEMENT == 0);
+    intrinsic || aura_allows_moving(world, caster, spell)
 }
 
 /// Moving leaves the channel alone (`SpellInfo::IsMoveAllowedChannel`).
-fn channel_allows_moving(spell: &SpellInfo) -> bool {
-    spell.interrupts.as_ref().is_none_or(|interrupts| {
+fn channel_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    let intrinsic = spell.interrupts.as_ref().is_none_or(|interrupts| {
         interrupts.channel_interrupt_flags[0] & CHANNEL_INTERRUPT_MOVING == 0
-    })
+    });
+    intrinsic || aura_allows_moving(world, caster, spell)
+}
+
+/// TC Unit::CanCastSpellWhileMoving: native330 uses a family mask, not its amount.
+fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
+    if attributes(spell, 13) & NO_DISABLE_MOVEMENT_INTERRUPT != 0 {
+        return false;
+    }
+    spell_mods::has_aura_type_affecting(
+        world,
+        caster,
+        crate::auras::handlers::CAST_WHILE_WALKING,
+        spell,
+    )
+}
+
+/// Aura gain/removal/expiry updates the server cast and its replicated movement flag.
+pub(crate) fn refresh_cast_movement_permission(world: &mut World, caster: Entity) {
+    let Some((spell_id, cast_type)) = world
+        .get::<CastState>(caster)
+        .map(|cast| (cast.spell_id, cast.cast_type))
+    else {
+        return;
+    };
+    let Some(spell) = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .cloned()
+    else {
+        warn!(
+            "Cannot refresh movement permission for active cast {spell_id}: missing SpellStore row"
+        );
+        return;
+    };
+    let allowed = match cast_type {
+        CastType::Normal => cast_allows_moving(world, caster, &spell),
+        CastType::Channel => channel_allows_moving(world, caster, &spell),
+    };
+    let mut cast = world.get_mut::<CastState>(caster).expect("cast read above");
+    if cast.cast_while_moving != allowed {
+        cast.cast_while_moving = allowed;
+    }
 }
 
 fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
@@ -1202,8 +1246,11 @@ fn validate_start(
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell)?;
-    let blocked_by_moving = (cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(spell))
-        || (is_channeled(spell) && !channel_allows_moving(spell));
+    let cast_blocked_by_moving =
+        cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(world, caster, spell);
+    let channel_blocked_by_moving =
+        is_channeled(spell) && !channel_allows_moving(world, caster, spell);
+    let blocked_by_moving = cast_blocked_by_moving || channel_blocked_by_moving;
     if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }
@@ -1563,8 +1610,8 @@ fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
 fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast: &mut CastState) {
     cast.spell_name = spell.name.clone();
     cast.cast_while_moving = match cast.cast_type {
-        CastType::Normal => cast_allows_moving(spell),
-        CastType::Channel => channel_allows_moving(spell),
+        CastType::Normal => cast_allows_moving(world, caster, spell),
+        CastType::Channel => channel_allows_moving(world, caster, spell),
     };
     world
         .entity_mut(caster)

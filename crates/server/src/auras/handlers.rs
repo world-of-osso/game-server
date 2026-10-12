@@ -49,6 +49,8 @@ pub enum AuraKind {
     LinkedSummon,
     /// Trigger and remove an owned child aura; only zero parent amounts are supported.
     Linked,
+    /// Permission to keep masked casts/channels moving (`spell_cast`).
+    CastMovement,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -186,6 +188,7 @@ pub const MOD_BONUS_ARMOR_PCT: u32 = 466;
 pub const MOD_STAT_BONUS_PCT: u32 = 467;
 pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
+pub const CAST_WHILE_WALKING: u32 = 330;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
@@ -206,6 +209,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
         LINKED | LINKED_2 => Linked,
+        CAST_WHILE_WALKING => CastMovement,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT
