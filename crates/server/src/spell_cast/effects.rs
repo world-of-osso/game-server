@@ -195,7 +195,10 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         if world
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()
+            || crate::hunter_pet::is_summoned_pet_owner(world, pet.owner)
         {
+            // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
+            // Water Elemental's separate40% branch is for non-pet guardians, not56.
             return demon_power_stats(world, pet.owner);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
