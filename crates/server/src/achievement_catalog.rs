@@ -17,7 +17,7 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
     66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162, 165,
-    216, 219, 220, 245, 246,
+    54, 216, 219, 220, 245, 246,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -51,6 +51,7 @@ pub(crate) enum CriteriaEvent {
     HighestAuctionBid(u64),
     AuctionWon,
     HighestAuctionSale(u64),
+    DoEmote(u32),
     UseItem(u32),
     EquipItem(u32),
     UseGameObject(u32),
@@ -133,6 +134,7 @@ impl CriteriaEvent {
             Self::HighestAuctionBid(_) => 83,
             Self::AuctionWon => 84,
             Self::HighestAuctionSale(_) => 85,
+            Self::DoEmote(_) => 54,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -254,6 +256,7 @@ impl CriteriaEvent {
             | Self::DieOnMap(asset)
             | Self::KilledByCreature(asset)
             | Self::DieFromEnvironmentalDamage(asset)
+            | Self::DoEmote(asset)
             | Self::UseItem(asset)
             | Self::EquipItem(asset)
             | Self::UseGameObject(asset)
@@ -975,6 +978,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 20 && criteria_id != 111356)
                         // TC Player.h environmental0/1/2/6; no native lava/slime/fire source.
                         || (kind == 26 && matches!(row.get::<_, i32>(2)?, 0 | 1 | 2 | 6))
+                        // TC TextEmotes IDs produced by native Dance/Wave/Sit/Sleep/Kneel.
+                        // TDB1210 has no criteria_data overlay for these unconditional rows.
+                        || (kind == 54 && matches!(row.get::<_, i32>(2)?, 34 | 101 | 86 | 87 | 59))
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
