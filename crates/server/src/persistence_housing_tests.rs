@@ -135,6 +135,13 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
     .unwrap();
     let state = snapshot(&db, owner, Some(house.house_id)).unwrap();
     assert!(state.stored.is_empty());
+    let placed = vec![StoredDecor {
+        decor_id: 1693,
+        quantity: 1,
+    }];
+    assert_eq!(state.placed, placed);
+    // Retail totalNumPlaced is account-wide, also outside any house layout.
+    assert_eq!(snapshot(&db, owner, None).unwrap().placed, placed);
     let instance = state.layout.unwrap().decor[0].instance_id;
     assert!(
         edit(
@@ -189,6 +196,7 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
     let visited = snapshot(&db, visitor, Some(house.house_id)).unwrap();
     assert!(!visited.layout.as_ref().unwrap().can_edit);
     assert!(visited.stored.is_empty());
+    assert!(visited.placed.is_empty());
     assert!(set_access(&db, visitor, house.house_id, true).is_err());
     assert!(
         edit(
@@ -218,10 +226,9 @@ fn housing_one_vendor_item_redeems_then_layout_conserves_quantity_and_visit_is_r
         },
     )
     .unwrap();
-    assert_eq!(
-        snapshot(&db, owner, Some(house.house_id)).unwrap().stored[0].quantity,
-        1
-    );
+    let removed = snapshot(&db, owner, Some(house.house_id)).unwrap();
+    assert_eq!(removed.stored[0].quantity, 1);
+    assert!(removed.placed.is_empty());
     assert!(
         snapshot(&db, visitor, Some(house.house_id))
             .unwrap()
