@@ -1,4 +1,5 @@
 //! Retail application at an authenticated Transmogrifier. See specs/transmog-apply.md.
+mod custom_sets;
 mod data;
 mod outfits;
 use bevy::prelude::*;
@@ -325,7 +326,12 @@ impl Plugin for TransmogPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (send_opened_states, process_requests, outfits::process_saves)
+            (
+                send_opened_states,
+                process_requests,
+                outfits::process_saves,
+                custom_sets::process_saves,
+            )
                 .chain()
                 .after(crate::npc_interaction::NpcInteractionsProcessed),
         );
@@ -465,6 +471,7 @@ fn handle(
     let templates = world.resource::<ItemTemplates>();
     let mut state = catalog.state(npc, &record, templates, &collection);
     state.outfits = outfits::load_outfits(db, account);
+    state.custom_sets = custom_sets::load_sets(db, account);
     let Some(changes) = changes else {
         return Ok(state);
     };
@@ -479,6 +486,7 @@ fn handle(
     save_inventory_record(db, character, &record);
     let mut state = catalog.state(npc, &record, templates, &collection);
     state.outfits = outfits::load_outfits(db, account);
+    state.custom_sets = custom_sets::load_sets(db, account);
     if let Some(mut current) = world.get_mut::<EquipmentAppearance>(player) {
         current.set_if_neq(appearance);
     }

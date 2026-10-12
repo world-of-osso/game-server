@@ -62,7 +62,7 @@ fn validate_outfit(
     validate_illusions(state, &outfit.illusions)
 }
 
-fn validate_choices(
+pub(super) fn validate_choices(
     state: &TransmogState,
     choices: &[TransmogOutfitChoice],
 ) -> Result<(), TransmogOutfitError> {
@@ -152,19 +152,28 @@ mod tests {
 pub(super) fn process_saves(world: &mut World) {
     for (connection, request) in collect_requests::<SaveTransmogOutfit>(world) {
         let npc = request.npc;
-        match save_outfit(world, connection, request) {
-            Ok(state) => {
-                if let Some(mut sender) = world.get_mut::<MessageSender<TransmogState>>(connection)
-                {
-                    sender.send::<TransmogChannel>(state);
-                }
+        let result = save_outfit(world, connection, request);
+        send_save_result(world, connection, npc, result);
+    }
+}
+
+pub(super) fn send_save_result(
+    world: &mut World,
+    connection: Entity,
+    npc: u64,
+    result: Result<TransmogState, TransmogOutfitError>,
+) {
+    match result {
+        Ok(state) => {
+            if let Some(mut sender) = world.get_mut::<MessageSender<TransmogState>>(connection) {
+                sender.send::<TransmogChannel>(state);
             }
-            Err(error) => {
-                if let Some(mut sender) =
-                    world.get_mut::<MessageSender<TransmogOutfitFailed>>(connection)
-                {
-                    sender.send::<TransmogChannel>(TransmogOutfitFailed { npc, error });
-                }
+        }
+        Err(error) => {
+            if let Some(mut sender) =
+                world.get_mut::<MessageSender<TransmogOutfitFailed>>(connection)
+            {
+                sender.send::<TransmogChannel>(TransmogOutfitFailed { npc, error });
             }
         }
     }
