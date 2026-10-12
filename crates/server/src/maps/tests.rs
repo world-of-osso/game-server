@@ -232,9 +232,11 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
     let dir = tempfile::tempdir().unwrap();
     let db = redb::Database::create(dir.path().join("collection.redb")).unwrap();
     crate::persistence::create_tables(&db);
+    let (character_id, _) =
+        crate::persistence::create_character(&db, 30, "Bookcaseuser", 1, 1).unwrap();
     crate::persistence::save_inventory(
         &db,
-        30,
+        character_id,
         &crate::persistence::InventoryData {
             gold: 500_000,
             items: vec![crate::persistence::InventoryItemData {
@@ -262,8 +264,9 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         )));
     h.app
         .add_systems(Update, crate::inventory::process_use_requests);
-    let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
+    let owner = h.spawn(character_id, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
     h.app.world_mut().entity_mut(owner.connection).insert((
+        Authenticated { account_id: 30 },
         pair::<UseItem>(),
         pair::<HousingReply>(),
         pair::<InventoryError>(),
@@ -294,11 +297,18 @@ fn housing_normal_bag_use_collects_the_authentic_bookcase_once_into_account_stor
         .world()
         .resource::<crate::persistence::GameDatabase>()
         .db;
-    assert!(crate::persistence::load_inventory(db, 30).items.is_empty());
-    assert_eq!(crate::persistence::load_inventory(db, 30).gold, 500_000);
+    assert!(
+        crate::persistence::load_inventory(db, character_id)
+            .items
+            .is_empty()
+    );
+    assert_eq!(
+        crate::persistence::load_inventory(db, character_id).gold,
+        500_000
+    );
     let actor = crate::persistence::housing_store::Actor {
         account_id: 30,
-        character_id: 30,
+        character_id,
         neighborhood_id: None,
         inside_house: None,
     };
