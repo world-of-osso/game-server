@@ -1150,7 +1150,14 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             "map{map_id} missing source gate{entry}"
         );
     }
-    for (gate, _) in &source_gates {
+    for (gate, entry) in &source_gates {
+        let (_, action, _) = gate_actions
+            .iter()
+            .find(|(source, _, _)| source == entry)
+            .unwrap();
+        if action == "delete" {
+            continue; // Empyrean collision walls exist without a door-animation contract.
+        }
         assert_eq!(
             h.app
                 .world()
