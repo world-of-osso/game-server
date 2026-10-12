@@ -93,6 +93,7 @@ impl Plugin for QuestPlugin {
                 credit_quest_kills,
                 credit_quest_area_triggers,
                 mark_quest_inputs_changed,
+                quest_requests::process_world_quests,
                 send_quest_updates,
             )
                 .chain()

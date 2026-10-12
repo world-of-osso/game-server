@@ -390,6 +390,122 @@ macro_rules! for_quest_messages {
     };
 }
 
+#[test]
+fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
+    use crate::world_quests::{Area, Definition, Rotation};
+    let mut app = setup_app().expect("authentic quest fixture");
+    app.insert_resource(crate::maps::difficulty::ServerClock {
+        fixed_unix: Some(1000),
+        ..Default::default()
+    });
+    app.insert_resource(Rotation {
+        epoch: 1000,
+        gap_seconds: 0,
+        ..Default::default()
+    });
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        let quest = quests.quests.get_mut(&BEATING_THEM_BACK).unwrap();
+        quest.quest_info_modifiers = 0x100;
+        quest.reward_money = 125;
+        quest.money_scaling = None;
+        quest.captured_reward_xp = Some(0);
+        quests.world_quests = vec![Definition {
+            quest_id: BEATING_THEM_BACK,
+            zone_id: 37,
+            duration: 100,
+        }];
+        quests.world_quest_areas.insert(
+            BEATING_THEM_BACK,
+            vec![Area {
+                map_id: 0,
+                ui_map_id: 37,
+                vertices: vec![(10., 10.), (20., 10.), (20., 20.), (10., 20.)],
+            }],
+        );
+    }
+    let client = spawn_client(&mut app, 30);
+    enter_world(&mut app, &client);
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+    app.world_mut().entity_mut(client.player).insert(Position {
+        x: 15.,
+        y: 15.,
+        z: 0.,
+    });
+    app.update();
+    let log = load_quest_log(db(&app), client.character_id);
+    assert_eq!(
+        log.active(BEATING_THEM_BACK).unwrap().expires_at,
+        Some(1100)
+    );
+    assert!(log.watched.contains(&BEATING_THEM_BACK));
+    app.world_mut().entity_mut(client.player).insert(origin());
+    app.update();
+    let log = load_quest_log(db(&app), client.character_id);
+    assert!(log.active(BEATING_THEM_BACK).is_some());
+    assert!(!log.watched.contains(&BEATING_THEM_BACK));
+    app.world_mut().entity_mut(client.player).insert(Position {
+        x: 15.,
+        y: 15.,
+        z: 0.,
+    });
+    app.update();
+    let gold = persistence::load_inventory(db(&app), client.character_id).gold;
+    kill(&mut app, &client, BLACKROCK_WORG, 1);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .unwrap()
+            .counts[0],
+        1
+    );
+    kill(&mut app, &client, BLACKROCK_WORG, 5);
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+    assert_eq!(
+        persistence::load_inventory(db(&app), client.character_id).gold,
+        gold + 125
+    );
+    app.update();
+    assert_eq!(
+        persistence::load_inventory(db(&app), client.character_id).gold,
+        gold + 125
+    );
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(1100);
+    app.update();
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .unwrap()
+            .expires_at,
+        Some(1200)
+    );
+    app.world_mut().entity_mut(client.player).insert(origin());
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(1200);
+    app.update();
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+}
+
 #[path = "zephras_quest_tests.rs"]
 mod zephras_tests;
 

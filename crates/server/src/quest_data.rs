@@ -183,6 +183,7 @@ pub(crate) struct QuestDb {
     /// Runtime evaluation clock, refreshed before quest requests and markers.
     pub now: Option<i64>,
     pub world_quests: Vec<crate::world_quests::Definition>,
+    pub world_quest_areas: HashMap<u32, Vec<crate::world_quests::Area>>,
     pub world_quest_windows: std::collections::BTreeMap<u32, crate::world_quests::Window>,
     pub quests: HashMap<u32, QuestTemplate>,
     /// Creature entry -> quests it starts.
@@ -564,6 +565,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.area_triggers = load_area_triggers(&conn)?;
     db.kill_credits = load_kill_credits(&conn)?;
     db.world_quests = load_world_quest_definitions(&conn, &db)?;
+    db.world_quest_areas = crate::world_quests::load_areas(&conn)?;
     Ok(db)
 }
 

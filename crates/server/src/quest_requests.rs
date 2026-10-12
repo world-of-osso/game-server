@@ -226,6 +226,37 @@ pub(super) fn process_quest_requests(
     }
 }
 
+pub(super) fn process_world_quests(
+    store: QuestStore,
+    mut io: QuestIo,
+    maps: Query<&crate::maps::InMap>,
+) {
+    let Some((db, quests)) = store.get() else {
+        return;
+    };
+    let connections: Vec<_> = io
+        .units
+        .connections
+        .iter()
+        .map(|(connection, _, link)| (connection, link.0))
+        .collect();
+    for (connection, player_entity) in connections {
+        let Some(requester) = resolve_requester(&io.units, connection) else {
+            continue;
+        };
+        let Ok(map) = maps.get(player_entity) else {
+            continue;
+        };
+        let mut session = QuestSession {
+            db,
+            quests,
+            requester,
+            io: &mut io,
+        };
+        session.visit_world_quests(map.map_id);
+    }
+}
+
 fn resolve_requester(units: &QuestUnits, connection: Entity) -> Option<Requester> {
     let (_, in_world, link) = units.connections.get(connection).ok()?;
     let (player, level, position) = units.players.get(link.0).ok()?;
@@ -239,6 +270,56 @@ fn resolve_requester(units: &QuestUnits, connection: Entity) -> Option<Requester
 }
 
 impl<'a> QuestSession<'a, '_, '_> {
+    fn visit_world_quests(&mut self, map_id: u32) {
+        let windows: Vec<_> = self.quests.world_quest_windows.values().copied().collect();
+        for window in windows {
+            let quest_id = window.quest_id;
+            let inside = self
+                .quests
+                .world_quest_areas
+                .get(&quest_id)
+                .is_some_and(|areas| {
+                    areas.iter().any(|area| {
+                        area.contains(map_id, self.requester.position.x, self.requester.position.y)
+                    })
+                });
+            let (mut log, mut inventory) = self.load();
+            if log.active(quest_id).is_none() {
+                if !inside {
+                    continue;
+                }
+                if self
+                    .accept_log(quest_id, &mut log, &mut inventory, Some(window.expires_at))
+                    .is_err()
+                {
+                    continue;
+                }
+            }
+            let watched = log.watched.contains(&quest_id);
+            if watched != inside {
+                if inside {
+                    log.watched.push(quest_id);
+                } else {
+                    log.watched.retain(|&id| id != quest_id);
+                }
+                self.save_log(&log);
+            }
+            if inside
+                && is_complete_in_log(self.quests, &log, quest_id, |id| {
+                    bag_count(self.db, &inventory, id)
+                })
+            {
+                if let Err(error) = self.choose_reward(0, quest_id, None) {
+                    send(
+                        &mut self.io.senders.failed,
+                        self.requester.connection,
+                        error,
+                    );
+                }
+            }
+        }
+    }
+
     fn handle(&mut self, request: QuestRequest) -> QuestResult {
         match request {
             QuestRequest::Status(query) => {
@@ -724,8 +805,19 @@ impl<'a> QuestSession<'a, '_, '_> {
 
     /// The quest is in the log and this giver ends it.
     fn turn_in_target(&self, npc: u64, quest_id: u32, log: &QuestLogData) -> QuestResult {
+        let quest = self.quest(quest_id)?;
+        if quest.quest_info_modifiers & 0x100 != 0 {
+            let now = self.quests.now.expect("world quest clock initialized");
+            if !self.quests.world_quest_windows.contains_key(&quest_id)
+                || log.active(quest_id).is_none_or(|active| {
+                    active.failed || active.expires_at.is_none_or(|end| now >= end)
+                })
+            {
+                return Err(failed(quest_id, QuestFailedReason::NotAvailable));
+            }
+            return Ok(());
+        }
         let entry = self.giver(npc, quest_id)?;
-        self.quest(quest_id)?;
         if !ends(self.quests, entry, quest_id) {
             return Err(failed(quest_id, QuestFailedReason::NotAvailable));
         }

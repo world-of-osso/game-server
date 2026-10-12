@@ -6,8 +6,81 @@ use std::collections::BTreeMap;
 pub(crate) struct Definition {
     pub quest_id: u32,
     pub zone_id: u32,
-    /// Authentic ManagedWorldState.UpTimeSecs. Never substitute a realm default.
+    /// Authentic DB2 duration or explicitly imported realm policy duration.
     pub duration: u32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Area {
+    pub map_id: u32,
+    pub ui_map_id: u32,
+    pub vertices: Vec<(f32, f32)>,
+}
+
+impl Area {
+    pub(crate) fn contains(&self, map_id: u32, x: f32, y: f32) -> bool {
+        if self.map_id != map_id || self.vertices.len() < 3 {
+            return false;
+        }
+        let mut inside = false;
+        for (&(ax, ay), &(bx, by)) in self
+            .vertices
+            .iter()
+            .zip(self.vertices.iter().cycle().skip(1))
+        {
+            let cross = (x - ax) * (by - ay) - (y - ay) * (bx - ax);
+            if cross == 0.0
+                && x >= ax.min(bx)
+                && x <= ax.max(bx)
+                && y >= ay.min(by)
+                && y <= ay.max(by)
+            {
+                return true;
+            }
+            if (ay > y) != (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax {
+                inside = !inside;
+            }
+        }
+        inside
+    }
+}
+
+pub(crate) fn load_areas(
+    conn: &rusqlite::Connection,
+) -> rusqlite::Result<std::collections::HashMap<u32, Vec<Area>>> {
+    let installed: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='content_world_quest_area')", [], |r| r.get(0))?;
+    let mut result = std::collections::HashMap::new();
+    if !installed {
+        return Ok(result);
+    }
+    let mut statement = conn.prepare("SELECT quest_id,blob_id,map_id,ui_map_id,x,y FROM content_world_quest_area ORDER BY quest_id,blob_id,point_index")?;
+    let rows = statement.query_map([], |r| {
+        Ok((
+            r.get::<_, u32>(0)?,
+            r.get::<_, u32>(1)?,
+            r.get::<_, u32>(2)?,
+            r.get::<_, u32>(3)?,
+            r.get::<_, f32>(4)?,
+            r.get::<_, f32>(5)?,
+        ))
+    })?;
+    let mut blobs: BTreeMap<(u32, u32), Area> = BTreeMap::new();
+    for row in rows {
+        let (quest, blob, map_id, ui_map_id, x, y) = row?;
+        blobs
+            .entry((quest, blob))
+            .or_insert_with(|| Area {
+                map_id,
+                ui_map_id,
+                vertices: Vec::new(),
+            })
+            .vertices
+            .push((x, y));
+    }
+    for ((quest, _), area) in blobs {
+        result.entry(quest).or_insert_with(Vec::new).push(area);
+    }
+    Ok(result)
 }
 
 #[derive(Resource, Debug, Clone)]
