@@ -3902,6 +3902,218 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
 }
 
 #[test]
+fn toyfx16_no_trap_cooking_fires_spawn_with_authored_identity_and_expiry() {
+    use crate::game_objects::summoned::SummonedObject;
+    use shared::components::{Position, Rotation};
+    use shared::protocol::GameObjectInfo;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, display, scale) in [
+        (67097, 93636, 207461, 396, 1.0),
+        (153039, 254240, 277297, 45521, 0.75),
+        (198402, 383081, 379147, 75339, 0.75),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("fire.redb"));
+        h.app.insert_resource(store.clone());
+        h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "toy {item}");
+        h.advance(100);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let objects: Vec<_> = world
+            .query::<(Entity, &GameObjectInfo)>()
+            .iter(world)
+            .filter(|(_, info)| info.entry == entry)
+            .map(|(entity, info)| (entity, info.clone()))
+            .collect();
+        assert_eq!(objects.len(), 1);
+        let (object, info) = &objects[0];
+        assert_eq!(
+            (info.go_type, info.display_id, info.scale),
+            (8, display, scale)
+        );
+        assert_eq!(
+            world.get::<crate::maps::InMap>(*object),
+            world.get::<crate::maps::InMap>(h.caster)
+        );
+        let lifetime = world.get::<SummonedObject>(*object).unwrap();
+        assert_eq!(lifetime.owner, h.caster);
+        assert_eq!(lifetime.spell_id, spell);
+        let source_duration = store
+            .get(spell)
+            .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
+            .duration
+            .unwrap()
+            .duration_ms;
+        assert!(source_duration > 0);
+        let remaining = lifetime.expires_at.unwrap() - crate::spell_cast::now(world);
+        assert!(remaining > f64::from(source_duration / 1000) - 10.0);
+        let placed = *world.get::<Position>(*object).unwrap();
+        assert!(
+            placed.x > 0.0,
+            "authored caster-front destination: {placed:?}"
+        );
+        // Same real lifecycle boundary, accelerated only by the fixture's virtual clock.
+        h.app
+            .world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(std::time::Duration::from_secs(7200));
+        h.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_secs(u64::try_from(source_duration / 1000).unwrap()),
+            ));
+        h.advance(2);
+        assert!(h.app.world().get_entity(*object).is_err());
+    }
+}
+
+#[test]
+fn toyfx16_cooking_recipe_needs_a_live_same_map_focus_before_spending_reagents() {
+    use crate::persistence::ClientId;
+    use shared::components::Position;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("cooking.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        ClientId(character),
+        shared::components::UnitScale(1.0),
+        crate::profession::PlayerProfessions {
+            lines: vec![],
+            spells: vec![2538],
+        },
+    ));
+    learn_effect_toy(&mut h, character, 67097);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let inventory = InventoryData {
+        gold: 0,
+        items: vec![InventoryItemData {
+            item_guid: persistence::next_id(db, "item_instance"),
+            item_id: 2672,
+            name: "Stringy Wolf Meat".into(),
+            quality: 1,
+            required_level: 1,
+            stack_count: 2,
+            vendor_sell_price: 0,
+            unique_auction: false,
+        }],
+    };
+    persistence::save_inventory(db, character, &inventory);
+    let before = persistence::load_inventory(db, character);
+    let refused = crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538);
+    assert!(
+        matches!(refused, Err(crate::spell_cast::CastFailure::Unsupported(ref reason)) if reason == "Requires Cooking Fire"),
+        "real cooking incorrectly succeeded without a Cooking Fire: {refused:?}"
+    );
+    assert_eq!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character),
+        before
+    );
+    assert_eq!(activate(&mut h, 67097)[0].error, None);
+    h.advance(100);
+    let object = {
+        let world = h.app.world_mut();
+        world
+            .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+            .iter(world)
+            .find(|(_, info)| info.entry == 207461)
+            .unwrap()
+            .0
+    };
+    let fire = *h.app.world().get::<Position>(object).unwrap();
+    for (distance, map) in [(12.0, 0), (3.0, 1), (0.0, 0)] {
+        h.app.world_mut().entity_mut(h.caster).insert((
+            Position {
+                x: fire.x + distance,
+                ..fire
+            },
+            crate::maps::InMap::continent(map),
+        ));
+        if distance > 0.0 {
+            assert!(crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538).is_err());
+            assert_eq!(
+                persistence::load_inventory(
+                    &h.app.world().resource::<GameDatabase>().db,
+                    character
+                ),
+                before
+            );
+        } else {
+            assert!(crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538).is_ok());
+            h.advance(100);
+            let after = persistence::load_inventory(
+                &h.app.world().resource::<GameDatabase>().db,
+                character,
+            );
+            assert_eq!(
+                after
+                    .items
+                    .iter()
+                    .find(|item| item.item_id == 2672)
+                    .unwrap()
+                    .stack_count,
+                1
+            );
+            assert_eq!(
+                after
+                    .items
+                    .iter()
+                    .find(|item| item.item_id == 2679)
+                    .unwrap()
+                    .stack_count,
+                1
+            );
+        }
+    }
+    let before_interruption =
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character);
+    assert!(crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538).is_ok());
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_some()
+    );
+    h.app.world_mut().despawn(object);
+    h.advance(100);
+    assert_eq!(
+        persistence::load_inventory(&h.app.world().resource::<GameDatabase>().db, character,),
+        before_interruption,
+        "lost focus during the source cooking cast consumed reagents"
+    );
+    assert!(
+        h.inbox
+            .failed
+            .iter()
+            .any(|failed| failed.detail.as_deref() == Some("Requires Cooking Fire"))
+    );
+    assert!(crate::spell_cast::cast_for_player(h.app.world_mut(), h.caster, 2538).is_err());
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
