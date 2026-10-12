@@ -1,10 +1,14 @@
 //! Partial Golden Serpent port from TC a352b1fa boss_golden_serpent.cpp.
 //! TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
-//! Intro paths/flying, follow/absorption and molten area triggers remain gaps.
+//! Intro paths/flying, near-point collision-angle search and native visuals remain gaps.
+mod gold_follow;
 mod golden_serpent;
 mod molten_gold;
 use super::{CreatureAi, Ctx, DamageTaken};
 use bevy::prelude::*;
+pub(crate) use gold_follow::{
+    load_model_reaches as load_gold_model_reaches, update_follows as update_gold_follows,
+};
 pub(crate) use molten_gold::{
     handles_effect as handles_molten_gold_effect, load_areas as load_molten_gold_areas,
     update_areas as update_molten_gold_areas,
@@ -18,6 +22,12 @@ const INSTANCE: &str = "instance_kings_rest";
 const MOLTEN_GOLD: u32 = 265915;
 const BREAK_TARGETING: u32 = 140562;
 const SPIT_GOLD: u32 = 265773;
+const LUCRES_CALL: u32 = 265923;
+const LUSTER: u32 = 265991;
+const INVISIBLE_DISPLAY: u32 = 11686;
+const TASK_FOLLOW: u32 = 1;
+const FOLLOW_DELAY_MS: u64 = 3_000;
+const ABSORPTION_DESPAWN_MS: u32 = 4_000;
 const ANIMATED_GOLD: u32 = 135406;
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
@@ -52,6 +62,24 @@ pub(crate) fn limit_incoming_loss(health: f32, loss: f32) -> f32 {
 #[derive(Default)]
 struct AnimatedGold {
     molten_cast: bool,
+    tasks: super::EventMap,
+}
+
+impl AnimatedGold {
+    fn start_follow(&mut self, ctx: &mut Ctx) {
+        let molten = ctx
+            .world
+            .get::<crate::auras::ActiveAuras>(ctx.me)
+            .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == MOLTEN_GOLD));
+        if molten {
+            return;
+        }
+        let Some(primary) = gold_follow::primary(ctx.world, ctx.me) else {
+            return;
+        };
+        gold_follow::start(ctx.world, ctx.me, primary);
+        self.molten_cast = false;
+    }
 }
 
 impl CreatureAi for AnimatedGold {
@@ -65,12 +93,57 @@ impl CreatureAi for AnimatedGold {
     fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
         if damage.damage >= damage.health_before && !self.molten_cast {
             ctx.do_cast_self(MOLTEN_GOLD);
+            gold_follow::clear(ctx.world, ctx.me);
             super::movement::clear_point_movement(ctx.world, ctx.me);
             self.molten_cast = true;
         }
     }
+    fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, spell_id: u32) {
+        if spell_id == LUCRES_CALL {
+            self.tasks.schedule(TASK_FOLLOW, FOLLOW_DELAY_MS);
+        }
+    }
+    fn movement_inform(&mut self, ctx: &mut Ctx, kind: super::MotionType, _id: u32) {
+        if kind != super::MotionType::Follow {
+            return;
+        }
+        let Some(primary) = gold_follow::primary(ctx.world, ctx.me) else {
+            return;
+        };
+        if ctx.world.get::<super::CreatureAiState>(primary).is_none() {
+            return;
+        }
+        super::smart_ai::lifetimes::schedule_despawn(
+            ctx.world,
+            ctx.me,
+            ABSORPTION_DESPAWN_MS,
+            0,
+            false,
+        );
+        gold_follow::clear(ctx.world, ctx.me);
+        super::movement::clear_point_movement(ctx.world, ctx.me);
+        ctx.do_cast_at(None, LUSTER, true);
+        super::dispatch(
+            ctx.world,
+            primary,
+            super::Hook::DoAction(golden_serpent::ACTION_ANNOUNCE_ABSORB),
+        );
+        let mut flags = *ctx.world.get::<UnitFlags>(ctx.me).expect("Gold unit flags");
+        flags.0 |= UnitFlags::NOT_SELECTABLE;
+        ctx.world.entity_mut(ctx.me).insert((
+            shared::components::ModelDisplay {
+                display_id: INVISIBLE_DISPLAY,
+            },
+            flags,
+        ));
+    }
     // TC companion UpdateAI only advances its task scheduler, never UpdateVictim.
-    fn update_ai(&mut self, _ctx: &mut Ctx, _diff_ms: u32) {}
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        self.tasks.update(u64::from(diff_ms));
+        while let Some(TASK_FOLLOW) = self.tasks.execute_event() {
+            self.start_follow(ctx);
+        }
+    }
 }
 
 pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::AuraScripts>) {
