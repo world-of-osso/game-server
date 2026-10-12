@@ -95,12 +95,17 @@ fn achievements_criteria_top_level_area_uses_authentic_dragon_isles_terrain_and_
     }
     let state = app.world().get::<PlayerAchievementState>(player).unwrap();
     assert!(state.earned_ids.contains(&16759));
+    assert_eq!(state.criteria_progress.get(&56318), Some(&1));
+    // TC LeaveArea uses the actual previous area and its negative IsInArea predicate.
+    assert_eq!(state.criteria_progress.get(&47848), Some(&1));
     drop(app);
     let reopened = redb::Database::open(file.path()).unwrap();
     let saved = persistence::load_achievements(&reopened, character);
     for &(_, criterion, _, _) in &points {
         assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
     }
+    assert_eq!(saved.criteria_progress.get(&56318), Some(&1));
+    assert_eq!(saved.criteria_progress.get(&47848), Some(&1));
 }
 
 #[test]

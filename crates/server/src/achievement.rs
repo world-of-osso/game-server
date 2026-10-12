@@ -73,6 +73,7 @@ pub(crate) fn decode_saved_achievement_state(bytes: &[u8]) -> (PlayerAchievement
 struct AchievementTracker {
     last_processed_level: u8,
     last_processed_zone: Option<u32>,
+    last_processed_area: Option<u32>,
 }
 
 /// Committed gameplay credit from systems that do not own an exclusive World.
@@ -138,6 +139,7 @@ fn send_initial_achievement_snapshot(world: &mut World) {
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
             last_processed_zone: None,
+            last_processed_area: None,
         });
     }
 }
@@ -416,9 +418,11 @@ fn process_top_level_area_achievement_updates(world: &mut World) {
 
 fn update_top_level_area_credit(world: &mut World, player: Entity) {
     let zone = load_player_terrain_area(world, player).and_then(|(area, map)| {
-        world
+        let zone = world
             .resource::<crate::area_table::AreaTable>()
-            .zone_id(area, map)
+            .zone_id(area, map)?;
+        record_terrain_area_transition(world, player, area);
+        Some(zone)
     });
     let Some(tracker) = world.get::<AchievementTracker>(player) else {
         return;
@@ -434,6 +438,24 @@ fn update_top_level_area_credit(world: &mut World, player: Entity) {
         // TC Player::UpdateZone7590 does not impose exploration's alive/non-taxi restriction.
         record_criteria_event(world, player, CriteriaEvent::EnterTopLevelArea(zone));
     }
+}
+
+/// TC Player::UpdateArea7507-7510: actual authenticated terrain changes only.
+fn record_terrain_area_transition(world: &mut World, player: Entity, area: u32) {
+    let Some(tracker) = world.get::<AchievementTracker>(player).copied() else {
+        return;
+    };
+    if tracker.last_processed_area == Some(area) {
+        return;
+    }
+    let events: Vec<_> = std::iter::once(CriteriaEvent::EnterArea(area))
+        .chain(tracker.last_processed_area.map(CriteriaEvent::LeaveArea))
+        .collect();
+    world
+        .get_mut::<AchievementTracker>(player)
+        .unwrap()
+        .last_processed_area = Some(area);
+    record_criteria_events(world, player, &events);
 }
 
 /// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
