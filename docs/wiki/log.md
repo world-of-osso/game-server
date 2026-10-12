@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-11 — [Zone population](../zone-population-counts.md):371 ranked zones/46 hosts, private234413 NPC/59863 GO/26770 quests;290 raw tables unchanged. Existing importer adds missing quests/vendors/taxi models, retains source/overlays, replaces legacy placements; deploy ground includes GO-only maps. Private5916 both observed skins reward48677/82747/9961 and discover/fly2037→2034. Native client player-immunity bug fixed; all57718 hosted ground files present,44 maps unbaked, actor appearance/receipt and Stormshield dock boundaries explicit.23 inspected PNGs; no canonical write/UDP5000/full suite; independent model gate unavailable.
+
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
 
 - 2026-10-11 — [SmartAI final integration](../smartai-census.md#proof): code65dee4d9 keeps master follower leash exclusion/data-selected boss tracking; targeted53PASS/1pre-existingignored, importer2PASS and enginephysics14PASS; check/fmt clean. Rebuilt final binaries completed both native skins on explicit authentic legacy copy;12 new inspected PNGs. Mixed-Retail scaling and unsupported vocabulary remain open; independent verifier unavailable.
