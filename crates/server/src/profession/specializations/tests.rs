@@ -275,6 +275,7 @@ fn source_snapshot_preserves_visual_edges_wallet_mapping_and_lock_reasons() {
 fn sourced_description_variables_do_not_invent_missing_bindings() {
     let sources = super::descriptions::load_description_sources(&source_connection()).unwrap();
     assert_eq!(sources.resolve(36464, "+$EV1 $EN1").unwrap(), "+1 Skill");
+    assert!(sources.resolve(129480, "$ev1").is_err());
     assert!(sources.resolve(36464, "$ev2").is_err());
     assert!(sources.resolve(0, "$ev1").is_err());
     assert!(sources.resolve(36464, "$ev").is_err());

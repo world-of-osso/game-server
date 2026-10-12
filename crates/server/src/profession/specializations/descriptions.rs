@@ -2,7 +2,7 @@ use rusqlite::Connection;
 use std::collections::BTreeMap;
 
 pub(super) struct DescriptionSources {
-    effects: BTreeMap<(u32, u32), (f64, String)>,
+    effects: BTreeMap<(u32, u32), Vec<(f64, String)>>,
     spells: BTreeMap<u32, String>,
 }
 
@@ -18,12 +18,10 @@ pub(super) fn load_description_sources(conn: &Connection) -> rusqlite::Result<De
     let rows = statement.query_map([], |row| {
         Ok(((row.get(0)?, row.get(1)?), (row.get(2)?, row.get(3)?)))
     })?;
-    let mut effects = BTreeMap::new();
+    let mut effects: BTreeMap<_, Vec<_>> = BTreeMap::new();
     for row in rows {
         let (key, value) = row?;
-        if effects.insert(key, value).is_some() {
-            return Err(rusqlite::Error::InvalidQuery);
-        }
+        effects.entry(key).or_default().push(value);
     }
     let spells = conn
         .prepare("SELECT ID,Name_lang FROM spell_name")?
@@ -60,10 +58,13 @@ impl DescriptionSources {
         };
         let (index, digits) = read_index(&token[prefix..])?;
         let slot = index.checked_sub(1).ok_or("effect indices start at one")?;
-        let (amount, name) = self
+        let effects = self
             .effects
             .get(&(definition, slot))
             .ok_or_else(|| format!("missing profession effect binding {index}"))?;
+        let [(amount, name)] = effects.as_slice() else {
+            return Err(format!("ambiguous profession effect binding {index}"));
+        };
         let replacement = if value_kind {
             amount.to_string()
         } else {
