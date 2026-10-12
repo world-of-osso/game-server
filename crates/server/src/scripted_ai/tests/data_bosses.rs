@@ -179,7 +179,21 @@ fn bossmod_timeline_diremaul_imported_bars_reset_on_real_casts_with_copy_scoped_
                 .iter()
                 .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
         );
-        h.advance(16.0);
+        let mut admitted_casts = Vec::new();
+        for _ in 0..320 {
+            h.advance(0.05);
+            if let Some(cast) = h.app.world().get::<CastState>(boss) {
+                if admitted_casts.last() != Some(&cast.spell_id) {
+                    admitted_casts.push(cast.spell_id);
+                }
+            }
+        }
+        if entry == 11490 {
+            assert!(
+                admitted_casts.contains(&spell),
+                "Zevrim's real SmartAI cast must enter CastState before its start warning"
+            );
+        }
         assert!(
             h.inbox(0).log.iter().any(|event| matches!(
                 event.kind,

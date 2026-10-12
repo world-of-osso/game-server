@@ -4,6 +4,35 @@ use shared::components::{Health, Npc, Player, Position};
 
 const AURA_FEIGN_DEATH: u32 = 66;
 
+/// TrinityCore a352b1fa GetTargets(SMART_TARGET_HOSTILE_RANDOM): threat-list
+/// selection, including the victim, with distance/player/primary-power filters.
+pub(super) fn random_hostile(world: &World, me: Entity, params: [u32; 4]) -> Option<Entity> {
+    use rand::seq::SliceRandom;
+    let [distance, player_only, power, _] = params;
+    let threat = world.get::<shared::threat::ThreatTable>(me)?;
+    let origin = crate::spell_cast::targets::position(world, me)?;
+    let map = world.get::<crate::maps::InMap>(me);
+    let candidates: Vec<Entity> = threat
+        .entries()
+        .iter()
+        .filter_map(|entry| Entity::try_from_bits(entry.entity))
+        .filter(|&unit| {
+            crate::spell_cast::targets::is_alive(world, unit)
+                && world.get::<crate::maps::InMap>(unit) == map
+                && (player_only == 0 || world.get::<Player>(unit).is_some())
+                && (distance == 0
+                    || crate::spell_cast::targets::position(world, unit)
+                        .is_some_and(|position| position.distance(origin) <= distance as f32))
+                && (power == 0
+                    || world
+                        .get::<shared::components::UnitPowers>(unit)
+                        .and_then(|powers| powers.entries.first())
+                        .is_some_and(|entry| entry.power as u32 + 1 == power))
+        })
+        .collect();
+    candidates.choose(&mut rand::thread_rng()).copied()
+}
+
 pub(super) fn nearest_creature(
     world: &mut World,
     me: Entity,

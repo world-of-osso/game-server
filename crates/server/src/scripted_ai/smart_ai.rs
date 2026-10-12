@@ -100,6 +100,7 @@ const ACTION_REMOVE_NPC_FLAG: u32 = 83;
 const TARGET_NONE: u32 = 0;
 const TARGET_SELF: u32 = 1;
 const TARGET_VICTIM: u32 = 2;
+const TARGET_HOSTILE_RANDOM: u32 = 5;
 const TARGET_ACTION_INVOKER: u32 = 7;
 const TARGET_STORED: u32 = 12;
 const TARGET_INVOKER_PARTY: u32 = 16;
@@ -276,6 +277,7 @@ fn supports_target(kind: u32) -> bool {
         TARGET_NONE
             | TARGET_SELF
             | TARGET_VICTIM
+            | TARGET_HOSTILE_RANDOM
             | TARGET_ACTION_INVOKER
             | TARGET_STORED
             | TARGET_INVOKER_PARTY
@@ -574,6 +576,11 @@ impl SmartAi {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
+            TARGET_HOSTILE_RANDOM => {
+                targets::random_hostile(ctx.world, ctx.me, event.target_params)
+                    .into_iter()
+                    .collect()
+            }
             TARGET_ACTION_INVOKER => invoker.into_iter().collect(),
             TARGET_INVOKER_PARTY => {
                 invoker.map_or_else(Vec::new, |player| targets::party_targets(ctx.world, player))
