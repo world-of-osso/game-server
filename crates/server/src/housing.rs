@@ -192,6 +192,9 @@ fn execute(
             enter_neighborhood(world, actor, *neighborhood_id)?;
             return Ok(Some(*neighborhood_id));
         }
+        HousingCommand::VisitPlot { plot_id } => {
+            return visit_plot(world, actor, *plot_id).map(Some);
+        }
         _ => apply_house_command(world, actor, context, command)?,
     }
     Ok(actor_context(world, actor)?.neighborhood_id)
@@ -252,7 +255,9 @@ fn apply_house_command(
         HousingCommand::ReloadLayout { house_id } => {
             store::house(&world.resource::<GameDatabase>().db, context, *house_id)?;
         }
-        HousingCommand::ListPlots { .. } | HousingCommand::EnterNeighborhood { .. } => {
+        HousingCommand::ListPlots { .. }
+        | HousingCommand::EnterNeighborhood { .. }
+        | HousingCommand::VisitPlot { .. } => {
             unreachable!("neighborhood commands handled before house operations")
         }
     }
@@ -304,22 +309,27 @@ fn leave_house(world: &mut World, actor: Actor, context: store::Actor) -> Result
         .inside_house
         .ok_or("Enter a house before leaving it.")?;
     let house = store::house(&world.resource::<GameDatabase>().db, context, house_id)?;
-    let plot = catalog(world)?.plot(house.plot_id)?.clone();
-    let neighborhood = catalog(world)?.neighborhood(house.neighborhood_id)?.clone();
+    visit_plot(world, actor, house.plot_id).map(|_| ())
+}
+
+fn visit_plot(world: &mut World, actor: Actor, plot_id: u32) -> Result<u32, String> {
+    let plot = catalog(world)?.plot(plot_id)?.clone();
+    let neighborhood = catalog(world)?.neighborhood(plot.neighborhood_id)?.clone();
     let destination = crate::maps::WorldLocation {
         map_id: neighborhood.entry.map_id,
         position: Vec3::from_array(plot.teleport),
         orientation: neighborhood.entry.orientation,
     };
-    transfer_property(world, actor, destination, u64::from(house.neighborhood_id))?;
+    transfer_property(world, actor, destination, u64::from(plot.neighborhood_id))?;
     store::save_neighborhood_location(
         &world.resource::<GameDatabase>().db,
         actor.character,
         &store::NeighborhoodLocation {
             map_id: destination.map_id,
-            neighborhood_id: house.neighborhood_id,
+            neighborhood_id: plot.neighborhood_id,
         },
-    )
+    )?;
+    Ok(plot.neighborhood_id)
 }
 
 fn transfer_property(
@@ -574,8 +584,43 @@ fn read_snapshot(
     if let Some(neighborhood) = neighborhood.or(context.neighborhood_id) {
         state.plots = catalog(world)?.plots(neighborhood)?;
         store::populate_plots(db, &mut state.plots)?;
+        load_plot_relationships(db, actor.character, &mut state);
     }
     Ok(state)
+}
+
+fn load_plot_relationships(db: &redb::Database, character: u64, state: &mut HousingState) {
+    use shared::protocol::HousingPlotOwnerType;
+    let friends = crate::persistence::load_friends(db, character);
+    for plot in &mut state.plots {
+        plot.owner_type = match plot.house_id {
+            None => HousingPlotOwnerType::None,
+            Some(house_id)
+                if state
+                    .owned_houses
+                    .iter()
+                    .any(|house| house.house_id == house_id) =>
+            {
+                HousingPlotOwnerType::SelfOwned
+            }
+            Some(_) => {
+                let owner = plot
+                    .owner_character_id
+                    .and_then(|id| crate::persistence::load_character(db, id));
+                let friend = owner.is_some_and(|owner| {
+                    friends
+                        .entries
+                        .iter()
+                        .any(|entry| entry.name.eq_ignore_ascii_case(&owner.name))
+                });
+                if friend {
+                    HousingPlotOwnerType::Friend
+                } else {
+                    HousingPlotOwnerType::Stranger
+                }
+            }
+        };
+    }
 }
 
 fn send_snapshot(

@@ -117,6 +117,7 @@ impl HousingCatalog {
                     cost: number(&fields, "Cost")?,
                     house_id: None,
                     owner_character_id: None,
+                    owner_type: shared::protocol::HousingPlotOwnerType::None,
                 };
                 plots.insert(id, plot);
             }
