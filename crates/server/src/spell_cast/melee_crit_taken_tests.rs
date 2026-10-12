@@ -11,7 +11,23 @@ const SLAM: u32 = 1464;
 const NATIVE_CRIT_REDUCTION: f32 = 60.0;
 
 fn protected_target() -> Harness {
-    let mut h = harness(Vec::new(), &[HARDENED_BATTLELYNX, SLAM], 1).unwrap();
+    let mut h = harness(
+        Vec::new(),
+        &[
+            HARDENED_BATTLELYNX,
+            SLAM,
+            75,
+            1449,
+            236422,
+            5487,
+            441685,
+            389590,
+            454788,
+            269360,
+        ],
+        1,
+    )
+    .unwrap();
     h.app
         .world_mut()
         .get_mut::<CharacterStats>(h.caster)
@@ -30,6 +46,25 @@ fn protected_target() -> Harness {
         },
     );
     h
+}
+
+fn apply_native(h: &mut Harness, target: Entity, spell: u32, index: u32) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: target,
+            target,
+            spell_id: spell,
+            effect_mask: 1 << index,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
+fn remove_protection(h: &mut Harness) {
+    crate::auras::remove_auras(h.app.world_mut(), h.npc, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == HARDENED_BATTLELYNX
+    });
 }
 
 fn slam_repeatedly(h: &mut Harness) {
@@ -81,4 +116,132 @@ fn class_completeness_native_hardened_battlelynx_prevents_auto_attack_crit() {
     let protected = damage_events(&h);
     assert!(protected.len() >= 12, "{:?}", h.inbox.log);
     assert!(protected.iter().all(|event| !event.crit), "{protected:?}");
+}
+
+#[test]
+fn class_completeness_native_melee_crit_reduction_does_not_change_ranged_or_magic() {
+    for spell in [75, 1449] {
+        let mut h = protected_target();
+        h.app
+            .world_mut()
+            .get_mut::<CharacterStats>(h.caster)
+            .unwrap()
+            .crit_pct = 100.0;
+        if spell == 75 {
+            charge_range(&mut h);
+        }
+        h.cast_and_deliver(spell, Some(h.npc));
+        h.advance(60);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let damage = damage_events(&h);
+        assert!(!damage.is_empty(), "{:?}", h.inbox.log);
+        assert!(damage.iter().all(|event| event.crit), "{damage:?}");
+    }
+}
+
+#[test]
+fn class_completeness_native_victim_crit_reductions_add_across_parent_auras() {
+    let mut h = protected_target();
+    remove_protection(&mut h);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 6.0;
+    let npc = h.npc;
+    apply_native(&mut h, npc, 389590, 0); // Demonic Resilience -2.
+    apply_native(&mut h, npc, 454788, 1); // Runic Protection -3.
+    apply_native(&mut h, npc, 269360, 2); // Avoidance -1.
+    slam_repeatedly(&mut h);
+    let damage = damage_events(&h);
+    assert!(damage.len() >= 24, "{:?}", h.inbox.log);
+    assert!(damage.iter().all(|event| !event.crit), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_melee_crit_modifier_belongs_to_the_victim() {
+    let mut h = protected_target();
+    remove_protection(&mut h);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    let caster = h.caster;
+    apply_native(&mut h, caster, HARDENED_BATTLELYNX, 2);
+    slam_repeatedly(&mut h);
+    let damage = damage_events(&h);
+    assert!(damage.iter().all(|event| event.crit), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_brittle_increases_victim_melee_crit_chance() {
+    let mut h = protected_target();
+    remove_protection(&mut h);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    let npc = h.npc;
+    apply_native(&mut h, npc, 236422, 3);
+    slam_repeatedly(&mut h);
+    let damage = damage_events(&h);
+    assert!(!damage.is_empty());
+    assert!(damage.iter().all(|event| event.crit), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_bear_reduction_stops_creature_melee_crits() {
+    let mut h = protected_target();
+    remove_protection(&mut h);
+    let caster = h.caster;
+    apply_native(&mut h, caster, 5487, 2);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(AutoAttack::new(caster));
+    h.advance(600);
+    let damage: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(h.npc.to_bits()) && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert!(!damage.is_empty(), "{:?}", h.inbox.log);
+    assert!(damage.iter().all(|event| !event.crit), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_wildshape_crit_reduction_expires_at_six_seconds() {
+    let mut h = protected_target();
+    remove_protection(&mut h);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 6.0;
+    let npc = h.npc;
+    apply_native(&mut h, npc, 441685, 3);
+    for _ in 0..3 {
+        h.set_power(PowerType::Rage, 1000.0);
+        h.cast_and_deliver(SLAM, Some(npc));
+        h.advance(32);
+    }
+    assert!(crate::auras::has_aura(h.app.world(), npc, 441685));
+    assert!(damage_events(&h).iter().all(|event| !event.crit));
+    h.advance(30);
+    assert!(!crate::auras::has_aura(h.app.world(), npc, 441685));
+    h.inbox.log.clear();
+    for _ in 0..240 {
+        h.set_power(PowerType::Rage, 1000.0);
+        h.cast_and_deliver(SLAM, Some(npc));
+        h.advance(32);
+        if damage_events(&h).iter().any(|event| event.crit) {
+            return;
+        }
+    }
+    panic!("no witnessed critical Slam after native six-second expiry");
 }
