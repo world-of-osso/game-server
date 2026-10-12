@@ -1,5 +1,9 @@
 # Toy effects14 — active whole-goal coverage
 
+## Warning-sign source batch (2026-10-12)
+
+104331/148627→73781/display51525;119039/176310→88280/display51525;170196/304505→156052/display92597, source model scale0.6. All three have source wild/no-title/no-slot summons, stationary templates, no npcflag/vehicle/AI/script/addon/creature-spell bindings and source60000ms lifetime. TDB1210 actual spell_script_names scan4066 rows has no selected binding; DB2/CDI evidence remains separate from that absence. Add only these authentic templates through the maintained importer; no runtime admission bypass or interaction invention. Actual bag-learn/UseToy RED atfe41a884 refuses missing73781. GREEN/native/census pending; source capsule `warning-sign-source.json` and `warning-sign-red.log` in the continuation evidence root. Swarthy117639 state kit, Spire79837 ObjectEffectPackage1063 and Jade particle/sound payloads remain outside this batch.
+
 Verified:2026-10-11. Goal remains all1166 authentic toy effects. Baseline masterd62e0b1:136 server-preflight candidates;843 missing runtime items,157 unsupported graphs,29 unresolved item metadata,1 unresolved on-use. Census is not rendered-effect certification.
 
 ## Batch1: source-resolved item selection
