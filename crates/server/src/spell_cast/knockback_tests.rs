@@ -225,7 +225,7 @@ fn arena_knockback_transfer_cancels_its_lease_but_never_cancels_a_newer_owner() 
 #[test]
 fn arena_knockback_landing_preserves_realm_fall_damage_and_actual_feather_fall() {
     for feather in [false, true] {
-        let mut h = source_push_harness(&[58873, 1706]);
+        let mut h = source_push_harness(&[58873, 130]);
         h.app.world_mut().get_mut::<Position>(h.caster).unwrap().y = 5.0;
         h.app.world_mut().get_mut::<Position>(h.npc).unwrap().y = 5.0;
         if feather {
@@ -234,7 +234,7 @@ fn arena_knockback_landing_preserves_realm_fall_damage_and_actual_feather_fall()
                 &crate::auras::AuraApplication {
                     caster: h.caster,
                     target: h.caster,
-                    spell_id: 1706,
+                    spell_id: 130,
                     effect_mask: u32::MAX,
                     source: crate::auras::AuraSource::Cast,
                 },
