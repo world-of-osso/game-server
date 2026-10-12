@@ -109,6 +109,24 @@ def supports_tree(root, trees, children, supported, visiting=frozenset()):
     )
 
 
+def raw_type_inventory(criteria, trees, records, supported):
+    by_type = collections.defaultdict(set)
+    for row_id, row in criteria.items():
+        by_type[int(row['Type'])].add(row_id)
+    tree_rows = {int(row['CriteriaID']) for row in trees.values()} - {0}
+    root_rows = {criterion for record in records.values() for criterion in record['criteria']}
+    return {
+        kind: dict(
+            raw_rows=len(ids), supported_raw_rows=len(ids & supported),
+            tree_referenced_rows=len(ids & tree_rows),
+            achievement_root_rows=len(ids & root_rows),
+            supported_achievement_root_rows=len(ids & supported & root_rows),
+            supported_outside_achievement_roots=len((ids & supported) - root_rows),
+        )
+        for kind, ids in sorted(by_type.items())
+    }
+
+
 def census(db2, modifiers_path, world_db, types, overlays_path):
     achievements = read_rows(db2 / 'Achievement.csv')
     criteria = read_rows(db2 / 'Criteria.csv')
@@ -184,6 +202,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     paths.extend([modifiers_path, overlays_path])
     return dict(
         build=db2.name, enabled_types=sorted(types),
+        raw_types=raw_type_inventory(criteria, trees, records, supported),
         sources={str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths},
         row_counts=dict(achievement=len(achievements), criteria=len(criteria),
                         criteria_tree=len(trees), modifier_tree=len(modifiers)),
