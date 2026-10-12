@@ -304,18 +304,15 @@ const UNKNOWN_TEMPLATE_DISPLAY: u32 = 16358;
 /// The display a TRANSFORM aura shows (AuraEffect::HandleAuraTransform,
 /// SpellAuraEffects.cpp:2090-2242): a model of creature template `entry`
 /// (`ObjectMgr::ChooseDisplayId`); the pink pig 16358, with an error, for an entry with no
-/// template. Zero-entry Murloc/Gnomeregan/Darkspear costumes use the exact authored
-/// special cases below; unimplemented zero-entry spells keep their current display.
+/// template. Source-defined zero-entry costumes use the exact authored special
+/// cases below; unimplemented zero-entry spells keep their current display.
 fn transform_display(world: &World, unit: Entity, spell_id: u32, entry: i32) -> Option<u32> {
     if entry == 0 {
         if spell_id == 42365 {
-            return zero_entry_costume_display(spell_id, 0);
+            return Some(21723);
         }
-        let sex = world
-            .get::<shared::components::Player>(unit)?
-            .appearance
-            .sex;
-        return zero_entry_costume_display(spell_id, sex);
+        let player = world.get::<shared::components::Player>(unit)?;
+        return zero_entry_costume_display(spell_id, player.race, player.appearance.sex);
     }
     let entry = u32::try_from(entry).ok()?;
     let template = world
@@ -336,8 +333,9 @@ fn transform_display(world: &World, unit: Entity, spell_id: u32, entry: i32) -> 
 }
 
 /// TC a352b1fa HandleAuraTransform: native sex, not the currently transformed model.
-fn zero_entry_costume_display(spell_id: u32, sex: u8) -> Option<u32> {
+fn zero_entry_costume_display(spell_id: u32, race: u8, sex: u8) -> Option<u32> {
     match (spell_id, sex) {
+        (16739, _) => orb_deception_display(race, sex),
         (42365, _) => Some(21723),
         (75531, 0) => Some(31654),
         (75531, 1) => Some(31655),
@@ -347,8 +345,27 @@ fn zero_entry_costume_display(spell_id: u32, sex: u8) -> Option<u32> {
     }
 }
 
+/// TC a352b1fa HandleAuraTransform2110-2161: exact race/native-gender identities.
+/// Unlisted races have no source mapping; do not invent an opposing-faction model.
+pub(crate) fn orb_deception_display(race: u8, sex: u8) -> Option<u32> {
+    let (male, female) = match race {
+        1 => (10137, 10138),
+        2 => (10139, 10140),
+        3 => (10141, 10142),
+        4 => (10143, 10144),
+        5 => (10146, 10145),
+        6 => (10136, 10147),
+        7 => (10148, 10149),
+        8 => (10135, 10134),
+        10 => (17829, 17830),
+        11 => (17827, 17828),
+        _ => return None,
+    };
+    Some(if sex == 1 { female } else { male })
+}
+
 pub(crate) fn supports_zero_entry_costume(spell_id: u32) -> bool {
-    zero_entry_costume_display(spell_id, 0).is_some()
+    zero_entry_costume_display(spell_id, 1, 0).is_some()
 }
 
 /// The first MOD_UNATTACKABLE aura sets the flag, the last one's removal clears it.

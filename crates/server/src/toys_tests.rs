@@ -13,6 +13,10 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
 }
 
 fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
+    setup_for_race_class(path, race, 8)
+}
+
+fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness, u64) {
     let mut h = harness(
         Vec::new(),
         &[
@@ -26,12 +30,12 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909, 127803,
             128150, 128151, 128152,
         ],
-        8,
+        class,
     )
     .unwrap();
     let db = redb::Database::create(path).unwrap();
     persistence::create_tables(&db);
-    let (character, _) = persistence::create_character(&db, 1, "ToyMage", race, 8).unwrap();
+    let (character, _) = persistence::create_character(&db, 1, "ToyMage", race, class).unwrap();
     let item = |id| InventoryItemData {
         item_guid: persistence::next_id(&db, "item_instance"),
         item_id: id,
@@ -515,24 +519,23 @@ fn toyfx_cosmetic_dummy_and_script_deliver_spell_go() {
 
 #[test]
 fn toyfx_screen_effect_replicates_and_cancel_removes_it() {
-    // Shadescale170187 has no runtime content_item, so its actual UseToy must
-    // remain unavailable. The authentic on-use spell proves the aura mechanism.
+    // Source item import makes Shadescale170187 usable through actual learning/UseToy.
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
     assert!(
         snapshot(h.app.world(), 1)
             .toys
             .iter()
-            .find(|t| t.item_id == 170187)
+            .find(|toy| toy.item_id == 170187)
             .unwrap()
             .unavailable_reason
-            .as_deref()
-            .unwrap()
-            .contains("content_item")
+            .is_none()
     );
-    assert!(toy_catalog::unsupported_types(h.app.world(), 304370).is_empty());
-    h.cast_and_deliver(304370, None);
+    learn_effect_toy(&mut h, character, 170187);
+    assert_eq!(activate(&mut h, 170187)[0].error, None);
+    h.advance(40);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 304370));
     let auras = h
         .app
         .world()
@@ -793,23 +796,22 @@ fn toyfx2_scale_toy_applies_replicates_and_reverts() {
 #[test]
 fn toyfx2_feather_fall_authentic_toy_spell_lifecycle() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, _) = setup(&dir.path().join("toys.redb"));
-    //113542 has no runtime item: do not invent one or count it as usable.
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    // Imported Whispers113542 now learns/activates through the real item boundary.
     assert!(
         snapshot(h.app.world(), 1)
             .toys
             .iter()
-            .find(|t| t.item_id == 113542)
+            .find(|toy| toy.item_id == 113542)
             .unwrap()
             .unavailable_reason
-            .as_deref()
-            .unwrap()
-            .contains("content_item")
+            .is_none()
     );
-    assert!(toy_catalog::unsupported_types(h.app.world(), 167273).is_empty());
-    h.cast_and_deliver(167273, None);
+    learn_effect_toy(&mut h, character, 113542);
+    assert_eq!(activate(&mut h, 113542)[0].error, None);
     h.advance(40); // Authentic one-second cast, not an immediate aura fixture.
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 167273));
     assert!(
         h.app
             .world()
@@ -2176,11 +2178,11 @@ fn toyfx13_audited_slots_do_not_admit_changed_amounts_or_unhandled_siblings() {
 fn toyfx13_shared_census_preserves_control_refusals_and_unbound_scripts() {
     let report = report_toy_census(&crate::test_data::world_db_path(), "TOYFX13_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
-    for item in [88377, 88417] {
+    for item in [88377, 88417, 1973] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [1973, 133997, 134007, 48933, 199902, 210974, 249468, 115503] {
+    for item in [35275, 133997, 134007, 48933, 199902, 210974, 249468, 115503] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(!toy["unavailable"].is_null(), "underived behavior: {toy}");
     }
@@ -2355,11 +2357,11 @@ fn toyfx12_prepared_census_retains_underivable_non_summon_scripts() {
     let path = import_toyfx8_world(directory.path());
     let report = report_toy_census(&path, "TOYFX12_CENSUS_REPORT");
     let toys = report["toys"].as_array().unwrap();
-    for item in [50471, 88377, 129149, 205045, 211931] {
+    for item in [50471, 88377, 129149, 205045, 211931, 1973] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(toy["unavailable"].is_null(), "{toy}");
     }
-    for item in [1973, 133997, 134007, 48933, 199902, 210974, 249468] {
+    for item in [35275, 133997, 134007, 48933, 199902, 210974, 249468] {
         let toy = toys.iter().find(|toy| toy["item_id"] == item).unwrap();
         assert!(!toy["unavailable"].is_null(), "underived behavior: {toy}");
     }
@@ -2715,6 +2717,120 @@ fn toyfx14_prepared_item_census_records_all_remaining_mechanics() {
             "unbound remote control/wormhole/narrative/metadata: {toy}"
         );
     }
+}
+
+#[test]
+fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
+    use shared::components::{ModelDisplay, Player, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    // TC a352b1fa SpellAuraEffects.cpp2110-2161, not inferred faction counterparts.
+    for (race, male, female) in [
+        (1, 10137, 10138),
+        (2, 10139, 10140),
+        (3, 10141, 10142),
+        (4, 10143, 10144),
+        (5, 10146, 10145),
+        (6, 10136, 10147),
+        (7, 10148, 10149),
+        (8, 10135, 10134),
+        (10, 17829, 17830),
+        (11, 17827, 17828),
+    ] {
+        for sex in [0, 1] {
+            let class = crate::race_class::playable_pairs()
+                .find(|(native, _)| *native == race)
+                .unwrap()
+                .1;
+            let (mut h, character) = setup_for_race_class(
+                &directory.path().join(format!("orb-{race}-{sex}.redb")),
+                race,
+                class,
+            );
+            h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+            h.app
+                .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+            h.app
+                .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+            h.app
+                .world_mut()
+                .get_mut::<Player>(h.caster)
+                .unwrap()
+                .appearance
+                .sex = sex;
+            let native = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+            let other = h.app.world().get::<ModelDisplay>(h.npc).cloned();
+            learn_effect_toy(&mut h, character, 1973);
+            assert_eq!(
+                activate(&mut h, 1973)[0].error,
+                None,
+                "race {race},sex {sex}"
+            );
+            h.advance(5);
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == 16739));
+            let display = if sex == 1 { female } else { male };
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<ModelDisplay>(h.caster)
+                    .unwrap()
+                    .display_id,
+                display
+            );
+            let player = h.app.world().get::<Player>(h.caster).unwrap();
+            assert_eq!((player.race, player.appearance.sex), (race, sex));
+            assert_eq!(h.app.world().get::<ModelDisplay>(h.npc), other.as_ref());
+            assert!(
+                h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == 16739)
+            );
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+                .unwrap()
+                .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                    spell_id: 16739,
+                });
+            h.advance(5);
+            assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), native.as_ref());
+            assert!(
+                !h.app
+                    .world()
+                    .get::<UnitAuras>(h.caster)
+                    .unwrap()
+                    .auras
+                    .iter()
+                    .any(|a| a.spell_id == 16739)
+            );
+        }
+    }
+    // No source mapping for Goblin9: no successful cosmetic no-op or spent cooldown.
+    let (mut h, character) = setup_for_race(&directory.path().join("orb-unmapped.redb"), 9);
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    learn_effect_toy(&mut h, character, 1973);
+    let result = activate(&mut h, 1973);
+    assert!(
+        result[0]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("no source display mapping for race 9")
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 16739));
+    assert!(!h.inbox.cooldowns.iter().any(|cd| cd.spell_id == 16739));
 }
 
 #[test]
