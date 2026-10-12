@@ -3829,6 +3829,79 @@ fn toyfx14_dice_learn_emote_and_roll_to_only_the_authored_audience() {
 }
 
 #[test]
+fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for missing in ["text", "group", "identity", "amount", "extra effect"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("dice-refusal.redb"));
+        let mut altered = store.get(47770).unwrap().clone();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        match missing {
+            "text" => {
+                h.app
+                    .world_mut()
+                    .remove_resource::<crate::spell_cast::toy_scripts::DiceTexts>();
+            }
+            "group" => {
+                h.app
+                    .world_mut()
+                    .remove_resource::<crate::group::GroupRegistry>();
+            }
+            "identity" => {
+                h.app.world_mut().entity_mut(h.caster).remove::<ClientId>();
+            }
+            "amount" => {
+                altered.effects[0].base_points = 1.0;
+            }
+            "extra effect" => {
+                altered.effects.push(crate::spell_info::SpellEffect {
+                    index: 1,
+                    effect: 10,
+                    implicit_targets: [1, 0],
+                    base_points: 100.0,
+                    ..default()
+                });
+            }
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![altered]));
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        learn_effect_toy(&mut h, character, 36863);
+        assert!(activate(&mut h, 36863)[0].error.is_some(), "{missing}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{missing} must not deliver SpellGo");
+        assert!(
+            h.inbox.cooldowns.is_empty(),
+            "{missing} must not start cooldown"
+        );
+        assert!(
+            h.app
+                .world()
+                .resource::<ToyChatCapture>()
+                .0
+                .values()
+                .all(Vec::is_empty),
+            "{missing} must not emit an emote or roll"
+        );
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
