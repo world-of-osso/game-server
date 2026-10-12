@@ -21,6 +21,7 @@ pub(crate) fn load(
     if !installed {
         return Ok(());
     }
+    load_creature_labels(conn, db)?;
     let mut statement=conn.prepare("SELECT o.quest_id,o.kind,o.object_id,o.amount,o.flags,o.flags2,o.weight,o.description,COALESCE(c.name,''),COALESCE(i.name,'') FROM content_world_quest_objective o JOIN content_world_quest q ON q.quest_id=o.quest_id LEFT JOIN tdb_creature_template c ON o.kind=0 AND c.entry=o.object_id LEFT JOIN content_item i ON o.kind=1 AND i.ID=o.object_id ORDER BY o.quest_id,o.ordinal")?;
     let rows = statement.query_map([], |row| {
         Ok((
@@ -85,6 +86,32 @@ pub(crate) fn load(
             .as_mut()
             .expect("initialized objective rules")
             .push(rule);
+    }
+    Ok(())
+}
+
+fn load_creature_labels(
+    conn: &rusqlite::Connection,
+    db: &mut crate::quest_data::QuestDb,
+) -> rusqlite::Result<()> {
+    let installed:bool=conn.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='content_world_quest_creature_label')",[],|row|row.get(0))?;
+    if !installed {
+        return Ok(());
+    }
+    let mut statement=conn.prepare("SELECT creature_entry,difficulty_id,label_id FROM content_world_quest_creature_label ORDER BY creature_entry,difficulty_id,label_id")?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            row.get::<_, u32>(2)?,
+        ))
+    })?;
+    for row in rows {
+        let (entry, difficulty, label) = row?;
+        db.creature_labels
+            .entry((entry, difficulty))
+            .or_default()
+            .push(label);
     }
     Ok(())
 }

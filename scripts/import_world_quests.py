@@ -17,7 +17,7 @@ from retail_content import QUEST_COLUMNS
 WORLD_QUEST_MODIFIER = 0x100
 
 
-def read_areas(directory, faction_reward_db2):
+def read_areas(directory, faction_reward_db2, creature_label_db2):
     from db2_casc import decode
     poi = {key: [dict((k, int(v)) for k, v in row.items())
                  for row in csv.DictReader((Path(directory) / filename).open())]
@@ -25,6 +25,10 @@ def read_areas(directory, faction_reward_db2):
     header, rows = decode(Path(faction_reward_db2).read_bytes())
     if header['layout_hash'] != 572521898:
         raise ValueError('QuestFactionReward layout differs from pinned 12.1.0.69933')
+    label_header, label_rows = decode(Path(creature_label_db2).read_bytes())
+    if label_header['layout_hash'] != 0x25B2B438:
+        raise ValueError('CreatureLabel layout differs from pinned 12.1.0.69933')
+    poi['creature_labels'] = list(label_rows.values())
     poi['faction_rewards'] = {row_id: [v if v < 32768 else v - 65536 for v in values[1:]]
                               for row_id, values in rows.items()}
     return poi
@@ -49,10 +53,30 @@ def polygon_areas(poi):
     return areas
 
 
+def insert_creature_labels(conn, poi):
+    # CreatureLabel's parent is the TDB difficulty row's CreatureDifficultyID,
+    # not its difficulty mode or KillCredit aliases (pinned Player::KilledMonster).
+    conn.execute('CREATE TABLE IF NOT EXISTS content_world_quest_creature_label (label_id INTEGER,creature_entry INTEGER,difficulty_id INTEGER,PRIMARY KEY(label_id,creature_entry,difficulty_id))')
+    conn.execute('DELETE FROM content_world_quest_creature_label')
+    difficulties = defaultdict(list)
+    for entry, mode, db2_id in conn.execute('SELECT Entry,DifficultyID,CreatureDifficultyID FROM tdb_creature_template_difficulty WHERE CreatureDifficultyID>0'):
+        difficulties[db2_id].append((entry,mode))
+    labels = defaultdict(list)
+    for _, label, difficulty in poi['creature_labels']:
+        labels[label].append(difficulty)
+    for label, parents in labels.items():
+        if any(parent not in difficulties for parent in parents):
+            continue
+        memberships = {(label,entry,mode) for parent in parents for entry,mode in difficulties[parent]}
+        conn.executemany('INSERT INTO content_world_quest_creature_label VALUES (?,?,?)',sorted(memberships))
+
+
 def supported_objectives(conn, quest):
     rows = conn.execute('SELECT Type,ObjectID,Amount,Flags,ProgressBarWeight FROM tdb_quest_objectives WHERE QuestID=?', (quest,)).fetchall()
     for kind, object_id, amount, flags, weight in rows:
-        if kind not in (0, 1, 2, 3, 9, 15) or amount <= 0 or (kind not in (9, 15) and object_id <= 0):
+        if kind not in (0, 1, 2, 3, 9, 15, 21) or amount <= 0 or (kind not in (9, 15) and object_id <= 0):
+            return False
+        if kind == 21 and not conn.execute('SELECT EXISTS(SELECT 1 FROM content_world_quest_creature_label WHERE label_id=?)',(object_id,)).fetchone()[0]:
             return False
         if not math.isfinite(weight) or weight < 0:
             raise ValueError(f'quest {quest}: invalid authenticated objective weight')
@@ -140,6 +164,7 @@ def insert_source_rewards(conn, templates, poi):
 def import_definitions(conn, receipt, poi, policy_duration=86400):
     world_ids = {row[0] for row in conn.execute('SELECT q.ID FROM tdb_quest_template q JOIN quest_info i ON i.ID=q.QuestInfoID WHERE i.Modifiers & 256 != 0')}
     areas = polygon_areas(dict(poi, blobs=[blob for blob in poi['blobs'] if blob['QuestID'] in world_ids]))
+    insert_creature_labels(conn, poi)
     definitions = select_definitions(conn, receipt, areas, policy_duration)
     conn.execute("CREATE TEMP TABLE IF NOT EXISTS world_quest_selection (ID INTEGER PRIMARY KEY)")
     conn.execute("DELETE FROM world_quest_selection")
@@ -221,9 +246,10 @@ def main():
     parser.add_argument('--poi-db2-dir', required=True, type=Path)
     parser.add_argument('--policy-duration', type=int, default=86400)
     parser.add_argument('--faction-reward-db2', required=True, type=Path)
+    parser.add_argument('--creature-label-db2', required=True, type=Path)
     args = parser.parse_args()
     receipt = json.loads(args.duration_receipt.read_text())
-    poi = read_areas(args.poi_db2_dir, args.faction_reward_db2)
+    poi = read_areas(args.poi_db2_dir, args.faction_reward_db2, args.creature_label_db2)
     imported = copy_and_import(args.source_db, args.output_db, receipt, poi, args.policy_duration)
     with closing(sqlite3.connect(f'{args.output_db.resolve().as_uri()}?mode=ro', uri=True)) as conn:
         counts = census(conn, poi)

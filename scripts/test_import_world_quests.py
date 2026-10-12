@@ -32,6 +32,7 @@ def fixture(conn):
         INSERT INTO quest_money_reward VALUES (50,0);
         CREATE TABLE tdb_quest_objectives (QuestID INTEGER, ID INTEGER, Type INTEGER, ObjectID INTEGER, Amount INTEGER, Description TEXT, "Order" INTEGER, StorageIndex INTEGER, Flags INTEGER DEFAULT 0, ProgressBarWeight REAL DEFAULT 0);
         INSERT INTO tdb_quest_objectives VALUES (52847,340072,0,138122,1,'',0,0,0,0);
+        CREATE TABLE tdb_creature_template_difficulty (Entry INTEGER,DifficultyID INTEGER,CreatureDifficultyID INTEGER);
         CREATE TABLE tdb_creature_template (entry INTEGER, name TEXT);
         INSERT INTO tdb_creature_template VALUES (138122,'Doom''s Howl');
         CREATE TABLE tdb_quest_poi (QuestID INTEGER, Idx1 INTEGER, BlobIndex INTEGER, ObjectiveIndex INTEGER, MapID INTEGER, UiMapID INTEGER, Priority INTEGER, Flags INTEGER, VerifiedBuild INTEGER);
@@ -55,7 +56,7 @@ def receipt(duration=604800):
 
 
 def areas():
-    return {"xp": [dict(ID=30, **{f'Difficulty_{n}': 1234 if n == 5 else 0 for n in range(10)})],
+    return {"creature_labels": [], "xp": [dict(ID=30, **{f'Difficulty_{n}': 1234 if n == 5 else 0 for n in range(10)})],
             "faction_rewards": {1: [0,10,25,75,150,250,350,500,1000,0], 2: [0,-10,-25,-75,-150,-250,-350,-500,-1000,0]},
             "blobs": [{"ID": 7, "QuestID": 52847, "MapID": 0, "UiMapID": 14, "NumPoints": 4},
                       {"ID": 8, "QuestID": 52848, "MapID": 0, "UiMapID": 14, "NumPoints": 1}],
@@ -90,6 +91,18 @@ class WorldQuestImportTests(unittest.TestCase):
             self.assertEqual(len(rows),8)
             self.assertEqual(rows[0],(0,138122,12,92,9.))
             self.assertEqual(rows[-1],(15,0,1,2,0.))
+
+    def test_authentic_label_membership_admits_only_resolved_labels(self):
+        with closing(sqlite3.connect(':memory:')) as conn:
+            fixture(conn)
+            conn.execute('UPDATE tdb_quest_objectives SET Type=21,ObjectID=3520,Amount=5')
+            conn.execute('INSERT INTO tdb_creature_template_difficulty VALUES(222677,0,273474)')
+            poi=areas()
+            poi['creature_labels']=[[58889,3520,273474]]
+            self.assertEqual(import_definitions(conn,receipt(),poi),[52847])
+            self.assertEqual(conn.execute('SELECT label_id,creature_entry,difficulty_id FROM content_world_quest_creature_label').fetchall(),[(3520,222677,0)])
+            conn.execute('UPDATE tdb_quest_objectives SET ObjectID=4346')
+            self.assertEqual(import_definitions(conn,receipt(),poi),[])
 
     def test_authoritative_talk_and_player_kill_objectives_are_admitted(self):
         with closing(sqlite3.connect(':memory:')) as conn:
