@@ -32,13 +32,12 @@ struct Participant {
 
 pub(super) fn update_battleground_objectives(world: &mut World) {
     let actors = read_participants(world);
-    let sources = world.resource::<GameObjectSpawns>().clone();
     let changed = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
         state
             .battleground_matches
             .iter_mut()
             .filter_map(|(match_id, matched)| {
-                update_match(world, matched, &actors, &sources).then_some(*match_id)
+                update_match(world, matched, &actors).then_some(*match_id)
             })
             .collect::<Vec<_>>()
     });
@@ -111,12 +110,12 @@ fn update_match(
     world: &mut World,
     matched: &mut InvitedBattleground,
     actors: &BTreeMap<u64, Participant>,
-    sources: &GameObjectSpawns,
 ) -> bool {
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
-    let Some(homes) = flag_homes(sources, map) else {
+    // Read only this match's two authored homes; never clone the world catalog.
+    let Some(homes) = flag_homes(world.resource::<GameObjectSpawns>(), map) else {
         return false;
     };
     let mut changed = false;

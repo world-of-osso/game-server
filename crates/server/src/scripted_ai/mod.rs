@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 pub mod boss_ai;
+pub mod bossmod;
 pub mod creature_text;
 pub mod event_map;
 pub mod instance_script;
@@ -44,9 +45,14 @@ impl Plugin for ScriptedAiPlugin {
         app.init_resource::<instance_script::InstanceScripts>()
             .add_systems(Startup, creature_text::load_creature_texts_startup)
             .add_systems(Startup, smart_ai::startup_load_smart_scripts)
+            .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(
                 FixedUpdate,
-                (init_creature_ai, update_creature_ai)
+                (
+                    bossmod::advance_schedules,
+                    init_creature_ai,
+                    update_creature_ai,
+                )
                     .chain()
                     .after(crate::creature_aggro::update_victim_system)
                     .before(crate::creature_ai::chase_system)
@@ -441,19 +447,6 @@ impl Ctx<'_> {
         match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
-                if let Some(map) = self.map()
-                    && instance_script::is_active_boss(self.world, map, self.me)
-                {
-                    instance_script::send_to_players(
-                        self.world,
-                        map,
-                        shared::protocol::EncounterTimelineEvent::Cast {
-                            caster: self.me.to_bits(),
-                            spell_id,
-                            severity: shared::protocol::EncounterSeverity::Low,
-                        },
-                    );
-                }
                 true
             }
             Err(failure) => {

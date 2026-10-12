@@ -130,7 +130,7 @@ fn timeline(h: &mut Harness, player: usize) -> Vec<shared::protocol::EncounterTi
 }
 
 #[test]
-fn boss_timeline_phase_changes_follow_active_encounter_not_spawn_or_evade_reset() {
+fn boss_timeline_smartai_phases_are_not_addon_alert_authority() {
     use shared::protocol::EncounterTimelineEvent;
     // Generic phase lifecycle fixture, NOT invented Cobrahn mechanics. Cast
     // rows/timers stay authentic; only reset/aggro phase actions are added.
@@ -159,9 +159,10 @@ fn boss_timeline_phase_changes_follow_active_encounter_not_spawn_or_evade_reset(
     h.engage(boss);
     h.advance(0.1);
     assert!(
-        timeline(&mut h, 0)
+        !timeline(&mut h, 0)
             .iter()
-            .any(|event| matches!(event, EncounterTimelineEvent::Phase { phase: 2, .. }))
+            .any(|event| matches!(event, EncounterTimelineEvent::Phase { .. })),
+        "AI phase changes cannot substitute for addon-authored alert phases"
     );
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
     h.advance(0.1);
@@ -175,60 +176,26 @@ fn boss_timeline_phase_changes_follow_active_encounter_not_spawn_or_evade_reset(
 }
 
 #[test]
-fn cobrahn_timeline_uses_selected_timer_and_warns_only_on_real_cast() {
-    use shared::protocol::EncounterTimelineEvent;
+fn cobrahn_timeline_does_not_fallback_to_smartai_without_addon_data() {
     let (mut h, boss) = cobrahn();
     h.engage(boss);
-    h.advance(0.1);
-    let events = timeline(&mut h, 0);
-    assert!(events.iter().any(|e| matches!(e, EncounterTimelineEvent::Cast { caster, spell_id: LIGHTNING_BOLT, .. } if *caster == boss.to_bits())), "accepted Cobrahn cast must warn: {events:?}");
-    let timer = events
-        .iter()
-        .rev()
-        .find_map(|e| match e {
-            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
-                timers
-                    .iter()
-                    .find(|t| t.spell_id == LIGHTNING_BOLT)
-                    .cloned()
-            }
-            _ => None,
-        })
-        .expect("actual randomized repeat deadline");
-    assert!((5800..=8000).contains(&timer.remaining_ms), "{timer:?}");
-    assert!((6000..=8000).contains(&timer.duration_ms));
+    h.advance(9.0);
     assert!(
-        timeline(&mut h, 1).is_empty(),
-        "other dungeon copy must not receive timers"
-    );
-    h.advance(3.2);
-    timeline(&mut h, 0);
-    let before_due = timer.remaining_ms as f32 / 1000.0 - 3.5;
-    h.advance(before_due.max(0.0));
-    assert!(
-        !timeline(&mut h, 0)
+        h.inbox(0)
+            .log
             .iter()
-            .any(|e| matches!(e, EncounterTimelineEvent::Cast { .. })),
-        "no second warning before selected deadline"
+            .any(|event| event.spell_id == Some(LIGHTNING_BOLT)),
+        "combat must still execute authored SmartAI casts"
     );
-    h.advance(0.5);
     assert!(
-        timeline(&mut h, 0).iter().any(|e| matches!(
-            e,
-            EncounterTimelineEvent::Cast {
-                spell_id: LIGHTNING_BOLT,
-                ..
-            }
-        )),
-        "selected timer must drive the actual next cast"
+        timeline(&mut h, 0).is_empty(),
+        "AI deadlines are not addon alert schedules"
     );
+    assert!(timeline(&mut h, 1).is_empty());
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
     h.advance(0.1);
-    assert!(
-        timeline(&mut h, 0).iter().any(
-            |e| matches!(e, EncounterTimelineEvent::Timers { timers, .. } if timers.is_empty())
-        )
-    );
+    assert!(!h.inbox(0).ends.last().unwrap().success);
+    assert!(timeline(&mut h, 0).is_empty());
 }
 
 fn assert_authored_cobrahn_loot(path: &std::path::Path) {
