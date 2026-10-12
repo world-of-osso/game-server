@@ -51,7 +51,7 @@ fn achievements_comparison_reads_target_account_and_character_without_mutating_v
     assert_eq!(target_name, "Otherplayer");
     let AchievementCatalogPage::Achievement {
         entry: Some(row), ..
-    } = *page
+    } = (*page).into()
     else {
         panic!("comparison details");
     };
@@ -71,7 +71,7 @@ fn achievements_comparison_reads_target_account_and_character_without_mutating_v
     else {
         panic!("comparison summary");
     };
-    let AchievementCatalogPage::Summary(summary) = *page else {
+    let AchievementCatalogPage::Summary(summary) = (*page).into() else {
         panic!("summary");
     };
     assert_eq!(summary.completed, 2);
@@ -107,7 +107,7 @@ fn achievements_comparison_reads_target_account_and_character_without_mutating_v
         target.to_bits(),
         QueryAchievementCatalog::Comparison {
             target_entity: viewer.to_bits(),
-            query: Box::new(QueryAchievementCatalog::Summary {
+            query: Box::new(shared::protocol::AchievementComparisonQuery::Summary {
                 scope: shared::protocol::AchievementScope::All,
             }),
         },
