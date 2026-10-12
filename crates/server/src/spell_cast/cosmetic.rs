@@ -44,6 +44,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     // Complete ordinary-model caster kits; no procedural/positioner/conditional payload.
     // Exact source contracts and exclusions: docs/toy-effects14-coverage.md.
     160093, 160688, 170869, // Mysterious Flower, smoldering boots, Blazing Wings
+    179869,
+    298869, // Gaze of the Darkmoon enemy marker; Ocean Simulator sound/attachment kits
     188172, 212660, 242014, // Personal Spotlight, Kirin Tor mark, Demon Hunter Pepe
     225826, 225828, // Magi crystal cone and Powder Box friendly-area attachment kits
     280053, 335276, 340276, // Light snowfall, back vessel, quill/parchment
