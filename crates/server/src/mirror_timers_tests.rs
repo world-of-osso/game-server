@@ -261,6 +261,10 @@ fn head_under_the_surface_is_under_water_and_floating_is_not() {
 }
 
 fn drowning_app(feet_y: f32) -> (App, Entity, Entity) {
+    drowning_app_with(feet_y, |_| {})
+}
+
+fn drowning_app_with(feet_y: f32, extra: impl FnOnce(&mut App)) -> (App, Entity, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -271,6 +275,7 @@ fn drowning_app(feet_y: f32) -> (App, Entity, Entity) {
     app.add_message::<crate::death::PlayerDeathTransition>();
     app.insert_resource(client_ground());
     app.add_systems(FixedUpdate, update_mirror_timers);
+    extra(&mut app);
     app.finish();
     app.cleanup();
     let feet = swim_spot(feet_y);
@@ -346,6 +351,79 @@ fn run_ticks(
         stops.extend(received::<MirrorTimerStop>(app, connection));
     }
     (starts, stops)
+}
+
+#[test]
+fn achievements_criteria_drowning_after_a_creature_wound_never_invents_a_creature_killer() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use crate::auth::{Authenticated, InWorld};
+    use crate::persistence::{self, ClientId, GameDatabase};
+    let (mut app, player, connection) = drowning_app_with(SEABED, |app| {
+        app.add_plugins((AchievementPlugin, crate::death::DeathPlugin));
+    });
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 1, "Woundeddiver", 1, 1).unwrap();
+    app.insert_resource(GameDatabase { db });
+    app.world_mut()
+        .entity_mut(player)
+        .insert((ClientId(character), PlayerAchievementState::default()));
+    app.world_mut().entity_mut(connection).insert((
+        Authenticated { account_id: 1 },
+        InWorld {
+            character_id: character,
+        },
+    ));
+    let npc = app
+        .world_mut()
+        .spawn((
+            shared::components::Npc {
+                template_id: 448,
+                name: "Hogger".into(),
+            },
+            Health {
+                current: 1000.0,
+                max: 1000.0,
+            },
+            InMap {
+                map_id: 0,
+                instance_id: 1,
+            },
+        ))
+        .id();
+    crate::combat::deal_direct_damage(app.world_mut(), npc, player, 100.0);
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 900.0);
+    assert_eq!(
+        app.world()
+            .get::<crate::combat::LastDamager>(player)
+            .unwrap()
+            .0,
+        npc
+    );
+    run_ticks(&mut app, connection, 20 * 186);
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 0.0);
+    assert_eq!(
+        app.world()
+            .get::<crate::death::PlayerDeathState>(player)
+            .unwrap()
+            .state,
+        shared::death::DeathState::Dead
+    );
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&111), Some(&1));
+    assert!(
+        !state.criteria_progress.contains_key(&455),
+        "a previous nonlethal attacker did not cause drowning"
+    );
+    assert!(!state.criteria_progress.contains_key(&5594));
+    drop(app);
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&db, character);
+    assert_eq!(saved.criteria_progress.get(&111), Some(&1));
+    assert!(!saved.criteria_progress.contains_key(&455));
 }
 
 #[test]
