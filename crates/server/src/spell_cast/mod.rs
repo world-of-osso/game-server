@@ -1889,7 +1889,7 @@ fn resolve_effects(
 ) {
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
-        crate::achievement::record_spell_target(world, unit, spell.id);
+        crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
         if !selects_targets(spell, effect) {
