@@ -8,7 +8,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 165}
+BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 46, 165}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 

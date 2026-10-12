@@ -2,6 +2,117 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_reputation_tracks_signed_changes_and_grants_real_timbers() {
+    use shared::components::CharacterAppearance;
+    use shared::reputation::CharacterReputation;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 17, "Timberproof", 1, 1).unwrap();
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(GameDatabase { db });
+    let reputation: CharacterReputation = serde_json::from_value(serde_json::json!({
+        "values": {"576": 41999}, "tracked": [], "watched": null
+    }))
+    .unwrap();
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Timberproof".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            PlayerAchievementState::default(),
+            reputation,
+        ))
+        .id();
+    app.world_mut().spawn((
+        Authenticated { account_id: 17 },
+        PlayerLink(player),
+        InWorld {
+            character_id: character,
+        },
+    ));
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&2011),
+        Some(&41999)
+    );
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&944)
+    );
+    app.world_mut()
+        .get_mut::<CharacterReputation>(player)
+        .unwrap()
+        .set_rep(576, 42000);
+    app.update();
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert!(state.account.as_deref().unwrap().earned_ids.contains(&944));
+    assert_eq!(
+        state
+            .account
+            .as_deref()
+            .unwrap()
+            .criteria_progress
+            .get(&2011),
+        Some(&42000)
+    );
+    app.world_mut()
+        .get_mut::<CharacterReputation>(player)
+        .unwrap()
+        .set_rep(576, 21000);
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&2011),
+        Some(&21000)
+    );
+    app.world_mut()
+        .get_mut::<CharacterReputation>(player)
+        .unwrap()
+        .set_rep(576, -2900);
+    app.update();
+    // TC ignores nonpositive standing; it does not invent an unsigned42000 offset.
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&2011),
+        Some(&21000)
+    );
+    assert!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&944)
+    );
+}
+
+#[test]
 fn achievements2_account_quests_migrate_across_characters_without_changing_character_credit() {
     use shared::components::CharacterAppearance;
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -359,8 +470,23 @@ fn achievements2_exploration_without_overlay_mapping_never_fabricates_area_credi
 }
 
 #[test]
-fn achievements2_reputation_without_retail_standing_never_fabricates_exalted_credit() {
-    assert_unsupported_achievement(944, 2011, 63_000);
+fn achievements_criteria_reputation_rejects_unmigrated_unsigned_counter() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    state.criteria_progress.insert(2011, 63_000);
+    catalog.update(&mut state, CriteriaEvent::ReachLevel(1), None, 1);
+    assert!(!state.criteria_progress.contains_key(&2011));
+    assert!(state.signed_reputation);
+    assert!(
+        !catalog
+            .aggregate(std::iter::once(PlayerAchievementState {
+                criteria_progress: BTreeMap::from([(2011, 63_000)]),
+                ..Default::default()
+            }))
+            .criteria_progress
+            .contains_key(&2011)
+    );
 }
 
 fn assert_unsupported_achievement(id: u32, criterion: u32, counter: u64) {

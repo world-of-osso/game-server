@@ -32,6 +32,9 @@ pub struct PlayerAchievementState {
     pub criteria_progress: BTreeMap<u32, u64>,
     #[serde(default)]
     pub earned_at: BTreeMap<u32, i64>,
+    /// Pre-support reputation quantities were not valid signed Retail progress.
+    #[serde(default)]
+    pub signed_reputation: bool,
     /// Presentation-only aggregate; never serialized into character contributions.
     #[serde(skip)]
     pub account: Option<Box<PlayerAchievementState>>,
@@ -86,6 +89,7 @@ impl Plugin for AchievementPlugin {
                 send_initial_achievement_snapshot,
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
+                process_reputation_achievement_updates,
                 process_committed_criteria_credits,
                 dungeon::send_entry_progress,
                 scenario::send_entry_progress,
@@ -159,6 +163,17 @@ fn process_skill_achievement_updates(world: &mut World) {
         .iter(world).flat_map(|(player, professions)| professions.lines.iter()
             .filter(|line| line.rank != 0)
             .map(move |line| (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)))).collect();
+    for (player, event) in updates {
+        record_criteria_event(world, player, event);
+    }
+}
+
+/// TC CriteriaHandler.cpp709-715 credits positive signed standing, not an unsigned tier offset.
+fn process_reputation_achievement_updates(world: &mut World) {
+    let updates: Vec<_> = world.query_filtered::<(Entity, &shared::reputation::CharacterReputation), Changed<shared::reputation::CharacterReputation>>()
+        .iter(world).flat_map(|(player, reputation)| reputation.values()
+            .filter(|(_, value)| *value > 0)
+            .map(move |(faction, value)| (player, CriteriaEvent::ReputationGained(faction, value as u32)))).collect();
     for (player, event) in updates {
         record_criteria_event(world, player, event);
     }

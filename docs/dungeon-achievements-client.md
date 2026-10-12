@@ -48,7 +48,7 @@ Pinned census: `scripts/achievement_census.py --db2 <69933-dir> --modifiers <Mod
 
 Type12 is CurrencyGained (not zone quests). TrinityCore a352b1fa CriteriaHandler.cpp599-600 accumulates awarded quantity; capped requests credit only the actual wallet increase, after the currency persistence boundary. Spending, failed awards and already-owned login balances produce no gain credit. Account contributions add earned quantities across characters; statistics retain raw quantities. Currency registry/content limitations remain independent of structural criteria support. Type11 is CompleteQuestsInZone.
 
-Baseline3388 trackable achievements (2338 account/1050 character),105 statistics. Batch12 predicts3489 (+101); recensus and runtime test establish the current count. Conditional/modifier/timer/world-state restrictions remain unevaluated.
+Baseline3388 trackable achievements (2338 account/1050 character),105 statistics. Batch12 census3489 (+101),143 statistics. Batch46 adds positive signed reputation load/change credit, with traditional Retail thresholds and authentic435-faction race/class baselines in the shared protocol. Old reputation saves migrate once to `reputations_retail_v2` by preserving recoverable per-race deltas; old clamped history is unrecoverable. Preserve earned IDs/dates; purge previously unsupported unsigned type46 quantities and rebuild from signed state. Unmigrated sibling-character quantities never enter account aggregation. Conditional/modifier/timer/world-state restrictions remain unevaluated.
 
 ## Bounds
 
