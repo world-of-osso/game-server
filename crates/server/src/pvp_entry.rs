@@ -16,14 +16,23 @@ pub(super) fn enter_battleground(
     character_id: u64,
     match_id: u64,
 ) -> Result<(), String> {
-    let destination = entry_location(world, player)?;
+    let arena = state
+        .battleground_matches
+        .get(&match_id)
+        .and_then(|matched| matched.arena.as_ref());
+    let destination = entry_location(world, player, arena.map(|arena| arena.source.starts))?;
     let sources = world
         .get_resource::<crate::game_objects::GameObjectSpawns>()
         .ok_or("gameobject catalog unavailable")?;
-    for entry in [
-        shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
-        shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
-    ] {
+    let required: &[u32] = if arena.is_some() {
+        &[]
+    } else {
+        &[
+            shared::protocol::WARSONG_ALLIANCE_FLAG_ENTRY,
+            shared::protocol::WARSONG_HORDE_FLAG_ENTRY,
+        ]
+    };
+    for &entry in required {
         if !sources
             .0
             .iter()
@@ -51,17 +60,23 @@ pub(super) fn enter_battleground(
     Ok(())
 }
 
-fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String> {
+fn entry_location(
+    world: &World,
+    player: Entity,
+    arena_starts: Option<[u32; 2]>,
+) -> Result<WorldLocation, String> {
     let invitation = world
         .get::<PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
         .ok_or("player has no battleground invitation")?;
-    if invitation.battleground_id != WARSONG_GULCH {
-        return Err("this battleground has no implemented entry lifecycle".into());
-    }
+    let starts = match arena_starts {
+        Some(starts) => starts,
+        None if invitation.battleground_id == WARSONG_GULCH => [ALLIANCE_ENTRY, HORDE_ENTRY],
+        None => return Err("this battleground has no implemented entry lifecycle".into()),
+    };
     let location_id = match invitation.team {
-        BgTeam::A => ALLIANCE_ENTRY,
-        BgTeam::B => HORDE_ENTRY,
+        BgTeam::A => starts[0],
+        BgTeam::B => starts[1],
     };
     let store = world
         .get_resource::<MapStore>()
@@ -89,8 +104,10 @@ fn create_match_map(
     if let Some(map) = invitation.map {
         return Ok(map);
     }
-    let template =
-        template_by_id(invitation.instance.bg_id).ok_or("battleground template missing")?;
+    let template = match &invitation.arena {
+        Some(arena) => arena.template(),
+        None => template_by_id(invitation.instance.bg_id).ok_or("battleground template missing")?,
+    };
     let roster: Vec<_> = invitation
         .instance
         .team_a_players
