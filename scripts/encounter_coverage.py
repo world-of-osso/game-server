@@ -19,6 +19,11 @@ from encounter_order import load_order
 EVENTS = {0, 4, 6, 7, 8, 17, 19, 20, 23, 25, 35, 40, 54, 55, 56, 57, 58, 61, 65}
 ACTIONS = {1, 2, 6, 11, 12, 17, 22, 29, 33, 37, 41, 53, 54, 55, 59, 64, 65, 66, 80, 81, 82, 83, 107, 152}
 TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
+# TC a352b1fa murder_row.h / instance_murder_row.cpp identify these primaries,
+# even where no placement/model join is available. These census facts do not bind runtime credit.
+CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
+                  (2813,3103): [234647], (2813,3105): [237415]}
+PARTIAL_PORTS = {'boss_kystia_manaheart': [1230298,1264095,474240,474183,1223906,1217989]}
 PORTS = {'boss_hogger': [86604, 86620, 86736],
          'boss_lord_overheat': [12466, 86633, 86636],
          'boss_randolph_moloch': [86726, 86729, 55964, 55966]}
@@ -104,7 +109,8 @@ def collect(connection, journals, actors, journal_maps, compat, order):
         entries, gaps = resolve_actors(mid, record['journal_ids'], actors, candidates)
         bound = [b for b in bindings[mid] if b['encounter_id'] == record['encounter_id'] or
                  (record['bit'] is not None and b['bit'] == record['bit'] and not b.get('compatibility'))]
-        entries = sorted(set(entries) | {b['creature_entry'] for b in bound})
+        entries = sorted(set(entries) | {b['creature_entry'] for b in bound} |
+                         set(CPP_IDENTITIES.get((mid,record['encounter_id']), [])))
         record['binding_gaps'] = gaps
         record['actors'] = []
         for entry in entries:
@@ -119,6 +125,9 @@ def collect(connection, journals, actors, journal_maps, compat, order):
             if conditions[entry]:
                 row_issues.append(dict(row='conditions', reasons=['SmartScript conditions not interpreted']))
             has_binding = entry in {b['creature_entry'] for b in bound}
+            if script in PARTIAL_PORTS:
+                row_issues.append(dict(row='TC callbacks', reasons=['Nibbles/infusion phases and shield renewal unported',
+                    'mirror summon template255050 absent; mirror callbacks unported', 'door/boundary and source-empty loot unproved']))
             actor_spawns = [r for r in spawns[entry] if r['map'] == mid]
             loot = [dict(difficulty=d['DifficultyID'], lootid=d['lootid'], rows=loot_counts.get(d['lootid'],0),
                          gold=[d['mingold'], d['maxgold']]) for d in difficulties[entry]]
@@ -127,9 +136,10 @@ def collect(connection, journals, actors, journal_maps, compat, order):
             record['actors'].append(dict(entry=entry, name=origin.get('name', template['name'] if template else ''),
                 spawned=len(actor_spawns), spawn_difficulties=sorted({str(s['spawnDifficulties']) for s in actor_spawns}),
                 template=template is not None, source_ai=origin.get('AIName',''), source_cpp=origin.get('ScriptName',''),
-                runtime_ai='ported TC C++' if script in PORTS else ('SmartAI' if loaded else 'melee-only lifecycle' if has_binding else 'no registered encounter AI'),
-                admitted_casts=PORTS.get(script,supported), authored_smart_casts=authored,
-                ai_gaps=row_issues, cpp_gap=bool(script and script not in PORTS),
+                runtime_ai=('partial TC C++ port' if has_binding else 'partial TC C++ port blocked by missing binding') if script in PARTIAL_PORTS else
+                    ('ported TC C++' if script in PORTS else ('SmartAI' if loaded else 'melee-only lifecycle' if has_binding else 'no registered encounter AI')),
+                admitted_casts=PARTIAL_PORTS.get(script,PORTS.get(script,supported)) if has_binding or loaded else [], authored_smart_casts=authored,
+                ai_gaps=row_issues, cpp_gap=bool(script and script not in PORTS and script not in PARTIAL_PORTS),
                 encounter_start_end='wired; unproved for this boss' if has_binding and actor_spawns else 'blocked: no binding/spawn',
                 kill_credit='wired; unproved for this boss' if has_binding and actor_spawns else 'blocked: no binding/spawn',
                 lockout='wired; unproved for this boss' if has_binding else 'blocked: no binding',
@@ -152,7 +162,7 @@ def render(records, database, revision):
         priorities.append(f"|{rank}|{p['tier']}|{r['map_id']} {r['instance']}|{refs}; {p['reason']}|")
     lines = ['# Hosted encounter coverage', '', 'Verified: 2026-10-12. **Census, not completion certification.**', '',
              f'Server revision: `{revision}`. Input: `{database}` (read-only).',
-             'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; current-season roster: Blizzard Curse of Ula\'tek update notes, news24293281 (August 6, 2026).', '',
+             'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; work-order relations: locally extracted DisplaySeason4279827, MythicPlusSeasonTrackedMap4521365, JournalTier1349056, JournalTierXInstance1285009, MapChallengeMode801709 and LFGDungeons1361033. TC a352b1fa murder_row.h/instance_murder_row.cpp supply missing primary actor identities; pinned hashes are in scripts/encounter_cpp_bindings.py.', '',
              'Every DungeonEncounter difficulty record and Journal-only encounter on an admissible party/raid map is retained. Garrisons excluded. A missing spawn is not a hosted fight. Display joins identify candidate actors; only imported bindings/compatibility data authorize kill credit. Multi-actor completion remains unproved.', '',
              '“Admitted casts” means current interpreter vocabulary or an existing Stockade Rust port, not correct damage, targeting, phases or complete boss mechanics. Spell effects, conditions, triggered chains and source-9 lists require behavioral certification. “Wired” is code reachability, not passing engage→kill→loot proof. Spawn counts are database placements, not observed live entities. Loot rows/gold are bindings, not awarded loot proof.', '',
              *priorities, '',
@@ -168,7 +178,7 @@ def render(records, database, revision):
             if a['cpp_gap']:
                 gap += '; TC C++ script unported'
             fields = base+[f"{r['name']} [{a['entry']}] / {a['spawned']}", f"{a['source_ai'] or a['source_cpp'] or 'none'} → {a['runtime_ai']}",
-                ','.join(map(str,a['admitted_casts']))+' / '+(gap or 'no row-vocabulary gap; mechanics unproved'),
+                ','.join(map(str,a['admitted_casts']))+' / '+(gap or 'no row-vocabulary gap; mechanics/phases unproved'),
                 '; '.join(a[k] for k in ('encounter_start_end','kill_credit','lockout')),loot+' / '+a['proof']]
             lines.append('|'+ '|'.join(s.replace('|','/') for s in fields)+'|')
     return '\n'.join(lines)+'\n'
