@@ -580,11 +580,15 @@ impl AchievementCatalog {
             .map(|child| self.tree_progress(*child, state))
             .collect();
         match tree.operator {
-            TreeOperator::Single => TreeProgress {
-                current: counter.unwrap_or(0).min(tree.amount),
-                required: tree.amount,
-                completed: counter.is_some_and(|counter| counter >= tree.amount),
-            },
+            TreeOperator::Single => {
+                // Authored amount0 still requires one real credit (e.g. LearnOrKnowSpell).
+                let required = tree.amount.max(1);
+                TreeProgress {
+                    current: counter.unwrap_or(0).min(required),
+                    required,
+                    completed: counter.is_some_and(|counter| counter >= required),
+                }
+            }
             TreeOperator::All => TreeProgress {
                 current: progress.iter().map(|child| child.current).sum(),
                 required: progress.iter().map(|child| child.required).sum(),
