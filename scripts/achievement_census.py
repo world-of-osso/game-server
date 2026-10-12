@@ -11,7 +11,7 @@ from pathlib import Path
 from import_achievement_modifiers import qualified_mythic_criteria
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 12, 14, 27, 28, 29, 34, 36, 41, 42, 43, 46, 68, 69, 73, 74, 75, 96, 130, 156, 157, 158, 160, 162, 165, 185, 186, 216}
+BASE_TYPES = {0, 1, 5, 7, 8, 12, 14, 27, 28, 29, 34, 36, 41, 42, 43, 46, 68, 69, 73, 74, 75, 96, 112, 130, 156, 157, 158, 160, 162, 165, 185, 186, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -66,7 +66,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind == 96 and asset not in pet_creatures:
             continue
-        if kind in (7, 75) and asset not in skills:
+        if kind in (7, 75, 112) and asset not in skills:
             continue
         supported.add(row_id)
     return supported

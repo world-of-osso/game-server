@@ -29,6 +29,7 @@ pub(crate) enum CriteriaEvent {
     UseItem(u32),
     UseGameObject(u32),
     KnowSkillLineSpells(u32, u32),
+    LearnTradeskillSkillLine(u32, u32),
     KnowPetCreature(u32),
     OwnUniquePets(u32),
     LearnToy(u32),
@@ -65,6 +66,7 @@ impl CriteriaEvent {
             Self::UseItem(_) => 41,
             Self::UseGameObject(_) => 68,
             Self::KnowSkillLineSpells(_, _) => 75,
+            Self::LearnTradeskillSkillLine(_, _) => 112,
             Self::KnowPetCreature(_) => 96,
             Self::OwnUniquePets(_) => 156,
             Self::LearnToy(_) => 185,
@@ -114,7 +116,8 @@ impl CriteriaEvent {
             | Self::ReputationGained(asset, _)
             | Self::AcquireItem(asset, _)
             | Self::LootItem(asset, _)
-            | Self::KnowSkillLineSpells(asset, _) => asset == criteria.asset,
+            | Self::KnowSkillLineSpells(asset, _)
+            | Self::LearnTradeskillSkillLine(asset, _) => asset == criteria.asset,
             Self::KillCreature(asset)
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
@@ -254,18 +257,20 @@ impl AchievementCatalog {
                 *counts.entry(skill).or_default() += 1;
             }
         }
-        let skills: BTreeSet<_> = self
-            .event_criteria
-            .get(&75)
+        let skills: BTreeSet<_> = [75, 112]
             .into_iter()
-            .flatten()
+            .flat_map(|kind| self.event_criteria.get(&kind).into_iter().flatten())
             .map(|id| self.criteria[id].asset)
             .collect();
         known
             .into_iter()
             .map(CriteriaEvent::LearnSpell)
-            .chain(skills.into_iter().map(|skill| {
-                CriteriaEvent::KnowSkillLineSpells(skill, counts.get(&skill).copied().unwrap_or(0))
+            .chain(skills.into_iter().flat_map(|skill| {
+                let count = counts.get(&skill).copied().unwrap_or(0);
+                [
+                    CriteriaEvent::KnowSkillLineSpells(skill, count),
+                    CriteriaEvent::LearnTradeskillSkillLine(skill, count),
+                ]
             }))
             .collect()
     }
@@ -490,6 +495,7 @@ impl AchievementCatalog {
         if matches!(
             event,
             CriteriaEvent::KnowSkillLineSpells(_, 0)
+                | CriteriaEvent::LearnTradeskillSkillLine(_, 0)
                 | CriteriaEvent::OwnUniquePets(0)
                 | CriteriaEvent::OwnToys(0)
         ) && !state.criteria_progress.contains_key(&id)
@@ -506,6 +512,7 @@ impl AchievementCatalog {
             | CriteriaEvent::KnowPetCreature(_)
             | CriteriaEvent::LearnToy(_) => 1,
             CriteriaEvent::KnowSkillLineSpells(_, count)
+            | CriteriaEvent::LearnTradeskillSkillLine(_, count)
             | CriteriaEvent::OwnUniquePets(count)
             | CriteriaEvent::OwnToys(count) => u64::from(count),
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
@@ -796,7 +803,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
                         || (matches!(kind, 14 | 74 | 130 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
-                        || (matches!(kind, 7 | 75) && row.get::<_, bool>(9)?)
+                        || (matches!(kind, 7 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
                                 .pet_creatures
@@ -817,7 +824,7 @@ fn load_spell_skill_lines(
     conn: &Connection,
     catalog: &mut AchievementCatalog,
 ) -> rusqlite::Result<()> {
-    let mut query = conn.prepare("SELECT DISTINCT s.Spell, s.SkillLine FROM skill_line_ability s JOIN criteria c ON c.Asset=s.SkillLine WHERE c.Type=75")?;
+    let mut query = conn.prepare("SELECT DISTINCT s.Spell, s.SkillLine FROM skill_line_ability s JOIN criteria c ON c.Asset=s.SkillLine WHERE c.Type IN (75,112)")?;
     for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
         let (spell, skill) = row?;
         catalog
