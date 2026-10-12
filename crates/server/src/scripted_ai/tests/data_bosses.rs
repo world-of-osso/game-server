@@ -557,6 +557,80 @@ fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is
 }
 
 #[test]
+fn encounter_coverage_animated_gold_molten_transition_stops_active_motion() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    let start = *h.app.world().get::<Position>(gold).unwrap();
+    let destination = Position {
+        x: start.x + 30.0,
+        ..start
+    };
+    super::super::movement::move_point(h.app.world_mut(), gold, 1, destination);
+    super::super::movement::set_walk(h.app.world_mut(), gold, true);
+    h.advance(0.2);
+    let moving_position = *h.app.world().get::<Position>(gold).unwrap();
+    assert!(moving_position.x > start.x);
+    let lethal_loss = h.health(gold).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, lethal_loss);
+    assert!(h.has_aura(gold, 265915));
+    let molten_position = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(0.5);
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        molten_position,
+        "source lethal transition clears its generator and stops moving"
+    );
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::CreatureMotion>(gold)
+            .unwrap(),
+        shared::components::CreatureMotion::Still
+    );
+}
+
+#[test]
+fn encounter_coverage_spit_gold_summons_only_on_expiry_or_target_death() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let player = h.player();
+    for (reason, expected) in [
+        (crate::auras::RemoveReason::Dispelled, 0),
+        (crate::auras::RemoveReason::Expired, 1),
+        (crate::auras::RemoveReason::Death, 2),
+    ] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: boss,
+                target: player,
+                spell_id: 265773,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(h.has_aura(player, 265773));
+        let location = *h.app.world().get::<Position>(player).unwrap();
+        crate::auras::remove_auras(h.app.world_mut(), player, reason, |aura| {
+            aura.spell_id == 265773
+        });
+        let actors = h.creatures_of(135406);
+        assert_eq!(actors.len(), expected, "source removal reason {reason:?}");
+        for actor in actors {
+            assert_eq!(*h.app.world().get::<InMap>(actor).unwrap(), map);
+            assert_eq!(*h.app.world().get::<Position>(actor).unwrap(), location);
+        }
+    }
+}
+
+#[test]
 fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let conn =
