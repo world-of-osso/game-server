@@ -885,4 +885,13 @@ fn achievements_criteria_loot_item_counts_only_committed_loot_slots() {
             .get(&15886),
         Some(&3)
     );
+    // Corpse loot is LOOT_CORPSE, never the disenchanting GetLootByType criterion5304.
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.looter.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5304)
+    );
 }

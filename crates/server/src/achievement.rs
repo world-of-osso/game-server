@@ -617,9 +617,11 @@ fn process_inventory_acquisition_credits(world: &mut World) {
             record_criteria_event(world, player, CriteriaEvent::AcquireItem(item, count));
         }
     }
-    for (character, item, count) in looted {
+    for (character, item, count, kind) in looted {
         if let Some(&player) = owners.get(&character) {
+            // TC Player::StoreLootItem (Player.cpp:27202-27203).
             record_criteria_event(world, player, CriteriaEvent::LootItem(item, count));
+            record_criteria_event(world, player, CriteriaEvent::GetLootByType(kind, count));
         }
     }
     for (character, copper) in money {
