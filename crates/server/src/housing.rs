@@ -30,7 +30,10 @@ impl Plugin for HousingPlugin {
     }
 }
 
-fn load_catalog(mut commands: Commands) {
+fn load_catalog(
+    mut commands: Commands,
+    mut objects: ResMut<crate::game_objects::GameObjectSpawns>,
+) {
     let connection = rusqlite::Connection::open_with_flags(
         crate::spell_info::WORLD_DB_PATH,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -47,6 +50,9 @@ fn load_catalog(mut commands: Commands) {
     };
     if let Err(message) = &loaded {
         warn!("Housing unavailable: {message}");
+    }
+    if let Ok(catalog) = &loaded {
+        objects.0.extend(catalog.cornerstones());
     }
     commands.insert_resource(HousingAvailability(loaded));
     commands.insert_resource(crate::housing_acquisition::HousingCollectionRule(
@@ -278,20 +284,54 @@ fn purchase_plot(
     if context.neighborhood_id != Some(plot.neighborhood_id) {
         return Err("Enter this neighborhood before purchasing its plot.".into());
     }
-    let position = world
-        .get::<Position>(actor.player)
-        .ok_or("Player position unavailable.")?;
-    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
-    let distance = Vec3::new(x, y, z).distance(Vec3::from_array(plot.cornerstone));
-    if !distance.is_finite() || distance > crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE {
-        return Err("Move within interaction range of this plot's authored cornerstone.".into());
-    }
+    require_cornerstone_reach(world, actor.player, plot_id)?;
     let db = &world.resource::<GameDatabase>().db;
     store::purchase(db, context, &plot)?;
     let gold = crate::persistence::load_inventory(db, actor.character).gold;
     world
         .resource_mut::<crate::gold::GoldUpdateQueue>()
         .record(actor.character, gold);
+    Ok(())
+}
+
+fn require_cornerstone_reach(
+    world: &mut World,
+    player: Entity,
+    plot_id: u32,
+) -> Result<(), String> {
+    let position = *world
+        .get::<Position>(player)
+        .ok_or("Player position unavailable.")?;
+    let map = *world
+        .get::<InMap>(player)
+        .ok_or("Enter the neighborhood before using its cornerstone.")?;
+    let source = catalog(world)?;
+    let entry = source
+        .cornerstones()
+        .into_iter()
+        .find(|spawn| source.cornerstone_plot(spawn.info.entry) == Some(plot_id))
+        .map(|spawn| spawn.info.entry)
+        .ok_or("This plot has no authenticated cornerstone source.")?;
+    let mut objects = world.query::<(
+        &InMap,
+        &shared::protocol::GameObjectInfo,
+        &Position,
+        &crate::game_objects::GameObjectBounds,
+    )>();
+    let stone = objects
+        .iter(world)
+        .find(|(copy, info, _, _)| **copy == map && info.entry == entry);
+    let Some((_, _, origin, bounds)) = stone else {
+        return Err("This plot's cornerstone is not present in this neighborhood copy.".into());
+    };
+    let reaches = bounds.reaches(
+        crate::game_objects::wow_position(origin),
+        crate::game_objects::wow_position(&position),
+        crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE,
+    );
+    if !reaches {
+        return Err("Move within interaction range of this plot's authored cornerstone.".into());
+    }
     Ok(())
 }
 

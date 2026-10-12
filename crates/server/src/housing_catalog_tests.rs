@@ -22,13 +22,49 @@ pub(crate) fn catalog_fixture() -> Connection {
         params![BUILD_KEY, neighborhood.to_string()],
     )
     .unwrap();
-    let plot = serde_json::json!({"NeighborhoodMapID":"1", "PlotIndex":"0", "Name":"", "Cost":"10000000", "CornerstonePosition_0":"2942.743896484375", "CornerstonePosition_1":"-214.265625", "CornerstonePosition_2":"113.11284637451172", "TeleportPosition_0":"2939.34375", "TeleportPosition_1":"-212.25540161132812", "TeleportPosition_2":"113.32099914550781"});
+    let plot = serde_json::json!({"NeighborhoodMapID":"1", "PlotIndex":"0", "Name":"", "Cost":"10000000", "CornerstonePosition_0":"2942.743896484375", "CornerstonePosition_1":"-214.265625", "CornerstonePosition_2":"113.11284637451172", "TeleportPosition_0":"2939.34375", "TeleportPosition_1":"-212.25540161132812", "TeleportPosition_2":"113.32099914550781", "CornerstoneGameObjectID":"527268"});
     db.execute(
         "INSERT INTO housing_catalog_record VALUES (?, 'NeighborhoodPlot', 417, ?)",
         params![BUILD_KEY, plot.to_string()],
     )
     .unwrap();
+    db.execute_batch("CREATE TABLE game_object_display_info (ID INTEGER, GeoBox_0 REAL, GeoBox_1 REAL, GeoBox_2 REAL, GeoBox_3 REAL, GeoBox_4 REAL, GeoBox_5 REAL); INSERT INTO game_object_display_info VALUES (110660,-2.6780343,-2.6780343,-0.5331883,2.6780343,2.6780343,4.1304092);").unwrap();
+    let object = serde_json::json!({"OwnerID":"2735", "DisplayID":"110660", "Name_lang":"Cornerstone - Plot 0", "Pos_0":"2941.23169", "Pos_1":"-214.586807", "Pos_2":"113.156387", "Rot_0":"0", "Rot_1":"0", "Rot_2":"0.902585328", "Rot_3":"0.430510968", "Scale":"1", "TypeID":"48"});
+    db.execute(
+        "INSERT INTO housing_catalog_record VALUES (?, 'GameObjects', 527268, ?)",
+        params![BUILD_KEY, object.to_string()],
+    )
+    .unwrap();
     db
+}
+
+#[test]
+fn housing_catalog_cornerstones_keep_actual_object_transform_and_refuse_substitution() {
+    let db = catalog_fixture();
+    let catalog = HousingCatalog::read(&db).unwrap();
+    let objects = catalog.cornerstones();
+    assert_eq!(objects.len(), 1);
+    let stone = &objects[0];
+    assert_eq!(stone.info.entry, 527268);
+    assert_eq!(stone.info.display_id, 110660);
+    assert_eq!(stone.info.go_type, 48);
+    assert_eq!(stone.info.name, "Cornerstone - Plot 0");
+    assert_eq!(stone.position, Vec3::new(2941.2317, -214.5868, 113.15639));
+    assert_ne!(
+        stone.position,
+        Vec3::from_array(catalog.plot(417).unwrap().cornerstone)
+    );
+    assert_eq!(catalog.cornerstone_plot(527268), Some(417));
+    assert_eq!(catalog.cornerstone_plot(581971), None);
+    db.execute(
+        "DELETE FROM housing_catalog_record WHERE table_name='GameObjects'",
+        [],
+    )
+    .unwrap();
+    let unavailable = HousingCatalog::read(&db).unwrap();
+    assert!(unavailable.cornerstones().is_empty());
+    assert_eq!(unavailable.cornerstone_plot(527268), None);
+    assert_eq!(unavailable.plots(1).unwrap().len(), 1);
 }
 
 #[test]
