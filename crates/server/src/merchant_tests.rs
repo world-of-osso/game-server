@@ -99,8 +99,9 @@ fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
             .get(&1874),
         Some(&1)
     );
+    //893 also requires knowing the mount spell(type34), not merely owning the item.
     assert!(
-        h.app
+        !h.app
             .world()
             .get::<PlayerAchievementState>(h.player)
             .unwrap()
@@ -109,6 +110,35 @@ fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
             .unwrap()
             .earned_ids
             .contains(&893)
+    );
+    h.app.world_mut().entity_mut(h.player).insert(Level(30));
+    h.set_gold(85_000_000);
+    let ring_vendor = h.open(32172);
+    let ring_inventory = h.take::<VendorInventory>();
+    let ring_slot = ring_inventory[0]
+        .items
+        .iter()
+        .find(|item| item.item_id == 40586)
+        .unwrap()
+        .slot;
+    h.buy(ring_vendor, ring_slot, 40586, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&7401),
+        Some(&1)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .earned_ids
+            .contains(&2084)
     );
     assert_eq!(
         persistence::load_achievements(
