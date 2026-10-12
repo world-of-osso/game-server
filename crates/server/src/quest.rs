@@ -161,7 +161,16 @@ fn send_initial_quest_log(
 /// player of a dead creature (`creature_tap`): a grouped player needs to be alive or
 /// without a corpse.
 fn credit_quest_kills(
-    killed: Query<(&Npc, &CreatureTap, &Position, &crate::maps::InMap), Added<DeathState>>,
+    killed: Query<
+        (
+            &Npc,
+            &CreatureTap,
+            &Position,
+            &crate::maps::InMap,
+            Option<&crate::zones::CreatureDifficulty>,
+        ),
+        Added<DeathState>,
+    >,
     players: RewardPlayers,
     lives: Query<(&ClientId, Option<&PlayerDeathState>), With<Player>>,
     groups: Option<Res<GroupRegistry>>,
@@ -180,14 +189,26 @@ fn credit_quest_kills(
                 id.0 == character && death.is_none_or(|death| death.state == PlayerLifeState::Alive)
             })
     };
-    for (npc, tap, position, map) in &killed {
+    for (npc, tap, position, map, difficulty) in &killed {
         for character_id in
             rewarded_characters(&tap.tappers, (map, position), &players, groups.as_deref())
                 .into_iter()
                 .filter(|&character| gets_credit(character))
         {
             let mut log = load_quest_log(db, character_id);
-            if credit_killed_creature(quests, &mut log, npc.template_id) {
+            let mut changed = credit_killed_creature(quests, &mut log, npc.template_id);
+            let mode = difficulty.map_or(0, |difficulty| difficulty.0);
+            if let Some(labels) = quests.creature_labels.get(&(npc.template_id, mode)) {
+                for &label in labels {
+                    changed |= crate::quest_rules::credit_objective(
+                        quests,
+                        &mut log,
+                        crate::quest_data::ObjectiveKind::KillWithLabel,
+                        label,
+                    );
+                }
+            }
+            if changed {
                 save_quest_log(db, character_id, &log);
                 dirty.0.insert(character_id);
             }

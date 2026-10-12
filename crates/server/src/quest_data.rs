@@ -219,6 +219,8 @@ pub(crate) struct QuestDb {
     pub area_triggers: HashMap<u32, Vec<QuestAreaTrigger>>,
     /// Creature entry -> its `KillCredit1`/`KillCredit2` entries (`Player::KilledMonster`).
     pub kill_credits: HashMap<u32, Vec<u32>>,
+    /// Authenticated CreatureLabel membership by entry and selected difficulty mode.
+    pub creature_labels: HashMap<(u32, u32), Vec<u32>>,
 }
 
 /// An `AreaTrigger.db2` row that explores quests.

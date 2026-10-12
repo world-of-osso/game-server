@@ -883,6 +883,87 @@ fn mark_rewarded(app: &App, client: &Client, quest_id: u32) {
     save_quest_log(db(app), client.character_id, &log);
 }
 
+#[test]
+fn world_quest_label_credit_uses_authentic_membership_only_on_real_creature_death() {
+    let mut app = setup_app().unwrap();
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest(quest_id INTEGER); INSERT INTO content_world_quest VALUES(82414);
+        CREATE TABLE content_world_quest_objective(quest_id INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,flags2 INTEGER,weight REAL,description TEXT,ordinal INTEGER);
+        INSERT INTO content_world_quest_objective VALUES(82414,21,3520,5,0,0,0,'Insects slain',0);
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT); CREATE TABLE content_item(ID INTEGER,name TEXT);
+        CREATE TABLE content_world_quest_creature_label(label_id INTEGER,creature_entry INTEGER,difficulty_id INTEGER);
+        INSERT INTO content_world_quest_creature_label VALUES(3520,222677,0);").unwrap();
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        quests.quests.insert(
+            82414,
+            crate::quest_data::QuestTemplate {
+                id: 82414,
+                ..Default::default()
+            },
+        );
+        crate::world_quest_objectives::load(&conn, &mut quests).unwrap();
+    }
+    let client = spawn_client(&mut app, 80);
+    enter_world(&mut app, &client);
+    save_quest_log(
+        db(&app),
+        client.character_id,
+        &QuestLogData {
+            active: vec![crate::persistence::quest_store::ActiveQuestData {
+                quest_id: 82414,
+                counts: vec![0],
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    );
+    killed_monster_credit(app.world_mut(), client.player, 222677);
+    kill(&mut app, &client, 3520, 1);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    kill(&mut app, &client, 222677, 1);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    app.world_mut().spawn((
+        crate::maps::InMap::continent(0),
+        Npc {
+            template_id: 222677,
+            name: String::new(),
+        },
+        origin(),
+        crate::zones::CreatureDifficulty(1),
+        crate::creature_tap::CreatureTap::tapped_by(client.character_id),
+        DeathState { respawn_timer: 60. },
+    ));
+    app.update();
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    kill(&mut app, &client, 222677, 8);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![5]
+    );
+}
+
 fn kill(app: &mut App, client: &Client, template_id: u32, count: usize) {
     for _ in 0..count {
         app.world_mut().spawn((
