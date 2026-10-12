@@ -304,14 +304,46 @@ fn process_owned_pet_achievement_updates(world: &mut World) {
     }
 }
 
-/// TC CriteriaHandler.cpp709-715 credits positive signed standing, not an unsigned tier offset.
+#[path = "achievement_rank_factions.rs"]
+mod rank_factions;
+
+/// Current traditional ranks, not visible/tracked factions or historical maxima.
+fn reputation_rank_events(
+    reputation: &shared::reputation::CharacterReputation,
+) -> Vec<CriteriaEvent> {
+    let values: Vec<_> = reputation
+        .values()
+        .filter(|(id, _)| {
+            rank_factions::TRADITIONAL_RANK_FACTIONS
+                .binary_search(id)
+                .is_ok()
+        })
+        .map(|(_, standing)| standing)
+        .collect();
+    use shared::reputation::{Standing, threshold_for_standing};
+    let count = |rank| {
+        let threshold = threshold_for_standing(rank);
+        u32::try_from(values.iter().filter(|&&value| value >= threshold).count())
+            .expect("faction count fits u32")
+    };
+    vec![
+        CriteriaEvent::TotalExaltedFactions(count(Standing::Exalted)),
+        CriteriaEvent::TotalReveredFactions(count(Standing::Revered)),
+        CriteriaEvent::TotalHonoredFactions(count(Standing::Honored)),
+    ]
+}
+
+/// TC CriteriaHandler709-715/737-745: positive standing and current rank totals.
 fn process_reputation_achievement_updates(world: &mut World) {
     let updates: Vec<_> = world.query_filtered::<(Entity, &shared::reputation::CharacterReputation), Changed<shared::reputation::CharacterReputation>>()
-        .iter(world).flat_map(|(player, reputation)| reputation.values()
-            .filter(|(_, value)| *value > 0)
-            .map(move |(faction, value)| (player, CriteriaEvent::ReputationGained(faction, value as u32)))).collect();
-    for (player, event) in updates {
-        record_criteria_event(world, player, event);
+        .iter(world).map(|(player, reputation)| {
+            let events = reputation.values().filter(|(_, value)| *value > 0)
+                .map(|(faction, value)| CriteriaEvent::ReputationGained(faction, value as u32))
+                .chain(reputation_rank_events(reputation)).collect::<Vec<_>>();
+            (player, events)
+        }).collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
     }
 }
 

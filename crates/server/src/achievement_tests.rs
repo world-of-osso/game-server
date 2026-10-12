@@ -1155,6 +1155,103 @@ fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cas
 }
 
 #[test]
+fn achievements_criteria_rank_totals_follow_committed_authentic_quest_reputation() {
+    use crate::world_quest_rewards::{Rewards, load_settlement};
+    use shared::reputation::CharacterReputation;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 17, "Rankproof", 1, 1).unwrap();
+    let reputation: CharacterReputation = serde_json::from_value(serde_json::json!({
+        "values": {"1090":41999,"1859":8999,"1273":42000,"2511":42000,"2089":42000,"999999":42000},
+        "tracked": [], "watched": null
+    }))
+    .unwrap();
+    persistence::save_reputation(&db, character, &reputation);
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(GameDatabase { db });
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Rankproof".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            PlayerAchievementState::default(),
+            reputation,
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((
+            Authenticated { account_id: 17 },
+            PlayerLink(player),
+            InWorld {
+                character_id: character,
+            },
+        ))
+        .id();
+    app.update();
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&5299), Some(&1));
+    assert_eq!(state.criteria_progress.get(&5300), Some(&1));
+    assert!(!state.criteria_progress.contains_key(&982));
+    let mut rewards = Rewards::default();
+    let mut query = conn.prepare("SELECT reward_id,amount,cap FROM content_world_quest_reward WHERE quest_id=45068 AND kind='reputation'").unwrap();
+    for row in query
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, i32>(1)?,
+                row.get::<_, u8>(2)?,
+            ))
+        })
+        .unwrap()
+    {
+        let (id, amount, cap) = row.unwrap();
+        rewards
+            .reputation
+            .push(shared::protocol::WorldQuestNumericReward { id, amount });
+        rewards.reputation_caps.insert(id, cap);
+    }
+    assert_eq!(rewards.reputation.len(), 2);
+    let db = &app.world().resource::<GameDatabase>().db;
+    let settlement = load_settlement(db, character, 1, Some(&rewards))
+        .unwrap()
+        .unwrap();
+    let txn = db.begin_write().unwrap();
+    settlement.persist_in(&txn, character);
+    txn.commit().unwrap();
+    settlement.publish(app.world_mut(), connection);
+    app.update();
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&982), Some(&1));
+    assert_eq!(state.criteria_progress.get(&5299), Some(&1));
+    assert_eq!(state.criteria_progress.get(&5300), Some(&2));
+    // Native traditional reputation loss recomputes current totals, not historical maxima.
+    app.world_mut()
+        .get_mut::<CharacterReputation>(player)
+        .unwrap()
+        .lose_rep(1090, 33001, shared::reputation::RepGainSource::QuestTurnIn);
+    app.update();
+    app.update();
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&982), Some(&0));
+    assert_eq!(state.criteria_progress.get(&5299), Some(&0));
+    assert_eq!(state.criteria_progress.get(&5300), Some(&1));
+    drop(app);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&reopened, character);
+    assert_eq!(saved.criteria_progress.get(&982), Some(&0));
+    assert_eq!(saved.criteria_progress.get(&5300), Some(&1));
+}
+
+#[test]
 fn achievements_criteria_reputation_tracks_signed_changes_and_grants_real_timbers() {
     use shared::components::CharacterAppearance;
     use shared::reputation::CharacterReputation;

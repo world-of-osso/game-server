@@ -36,6 +36,9 @@ pub(crate) enum CriteriaEvent {
     SkillMaxRank(u32, u16),
     CurrencyGained(u32, u32),
     ReputationGained(u32, u32),
+    TotalExaltedFactions(u32),
+    TotalReveredFactions(u32),
+    TotalHonoredFactions(u32),
     AcquireItem(u32, u32),
     LootItem(u32, u32),
     ParticipateInBattleground(u32),
@@ -131,6 +134,9 @@ impl CriteriaEvent {
             Self::SkillMaxRank(_, _) => 40,
             Self::CurrencyGained(_, _) => 12,
             Self::ReputationGained(_, _) => 46,
+            Self::TotalExaltedFactions(_) => 47,
+            Self::TotalReveredFactions(_) => 87,
+            Self::TotalHonoredFactions(_) => 88,
             Self::AcquireItem(_, _) => 36,
             Self::LootItem(_, _) => 42,
             Self::ParticipateInBattleground(_) => 15,
@@ -228,7 +234,10 @@ impl CriteriaEvent {
                         .max_level_class
                         .is_none_or(|required| required == class)
             }
-            Self::GainLevels(_)
+            Self::TotalExaltedFactions(_)
+            | Self::TotalReveredFactions(_)
+            | Self::TotalHonoredFactions(_)
+            | Self::GainLevels(_)
             | Self::LootMoney(_)
             | Self::DamageDealt(_)
             | Self::HighestDamageDone(_)
@@ -659,6 +668,9 @@ impl AchievementCatalog {
                 | CriteriaEvent::LearnTradeskillSkillLine(_, 0)
                 | CriteriaEvent::OwnUniquePets(0)
                 | CriteriaEvent::OwnToys(0)
+                | CriteriaEvent::TotalExaltedFactions(0)
+                | CriteriaEvent::TotalReveredFactions(0)
+                | CriteriaEvent::TotalHonoredFactions(0)
                 | CriteriaEvent::RewardedQuestCount(0)
                 | CriteriaEvent::RewardedQuestsInZone(_, 0)
                 | CriteriaEvent::BankTabsOwned(_, 0)
@@ -702,7 +714,10 @@ impl AchievementCatalog {
             | CriteriaEvent::LearnTaxiNode(_)
             | CriteriaEvent::GotHaircut
             | CriteriaEvent::EquipItem(_) => 1,
-            CriteriaEvent::KnowSkillLineSpells(_, count)
+            CriteriaEvent::TotalExaltedFactions(count)
+            | CriteriaEvent::TotalReveredFactions(count)
+            | CriteriaEvent::TotalHonoredFactions(count)
+            | CriteriaEvent::KnowSkillLineSpells(_, count)
             | CriteriaEvent::LearnTradeskillSkillLine(_, count)
             | CriteriaEvent::OwnUniquePets(count)
             | CriteriaEvent::OwnToys(count)
@@ -1059,7 +1074,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog
