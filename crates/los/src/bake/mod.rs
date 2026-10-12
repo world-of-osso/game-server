@@ -43,6 +43,9 @@ pub struct ModelGeometry {
     pub max: Vec3,
     /// Triangles of alpha-tested or blended batches.
     pub dropped_triangles: usize,
+    /// Authored M2 face normals in model-local engine axes, populated only for
+    /// the dedicated floor bake. LOS and navigation retain their existing rules.
+    floor_normals: Vec<Vec3>,
 }
 
 impl ModelGeometry {
@@ -56,7 +59,19 @@ impl ModelGeometry {
             min,
             max,
             dropped_triangles,
+            floor_normals: Vec::new(),
         }
+    }
+
+    fn walkable_m2_faces(&self, world: Affine3A) -> Vec<[Vec3; 3]> {
+        self.triangles
+            .iter()
+            .zip(&self.floor_normals)
+            .filter_map(|(&triangle, &normal)| {
+                let world_normal = world.matrix3.mul_vec3(normal.into()).normalize_or_zero();
+                (world_normal.y >= shared::ground::min_walkable_normal_y()).then_some(triangle)
+            })
+            .collect()
     }
 
     /// Smallest side of the bounding box at `scale`.
@@ -486,7 +501,12 @@ impl Baker {
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
             let before = build.triangles.len();
-            build.stats.doodad_triangles += build.add(&model.triangles, doodad.world);
+            let added = if self.m2_only {
+                build.add(&model.walkable_m2_faces(doodad.world), doodad.world)
+            } else {
+                build.add(&model.triangles, doodad.world)
+            };
+            build.stats.doodad_triangles += added;
             if self.collision && !self.m2_only {
                 build
                     .obstacles
@@ -531,7 +551,11 @@ impl Baker {
             .map_err(|err| err.to_string())?;
         let file = m2::M2File::parse(&data)?;
         if self.collision {
-            return Ok(ModelGeometry::new(file.collision_triangles()?, 0));
+            let mut geometry = ModelGeometry::new(file.collision_triangles()?, 0);
+            if self.m2_only {
+                geometry.floor_normals = file.collision_normals()?;
+            }
+            return Ok(geometry);
         }
         let skin = primary_skin(&self.data.join("models"), fdid, file.skin_fdid)?;
         let (triangles, dropped) = file.opaque_triangles(&skin)?;
