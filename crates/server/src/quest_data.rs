@@ -22,6 +22,7 @@ const QUEST_FLAGS_WEEKLY: u32 = 0x8000;
 /// `FlagsEx` bit (TrinityCore `QUEST_FLAGS_EX_LEGENDARY`, QuestDef.h:260).
 const QUEST_FLAGS_EX_LEGENDARY: u32 = 0x100;
 /// `QuestInfo.Modifiers` bits (`Quest::IsImportant` / `Quest::IsMeta`, QuestDef.cpp:509-523).
+const QUEST_INFO_MODIFIER_WORLD_QUEST: u32 = 0x100;
 const QUEST_INFO_MODIFIER_IMPORTANT: u32 = 0x400;
 const QUEST_INFO_MODIFIER_META: u32 = 0x800;
 /// `QuestInfo.Type` `QuestTagType::CovenantCalling` (QuestDef.h:349).
@@ -562,13 +563,21 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.money_rewards = load_money_rewards(&conn)?;
     db.area_triggers = load_area_triggers(&conn)?;
     db.kill_credits = load_kill_credits(&conn)?;
-    db.world_quests = crate::world_quests::load_definitions(&conn)?;
-    for definition in &db.world_quests {
-        if !db
+    db.world_quests = load_world_quest_definitions(&conn, &db)?;
+    Ok(db)
+}
+
+fn load_world_quest_definitions(
+    conn: &Connection,
+    db: &QuestDb,
+) -> rusqlite::Result<Vec<crate::world_quests::Definition>> {
+    let definitions = crate::world_quests::load_definitions(conn)?;
+    for definition in &definitions {
+        let has_world_quest_template = db
             .quests
             .get(&definition.quest_id)
-            .is_some_and(|q| q.quest_info_modifiers & 0x100 != 0)
-        {
+            .is_some_and(|quest| quest.quest_info_modifiers & QUEST_INFO_MODIFIER_WORLD_QUEST != 0);
+        if !has_world_quest_template {
             error!(
                 "World quest {} lacks a loaded authentic world-quest template",
                 definition.quest_id
@@ -576,7 +585,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
             return Err(rusqlite::Error::InvalidQuery);
         }
     }
-    Ok(db)
+    Ok(definitions)
 }
 
 /// Optional source overlay metadata; base Retail/Wrath rows retain their existing rules.

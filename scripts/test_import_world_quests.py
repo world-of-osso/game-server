@@ -1,4 +1,5 @@
 import sqlite3
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,7 +11,7 @@ from import_world_quests import QUEST_COLUMNS, copy_and_import, import_definitio
 def fixture(conn):
     text = {"LogTitle", "LogDescription", "QuestDescription", "AreaDescription", "QuestCompletionLog"}
     columns = {source: "TEXT DEFAULT ''" if source in text else "INTEGER DEFAULT 0" for source in QUEST_COLUMNS.values()}
-    columns.update(ManagedWorldStateID="INTEGER DEFAULT 0", FlagsEx="INTEGER DEFAULT 0", QuestInfoID="INTEGER DEFAULT 0")
+    columns.update(ManagedWorldStateID="INTEGER DEFAULT 0", FlagsEx="INTEGER DEFAULT 0", QuestInfoID="INTEGER DEFAULT 0", RewardCurrencyID1="INTEGER DEFAULT 0", RewardCurrencyQty1="INTEGER DEFAULT 0", RewardFactionCapIn1="INTEGER DEFAULT 0")
     conn.execute("CREATE TABLE tdb_quest_template (" + ",".join(f'{k} {v}' for k, v in columns.items()) + ")")
     targets = {target: "TEXT DEFAULT ''" if source in text else "INTEGER DEFAULT 0" for target, source in QUEST_COLUMNS.items()}
     targets.update(QuestLevel="INTEGER DEFAULT 0", MinLevel="INTEGER DEFAULT 0", RewardMoney="INTEGER DEFAULT 0")
@@ -40,7 +41,7 @@ def fixture(conn):
         CREATE TABLE content_quest_poi (QuestID INTEGER, id INTEGER, ObjectiveIndex INTEGER, MapID INTEGER, WorldMapAreaId INTEGER, Floor INTEGER, Priority INTEGER, Flags INTEGER, VerifiedBuild INTEGER);
         CREATE TABLE content_quest_poi_points (QuestID INTEGER, Idx1 INTEGER, Idx2 INTEGER, X INTEGER, Y INTEGER, VerifiedBuild INTEGER);
     """)
-    conn.execute("INSERT INTO tdb_quest_template (ID, QuestInfoID, ManagedWorldStateID, QuestSortID, ContentTuningID, LogTitle, AllowableRaces) VALUES (52847,112,113,9734,464,'Doom''s Howl',6130900294268439629)")
+    conn.execute("INSERT INTO tdb_quest_template (ID, QuestInfoID, ManagedWorldStateID, QuestSortID, ContentTuningID, LogTitle, AllowableRaces, RewardCurrencyID1, RewardCurrencyQty1, RewardFactionID1, RewardFactionOverride1, RewardFactionCapIn1) VALUES (52847,112,113,9734,464,'Doom''s Howl',6130900294268439629,1717,1,2159,7500,7)")
     conn.execute("INSERT INTO tdb_quest_template (ID, QuestInfoID, ManagedWorldStateID, QuestSortID, LogTitle) VALUES (52848,112,0,9734,'Unknown duration')")
     conn.execute("INSERT INTO tdb_quest_template (ID, QuestInfoID, ManagedWorldStateID, LogTitle) VALUES (999,1,113,'Ordinary quest')")
     for index in range(1,10):
@@ -60,6 +61,9 @@ class WorldQuestImportTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT quest_id,zone_id,duration_seconds FROM content_world_quest").fetchall(), [(52847,9734,604800)])
             row = conn.execute("SELECT ID,LogTitle,MinLevel,RequiredNpcOrGo1,RequiredNpcOrGoCount1,AllowableRaces FROM content_quest_template").fetchone()
             self.assertEqual(row, (52847,"Doom's Howl",10,138122,1,6130900294268439629))
+            source = json.loads(conn.execute("SELECT source_template_json FROM content_world_quest").fetchone()[0])
+            self.assertEqual((source["RewardCurrencyID1"],source["RewardCurrencyQty1"]),(1717,1))
+            self.assertEqual((source["RewardFactionID1"],source["RewardFactionOverride1"],source["RewardFactionCapIn1"]),(2159,7500,7))
             self.assertEqual(conn.execute("SELECT X,Y FROM content_quest_poi_points").fetchall(), [(-1061,-2482)])
             self.assertEqual(conn.execute("SELECT MapID,WorldMapAreaId FROM content_quest_poi").fetchall(), [(0,14)])
             self.assertEqual(import_definitions(conn, receipt()), [52847])
