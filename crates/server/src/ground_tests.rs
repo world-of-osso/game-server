@@ -57,11 +57,14 @@ fn probe_silvershard_cart_approach(ground: &mut GroundMap, center: Vec3) -> Opti
             let x = center.x + radius * dx;
             let y = center.y + radius * dy;
             let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, center.z + 1.0);
-            if let GroundProbe::Supported(height) = ground.ground_at(727, Vec3::new(bx, by, bz)) {
-                if height >= center.z - 3.0 {
-                    return Some([x, y, height + 0.1]);
-                }
+            let GroundProbe::Supported(height) = ground.ground_at(727, Vec3::new(bx, by, bz))
+            else {
+                continue;
+            };
+            if height < center.z - 3.0 {
+                continue;
             }
+            return Some([x, y, height + 0.1]);
         }
     }
     None
