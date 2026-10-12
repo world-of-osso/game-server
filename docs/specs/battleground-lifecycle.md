@@ -4,6 +4,16 @@
 
 Finish one Retail Mainline match: queue → invite/accept → isolated map entry → map objective → scoreboard → sourced honor → return to origin. Extend `pvp.rs` and shared `battleground*.rs`; Modern and Forever share behavior. No synthetic identifiers, timings or rewards; no agent world.db writes.
 
+## Coverage expansion — active 2026-10-12
+
+- [ ] Extend the complete lifecycle to random/epic Arathi Basin, Battle for Gilneas, Twin Peaks, Eye of the Storm, Temple of Kotmogu, Silvershard Mines, Seething Shore, Deephaul Ravine, Alterac Valley and Isle of Conquest. Source-backed objectives, WorldState IDs, victory rules, map-specific scoreboard columns and end/leave are required per map.
+- [ ] Deepwind Gorge remains a source-content gap: local Map2245/WDT2992913 exists, but TDB1210 has zero creature/gameobject placements, no battleground_template1037/1039, and pinned TC has no Deepwind script. Do not invent placements or substitute an older layout.
+- [ ] Behavioral server proof and private real-UDP Modern/Forever native proof per implemented map. Lightweight NetworkBridge peers may fill the sourced minimum roster. Travel acceleration must preserve authored positions; never inject objective scores/outcomes.
+
+Sources: local BattlemasterList FDID1360265/layout3414CBD7 and Map CSV12.1.0.69933; read-only TDB1210 catalogs; local CASC WDT extraction; TC a352b1fa9017138cc2f1dcfc0a51afaa17391ecf. BattlemasterList's current layout has no MapID field; association is verified through TDB templates and their safe-location maps. Resource/flag IDs must retain this distinction. WorldState FDID1374383 is absent from the local CASC root; TDB world_state and pinned TC references remain available, but independent DB2 WorldState row verification is a recorded gap.
+
+Current proof/source ledger: `/home/osso/.worktrees/handoff-bg-coverage.md`; durable receipts in engine `data/diagnostics/bg-coverage-2026-10-12/`. This section supersedes WSG-only scope, not previously proved WSG behavior.
+
 ## Selection and source evidence — 2026-10-11
 
 Mainline Warsong Gulch map2106 is the smallest local source-backed candidate: TDB1210 has28 creatures,14 gameobjects and2 capture area triggers. AB2107 has308/36/4; IoC628 has242/158; AV30 has1138/265. Classic maps489/529 have no source spawn rows in this archive. Counts are source coverage, not live proof or all selectable battleground modes.
