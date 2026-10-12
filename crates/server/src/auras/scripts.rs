@@ -83,6 +83,27 @@ const UNSTABLE_AFFLICTION: u32 = 30108;
 const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
 const PROTECTIVE_GROWTH: u32 = 433_748;
 const REGROWTH: u32 = 8_936;
+const LINGERING_HEALING: u32 = 231_040;
+
+/// Native231040s2 extends Regrowth only "when cast on yourself"; s1 is the
+/// independently masked Rejuvenation duration modifier handled by spell_mods.
+pub(super) fn self_regrowth_duration_bonus(
+    world: &World,
+    application: &super::AuraApplication,
+) -> f32 {
+    if application.spell_id != REGROWTH || application.caster != application.target {
+        return 0.0;
+    }
+    world
+        .get::<super::ActiveAuras>(application.caster)
+        .and_then(|auras| {
+            auras.iter().find(|aura| {
+                aura.spell_id == LINGERING_HEALING && aura.caster == application.caster
+            })
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 1))
+        .map_or(0.0, |effect| effect.amount)
+}
 
 /// Native433748s1: "Your Regrowth protects you ... while your Regrowth is on you."
 /// Fold into the recipient's shared school multipliers so spells and melee agree.
@@ -131,6 +152,7 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
     (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
+        || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == 431442 && matches!(effect_index, 0..=2))
         || (spell_id == 1260647 && effect_index == 0)
         || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
