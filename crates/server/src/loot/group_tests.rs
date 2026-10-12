@@ -81,7 +81,14 @@ fn achievements_criteria_loot_money_group_shares_are_actual_awards_and_cap_failu
     h.app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
     bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut h.app);
-    for player in [h.looter.player, other.player] {
+    for (looter, account) in [(h.looter, 1), (other, 2)] {
+        h.app
+            .world_mut()
+            .entity_mut(looter.connection)
+            .insert(crate::auth::Authenticated {
+                account_id: account,
+            });
+        let player = looter.player;
         h.app
             .world_mut()
             .entity_mut(player)
