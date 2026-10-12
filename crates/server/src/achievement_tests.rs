@@ -2,6 +2,108 @@ use super::*;
 use rusqlite::Connection;
 
 #[test]
+fn achievements_criteria_top_level_area_uses_authentic_dragon_isles_terrain_and_persists() {
+    use shared::components::{CharacterAppearance, Position};
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let (character, _) = persistence::create_character(&db, 17, "Zoneproof", 1, 1).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real ground asset directory");
+    let mut ground = crate::ground::GroundMap::new(
+        std::path::Path::new(&data),
+        maps.maps
+            .iter()
+            .map(|(&id, map)| (id, map.wdt_file_data_id))
+            .collect(),
+    );
+    // Authored MCNK centres from WDT3694921: roots3727661/4019752/4020532/4018737/4019782.
+    let points = [
+        (13644, 56789, 13644, (4883.333, 149.99935, 17.0797)),
+        (13645, 56811, 13766, (883.3333, 2150.0003, 256.679)),
+        (13646, 56812, 13646, (-1583.3326, -1616.6666, 1130.9233)),
+        (13647, 57004, 13794, (3816.6663, -3050.0007, 13.76233)),
+        (13862, 56813, 13862, (549.99935, -783.3327, 710.2002)),
+    ];
+    for &(_, _, area, (x, y, z)) in &points {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+        assert_eq!(ground.area_at(2444, Vec3::new(x, y, z)), Some(area));
+    }
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(4883.333, 149.99935, 17.0797);
+    let mut app = App::new();
+    app.add_plugins(AchievementPlugin);
+    app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    app.insert_resource(ground);
+    app.insert_resource(GameDatabase { db });
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Zoneproof".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Level(1),
+            Position { x, y, z },
+            InMap::continent(2444),
+            PlayerAchievementState::default(),
+            crate::death::PlayerDeathState::default(),
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((Authenticated { account_id: 17 }, PlayerLink(player)))
+        .id();
+    app.update();
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&56789)
+    );
+    app.world_mut().entity_mut(connection).insert(InWorld {
+        character_id: character,
+    });
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&56789),
+        Some(&1)
+    );
+    for &(_, criterion, _, (x, y, z)) in &points {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+        app.world_mut()
+            .entity_mut(player)
+            .insert(Position { x, y, z });
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&criterion),
+            Some(&1)
+        );
+    }
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert!(state.earned_ids.contains(&16759));
+    drop(app);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&reopened, character);
+    for &(_, criterion, _, _) in &points {
+        assert_eq!(saved.criteria_progress.get(&criterion), Some(&1));
+    }
+}
+
+#[test]
 fn achievements_criteria_knowledge_skill_line_counts_distinct_actual_spells_and_recomputes() {
     use crate::class_progression::KnownSpells;
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();

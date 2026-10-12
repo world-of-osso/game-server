@@ -67,6 +67,7 @@ pub(crate) enum CriteriaEvent {
     ActivelyEarnedPetLevel(u8),
     Login,
     ExploreAreaBit(u32),
+    EnterTopLevelArea(u32),
     TriggerGameEvent(u32),
     GainAura(u32),
     WinBattleground(u32),
@@ -147,6 +148,7 @@ impl CriteriaEvent {
             Self::ActivelyEarnedPetLevel(_) => 162,
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
+            Self::EnterTopLevelArea(_) => 225,
             Self::TriggerGameEvent(_) => 73,
             Self::GainAura(_) => 69,
             Self::WinBattleground(_) => 1,
@@ -256,6 +258,7 @@ impl CriteriaEvent {
             | Self::LearnToy(asset)
             | Self::CompleteScenario(asset)
             | Self::CompleteQuestInZone(asset)
+            | Self::EnterTopLevelArea(asset)
             | Self::LearnTaxiNode(asset)
             | Self::RewardedQuestsInZone(asset, _)
             | Self::BankTabsOwned(asset, _)
@@ -633,6 +636,7 @@ impl AchievementCatalog {
             CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
+            | CriteriaEvent::EnterTopLevelArea(_)
             | CriteriaEvent::KnowPetCreature(_)
             | CriteriaEvent::LearnToy(_)
             | CriteriaEvent::LearnTaxiNode(_)
@@ -971,7 +975,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
-                        || (kind == 11 && row.get::<_, bool>(12)?)
+                        || (matches!(kind, 11 | 225) && row.get::<_, bool>(12)?)
                         || (kind == 262 && row.get::<_, bool>(13)?)
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
