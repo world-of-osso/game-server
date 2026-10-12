@@ -211,6 +211,7 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
                 max: 100.0,
             },
             UnitFactionTemplate(HUMAN_TEMPLATE),
+            crate::maps::InMap::continent(0),
             Moving(false),
             PlayerProfessions::default(),
         ))
@@ -299,6 +300,7 @@ impl Harness {
                     max: 100.0,
                 },
                 UnitFactionTemplate(faction),
+                crate::maps::InMap::continent(0),
             ))
             .id()
     }

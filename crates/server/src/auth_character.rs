@@ -632,10 +632,13 @@ fn insert_player_init_state(
         world_map,
         friends,
         ignore_list,
-        collections,
+        mut collections,
         currencies,
         reputation,
     } = init;
+    // Legacy character mount IDs were display IDs and included invented starters.
+    // Only authentic learned spells migrate into the account Mount Journal.
+    collections.mounts.clear();
     commands.entity(entity).insert(Gold(gold));
     commands.entity(entity).insert(professions);
     commands.entity(entity).insert(achievements);
@@ -650,23 +653,6 @@ fn insert_player_init_state(
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);
     collections
-}
-
-fn insert_spawn_mount_state(
-    commands: &mut Commands,
-    entity: Entity,
-    collections: &crate::collection::PlayerCollectionState,
-) {
-    let Some(mount_display_id) = collections.active_mount_display_id() else {
-        return;
-    };
-    commands.entity(entity).insert((
-        shared::components::Mounted {
-            mount_display_id,
-            ..Default::default()
-        },
-        MovementSpeed(crate::collection::movement_speed_for_mount(true)),
-    ));
 }
 
 fn insert_spawn_mana_state(commands: &mut Commands, entity: Entity, data: &CharacterData) {
@@ -702,8 +688,7 @@ pub fn spawn_player_entity(
     let entity = commands
         .spawn((build_player_components(data, character_id), map))
         .id();
-    let collections = insert_player_spawn_components(commands, entity, data, init);
-    insert_spawn_mount_state(commands, entity, &collections);
+    insert_player_spawn_components(commands, entity, data, init);
     insert_spawn_mana_state(commands, entity, data);
     insert_spawn_guild_membership(commands, entity, guild);
     info!(

@@ -56,6 +56,38 @@ fn companion_item_learns_three_instances_and_keeps_fourth_item() {
 
 const MAGE: u8 = 8;
 
+#[test]
+fn mount_journal_item_learning_consumes_once_and_rejects_duplicate() {
+    let mut eater = eater_with_spells(&[5655], 2, &[6648], MAGE).expect("Chestnut Mare data");
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::mount_journal::load(&conn).unwrap());
+    use_slot(&mut eater, 0);
+    assert!(errors(&mut eater).is_empty());
+    assert_eq!(count_of(&eater, 5655), 1);
+    let owner = eater.h.caster;
+    assert!(crate::mount_journal::knows_spell(
+        eater.h.app.world(),
+        owner,
+        6648
+    ));
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        crate::persistence::mount_store::load(db, 1).get(&18),
+        Some(&false)
+    );
+    assert!(crate::persistence::mount_store::load(db, 2).is_empty());
+    use_slot(&mut eater, 0);
+    assert_eq!(errors(&mut eater).len(), 1);
+    assert_eq!(count_of(&eater, 5655), 1);
+}
+
 /// Toy.csv ID 1: Orb of Deception; learning consumes one item, not the toy spell.
 #[test]
 fn toys_learning_consumes_orb_of_deception() {

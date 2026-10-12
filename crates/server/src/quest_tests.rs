@@ -610,6 +610,7 @@ fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
 macro_rules! for_quest_messages {
     ($apply:ident, $($arg:expr),*) => {
         $apply::<QuestLogSnapshot>($($arg),*);
+        $apply::<shared::protocol::WorldQuestAvailability>($($arg),*);
         $apply::<QuestLogUpdate>($($arg),*);
         $apply::<QuestGiverStatusQuery>($($arg),*);
         $apply::<QuestGiverStatusMultiple>($($arg),*);
@@ -643,6 +644,334 @@ macro_rules! for_quest_messages {
         $apply::<PlayerXpUpdate>($($arg),*);
         $apply::<LogXpGain>($($arg),*);
     };
+}
+
+#[test]
+fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
+    use crate::world_quests::{Area, Definition, Rotation};
+    let mut app = setup_app().expect("authentic quest fixture");
+    app.insert_resource(crate::maps::difficulty::ServerClock {
+        fixed_unix: Some(1000),
+        ..Default::default()
+    });
+    app.insert_resource(Rotation {
+        epoch: 1000,
+        gap_seconds: 0,
+        ..Default::default()
+    });
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        let quest = quests.quests.get_mut(&BEATING_THEM_BACK).unwrap();
+        quest.quest_info_modifiers = 0x100;
+        quest.reward_money = 125;
+        quest.money_scaling = None;
+        quest.captured_reward_xp = Some(0);
+        quest.reward_xp_difficulty = 5;
+        quest.reward_items = vec![(117, 2)];
+        quests.world_quest_xp.insert((30, 5), 1234);
+        quests.world_quest_rewards.insert(
+            BEATING_THEM_BACK,
+            crate::world_quest_rewards::Rewards {
+                xp_multiplier: 1.,
+                currencies: vec![shared::protocol::WorldQuestNumericReward {
+                    id: shared::currency::HONOR_CURRENCY_ID,
+                    amount: 7,
+                }],
+                reputation: vec![shared::protocol::WorldQuestNumericReward { id: 72, amount: 75 }],
+                ..Default::default()
+            },
+        );
+        quests.world_quests = vec![Definition {
+            quest_id: BEATING_THEM_BACK,
+            zone_id: 37,
+            duration: 100,
+        }];
+        quests.world_quest_areas.insert(
+            BEATING_THEM_BACK,
+            vec![Area {
+                map_id: 0,
+                ui_map_id: 37,
+                vertices: vec![(10., 10.), (20., 10.), (20., 20.), (10., 20.)],
+            }],
+        );
+    }
+    let client = spawn_client(&mut app, 30);
+    enter_world(&mut app, &client);
+    let availability = received::<shared::protocol::WorldQuestAvailability>(&mut app, &client)
+        .pop()
+        .unwrap();
+    assert_eq!(availability.quests.len(), 1);
+    assert_eq!(availability.quests[0].expires_at, 1100);
+    assert_eq!(
+        availability.quests[0].position,
+        shared::protocol::QuestPoiPoint { x: 15, y: 15 }
+    );
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+    app.world_mut().entity_mut(client.player).insert(Position {
+        x: 15.,
+        y: 100.,
+        z: -15.,
+    });
+    app.update();
+    let log = load_quest_log(db(&app), client.character_id);
+    assert_eq!(
+        log.active(BEATING_THEM_BACK).unwrap().expires_at,
+        Some(1100)
+    );
+    assert!(log.watched.contains(&BEATING_THEM_BACK));
+    app.world_mut()
+        .resource_mut::<QuestDb>()
+        .quests
+        .get_mut(&THE_FARGODEEP_MINE)
+        .unwrap()
+        .time_allowed = 500;
+    let giver = spawn_npc(&mut app, MARSHAL_DUGHAN, 15.);
+    app.world_mut()
+        .entity_mut(Entity::try_from_bits(giver).unwrap())
+        .insert(Position {
+            x: 15.,
+            y: 100.,
+            z: -15.,
+        });
+    accept(&mut app, &client, giver, THE_FARGODEEP_MINE);
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .is_some(),
+        "task availability deadlines are not ordinary quest timers"
+    );
+    app.world_mut().entity_mut(client.player).insert(origin());
+    app.update();
+    let log = load_quest_log(db(&app), client.character_id);
+    assert!(log.active(BEATING_THEM_BACK).is_some());
+    assert!(!log.watched.contains(&BEATING_THEM_BACK));
+    app.world_mut().entity_mut(client.player).insert(Position {
+        x: 15.,
+        y: 100.,
+        z: -15.,
+    });
+    app.update();
+    let gold = persistence::load_inventory(db(&app), client.character_id).gold;
+    let food_before = crate::quest_view::bag_count(
+        db(&app),
+        &persistence::load_inventory(db(&app), client.character_id),
+        117,
+    );
+    let reputation_before =
+        persistence::load_reputation(db(&app), client.character_id, Default::default).get_value(72);
+    kill(&mut app, &client, BLACKROCK_WORG, 1);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .unwrap()
+            .counts[0],
+        1
+    );
+    app.world_mut().entity_mut(client.player).insert(origin());
+    kill(&mut app, &client, BLACKROCK_WORG, 5);
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+    assert_eq!(
+        persistence::load_inventory(db(&app), client.character_id).gold,
+        gold + 125
+    );
+    assert_eq!(
+        crate::quest_view::bag_count(
+            db(&app),
+            &persistence::load_inventory(db(&app), client.character_id),
+            117
+        ),
+        food_before + 2
+    );
+    // Automatic settlement queues XP in PostUpdate; the XP system drains it next frame.
+    app.update();
+    let gains = received::<LogXpGain>(&mut app, &client);
+    assert_eq!(
+        gains
+            .iter()
+            .filter(|gain| gain.reason == XpGainReason::Quest)
+            .map(|gain| gain.amount)
+            .collect::<Vec<_>>(),
+        vec![1234]
+    );
+    assert_eq!(
+        persistence::load_currencies(db(&app), client.character_id)
+            .get(shared::currency::HONOR_CURRENCY_ID),
+        7
+    );
+    assert_eq!(
+        persistence::load_reputation(db(&app), client.character_id, Default::default).get_value(72),
+        reputation_before + 75
+    );
+    app.update();
+    assert!(
+        received::<LogXpGain>(&mut app, &client)
+            .iter()
+            .all(|gain| gain.reason != XpGainReason::Quest)
+    );
+    assert_eq!(
+        crate::quest_view::bag_count(
+            db(&app),
+            &persistence::load_inventory(db(&app), client.character_id),
+            117
+        ),
+        food_before + 2
+    );
+    assert_eq!(
+        persistence::load_currencies(db(&app), client.character_id)
+            .get(shared::currency::HONOR_CURRENCY_ID),
+        7
+    );
+    assert_eq!(
+        persistence::load_inventory(db(&app), client.character_id).gold,
+        gold + 125
+    );
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+    app.world_mut().entity_mut(client.player).insert(Position {
+        x: 15.,
+        y: 100.,
+        z: -15.,
+    });
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(1100);
+    app.update();
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .unwrap()
+            .expires_at,
+        Some(1200)
+    );
+    app.world_mut().entity_mut(client.player).insert(origin());
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(1200);
+    app.update();
+    assert!(
+        load_quest_log(db(&app), client.character_id)
+            .active(BEATING_THEM_BACK)
+            .is_none()
+    );
+}
+
+#[test]
+fn world_quest_player_kills_use_authoritative_deaths_personal_credit_and_faction_flags() {
+    use crate::quest_data::{ObjectiveDef, ObjectiveKind, QuestTemplate};
+    use crate::world_quest_objectives::ObjectiveRule;
+    let mut app = setup_app_with(|app| {
+        app.add_message::<crate::death::PlayerDeathTransition>();
+    })
+    .unwrap();
+    let killer = spawn_named_client(&mut app, 30, "PvpQuest");
+    let ally = spawn_named_client(&mut app, 30, "PvpAlly");
+    let enemy = spawn_named_client(&mut app, 30, "PvpEnemy");
+    app.world_mut()
+        .get_mut::<Player>(enemy.player)
+        .unwrap()
+        .race = 2;
+    for player in [ally.player, enemy.player] {
+        app.world_mut()
+            .entity_mut(player)
+            .insert(shared::components::Health {
+                current: 100.,
+                max: 100.,
+            });
+    }
+    let objectives = vec![
+        ObjectiveDef {
+            kind: ObjectiveKind::PlayerKills,
+            object_id: 0,
+            required: 2,
+            text: "Players defeated".into(),
+        },
+        ObjectiveDef {
+            kind: ObjectiveKind::PlayerKills,
+            object_id: 0,
+            required: 2,
+            text: "Same faction".into(),
+        },
+        ObjectiveDef {
+            kind: ObjectiveKind::Monster,
+            object_id: 0,
+            required: 2,
+            text: "Never player credit".into(),
+        },
+    ];
+    app.world_mut().resource_mut::<QuestDb>().quests.insert(
+        900001,
+        QuestTemplate {
+            id: 900001,
+            objectives,
+            world_objective_rules: Some(vec![
+                ObjectiveRule::default(),
+                ObjectiveRule {
+                    flags: 128,
+                    flags2: 0,
+                    weight: 0.,
+                },
+                ObjectiveRule::default(),
+            ]),
+            ..Default::default()
+        },
+    );
+    let active = crate::persistence::quest_store::ActiveQuestData {
+        quest_id: 900001,
+        counts: vec![0; 3],
+        ..Default::default()
+    };
+    for client in [&killer, &ally] {
+        save_quest_log(
+            db(&app),
+            client.character_id,
+            &QuestLogData {
+                active: vec![active.clone()],
+                ..Default::default()
+            },
+        );
+    }
+    crate::combat::kill_unit(app.world_mut(), killer.player, ally.player);
+    assert_eq!(
+        load_quest_log(db(&app), killer.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![1, 1, 0]
+    );
+    assert_eq!(
+        load_quest_log(db(&app), ally.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![0, 0, 0]
+    );
+    crate::combat::kill_unit(app.world_mut(), killer.player, ally.player);
+    assert_eq!(
+        load_quest_log(db(&app), killer.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![1, 1, 0]
+    );
+    crate::combat::kill_unit(app.world_mut(), killer.player, enemy.player);
+    assert_eq!(
+        load_quest_log(db(&app), killer.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![2, 1, 0]
+    );
 }
 
 #[path = "zephras_quest_tests.rs"]
@@ -807,6 +1136,166 @@ fn mark_rewarded(app: &App, client: &Client, quest_id: u32) {
     let mut log = load_quest_log(db(app), client.character_id);
     log.mark_rewarded(quest_id);
     save_quest_log(db(app), client.character_id, &log);
+}
+
+#[test]
+fn world_quest_single_leaf_criteria_credit_is_persisted_capped_and_fresh_for_each_task() {
+    let mut app = setup_app().unwrap();
+    app.world_mut()
+        .resource_mut::<crate::maps::difficulty::ServerClock>()
+        .fixed_unix = Some(1000);
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest(quest_id INTEGER); INSERT INTO content_world_quest VALUES(82387);
+        CREATE TABLE content_world_quest_objective(quest_id INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,flags2 INTEGER,weight REAL,description TEXT,ordinal INTEGER);
+        INSERT INTO content_world_quest_objective VALUES(82387,14,165946,1,0,0,0,'Have 50 or more stacks of Unseeming Shift',0);
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT); CREATE TABLE content_item(ID INTEGER,name TEXT);
+        CREATE TABLE content_world_quest_criterion(root_id INTEGER,criterion_id INTEGER,kind INTEGER,asset INTEGER);
+        INSERT INTO content_world_quest_criterion VALUES(165946,69041,0,227455);").unwrap();
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        quests.quests.insert(
+            82387,
+            crate::quest_data::QuestTemplate {
+                id: 82387,
+                ..Default::default()
+            },
+        );
+        crate::world_quest_objectives::load(&conn, &mut quests).unwrap();
+    }
+    let client = spawn_client(&mut app, 80);
+    enter_world(&mut app, &client);
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    let fresh = QuestLogData {
+        active: vec![crate::persistence::quest_store::ActiveQuestData {
+            quest_id: 82387,
+            counts: vec![0],
+            expires_at: Some(2000),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    save_quest_log(db(&app), client.character_id, &fresh);
+    killed_monster_credit(app.world_mut(), client.player, 225891);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    save_quest_log(db(&app), client.character_id, &fresh);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    killed_monster_credit(app.world_mut(), client.player, 227455);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82387)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+}
+
+#[test]
+fn world_quest_label_credit_uses_authentic_membership_only_on_real_creature_death() {
+    let mut app = setup_app().unwrap();
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_world_quest(quest_id INTEGER); INSERT INTO content_world_quest VALUES(82414);
+        CREATE TABLE content_world_quest_objective(quest_id INTEGER,kind INTEGER,object_id INTEGER,amount INTEGER,flags INTEGER,flags2 INTEGER,weight REAL,description TEXT,ordinal INTEGER);
+        INSERT INTO content_world_quest_objective VALUES(82414,21,3520,5,0,0,0,'Insects slain',0);
+        CREATE TABLE tdb_creature_template(entry INTEGER,name TEXT); CREATE TABLE content_item(ID INTEGER,name TEXT);
+        CREATE TABLE content_world_quest_creature_label(label_id INTEGER,creature_entry INTEGER,difficulty_id INTEGER);
+        INSERT INTO content_world_quest_creature_label VALUES(3520,222677,0);").unwrap();
+    {
+        let mut quests = app.world_mut().resource_mut::<QuestDb>();
+        quests.quests.insert(
+            82414,
+            crate::quest_data::QuestTemplate {
+                id: 82414,
+                ..Default::default()
+            },
+        );
+        crate::world_quest_objectives::load(&conn, &mut quests).unwrap();
+    }
+    let client = spawn_client(&mut app, 80);
+    enter_world(&mut app, &client);
+    save_quest_log(
+        db(&app),
+        client.character_id,
+        &QuestLogData {
+            active: vec![crate::persistence::quest_store::ActiveQuestData {
+                quest_id: 82414,
+                counts: vec![0],
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    );
+    killed_monster_credit(app.world_mut(), client.player, 222677);
+    kill(&mut app, &client, 3520, 1);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![0]
+    );
+    kill(&mut app, &client, 222677, 1);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    app.world_mut().spawn((
+        crate::maps::InMap::continent(0),
+        Npc {
+            template_id: 222677,
+            name: String::new(),
+        },
+        origin(),
+        crate::zones::CreatureDifficulty(1),
+        crate::creature_tap::CreatureTap::tapped_by(client.character_id),
+        DeathState { respawn_timer: 60. },
+    ));
+    app.update();
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![1]
+    );
+    kill(&mut app, &client, 222677, 8);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(82414)
+            .unwrap()
+            .counts,
+        vec![5]
+    );
 }
 
 fn kill(app: &mut App, client: &Client, template_id: u32, count: usize) {

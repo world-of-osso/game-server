@@ -73,6 +73,7 @@ fn offered_item(shop: &Shop, buyer: Buyer, batch: &model::StockBatch) -> Option<
         name: goods.name.clone(),
         quality: goods.quality,
         price,
+        extra_costs: Vec::new(),
         stack_count: 1,
         max_stack: template.max_stack,
         num_available: Some(batch.count),
