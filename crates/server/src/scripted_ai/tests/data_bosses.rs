@@ -82,6 +82,7 @@ fn bound_boss_in_state(
         .as_ref()
         .map_or_else(world_db_path, |(_, path)| path.clone());
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
@@ -836,6 +837,117 @@ fn encounter_coverage_animated_gold_molten_transition_stops_active_motion() {
             .get::<shared::components::CreatureMotion>(gold)
             .unwrap(),
         shared::components::CreatureMotion::Still
+    );
+}
+
+fn molten_gold_fixture() -> (Harness, Entity, Entity, Position, InMap) {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    let center = *h.app.world().get::<Position>(gold).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 20.0,
+        ..center
+    });
+    h.advance(0.1);
+    let loss = h.health(gold).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, loss);
+    assert!(h.has_aura(gold, 265915));
+    (h, gold, player, center, map)
+}
+
+#[test]
+fn encounter_coverage_molten_gold_source_sphere_enters_damages_and_exits() {
+    let (mut h, gold, player, center, _) = molten_gold_fixture();
+    // TC sphere radius5 plus Player combat reach1.5; exact distance is 3D.
+    h.app.world_mut().entity_mut(player).insert(Position {
+        y: center.y + 6.51,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(!h.has_aura(player, 265914));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        y: center.y + 6.49,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(
+        h.has_aura(player, 265914),
+        "source OnUnitEnter self-casts damage aura"
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(player)
+        .unwrap();
+    assert!(
+        aura.iter()
+            .any(|a| a.spell_id == 265914 && a.caster == player)
+    );
+    let health = h.health(player).current;
+    h.advance(1.1);
+    assert!(
+        h.health(player).current < health,
+        "actual authored periodic loss"
+    );
+    assert!(
+        !h.has_aura(gold, 265914),
+        "NPCs do not receive this player-only trigger"
+    );
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 6.51,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(player, 265914),
+        "source OnUnitExit removes damage aura"
+    );
+}
+
+#[test]
+fn encounter_coverage_molten_gold_attached_area_is_copy_local_and_removed_with_aura() {
+    let (mut h, gold, player, center, map) = molten_gold_fixture();
+    h.app.world_mut().entity_mut(player).insert(center);
+    let remote_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let wow = h.wow_position(gold);
+    let (remote, _) = spawn_player(&mut h.app, remote_map, [wow.x, wow.y, wow.z, 0.0], 999);
+    h.advance(0.1);
+    assert!(h.has_aura(player, 265914));
+    assert!(!h.has_aura(remote, 265914));
+    let moved = Position {
+        x: center.x + 30.0,
+        ..center
+    };
+    h.app.world_mut().entity_mut(gold).insert(moved);
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(player, 265914),
+        "area follows its aura target, not cast origin"
+    );
+    h.app.world_mut().entity_mut(player).insert(moved);
+    h.advance(0.1);
+    assert!(h.has_aura(player, 265914));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(player, 265914),
+        "aura395 removal removes the attached area"
     );
 }
 

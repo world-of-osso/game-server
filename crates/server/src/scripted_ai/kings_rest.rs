@@ -2,8 +2,12 @@
 //! TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
 //! Intro paths/flying, follow/absorption and molten area triggers remain gaps.
 mod golden_serpent;
+mod molten_gold;
 use super::{CreatureAi, Ctx, DamageTaken};
 use bevy::prelude::*;
+pub(crate) use molten_gold::{
+    load_areas as load_molten_gold_areas, update_areas as update_molten_gold_areas,
+};
 use shared::components::UnitFlags;
 
 pub(crate) const ANIMATED_GOLD_SCRIPT: &str = "npc_animated_gold";
@@ -122,6 +126,7 @@ fn has_transform(aura: &crate::auras::AuraInstance) -> bool {
 }
 
 fn apply_molten_immunity(world: &mut World, actor: Entity, aura: &crate::auras::AuraInstance) {
+    molten_gold::apply(world, actor, aura);
     if has_transform(aura) {
         set_molten_flags(world, actor, true);
     }
@@ -132,6 +137,7 @@ fn remove_molten_immunity(
     aura: &crate::auras::AuraInstance,
     _reason: crate::auras::RemoveReason,
 ) {
+    molten_gold::remove(world, actor, aura);
     if has_transform(aura) {
         set_molten_flags(world, actor, false);
     }

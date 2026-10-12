@@ -974,6 +974,10 @@ fn startup_load_world_data(mut commands: Commands) {
         maps.area_triggers.len()
     );
     commands.insert_resource(maps);
+    commands.insert_resource(
+        crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn)
+            .expect("Failed to load authored Molten Gold area12928 from local TDB"),
+    );
     let achievements = crate::achievement::load_achievement_catalog(&conn)
         .expect("Failed to load achievements; run scripts/import_achievements.py with locally extracted DB2s");
     let scenarios = crate::achievement::load_scenarios(&conn, &achievements).expect(
