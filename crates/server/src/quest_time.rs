@@ -15,6 +15,22 @@ pub(crate) fn expire_log(
     now: i64,
 ) -> Vec<u32> {
     let mut expired = Vec::new();
+    let ended_tasks: Vec<_> = log
+        .active
+        .iter()
+        .filter(|active| {
+            quests
+                .world_quests
+                .iter()
+                .any(|q| q.quest_id == active.quest_id)
+                && active.expires_at.is_none_or(|end| now >= end)
+        })
+        .map(|active| active.quest_id)
+        .collect();
+    for quest_id in ended_tasks {
+        log.remove(quest_id);
+        expired.push(quest_id);
+    }
     for active in &mut log.active {
         let timed = quests
             .quests
@@ -31,6 +47,7 @@ pub(crate) fn expire_log(
 
 pub(crate) fn refresh(
     clock: Res<ServerClock>,
+    rotation: Res<crate::world_quests::Rotation>,
     mut quests: Option<ResMut<QuestDb>>,
     db: Option<Res<GameDatabase>>,
     connections: Query<(Entity, &InWorld)>,
@@ -48,6 +65,11 @@ pub(crate) fn refresh(
         crate::maps::locks::next_reset_time(crate::maps::store::ResetInterval::Daily, old) <= now
     });
     quests.now = Some(now);
+    quests.world_quest_windows = rotation
+        .active(&quests.world_quests, now)
+        .into_iter()
+        .map(|window| (window.quest_id, window))
+        .collect();
     for (connection, owner) in &connections {
         let mut log = load_quest_log(&db.db, owner.character_id);
         let expired = expire_log(quests, &mut log, now);

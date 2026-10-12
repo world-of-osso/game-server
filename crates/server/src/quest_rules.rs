@@ -151,6 +151,13 @@ fn chain_ok(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
 }
 
 fn reward_locked(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
+    if quest.quest_info_modifiers & 0x100 != 0 {
+        return db.world_quest_windows.get(&quest.id).is_none_or(|window| {
+            log.completed_at
+                .get(&quest.id)
+                .is_some_and(|&time| time >= window.starts_at)
+        });
+    }
     if !log.is_rewarded(quest.id) || quest.is_repeatable() {
         return false;
     }
@@ -216,10 +223,13 @@ pub(crate) fn can_take(
     requirements(db, log, player, quest)?;
     level_ok(player, quest)?;
     if quest.time_allowed != 0
-        && log
-            .active
-            .iter()
-            .any(|q| q.expires_at.is_some() && !q.failed)
+        && log.active.iter().any(|active| {
+            !active.failed
+                && db
+                    .quests
+                    .get(&active.quest_id)
+                    .is_some_and(|template| template.time_allowed > 0)
+        })
     {
         return Err(QuestFailedReason::OnlyOneTimedQuest);
     }
@@ -236,18 +246,24 @@ pub(crate) fn objective_counts(
     active: &ActiveQuestData,
     bag_count: impl Fn(u32) -> u32,
 ) -> Vec<u32> {
-    quest
+    let mut counts: Vec<_> = quest
         .objectives
         .iter()
         .enumerate()
         .map(|(index, objective)| {
             let current = match objective.kind {
-                ObjectiveKind::Item => bag_count(objective.object_id),
+                ObjectiveKind::Item
+                    if !crate::world_quest_objectives::rule(quest, index).quest_bound_item() =>
+                {
+                    bag_count(objective.object_id)
+                }
                 _ => active.counts.get(index).copied().unwrap_or(0),
             };
             current.min(objective.required)
         })
-        .collect()
+        .collect();
+    crate::world_quest_objectives::derive_progress_bars(quest, &mut counts);
+    counts
 }
 
 pub(crate) fn objectives_done(quest: &QuestTemplate, counts: &[u32]) -> bool {
@@ -258,7 +274,11 @@ pub(crate) fn objectives_done(quest: &QuestTemplate, counts: &[u32]) -> bool {
         .objectives
         .iter()
         .zip(counts)
-        .all(|(objective, &count)| count >= objective.required)
+        .enumerate()
+        .all(|(index, (objective, &count))| {
+            !crate::world_quest_objectives::rule(quest, index).required()
+                || count >= objective.required
+        })
 }
 
 /// TrinityCore `.quest complete` for the counted objectives: every kill and object
@@ -325,12 +345,48 @@ pub(crate) fn credit_objective(
             continue;
         };
         active.counts.resize(quest.objectives.len(), 0);
-        for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
-            if objective.kind == kind
-                && objective.object_id == object_id
-                && *count < objective.required
+        for (index, objective) in quest.objectives.iter().enumerate() {
+            let counted_match = objective.kind == kind && objective.object_id == object_id;
+            let criterion_match = kind == ObjectiveKind::Monster
+                && objective.kind == ObjectiveKind::CriteriaTree
+                && db.task_criteria.get(&objective.object_id) == Some(&(0, object_id));
+            if (counted_match || criterion_match)
+                && active.counts[index] < objective.required
+                && crate::world_quest_objectives::creditable(quest, &active.counts, index)
             {
-                *count += 1;
+                active.counts[index] += 1;
+                changed = true;
+            }
+        }
+    }
+    changed
+}
+
+/// Pinned KilledPlayerCredit: personal counter; flagged objectives require the victim's effective team.
+pub(crate) fn credit_player_kill(db: &QuestDb, log: &mut QuestLogData, same_team: bool) -> bool {
+    const SAME_FACTION: u32 = 0x80;
+    let mut changed = false;
+    for active in &mut log.active {
+        if active.failed
+            || active
+                .expires_at
+                .is_some_and(|end| db.now.is_some_and(|now| now >= end))
+        {
+            continue;
+        }
+        let Some(quest) = db.quests.get(&active.quest_id) else {
+            continue;
+        };
+        active.counts.resize(quest.objectives.len(), 0);
+        for (index, objective) in quest.objectives.iter().enumerate() {
+            let flags = crate::world_quest_objectives::rule(quest, index).flags;
+            let team_allowed = flags & SAME_FACTION == 0 || same_team;
+            if objective.kind == ObjectiveKind::PlayerKills
+                && team_allowed
+                && active.counts[index] < objective.required
+                && crate::world_quest_objectives::creditable(quest, &active.counts, index)
+            {
+                active.counts[index] += 1;
                 changed = true;
             }
         }
@@ -363,6 +419,45 @@ pub(crate) fn credit_area_trigger(db: &QuestDb, log: &mut QuestLogData, quests: 
     changed
 }
 
+/// Pinned ItemAddedQuestCheck before StoreNewItem: authored bound objectives
+/// store credit. Only a single updated non-source objective suppresses creation.
+pub(crate) fn credit_bound_item(
+    db: &QuestDb,
+    log: &mut QuestLogData,
+    item_id: u32,
+    amount: u32,
+) -> (bool, bool) {
+    let mut updated = Vec::new();
+    for active in &mut log.active {
+        let Some(quest) = db.quests.get(&active.quest_id) else {
+            continue;
+        };
+        if active.failed
+            || active
+                .expires_at
+                .is_some_and(|end| db.now.is_some_and(|now| now >= end))
+        {
+            continue;
+        }
+        active.counts.resize(quest.objectives.len(), 0);
+        for (index, objective) in quest.objectives.iter().enumerate() {
+            let matches = objective.kind == ObjectiveKind::Item && objective.object_id == item_id;
+            let rule = crate::world_quest_objectives::rule(quest, index);
+            if !matches || !rule.quest_bound_item() || active.counts[index] >= objective.required {
+                continue;
+            }
+            if !crate::world_quest_objectives::creditable(quest, &active.counts, index) {
+                continue;
+            }
+            active.counts[index] = active.counts[index]
+                .saturating_add(amount)
+                .min(objective.required);
+            updated.push(quest.start_item != item_id);
+        }
+    }
+    (!updated.is_empty(), updated.as_slice() == [true])
+}
+
 /// AzerothCore `Player::HasQuestForItem`: a quest in the log still needs more
 /// of `item_id` for one of its item objectives.
 pub(crate) fn quest_needs_item(
@@ -373,11 +468,17 @@ pub(crate) fn quest_needs_item(
 ) -> bool {
     log.active.iter().any(|active| {
         db.quests.get(&active.quest_id).is_some_and(|quest| {
-            quest.objectives.iter().any(|objective| {
-                objective.kind == ObjectiveKind::Item
-                    && objective.object_id == item_id
-                    && bag_count(item_id) < objective.required
-            })
+            let counts = objective_counts(quest, active, &bag_count);
+            quest
+                .objectives
+                .iter()
+                .enumerate()
+                .any(|(index, objective)| {
+                    objective.kind == ObjectiveKind::Item
+                        && objective.object_id == item_id
+                        && counts[index] < objective.required
+                        && crate::world_quest_objectives::creditable(quest, &counts, index)
+                })
         })
     })
 }
