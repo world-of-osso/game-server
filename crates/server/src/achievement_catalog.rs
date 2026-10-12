@@ -17,7 +17,7 @@ use super::PlayerAchievementState;
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
     0, 1, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 41, 42, 59, 62, 63, 65, 67, 68, 69, 73,
     66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158, 160, 162, 165,
-    54, 216, 219, 220, 245, 246,
+    54, 55, 105, 216, 219, 220, 245, 246,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -51,6 +51,10 @@ pub(crate) enum CriteriaEvent {
     HighestAuctionBid(u64),
     AuctionWon,
     HighestAuctionSale(u64),
+    HealingDone(u64),
+    HighestHealCast(u64),
+    TotalHealReceived(u64),
+    HighestHealReceived(u64),
     DoEmote(u32),
     UseItem(u32),
     EquipItem(u32),
@@ -134,6 +138,10 @@ impl CriteriaEvent {
             Self::HighestAuctionBid(_) => 83,
             Self::AuctionWon => 84,
             Self::HighestAuctionSale(_) => 85,
+            Self::HealingDone(_) => 55,
+            Self::HighestHealCast(_) => 104,
+            Self::TotalHealReceived(_) => 105,
+            Self::HighestHealReceived(_) => 106,
             Self::DoEmote(_) => 54,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
@@ -200,6 +208,10 @@ impl CriteriaEvent {
             Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::FulfillCraftingOrderType(kind) => u32::from(kind) == criteria.asset,
             Self::LootMoney(_)
+            | Self::HealingDone(_)
+            | Self::HighestHealCast(_)
+            | Self::TotalHealReceived(_)
+            | Self::HighestHealReceived(_)
             | Self::MoneySpentOnPostage(_)
             | Self::MostMoneyOwned(_)
             | Self::MoneyEarnedFromAuctions(_)
@@ -626,6 +638,10 @@ impl AchievementCatalog {
                 | CriteriaEvent::MostMoneyOwned(0)
                 | CriteriaEvent::HighestAuctionBid(0)
                 | CriteriaEvent::HighestAuctionSale(0)
+                | CriteriaEvent::HealingDone(0)
+                | CriteriaEvent::HighestHealCast(0)
+                | CriteriaEvent::TotalHealReceived(0)
+                | CriteriaEvent::HighestHealReceived(0)
         ) && !state.criteria_progress.contains_key(&id)
         {
             return;
@@ -635,7 +651,9 @@ impl AchievementCatalog {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
             CriteriaEvent::MostMoneyOwned(amount)
             | CriteriaEvent::HighestAuctionBid(amount)
-            | CriteriaEvent::HighestAuctionSale(amount) => (*counter).max(amount),
+            | CriteriaEvent::HighestAuctionSale(amount)
+            | CriteriaEvent::HighestHealCast(amount)
+            | CriteriaEvent::HighestHealReceived(amount) => (*counter).max(amount),
             CriteriaEvent::SkillRank(_, rank) | CriteriaEvent::SkillMaxRank(_, rank) => {
                 u64::from(rank)
             }
@@ -656,7 +674,9 @@ impl AchievementCatalog {
             | CriteriaEvent::BankTabsOwned(_, count)
             | CriteriaEvent::PetBattleAchievementPoints(count) => u64::from(count),
             CriteriaEvent::RewardedQuestsInZone(_, count) => (*counter).max(u64::from(count)),
-            CriteriaEvent::MoneyEarnedFromQuesting(amount)
+            CriteriaEvent::HealingDone(amount)
+            | CriteriaEvent::TotalHealReceived(amount)
+            | CriteriaEvent::MoneyEarnedFromQuesting(amount)
             | CriteriaEvent::MoneySpentOnTaxis(amount)
             | CriteriaEvent::MoneySpentAtBarberShop(amount)
             | CriteriaEvent::MoneySpentOnPostage(amount)
@@ -993,7 +1013,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 9 | 14 | 17 | 23 | 48 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 9 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

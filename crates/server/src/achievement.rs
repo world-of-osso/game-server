@@ -854,6 +854,36 @@ fn send_updates(
     }
 }
 
+/// TC Unit.cpp6572-6583: totals exclude overheal; peaks retain the full heal.
+pub(crate) fn record_healing(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+    effective: f32,
+) {
+    if world.get::<Player>(caster).is_some() {
+        record_criteria_events(
+            world,
+            caster,
+            &[
+                CriteriaEvent::HealingDone(effective as u64),
+                CriteriaEvent::HighestHealCast(amount as u64),
+            ],
+        );
+    }
+    if world.get::<Player>(target).is_some() {
+        record_criteria_events(
+            world,
+            target,
+            &[
+                CriteriaEvent::TotalHealReceived(effective as u64),
+                CriteriaEvent::HighestHealReceived(amount as u64),
+            ],
+        );
+    }
+}
+
 /// TC Player::SummonIfPossible26094 credits a valid acceptance before TeleportTo.
 pub(crate) fn record_accepted_summon(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::AcceptSummon);

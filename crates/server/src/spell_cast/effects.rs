@@ -910,6 +910,7 @@ fn apply_resolved_heal(
     }
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
+    crate::achievement::record_healing(world, ctx.caster, target, amount, effective);
     crate::creature_aggro::add_healing_threat(
         world,
         ctx.caster,
