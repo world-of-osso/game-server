@@ -10,6 +10,12 @@ User-approved2026-10-11 Retail account Mount Journal. [Implementation](../wiki/s
 - [x] Every journal reader/request sees initialized ownership across deferred auth/world entry. Summon/random use existing spell validation and mount capability rules; combat/unowned requests refuse; dismount cancels the aura. Random candidates must be owned, favourited and usable.
 - [ ] Native privateUDP5901 learning/summon/favourite/random/alternate-character proof in both skins.
 
+### Acquisition/game integration — user extension2026-10-11
+
+- [ ] Authentic vendor mount teaching items/direct-learn entries retain cost, ExtendedCost, faction/reputation authority and are proved through buy→learn in both skins.
+- [ ] Retail AH Miscellaneous→Mounts lists/trades teaching items; authoritative purchase/delivery/use grants ownership, with both-skin live proof.
+- [ ] Ownership drives Already known item/vendor/AH presentation; mount teaching items grant no transmog appearance.
+
 ## How it works
 
 - [Server mounts](../wiki/systems/mounts.md#mount-journal).
@@ -31,7 +37,7 @@ User-approved2026-10-11 Retail account Mount Journal. [Implementation](../wiki/s
 
 ## Known gaps (current cycle)
 
-- [ ] Both-skin live acceptance and final targeted/check/fmt/protocol gate.
+- [ ] Reliable live account-change/dismount feedback, both-skin vendor/AH acquisition acceptance and final targeted/check/fmt/protocol gate.
 
 ## Out of scope
 
