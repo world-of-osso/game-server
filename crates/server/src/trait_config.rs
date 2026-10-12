@@ -5,6 +5,13 @@
 
 use std::collections::HashMap;
 
+mod professions;
+pub(crate) use professions::{
+    ProfessionTraitProgress, build_profession_config, check_profession_purchases,
+    profession_unspent, spent_currency_totals,
+};
+use professions::{achievement_is_earned, profession_currency_amount, quest_is_rewarded};
+
 use crate::spell_info::{
     COND_FLAG_GATE, COND_FLAG_SUFFICIENT, TraitCond, TraitCondType, TraitCost, TraitEdgeType,
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
@@ -56,6 +63,7 @@ struct Checker<'a> {
     ctx: TraitContext,
     entries: &'a [ConfigEntry],
     spent: SpentMap,
+    progress: Option<&'a ProfessionTraitProgress>,
 }
 
 /// Ranks granted for free at this spec and level, capped at each entry's max ranks.
@@ -63,6 +71,10 @@ struct Checker<'a> {
 /// evaluated against an empty config.
 pub fn granted_entries(tree: &TraitTree, ctx: TraitContext) -> Vec<ConfigEntry> {
     let checker = Checker::new(tree, ctx, &[]);
+    granted_from_checker(tree, &checker)
+}
+
+fn granted_from_checker(tree: &TraitTree, checker: &Checker<'_>) -> Vec<ConfigEntry> {
     let mut granted: Vec<ConfigEntry> = Vec::new();
     let mut grant = |node: &TraitNode, entry_id: u32, ranks: u32| {
         let max = node.entry(entry_id).map_or(0, |entry| entry.max_ranks);
@@ -110,7 +122,16 @@ pub fn build_config(
     ctx: TraitContext,
     purchases: &[Purchase],
 ) -> Result<Vec<ConfigEntry>, String> {
-    let mut entries = granted_entries(tree, ctx);
+    let entries = merge_purchases(tree, granted_entries(tree, ctx), purchases)?;
+    validate(tree, ctx, &entries)?;
+    Ok(entries)
+}
+
+fn merge_purchases(
+    tree: &TraitTree,
+    mut entries: Vec<ConfigEntry>,
+    purchases: &[Purchase],
+) -> Result<Vec<ConfigEntry>, String> {
     for purchase in purchases.iter().filter(|purchase| purchase.ranks > 0) {
         let node = tree.node(purchase.node_id).ok_or_else(|| {
             format!(
@@ -143,7 +164,6 @@ pub fn build_config(
             }),
         }
     }
-    validate(tree, ctx, &entries)?;
     Ok(entries)
 }
 
@@ -151,7 +171,7 @@ pub fn build_config(
 /// currency in `TraitTreeXTraitCurrency` order.
 pub fn unspent(tree: &TraitTree, ctx: TraitContext, entries: &[ConfigEntry]) -> Vec<(u32, i32)> {
     let spent = spent_currencies(tree, entries);
-    let owned = owned_currencies(tree, ctx, entries);
+    let owned = owned_currencies(tree, ctx, entries, None);
     tree.currencies
         .iter()
         .map(|currency| {
@@ -233,7 +253,7 @@ fn check_budget(
     entries: &[ConfigEntry],
     spent: &SpentMap,
 ) -> Result<(), String> {
-    let owned = owned_currencies(tree, ctx, entries);
+    let owned = owned_currencies(tree, ctx, entries, None);
     let mut spent: Vec<_> = spent.iter().filter(|(_, spent)| spent.total > 0).collect();
     spent.sort_by_key(|(currency, _)| **currency);
     for (currency, spent) in spent {
@@ -254,6 +274,7 @@ fn owned_currencies(
     tree: &TraitTree,
     ctx: TraitContext,
     entries: &[ConfigEntry],
+    progress: Option<&ProfessionTraitProgress>,
 ) -> HashMap<u32, i32> {
     let has_entry = |entry_id| {
         entries
@@ -267,13 +288,14 @@ fn owned_currencies(
                 .sources
                 .iter()
                 .filter(|source| {
-                    source.quest_id == 0
-                        && source.achievement_id == 0
+                    quest_is_rewarded(progress, source.quest_id)
+                        && achievement_is_earned(progress, source.achievement_id)
                         && source.player_level <= u32::from(ctx.level)
                         && (source.node_entry_id == 0 || has_entry(source.node_entry_id))
                 })
                 .map(|source| source.amount)
                 .sum();
+            let amount = profession_currency_amount(progress, currency.id, amount);
             (currency.id, amount)
         })
         .collect()
@@ -343,6 +365,7 @@ impl<'a> Checker<'a> {
             ctx,
             entries,
             spent: spent_currencies(tree, entries),
+            progress: None,
         }
     }
 
@@ -404,11 +427,18 @@ impl<'a> Checker<'a> {
     }
 
     fn check_parents(&self, node: &TraitNode) -> Result<(), String> {
-        if node.parents.is_empty() {
+        let visual_only = node
+            .parents
+            .iter()
+            .all(|(_, kind)| *kind == TraitEdgeType::VisualOnly);
+        if visual_only {
             return Ok(());
         }
         let mut any_filled = false;
         for &(parent_id, kind) in &node.parents {
+            if kind == TraitEdgeType::VisualOnly {
+                continue;
+            }
             let filled = self
                 .tree
                 .node(parent_id)
@@ -516,13 +546,13 @@ impl<'a> Checker<'a> {
 
     /// TrinityCore `MeetsTraitCondition`.
     fn meets_cond(&self, cond: &TraitCond) -> Result<(), String> {
-        if cond.quest_id != 0 {
+        if !quest_is_rewarded(self.progress, cond.quest_id) {
             return Err(format!(
                 "condition {} requires quest {}",
                 cond.id, cond.quest_id
             ));
         }
-        if cond.achievement_id != 0 {
+        if !achievement_is_earned(self.progress, cond.achievement_id) {
             return Err(format!(
                 "condition {} requires achievement {}",
                 cond.id, cond.achievement_id
@@ -601,3 +631,7 @@ impl<'a> Checker<'a> {
 #[cfg(test)]
 #[path = "trait_config_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "profession_trait_tests.rs"]
+mod profession_tests;

@@ -26,6 +26,8 @@ pub enum TraitNodeType {
 /// (VisualOnly, deprecated, MutuallyExclusive) do not occur on class trees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum TraitEdgeType {
+    /// Drawn by the client; does not constrain purchases.
+    VisualOnly,
     /// Any one filled parent with this edge type makes the node available.
     SufficientForAvailability,
     /// This parent must be filled.
@@ -198,6 +200,7 @@ fn node_type(value: i64) -> rusqlite::Result<TraitNodeType> {
 
 fn edge_type(value: i64) -> rusqlite::Result<TraitEdgeType> {
     Ok(match value {
+        0 => TraitEdgeType::VisualOnly,
         2 => TraitEdgeType::SufficientForAvailability,
         3 => TraitEdgeType::RequiredForAvailability,
         _ => return Err(invalid("unsupported TraitEdge.Type", value)),
@@ -223,6 +226,14 @@ pub(crate) fn load_trait_tree(conn: &Connection, skill_line: u32) -> rusqlite::R
         [skill_line],
         |r| uint(r, 0),
     )?;
+    load_trait_tree_by_id(conn, tree_id)
+}
+
+/// Load one explicitly selected class or profession tree, without choosing a variant.
+pub(crate) fn load_trait_tree_by_id(
+    conn: &Connection,
+    tree_id: u32,
+) -> rusqlite::Result<TraitTree> {
     let spec_sets = load_spec_sets(conn)?;
     let conds = |sql: &str| load_linked_conds(conn, sql, tree_id, &spec_sets);
     let costs = |sql: &str| load_linked_costs(conn, sql, tree_id);

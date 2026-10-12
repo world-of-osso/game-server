@@ -145,13 +145,30 @@ pub(crate) fn find_interactable_petitioner(
     player: Entity,
     npc: Entity,
 ) -> Result<&Npc, InteractionError> {
+    find_interactable_flag(world, player, npc, NpcFlags::PETITIONER)
+}
+
+pub(crate) fn find_interactable_crafting_broker(
+    world: &World,
+    player: Entity,
+    npc: Entity,
+) -> Result<&Npc, InteractionError> {
+    find_interactable_flag(world, player, npc, NpcFlags::CRAFTING_ORDERS)
+}
+
+fn find_interactable_flag(
+    world: &World,
+    player: Entity,
+    npc: Entity,
+    required_flag: u64,
+) -> Result<&Npc, InteractionError> {
     let target = world
         .get::<Npc>(npc)
         .ok_or(InteractionError::InvalidTarget)?;
     let flags = world
         .get::<NpcFlags>(npc)
         .ok_or(InteractionError::InvalidTarget)?;
-    if !flags.contains(NpcFlags::PETITIONER) {
+    if !flags.contains(required_flag) {
         return Err(InteractionError::InvalidTarget);
     }
     let player_view = (

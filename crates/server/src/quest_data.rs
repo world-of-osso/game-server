@@ -120,6 +120,8 @@ pub(crate) struct QuestTemplate {
     /// Item given on accept (`StartItem` x `ProvidedItemCount`).
     pub start_item: u32,
     pub provided_item_count: u32,
+    /// Authored TDB rewards whose CurrencyTypes is a profession TraitCurrency.
+    pub profession_knowledge_rewards: Vec<(u32, u32)>,
     pub reward_items: Vec<(u32, u32)>,
     pub choice_items: Vec<(u32, u32)>,
     pub objectives: Vec<ObjectiveDef>,
@@ -358,6 +360,7 @@ fn quest_from_row(
         captured_reward_xp: None,
         start_item: int(row, "StartItem")? as u32,
         provided_item_count: int(row, "ProvidedItemCount")? as u32,
+        profession_knowledge_rewards: Vec::new(),
         reward_items: item_pairs(row, "RewardItem", "RewardAmount", 4)?,
         choice_items: item_pairs(row, "RewardChoiceItemID", "RewardChoiceItemQuantity", 6)?,
         objectives: objectives_from_row(row, names)?,
@@ -569,6 +572,13 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
         let (quest, link) = row?;
         links.push((quest.id, link));
         db.quests.insert(quest.id, quest);
+    }
+    let knowledge_rewards =
+        crate::profession::specializations::load_knowledge_quest_rewards(&conn)?;
+    for (quest_id, rewards) in knowledge_rewards {
+        if let Some(quest) = db.quests.get_mut(&quest_id) {
+            quest.profession_knowledge_rewards = rewards;
+        }
     }
     load_reconstruction_metadata(&conn, &mut db)?;
     link_quests(&mut db, &links);
