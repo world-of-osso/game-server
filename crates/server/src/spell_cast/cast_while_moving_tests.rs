@@ -135,6 +135,54 @@ fn class_completeness_native_grace_mask_does_not_allow_foreign_family_fireball()
 }
 
 #[test]
+fn class_completeness_native_grace_requires_a_matching_mask_within_its_family() {
+    let data = world_db().unwrap();
+    let mut spell = data.store.get(LIGHTNING_BOLT).unwrap().clone();
+    // Native Far Sight has the same family and an empty mask; isolate that selector input.
+    let empty = data
+        .store
+        .get(6196)
+        .unwrap()
+        .class_options
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        spell.class_options.as_ref().unwrap().spell_class_set,
+        empty.spell_class_set
+    );
+    spell.class_options.as_mut().unwrap().spell_class_mask = empty.spell_class_mask;
+    let mut h = harness(vec![spell], &[GRACE], 7).unwrap();
+    apply_mobility(&mut h, GRACE);
+    set_moving(&mut h);
+    h.cast_and_deliver(LIGHTNING_BOLT, Some(h.npc));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        CastFailReason::CantCastWhileMoving
+    );
+}
+
+#[test]
+fn class_completeness_native_grace_on_another_recipient_does_not_allow_the_caster_to_move() {
+    let mut h = shaman();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.npc,
+            target: h.npc,
+            spell_id: GRACE,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    set_moving(&mut h);
+    h.cast_and_deliver(LIGHTNING_BOLT, Some(h.npc));
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        CastFailReason::CantCastWhileMoving
+    );
+}
+
+#[test]
 fn class_completeness_native_grace_expiry_cancels_a_still_moving_cast() {
     let mut h = shaman();
     apply_mobility(&mut h, GRACE);
