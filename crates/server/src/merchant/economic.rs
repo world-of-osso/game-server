@@ -119,7 +119,10 @@ pub(super) fn buy(
         state,
         inventory,
         expected_inventory,
-    )
+    )?;
+    shop.gold
+        .record_acquisition(customer.character_id, purchase.item_id, purchase.count);
+    Ok(())
 }
 
 fn clone_purchase_state(

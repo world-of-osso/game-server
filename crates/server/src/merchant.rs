@@ -505,6 +505,8 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     drop(mint);
     model.set_gold(model.gold() - price);
     shop.save(customer.character_id, model);
+    shop.gold
+        .record_acquisition(customer.character_id, slot.item_id, items);
     if slot.maxcount > 0 {
         shop.stock
             .consume(vendor, req.slot, slot, goods.buy_count, items, now);

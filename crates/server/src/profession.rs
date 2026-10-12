@@ -469,9 +469,9 @@ fn store_created_item(
         .map(|_| bags.character_id)
     })
     .ok_or("caster has no bags")??;
-    world
-        .resource_mut::<GoldUpdateQueue>()
-        .record_items(character_id);
+    let mut updates = world.resource_mut::<GoldUpdateQueue>();
+    updates.record_items(character_id);
+    updates.record_acquisition(character_id, item_id, count);
     Ok(())
 }
 

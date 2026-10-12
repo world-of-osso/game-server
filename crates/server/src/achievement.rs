@@ -82,6 +82,7 @@ impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::maps::ServerClock>();
         app.add_message::<CriteriaCredit>();
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(
             Update,
@@ -91,6 +92,7 @@ impl Plugin for AchievementPlugin {
                 process_skill_achievement_updates,
                 process_reputation_achievement_updates,
                 process_committed_criteria_credits,
+                process_inventory_acquisition_credits,
                 dungeon::send_entry_progress,
                 scenario::send_entry_progress,
                 send_requested_catalog_pages,
@@ -221,6 +223,22 @@ fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent
         && let Some(connection) = connection_for_player(world, player)
     {
         send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+fn process_inventory_acquisition_credits(world: &mut World) {
+    let acquired = world
+        .resource_mut::<crate::gold::GoldUpdateQueue>()
+        .take_acquisitions();
+    let owners: BTreeMap<_, _> = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .map(|(link, owner)| (owner.character_id, link.0))
+        .collect();
+    for (character, item, count) in acquired {
+        if let Some(&player) = owners.get(&character) {
+            record_criteria_event(world, player, CriteriaEvent::AcquireItem(item, count));
+        }
     }
 }
 
