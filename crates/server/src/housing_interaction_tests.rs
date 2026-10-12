@@ -88,11 +88,25 @@ fn housing_cornerstone_use_opens_only_for_authenticated_same_copy_player_in_real
 }
 
 #[test]
-fn housing_bulletin_board_use_lists_this_neighborhoods_residents_with_live_presence() {
+fn housing_bulletin_board_use_lists_this_neighborhoods_residents_alphabetically_with_presence() {
     let source = crate::housing_catalog::tests::catalog_fixture();
     crate::housing_catalog::tests::add_bulletin_board(&source);
+    // NeighborhoodPlot 418 (PlotIndex 1) as authored; its cornerstone row is not imported.
+    let plot = serde_json::json!({"NeighborhoodMapID":"1", "PlotIndex":"1", "Name":"", "Cost":"10000000", "CornerstonePosition_0":"2674.317626953125", "CornerstonePosition_1":"651.8455200195312", "CornerstonePosition_2":"49.2256965637207", "TeleportPosition_0":"2675.425048828125", "TeleportPosition_1":"649.3803100585938", "TeleportPosition_2":"49.53499984741211", "CornerstoneGameObjectID":"527310"});
+    source
+        .execute(
+            "INSERT INTO housing_catalog_record VALUES (?, 'NeighborhoodPlot', 418, ?)",
+            rusqlite::params![
+                crate::persistence::housing_store::BUILD_KEY,
+                plot.to_string()
+            ],
+        )
+        .unwrap();
     let catalog = crate::housing_catalog::HousingCatalog::read(&source).unwrap();
-    let plot = catalog.plot(417).unwrap().clone();
+    let plots = [
+        catalog.plot(417).unwrap().clone(),
+        catalog.plot(418).unwrap().clone(),
+    ];
     let maps = crate::maps::store::load_map_store(&world_db().unwrap()).unwrap();
     let mut manager = InstanceManager::default();
     let copy = manager
@@ -114,28 +128,32 @@ fn housing_bulletin_board_use_lists_this_neighborhoods_residents_with_live_prese
         pair::<UseGameObject>(),
         pair::<HousingReply>(),
     ));
-    // Another account's character owns plot 417 (PlotIndex 0) and is not logged in.
+    // The viewer owns plot 417 (PlotIndex 0); another account's offline character owns 418.
     let (viewer, resident) = {
         let db = &h
             .app
             .world()
             .resource::<crate::persistence::GameDatabase>()
             .db;
-        let (viewer, _) =
-            crate::persistence::create_character(db, 1, "Housevisitor", 1, 1).unwrap();
-        let (resident, _) =
-            crate::persistence::create_character(db, 2, "Houseproof", 1, 1).unwrap();
-        let mut inventory = crate::persistence::load_inventory(db, resident);
-        inventory.gold = plot.cost;
-        crate::persistence::save_inventory(db, resident, &inventory);
-        let buyer = crate::persistence::housing_store::Actor {
-            account_id: 2,
-            character_id: resident,
-            neighborhood_id: Some(1),
-            inside_house: None,
+        let buy = |account: u64, name: &str, plot: &shared::protocol::HousingPlot| {
+            let (character, _) =
+                crate::persistence::create_character(db, account, name, 1, 1).unwrap();
+            let mut inventory = crate::persistence::load_inventory(db, character);
+            inventory.gold = plot.cost;
+            crate::persistence::save_inventory(db, character, &inventory);
+            let buyer = crate::persistence::housing_store::Actor {
+                account_id: account,
+                character_id: character,
+                neighborhood_id: Some(1),
+                inside_house: None,
+            };
+            crate::persistence::housing_store::purchase(db, buyer, plot).unwrap();
+            character
         };
-        crate::persistence::housing_store::purchase(db, buyer, &plot).unwrap();
-        (viewer, resident)
+        (
+            buy(1, "Housevisitor", &plots[0]),
+            buy(2, "Houseproof", &plots[1]),
+        )
     };
     h.app.world_mut().entity_mut(h.connection).insert(InWorld {
         character_id: viewer,
@@ -167,13 +185,18 @@ fn housing_bulletin_board_use_lists_this_neighborhoods_residents_with_live_prese
     assert_eq!(replies[0].state.opened_cornerstone, None);
     let roster = replies[0].state.bulletin_board.as_ref().unwrap();
     assert_eq!(roster.neighborhood_id, 1);
+    let resident_row =
+        |name: &str, online: bool, plot_index: u32| shared::protocol::NeighborhoodResident {
+            name: name.into(),
+            online,
+            plot_index,
+        };
     assert_eq!(
         roster.residents,
-        vec![shared::protocol::NeighborhoodResident {
-            name: "Houseproof".into(),
-            online: false,
-            plot_index: 0,
-        }]
+        vec![
+            resident_row("Houseproof", false, 1),
+            resident_row("Housevisitor", true, 0),
+        ]
     );
     // The resident logs in: the next board use reports them online.
     h.app.world_mut().spawn((
@@ -186,5 +209,6 @@ fn housing_bulletin_board_use_lists_this_neighborhoods_residents_with_live_prese
         object: board.to_bits(),
     });
     let replies = h.take::<HousingReply>();
-    assert!(replies[0].state.bulletin_board.as_ref().unwrap().residents[0].online);
+    let roster = replies[0].state.bulletin_board.as_ref().unwrap();
+    assert!(roster.residents.iter().all(|resident| resident.online));
 }

@@ -445,7 +445,8 @@ fn read_roster(
         .iter(world)
         .map(|entered| entered.character_id)
         .collect();
-    let residents = owners
+    // Retail's client keeps the received roster as its alphabetical member list.
+    let mut residents: Vec<_> = owners
         .into_iter()
         .map(
             |(plot_index, character, name)| shared::protocol::NeighborhoodResident {
@@ -455,6 +456,7 @@ fn read_roster(
             },
         )
         .collect();
+    residents.sort_by(|left, right| left.name.cmp(&right.name));
     Ok(shared::protocol::NeighborhoodRoster {
         neighborhood_id,
         residents,
