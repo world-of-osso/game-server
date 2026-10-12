@@ -10,7 +10,7 @@ use lightyear::prelude::*;
 use rusqlite::Connection;
 use shared::battleground::BgPhase;
 use shared::components::{Health, Position};
-use shared::protocol::GameObjectInfo;
+use shared::protocol::{GameObjectInfo, GameObjectVisible};
 use std::collections::{BTreeMap, BTreeSet};
 const ACTIVATION_SECONDS: f64 = 90.0;
 
@@ -64,12 +64,17 @@ pub(super) fn prepare_map(world: &mut World, map: InMap) {
     if let Some(sources) = sources {
         world.resource_scope(|world, mut timers: Mut<SightTimers>| {
             for source in &sources {
-                if let Some(entity) = find_orb(world, map, source) {
-                    world.despawn(entity);
+                let entity = find_orb(world, map, source);
+                if let Some(entity) = entity {
+                    set_visible(world, entity, false);
                 }
-                timers
-                    .0
-                    .insert((map, source.spawn.guid), SightSlot::default());
+                timers.0.insert(
+                    (map, source.spawn.guid),
+                    SightSlot {
+                        entity,
+                        ready_at: None,
+                    },
+                );
             }
         });
     }
@@ -145,6 +150,12 @@ pub(super) fn update_sight(world: &mut World, now: f64) {
         }
     });
 }
+fn set_visible(world: &mut World, entity: Entity, visible: bool) {
+    let desired = GameObjectVisible(visible);
+    if world.get::<GameObjectVisible>(entity) != Some(&desired) {
+        world.entity_mut(entity).insert(desired);
+    }
+}
 fn find_orb(world: &mut World, map: InMap, source: &SightSource) -> Option<Entity> {
     let position = bevy_position(source.spawn.position);
     let mut query = world.query::<(Entity, &InMap, &GameObjectInfo, &Position)>();
@@ -165,16 +176,14 @@ fn update_orb(
     let existing = slot.entity;
     let Some(start) = matched.started else {
         if let Some(entity) = existing {
-            world.despawn(entity);
-            slot.entity = None;
+            set_visible(world, entity, false);
         }
         return;
     };
     let ready = *slot.ready_at.get_or_insert(start + ACTIVATION_SECONDS);
     if matched.phase != BgPhase::InProgress || now < ready {
         if let Some(entity) = existing {
-            world.despawn(entity);
-            slot.entity = None;
+            set_visible(world, entity, false);
         }
         return;
     }
@@ -190,6 +199,7 @@ fn update_orb(
             .id(),
     };
     slot.entity = Some(orb);
+    set_visible(world, orb, true);
     let position = bevy_position(source.spawn.position);
     let position = Vec3::new(position.x, position.y, position.z);
     let target = actors
@@ -212,8 +222,7 @@ fn update_orb(
                 source: crate::auras::AuraSource::Cast,
             },
         );
-        world.despawn(orb);
-        slot.entity = None;
+        set_visible(world, orb, false);
         slot.ready_at = Some(now + f64::from(source.respawn_secs));
     }
 }
