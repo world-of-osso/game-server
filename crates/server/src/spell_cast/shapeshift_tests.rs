@@ -151,7 +151,6 @@ fn class_completeness_native_ignore_form_removal_and_expiry_restore_rejection() 
                 .world()
                 .get::<crate::auras::ActiveAuras>(h.caster)
                 .unwrap()
-                .auras
                 .iter()
                 .find(|aura| aura.spell_id == PREDATORY_SWIFTNESS)
                 .unwrap()
