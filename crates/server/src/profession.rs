@@ -326,17 +326,31 @@ pub(crate) fn with_learner<R>(
 /// `LEARN_SPELL` (36).
 pub(crate) fn effect_learn_spell(
     world: &mut World,
-    _ctx: &EffectCtx,
+    ctx: &EffectCtx,
     effect: &SpellEffect,
     target: Entity,
 ) {
-    let spell = effect.trigger_spell;
-    if with_learner(world, target, |learner, profs| {
-        learner.learn_spell(profs, spell, 0)
-    })
-    .is_none()
-    {
-        warn!("LEARN_SPELL {spell}: target {target} has no professions");
+    // TC SpellEffects.cpp1964-1986: zero-trigger item casts learn ON_LEARN effects.
+    let spells = if effect.trigger_spell != 0 {
+        vec![effect.trigger_spell]
+    } else if let Some(item) = ctx.spell.cast_retail_item_id {
+        world
+            .resource::<crate::item_templates::ItemTemplates>()
+            .retail_learning_spells
+            .get(&item)
+            .cloned()
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    for spell in spells {
+        if with_learner(world, target, |learner, profs| {
+            learner.learn_spell(profs, spell, 0)
+        })
+        .is_none()
+        {
+            warn!("LEARN_SPELL {spell}: target {target} has no professions");
+        }
     }
 }
 
