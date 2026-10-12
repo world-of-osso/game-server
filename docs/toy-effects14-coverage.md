@@ -88,7 +88,7 @@ Source gaps retained: procedural cloak Type17 payload, Scoots ModifierTree303980
 
 ## Canonical import fixture regression (2026-10-12)
 
-Lead applied source item/template import to canonical world.db; observed content_item59044 includes170187 and113542. Old ScreenEffect/FeatherFall tests still asserted missing content_item and failed at unavailable_reasonNone; both REDs reproduced against that exact linked database. Tests now perform real bag learning/UseToy, SpellGo, authored aura replication and cancellation for Shadescale170187/304370 and Whispers113542/167273. No ad-hoc item or generic-spell bypass; targeted/full requested toys GREEN pending.
+Lead applied source item/template import to canonical world.db; observed content_item59044 includes170187 and113542. Old ScreenEffect/FeatherFall tests still asserted missing content_item and failed at unavailable_reasonNone; both REDs reproduced against that exact linked database. Tests now perform real bag learning/UseToy, SpellGo, authored aura replication and cancellation for Shadescale170187/304370 and Whispers113542/167273. No ad-hoc item or generic-spell bypass. Both targeted imported-item GREENs pass (24.19s/14.73s). First requested canonical filter passes64/66; remaining failures are old census assertions calling newly implemented Orb1973 underived. Those fixtures now admit1973 and retain genuine unimplemented35275 alongside all prior control/script refusals; requested canonical rerun pending.
 
 ## Import command
 
