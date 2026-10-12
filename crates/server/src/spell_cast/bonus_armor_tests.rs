@@ -144,7 +144,7 @@ fn class_completeness_native_bonus_armor_independent_factors_multiply() {
     apply_native_armor(&mut h, SECOND_BUFF);
     apply_native_armor(&mut h, ARMOR_DEBUFF);
     let after = calculate_armor(&h);
-    let expected = ((100.0 + baseline.primary.intellect.floor())
+    let expected = (baseline.armor
         * native_factor(ARMOR_BUFF)
         * native_factor(SECOND_BUFF)
         * native_factor(ARMOR_DEBUFF))
