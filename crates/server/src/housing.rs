@@ -30,10 +30,7 @@ impl Plugin for HousingPlugin {
     }
 }
 
-fn load_catalog(
-    mut commands: Commands,
-    mut objects: ResMut<crate::game_objects::GameObjectSpawns>,
-) {
+fn load_catalog(mut commands: Commands) {
     let connection = rusqlite::Connection::open_with_flags(
         crate::spell_info::WORLD_DB_PATH,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -51,13 +48,21 @@ fn load_catalog(
     if let Err(message) = &loaded {
         warn!("Housing unavailable: {message}");
     }
-    if let Ok(catalog) = &loaded {
-        objects.0.extend(catalog.cornerstones());
-    }
     commands.insert_resource(HousingAvailability(loaded));
     commands.insert_resource(crate::housing_acquisition::HousingCollectionRule(
         collection,
     ));
+}
+
+pub(crate) fn spawn_cornerstones(
+    commands: &mut Commands,
+    source: &HousingAvailability,
+    map: InMap,
+) {
+    if let Ok(catalog) = &source.0 {
+        let objects = crate::game_objects::GameObjectSpawns(catalog.cornerstones());
+        crate::game_objects::spawn_map_game_objects(commands, &objects, map, 0);
+    }
 }
 
 fn catalog(world: &World) -> Result<&HousingCatalog, String> {

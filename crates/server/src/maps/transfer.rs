@@ -347,6 +347,9 @@ pub(crate) fn spawn_map_content(world: &mut World, map: InMap) {
             world.get_resource::<crate::game_objects::GameObjectSpawns>(),
             content,
         );
+        if let Some(housing) = world.get_resource::<crate::housing::HousingAvailability>() {
+            crate::housing::spawn_cornerstones(&mut commands, housing, map);
+        }
     }
     queue.apply(world);
 }

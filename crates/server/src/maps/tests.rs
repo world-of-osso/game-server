@@ -174,9 +174,6 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
         },
     );
     let mut h = housing_harness(db);
-    h.app
-        .world_mut()
-        .insert_resource(housing_cornerstone_fixture());
     let owner = h.spawn(30, InMap::continent(0), STOCKADE_ENTRANCE_TRIGGER);
     h.app
         .world_mut()
@@ -228,10 +225,6 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     let db = redb::Database::open(&path).unwrap();
     assert_eq!(crate::persistence::load_inventory(&db, 30).gold, 10_000_000);
     let mut restarted = housing_harness(db);
-    restarted
-        .app
-        .world_mut()
-        .insert_resource(housing_cornerstone_fixture());
     let place = restarted
         .app
         .world_mut()
@@ -251,16 +244,6 @@ fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database
     assert_ne!(place.map.instance_id, 0);
     assert_eq!(place.position, position);
     assert_eq!(cornerstones_in(restarted.app.world_mut(), place.map), 1);
-}
-
-// Pinned GameObjects527268/layout44BD453C and GameObjectDisplayInfo110660.
-// No fabricated production spawn or first-house geometry enters this fixture.
-fn housing_cornerstone_fixture() -> crate::game_objects::GameObjectSpawns {
-    let catalog = crate::housing_catalog::HousingCatalog::read(
-        &crate::housing_catalog::tests::catalog_fixture(),
-    )
-    .unwrap();
-    crate::game_objects::GameObjectSpawns(catalog.cornerstones())
 }
 
 fn cornerstones_in(world: &mut World, map: InMap) -> usize {
@@ -400,6 +383,11 @@ fn housing_harness(db: redb::Database) -> Harness {
         app.insert_resource(crate::persistence::GameDatabase { db });
         app.insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
+        // Production world startup replaces the generic population through Commands.
+        // Housing must survive that replacement without fixture-injected map objects.
+        app.add_systems(Startup, |mut commands: Commands| {
+            commands.insert_resource(crate::game_objects::GameObjectSpawns::default());
+        });
         app.add_systems(Update, crate::housing::process_requests);
     })
     .unwrap()
