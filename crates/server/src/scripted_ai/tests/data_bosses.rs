@@ -51,21 +51,10 @@ fn bound_boss_with_catalog(
             }
         }
     }
-    let mut spell_ids = vec![133];
-    if let Some(rows) = scripts.0.get(&entry) {
-        spell_ids.extend(
-            rows.iter()
-                .filter(|row| row.action_type == 11)
-                .map(|row| row.action_params[0]),
-        );
-    }
+    // Use production's complete DB2 store, including absence of legacy SAI IDs.
+    // A script's unknown spell must fail normal admission, not panic the fixture.
     let all = crate::spell_cast::test_harness::world_db().unwrap();
-    app.insert_resource(SpellStore::fixture(
-        spell_ids
-            .iter()
-            .map(|id| all.store.get(*id).unwrap().clone())
-            .collect(),
-    ));
+    app.insert_resource(all.store.clone());
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
