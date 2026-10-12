@@ -101,6 +101,16 @@ fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(113656, Some(h.npc));
     h.advance(90); // Fists channel finished; its 24-second cooldown is running.
+    eprintln!(
+        "FoF target health={} hits={:?}",
+        h.health(h.npc),
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(117418))
+            .map(|event| (event.amount, event.kind))
+            .collect::<Vec<_>>()
+    );
     let before = h
         .app
         .world()
