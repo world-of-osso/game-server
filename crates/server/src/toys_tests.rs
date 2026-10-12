@@ -13,6 +13,10 @@ fn setup(path: &std::path::Path) -> (Harness, u64) {
 }
 
 fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
+    setup_for_race_class(path, race, 8)
+}
+
+fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness, u64) {
     let mut h = harness(
         Vec::new(),
         &[
@@ -26,12 +30,12 @@ fn setup_for_race(path: &std::path::Path, race: u8) -> (Harness, u64) {
             196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909, 127803,
             128150, 128151, 128152,
         ],
-        8,
+        class,
     )
     .unwrap();
     let db = redb::Database::create(path).unwrap();
     persistence::create_tables(&db);
-    let (character, _) = persistence::create_character(&db, 1, "ToyMage", race, 8).unwrap();
+    let (character, _) = persistence::create_character(&db, 1, "ToyMage", race, class).unwrap();
     let item = |id| InventoryItemData {
         item_guid: persistence::next_id(&db, "item_instance"),
         item_id: id,
@@ -2739,9 +2743,14 @@ fn toyfx14_orb_deception_uses_native_race_and_sex_and_restores() {
         (11, 17827, 17828),
     ] {
         for sex in [0, 1] {
-            let (mut h, character) = setup_for_race(
+            let class = crate::race_class::playable_pairs()
+                .find(|(native, _)| *native == race)
+                .unwrap()
+                .1;
+            let (mut h, character) = setup_for_race_class(
                 &directory.path().join(format!("orb-{race}-{sex}.redb")),
                 race,
+                class,
             );
             h.app.insert_resource(toy_catalog::load(&conn).unwrap());
             h.app
