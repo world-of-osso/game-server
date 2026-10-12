@@ -216,25 +216,35 @@ pub(crate) fn record_mythic_completion(world: &mut World, run: &ChallengeRun) {
     if run.phase != ChallengePhase::Completed {
         return;
     }
-    let players: Vec<_> = world
-        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
-        .iter(world)
-        .filter_map(|(link, _)| {
-            let map = world.get::<InMap>(link.0)?;
-            let level = world.get::<Level>(link.0)?;
-            (map.map_id == run.map_id && map.instance_id == run.instance_id)
-                .then_some((link.0, level.0))
-        })
-        .collect();
-    for (player, player_level) in players {
+    for (player, player_level) in find_mythic_finishers(world, run) {
         let completion = catalog::MythicCompletion {
             key_level: run.key.level,
             challenge_map: run.key.challenge_id,
             player_level,
             in_time: run.elapsed_ms <= run.time_limit_ms,
         };
-        record_criteria_event(world, player, CriteriaEvent::CompleteMythicPlus(completion));
+        let event = CriteriaEvent::CompleteMythicPlus(completion);
+        scenario::record(world, player, event);
+        if let Some((snapshot, toasts)) =
+            update_player_events(world, player, &[event], Some(run.map_id))
+            && let Some(connection) = connection_for_player(world, player)
+        {
+            send_updates(world, connection, snapshot, toasts);
+        }
     }
+}
+
+fn find_mythic_finishers(world: &mut World, run: &ChallengeRun) -> Vec<(Entity, u8)> {
+    world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .filter_map(|(link, _)| {
+            let map = world.get::<InMap>(link.0)?;
+            let level = world.get::<Level>(link.0)?;
+            let finished_copy = map.map_id == run.map_id && map.instance_id == run.instance_id;
+            finished_copy.then_some((link.0, level.0))
+        })
+        .collect()
 }
 
 /// Terminal authoritative winner only; conditional PvP/streak rows remain unevaluated.
