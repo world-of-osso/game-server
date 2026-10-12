@@ -53,11 +53,38 @@ def receipt(duration=604800):
     return {"managed_world_states": {"113": {"ID": 113, "UpTimeSecs": duration}}}
 
 
+def areas():
+    return {"blobs": [{"ID": 7, "QuestID": 52847, "MapID": 0, "UiMapID": 14, "NumPoints": 4},
+                      {"ID": 8, "QuestID": 52848, "MapID": 0, "UiMapID": 14, "NumPoints": 1}],
+            "points": [{"ID": n, "QuestPOIBlobID": 7, "X": x, "Y": y, "Z": 0}
+                       for n, (x, y) in enumerate([(-1065,-2486),(-1057,-2486),(-1057,-2478),(-1065,-2478)])]
+                      + [{"ID": 9, "QuestPOIBlobID": 8, "X": 0, "Y": 0, "Z": 0}]}
+
+
 class WorldQuestImportTests(unittest.TestCase):
+    def test_polygon_policy_duration_and_point_only_exclusion(self):
+        with closing(sqlite3.connect(":memory:")) as conn:
+            fixture(conn)
+            poi = areas()
+            poi["blobs"][0]["QuestID"] = 52848
+            poi["blobs"][1]["QuestID"] = 52847
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52848,340073,0,138122,1,'',0,0)")
+            self.assertEqual(import_definitions(conn, receipt(), poi, 172800), [52848])
+            self.assertEqual(conn.execute("SELECT duration_seconds,duration_source FROM content_world_quest").fetchall(), [(172800, 'policy')])
+            self.assertEqual(conn.execute("SELECT map_id,ui_map_id,x,y FROM content_world_quest_area ORDER BY point_index").fetchall(),
+                             [(0,14,-1065,-2486),(0,14,-1057,-2486),(0,14,-1057,-2478),(0,14,-1065,-2478)])
+
+    def test_unsupported_objective_is_excluded_not_silently_completed(self):
+        with closing(sqlite3.connect(":memory:")) as conn:
+            fixture(conn)
+            conn.execute("INSERT INTO tdb_quest_objectives VALUES (52847,340073,99,138122,1,'',1,1)")
+            self.assertEqual(import_definitions(conn, receipt(), areas()), [])
+            self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template").fetchone()[0], 0)
+
     def test_world_quest_import_preserves_authentic_duration_objective_pin_and_race_mask(self):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)
-            self.assertEqual(import_definitions(conn, receipt()), [52847])
+            self.assertEqual(import_definitions(conn, receipt(), areas()), [52847])
             self.assertEqual(conn.execute("SELECT quest_id,zone_id,duration_seconds FROM content_world_quest").fetchall(), [(52847,9734,604800)])
             row = conn.execute("SELECT ID,LogTitle,MinLevel,RequiredNpcOrGo1,RequiredNpcOrGoCount1,AllowableRaces FROM content_quest_template").fetchone()
             self.assertEqual(row, (52847,"Doom's Howl",10,138122,1,6130900294268439629))
@@ -66,14 +93,14 @@ class WorldQuestImportTests(unittest.TestCase):
             self.assertEqual((source["RewardFactionID1"],source["RewardFactionOverride1"],source["RewardFactionCapIn1"]),(2159,7500,7))
             self.assertEqual(conn.execute("SELECT X,Y FROM content_quest_poi_points").fetchall(), [(-1061,-2482)])
             self.assertEqual(conn.execute("SELECT MapID,WorldMapAreaId FROM content_quest_poi").fetchall(), [(0,14)])
-            self.assertEqual(import_definitions(conn, receipt()), [52847])
+            self.assertEqual(import_definitions(conn, receipt(), areas()), [52847])
             self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template").fetchone()[0], 1)
 
     def test_world_quest_import_rejects_invalid_duration_without_guess(self):
         with closing(sqlite3.connect(":memory:")) as conn:
             fixture(conn)
             with self.assertRaisesRegex(ValueError, "duration"):
-                import_definitions(conn, receipt(0))
+                import_definitions(conn, receipt(0), areas())
             self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template").fetchone()[0], 0)
 
     def test_world_quest_import_private_copy_never_mutates_or_overwrites_source(self):
@@ -82,12 +109,12 @@ class WorldQuestImportTests(unittest.TestCase):
             with closing(sqlite3.connect(source)) as conn:
                 fixture(conn)
             before = source.read_bytes()
-            self.assertEqual(copy_and_import(source, output, receipt()), [52847])
+            self.assertEqual(copy_and_import(source, output, receipt(), areas()), [52847])
             self.assertEqual(source.read_bytes(), before)
             with self.assertRaises(FileExistsError):
-                copy_and_import(source, output, receipt())
+                copy_and_import(source, output, receipt(), areas())
             with self.assertRaises(ValueError):
-                copy_and_import(source, source, receipt())
+                copy_and_import(source, source, receipt(), areas())
 
 
 if __name__ == "__main__":
