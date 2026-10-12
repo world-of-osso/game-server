@@ -1088,9 +1088,22 @@ fn try_swing(
             unkillable && attacker.entity != target_entity,
         ),
     );
-    let rescue =
-        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss);
-    let became_lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
+    let intercepted = crate::scripted_ai::has_damage_interceptor(script_name);
+    // Interception reactions may heal (Molten Gold136). Keep health uncommitted
+    // until the exclusive-world hook executes; never undo an applied death.
+    if intercepted {
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            commit_intercepted_melee_loss(world, attacker_entity, target_entity, incoming_loss);
+        });
+    }
+    let rescue = if intercepted {
+        None
+    } else {
+        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss)
+    };
+    let became_lethal =
+        !intercepted && rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
     if let Some(instance) = rescue {
         commands.queue(move |world: &mut World| {
             crate::auras::remove_instance(
@@ -1101,7 +1114,7 @@ fn try_swing(
             )
         });
     }
-    if is_npc && incoming_loss > 0.0 {
+    if is_npc && incoming_loss > 0.0 && !intercepted {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
             crate::creature_tap::record_damage(
@@ -1357,6 +1370,38 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     }
     let damage = crate::auras::damage_transfer::route(world, attacker, victim, 1, damage);
     deal_health_damage(world, attacker, victim, damage, 1, None, 0.0);
+}
+
+/// Source-script melee interception resolves in the exclusive-world boundary:
+/// snapshot → adjust loss → reaction → health commit → tap/death.
+fn commit_intercepted_melee_loss(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    incoming: f32,
+) {
+    let Some(health) = world.get::<Health>(victim) else {
+        return;
+    };
+    if health.current <= 0.0 {
+        return;
+    }
+    let before = health.current;
+    let loss = crate::scripted_ai::limit_scripted_loss(
+        world.get::<crate::scripted_ai::CreatureScriptName>(victim),
+        before,
+        incoming,
+    );
+    crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming);
+    let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    if loss > 0.0 {
+        crate::creature_tap::record_damage(world, victim, attacker, before, loss);
+    }
+    mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
+    if lethal {
+        mark_npc_dead_world(world, victim);
+        crate::spell_cast::log_event(world, death_log_event(attacker, victim));
+    }
 }
 
 /// Health application for an already-mitigated direct or redirected hit.
