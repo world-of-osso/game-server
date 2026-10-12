@@ -192,13 +192,9 @@ fn adventure_guide_actual_creature_credit_is_once_persistent_and_reset_by_month(
         .resource::<AchievementCatalog>()
         .criterion_tree_ids(151404);
     let (criterion,asset)=trees.iter().find_map(|id| source.query_row("SELECT c.ID,c.Asset FROM criteria_tree t JOIN criteria c ON c.ID=t.CriteriaID WHERE t.ID=?1 AND c.Type=0",[id],|r|Ok((r.get::<_,u32>(0)?,r.get::<_,u32>(1)?))).ok()).expect("authentic Colossus kill criterion");
-    let name: String = source
-        .query_row(
-            "SELECT name FROM creature_template WHERE entry=?1",
-            [asset],
-            |r| r.get(0),
-        )
-        .unwrap();
+    // The realm's Wrath creature catalog does not contain these Retail event NPCs.
+    // Death credit matches the authentic criterion Asset, not the display name.
+    let name = "Colossus".to_string();
     h.app
         .world_mut()
         .entity_mut(h.player)
