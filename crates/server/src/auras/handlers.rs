@@ -53,6 +53,8 @@ pub enum AuraKind {
     CastMovement,
     /// Masked permission to ignore cast-start form restrictions (`spell_cast::shapeshift`).
     IgnoreShapeshift,
+    /// Player casting restriction with native class-family exceptions.
+    CastRestriction,
     /// Receiver-side finite harmful aura duration (`mechanic_duration`).
     MechanicDuration,
 }
@@ -194,6 +196,7 @@ pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
+pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
@@ -218,6 +221,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
+        DISABLE_CASTING_EXCEPT_ABILITIES => CastRestriction,
         MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,

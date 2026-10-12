@@ -104,6 +104,7 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
             .map(|class| ClassInfo {
                 class_id: class.class_id,
                 skill_line: class.skill_line,
+                spell_class_set: class.spell_class_set,
                 power_types: class.power_types.clone(),
                 attack_power_per_strength: class.attack_power_per_strength,
                 attack_power_per_agility: class.attack_power_per_agility,
