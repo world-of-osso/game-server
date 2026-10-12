@@ -4,7 +4,7 @@ Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred S
 
 ## What it must do
 
-- [x] Preserve Retail initial and cast-triggered repeat delays, warning keys/severity, encounter/NPC identity and addon/version/file/line provenance.
+- [x] Preserve Retail initial and cast-triggered repeat delays, warning keys/severity, encounter/NPC identity and addon/version/file/line provenance. BigWigs Retail engages through `OnEncounterStart`, never legacy `OnEngage`; the last selected Lua method definition replaces earlier bodies and registrations.
 - [x] Extract literal health thresholds and stage changes without inventing an initial timer.
 - [x] Record unsupported conditions rather than executing Lua or treating them as unconditional.
 - [x] Require Spell and SpellName rows stamped `12.1.0.69933`; reject unvalidated spell IDs.
