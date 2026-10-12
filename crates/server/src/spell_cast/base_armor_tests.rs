@@ -15,6 +15,7 @@ fn armor_harness(pet: bool) -> Harness {
     constants[10] = ARMOR_CONSTANT;
     h.app
         .insert_resource(crate::level_scaling::ArmorConstants(constants));
+    h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
     h.app
         .world_mut()
         .entity_mut(h.npc)
