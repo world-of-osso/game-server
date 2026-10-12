@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Source summon flags/privacy](systems/toys.md#source-summon-flag-import-2026-10-12): atomic3610-record flags import, real two-peer owner-only/public-control proof, wild spawn/target visibility fixes and preserved337 census; group-private remains explicit gap.
+
 - 2026-10-12 — [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12): source31442/7353 environmental activation, snapshotted versatility retention, seven actual-use identities and census330→337; representative native both-skin proof and lead-only asset publication recorded.
 
 - 2026-10-12 — [Kings' Rest source admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): Golden primary-only SQL preparation from pinned instance/header/script and local journal/TDB; no companion credit or canonical mutation. Missing emerge/intro pipeline and mutable-damage ordering remain named gaps, not a whole-boss port.

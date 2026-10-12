@@ -1,5 +1,13 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source-private summons (2026-10-12)
+
+Source flag import and owner-only replication repair preserve the337/1166 preflight census (zero additions/removals), rather than claiming new working toys. Pinned CASC1345276/layoutA4CA5ECF has3610 readable records and three named encrypted gaps. Six importer tests cover exact0/private/creature-level flag words, real3001 signed/unsigned identity preservation, idempotence and transactional schema/data rollback. Canonical flag columns are a required lead import before deploying this branch; existing metadata/unrelated tables remain unchanged. [Importer and command](wiki/systems/toys.md#source-summon-flag-import-2026-10-12).
+
+TC a352b1fa `SpellEffects.cpp::EffectSummonType` and `Object.cpp::CheckPrivateObjectOwnerVisibility` define owner privacy. Actual private5911 two-peer RED observes73781 in both replicas while public66768 is visible to both. Fix covers both spatial visibility update paths and the actual wild/default zone-spawn path; source-private descendants inherit an existing private owner. Actual UDP GREEN uses Lilian's Warning Sign119039/176310→88280: owner=true, nearby observer=false, public66768=true for both. Source3077 is shared by all four warning signs. Group-private toy graphs remain explicitly unavailable; other flag semantics are not certified by importing their metadata.
+
+Modern+Forever real owner journal use of Shirakess170196/304505→156052/display92597 preserves four meshes,.6 root scale/no pet frame and natural60000ms expiry (observed59405/59742ms after model readiness). Two framed sign PNGs inspected; four total1280×720 captures in requested `toys/private-sign17/`. Receipts/logs and source data under continuation root; all owned runtime stopped. Post-merge interest/scenery regression33/33 PASS205.84s; server/engine checks and both formats PASS. Independent review remains unavailable due expired OAuth, not PASS. Per-toy complete effects and the whole1166 goal remain open.
+
 ## Linked cooking traps (2026-10-12)
 
 Read-only canonical census330→337/1166 (+7, zero removed): Little Wickerman70722/99767→208935/display10726/.25; Eternal Kiln104309/148553→223229/14358/.5; Cozy Bonfire116435/171549→236014/30040/.5; Steamworks Sausage Grill116757/171760→236110/7385/1; Muckpool Cookpot182780/340241→357706/67291/.5; Ever-Abundant Hearth184404/345745→364811/67976/.5; Tuskarr Traveling Soup Pot199892/388258→381360/75335/.7. Each source focus4 links31442. Census measures runtime preflight, not complete per-toy effect certification.
