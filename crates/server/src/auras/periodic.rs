@@ -171,13 +171,20 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         {
             crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster);
         }
-        PERIODIC_TRIGGER_SPELL => crate::spell_cast::cast_triggered(
-            world,
-            tick.caster,
-            tick.trigger_spell,
-            Some(unit),
-            TICK_TRIGGER_DEPTH,
-        ),
+        PERIODIC_TRIGGER_SPELL => {
+            // TC OnEffectPeriodic runs before the default trigger, even when
+            // DB2 has no trigger (the script supplies Mirror Image1264098).
+            run_scripted_tick(world, unit, spell, tick);
+            if tick.trigger_spell != 0 {
+                crate::spell_cast::cast_triggered(
+                    world,
+                    tick.caster,
+                    tick.trigger_spell,
+                    Some(unit),
+                    TICK_TRIGGER_DEPTH,
+                );
+            }
+        }
         PERIODIC_DUMMY => run_dummy_tick(world, unit, spell, tick),
         other => debug!(
             "Spell {}: periodic aura type {other} has no tick handler",
@@ -186,7 +193,7 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
     }
 }
 
-fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+fn run_scripted_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) -> bool {
     let scripted = world
         .get_resource::<scripts::AuraScripts>()
         .and_then(|scripts| scripts.0.get(&spell.id))
@@ -199,6 +206,12 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
         if let Some(aura) = aura {
             scripts::run_periodic(world, unit, &aura, tick.effect_index);
         }
+    }
+    scripted
+}
+
+fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+    if run_scripted_tick(world, unit, spell, tick) {
         return;
     }
     let Some(effect) = spell

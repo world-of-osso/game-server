@@ -11,17 +11,60 @@ fn bound_boss_with_catalog(
     bit: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
+    let difficulty = if map_id == 409 { 3 } else { 1 };
+    bound_boss_at_difficulty(entry, map_id, bit, difficulty, catalog)
+}
+
+/// Use the production importer on a consistent isolated snapshot, never
+/// canonical data. The TempDir stays alive until all fixture resources are loaded.
+fn prepare_mirror_database() -> (tempfile::TempDir, std::path::PathBuf) {
+    let directory = tempfile::tempdir().expect("isolated encounter fixture directory");
+    let path = directory.path().join("encounter-mirror.sqlite");
+    let source = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("read-only encounter source database");
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .expect("snapshot canonical encounter data without writing source");
+    let script =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/encounter_summons.py");
+    let result = std::process::Command::new("python3")
+        .arg(script)
+        .arg("--db")
+        .arg(&path)
+        .output()
+        .expect("run authenticated mirror template importer");
+    assert!(
+        result.status.success(),
+        "mirror source preparation failed: {}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    (directory, path)
+}
+
+fn bound_boss_at_difficulty(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    difficulty: u32,
+    catalog: Option<bossmod::Catalog>,
+) -> (Harness, Entity, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     if let Some(catalog) = catalog {
         app.insert_resource(catalog);
     }
-    let path = world_db_path();
+    let prepared = (entry == 234648).then(prepare_mirror_database);
+    let path = prepared
+        .as_ref()
+        .map_or_else(world_db_path, |(_, path)| path.clone());
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
-    templates.retain(|id, _| *id == entry);
+    templates.retain(|id, _| *id == entry || (entry == 234648 && [234660, 255050].contains(id)));
     crate::world_data::load_template_models(&conn, &mut templates);
+    let difficulty_templates =
+        crate::world_data::load_difficulty_templates(&conn, &expected, &templates);
     let hp = conn
         .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
         .unwrap()
@@ -36,6 +79,7 @@ fn bound_boss_with_catalog(
         .collect();
     app.insert_resource(WorldData {
         templates,
+        difficulty_templates,
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
@@ -58,7 +102,6 @@ fn bound_boss_with_catalog(
     app.insert_resource(scripts);
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
-    let difficulty = if map_id == 409 { 3 } else { 1 };
     let mut instances = crate::maps::InstanceManager::default();
     let entrant = crate::maps::instances::InstanceEntrant {
         character_id: 2001,
@@ -80,26 +123,7 @@ fn bound_boss_with_catalog(
         .map;
     app.insert_resource(instances);
     app.insert_resource(maps);
-    let spawn = conn.query_row(
-        "SELECT guid,position_x,position_y,position_z,orientation,spawntimesecs FROM content_creature WHERE id1=? AND map=? ORDER BY guid LIMIT 1",
-        [entry, map_id], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: entry,
-            map: map_id as u16, zone_id: 0, position_x: row.get(1)?, position_y: row.get(2)?,
-            position_z: row.get(3)?, orientation: row.get(4)?, spawntimesecs: row.get(5)?,
-            wander_distance: 0.0, movement_type: 0, display_id: None, unit_flags: None,
-            spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap();
-    let wd = app.world().resource::<WorldData>();
-    let mut queue = bevy::ecs::world::CommandQueue::default();
-    let mut commands = Commands::new(&mut queue, app.world());
-    let boss = crate::zones::spawn_creature(
-        &mut commands,
-        wd,
-        &wd.templates[&entry],
-        map,
-        false,
-        &spawn,
-        &mut rand::thread_rng(),
-    );
-    queue.apply(app.world_mut());
+    let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
     let near = [
         spawn.position_x + 3.0,
         spawn.position_y,
@@ -124,6 +148,538 @@ fn bound_boss_with_catalog(
     };
     h.advance(0.05);
     (h, boss, map)
+}
+
+fn spawn_authored_actor(
+    app: &mut App,
+    conn: &Connection,
+    entry: u32,
+    map: InMap,
+    difficulty: u32,
+) -> (Entity, CreatureSpawn) {
+    let spawn = conn.query_row(
+        "SELECT guid,position_x,position_y,position_z,orientation,spawntimesecs FROM content_creature WHERE id1=? AND map=? ORDER BY guid LIMIT 1",
+        [entry, map.map_id], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: entry,
+            map: map.map_id as u16, zone_id: 0, position_x: row.get(1)?, position_y: row.get(2)?,
+            position_z: row.get(3)?, orientation: row.get(4)?, spawntimesecs: row.get(5)?,
+            wander_distance: 0.0, movement_type: 0, display_id: None, unit_flags: None,
+            spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap();
+    let wd = app.world().resource::<WorldData>();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    let actor = crate::zones::spawn_creature(
+        &mut commands,
+        wd,
+        wd.template_for(entry, difficulty)
+            .expect("authored fixture difficulty"),
+        map,
+        false,
+        &spawn,
+        &mut rand::thread_rng(),
+    );
+    commands
+        .entity(actor)
+        .insert(crate::zones::CreatureDifficulty(difficulty));
+    queue.apply(app.world_mut());
+    (actor, spawn)
+}
+
+#[test]
+fn encounter_coverage_kystia_mirror_tick_spawns_authored_copy_in_the_same_instance() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(14.4);
+    assert!(!h.has_aura(kystia, 1264095));
+    assert!(h.creatures_of(255050).is_empty());
+    h.advance(0.3);
+    assert!(h.has_aura(kystia, 1264095));
+    // Local DB2 Attributes5/0x200 requests an extra tick on apply; subsequent
+    // effect0 ticks are1500ms. Do not invent a2-second initial wait.
+    assert_eq!(h.creatures_of(255050).len(), 1);
+    h.advance(1.6);
+    let mirrors = h.creatures_of(255050);
+    assert_eq!(
+        mirrors.len(),
+        2,
+        "initial plus authored1500ms periodic tick"
+    );
+    let center = *h.app.world().get::<Position>(kystia).unwrap();
+    for mirror in mirrors {
+        assert_eq!(*h.app.world().get::<InMap>(mirror).unwrap(), map);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::zones::TempSummon>(mirror)
+                .unwrap()
+                .summoner,
+            kystia
+        );
+        let p = h.app.world().get::<Position>(mirror).unwrap();
+        assert!((-30.0..=25.0).contains(&(p.x - center.x)));
+        assert!((-26.0..=15.0).contains(&(p.z - center.z)));
+        assert!(
+            h.has_aura(mirror, 1264106),
+            "authored SmartAI Respawn11 must cast Felstorm"
+        );
+    }
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), kystia);
+    h.advance(0.1);
+    assert!(
+        h.creatures_of(255050).is_empty(),
+        "evade must retire owned mirrors"
+    );
+}
+
+#[test]
+fn encounter_coverage_mirror_respawn_cast_is_not_an_ordinary_reset_cast() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let mirror = crate::zones::summon_creature(
+        h.app.world_mut(),
+        kystia,
+        255050,
+        [8860.0, -4840.0, 13.0, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    assert_eq!(*h.app.world().get::<InMap>(mirror).unwrap(), map);
+    assert!(
+        h.has_aura(mirror, 1264106),
+        "appearance must run sourced Respawn11 cast"
+    );
+    let original_expiry = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(mirror)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1264106)
+        .unwrap()
+        .expires_at;
+    h.advance(1.1);
+    super::super::dispatch(h.app.world_mut(), mirror, Hook::Reset);
+    h.advance(0.1);
+    let expiry_after_reset = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(mirror)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1264106)
+        .unwrap()
+        .expires_at;
+    assert_eq!(
+        original_expiry, expiry_after_reset,
+        "ordinary reset must not refresh Respawn11 Felstorm"
+    );
+}
+
+#[test]
+fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    h.engage(kystia);
+    let mirror = crate::zones::summon_creature(
+        h.app.world_mut(),
+        kystia,
+        255050,
+        [8860.0, -4840.0, 13.0, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    assert!(h.has_aura(mirror, 1264106));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        mirror,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1264106,
+    );
+    h.advance(0.1);
+    assert!(
+        h.app.world().get_entity(mirror).is_err(),
+        "TC Felstorm OnRemove must DespawnOrUnsummon after1ms"
+    );
+    assert_eq!(
+        super::super::instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::InProgress)
+    );
+    assert!(h.app.world().get_entity(kystia).is_ok());
+}
+
+#[test]
+fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    h.engage(kystia);
+    h.advance(0.1);
+    h.hit_pct(nibbles, 2_000.0);
+    assert_eq!(
+        h.health(nibbles).current,
+        1.0,
+        "TC Nibbles SetUnkillable must clamp a lethal hit"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(nibbles)
+            .is_none()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    assert!(
+        h.inbox(0).ends.is_empty(),
+        "companion damage cannot complete encounter3101"
+    );
+}
+
+#[test]
+fn encounter_coverage_nibbles_health_check_starts_authored_light_infusion_phase() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(0.1);
+    assert!(
+        h.inbox(0)
+            .engages
+            .iter()
+            .any(|frame| frame.unit == nibbles.to_bits() && frame.target_frame_priority == 2)
+    );
+    h.hit_pct(nibbles, 2_000.0);
+    h.advance(0.8);
+    assert_ne!(
+        h.app.world().get::<UnitFactionTemplate>(nibbles).unwrap().0,
+        35,
+        "source health check is not due before1s"
+    );
+    h.advance(0.2);
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(nibbles).unwrap().0,
+        35
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(nibbles)
+            .unwrap()
+            .display_id,
+        128332
+    );
+    assert!(
+        matches!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(nibbles),
+            Some(crate::creature_ai::CreatureState::Pursuing { .. })
+        ),
+        "friendly scripted phase cannot be generic evade: {:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(nibbles)
+    );
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(nibbles)
+        .expect("Light Infusion must start at the1s health check");
+    assert_eq!(cast.spell_id, 1230304);
+    assert_eq!(cast.duration, 2.0, "local CastingTimeIndex5 is2000ms");
+    h.advance(2.2);
+    let channel = h
+        .app
+        .world()
+        .get::<CastState>(nibbles)
+        .expect("Light Infusion must become the authored channel");
+    assert_eq!(channel.spell_id, 1230304);
+    assert_eq!(channel.cast_type, CastType::Channel);
+    assert_eq!(channel.duration, 15.0, "local DurationIndex8 is15000ms");
+    assert!(
+        h.has_aura(kystia, 1265412),
+        "Light Infusion dummy must apply Destabilized to Kystia"
+    );
+    assert!(
+        !h.has_aura(kystia, 1217989),
+        "Light Infusion203 must remove the initial shield"
+    );
+    // Named source gap, NOT successful cycle acceptance: partial flags0x40020
+    // omit IGNORE_CASTER_AURAS.20s Destabilized still stuns Kystia after15s Light.
+    h.advance(14.9);
+    assert_eq!(
+        crate::spell_cast::creature_cast_ignoring_in_progress(
+            h.app.world_mut(),
+            kystia,
+            474238,
+            Some(nibbles)
+        ),
+        Err(crate::spell_cast::CastFailure::CrowdControlled(
+            crate::auras::CastBlock::Stunned
+        ))
+    );
+    assert_eq!(
+        h.app.world().get::<CastState>(kystia).unwrap().spell_id,
+        1265412
+    );
+    assert!(
+        !h.has_aura(kystia, 1217989),
+        "blocked source callback must not invent shield renewal"
+    );
+    assert!(
+        h.health(nibbles).current > h.health(nibbles).max * 0.2,
+        "authored10% healing ticks must restore the companion"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    assert!(
+        h.inbox(1).engages.is_empty(),
+        "companion frame cannot leak to another copy"
+    );
+}
+
+#[test]
+#[ignore = "authentic infusion cycle blocked: local15s Light/20s self-stun; no approved timer/flag correction"]
+fn encounter_coverage_kystia_full_infusion_cycle_acceptance_gate() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(0.1);
+    h.hit_pct(nibbles, 2_000.0);
+    h.advance(18.1);
+    let infusion = h
+        .app
+        .world()
+        .get::<CastState>(kystia)
+        .expect("Illicit Infusion required for full cycle");
+    assert_eq!(infusion.spell_id, 474238);
+    assert_eq!(infusion.cast_type, CastType::Channel);
+    assert_eq!(infusion.duration, 3.0);
+    h.advance(3.2);
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(kystia)
+        .unwrap();
+    assert_eq!(
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 1217989)
+            .unwrap()
+            .stacks,
+        3
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(nibbles).unwrap().0,
+        16
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(nibbles)
+            .unwrap()
+            .display_id,
+        126199
+    );
+}
+
+#[test]
+fn encounter_coverage_kystia_uses_authored_chaos_barrage_schedule_and_lifecycle() {
+    // TC a352b1fa boss_kystia_manaheart.cpp: 1s initial, 3500ms repeat.
+    // Primary actor only completes encounter3101; Nibbles never grants boss credit.
+    let (mut h, boss, map) = bound_boss(234648, 2813, 0);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(boss);
+    h.advance(0.9);
+    assert_eq!(h.casts(0, boss, 1230298), 0);
+    h.advance(0.2);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(boss)
+        .expect("authored1s Chaos Barrage missing");
+    assert_eq!(cast.spell_id, 1230298);
+    assert_eq!(cast.duration, 3.0, "DB2 CastingTimeIndex14 is3000ms");
+    assert_eq!(
+        h.casts(0, boss, 1230298),
+        0,
+        "source trigger flags do not bypass cast time"
+    );
+    h.advance(2.8);
+    assert_eq!(h.casts(0, boss, 1230298), 0);
+    h.advance(0.2);
+    assert_eq!(h.casts(0, boss, 1230298), 1);
+    h.advance(0.3);
+    assert!(h.app.world().get::<CastState>(boss).is_none());
+    h.advance(0.2);
+    assert_eq!(
+        h.app.world().get::<CastState>(boss).unwrap().spell_id,
+        1230298
+    );
+    h.advance(3.0);
+    assert_eq!(
+        h.casts(0, boss, 1230298),
+        2,
+        "authored3500ms repeat missing"
+    );
+    assert_eq!(h.inbox(0).starts[0].encounter_id, 3101);
+    assert!(h.inbox(1).starts.is_empty());
+    assert!(
+        h.inbox(1)
+            .log
+            .iter()
+            .all(|e| e.source != Some(boss.to_bits()))
+    );
+    // Mirror is due14s, but TC waits for the11.5s Chaos cast to finish14.5s.
+    h.advance(6.8);
+    assert!(
+        !h.has_aura(boss, 1264095),
+        "Mirror Images interrupted Chaos Barrage"
+    );
+    h.advance(0.3);
+    assert!(
+        h.has_aura(boss, 1264095),
+        "due Mirror Images aura did not follow cast completion"
+    );
+    assert_eq!(
+        h.casts(0, boss, 474240),
+        0,
+        "Normal must not schedule Fel Nova"
+    );
+    // Controlled death proof includes the authored four-stack damage reduction.
+    h.hit_pct(boss, 2_000.0);
+    h.advance(0.05);
+    assert!(h.inbox(0).ends.last().unwrap().success);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        1
+    );
+    let casts = h.casts(0, boss, 1230298);
+    h.advance(4.0);
+    assert_eq!(h.casts(0, boss, 1230298), casts, "dead boss cast again");
+}
+
+#[test]
+fn encounter_coverage_kystia_appears_with_sourced_four_stack_felshield() {
+    let (mut h, boss, _) = bound_boss(234648, 2813, 0);
+    let shield_stacks = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(boss)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1217989))
+        .map(|aura| aura.stacks);
+    assert_eq!(
+        shield_stacks,
+        Some(4),
+        "TC JustAppeared/FelCrazed must supply four stacks"
+    );
+    let before = h.health(boss).current;
+    h.hit(boss, 100_000.0);
+    let protected_loss = before - h.health(boss).current;
+    assert!(protected_loss > 0.0);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1217989,
+    );
+    let before = h.health(boss).current;
+    h.hit(boss, 100_000.0);
+    let unprotected_loss = before - h.health(boss).current;
+    // DB2 aura87 authors -20% for each of the four stacks.
+    assert!((protected_loss / unprotected_loss - 0.2).abs() < 0.001);
+}
+
+#[test]
+fn encounter_coverage_kystia_source_trigger_flags_do_not_bypass_school_lockout() {
+    let (mut h, boss, _) = bound_boss(234648, 2813, 0);
+    let now = h.app.world().resource::<Time>().elapsed_secs_f64();
+    let mut history = crate::spell_cast::SpellHistory::default();
+    history.lock_schools(127, now + 30.0);
+    h.app.world_mut().entity_mut(boss).insert(history);
+    h.engage(boss);
+    h.advance(1.1);
+    assert_eq!(
+        h.casts(0, boss, 1230298),
+        0,
+        "TC ignores only cast-in-progress, not school lockout"
+    );
+}
+
+#[test]
+fn encounter_coverage_kystia_heroic_fel_nova_schedule_and_evade_retirement() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(234648, 2813, 0, 2, None);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(boss);
+    // Due12s, admitted only after the11.5s Chaos cast completes14.5s.
+    h.advance(14.4);
+    let nova_hits = |h: &Harness| {
+        h.inbox(0)
+            .log
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Damage
+                    && e.source == Some(boss.to_bits())
+                    && e.spell_id == Some(1223906)
+            })
+            .count()
+    };
+    assert_eq!(nova_hits(&h), 0);
+    h.advance(0.3);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(boss)
+        .expect("Heroic selector→Blink→Fel Nova must start the sourced cast");
+    assert_eq!(cast.spell_id, 1223906);
+    assert_eq!(cast.duration, 3.5, "DB2 CastingTimeIndex22 is3500ms");
+    h.advance(3.5);
+    assert!(
+        nova_hits(&h) > 0,
+        "Heroic Fel Nova must deal actual DB2 damage"
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.05);
+    assert!(!h.inbox(0).ends.last().unwrap().success);
+    let hits = nova_hits(&h);
+    h.advance(16.0);
+    assert_eq!(nova_hits(&h), hits, "evaded boss retained its15s schedule");
 }
 
 #[test]

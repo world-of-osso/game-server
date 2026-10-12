@@ -8,7 +8,7 @@ struct TimedDespawn {
     fade_before_despawn: bool,
 }
 
-pub(super) fn schedule_despawn(
+pub(in crate::scripted_ai) fn schedule_despawn(
     world: &mut World,
     entity: Entity,
     delay_ms: u32,

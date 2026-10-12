@@ -27,6 +27,9 @@ pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (crate::scripted_ai::murder_row::SPELL_FEL_CRAZED, 1) {
+        return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
+    }
     super::toy_scripts::cast_effect(spell, index)
         .or_else(|| batch14::cast_effect(spell, index))
         .or_else(|| batch9::cast_effect(spell, index))
@@ -119,8 +122,25 @@ const DEFLECTING_SPIKES: u32 = 321_028;
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
 pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
+/// Source OnDestinationTargetSelect hooks, keyed by spell/effect/target selector.
+pub(super) fn relocate_destination(
+    spell_id: u32,
+    effect: &crate::spell_info::SpellEffect,
+    dest: &mut super::targets::Dest,
+) {
+    if spell_id == crate::scripted_ai::murder_row::SPELL_MIRROR_IMAGE
+        && effect.index == 0
+        && effect.implicit_targets.contains(&87)
+    {
+        crate::scripted_ai::murder_row::relocate_mirror_destination(dest);
+    }
+}
+
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::murder_row::SPELL_FEL_NOVA_SELECTOR, 0) => {
+            Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
+        }
         (124491, 0) => Some(start_switch_capture),
         (97372, 0) => Some(crate::pvp::change_track),
         (batch17::CONFLAGRATE, 0) => Some(batch17::conflagrate),
@@ -312,6 +332,9 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        crate::scripted_ai::murder_row::SPELL_BLINK => {
+            Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
+        }
         batch20::BARBED_SHOT => Some(batch20::grant_barbed_focus),
         batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
         batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),
