@@ -354,6 +354,39 @@ pub(crate) fn credit_objective(
     changed
 }
 
+/// Pinned KilledPlayerCredit: personal counter; flagged objectives require the victim's effective team.
+pub(crate) fn credit_player_kill(db: &QuestDb, log: &mut QuestLogData, same_team: bool) -> bool {
+    const SAME_FACTION: u32 = 0x80;
+    let mut changed = false;
+    for active in &mut log.active {
+        if active.failed
+            || active
+                .expires_at
+                .is_some_and(|end| db.now.is_some_and(|now| now >= end))
+        {
+            continue;
+        }
+        let Some(quest) = db.quests.get(&active.quest_id) else {
+            continue;
+        };
+        active.counts.resize(quest.objectives.len(), 0);
+        for (index, (objective, count)) in
+            quest.objectives.iter().zip(&mut active.counts).enumerate()
+        {
+            let flags = crate::world_quest_objectives::rule(quest, index).flags;
+            let team_allowed = flags & SAME_FACTION == 0 || same_team;
+            if objective.kind == ObjectiveKind::PlayerKills
+                && team_allowed
+                && *count < objective.required
+            {
+                *count += 1;
+                changed = true;
+            }
+        }
+    }
+    changed
+}
+
 /// `WorldSession::HandleAreaTriggerOpcode` (MiscHandler.cpp:521-558) for an entered
 /// trigger: every quest in the log the trigger explores (`GetQuestsForAreaTrigger`)
 /// whose exploration is not done yet gets it (`AreaExploredOrEventHappens`). Returns

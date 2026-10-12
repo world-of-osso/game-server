@@ -605,6 +605,113 @@ fn world_quest_area_entry_progress_reward_window_replay_and_expiry() {
     );
 }
 
+#[test]
+fn world_quest_player_kills_use_authoritative_deaths_personal_credit_and_faction_flags() {
+    use crate::quest_data::{ObjectiveDef, ObjectiveKind, QuestTemplate};
+    use crate::world_quest_objectives::ObjectiveRule;
+    let mut app = setup_app_with(|app| {
+        app.add_message::<crate::death::PlayerDeathTransition>();
+    })
+    .unwrap();
+    let killer = spawn_named_client(&mut app, 30, "PvpQuest");
+    let ally = spawn_named_client(&mut app, 30, "PvpAlly");
+    let enemy = spawn_named_client(&mut app, 30, "PvpEnemy");
+    app.world_mut()
+        .get_mut::<Player>(enemy.player)
+        .unwrap()
+        .race = 2;
+    for player in [ally.player, enemy.player] {
+        app.world_mut()
+            .entity_mut(player)
+            .insert(shared::components::Health {
+                current: 100.,
+                max: 100.,
+            });
+    }
+    let objectives = vec![
+        ObjectiveDef {
+            kind: ObjectiveKind::PlayerKills,
+            object_id: 0,
+            required: 2,
+            text: "Players defeated".into(),
+        },
+        ObjectiveDef {
+            kind: ObjectiveKind::PlayerKills,
+            object_id: 0,
+            required: 2,
+            text: "Same faction".into(),
+        },
+        ObjectiveDef {
+            kind: ObjectiveKind::Monster,
+            object_id: 0,
+            required: 2,
+            text: "Never player credit".into(),
+        },
+    ];
+    app.world_mut().resource_mut::<QuestDb>().quests.insert(
+        900001,
+        QuestTemplate {
+            id: 900001,
+            objectives,
+            world_objective_rules: Some(vec![
+                ObjectiveRule::default(),
+                ObjectiveRule {
+                    flags: 128,
+                    weight: 0.,
+                },
+                ObjectiveRule::default(),
+            ]),
+            ..Default::default()
+        },
+    );
+    let active = crate::persistence::quest_store::ActiveQuestData {
+        quest_id: 900001,
+        counts: vec![0; 3],
+        ..Default::default()
+    };
+    for client in [&killer, &ally] {
+        save_quest_log(
+            db(&app),
+            client.character_id,
+            &QuestLogData {
+                active: vec![active.clone()],
+                ..Default::default()
+            },
+        );
+    }
+    crate::combat::kill_unit(app.world_mut(), killer.player, ally.player);
+    assert_eq!(
+        load_quest_log(db(&app), killer.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![1, 1, 0]
+    );
+    assert_eq!(
+        load_quest_log(db(&app), ally.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![0, 0, 0]
+    );
+    crate::combat::kill_unit(app.world_mut(), killer.player, ally.player);
+    assert_eq!(
+        load_quest_log(db(&app), killer.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![1, 1, 0]
+    );
+    crate::combat::kill_unit(app.world_mut(), killer.player, enemy.player);
+    assert_eq!(
+        load_quest_log(db(&app), killer.character_id)
+            .active(900001)
+            .unwrap()
+            .counts,
+        vec![2, 1, 0]
+    );
+}
+
 #[path = "zephras_quest_tests.rs"]
 mod zephras_tests;
 
