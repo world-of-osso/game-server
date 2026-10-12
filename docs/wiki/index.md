@@ -1,5 +1,13 @@
 # Wiki Index
 
+- [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29) — player-only263 admission/completion, caster-class and parent flags, thirteen controls; cooking-focus/spellcaster integration preserves both payload contracts.
+
+- [Native form admission](../class-completeness6.md#native-form-admission--batch28) — authored64-bit masks/form flags, recipient275 bypass, ten cast/lifecycle controls and explicit conditional census transitions; whole class goal remains open.
+
+- [Shared AoE avoidance](../class-completeness2.md#aoe-avoidance-shared-aura229) — native per-effect229 school/multiplicative reduction; five damage/lifecycle controls, flag/leech and class-wide proof limits.
+
+- [Level80 class completeness](systems/spell-casting.md#level80-class-completeness) — all13/all40 native census; [continuation](../class-completeness2.md): native selectors/lifecycles, owner summon damage/raw mastery, ready-time credit, charged missile modifiers, minimum-speed floors and zero-amount linked children; representative live gate closed, whole spell/talent coverage open.
+- [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations and real witnesses, recipient-safe typing and explicit native/data coverage boundaries.
 - [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations/real witnesses, recipient-safe typing, four scaled identities and two authored state-kit/expiry proofs; explicit remaining boundaries.
 
 - [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.

@@ -38,6 +38,10 @@ pub struct SummonProperties {
 }
 
 impl SummonProperties {
+    pub(crate) fn is_pet(self) -> bool {
+        self.control == CONTROL_PET
+    }
+
     fn follows_owner(self) -> bool {
         self.control == CONTROL_PET
             || matches!(

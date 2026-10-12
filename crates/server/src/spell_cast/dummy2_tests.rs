@@ -1,6 +1,7 @@
 //! Second batch: real catalog casts, not direct script-hook calls.
 use super::test_harness::*;
 use shared::components::PowerType;
+use shared::protocol::CombatLogKind;
 
 #[test]
 fn dummy2_hunter_cobra_shot_damages_and_reduces_kill_command_cooldown() {
@@ -98,9 +99,30 @@ fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
 fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
     let mut h = harness(Vec::new(), &[100784, 261917, 113656, 117418, 120086], 10)
         .expect("real world.db required");
+    // This is a cooldown-sequence fixture, not a target-death test. Real cone damage
+    // now reaches the target; keep it alive for the subsequent Blackout Kick.
+    *h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.npc)
+        .unwrap() = shared::components::Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
     h.set_power(PowerType::Chi, 6.0);
     h.cast_and_deliver(113656, Some(h.npc));
     h.advance(90); // Fists channel finished; its 24-second cooldown is running.
+    assert!(
+        h.health(h.npc) > 0.0,
+        "cooldown follow-up needs a living target"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(117418)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
     let before = h
         .app
         .world()
