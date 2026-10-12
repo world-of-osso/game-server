@@ -260,6 +260,13 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     }
 }
 
+/// TC Unit::_ApplyAura credits the recipient when a new application is installed.
+pub(crate) fn record_gain_aura(world: &mut World, target: Entity, spell: u32) {
+    if world.get::<Player>(target).is_some() {
+        record_criteria_event(world, target, CriteriaEvent::GainAura(spell));
+    }
+}
+
 /// TC GameEventSender.cpp:43-58 credits the player source, never an NPC/target.
 pub(crate) fn record_player_game_event(world: &mut World, source: Entity, event: u32) {
     if event != 0 && world.get::<Player>(source).is_some() {

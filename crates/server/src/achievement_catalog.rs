@@ -29,6 +29,7 @@ pub(crate) enum CriteriaEvent {
     Login,
     ExploreAreaBit(u32),
     TriggerGameEvent(u32),
+    GainAura(u32),
     CompleteMythicPlus(MythicCompletion),
     CompleteQuest(u32),
     CastSpell(u32),
@@ -50,6 +51,7 @@ impl CriteriaEvent {
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
             Self::TriggerGameEvent(_) => 73,
+            Self::GainAura(_) => 69,
             Self::CompleteMythicPlus(_) => 216,
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
@@ -80,6 +82,7 @@ impl CriteriaEvent {
             | Self::BeSpellTarget(asset)
             | Self::LearnSpell(asset)
             | Self::TriggerGameEvent(asset)
+            | Self::GainAura(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -368,7 +371,10 @@ impl AchievementCatalog {
                 }
                 let counter = aggregate.criteria_progress.entry(id).or_default();
                 *counter = if self.criteria.get(&id).is_some_and(|row| {
-                    matches!(row.kind, 0 | 12 | 28 | 29 | 36 | 73 | 74 | 158 | 165 | 216)
+                    matches!(
+                        row.kind,
+                        0 | 12 | 28 | 29 | 36 | 69 | 73 | 74 | 158 | 165 | 216
+                    )
                 }) {
                     counter.saturating_add(value)
                 } else {
@@ -619,7 +625,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (matches!(kind, 74 | 158) && row.get::<_, i32>(2)? == 0)
                         || (kind == 7 && row.get::<_, bool>(9)?)
-                        || (matches!(kind, 28 | 34) && row.get::<_, bool>(8)?)
+                        || (matches!(kind, 28 | 34 | 69) && row.get::<_, bool>(8)?)
                         || (kind == 29
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))

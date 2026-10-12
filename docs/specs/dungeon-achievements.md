@@ -75,3 +75,5 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 - Type43: pinned WorldMapOverlay areas, Retail AreaBit persistence and actual living/non-taxi terrain discovery; no overlay/area ID substitution.
 - Type73: authoritative successful spell effect61 sends its authored MiscValue to the player caster. Targetless effects execute once; unit-target effects use the hit/immunity boundary. Timers, fail-event conditions, unknown modifiers and absent scripted producers remain unevaluated.
 - Type39 rated arena remains unsupported: no rating producer exists. Never seed a rating to claim support.
+- Type69: new authoritative aura applications credit the receiving player after successful installation; refreshes, immune/empty applications and dead-target rejection do not credit.
+- Type132 rated battleground rating has no native rating producer, matching the type39 gap. Type205 lacks authored local TransmogSet/TransmogSetGroup membership and a group-completion producer; collection IDs are not inferred.
