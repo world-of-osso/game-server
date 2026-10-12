@@ -19,7 +19,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Native targets72/86/91 use random directions and authored radii around the caster or prior destination.
 - [x] Unspawned class/spec/talent summon templates/models/addons are retained from authentic TDB rows without creating world spawns.
 - [x] Native spellcaster portals restrict party access and apply authored class/race conditions before casting their destination chain.
-- [ ] Aura429 multiplies direct spell and melee damage of the current owner's controlled pets and guardians, not that owner's personal damage or a stranger's summons. Removed modifiers stop affecting summons; copied source damage does not consume the owner modifier again.
+- [x] Aura429 multiplies direct spell and melee damage of the current owner's controlled pets and guardians, not that owner's personal damage or a stranger's summons. Removed modifiers stop affecting summons; copied source damage does not consume the owner modifier again.
 - [ ] Native MasteryAffectsPoints adds raw mastery points times the authored effect coefficient before points modifiers. Self-owned flagged aura amounts follow stat/aura changes without restarting duration, stacks or tick phase; derived mastery percent is not substituted for raw points. Underivable Lycara point/percent conversion remains a gap.
 - [x] Apply native aura537 damage percentages only for matching label and aura owner.
 - [x] Apply aura457 haste only to its charge category; preserve running-clock progress and publish rate changes/replenishment without another cast.
