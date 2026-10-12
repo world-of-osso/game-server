@@ -29,7 +29,7 @@ Added/removed are multiset row differences, not GUID counts. Authentic source re
 
 ## Hosting / ground / navigation
 
-46 hosted open maps, including12 newly admitted older continents/zones. All57,718 hosted ground dependencies present; zero missing WDT/ADT/WMO files. deploy.sh calls the existing ground-files selector. Navmesh only exists for0/2991 (and instance34);44 hosted maps have no bake. Missing expansion navigation is not claimed as obstacle-aware movement. Ground filenames alone do not prove every surface walkable: Stormshield dock approach currently lacks usable support.
+46 hosted open maps, including12 newly admitted older continents/zones. All57,718 hosted ground dependencies present; zero missing WDT/ADT/WMO files. deploy.sh calls the existing ground-files selector, now covering both creature and GO-only maps. Navmesh only exists for0/2991 (and instance34);44 hosted maps have no bake. Missing expansion navigation is not claimed as obstacle-aware movement. Ground filenames alone do not prove every surface walkable: Stormshield dock approach currently lacks usable support.
 
 ## Live proof — active
 

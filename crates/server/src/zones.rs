@@ -1079,7 +1079,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
-    fn zone_population_null_spawn_flags_keep_quest_ender_player_immunity() {
+    fn zone_population_quest_ender_keeps_authored_player_immunity() {
         const LORD_AUTUMNVALE: u32 = 127080;
         const AUTHORED_FLAGS: u32 = 320;
         let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
