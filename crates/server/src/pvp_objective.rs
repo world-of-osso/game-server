@@ -582,7 +582,7 @@ fn enemy_team(team: BgTeam) -> BgTeam {
     }
 }
 
-fn send_match_snapshot(world: &mut World, match_id: u64) {
+pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
     let values = {
         let state = world.resource::<PvpServerState>();
         let Some(matched) = state.battleground_matches.get(&match_id) else {
