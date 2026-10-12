@@ -412,6 +412,8 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
     let started = crate::auras::aura_now(h.app.world());
     h.engage(boss);
     let mut previous_cast = None;
+    let mut cast_started = 0.0;
+    let mut busy_windows = Vec::new();
     let mut admissions: std::collections::HashMap<u32, Vec<f64>> = Default::default();
     for _ in 0..1_800 {
         h.advance(0.05);
@@ -421,6 +423,12 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
             .world()
             .get::<CastState>(boss)
             .map(|cast| cast.spell_id);
+        if previous_cast != current_cast {
+            if previous_cast.is_some() {
+                busy_windows.push((cast_started, now));
+            }
+            cast_started = now;
+        }
         if let Some(spell_id) = current_cast
             && previous_cast != current_cast
             && [265773, 265781, 265910, 265923].contains(&spell_id)
@@ -460,10 +468,18 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
             "authored spell {spell_id} did not repeat: {times:?}"
         );
         for pair in times.windows(2) {
-            // Events keep ticking while casts delay execution, so never shorten a repeat.
+            let mut expected_due = pair[0] + repeat;
+            for &(busy_start, busy_end) in &busy_windows {
+                if busy_start >= pair[1] - 0.001 {
+                    break;
+                }
+                if busy_start <= expected_due + 0.001 && expected_due < busy_end {
+                    expected_due = busy_end;
+                }
+            }
             assert!(
-                pair[1] - pair[0] >= repeat - 0.1,
-                "spell {spell_id}: {times:?}"
+                (pair[1] - expected_due).abs() <= 0.1,
+                "spell {spell_id}: actual {times:?}, due {expected_due}, busy {busy_windows:?}"
             );
         }
     }
@@ -478,6 +494,50 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
     assert!(
         h.inbox(0).timeline.is_empty(),
         "partial TC combat must not invent Retail alerts"
+    );
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_rejects_obsolete_bossmod_alert_catalog() {
+    // Authentic legacy LittleWigs GoldenSerpent.lua OnEngage CDBar265773/9s.
+    // Current Retail never invokes it, so even a stale catalog must stay silent.
+    let catalog = bossmod::Catalog(std::collections::HashMap::from([(
+        2139,
+        vec![bossmod::Rule {
+            id: 1,
+            trigger: bossmod::Trigger::Engage,
+            required_phase: None,
+            action: bossmod::Action::Timer {
+                spell_id: 265773,
+                duration_ms: 9_000,
+            },
+        }],
+    )]));
+    let (mut h, boss, _) = bound_boss_in_state(
+        135322,
+        1762,
+        0,
+        1,
+        Some(catalog),
+        EncounterState::InProgress,
+    );
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert!(
+        h.inbox(0)
+            .engages
+            .iter()
+            .any(|frame| frame.unit == boss.to_bits())
+    );
+    assert!(
+        h.inbox(0).timeline.is_empty(),
+        "stale legacy timer is not Retail authority"
     );
 }
 
