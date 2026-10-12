@@ -1,6 +1,24 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_area_predicates_use_authored_ancestry_and_negative_leave_test() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    // Little Scales Daycare14096 belongs to Valdrakken13862, criterion56318.
+    catalog.update(&mut state, CriteriaEvent::EnterArea(14096), None, 1);
+    assert_eq!(state.criteria_progress.get(&56318), Some(&1));
+    let mut outside = PlayerAchievementState::default();
+    catalog.update(&mut outside, CriteriaEvent::EnterArea(11400), None, 1);
+    assert!(!outside.criteria_progress.contains_key(&56318));
+    // TC's LeaveArea predicate is !IsInArea(previous_area, requested_area), not equality.
+    catalog.update(&mut outside, CriteriaEvent::LeaveArea(0), None, 1);
+    catalog.update(&mut outside, CriteriaEvent::LeaveArea(11400), None, 1);
+    assert!(!outside.criteria_progress.contains_key(&47848));
+    catalog.update(&mut outside, CriteriaEvent::LeaveArea(13862), None, 1);
+    assert_eq!(outside.criteria_progress.get(&47848), Some(&1));
+}
+
+#[test]
 fn zero_amount_leaf_requires_a_real_positive_credit_and_reports_one_of_one() {
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     let catalog = load_achievement_catalog(&conn).unwrap();

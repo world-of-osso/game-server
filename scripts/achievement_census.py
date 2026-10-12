@@ -12,7 +12,7 @@ from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_level_classes import qualified_level_classes
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 156, 157, 158, 160, 162, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -78,7 +78,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind == 152 and asset not in scenarios:
             continue
-        if kind in (11, 225) and asset not in zones:
+        if kind in (11, 163, 164, 225) and asset not in zones:
             continue
         if kind == 262 and asset not in taxi_nodes:
             continue

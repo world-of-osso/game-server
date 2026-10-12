@@ -83,6 +83,8 @@ pub(crate) enum CriteriaEvent {
     Login,
     ExploreAreaBit(u32),
     EnterTopLevelArea(u32),
+    EnterArea(u32),
+    LeaveArea(u32),
     TriggerGameEvent(u32),
     GainAura(u32),
     WinBattleground(u32),
@@ -180,6 +182,8 @@ impl CriteriaEvent {
             Self::Login => 74,
             Self::ExploreAreaBit(_) => 43,
             Self::EnterTopLevelArea(_) => 225,
+            Self::EnterArea(_) => 163,
+            Self::LeaveArea(_) => 164,
             Self::TriggerGameEvent(_) => 73,
             Self::GainAura(_) => 69,
             Self::WinBattleground(_) => 1,
@@ -226,6 +230,8 @@ impl CriteriaEvent {
                 u32::from(level) == criteria.asset
             }
             Self::ExploreAreaBit(bit) => criteria.exploration_bits.contains(&bit),
+            Self::EnterArea(area) => area != 0 && criteria.area_members.contains(&area),
+            Self::LeaveArea(area) => area != 0 && !criteria.area_members.contains(&area),
             Self::GetLootByType(kind, _) => u32::from(kind) == criteria.asset,
             Self::FulfillCraftingOrderType(kind) => u32::from(kind) == criteria.asset,
             Self::ReachMaxLevel(class) => {
@@ -365,6 +371,7 @@ struct Criteria {
     mythic: Option<MythicRequirements>,
     max_level_class: Option<u8>,
     exploration_bits: Vec<u32>,
+    area_members: BTreeSet<u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -708,6 +715,8 @@ impl AchievementCatalog {
             | CriteriaEvent::CompleteQuest(_)
             | CriteriaEvent::LearnSpell(_)
             | CriteriaEvent::ExploreAreaBit(_)
+            | CriteriaEvent::EnterArea(_)
+            | CriteriaEvent::LeaveArea(_)
             | CriteriaEvent::EnterTopLevelArea(_)
             | CriteriaEvent::KnowPetCreature(_)
             | CriteriaEvent::LearnToy(_)
@@ -1010,7 +1019,27 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
     Ok(catalog)
 }
 
+/// TC DB2Manager::IsInArea follows authored parent links, unlike terrain zone selection.
+fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTreeSet<u32> {
+    let mut descendants = BTreeSet::new();
+    let mut pending = vec![root];
+    while let Some(area) = pending.pop() {
+        if descendants.insert(area) {
+            pending.extend(children.get(&area).into_iter().flatten().copied());
+        }
+    }
+    descendants
+}
+
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
+    let mut areas = conn.prepare("SELECT ID, ParentAreaID FROM area_table WHERE ID != 0")?;
+    let mut area_children = HashMap::<u32, Vec<u32>>::new();
+    for row in areas.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
+        let (area, parent) = row?;
+        if parent != 0 {
+            area_children.entry(parent).or_default().push(area);
+        }
+    }
     let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset), EXISTS(SELECT 1 FROM taxi_nodes t WHERE t.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
@@ -1045,6 +1074,11 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 kind,
                 mythic,
                 max_level_class,
+                area_members: if matches!(kind, 163 | 164) {
+                    collect_area_descendants(row.get::<_, i32>(2)? as u32, &area_children)
+                } else {
+                    BTreeSet::new()
+                },
                 exploration_bits: exploration_bits.clone(),
                 asset: row.get::<_, i32>(2)? as u32,
                 // TDB1210 criteria_data:11118-11127 require holiday404;
@@ -1065,7 +1099,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 43 && !exploration_bits.is_empty())
                         || (kind == 185 && row.get::<_, bool>(10)?)
                         || (kind == 152 && row.get::<_, bool>(11)?)
-                        || (matches!(kind, 11 | 225) && row.get::<_, bool>(12)?)
+                        || (matches!(kind, 11 | 163 | 164 | 225) && row.get::<_, bool>(12)?)
                         || (kind == 262 && row.get::<_, bool>(13)?)
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
