@@ -30,6 +30,7 @@ pub(crate) enum CriteriaEvent {
     CompleteQuest(u32),
     CastSpell(u32),
     BeSpellTarget(u32),
+    LearnSpell(u32),
     DefeatEncounter(u32),
 }
 
@@ -47,6 +48,7 @@ impl CriteriaEvent {
             Self::CompleteQuest(_) => 27,
             Self::CastSpell(_) => 29,
             Self::BeSpellTarget(_) => 28,
+            Self::LearnSpell(_) => 34,
             Self::DefeatEncounter(_) => 165,
         }
     }
@@ -69,6 +71,7 @@ impl CriteriaEvent {
             | Self::CompleteQuest(asset)
             | Self::CastSpell(asset)
             | Self::BeSpellTarget(asset)
+            | Self::LearnSpell(asset)
             | Self::DefeatEncounter(asset) => asset == criteria.asset,
         }
     }
@@ -366,7 +369,7 @@ impl AchievementCatalog {
         *counter = match event {
             CriteriaEvent::ReachLevel(level) => (*counter).max(u64::from(level)),
             CriteriaEvent::SkillRank(_, rank) => u64::from(rank),
-            CriteriaEvent::CompleteQuest(_) => 1,
+            CriteriaEvent::CompleteQuest(_) | CriteriaEvent::LearnSpell(_) => 1,
             CriteriaEvent::ReputationGained(_, value) => u64::from(value),
             CriteriaEvent::CurrencyGained(_, amount) | CriteriaEvent::AcquireItem(_, amount) => {
                 counter.saturating_add(u64::from(amount))
@@ -583,7 +586,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                     || ((matches!(kind, 0 | 5 | 8 | 12 | 27 | 36 | 46 | 165)
                         || (kind == 158 && row.get::<_, i32>(2)? == 0)
                         || (kind == 7 && row.get::<_, bool>(9)?)
-                        || (kind == 28 && row.get::<_, bool>(8)?)
+                        || (matches!(kind, 28 | 34) && row.get::<_, bool>(8)?)
                         || (kind == 29
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))

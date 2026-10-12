@@ -10,7 +10,7 @@ from pathlib import Path
 
 from import_achievement_modifiers import qualified_mythic_criteria
 
-BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 36, 46, 158, 165, 216}
+BASE_TYPES = {0, 5, 7, 8, 12, 27, 28, 29, 34, 36, 46, 158, 165, 216}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -49,7 +49,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids):
             continue
         if any(int(row[key]) for key in CONDITIONS):
             continue
-        if kind in (28, 29) and asset not in spells:
+        if kind in (28, 29, 34) and asset not in spells:
             continue
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
