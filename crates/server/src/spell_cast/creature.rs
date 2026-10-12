@@ -78,7 +78,7 @@ fn load_creature_cast(
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
     let requirement = targets::explicit_requirement(handled_effects(&spell));
-    let explicit = target.or_else(|| default_scripted_target(world, caster, &spell, requirement));
+    let explicit = target.or_else(|| default_scripted_target(world, caster, requirement));
     Ok((spell, explicit))
 }
 
@@ -87,7 +87,6 @@ fn load_creature_cast(
 fn default_scripted_target(
     world: &World,
     caster: Entity,
-    spell: &SpellInfo,
     requirement: Option<targets::Relation>,
 ) -> Option<Entity> {
     let relation = requirement?;
@@ -96,9 +95,11 @@ fn default_scripted_target(
             .get::<crate::networking::CombatTarget>(caster)
             .and_then(|target| target.0)
             .filter(|&target| {
-                targets::relation_matches(world, caster, target, relation)
-                    && targets::creature_type_allowed(world, spell, target)
+                world.get::<shared::components::Health>(target).is_some()
+                    && targets::relation_matches(world, caster, target, relation)
             })
+    } else if relation == targets::Relation::Ally {
+        None
     } else {
         victim(world, caster)
     };
