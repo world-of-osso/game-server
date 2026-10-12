@@ -546,7 +546,12 @@ mod session {
         };
         let player = app
             .world_mut()
-            .spawn((position, health, UnitFactionTemplate(1)))
+            .spawn((
+                position,
+                health,
+                UnitFactionTemplate(1),
+                crate::maps::InMap::continent(0),
+            ))
             .id();
         let npc = app
             .world_mut()
@@ -559,6 +564,7 @@ mod session {
                 position,
                 health,
                 UnitFactionTemplate(1),
+                crate::maps::InMap::continent(0),
             ))
             .id();
         let connection = app

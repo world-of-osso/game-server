@@ -37,6 +37,8 @@ fn spell_quest_app() -> Option<App> {
             crate::creature_aggro::CreatureAggroPlugin,
             crate::scripted_ai::ScriptedAiPlugin,
         ));
+        // These quests run no boss encounter; skip the production world-copy load.
+        app.insert_resource(crate::scripted_ai::bossmod::Catalog::default());
         app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
             Duration::from_millis(50),
         ));

@@ -115,6 +115,7 @@ fn crafter(h: &mut Harness, name: &str) -> (Entity, u64) {
                 z: 0.0,
             },
             UnitFactionTemplate(1),
+            crate::maps::InMap::continent(0),
             Moving(false),
             profs,
         ))
@@ -474,6 +475,7 @@ fn crafting_orders_wire_customer_query_place_and_cancel() {
                 max: 100.0,
             },
             shared::components::UnitFactionTemplate(faction),
+            crate::maps::InMap::continent(0),
         ))
         .id();
     h.send::<shared::protocol::InteractNpc, shared::protocol::InteractionChannel>(
