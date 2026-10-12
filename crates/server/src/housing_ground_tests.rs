@@ -34,6 +34,17 @@ fn housing_ground_closure_keeps_all_authored_tiles_and_wmo_dependencies() {
 
 #[test]
 #[ignore = "requires locally extracted Retail housing map geometry"]
+fn housing_ground_home_interior_authored_entry_has_real_support() {
+    let mut ground = GroundMap::new(&housing_cache(), HashMap::from([(2783, 5890928)]));
+    // Authored NeighborhoodMap7 Home Interior entry, not a fabricated room spawn.
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(-1000.0, -1000.0, 0.1);
+    let probe = ground.ground_at(2783, Vec3::new(x, y, z));
+    println!("HOUSING_INTERIOR_ENTRY {probe:?}");
+    assert!(matches!(probe, GroundProbe::Supported(height) if height.is_finite()));
+}
+
+#[test]
+#[ignore = "requires locally extracted Retail housing map geometry"]
 fn housing_ground_founders_authored_entry_cornerstone_and_plot_teleport_are_supported() {
     let mut ground = GroundMap::new(&housing_cache(), HashMap::from([(2735, 5660542)]));
     // NeighborhoodMap1, actual GameObjects527268 and NeighborhoodPlot417 teleport.
