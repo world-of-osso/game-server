@@ -62,6 +62,23 @@ Incremental server-crate rebuild (one file touched, loaded machine): debug opt-l
 - `persistence::tests::periodic_save_writes_every_changed_player_with_map_and_corpse`
 - `frame_stats::tests::*` — window reset and lost ticks past the clamp
 
+## Release catalog-copy regression (2026-10-12)
+
+Release master `cb1a89e` on private UDP5882 with a SQLite backup of canonical world.db reproduced idle work means 20.9–23.4 ms, maxima 50.7–64.8 ms and 1–2 overruns per 10 seconds after startup. Existing `system-timings` profiling measured `pvp_objective::update_battleground_objectives` at 11.97 ms/run: it cloned the complete `GameObjectSpawns` resource every fixed tick, including when no battleground existed. `perf` was not installed; tracing used a diagnostic release snapshot only.
+
+The objective tick now reads only the two flag homes for each mapped match. No catalog clone occurs when there are no matches; each active match retains the same authored flag positions, roster start, drop and capture logic. Creature activation, respawn clocks and script activation are unchanged. Behavioral regression: `pvp::tests::objective_tick_without_matches_needs_no_world_object_catalog`; existing `maps::tests::ten_warsong_players_accept_over_the_channel_then_ack_one_reserved_map` covers the real roster/transfer/three-capture lifecycle.
+
+Identical harness: restored private redb seed, same SQLite backup, release binaries without tracing, 25-second warm-up, 60-second idle period, three real NetworkBridge peers, 25-second entry warm-up, 60-second online period. Only reporting windows wholly inside a measurement period count (five complete windows each). Peers: level90 warriors at Stormwind map0 (-8833,628,94), Orgrimmar map1 (1631,-4378,30) and authored Valdrakken map2444 (273.76,-1018.95,870.875). Auth/world-entry logs confirm all three connected. Host load varied; these are not sakuin measurements.
+
+| Scope | Before mean / max ms | After mean / max ms | Before / after overruns (50s) |
+|---|---:|---:|---:|
+| Idle | 9.44 / 31.5 | 3.06 / 12.7 | 0 / 0 |
+| Three city peers | 14.70 / 60.5 | 11.84 / 42.5 | 1 / 0 |
+
+The earlier loaded-host reproduction was 20.9–23.4 ms idle; do not present that as the paired baseline or claim production improvement without deploying. Local startup hosted 115356 creatures and 23560 objects; the cloned catalog contained 75205 object spawns, including other map copies. This is the requested canonical local data, not a demonstrated exact production census. Cold entry still spikes (before 553.3 ms, after 677.9 ms), separate from steady simulation; this fix does not bound login/startup latency. Diagnostic after-profile removed objectives from the top15: online leaders were replication change collection ~1.92 ms/run and active wander ~1.80 ms/run, not global idle catalog copies.
+
+Durable logs and harness: `game-engine/data/diagnostics/server-tick-perf-2026-10-12/`; branch/proof ledger in `/home/osso/.worktrees/handoff-server-tick-perf.md`. The peer fixture is [native_tick_perf_peers.rs](../../../../game-engine/godot/network/examples/native_tick_perf_peers.rs).
+
 ## Sources
 
 - [crates/server/src/frame_stats.rs](../../../crates/server/src/frame_stats.rs) — frame work and fixed-step report

@@ -1,6 +1,12 @@
 # Wiki Log
 
+- 2026-10-11 — [Adventure Guide](../specs/adventure-guide.md): copy-only catalogs, signed priorities, current-month account contributions and query/tracking. Five scoped service tests pass; both-skin persisted Track and authored display-only TrainingGrounds852 rendered. Check/fmt pass; unsupported gates/criteria/month/reward bindings remain explicit.
 - 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
+- 2026-10-11 — [Boss-mod continuation](../bossmod-data-coverage.md): target5 root fix gives real Zevrim CastState/effects; lexical/guard/locale/custom-timer regressions17PASS, timeline7PASS, changed protocol1729PASS and check/fmt pass. Rendered addon warnings and both-skin private5906 Hydrospawn/Zevrim bars/warnings proved in eight inspected PNGs. DBM/EXBoss native input clocks remain explicit gaps; no fabricated timers or shared realm changes.
+
+- 2026-10-11 — [Boss-mod runtime boundary](systems/bossmod-data.md#current-integration-boundary): sole-source copied catalogs,191 hosted bindings,343 literal LittleWigs schedules and central server CastStart/CastSuccess reconciliation. Importer5PASS, timeline6PASS/1FAIL, check and changed-file rustfmt pass. No native/PNG proof; warning text transport, dynamic raid timeline inputs and cast-start fixture observation remain open. Not ready.
+
+- 2026-10-11 — [Boss-mod data import](systems/bossmod-data.md): non-executing Lua AST extraction, Retail branch selection, literal timers/health/phases/warnings, pinned Spell/SpellName validation and copy-only SQLite. Four behavioral tests pass; server reconciliation and private native proof remain open.
 
 - 2026-10-11 — [Private terrain destinations](investigations/private-terrain-destinations.md): UDP5881 reproduced cooldown-assist/Erland authority falling before client tiles parse; stale setup Z rejected by unchanged step reach. Shared build-qualified private destination manifest/helper; actual server gravity RED on original coordinates. Live/final proof retained separately, no canonical writes or collision clamps.
 
@@ -901,3 +907,5 @@ Recovered nine local-CASC DB2 payloads and added source-pinned staging import; [
 ## 2026-10-11 — profession specialization runtime
 
 Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe persistence and quest reward boundary; [mechanics](systems/profession-specializations.md). Core source rules already pass; runtime/network/live proofs remain open.
+
+- 2026-10-12: [Release tick profiling](investigations/server-tick-lag.md#release-catalog-copy-regression-2026-10-12): idle objective tick copied the full gameobject catalog; restrict reads to mapped match flag homes, preserving gameplay.
