@@ -25,26 +25,29 @@ pub(super) fn check_cast(
     if !auras.has_type(DISABLE_CASTING_EXCEPT_ABILITIES) || bypasses_restriction(spell) {
         return Ok(());
     }
-    let class_set = world
-        .get_resource::<ClassSpells>()
-        .and_then(|classes| {
-            classes
-                .classes
-                .iter()
-                .find(|class| class.class_id == player.class)
-        })
-        .map(|class| class.spell_class_set)
-        .ok_or_else(|| {
-            CastFailure::Unsupported(format!(
-                "missing native class metadata for aura263 caster class{}",
-                player.class
-            ))
-        })?;
+    let class_set = read_class_set(world, player.class)?;
     if has_class_family_exception(world, auras, class_set, spell)? {
         Ok(())
     } else {
         Err(CastFailure::CantDoThatRightNow)
     }
+}
+
+fn read_class_set(world: &World, class_id: u8) -> Result<u32, CastFailure> {
+    world
+        .get_resource::<ClassSpells>()
+        .and_then(|classes| {
+            classes
+                .classes
+                .iter()
+                .find(|class| class.class_id == class_id)
+        })
+        .map(|class| class.spell_class_set)
+        .ok_or_else(|| {
+            CastFailure::Unsupported(format!(
+                "missing native class metadata for aura263 caster class{class_id}"
+            ))
+        })
 }
 
 fn bypasses_restriction(spell: &SpellInfo) -> bool {
@@ -79,16 +82,16 @@ fn has_class_family_exception(
             .ok_or_else(|| {
                 CastFailure::Unsupported(format!("missing aura263 parent spell{}", aura.spell_id))
             })?;
-        let Some(parent_options) = parent.class_options.as_ref() else {
-            continue;
-        };
-        // HasAuraTypeWithFamilyFlags uses the parent spell's flags, NOT the effect mask.
-        let overlaps = (0..4).any(|word| {
-            parent_options.spell_class_mask[word] & cast_options.spell_class_mask[word] != 0
-        });
-        if overlaps {
+        if parent_flags_overlap(parent, cast_options.spell_class_mask) {
             return Ok(true);
         }
     }
     Ok(false)
+}
+
+/// HasAuraTypeWithFamilyFlags uses the parent spell's flags, NOT the effect mask.
+fn parent_flags_overlap(parent: &SpellInfo, cast_flags: [u32; 4]) -> bool {
+    parent.class_options.as_ref().is_some_and(|options| {
+        (0..4).any(|word| options.spell_class_mask[word] & cast_flags[word] != 0)
+    })
 }
