@@ -244,6 +244,48 @@ fn source_snapshot_preserves_visual_edges_wallet_mapping_and_lock_reasons() {
         .find(|node| node.node_id == 28534)
         .unwrap();
     assert_eq!(root_perk.perk.as_ref().unwrap().path_node_id, 28546);
+    let knowledge = tree.nodes.iter().find(|n| n.entry_id == 36327).unwrap();
+    assert_eq!(
+        knowledge.description,
+        "Improve at making leather armor, gaining +1 Skill per point in this Specialization."
+    );
+    let major = tree
+        .nodes
+        .iter()
+        .find(|n| n.node_id == 28535)
+        .unwrap()
+        .perk
+        .as_ref()
+        .unwrap();
+    assert!(major.is_major_bonus);
+    assert!(!major.unlocks_subpath);
+    let unlock = tree
+        .nodes
+        .iter()
+        .find(|n| n.node_id == 28533)
+        .unwrap()
+        .perk
+        .as_ref()
+        .unwrap();
+    assert!(!unlock.is_major_bonus);
+    assert!(unlock.unlocks_subpath);
+}
+
+#[test]
+fn sourced_description_variables_do_not_invent_missing_bindings() {
+    let sources = super::descriptions::load_description_sources(&source_connection()).unwrap();
+    assert_eq!(sources.resolve(36464, "+$EV1 $EN1").unwrap(), "+1 Skill");
+    assert!(sources.resolve(36464, "$ev2").is_err());
+    assert!(sources.resolve(0, "$ev1").is_err());
+    assert!(sources.resolve(36464, "$ev").is_err());
+    assert!(sources.resolve(36464, "$unknown1").is_err());
+    let catalog = source_catalog();
+    assert!(
+        catalog
+            .nodes
+            .values()
+            .all(|node| !node.description.contains('$'))
+    );
 }
 
 #[test]
