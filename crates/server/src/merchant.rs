@@ -238,6 +238,7 @@ impl Shop<'_, '_> {
                     name: goods.name,
                     quality: goods.quality,
                     price: goods.buy_price,
+                    extra_costs: Vec::new(),
                     stack_count: goods.buy_count,
                     max_stack: template.max_stack.max(1),
                     num_available: available,
