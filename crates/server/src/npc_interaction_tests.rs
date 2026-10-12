@@ -18,6 +18,9 @@ use crate::gold::GoldUpdateQueue;
 #[path = "transmog_tests.rs"]
 mod transmog_tests;
 
+#[path = "housing_interaction_tests.rs"]
+mod housing_interaction_tests;
+
 const HUMAN_TEMPLATE: u32 = 1;
 const ORC_TEMPLATE: u32 = 2;
 /// Auctioneer Fitch, Stormwind Trade District (creature guid 79705, npcflag 0x200000, faction 12).

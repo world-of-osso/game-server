@@ -1,0 +1,84 @@
+# Build-qualified housing catalog
+
+## Contract
+
+- Import only local DB2 exports authenticated against the audit CSV/DB2 SHA-256 receipts and exact active Retail product/build/build key.
+- Preserve every authored column and literal unknown field without reinterpretation. JSON field values retain the CSV representation.
+- Key records by build key, DB2 table name and record ID. Keep older builds separate; replace one build atomically and idempotently without touching unrelated world tables.
+- Preserve source FDID/layout/hash/row count, encrypted dropped-record counts and absent-table receipts. Missing source data is not a gameplay default.
+- Catalog entries, StartingQuantity and raw plot Cost do not grant ownership, establish grant semantics, or establish currency units.
+
+## Lead import (canonical database mutation; agents must not run)
+
+From game-server after landing the housing-core importer:
+
+```text
+python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/housing-core-2026-10-12/qualified-sources --db /home/osso/Projects/world-of-osso/game-server/data/world.db --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
+python3 scripts/import_housing.py --evidence /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/housing-core-2026-10-12/qualified-sources --db /home/osso/Projects/world-of-osso/game-engine/data/cache/housing.sqlite --build 12.1.0.69933 --build-key dcfc90fffd79ba00406ae46f5f657592
+```
+
+This combined export includes the original audit, authenticated cornerstones and catalog acquisition sources:47 tables/70,552 rows/54 unreadable records. It supersedes the older35-table and cornerstone-only imports; each import replaces this build's records, so do not run an older export afterward. The same command with an isolated output database verifies the export. Static catalogs are not proof of playable neighborhoods, Housing Dashboard, decor acquisition, editor or visitor replication.
+
+## Housing map metadata
+
+Load authored Map.db2 types 7 (House) and 8 (Neighborhood), retaining map2735/2736/2783 names and WDT FDIDs. They are not dungeons and generic continent/dungeon admission remains refused until the housing service authorizes a particular neighborhood/owner/visitor copy. Loading map metadata is not hosting playable housing.
+
+Property copies are keyed by authored map ID and authoritative neighborhood/house identity. Housing authority must reserve entry for a character before ordinary teleport/arrival can resolve that copy; unreserved characters and reservations for another property are refused. Copies use the common instance-ID allocator but have no synthetic MapDifficulty, dungeon locks or reset schedule. A reservation allocates identity without initializing map content. The first ordinary transfer arrival or saved-map login initializes that copy's authenticated objects/creatures exactly once; later arrivals reuse the same population. This admission primitive alone does not prove playable housing.
+
+No verified first-house exterior/interior grant source is available. Do not infer default grants from component membership, UnlockItemID=0 or the placeholder House row. Rank3 may use one bounded authentic vendor-item redemption path backed by world.db/TDB npc_vendor or an authored DB2 item effect (lead approval, 2026-10-11); never turn StartingQuantity into ownership without grant semantics.
+
+## Authoritative catalog coordinates
+
+The server reads build-qualified NeighborhoodMap entries and NeighborhoodPlot cornerstone/teleport coordinates from the imported catalog. Supported shipping neighborhoods are map2735/2736; record4/map2640 has no matching Map.db2 row. Plot prices retain authored copper amounts under the Retail cornerstone MoneyFrame/GetMoney contract. Names may be authentically empty; do not generate neighborhood/plot names or grants. Missing catalog imports must produce an explicit unavailable error.
+
+## Authored map ground
+
+Neighborhood2735/2736 and interior2783 use their real WDT/ADT and placed WMO collision. No generated flat floor substitutes for a missing map or house grant. Explicit registered-map extraction uses the existing local-CASC ground walker, including maps with no NPC spawns:
+
+```text
+python3 scripts/extract_ground.py --world-db <housing-world.db> --cache <private-housing-assets> --engine <game-engine-checkout> --casc-local <asset-resolver>/target/debug/casc-local --failed <private-housing-assets>/ground-failed.tsv --map 2735 --map 2736 --map 2783
+```
+
+Opt-in `housing_ground_ -- --ignored --nocapture` with `GAME_SERVER_GROUND_DIR=<private-housing-assets>` checks complete root/obj0/WMO geometry, actual210/225/25WDT roots and real support at Founder's authored entry/cornerstone/plot teleport. Client textures/M2 receipts, LOS bake and both-skin rendered admission remain separate proof gates. `scripts/build-host.py --bin los-bake --features bake` builds the existing geometry baker through the maintained host helper; default server-tool builds do not include it. Bake each selected map privately with `los-bake --data <private-housing-assets> --world-db <housing-world.db> --out <private-housing-assets>/los --map <2735|2736|2783> --all --no-eyes`; this preserves existing player-eye data and does not publish to canonical assets. Map bytes alone do not grant exterior or interior components.
+
+## Authenticated cornerstones
+
+Use NeighborhoodPlot.CornerstoneGameObjectID only as a reference to the same-build GameObjects record. Preserve that object's actual Pos, quaternion, name, type48, display and GameObjectDisplayInfo bounds. NeighborhoodPlot.CornerstonePosition is a different authored marker; never substitute it for a missing object. First copy arrival spawns available source cornerstones directly from the authoritative housing catalog; generic world startup population replacement cannot discard them. Ordinary later arrivals do not duplicate them. Plot payment requires that exact object in the player's copy and the existing five-yard gameobject model-box reach check, including nonfinite refusal. Ordinary UseGameObject opens the cornerstone through the same living-player/range validation and authenticated account/character link; identical coordinates in another copy and unauthenticated connections are refused. Its HousingReply carries the inspected plot identity without claiming ownership.
+
+Pinned local GameObjects/layout44BD453C supplies all55 Founder's Point cornerstones; Razorwind's55 referenced cornerstone records are absent. Its plot records remain browsable, but absent objects cannot be purchased through a fabricated marker. No first-house grant follows from either source.
+
+The [combined lead import](#lead-import-canonical-database-mutation-agents-must-not-run) includes decoded local GameObjects841620 and pinned DBD revision07d008f28907c00827cacadf2d7c1a40f578b6a3 alongside the original audit and acquisition sources; hashes and rows are checked by the same importer. It neither invents TDB templates nor mutates unrelated world tables.
+
+## Atomic ownership and basic storage
+
+The housing persistence table records account ownership, paid plot claims, storage counts and stable placed-instance IDs independently of character serialization. Purchase and inventory copper debit commit in one transaction; competing buyers cannot both claim one plot. No first-house exterior/room/decor grants are inferred.
+
+A bounded redemption candidate is authenticated by vendor252312/item245259/decor1693 (Small Val'sharah Bookcase), ExtendedCost0, item_sparse.BuyPrice500000 and collect spell1238340/effect324/MiscValue1693. Normal bag UseItem and the authenticated redemption request consume one owned Retail bag item and grant one stored copy atomically; neither creates vendor items nor waives acquisition costs. The server verifies the pinned HouseDecor.ItemID, on-use trigger, zero player condition and exact collect effect/decor linkage. Vendor provenance/cost is checked by the normal merchant acquisition path; collection requires ownership, not a vendor-only acquisition. Wrong build, altered linkage or absent source refuses collection. The collector now resolves every same-build HouseDecor.ItemID → ItemXItemEffect → on-use ItemEffect → effect324 target with zero player condition/base points, rather than a bookcase-only branch. Ownership remains an actual Retail bag item, not membership. Source census2722 matched links includes34 vendor items; quest/crafting/trade-acquired items use that same item collector without requiring a vendor listing. This does not manufacture quest/achievement rewards or recipes. Missing/nonzero-condition chains remain unavailable, not inferred. Bag updates and an authoritative owned-storage snapshot follow successful collection; repeating use of the consumed item cannot duplicate decor.
+
+Only an owner inside that house edits. Place consumes stored quantity, remove restores it, move/rotate preserve quantity, nonfinite transforms are refused. Account ownership/storage/layouts survive database reopen. Visitors require explicit owner HouseAccessAnyone configuration, receive the same saved layout, cannot edit and never receive the owner's private account storage. Unset access remains unknown and grants no visitor permission.
+
+The runtime service binds requests to authenticated account/character/player links. Neighborhood entry reserves the authored copy before the existing transfer handshake. Purchase additionally requires authoritative presence in that neighborhood and within the server's 5-unit gameobject interaction distance of its cornerstone; nonfinite positions cannot satisfy proximity. Accepted payment updates persisted gold and the live replication queue. Plot lists overlay durable ownership without exposing account IDs. Home Interior admission uses authored NeighborhoodMap7/map2783 entry and house-owned copies, without granting exterior/room components. Missing first-house grant data remains explicit: the raw authored terrain is not claimed to be an assembled house. Persist the visited house identity and authenticated account independently of instance IDs; fresh saved-house login rechecks access, so revoked visitors are refused. LeaveHouse returns to that house's authored NeighborhoodPlot teleport.
+
+Successful neighborhood transfers persist the authenticated character's map/neighborhood identity independently of process-local instance IDs. A fresh server resolves a character saved on that housing map into the same logical neighborhood copy; absent/mismatched admission is refused. The full wire/WorldPortAck purchase test closes and reopens redb and creates a fresh instance manager before exercising login admission.
+
+Native controls, playable terrain, component placement, item collection integration, editor networking and visitor convergence still require end-to-end proof. Persistence/domain tests alone do not certify them.
+
+## Behavioral proof
+
+Focused `scripts/tests/test_import_housing.py`: exact authored fireplace/plot data; unknown-field retention; no ownership/currency invention; idempotence; unrelated table preservation; wrong build/key and altered CSV/DB2 refusal; transactional rollback across tables.
+
+## Precision transforms and persistence schema1
+
+Expert commits atomically retain full Y-up position, yaw/pitch/roll in radians and positive finite uniform scale. Owner/in-house authority and stored/placed conservation remain unchanged; accepted full transforms publish to same-copy observers. WMO decor retains its authenticated InitialScale (Retail NoWMOScale); no arbitrary outdoor bounds or scale extrema are invented. Basic edits preserve the other axes and scale.
+
+Startup migrates pre-precision redb schema0 exactly once within initialization's transaction: preserve saved position/yaw and derive pitch, roll and scale from the same-build HouseDecor InitialRotation/InitialScale. Source degrees/Z-up convert to engine radians/Y-up; missing or invalid source aborts without replacing the row. Schema1 runtime has no legacy transform decoder. Reopening schema1 never resets later precision edits. No canonical world.db mutation is needed; source catalog promotion remains lead-owned.
+
+## Decor-reward quest acquisition
+
+Same-build HouseDecor item membership identifies existing TDB quest rewards, never grants them. Import the authored TDB objective14 as CriteriaTree, preserving its root/required amount/text. Only an unconditional CompleteAll4 root with one AcquireItem36 leaf and IsForQuest32 is enabled; unknown types, flags, timers/modifiers/world-state conditions or missing objectives block completion instead of falling through to empty legacy objectives. Successful ordinary paid merchant acquisition accumulates its actual delivered item quantity in the matching active quest; failed buys and other items give no credit. Normal quest turn-in, reward quantities and bag collection remain their existing authority paths.
+
+Pinned Furniture Favor92572 uses root216882/leaf216883/criterion109153/item253168 and rewards one253173 (Meadery Storage Barrel9247). CPU source/credit proof is separate from live acquisition: TDB has no253168 vendor listing; source vendor rows239598–239600 point at unresolved VendorItemID252826. Never substitute253168 for that reference or invent stock/cost/conditions. Recipe spells1239278/1239321 lack SkillLineAbility entries; GnomishFence's collect effect has MiscValue0. Those missing contracts remain explicit acquisition gaps.
+
+## Finder relationships and plot admission
+
+ListPlots overlays Retail None/Stranger/Friend/Self ownership relative to the requester. Friend status comes only from the character's persisted friends list and the real owner character name; account-owned houses are Self even for another owned character. No client-supplied friendship grants access. HouseAccessAnyone is still checked for interior visiting. Finder VisitPlot admits the authenticated neighborhood copy and ports to NeighborhoodPlot.TeleportPosition without payment, ownership, decor or a fabricated reservation timeout. Neighborhood map-entry orientation follows the existing source return path.
