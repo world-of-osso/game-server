@@ -14,11 +14,11 @@ from contextlib import closing
 from pathlib import Path
 
 from raid_encounters import read_journal
+from encounter_order import load_order
 
 EVENTS = {0, 4, 6, 7, 8, 17, 19, 20, 23, 25, 35, 40, 54, 55, 56, 57, 58, 61, 65}
 ACTIONS = {1, 2, 6, 11, 12, 17, 22, 29, 33, 37, 41, 53, 54, 55, 59, 64, 65, 66, 80, 81, 82, 83, 107, 152}
 TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
-CURRENT = {2993, 2813, 2825, 2859, 2923, 1762, 2521, 1877, 3004}
 PORTS = {'boss_hogger': [86604, 86620, 86736],
          'boss_lord_overheat': [12466, 86633, 86636],
          'boss_randolph_moloch': [86726, 86729, 55964, 55966]}
@@ -78,7 +78,7 @@ def index_rows(connection, query, key):
     return indexed
 
 
-def collect(connection, journals, actors, journal_maps, compat):
+def collect(connection, journals, actors, journal_maps, compat, order):
     connection.row_factory = sqlite3.Row
     maps = {r['ID']: dict(r) for r in connection.execute("SELECT * FROM map WHERE InstanceType IN (1,2) AND lower(Directory) NOT LIKE '%garrison%' AND EXISTS (SELECT 1 FROM map_difficulty d WHERE d.MapID=map.ID)")}
     records = catalog_records([dict(r) for r in connection.execute('SELECT * FROM dungeon_encounter')], journals, journal_maps, set(maps))
@@ -100,7 +100,7 @@ def collect(connection, journals, actors, journal_maps, compat):
     for record in records:
         mid = record['map_id']
         record['instance'] = maps[mid]['MapName_lang']
-        record['priority'] = 'current-season' if mid in CURRENT else 'unranked: no run-frequency source'
+        record['priority'] = order[mid]
         entries, gaps = resolve_actors(mid, record['journal_ids'], actors, candidates)
         bound = [b for b in bindings[mid] if b['encounter_id'] == record['encounter_id'] or
                  (record['bit'] is not None and b['bit'] == record['bit'] and not b.get('compatibility'))]
@@ -141,15 +141,24 @@ def collect(connection, journals, actors, journal_maps, compat):
 
 
 def render(records, database, revision):
+    instance_order = {r['map_id']: r for r in records}
+    priorities = ['## Work order (user-approved, not measured popularity)', '',
+                  'Tier1: locally related Midnight Season2 dungeons/current raid. Tier2: Normal leveling LFG dungeons by ContentTuning.MinLevelSquish (12.1 LFGDungeons no longer has MinLevel). Tier3: remaining instances, newest Map.ExpansionID first. Missing local tier relations/tuning stay in Tier3. This prioritizes current content and the new-character path without inventing production usage statistics or changing the Mythic+ catalog.', '',
+                  'Local DisplaySeason37 explicitly names Midnight Season2. MythicPlusSeasonTrackedMap relates challenge IDs to DisplaySeason (not directly to MythicPlusSeason.ID). JournalTier505 is Current Season; AvailabilityCondition156363 distinguishes Season2 entries. Both dungeon relations must exist; raids require JournalTierXInstance→JournalInstance→Map. No server season activation is inferred.', '',
+                  '|Rank|Tier|Map / instance|Local row IDs / rationale|', '|---:|---:|---|---|']
+    for rank, r in enumerate(sorted(instance_order.values(), key=lambda r: r['priority']['sort']), 1):
+        p = r['priority']
+        refs = ', '.join(f'{k}={v}' for k,v in p.items() if k not in ('tier','sort','reason'))
+        priorities.append(f"|{rank}|{p['tier']}|{r['map_id']} {r['instance']}|{refs}; {p['reason']}|")
     lines = ['# Hosted encounter coverage', '', 'Verified: 2026-10-12. **Census, not completion certification.**', '',
              f'Server revision: `{revision}`. Input: `{database}` (read-only).',
              'Sources: local TDB1210, DB2 12.1.0.69933 JournalEncounter/Creature and Map/DungeonEncounter; current-season roster: Blizzard Curse of Ula\'tek update notes, news24293281 (August 6, 2026).', '',
              'Every DungeonEncounter difficulty record and Journal-only encounter on an admissible party/raid map is retained. Garrisons excluded. A missing spawn is not a hosted fight. Display joins identify candidate actors; only imported bindings/compatibility data authorize kill credit. Multi-actor completion remains unproved.', '',
              '“Admitted casts” means current interpreter vocabulary or an existing Stockade Rust port, not correct damage, targeting, phases or complete boss mechanics. Spell effects, conditions, triggered chains and source-9 lists require behavioral certification. “Wired” is code reachability, not passing engage→kill→loot proof. Spawn counts are database placements, not observed live entities. Loot rows/gold are bindings, not awarded loot proof.', '',
-             'Priority tier: Altar of Fangs2993, Murder Row2813, Den of Nalorakk2825, Blinding Vale2859, Voidscar Arena2923, Kings\' Rest1762, Ruby Life Pools2521, Temple of Sethraliss1877 and Venomous Abyss3004. No run-frequency dataset supplied; no numeric popularity rank invented. Current-season instances are shown first, then stable map/encounter order pending frequency evidence.', '',
+             *priorities, '',
              f"Census: {len(records)} encounter records; {len({r['map_id'] for r in records})} maps; {sum(len(r['actors']) for r in records)} actor projections (difficulty duplicates retained).", '',
              '## Per-boss census', '', '|Map / instance|Encounter / journal|Boss / spawn count|AI source → runtime|Admitted cast IDs / gaps|START/END; credit; lockout|Loot bindings / proof|', '|---|---|---|---|---|---|---|']
-    for r in sorted(records,key=lambda r:(r['map_id'] not in CURRENT,r['map_id'],r['encounter_id'],r['journal_ids'])):
+    for r in sorted(records,key=lambda r:(r['priority']['sort'],r['encounter_id'],r['journal_ids'])):
         base = [f"{r['map_id']} {r['instance']}", f"{r['encounter_id']} (difficulty {r['difficulty']}, bit {r['bit']}); J:{','.join(map(str,r['journal_ids']))}"]
         if not r['actors']:
             lines.append('|'+ '|'.join(base+[r['name']+' / unresolved','unknown','; '.join(r['binding_gaps']),'blocked; blocked; blocked','unknown; unproved'])+'|')
@@ -174,6 +183,7 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--json',type=Path,required=True)
     parser.add_argument('--revision',required=True)
+    parser.add_argument('--order-db2',type=Path,required=True)
     args = parser.parse_args()
     journals=read_journal(args.journal,0xB88D11CC,13,{2:2})
     actors=read_journal(args.creatures,0x81A3C769,9)
@@ -182,8 +192,12 @@ def main():
     compat_path=Path(__file__).parent.parent/'crates/server/src/scripted_ai/encounter_compat.csv'
     compat=[tuple(map(int,r.split(','))) for r in compat_path.read_text().splitlines() if r and not r.startswith('#')]
     with closing(sqlite3.connect(args.db.resolve().as_uri()+'?mode=ro',uri=True)) as conn:
-        records=collect(conn,journals,actors,journal_maps,compat)
+        conn.row_factory=sqlite3.Row
+        conn.execute('BEGIN')
+        order=load_order(conn,args.order_db2,journal_maps)
+        records=collect(conn,journals,actors,journal_maps,compat,order)
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [args.journal,args.creatures,args.journal_instances,compat_path]}
+    hashes.update({str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in args.order_db2.glob('*.db2')})
     args.json.write_text(json.dumps(dict(revision=args.revision,source_hashes=hashes,records=records),indent=2)+'\n')
     args.output.write_text(render(records,args.db,args.revision))
     print(f'{len(records)} records, {len({r["map_id"] for r in records})} maps; wrote {args.output}')
