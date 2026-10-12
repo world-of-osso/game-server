@@ -9,7 +9,7 @@
 - Solo Shuffle requires authentic role/round policy as well as six-player DB2 rows. Dampening requires sourced runtime policy; spell existence alone cannot supply timing.
 
 ## Data installation
-Lead runs scripts/import-arenas.py against the intended worldDB with --wdt-dir pointing at the local-CASC WDT receipts. Source CSV: scripts/reference/arena-12.1.0.69933/BattlemasterList.csv. Runtime refuses startup without arena_map. Canonical imports remain lead-owned.
+Lead runs scripts/import-arenas.py against the intended worldDB with --wdt-dir pointing at the local-CASC WDT receipts and --promote for authored gate/orb objects. Promotion touches only arena object spawns and their templates. Source CSV: scripts/reference/arena-12.1.0.69933/BattlemasterList.csv. Runtime refuses startup without arena_map. Canonical imports remain lead-owned.
 
 ## Current proof boundary
-Skirmish queue pairing and readiness/preparation/elimination tested behaviorally. Reserved-copy admission regression reproduced; entry integration underway. Gates, enemy combat, authored orbs, native frames, rated/Shuffle and both-skin live proof are not yet complete. Full ledger: /home/osso/.worktrees/handoff-arena-coverage.md.
+Nine targeted server cases cover skirmish pairing, source level20 floor, reserved-copy admission, source door/orb loading, preparation/gates, real same-race enemy attacks, TC arithmetic/window policy, and full four-player skirmish/rated HostClient entry→32727 aura→90s physical34709 orb→HP-primed real kills→scored outcome/full resurrection→every exact origin return. Rated results persist personal rating/MMR only after the played outcome; old ratings with absent sourced MMR remain untrusted. Both-skin UI tests cover actions, enemy frames, rating and measured score display; rendered/UDP live proof remains pending. Shuffle role/round policy and dampening schedule remain source gaps. Full ledger: /home/osso/.worktrees/handoff-arena-coverage.md.
