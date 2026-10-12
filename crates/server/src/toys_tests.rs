@@ -2776,6 +2776,99 @@ fn toyfx14_zero_entry_costumes_use_authentic_gender_models_and_restore() {
 }
 
 #[test]
+fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_gameplay() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, duration) in [
+        (108743, 160688, 600000),
+        (110586, 160093, 180000),
+        (116115, 170869, 900000),
+        (127864, 188172, 3600000),
+        (137294, 212660, 300000),
+        (147537, 242014, 3600000),
+        (163744, 280053, 300000),
+        (180947, 335276, 900000),
+        (182890, 340276, 180000),
+        (204220, 403491, 300000),
+        (230727, 467285, 1800000),
+        (259240, 1264653, 300000),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("attachment-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app.insert_resource(store.clone());
+        let model_before = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+        let caster_health = *h.app.world().get::<Health>(h.caster).unwrap();
+        let target_health = *h.app.world().get::<Health>(h.npc).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(60);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        let aura = h
+            .app
+            .world()
+            .get::<UnitAuras>(h.caster)
+            .unwrap()
+            .auras
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap();
+        assert_eq!(
+            aura.duration_ms, duration,
+            "authored lifetime of item {item}"
+        );
+        assert_eq!(
+            h.app.world().get::<ModelDisplay>(h.caster),
+            model_before.as_ref()
+        );
+        assert_eq!(
+            *h.app.world().get::<Health>(h.caster).unwrap(),
+            caster_health
+        );
+        assert_eq!(*h.app.world().get::<Health>(h.npc).unwrap(), target_health);
+        assert_eq!(
+            h.app
+                .world_mut()
+                .query::<&crate::spell_cast::summon::SummonedCreature>()
+                .iter(h.app.world())
+                .count(),
+            0
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                spell_id: spell,
+            });
+        h.advance(5);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+    }
+}
+
+#[test]
 fn toys_effect_census() {
     report_toy_census(&crate::test_data::world_db_path(), "TOY_CENSUS_REPORT");
 }
