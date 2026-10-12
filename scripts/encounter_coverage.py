@@ -16,14 +16,14 @@ from pathlib import Path
 from raid_encounters import read_journal
 from encounter_order import load_order
 
-EVENTS = {0, 4, 6, 7, 8, 17, 19, 20, 23, 25, 35, 40, 54, 55, 56, 57, 58, 61, 65}
+EVENTS = {0, 4, 6, 7, 8, 11, 17, 19, 20, 23, 25, 35, 40, 54, 55, 56, 57, 58, 61, 65}
 ACTIONS = {1, 2, 6, 11, 12, 17, 22, 29, 33, 37, 41, 53, 54, 55, 59, 64, 65, 66, 80, 81, 82, 83, 107, 152}
 TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
 # TC a352b1fa murder_row.h / instance_murder_row.cpp identify these primaries,
 # even where no placement/model join is available. These census facts do not bind runtime credit.
 CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
                   (2813,3103): [234647], (2813,3105): [237415]}
-PARTIAL_PORTS = {'boss_kystia_manaheart': [1230298,1264095,474240,474183,1223906,1217989]}
+PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240,474183,1223906,1217989,1265412]}
 PORTS = {'boss_hogger': [86604, 86620, 86736],
          'boss_lord_overheat': [12466, 86633, 86636],
          'boss_randolph_moloch': [86726, 86729, 55964, 55966]}
@@ -126,8 +126,10 @@ def collect(connection, journals, actors, journal_maps, compat, order):
                 row_issues.append(dict(row='conditions', reasons=['SmartScript conditions not interpreted']))
             has_binding = entry in {b['creature_entry'] for b in bound}
             if script in PARTIAL_PORTS:
-                row_issues.append(dict(row='TC callbacks', reasons=['Nibbles/infusion phases and shield renewal unported',
-                    'mirror summon template255050 absent; mirror callbacks unported', 'door/boundary and source-empty loot unproved']))
+                row_issues.append(dict(row='TC callbacks', reasons=[
+                    'infusion completion blocked: local15s Light/20s Destabilized; exact474238 flags do not bypass caster auras',
+                    'mirror Normal template/callbacks/retirement supported on private copy; other difficulties and Felstorm damage unproved',
+                    'Fel Spray area geometry/damage, root/visual kits, door/boundary and source-empty loot unproved']))
             actor_spawns = [r for r in spawns[entry] if r['map'] == mid]
             loot = [dict(difficulty=d['DifficultyID'], lootid=d['lootid'], rows=loot_counts.get(d['lootid'],0),
                          gold=[d['mingold'], d['maxgold']]) for d in difficulties[entry]]

@@ -25,6 +25,11 @@ class CoverageTests(unittest.TestCase):
         row['target_type'] = 4
         self.assertEqual(coverage.row_gaps(row), ['target 4'])
 
+    def test_authored_respawn_cast_has_no_row_vocabulary_gap(self):
+        row = dict(id=0, event_type=11, action_type=11, target_type=1, event_flags=0,
+                   action_param1=1264106, action_param2=0, event_param2=0)
+        self.assertEqual(coverage.row_gaps(row), [])
+
     def test_ambiguous_display_does_not_assign_kill_credit(self):
         actors = [['Council', '', 30, 9, 123, 0, 0, 0, 9]]
         candidates = {(43, 123): [3669, 3670]}
