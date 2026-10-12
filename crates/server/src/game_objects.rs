@@ -50,7 +50,8 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
      WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10, 50) \
-     OR (g.map = ?7 AND t.type = ?8 AND t.entry IN (?9, ?10)) ORDER BY g.guid";
+     OR (g.map = ?7 AND t.type = ?8 AND t.entry IN (?9, ?10)) \
+     OR (g.map IN (SELECT map_id FROM arena_map) AND t.type IN (0,6)) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
