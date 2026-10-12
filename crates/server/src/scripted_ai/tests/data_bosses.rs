@@ -502,6 +502,39 @@ fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is
 }
 
 #[test]
+fn encounter_coverage_spit_gold_summons_only_on_expiry_or_target_death() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let player = h.player();
+    for (reason, expected) in [
+        (crate::auras::RemoveReason::Dispelled, 0),
+        (crate::auras::RemoveReason::Expired, 1),
+        (crate::auras::RemoveReason::Death, 2),
+    ] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: boss,
+                target: player,
+                spell_id: 265773,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(h.has_aura(player, 265773));
+        let location = *h.app.world().get::<Position>(player).unwrap();
+        crate::auras::remove_auras(h.app.world_mut(), player, reason, |aura| {
+            aura.spell_id == 265773
+        });
+        let actors = h.creatures_of(135406);
+        assert_eq!(actors.len(), expected, "source removal reason {reason:?}");
+        for actor in actors {
+            assert_eq!(*h.app.world().get::<InMap>(actor).unwrap(), map);
+            assert_eq!(*h.app.world().get::<Position>(actor).unwrap(), location);
+        }
+    }
+}
+
+#[test]
 fn encounter_coverage_nibbles_survives_lethal_hit_without_encounter_credit() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let conn =
