@@ -1456,3 +1456,58 @@ fn source_requirements_static_merchant_unique_limit_counts_retail_only() {
         assert_eq!(h.count_of(id), vec![1, 1]);
     }
 }
+
+/// TC BuyItemFromVendorSlot/SellItemToVendor: committed purchases (219), sales (220) and
+/// sale copper (59) only; refusals and buybacks credit nothing.
+#[test]
+fn achievements_criteria_vendor_purchases_and_sales_count_only_committed_trades() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut h = harness_with(|app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic vendor database");
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    // Hidden NPE trackers14223 (criterion48159) / 14221 (47940); Gold from vendors921 (4091).
+    let counters = |h: &Harness| {
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap();
+        [48159, 47940, 4091].map(|id| state.criteria_progress.get(&id).copied())
+    };
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.set_gold(88);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
+    assert_eq!(h.failures(), vec![MerchantError::NotEnoughMoney]);
+    assert_eq!(counters(&h), [None, None, None]);
+    h.set_gold(100_000);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
+    assert!(h.failures().is_empty());
+    assert_eq!(counters(&h), [Some(1), None, None]);
+    let linen = h.guid_of(LINEN);
+    h.sell(godric, linen, 5);
+    assert!(h.failures().is_empty());
+    assert_eq!(counters(&h), [Some(1), Some(1), Some(5 * 13)]);
+    h.send::<_, MerchantChannel>(BuybackItemRequest {
+        npc: godric.to_bits(),
+        slot: 0,
+    });
+    assert!(h.failures().is_empty());
+    assert_eq!(counters(&h), [Some(1), Some(1), Some(5 * 13)]);
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.player)
+        .unwrap();
+    assert!(state.earned_ids.contains(&14223) && state.earned_ids.contains(&14221));
+}

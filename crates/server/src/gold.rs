@@ -27,6 +27,7 @@ pub(crate) struct GoldUpdateQueue {
     acquired_items: Vec<(u64, u32, u32)>,
     looted_items: Vec<(u64, u32, u32)>,
     looted_money: Vec<(u64, u64)>,
+    criteria: Vec<(u64, crate::achievement::CriteriaEvent)>,
 }
 
 impl GoldUpdateQueue {
@@ -55,6 +56,19 @@ impl GoldUpdateQueue {
         if copper != 0 {
             self.looted_money.push((character, copper));
         }
+    }
+
+    /// Achievement credit of a committed inventory/money transaction by its character.
+    pub(crate) fn record_criteria(
+        &mut self,
+        character: u64,
+        event: crate::achievement::CriteriaEvent,
+    ) {
+        self.criteria.push((character, event));
+    }
+
+    pub(crate) fn take_criteria(&mut self) -> Vec<(u64, crate::achievement::CriteriaEvent)> {
+        std::mem::take(&mut self.criteria)
     }
 
     pub(crate) fn take_looted_money(&mut self) -> Vec<(u64, u64)> {
