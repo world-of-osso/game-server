@@ -33,37 +33,41 @@ fn read_snapshot(world: &World, player: Entity) -> SpellCostSnapshot {
         .get::<KnownSpells>(player)
         .expect("cost publication requires known spells")
         .iter()
-        .map(|spell_id| {
-            let result = store
-                .get(spell_id)
-                .ok_or_else(|| format!("spell {spell_id}: metadata absent"))
-                .and_then(|spell| {
-                    applicable_costs(world, player, spell)
-                        .map_err(|error| format!("spell {spell_id}: {error:?}"))
-                });
-            let affordable = result
-                .as_ref()
-                .is_ok_and(|costs| costs.iter().all(|(_, amount, current)| current >= amount));
-            let costs = result.map(|readings| {
-                readings
-                    .into_iter()
-                    .map(|(pool, amount, _)| EffectivePowerCost {
-                        power_type: match pool {
-                            CostPool::Health => -2,
-                            CostPool::Power(power) => power as i32,
-                        },
-                        amount,
-                    })
-                    .collect()
-            });
-            SpellCostReading {
-                spell_id,
-                costs,
-                affordable,
-            }
-        })
+        .map(|spell_id| read_spell_cost(world, player, store, spell_id))
         .collect();
     SpellCostSnapshot { spells }
+}
+
+fn read_spell_cost(
+    world: &World,
+    player: Entity,
+    store: &SpellStore,
+    spell_id: u32,
+) -> SpellCostReading {
+    let result = store
+        .get(spell_id)
+        .ok_or_else(|| format!("spell {spell_id}: metadata absent"))
+        .and_then(|spell| {
+            applicable_costs(world, player, spell)
+                .map_err(|error| format!("spell {spell_id}: {error:?}"))
+        });
+    let affordable = result
+        .as_ref()
+        .is_ok_and(|costs| costs.iter().all(|(_, amount, current)| current >= amount));
+    let costs = result.map(|readings| readings.into_iter().map(encode_effective_cost).collect());
+    SpellCostReading {
+        spell_id,
+        costs,
+        affordable,
+    }
+}
+
+fn encode_effective_cost((pool, amount, _): (CostPool, f32, f32)) -> EffectivePowerCost {
+    let power_type = match pool {
+        CostPool::Health => super::POWER_HEALTH,
+        CostPool::Power(power) => power as i32,
+    };
+    EffectivePowerCost { power_type, amount }
 }
 
 #[cfg(test)]
