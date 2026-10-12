@@ -28,8 +28,6 @@ mod bonus_stat_tests;
 #[cfg(test)]
 mod cast_while_moving_tests;
 #[cfg(test)]
-mod shapeshift_tests;
-#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -121,6 +119,9 @@ mod reflect;
 mod resources;
 pub mod runes;
 pub mod scripts;
+mod shapeshift;
+#[cfg(test)]
+mod shapeshift_tests;
 pub mod summon;
 #[cfg(test)]
 mod summon_at_tests;
@@ -263,6 +264,10 @@ pub enum CastFailure {
     AffectingCombat,
     /// `SPELL_FAILED_NOT_MOUNTED`.
     NotMounted,
+    /// `SPELL_FAILED_NOT_SHAPESHIFT`.
+    NotShapeshift,
+    /// `SPELL_FAILED_ONLY_SHAPESHIFT`.
+    OnlyShapeshift,
     NotEnoughPower(PowerType),
     NotEnoughHealth,
     /// Missing `SpellReagents` item (its name).
@@ -314,6 +319,8 @@ impl CastFailure {
             Self::LineOfSight => (R::LineOfSight, None),
             Self::AffectingCombat => (R::AffectingCombat, None),
             Self::NotMounted => (R::NotMounted, None),
+            Self::NotShapeshift => (R::NotShapeshift, None),
+            Self::OnlyShapeshift => (R::OnlyShapeshift, None),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
             // SPELL_FAILED_REAGENTS, SPELL_FAILED_TOTEM_CATEGORY, ERR_INV_FULL
@@ -1297,6 +1304,7 @@ fn validate_start(
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
+    shapeshift::check_cast(world, caster, spell)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
     teleport::check_destination(world, caster, spell)?;
