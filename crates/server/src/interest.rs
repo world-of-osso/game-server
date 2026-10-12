@@ -341,6 +341,7 @@ impl Plugin for InterestPlugin {
         app.init_resource::<InterestDirtyQueue>()
             .init_resource::<InterestIndex>()
             .add_observer(on_network_visibility_added)
+            .add_observer(on_private_object_owner_added)
             .add_observer(on_replication_client_added)
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
@@ -362,6 +363,16 @@ fn on_replication_client_added(
     for entity in &targets {
         commands.lose_visibility(entity, trigger.entity);
     }
+}
+
+fn on_private_object_owner_added(
+    trigger: On<Add, PrivateObjectOwner>,
+    owners: Query<&PrivateObjectOwner>,
+    mut index: ResMut<InterestIndex>,
+) {
+    let owner = owners.get(trigger.entity).expect("added private owner");
+    index.private_owners.insert(trigger.entity, owner.0);
+    index.dirty_targets.insert(trigger.entity);
 }
 
 fn on_network_visibility_added(

@@ -212,6 +212,7 @@ fn spawn_wild_summon(
     };
     let display_scale = read_actor_display_scale(world, actor);
     let metadata = snapshot_summon_metadata(world, ctx, properties_id, properties, display_scale);
+    let private_owner = private_summon_owner(world, ctx.caster, properties.flags);
     let mut entity = world.entity_mut(actor);
     entity.insert((
         // Model DisplayScale is a separate factor, not native object scale.
@@ -223,6 +224,9 @@ fn spawn_wild_summon(
     ));
     if properties.faction != 0 {
         entity.insert(UnitFactionTemplate(properties.faction));
+    }
+    if let Some(owner) = private_owner {
+        entity.insert(crate::interest::PrivateObjectOwner(owner));
     }
     drop(entity);
     crate::auras::auras_changed(world, actor);
