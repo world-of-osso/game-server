@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 
 use bevy::ecs::system::RunSystemOnce;
 use serde::Deserialize;
-use shared::components::{Health, Position, VerticalVelocity};
+use shared::components::{Health, MovementControl, Player, Position, VerticalVelocity};
 
 use super::*;
 use crate::networking::FallTracker;
@@ -58,7 +58,15 @@ fn private_live_destinations_remain_supported_through_server_gravity() {
                     current: 100.0,
                     max: 100.0,
                 },
-                VerticalVelocity::default(),
+                Player {
+                    name: "Terrainproof".into(),
+                    race: 1,
+                    class: 2,
+                    appearance: Default::default(),
+                },
+                MovementControl::default(),
+                // A sentinel velocity proves gravity actually processed this entity.
+                VerticalVelocity(-10.0),
                 FallTracker::grounded(destination.z),
                 crate::maps::InMap::continent(destination.map),
             ))
@@ -79,6 +87,11 @@ fn private_live_destinations_remain_supported_through_server_gravity() {
                 position.y
             );
             assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+            assert_eq!(
+                app.world().get::<VerticalVelocity>(player).unwrap().0,
+                0.0,
+                "{name}: gravity did not resolve the sentinel downward velocity"
+            );
         }
     }
 }
