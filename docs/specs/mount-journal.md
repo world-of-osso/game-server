@@ -14,7 +14,9 @@ User-approved2026-10-11 Retail account Mount Journal. [Implementation](../wiki/s
 
 ### Acquisition/game integration — user extension2026-10-11
 
-- [ ] Authentic vendor mount teaching items/direct-learn entries retain cost, ExtendedCost, faction/reputation authority and are proved through buy→learn in both skins.
+- [ ] Authentic vendor mount teaching items retain authored Money, item/currency ExtendedCost, faction and minimum reputation authority and are proved through buy→learn in both skins. TDB1210 has no mount direct-learn vendor entries; none are fabricated.
+- Mount purchases multiply every cost by purchase count, reject insufficient payment/reputation/space without changing player state, and commit gold, token destruction, currency and delivery in one redb transaction. Authored CurrencyTypes IDs are not aliases of legacy wallet IDs. Missing cost metadata disables the affected offer, never makes it free.
+- Minimum reputation uses ItemSparse rank0–7 and actual CharacterReputation standing; vendor usability reflects the same authority. No reputation discount is introduced.
 - [ ] Retail AH Miscellaneous→Mounts lists/trades teaching items; authoritative purchase/delivery/use grants ownership, with both-skin live proof.
 - [ ] Ownership drives Already known item/vendor/AH presentation; mount teaching items grant no transmog appearance.
 
