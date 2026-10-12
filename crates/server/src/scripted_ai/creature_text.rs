@@ -259,7 +259,7 @@ fn hearers(world: &mut World, speaker: Entity, range: Option<f32>) -> Vec<Entity
         .collect()
 }
 
-fn send_chat(world: &mut World, player: Entity, message: ChatMessage) {
+pub(crate) fn send_chat(world: &mut World, player: Entity, message: ChatMessage) {
     let mut connections = world.query::<(&PlayerLink, &mut MessageSender<ChatMessage>)>();
     for (link, mut sender) in connections.iter_mut(world) {
         if link.0 == player {

@@ -60,6 +60,9 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
+        .insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+    h.app.init_resource::<crate::group::GroupRegistry>();
+    h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app
         .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
@@ -3694,7 +3697,7 @@ fn toyfx14_dice_learn_emote_and_roll_to_only_the_authored_audience() {
         ));
         let mut peers = Vec::new();
         for (peer, x, map, name) in [
-            (2, 3.0, 0, "Near"),
+            (2, 35.0, 0, "Near"),
             (3, 500.0, 0, "Far"),
             (4, 3.0, 1, "OtherMap"),
             (5, 500.0, 1, "PartyFar"),
@@ -3839,6 +3842,8 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
+    world.insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+    world.init_resource::<crate::group::GroupRegistry>();
     world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
