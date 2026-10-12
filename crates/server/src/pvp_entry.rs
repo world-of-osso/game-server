@@ -64,6 +64,11 @@ fn entry_location(world: &World, player: Entity) -> Result<WorldLocation, String
     let store = world
         .get_resource::<MapStore>()
         .ok_or("map catalog is unavailable")?;
+    if let Some(transport) = store.safe_loc_transports.get(&location_id) {
+        return Err(format!(
+            "battleground start location {location_id} requires unimplemented transport {transport} entry"
+        ));
+    }
     let destination = store
         .safe_locs
         .get(&location_id)

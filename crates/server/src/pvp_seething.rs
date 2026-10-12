@@ -66,35 +66,7 @@ impl SeethingRuntime {
                 return Err(format!("source Azerite template/display {entry} missing"));
             }
         }
-        let fissures: Vec<_> = world
-            .get_resource::<crate::world_data::WorldData>()
-            .ok_or("Seething source creature catalog missing")?
-            .spawns
-            .iter()
-            .filter(|spawn| spawn.map == 1803 && spawn.template_entry == 125253)
-            .map(|spawn| Vec3::new(spawn.position_x, spawn.position_y, spawn.position_z))
-            .collect();
-        let mut ground = world
-            .get_resource_mut::<crate::ground::GroundMap>()
-            .ok_or("Seething source terrain missing")?;
-        let mut sites = BTreeMap::new();
-        for position in fissures {
-            let (x, y, z) = crate::terrain_height::wow_to_bevy(position.x, position.y, position.z);
-            let area = ground
-                .area_at(1803, Vec3::new(x, y, z))
-                .ok_or_else(|| format!("Seething fissure {position:?} has no authored ADT area"))?;
-            if !SEETHING_AREAS.contains(&area) || sites.insert(area, position).is_some() {
-                return Err(format!(
-                    "Seething fissure duplicate/unsupported area {area}"
-                ));
-            }
-        }
-        if sites.len() != SEETHING_AREAS.len() {
-            return Err(format!(
-                "Seething source requires twelve fissure areas; found {}",
-                sites.len()
-            ));
-        }
+        let sites = load_fissure_sites(world)?;
         Ok(Self {
             battle: SeethingBattle::new(),
             sites,
@@ -157,6 +129,44 @@ impl SeethingRuntime {
             .id();
         self.objects.insert(generation, entity);
     }
+}
+
+fn read_fissure_positions(world: &World) -> Result<Vec<Vec3>, String> {
+    let source = world
+        .get_resource::<crate::world_data::WorldData>()
+        .ok_or("Seething source creature catalog missing")?;
+    Ok(source
+        .spawns
+        .iter()
+        .filter(|spawn| spawn.map == 1803 && spawn.template_entry == 125253)
+        .map(|spawn| Vec3::new(spawn.position_x, spawn.position_y, spawn.position_z))
+        .collect())
+}
+
+fn load_fissure_sites(world: &mut World) -> Result<BTreeMap<u32, Vec3>, String> {
+    let fissures = read_fissure_positions(world)?;
+    let mut ground = world
+        .get_resource_mut::<crate::ground::GroundMap>()
+        .ok_or("Seething source terrain missing")?;
+    let mut sites = BTreeMap::new();
+    for position in fissures {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(position.x, position.y, position.z);
+        let area = ground
+            .area_at(1803, Vec3::new(x, y, z))
+            .ok_or_else(|| format!("Seething fissure {position:?} has no authored ADT area"))?;
+        if !SEETHING_AREAS.contains(&area) || sites.insert(area, position).is_some() {
+            return Err(format!(
+                "Seething fissure duplicate/unsupported area {area}"
+            ));
+        }
+    }
+    if sites.len() != SEETHING_AREAS.len() {
+        return Err(format!(
+            "Seething source requires twelve fissure areas; found {}",
+            sites.len()
+        ));
+    }
+    Ok(sites)
 }
 
 pub(super) fn update_seething(

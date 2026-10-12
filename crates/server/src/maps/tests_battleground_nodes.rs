@@ -12,7 +12,7 @@ struct EnteredMatch {
 }
 
 #[test]
-fn seething_channel_source_gathering_cast_cancellation_natural_victory_and_return() {
+fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return() {
     let template = shared::battleground::seething_shore();
     let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
     let actor = &entered.players[0];
@@ -44,8 +44,22 @@ fn seething_channel_source_gathering_cast_cancellation_natural_victory_and_retur
             .is_some()
     );
     assert_eq!(battleground(h, actor).score_a, 0);
-    crate::spell_cast::cancel_cast(h.app.world_mut(), actor.player);
-    h.advance(7);
+    h.app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(crate::networking::Moving(true));
+    h.advance(1);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(actor.player)
+            .is_none()
+    );
+    h.app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(crate::networking::Moving(false));
+    h.advance(6);
     assert_eq!(battleground(h, actor).score_a, 0);
     use_object(h, actor, object);
     h.advance(6);
@@ -75,6 +89,64 @@ fn seething_channel_source_gathering_cast_cancellation_natural_victory_and_retur
         .unwrap();
     assert!(own.objective_scores.contains(&(744, 15)));
     win_leave_and_return(&mut entered, 1500);
+}
+
+#[test]
+fn seething_channel_refuses_unimplemented_transport_relative_entry() {
+    let template = shared::battleground::seething_shore();
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let mut h = harness_with(|app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::faction::FactionTemplates::default());
+        app.insert_resource(crate::game_objects::GameObjectSpawns::default());
+        app.add_plugins(crate::pvp::PvpPlugin);
+    })
+    .unwrap();
+    let players: Vec<_> = (1..=10)
+        .map(|id| h.spawn(id, STORMWIND, STOCKADE_ENTRANCE_TRIGGER))
+        .collect();
+    for who in &players {
+        h.app.world_mut().entity_mut(who.player).insert((
+            crate::pvp::PlayerPvpState::default(),
+            shared::components::Level(40),
+        ));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForBattleground>(),
+            pair::<RespondToBattlegroundInvite>(),
+            pair::<PvpStateUpdate>(),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(QueueForBattleground {
+                battleground_id: template.id,
+            });
+    }
+    h.receive_pvp_updates(5);
+    let who = &players[0];
+    let match_id = battleground(&h, who).match_id;
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
+        .unwrap()
+        .send::<PvpChannel>(RespondToBattlegroundInvite {
+            match_id,
+            accepted: true,
+        });
+    let updates = h.receive_pvp_updates(5);
+    assert!(
+        updates[&who.connection].iter().any(|update| update
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("transport 35"))),
+        "{:#?}",
+        updates[&who.connection]
+    );
+    assert!(h.new_worlds(who).is_empty());
+    assert_eq!(h.map_of(who), Some(STORMWIND));
 }
 
 fn seething_objects(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
@@ -115,6 +187,25 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
         }
         if template.map_id == 1803 {
             let (world_data, templates) = seething_source_world();
+            // Partial objective proof only: the parent's approved grounded fixture
+            // starts at an actual authored fissure, not a fabricated airship transform.
+            // The separate refusal test retains genuine TransportSpawnId35/36.
+            let fissure = world_data
+                .spawns
+                .iter()
+                .find(|spawn| spawn.map == 1803 && spawn.template_entry == 125253)
+                .unwrap();
+            let ground_start =
+                Vec3::new(fissure.position_x, fissure.position_y, fissure.position_z);
+            {
+                let mut store = app.world_mut().resource_mut::<MapStore>();
+                assert_eq!(store.safe_loc_transports.get(&6337), Some(&35));
+                assert_eq!(store.safe_loc_transports.get(&6380), Some(&36));
+                for start in starts {
+                    store.safe_loc_transports.remove(&start);
+                    store.safe_locs.get_mut(&start).unwrap().position = ground_start;
+                }
+            }
             app.insert_resource(world_data);
             app.insert_resource(templates);
             app.insert_resource(crate::ground::GroundMap::new(
@@ -195,7 +286,7 @@ fn enter_source_match(template: &BgTemplate, starts: [u32; 2]) -> EnteredMatch {
         let destinations = h.new_worlds(who);
         assert_eq!(destinations.len(), 1);
         let start = starts[if invitation.team == BgTeam::A { 0 } else { 1 }];
-        let source = map_store().unwrap().safe_locs[&start];
+        let source = h.app.world().resource::<MapStore>().safe_locs[&start];
         assert_eq!(destinations[0].map_id, source.map_id);
         let position = destinations[0].position;
         assert!(close(
