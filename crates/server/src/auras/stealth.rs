@@ -23,30 +23,36 @@ impl Stealth {
         let mut state = Self::default();
         for aura in auras.iter() {
             for effect in &aura.effects {
-                let kind = effect.misc_values[0];
-                let amount = effect.amount * aura.stack_multiplier();
-                match effect.aura_type {
-                    handlers::MOD_STEALTH => *state.hidden.entry(kind).or_default() += amount,
-                    handlers::MOD_STEALTH_DETECT => {
-                        *state.detection.entry(kind).or_default() += amount
-                    }
-                    handlers::DETECT_STEALTH => {
-                        state.absolute.insert(kind);
-                    }
-                    _ => {}
-                }
+                state.add_detection_effect(effect, aura.stack_multiplier());
             }
         }
+        state.add_level_modifiers(auras);
+        state
+    }
+
+    fn add_detection_effect(&mut self, effect: &super::AuraEffectState, stacks: f32) {
+        let kind = effect.misc_values[0];
+        let amount = effect.amount * stacks;
+        match effect.aura_type {
+            handlers::MOD_STEALTH => *self.hidden.entry(kind).or_default() += amount,
+            handlers::MOD_STEALTH_DETECT => *self.detection.entry(kind).or_default() += amount,
+            handlers::DETECT_STEALTH => {
+                self.absolute.insert(kind);
+            }
+            _ => {}
+        }
+    }
+
+    fn add_level_modifiers(&mut self, auras: &ActiveAuras) {
         for aura in auras.iter() {
             for effect in &aura.effects {
                 if effect.aura_type == handlers::MOD_STEALTH_LEVEL
-                    && let Some(value) = state.hidden.get_mut(&effect.misc_values[0])
+                    && let Some(value) = self.hidden.get_mut(&effect.misc_values[0])
                 {
                     *value += effect.amount * aura.stack_multiplier();
                 }
             }
         }
-        state
     }
 
     pub(crate) fn detects(
@@ -59,13 +65,14 @@ impl Stealth {
         if target.hidden.is_empty() {
             return true;
         }
-        let offset = Vec3::new(
-            victim.x - observer.x,
-            victim.y - observer.y,
-            victim.z - observer.z,
-        );
+        let victim = Vec3::new(victim.x, victim.y, victim.z);
+        let observer = Vec3::new(observer.x, observer.y, observer.z);
+        let offset = victim - observer;
         let distance = offset.length();
-        if distance < geometry.reach {
+        let Some(reach) = geometry.reach else {
+            return false; // Local sources do not contain NPC model CombatReach rows.
+        };
+        if distance < reach {
             return true;
         }
         if geometry.unit && !geometry.faces(offset) {
@@ -74,22 +81,29 @@ impl Stealth {
         if geometry.trap {
             return true;
         }
-        target.hidden.iter().all(|(kind, hidden)| {
-            if geometry.unit && self.absolute.contains(kind) {
-                return true;
-            }
-            let points = BASE_DETECTION_POINTS
-                + f32::from(geometry.level.saturating_sub(1)) * DETECTION_POINTS_PER_LEVEL
-                + self.detection.get(kind).copied().unwrap_or(0.0)
-                - hidden;
-            let range = points * YARDS_PER_POINT + geometry.reach;
-            let range = if geometry.player {
-                range.min(MAX_PLAYER_DETECTION_RANGE)
-            } else {
-                range
-            };
-            distance <= range
-        })
+        target
+            .hidden
+            .iter()
+            .all(|(kind, hidden)| self.detects_type(*kind, *hidden, geometry, distance))
+    }
+
+    fn detects_type(
+        &self,
+        kind: i32,
+        hidden: f32,
+        geometry: DetectionGeometry,
+        distance: f32,
+    ) -> bool {
+        if geometry.unit && self.absolute.contains(&kind) {
+            return true;
+        }
+        let points = BASE_DETECTION_POINTS
+            + f32::from(geometry.level.saturating_sub(1)) * DETECTION_POINTS_PER_LEVEL
+            + self.detection.get(&kind).copied().unwrap_or(0.0)
+            - hidden;
+        geometry
+            .range(points)
+            .is_some_and(|range| distance <= range)
     }
 }
 
@@ -97,7 +111,7 @@ impl Stealth {
 pub(crate) struct DetectionGeometry {
     level: u8,
     facing: Option<f32>,
-    reach: f32,
+    reach: Option<f32>,
     unit: bool,
     player: bool,
     trap: bool,
@@ -120,16 +134,27 @@ impl DetectionGeometry {
         Self {
             level: level.map_or(1, |level| level.0),
             facing: rotation.map(|rotation| rotation.y),
-            reach: if unit {
-                PLAYER_COMBAT_REACH * scale.map_or(1.0, |scale| scale.0)
+            reach: if player {
+                Some(PLAYER_COMBAT_REACH * scale.map_or(1.0, |scale| scale.0))
+            } else if npc {
+                None
             } else {
-                0.0
+                Some(0.0)
             },
             unit,
             player,
             trap: object.is_some_and(|object| object.go_type == 6),
         }
     }
+    fn range(self, points: f32) -> Option<f32> {
+        let range = points * YARDS_PER_POINT + self.reach?;
+        Some(if self.player {
+            range.min(MAX_PLAYER_DETECTION_RANGE)
+        } else {
+            range
+        })
+    }
+
     fn faces(self, offset: Vec3) -> bool {
         self.facing
             .is_some_and(|angle| Vec3::new(angle.sin(), 0.0, angle.cos()).dot(offset) >= 0.0)
