@@ -1,4 +1,7 @@
 //! Retail application at an authenticated Transmogrifier. See specs/transmog-apply.md.
+mod custom_sets;
+mod data;
+mod outfits;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use rusqlite::Connection;
@@ -31,6 +34,8 @@ const FISHING_POLE: u8 = 20;
 struct Source {
     view: TransmogSource,
     template: ItemTemplate,
+    collectable: bool,
+    offer: bool,
 }
 
 #[derive(Resource, Default)]
@@ -38,22 +43,36 @@ pub(crate) struct TransmogCatalog {
     sources: HashMap<u32, Source>,
     by_appearance: HashMap<u32, Vec<u32>>,
     prices: HashMap<(ItemDefinitionSource, u32), u64>,
+    catalogue: Vec<Source>,
+    /// ItemModifiedAppearance.ID -> index into `catalogue`.
+    catalogue_index: HashMap<u32, usize>,
+    wardrobe: data::Wardrobe,
 }
 
 impl TransmogCatalog {
     pub(crate) fn load(conn: &Connection) -> rusqlite::Result<Self> {
-        let mut catalog = Self::default();
+        let mut catalog = Self {
+            wardrobe: data::Wardrobe::load_embedded(),
+            ..Default::default()
+        };
         let mut stmt = conn.prepare(
             "SELECT m.ID, m.ItemAppearanceID, i.ID, a.ItemDisplayInfoID, i.Name,
              i.InventoryType, i.ClassID, i.SubclassID, i.RequiredLevel, i.AllowableClass,
-             i.AllowableRaces_0, i.AllowableRaces_1, i.Flags_1, a.DefaultIconFileDataID
+             i.AllowableRaces_0, i.AllowableRaces_1, i.Flags_1, a.DefaultIconFileDataID,
+             i.Quality, m.TransmogSourceTypeEnum, a.TransmogPlayerConditionID
              FROM item_modified_appearance m JOIN item_appearance a ON a.ID=m.ItemAppearanceID
              JOIN content_item i ON i.ID=m.ItemID
-             WHERE a.ItemDisplayInfoID>0 AND a.TransmogPlayerConditionID=0
-             AND (i.Flags_1 & 4194304)=0 AND i.Quality<>6 ORDER BY m.ID",
+             WHERE a.ItemDisplayInfoID>0 ORDER BY m.ID",
         )?;
         for row in stmt.query_map([], source_from_row)? {
             let source = row?;
+            catalog
+                .catalogue_index
+                .insert(source.view.source_id, catalog.catalogue.len());
+            catalog.catalogue.push(source.clone());
+            if !source.offer {
+                continue;
+            }
             catalog
                 .by_appearance
                 .entry(source.view.appearance_id)
@@ -100,6 +119,64 @@ impl TransmogCatalog {
         sources
     }
 
+    /// Sets the account has started. TrinityCore a352b1fa CollectionMgr::IsSetCompleted:
+    /// members group by transmog slot and a slot is known when any member is collected.
+    /// Members absent from world.db content_item are unknown here and omitted.
+    fn available_sets(
+        &self,
+        class: u8,
+        collection: &shared::transmog::AppearanceCollection,
+    ) -> Vec<TransmogSet> {
+        self.wardrobe
+            .sets()
+            .iter()
+            .filter(|set| set.usable_by(class))
+            .filter_map(|set| {
+                let mut pieces = std::collections::BTreeMap::new();
+                for id in &set.source_ids {
+                    let Some(source) = self.catalogue_index.get(id).map(|&i| &self.catalogue[i])
+                    else {
+                        continue;
+                    };
+                    let Some(slot) = EquipmentSlot::for_inventory_type(source.view.inventory_type)
+                        .iter()
+                        .copied()
+                        .find(|slot| slot.visual_slot().is_some())
+                    else {
+                        continue;
+                    };
+                    let state = collection_state(source, collection);
+                    let known = pieces
+                        .get(&slot)
+                        .is_some_and(|piece: &TransmogCatalogueSource| {
+                            piece.collection == TransmogCollectionState::Collected
+                                || state != TransmogCollectionState::Collected
+                        });
+                    if !known {
+                        pieces.insert(
+                            slot,
+                            TransmogCatalogueSource {
+                                source: source.view.clone(),
+                                collection: state,
+                                slots: vec![slot],
+                            },
+                        );
+                    }
+                }
+                let started = pieces
+                    .values()
+                    .any(|piece| piece.collection == TransmogCollectionState::Collected);
+                started.then(|| TransmogSet {
+                    set_id: set.set_id,
+                    parent_set_id: set.parent_set_id,
+                    name: set.name.clone(),
+                    source_ids: set.source_ids.clone(),
+                    primary_appearances: pieces.into_values().collect(),
+                })
+            })
+            .collect()
+    }
+
     fn state(
         &self,
         npc: u64,
@@ -141,7 +218,27 @@ impl TransmogCatalog {
                 })
             })
             .collect();
-        TransmogState { npc, slots }
+        let mut state = TransmogState {
+            npc,
+            slots,
+            ..Default::default()
+        };
+        state.sets = self.available_sets(record.character.class, collection);
+        self.wardrobe.populate(&mut state);
+        state
+    }
+}
+
+fn collection_state(
+    source: &Source,
+    collection: &shared::transmog::AppearanceCollection,
+) -> TransmogCollectionState {
+    if !source.collectable {
+        TransmogCollectionState::NonCollectable
+    } else if collection.has(source.view.appearance_id) {
+        TransmogCollectionState::Collected
+    } else {
+        TransmogCollectionState::Uncollected
     }
 }
 
@@ -161,9 +258,16 @@ fn source_from_row(row: &rusqlite::Row) -> rusqlite::Result<Source> {
         },
         ..Default::default()
     };
+    let quality: u8 = row.get(14)?;
+    let source_type: u8 = row.get(15)?;
+    let condition: u32 = row.get(16)?;
+    let source_visual = template.scaling.flags2 & NO_SOURCE_VISUAL == 0 && quality != 6;
     Ok(Source {
+        collectable: source_visual && !matches!(source_type, 6 | 9),
+        offer: source_visual && condition == 0,
         view: TransmogSource {
             source_id: row.get(0)?,
+            source_type,
             appearance_id: row.get(1)?,
             item_id: row.get(2)?,
             display_id: row.get(3)?,
@@ -197,6 +301,10 @@ fn compatible(target: &ItemTemplate, source: &ItemTemplate) -> bool {
             || weapon_group(target.scaling.subclass_id)
                 .is_some_and(|group| Some(group) == weapon_group(source.scaling.subclass_id));
     }
+    compatible_slot_types(target, source)
+}
+
+fn compatible_slot_types(target: &ItemTemplate, source: &ItemTemplate) -> bool {
     let target_slots = EquipmentSlot::for_inventory_type(target.inventory_type);
     let source_slots = EquipmentSlot::for_inventory_type(source.inventory_type);
     target_slots == source_slots
@@ -238,7 +346,12 @@ impl Plugin for TransmogPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (send_opened_states, process_requests)
+            (
+                send_opened_states,
+                process_requests,
+                outfits::process_saves,
+                custom_sets::process_saves,
+            )
                 .chain()
                 .after(crate::npc_interaction::NpcInteractionsProcessed),
         );
@@ -376,7 +489,9 @@ fn handle(
     let collection = crate::persistence::appearance_store::load_account_appearances(db, account);
     let catalog = world.resource::<TransmogCatalog>();
     let templates = world.resource::<ItemTemplates>();
-    let state = catalog.state(npc, &record, templates, &collection);
+    let mut state = catalog.state(npc, &record, templates, &collection);
+    state.outfits = outfits::load_outfits(db, account);
+    state.custom_sets = custom_sets::load_sets(db, account);
     let Some(changes) = changes else {
         return Ok(state);
     };
@@ -389,7 +504,9 @@ fn handle(
     let appearance = model.appearance().clone();
     record = model.into_record();
     save_inventory_record(db, character, &record);
-    let state = catalog.state(npc, &record, templates, &collection);
+    let mut state = catalog.state(npc, &record, templates, &collection);
+    state.outfits = outfits::load_outfits(db, account);
+    state.custom_sets = custom_sets::load_sets(db, account);
     if let Some(mut current) = world.get_mut::<EquipmentAppearance>(player) {
         current.set_if_neq(appearance);
     }

@@ -182,12 +182,16 @@ impl Baker {
         let wdt = self
             .read("terrain", &format!("{wdt_fdid}.wdt"))
             .map_err(|err| err.to_string())?;
-        let Some(placement) = adt::global_wmo(&wdt)? else {
+        let Some(mut placement) = adt::global_wmo(&wdt)? else {
             return Ok(None);
         };
-        let ModelRef::Fdid(fdid) = placement.model else {
-            unreachable!()
+        let fdid = match &placement.model {
+            ModelRef::Fdid(fdid) => *fdid,
+            ModelRef::Path(path) => self
+                .path_fdid(path)
+                .ok_or_else(|| format!("global WMO path {path}: not in local listfile"))?,
         };
+        placement.model = ModelRef::Fdid(fdid);
         let model = self
             .wmo(fdid)
             .ok_or_else(|| format!("missing global WMO {fdid}"))?;

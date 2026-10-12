@@ -12,7 +12,7 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1, 34, 670, 2106)
+RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
 # spawns in it are seen by everyone, like PhaseId 0.
 DEFAULT_PHASE = 169
@@ -48,7 +48,7 @@ SPAWN_DIFFICULTIES = f"""(SELECT group_concat(difficulty, ',') FROM (SELECT r.di
 
 def create_retail_map_table(conn):
     """temp.retail_map: each (RETAIL_MAPS map, difficulty its copies spawn at): 0 for open world, every
-    MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use0."""
+    MapDifficulty.db2 DifficultyID of a party dungeon; battleground authored spawns use 0."""
     rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({MAP_LIST})"))
     missing = [m for m in RETAIL_MAPS if m not in rows]
     unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY, INSTANCE_TYPE_BATTLEGROUND)}
