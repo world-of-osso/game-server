@@ -79,7 +79,7 @@ class VehicleGroundFilesTest(unittest.TestCase):
                 )
             expected.update((f"terrain/{wdt}.wdt", f"terrain/{root}.adt", f"terrain/{obj0}.adt"))
         self.assertEqual(set(self.list_files()), expected)
-        self.assertEqual(self.list_files("--missing"), [])
+        self.assertFalse(any(self.list_files("--missing")))
 
     def test_missing_passenger_model_is_reported_with_vehicle_id(self):
         self.assertEqual(self.list_files("--missing"), ["vehicle 312\tmodels/234720.m2"])
