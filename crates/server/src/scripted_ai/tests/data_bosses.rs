@@ -843,7 +843,13 @@ fn encounter_coverage_animated_gold_molten_transition_stops_active_motion() {
 }
 
 fn molten_gold_fixture() -> (Harness, Entity, Entity, Position, InMap) {
-    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    molten_gold_fixture_in_state(EncounterState::NotStarted)
+}
+
+fn molten_gold_fixture_in_state(
+    initial_state: EncounterState,
+) -> (Harness, Entity, Entity, Position, InMap) {
+    let (mut h, boss, map) = bound_boss_in_state(135322, 1762, 0, 1, None, initial_state);
     let position = h.wow_position(boss);
     let gold = crate::zones::summon_creature(
         h.app.world_mut(),
@@ -854,8 +860,13 @@ fn molten_gold_fixture() -> (Harness, Entity, Entity, Position, InMap) {
     .unwrap();
     let center = *h.app.world().get::<Position>(gold).unwrap();
     let player = h.player();
+    let player_distance = if initial_state == EncounterState::NotStarted {
+        20.0
+    } else {
+        500.0
+    };
     h.app.world_mut().entity_mut(player).insert(Position {
-        x: center.x + 20.0,
+        x: center.x + player_distance,
         ..center
     });
     h.advance(0.1);
@@ -1136,7 +1147,8 @@ fn encounter_coverage_gold_lucre_task_checks_molten_at_callback_not_at_hit() {
 
 #[test]
 fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credit() {
-    let (mut h, gold, _, center, map) = molten_gold_fixture();
+    // Source NotStarted spawn is in the unported flying intro, not a walkable start.
+    let (mut h, gold, _, center, map) = molten_gold_fixture_in_state(EncounterState::Fail);
     let boss = h.creatures_of(135322)[0];
     let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
         .map(PathBuf::from)
@@ -1151,8 +1163,9 @@ fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credi
     );
     h.app
         .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+    // This west ray has an actual nav corridor; the east fixture ray was outside the chamber.
     let start = Position {
-        x: center.x + 25.0,
+        x: center.x - 25.0,
         ..center
     };
     h.app.world_mut().entity_mut(gold).insert(start);
