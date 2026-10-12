@@ -40,6 +40,8 @@
 
 - [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
 
+- [Mount vendor acquisition](systems/mounts.md#vendor-acquisition) — pinned mount-only ExtendedCost, minimum reputation and atomic payment/delivery; [source data boundary](../mount-vendor-costs.md).
+
 ## October 9 reconciliation
 
 - [Deployment](../deploy.md) — sakuin NixOS unit/state SSOT; layout `0dcaa23`, bookworm compatibility `6bfd7b6`. Desktop/local workflows are private development.

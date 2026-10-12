@@ -14,6 +14,14 @@ Summon uses `cast_for_player`, and dismount uses `cancel_mount_aura`; existing r
 
 Verified2026-10-11: durable account/item tests and five journal transport/cast/boundary tests pass. Native both-skin acceptance remains open in the contract. World.db is read-only; existing1694 mount rows need no new import.
 
+### Vendor acquisition
+
+`merchant/mount_costs.rs` loads pinned build69933 ItemExtendedCost rows selected by TDB1210 teaching-mount offers. The catalog replaces matching imported mount rows with exact TDB offers, preserves ordinary offers and checks the catalog slot on purchase. Cost Money overrides item BuyPrice. Item/currency amounts multiply by purchase count; `_100_Scaler` currency precision divides raw counts by100 exactly. Missing metadata disables the whole affected cost, never substitutes IDs or invents names. [Data provenance and reproduction](../../mount-vendor-costs.md).
+
+Detached inventory/wallet copies stage payment before delivery. One redb write commits gold, consumed items, delivered items and currency; only then does the server replace PlayerCurrencies and enqueue gold/bag/currency updates. Mount ItemSparse reputation requirements use CharacterReputation standing for listing usability and purchase rejection. Existing faction filtering remains. No serialized character fields, global currency definitions or reputation discounts change.
+
+Targeted HostClient tests: `merchant_mount_cost_tests.rs`; original gold-only purchase→learn/no-transmog test remains in `merchant_tests.rs`. Native client and integration acceptance belong to the main Mount Journal goal.
+
 ### Data
 
 `world.db` gets the Retail DB2 tables `mount`, `mount_capability`, `mount_type_x_capability` and `mount_x_display` (`scripts/db2.py`; run `python3 scripts/db2.py fetch && python3 scripts/db2.py import` to add them to an existing `world.db`). `MountStore` loads them at startup with the aura spell part of the PlayerConditions they name.

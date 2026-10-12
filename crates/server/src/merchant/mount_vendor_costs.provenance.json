@@ -1,0 +1,16 @@
+{
+  "build": "12.1.0.69933",
+  "build_key": "dcfc90fffd79ba00406ae46f5f657592",
+  "file_data_id": 801681,
+  "layout": "22331DAB",
+  "db2_sha256": "1029caead94809777a61f0cfb8f9c54d98686e1cc29e93fe501395551504a47f",
+  "csv_sha256": "21d5ac119c21a388546b29db23aa522b5eb8a4d04a4436a0790d2a5ce2021a2d",
+  "tdb_mount_offers_sha256": "e1ca6c0c5a61b11ffb312308a9418362bad4edab50166a19dfa5457e49b01811",
+  "selected_offers": 199,
+  "selected_costs": 40,
+  "unavailable_currency_metadata": [
+    392,
+    3252
+  ],
+  "currency_counts": "Raw DB2 precision; CurrencyTypes.Flags_0 & 0x8 divides by 100 exactly."
+}

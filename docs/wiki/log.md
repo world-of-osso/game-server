@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Mount vendor acquisition](systems/mounts.md#vendor-acquisition): authenticated mount-only ExtendedCost, exact currency precision, atomic payment/delivery and ItemSparse reputation authority; [pinned data/gaps](../mount-vendor-costs.md). Main owns native/integration acceptance.
+
 - 2026-10-11 — [Mount Journal](systems/mounts.md#mount-journal): read-only catalog, account item/favourite persistence and spell-backed requests; both auth-entry crash boundaries reproduced and fixed through one initialized Update step. Native/final acceptance remains tracked by the contract.
 - 2026-10-11 — [Fixed-output crafting orders](systems/crafting-orders.md):2047-row copy-only export/import,89 fixed-output catalog rows, public/guild/personal escrow/claim/cast/mail/refund lifecycle and explicit two-sender mailbox migration. Targeted proof ledger in handoff; fee/duration/content/native gaps remain explicit.
 

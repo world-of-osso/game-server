@@ -12,7 +12,7 @@
 //! one `InventoryModel` save and reach the owner through `GoldUpdateQueue`.
 //!
 //! Gaps: no reputation price discount (`GetReputationPriceDiscount`; NPC factions
-//! are not mapped to reputation factions), no `ExtendedCost` items, no vendor
+//! are not mapped to reputation factions), no non-mount `ExtendedCost` items, no vendor
 //! conditions and no sell price reduction for damaged items.
 
 use bevy::ecs::system::SystemParam;
@@ -42,6 +42,7 @@ use crate::persistence::{self, GameDatabase, InventoryItemData};
 
 mod catalog;
 mod economic;
+mod mount_costs;
 mod stock;
 
 use catalog::VendorSlot;
@@ -86,6 +87,7 @@ type MerchantResult = Result<(), MerchantError>;
 /// Race, class and level of the player.
 #[derive(Debug, Clone, Copy)]
 struct Buyer {
+    player: Entity,
     race: u8,
     class: u8,
     level: u16,
@@ -128,6 +130,10 @@ struct Shop<'w, 's> {
     players: Query<'w, 's, (&'static Player, Option<&'static Level>)>,
     durability_rules: Res<'w, ItemDurability>,
     durability: Query<'w, 's, &'static mut EquippedDurability>,
+    reputations: Query<'w, 's, &'static shared::reputation::CharacterReputation>,
+    currencies: Query<'w, 's, &'static mut crate::currency::PlayerCurrencies>,
+    currency_updates:
+        Query<'w, 's, &'static mut MessageSender<shared::protocol::CurrencyStateUpdate>>,
     reset: Res<'w, DailyReset>,
     changed_guilds: ResMut<'w, ChangedGuilds>,
     inventories: Query<'w, 's, &'static mut MessageSender<VendorInventory>>,
@@ -160,7 +166,19 @@ impl Shop<'_, '_> {
         let (race, class, level) = self.players.get(player).map_or((0, 0, 1), |(p, level)| {
             (p.race, p.class, level.map_or(1, |level| u16::from(level.0)))
         });
-        Buyer { race, class, level }
+        Buyer {
+            player,
+            race,
+            class,
+            level,
+        }
+    }
+
+    fn mount_reputation_met(&self, buyer: Buyer, item_id: u32) -> bool {
+        self.catalog
+            .mount_reputation
+            .get(&item_id)
+            .is_none_or(|requirement| requirement.met(self.reputations.get(buyer.player).ok()))
     }
 
     fn vendor_entry(&self, vendor: Entity) -> Result<u32, MerchantError> {
@@ -232,17 +250,19 @@ impl Shop<'_, '_> {
                 if available == Some(0) {
                     return None;
                 }
+                let cost = self.catalog.mount_costs.get(&(entry, index as u32));
                 Some(VendorItem {
                     slot: index as u32,
                     item_id: slot.item_id,
                     name: goods.name,
                     quality: goods.quality,
-                    price: goods.buy_price,
-                    extra_costs: Vec::new(),
+                    price: cost.map_or(goods.buy_price, |cost| cost.money),
+                    extra_costs: cost.map_or_else(Vec::new, |cost| cost.extra.clone()),
                     stack_count: goods.buy_count,
                     max_stack: template.max_stack.max(1),
                     num_available: available,
-                    usable: buyer.can_use(&template),
+                    usable: buyer.can_use(&template)
+                        && self.mount_reputation_met(buyer, slot.item_id),
                     max_durability: self.durability_rules.max_durability(slot.item_id),
                 })
             })
@@ -428,7 +448,7 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
         .copied()
         .filter(|slot| slot.item_id == req.item_id)
         .ok_or(MerchantError::ItemNotFound)?;
-    let goods = shop
+    let mut goods = shop
         .catalog
         .goods
         .get(&slot.item_id)
@@ -444,14 +464,28 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     if !buyer.offered(&template) {
         return Err(MerchantError::ItemNotFound);
     }
-    let count = match goods.buy_price {
-        0 => req.count.max(1),
-        price => req
-            .count
-            .max(1)
-            .min(u32::try_from(MAX_MONEY / u64::from(price)).unwrap_or(u32::MAX)),
+    if !shop.mount_reputation_met(buyer, slot.item_id) {
+        return Err(MerchantError::ReputationRequired);
+    }
+    let mount_cost = shop.catalog.mount_costs.get(&(entry, req.slot)).cloned();
+    if let Some(cost) = &mount_cost {
+        goods.buy_price = cost.money;
+    }
+    let count = if mount_cost.is_some() {
+        req.count.max(1)
+    } else {
+        match goods.buy_price {
+            0 => req.count.max(1),
+            price => req
+                .count
+                .max(1)
+                .min(u32::try_from(MAX_MONEY / u64::from(price)).unwrap_or(u32::MAX)),
+        }
     };
-    let items = goods.buy_count.saturating_mul(count);
+    let items = goods
+        .buy_count
+        .checked_mul(count)
+        .ok_or(MerchantError::CantCarryMore)?;
     let now = shop.now();
     let available = shop
         .stock
@@ -473,6 +507,11 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     {
         return Err(MerchantError::CantCarryMore);
     }
+    let wallet = mount_cost
+        .as_ref()
+        .map(|cost| mount_costs::debit_turnins(shop, customer.player, &mut model, cost, count))
+        .transpose()?
+        .flatten();
     let mut mint = shop.mint();
     let item = InventoryItemData {
         item_guid: mint(),
@@ -505,7 +544,11 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     })?;
     drop(mint);
     model.set_gold(model.gold() - price);
-    shop.save(customer.character_id, model);
+    if mount_cost.is_some() {
+        mount_costs::persist_purchase(shop, customer, model, wallet);
+    } else {
+        shop.save(customer.character_id, model);
+    }
     if slot.maxcount > 0 {
         shop.stock
             .consume(vendor, req.slot, slot, goods.buy_count, items, now);
