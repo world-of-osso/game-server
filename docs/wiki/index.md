@@ -1,5 +1,8 @@
 # Wiki Index
 
+- [Toy input/rendering continuation](systems/toys.md#toy-effects14-authentic-input-and-rendering-boundaries-2026-10-11) — source-bound admission, clicked destinations and real witnesses, recipient-safe typing and explicit native/data coverage boundaries.
+
+- [Mount Journal authority](systems/mounts.md#mount-journal) — authentic account ownership/item transactions, normal spell casting, favourite/random requests and reproduced auth-entry ordering boundaries.
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
 - [Boss-mod data import](systems/bossmod-data.md) — static AST/locale extraction, copy-only authority and actual-cast reconciliation; hosted7/7 and both-skin private two-encounter proof pass, native-input schedule coverage remains open.
@@ -40,6 +43,8 @@
 - [Stranglethorn ground](investigations/stranglethorn-ground.md) — legacy underground audit target, real-tile/admin-gravity proof, private hub samples and all-map root-tile census.
 
 - [Disenchant](systems/disenchant.md) — private both-skin proof; reject wholly unavailable TDB material entries before disposal; exact stale-build census.
+
+- [Mount vendor acquisition](systems/mounts.md#vendor-acquisition) — pinned mount-only ExtendedCost, minimum reputation and atomic payment/delivery; [source data boundary](../mount-vendor-costs.md).
 
 ## October 9 reconciliation
 

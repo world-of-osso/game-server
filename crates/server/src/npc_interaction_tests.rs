@@ -106,6 +106,7 @@ fn harness_with(player_faction: u32, extra: impl FnOnce(&mut App)) -> Option<Har
                 max: 100.0,
             },
             UnitFactionTemplate(player_faction),
+            crate::maps::InMap::continent(0),
         ))
         .id();
     let connection = app
@@ -162,10 +163,10 @@ impl Harness {
     /// Spawn a creature from its world.db template at its first spawn point and put
     /// the player `offset` yards east of it.
     fn spawn_real_npc(&mut self, entry: u32, offset: f32) -> Entity {
-        let (name, faction, npcflag, x, y, z): (String, u32, u32, f32, f32, f32) = self
+        let (name, faction, npcflag, x, y, z,map): (String, u32, u32, f32, f32, f32,u32) = self
             .conn
             .query_row(
-                "SELECT t.name, t.faction, t.npcflag, c.position_x, c.position_y, c.position_z
+                "SELECT t.name, t.faction, t.npcflag, c.position_x, c.position_y, c.position_z,c.map
                  FROM content_creature_template t JOIN content_creature c ON c.id1 = t.entry
                  WHERE t.entry = ?1 ORDER BY c.guid LIMIT 1",
                 [entry],
@@ -177,6 +178,7 @@ impl Harness {
                         row.get(3)?,
                         row.get(4)?,
                         row.get(5)?,
+                        row.get(6)?,
                     ))
                 },
             )
@@ -201,6 +203,7 @@ impl Harness {
                     max: 100.0,
                 },
                 UnitFactionTemplate(faction),
+                crate::maps::InMap::continent(map),
             ))
             .id();
         self.place_player(npc, offset);
@@ -209,6 +212,8 @@ impl Harness {
 
     fn place_player(&mut self, npc: Entity, offset: f32) {
         let npc_position = *self.app.world().get::<Position>(npc).unwrap();
+        let map = *self.app.world().get::<crate::maps::InMap>(npc).unwrap();
+        self.app.world_mut().entity_mut(self.player).insert(map);
         *self
             .app
             .world_mut()
@@ -305,6 +310,7 @@ fn crafting_broker_opens_customer_service_and_revalidates_range() {
                 max: 100.0,
             },
             UnitFactionTemplate(faction),
+            crate::maps::InMap::continent(0),
         ))
         .id();
     h.interact(broker);
