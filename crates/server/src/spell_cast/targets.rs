@@ -159,24 +159,23 @@ pub fn explicit_requirement<'a>(
 /// TC NeedsToBeTriggeredByCaster: a channel's child supplies a non-caster unit mask.
 pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
     effect.implicit_targets.into_iter().any(|id| {
-        id != 1
-            && matches!(
-                selector(id),
-                Some(
-                    Selector::Explicit(_)
-                        | Selector::RaidCorpses
-                        | Selector::ChannelTarget
-                        | Selector::Pet
-                        | Selector::AreaAroundSrc(_)
-                        | Selector::AreaAroundDest(_)
-                        | Selector::DynObj(_)
-                        | Selector::ConeEntry
-                        | Selector::ConeEnemy
-                        | Selector::CasterLine
-                        | Selector::ConeToDest
-                        | Selector::LineToDest
-                )
+        matches!(
+            selector(id),
+            Some(
+                Selector::Explicit(_)
+                    | Selector::RaidCorpses
+                    | Selector::ChannelTarget
+                    | Selector::Pet
+                    | Selector::AreaAroundSrc(_)
+                    | Selector::AreaAroundDest(_)
+                    | Selector::DynObj(_)
+                    | Selector::ConeEntry
+                    | Selector::ConeEnemy
+                    | Selector::CasterLine
+                    | Selector::ConeToDest
+                    | Selector::LineToDest
             )
+        )
     })
 }
 

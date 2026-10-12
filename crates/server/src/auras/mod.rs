@@ -598,8 +598,8 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        let handled = handlers::is_handled(effect.aura_type)
-            && (!linked::is_linked(effect.aura_type) || effect.amount == 0.0);
+        let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
+        let handled = handlers::is_handled(effect.aura_type) && supported_amount;
         if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
             continue;
         }
