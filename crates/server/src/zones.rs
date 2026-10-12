@@ -257,6 +257,7 @@ pub(crate) fn spawn_creature(
             entity.insert(equipment);
         }
         insert_ai_components(&mut entity, spawn, template, addon, world_data);
+        crate::pvp::insert_track_switch(&mut entity, spawn);
         crate::creature_aggro::insert_aggro_components(
             &mut entity,
             template.aggro_mode,

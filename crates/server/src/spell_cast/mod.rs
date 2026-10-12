@@ -114,7 +114,9 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-pub(crate) use creature::{AiTarget, ai_spell_target, creature_cast};
+pub(crate) use creature::{
+    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_in_progress,
+};
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
 
@@ -1192,6 +1194,7 @@ fn validate_start(
     spell: &SpellInfo,
     explicit: Option<Entity>,
     witness: Option<WitnessRay>,
+    ignore_cast_in_progress: bool,
 ) -> Result<Option<Entity>, CastFailure> {
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
@@ -1203,7 +1206,7 @@ fn validate_start(
     toy_scripts::check_cast(world, caster, spell)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
-    if world.get::<CastState>(caster).is_some() {
+    if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell)?;
@@ -1487,7 +1490,16 @@ fn start_cast(
     explicit: Option<Entity>,
     witness: Option<WitnessRay>,
 ) -> Result<(), CastFailure> {
-    let target = validate_start(world, caster, spell, explicit, witness)?;
+    let target = validate_start(world, caster, spell, explicit, witness, false)?;
+    begin_validated_cast(world, caster, spell, target)
+}
+
+fn begin_validated_cast(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
@@ -1849,7 +1861,7 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        let mut dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             spell.cast_destination.map(|point| targets::Dest {
                 position: Vec3::from_array(point),
                 orientation: targets::orientation(world, caster),
@@ -1857,6 +1869,9 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
+        if let Some(dest) = &mut dest {
+            scripts::relocate_destination(spell.id, effect, dest);
+        }
         plan.push(PlannedEffect {
             index,
             units,
@@ -2439,6 +2454,11 @@ pub(crate) fn advance_casts(world: &mut World) {
             CastTickResult::ChannelComplete => {
                 crate::auras::channel_completed(world, caster, spell_id);
                 end_cast(world, caster);
+                crate::scripted_ai::dispatch(
+                    world,
+                    caster,
+                    crate::scripted_ai::Hook::ChannelFinished { spell_id },
+                );
             }
             CastTickResult::Completed => {
                 world.entity_mut(caster).remove::<CastState>();
