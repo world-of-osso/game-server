@@ -39,6 +39,19 @@ pub(crate) fn load_journal(db: &Database, account_id: u64) -> PetJournal {
     journal
 }
 
+/// Read the same authoritative account journal inside the achievement write transaction.
+pub(crate) fn unique_species_in_transaction(txn: &redb::WriteTransaction, account_id: u64) -> u32 {
+    let table = txn
+        .open_table(ACCOUNT_PET_JOURNALS)
+        .expect("open owned pet journal");
+    let journal: PetJournal = table
+        .get(account_id)
+        .expect("read owned pet journal")
+        .map(|row| serde_json::from_slice(row.value()).expect("decode owned pet journal"))
+        .unwrap_or_default();
+    u32::try_from(journal.unique_species()).expect("journal count fits u32")
+}
+
 pub(crate) fn save_journal(db: &Database, account_id: u64, journal: &PetJournal) {
     let bytes = serde_json::to_vec(journal).expect("encode account pet journal");
     let transaction = db.begin_write().expect("begin account pet journal save");

@@ -110,14 +110,10 @@ fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmet
         crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 65358, 1).unwrap()
     );
     app.update();
-    assert_eq!(
-        app.world()
-            .get::<PlayerAchievementState>(player)
-            .unwrap()
-            .criteria_progress
-            .get(&23579),
-        Some(&1)
-    );
+    let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+    assert_eq!(state.criteria_progress.get(&19598), Some(&1));
+    assert!(state.account.as_ref().unwrap().earned_ids.contains(&1017));
+    assert_eq!(state.criteria_progress.get(&23579), Some(&1));
     assert!(
         crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 65358, 1).unwrap()
     );
@@ -128,6 +124,101 @@ fn achievements_criteria_knowledge_pet_uses_the_owned_account_journal_not_cosmet
             .unwrap()
             .criteria_progress
             .get(&23579),
+        Some(&1)
+    );
+    assert!(
+        crate::battle_pets::learn_companion_from_item(app.world_mut(), player, 4055, 1).unwrap()
+    );
+    app.update();
+    let (sibling_character, _) = persistence::create_character(
+        &app.world().resource::<GameDatabase>().db,
+        42,
+        "Petsibling",
+        1,
+        1,
+    )
+    .unwrap();
+    let sibling = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Petsibling".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            PlayerAchievementState::default(),
+            Level(1),
+            crate::collection::default_collection_state(),
+        ))
+        .id();
+    let sibling_connection = app
+        .world_mut()
+        .spawn((
+            Authenticated { account_id: 42 },
+            PlayerLink(sibling),
+            InWorld {
+                character_id: sibling_character,
+            },
+        ))
+        .id();
+    app.update();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(sibling)
+            .unwrap()
+            .criteria_progress
+            .get(&19598),
+        Some(&2)
+    );
+    let mut journal =
+        crate::battle_pets::load_journal(&app.world().resource::<GameDatabase>().db, 42);
+    let squirrel = journal.by_species(39)[0].id;
+    // The shared release API changes the authoritative journal; no native release-UI claim.
+    journal.remove(squirrel).unwrap();
+    crate::battle_pets::save_journal(&app.world().resource::<GameDatabase>().db, 42, &journal);
+    app.world_mut()
+        .get_mut::<crate::battle_pets::AccountPetJournal>(player)
+        .unwrap()
+        .journal = journal;
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .account
+            .as_ref()
+            .unwrap()
+            .criteria_progress
+            .get(&19598),
+        Some(&1)
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(sibling)
+            .unwrap()
+            .criteria_progress
+            .get(&19598),
+        Some(&2),
+        "stale character copy must not override the owning account journal"
+    );
+    app.world_mut()
+        .entity_mut(sibling_connection)
+        .remove::<InWorld>()
+        .insert(InWorld {
+            character_id: sibling_character,
+        });
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(sibling)
+            .unwrap()
+            .account
+            .as_ref()
+            .unwrap()
+            .criteria_progress
+            .get(&19598),
         Some(&1)
     );
     drop(app);

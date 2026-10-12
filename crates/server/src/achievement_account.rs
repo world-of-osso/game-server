@@ -67,7 +67,8 @@ pub(super) fn save_account_progress(
         update.character,
         character_state,
     );
-    let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update);
+    let unique_pets = crate::battle_pets::unique_species_in_transaction(&txn, update.account);
+    let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update, unique_pets);
     saved.state = aggregate.clone();
     let bytes = serde_json::to_vec(&saved).expect("encode account achievements");
     accounts
@@ -154,8 +155,10 @@ fn evaluate_account_progress(
     catalog: &AchievementCatalog,
     saved: &AccountProgress,
     update: &AccountUpdate,
+    unique_pets: u32,
 ) -> (PlayerAchievementState, Vec<AchievementToastSnapshot>) {
     let mut aggregate = catalog.aggregate(saved.contributions.values().cloned());
+    catalog.set_account_unique_pet_count(&mut aggregate, unique_pets);
     aggregate.earned_ids.extend(&saved.state.earned_ids);
     for (&id, &date) in &saved.state.earned_at {
         aggregate
