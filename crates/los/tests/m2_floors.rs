@@ -67,6 +67,7 @@ fn global_wmo_fixture() -> tempfile::TempDir {
     mphd[..4].copy_from_slice(&1u32.to_le_bytes());
     let mut modf = vec![0; 64];
     modf[..4].copy_from_slice(&999u32.to_le_bytes());
+    modf[56..58].copy_from_slice(&8u16.to_le_bytes());
     modf[12..16].copy_from_slice(&100f32.to_le_bytes());
     modf[24..28].copy_from_slice(&180f32.to_le_bytes());
     let mut wdt = chunk(b"MPHD", &mphd);

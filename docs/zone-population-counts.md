@@ -1,0 +1,418 @@
+# Zone population census
+
+Verified: 2026-10-11. Source: TDB1210, SQL AreaTable and local Retail12.1.0.69933 UiMap/UiMapAssignment. Canonical read-only baseline; after is an isolated SQLite backup copy.
+
+## Import command
+
+Lead first creates an unlinked SQLite backup of world.db named world.db.zone-population; do not rename/swap/write canonical world.db in this task. After landing code:
+
+```text
+python3 scripts/content_policy.py --mode world-promote --maps 369,530,571,609,646,648,654,730,732,860,861,870,974,1064,1116,1220,1265,1464,1479,1481,1502,1642,1643,1669,1860,1865,2081,2127,2175,2222,2241,2268,2297,2374,2444,2454,2552,2570,2601,2694,2738,2771,2785 --db data/world.db.zone-population --report /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/zone-population-2026-10-11/lead-import-report.json
+```
+
+Policy and filtering: [content import](wiki/systems/content-import.md#zone-questservice-promotion-2026-10-11). Requirements: [retail world content](specs/retail-world-content.md#zone-population-continuation-2026-10-11).
+
+## Before / after copy
+
+|Table|Before|After|Added rows|Removed rows|
+|---|---:|---:|---:|---:|
+|content_creature|226650|234413|74521|66758|
+|content_gameobject|80655|59863|24671|45463|
+|content_quest_template|12343|26770|14427|0|
+|content_creature_queststarter|8306|8700|394|0|
+|content_creature_questender|10914|11649|735|0|
+|content_gameobject_queststarter|613|665|52|0|
+|content_gameobject_questender|503|519|16|0|
+|content_npc_vendor|42599|46191|10012|6420|
+
+Added/removed are multiset row differences, not GUID counts. Authentic source replacements remove legacy AC placements and positive-only event objects; the GO total decrease is intentional. Same-map non-source overlays and unrelated maps remain. Trainers read the existing raw TDB service tables; taxi mount models without world spawns now enter content.305 non-content tables compare identically on the lead-requested fresh crafting/SmartAI snapshot, including1,123 TDB summon-group rows. Exact content row diffs and JSON census: canonical engine data/diagnostics/zone-population-2026-10-11/.
+
+## Hosting / ground / navigation
+
+46 hosted open maps, including12 newly admitted older continents/zones. All57,718 hosted ground dependencies present; zero missing WDT/ADT/WMO files. deploy.sh calls the existing ground-files selector, now covering both creature and GO-only maps. Navmesh only exists for0/2991 (and instance34);44 hosted maps have no bake. Missing expansion navigation is not claimed as obstacle-aware movement. Ground filenames alone do not prove every surface walkable: Stormshield dock approach currently lacks usable support.
+
+## Live proof — verified2026-10-11
+
+Private UDP5916 fb_zone_modern/Zonemod30 and fb_zone_forever/Zoneforev31: both observed skins visited Drustvar1643, Isle of Dorn2552 and newly hosted Terokkar530. Native Interact Key G and physical registry-pointer clicks accepted and rewarded48677 Wicker Worship,82747 Crossroads Plaza and9961 What's Wrong at Cenarion Thicket? Each has authentic delivery/no-counter objectives; no administrative quest completion or item credit was used. Setup used level80 and administrative travel to source NPC coordinates, not a walked-route certification. Native reward messages/quest-log removal prove turn-in; Crossroads paid2g89s/1450XP, Wicker2g57s40c, Cenarion210XP in these fixtures.
+
+Both accounts discovered Drustvar taxi nodes2034 and2037 through their authored masters, opened the real Kul Tiras flight map and clicked route2037→2034. Server-controlled flight at32yd/s reached the authored endpoint and restored7yd/s. The same-map taxi hardcode and missing source taxi mount-model dependencies are fixed. Client immunity regression makes neutral Lord Autumnvale127080 flags320 talkable rather than selecting auto-attack; template flags were already correct in ECS.
+
+24 latest-data inspected1280px-or-smaller PNGs: `/syncthing/AgentShared/2026-10-11/zone-population/`. Full snapshots, CLI frame bounds, actor/admin logs, exact row diffs, source/after databases and `live-proof-summary.json` live in canonical engine `data/diagnostics/zone-population-2026-10-11/`. Earlier-round blank capture was rejected; all24 final rerun captures are valid. `round1/` preserves earlier evidence; final root snapshots use refreshed data and merged crafting/protocol2a48bdc. Owned clients/server terminated;5916 free. Lead NPC cache publication improved observed bodies/portraits during the rerun; remaining source/appearance/receipt/material boundaries are owned by the NPC appearance census. This proves native quest/taxi authority, not full-world visual fidelity. Extra Stormshield36626 accepted but dock approach falls through unsupported ground; not used for the three rewarded-zone proofs. No artwork, factions, quest objectives, phasing, receipts or population fabricated. Independent model verification unavailable (expired Claude OAuth), no independent PASS claimed.
+
+## Ranked per-zone census
+
+Quest rank = distinct positive QuestSortID rolled to root AreaTable zone. Source creature/GO totals include conditional/event variants; they are not all eligible/live. Declared areas take precedence; unassigned placements use the smallest covering matching zone UiMapAssignment rectangle. Inferred counts live in JSON and do not alter data. Zone0 remains explicit. Givers/enders = distinct creature/GO entry identities with authored relations, not duplicate spawns. Quests lacking source/eligible placements, unsupported objectives, script/phase/condition data or assets remain unavailable; content counts are not quest-playability certification. Columns TDB / before content / after copy; relation columns giver and ender identity counts.
+
+|Map / root zone (UiMap IDs)|Quests T/B/A|Creatures T/B/A|Gameobjects T/B/A|Givers T/B/A|Enders T/B/A|
+|---|---:|---:|---:|---:|---:|
+|1220 / 7503 Highmountain (650,739)|694/0/417|2/2/2|1/1/1|0/0/0|0/0/0|
+|1220 / 7637 Suramar (680)|590/0/523|14/14/14|2/2/2|0/0/0|0/0/0|
+|1642 / 8499 Zuldazar (862,1165)|465/0/395|2/1/1|89/4/4|1/0/0|1/0/0|
+|1643 / 8567 Tiragarde Sound (895,1161)|427/0/363|255/199/199|359/283/283|9/0/1|6/0/0|
+|2444 / 13647 Thaldraszus (2025,2112)|426/0/303|86/54/54|409/51/51|13/0/1|11/0/3|
+|1116 / 6721 Gorgrond (543)|419/0/400|12/12/12|3/3/3|0/0/0|0/0/0|
+|1116 / 6662 Talador (535)|411/0/391|7/7/7|2/2/2|0/0/0|0/0/0|
+|2444 / 13644 The Waking Shores (2022)|405/0/337|41/41/41|86/0/0|12/0/0|12/0/0|
+|1643 / 9042 Stormsong Valley (942)|403/0/347|371/181/181|84/29/29|1/0/0|1/0/0|
+|2444 / 13646 The Azure Span (2024)|403/0/330|2523/2305/2305|225/171/171|10/0/2|8/0/1|
+|2552 / 14717 Isle of Dorn (2248,2328,2339)|403/0/298|3153/2848/2848|949/628/628|32/0/8|24/0/7|
+|1116 / 6720 Frostfire Ridge (525)|399/0/374|29/13/13|3/1/1|4/0/0|5/0/0|
+|1220 / 7541 Stormheim (634)|385/0/343|5/5/5|2/2/2|0/0/0|0/0/0|
+|1220 / 7558 Val'sharah (641)|384/0/340|18/8/8|26/2/2|1/0/1|1/0/1|
+|2738 / 15336 K'aresh (2371,2472)|380/0/269|62/21/21|17/16/16|4/0/1|4/0/2|
+|2444 / 13645 Ohn'ahran Plains (2023)|359/0/273|72/42/42|71/0/0|10/0/0|10/0/0|
+|2222 / 11510 Ardenweald (1565)|356/0/297|6/6/6|2/2/2|0/0/0|0/0/0|
+|1643 / 8721 Drustvar (896)|350/0/295|1969/1861/1861|274/250/250|31/0/19|16/0/9|
+|870 / 5785 The Jade Forest (371)|345/1/339|477/16/16|178/2/2|12/0/0|12/0/0|
+|1642 / 8501 Vol'dun (864)|343/0/310|0/0/0|1/1/1|0/0/0|0/0/0|
+|2454 / 14022 Zaralek Cavern (2133)|333/0/277|347/347/347|15/1/1|2/0/0|2/0/0|
+|2601 / 14838 Hallowfall (2215)|333/0/276|19/19/19|38/0/0|4/0/0|4/0/0|
+|1220 / 7334 Azsuna (630)|330/0/287|719/619/619|142/134/134|21/0/2|26/0/3|
+|2601 / 14795 The Ringing Deeps (2214)|320/0/230|18/18/18|28/0/0|4/0/0|4/0/0|
+|0 / 5339 Stranglethorn Vale (50,210,224)|317/294/294|2448/2448/2448|939/632/632|66/60/60|74/65/65|
+|1116 / 6719 Shadowmoon Valley (539)|315/0/290|1096/894/894|156/47/47|8/0/2|11/0/1|
+|1642 / 8500 Nazmir (863)|315/0/276|1/0/0|1/1/1|0/0/0|0/0/0|
+|2601 / 14752 Azj-Kahet (2213,2216,2255,2256)|309/0/242|6/6/6|56/0/0|7/0/0|7/0/0|
+|2222 / 11462 Maldraxxus (1536)|305/0/258|8/8/8|2/2/2|0/0/0|0/0/0|
+|870 / 5805 Valley of the Four Winds (376)|304/0/251|9/9/9|7/1/1|2/0/0|2/0/0|
+|1116 / 6755 Nagrand (550)|300/0/282|5/5/5|0/0/0|0/0/0|0/0/0|
+|2222 / 10534 Bastion (1533)|298/0/235|614/596/596|47/47/47|4/0/0|4/0/0|
+|571 / 210 Icecrown (118)|287/278/285|4790/4132/3932|1819/3142/1640|48/50/46|47/47/43|
+|0 / 4922 Twilight Highlands (241)|285/189/189|7483/5236/5236|1762/990/990|114/72/72|114/71/71|
+|2222 / 10413 Revendreth (1525)|280/0/179|15/9/9|2/2/2|2/0/0|2/0/0|
+|2374 / 13536 Zereth Mortis (1970)|274/0/227|6/0/0|9/0/0|1/0/0|0/0/0|
+|1643 / 10290 Mechagon (1462)|273/0/240|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 3537 Borean Tundra (114)|269/254/269|4447/4293/4374|2164/1878/1239|116/119/116|106/104/100|
+|0 / 5146 Vashj'ir (201,203,204,205)|262/112/112|7967/7967/7967|1565/1311/1311|42/36/36|45/39/39|
+|0 / 15968 Eversong Woods (2395)|252/0/0|14/11/11|24/24/24|1/0/0|1/0/0|
+|530 / 3483 Hellfire Peninsula (100)|251/240/248|3228/3231/3228|1809/2096/1283|84/88/84|99/84/89|
+|571 / 65 Dragonblight (115)|251/243/251|3139/3097/3137|2042/1630/788|72/74/69|67/69/61|
+|1 / 15 Dustwallow Marsh (70)|247/232/232|2348/2348/2348|665/552/552|65/61/61|69/64/64|
+|1 / 331 Ashenvale (63)|234/219/219|5161/5154/5154|1431/1159/1159|99/94/94|96/91/91|
+|1064 / 6507 Isle of Thunder (504)|232/0/227|2/2/2|0/0/0|0/0/0|0/0/0|
+|870 / 5840 Vale of Eternal Blossoms (390)|231/0/212|8/8/8|12/2/2|3/0/0|3/0/0|
+|0 / 139 Eastern Plaguelands (23)|230/146/146|2944/2878/2878|764/536/536|37/34/34|43/39/39|
+|571 / 495 Howling Fjord (117)|227/221/229|4952/4716/4934|1979/1673/1102|77/77/74|70/68/64|
+|1 / 5034 Uldum (249)|226/73/74|4324/4324/4324|516/417/417|39/37/37|27/25/25|
+|1 / 1377 Silithus (81)|225/84/84|1535/1518/1518|304/235/235|23/22/22|34/26/26|
+|2694 / 15355 Harandar (2413)|225/0/154|162/49/49|6/0/0|3/0/0|2/0/0|
+|2771 / 16648 Voidstorm (2405,2444)|224/0/131|5/5/5|0/0/0|0/0/0|0/0/0|
+|1 / 16 Azshara (76)|221/152/152|3162/3156/3156|714/651/651|55/52/52|54/51/51|
+|530 / 3520 Shadowmoon Valley (104)|221/200/209|2188/2429/2188|867/1606/534|37/40/36|32/32/30|
+|0 / 15947 Zul'Aman (2437,2536)|216/0/0|7/7/7|0/0/0|0/0/0|0/0/0|
+|1116 / 6722 Spires of Arak (542)|214/0/209|10/10/10|1/1/1|0/0/0|0/0/0|
+|1 / 357 Feralas (69)|207/186/186|2047/2047/2047|670/414/414|34/29/29|50/44/44|
+|1 / 400 Thousand Needles (64)|202/156/156|3755/3755/3755|1008/982/982|49/49/49|50/50/50|
+|1 / 148 Darkshore (62)|201/165/165|680/680/680|264/217/217|16/15/15|16/15/15|
+|1 / 440 Tanaris (71)|194/154/154|1565/1565/1565|368/205/205|20/17/17|27/24/24|
+|1 / 14 Durotar (1,461,463)|193/173/173|5552/5512/5512|1751/934/934|105/101/101|128/122/122|
+|870 / 5841 Kun-Lai Summit (379)|192/0/189|18/18/18|17/1/1|6/0/0|6/0/0|
+|870 / 6138 Dread Wastes (422)|190/0/164|10/10/10|6/0/0|2/0/0|2/0/0|
+|2444 / 14433 The Forbidden Reach (2151)|190/0/171|0/0/0|7/0/0|1/0/0|1/0/0|
+|2222 / 13570 Korthia (1961)|188/0/154|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 1519 Stormwind City (84)|187/120/121|2273/1517/1517|5910/887/887|76/49/49|127/90/90|
+|1 / 361 Felwood (77)|186/129/129|2583/2455/2455|1006/894/894|60/58/58|55/53/53|
+|0 / 28 Western Plaguelands (22)|185/169/169|1988/1988/1988|683/506/506|50/47/47|58/51/51|
+|571 / 394 Grizzly Hills (116)|182/168/180|4031/3921/4031|2312/2024/1137|94/94/91|91/95/82|
+|1 / 1637 Orgrimmar (85)|179/128/129|1467/1423/1423|1641/580/580|76/63/63|97/77/77|
+|530 / 3523 Netherstorm (109)|175/161/169|1944/1961/1944|834/1364/666|38/39/37|34/34/32|
+|1 / 616 Mount Hyjal (198)|173/98/98|6093/3346/3346|1407/920/920|72/44/44|73/43/43|
+|1 / 17 Northern Barrens (10)|171/151/151|1701/1701/1701|466/222/222|38/34/34|35/31/31|
+|0 / 1 Dun Morogh (27,469)|170/161/161|2803/2803/2803|1602/814/814|67/66/66|94/91/91|
+|530 / 3519 Terokkar Forest (108)|167/165/173|4726/4550/4723|2896/2845/1797|95/92/96|97/93/89|
+|571 / 67 The Storm Peaks (120)|165/158/163|811/543/647|313/1543/189|7/7/7|6/6/5|
+|870 / 5842 Townlong Steppes (388)|165/0/156|10/10/10|4/1/1|1/0/0|1/0/0|
+|1220 / 7543 Broken Shore (646)|164/0/144|0/0/0|1/1/1|0/0/0|0/0/0|
+|530 / 3522 Blade's Edge Mountains (105)|160/155/160|3020/2939/2972|1840/2109/1121|81/79/75|82/82/71|
+|2222 / 11400 The Maw (1543)|159/0/129|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 618 Winterspring (83)|158/114/114|1104/1104/1104|355/238/238|24/22/22|20/17/17|
+|646 / 5042 Deepholm (207)|157/3/156|6524/0/5413|1063/0/940|52/0/41|51/0/40|
+|1 / 406 Stonetalon Mountains (65)|156/149/149|578/578/578|488/76/76|13/6/6|13/6/6|
+|0 / 10 Duskwood (47)|155/131/131|1791/1791/1791|363/200/200|28/25/25|25/22/22|
+|1 / 405 Desolace (66)|154/141/141|3481/3481/3481|799/608/608|47/44/44|52/49/49|
+|0 / 267 Hillsbrad Foothills (25)|151/133/133|446/446/446|289/113/113|20/17/17|24/20/20|
+|530 / 3518 Nagrand (107)|150/131/142|1261/1354/1261|544/1370/240|28/29/27|23/25/22|
+|0 / 16365 Atal'Utek (2512)|147/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 4 Blasted Lands (17)|143/101/101|974/966/966|499/148/148|22/12/12|22/13/13|
+|571 / 66 Zul'Drak (121)|143/131/140|5114/4865/4631|2629/2434/1905|100/97/89|101/102/88|
+|0 / 3 Badlands (15)|140/129/129|1088/1088/1088|488/245/245|24/21/21|24/21/21|
+|0 / 12 Elwynn Forest (37,425)|137/114/116|1788/1786/1786|944/327/327|44/40/40|50/45/45|
+|0 / 85 Tirisfal Glades (18,465)|136/112/112|1357/1345/1345|1150/333/333|45/36/36|33/27/27|
+|1669 / 8574 Krokuun (830)|132/0/110|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 490 Un'Goro Crater (78)|130/110/110|2557/2557/2557|625/590/590|34/29/29|36/31/31|
+|0 / 46 Burning Steppes (36)|129/84/84|890/890/890|215/163/163|18/18/18|14/14/14|
+|1116 / 6941 Ashran (588)|125/0/52|194/194/194|105/105/105|3/0/2|4/0/3|
+|1 / 4709 Southern Barrens (199)|124/102/102|20/20/20|438/0/0|5/0/0|5/0/0|
+|654 / 4714 Gilneas (202)|122/0/115|4261/0/77|427/0/0|60/0/1|55/0/0|
+|0 / 47 The Hinterlands (26)|121/120/120|883/883/883|733/419/419|24/19/19|38/33/33|
+|870 / 6134 Krasarang Wilds (418)|121/0/117|7/7/7|9/0/0|4/0/0|4/0/0|
+|1220 / 7502 Dalaran ()|116/0/84|109/22/22|538/20/20|8/1/2|13/1/5|
+|571 / 3711 Sholazar Basin (119)|113/106/113|3092/3067/2936|1418/1691/986|48/47/46|46/47/40|
+|1 / 215 Mulgore (7,462)|107/76/90|2238/2238/2238|543/414/414|47/46/46|53/52/52|
+|0 / 45 Arathi Highlands (14)|106/99/99|1729/1729/1729|638/471/471|46/43/43|50/47/47|
+|530 / 3521 Zangarmarsh (102)|103/97/103|4902/4924/4902|2834/2457/1863|95/94/95|83/82/75|
+|2175 / 10424 Exile's Reach ()|103/0/88|900/441/441|29/18/18|16/0/0|23/0/0|
+|0 / 38 Loch Modan (48)|102/96/96|1686/1686/1686|635/493/493|35/32/32|36/33/33|
+|0 / 130 Silverpine Forest (21)|98/76/76|3273/3155/3155|908/537/537|40/36/36|38/34/34|
+|0 / 11 Wetlands (56)|97/94/94|2249/2248/2248|640/452/452|31/27/27|40/36/36|
+|1116 / 6723 Tanaan Jungle (534)|97/0/91|0/0/0|0/0/0|0/0/0|0/0/0|
+|1669 / 8701 Eredath (882)|95/0/77|0/0/0|1/1/1|0/0/0|0/0/0|
+|860 / 5736 The Wandering Isle ()|90/0/87|60/0/58|82/0/12|1/0/1|1/0/1|
+|2222 / 10565 Oribos ()|89/0/74|237/195/195|142/142/142|2/0/1|1/0/0|
+|0 / 44 Redridge Mountains (49)|88/72/72|771/771/771|411/260/260|18/16/16|32/30/30|
+|530 / 3430 Eversong Woods (Burning Crusade) (94,467)|88/76/82|1485/1349/1485|869/898/458|44/39/48|36/35/40|
+|0 / 1537 Ironforge (87)|87/83/83|405/405/405|959/425/425|41/32/32|63/49/49|
+|0 / 8 Swamp of Sorrows (51)|81/80/80|1201/1201/1201|681/414/414|25/22/22|21/18/18|
+|648 / 4720 The Lost Isles (174)|81/0/81|5625/0/4|1000/0/0|32/0/0|31/0/0|
+|0 / 40 Westfall (52)|80/74/74|1942/1813/1813|364/279/279|22/20/20|27/25/25|
+|0 / 51 Searing Gorge (32)|79/67/67|1302/1302/1302|900/792/792|29/27/27|26/25/25|
+|530 / 3525 Bloodmyst Isle (106)|79/79/80|1368/1363/1368|632/838/524|38/38/38|32/34/32|
+|1 / 141 Teldrassil (57,460)|77/75/75|1529/1529/1529|535/407/407|30/29/29|40/39/39|
+|530 / 3524 Azuremyst Isle (97,468)|74/70/72|1773/1937/1773|1241/1116/577|54/54/58|53/51/50|
+|2241 / 10833 Uldum ()|74/0/64|0/0/0|3/3/3|0/0/0|0/0/0|
+|2127 / 10416 Siren Isle (2369)|71/0/56|236/236/236|24/24/24|0/0/0|0/0/0|
+|530 / 3433 Ghostlands (95)|69/62/70|1656/1619/1655|683/787/585|40/45/45|39/42/39|
+|0 / 41 Deadwind Pass (42)|63/52/52|1358/1357/1357|404/404/404|23/22/22|37/36/36|
+|0 / 15969 Silvermoon City (2393)|63/0/0|7/3/3|0/0/0|1/0/0|2/0/0|
+|530 / 3703 Shattrath City (111)|59/48/52|1025/1063/1025|2528/2764/328|51/60/57|45/55/48|
+|1669 / 8899 Antoran Wastes (885)|57/0/39|0/0/0|0/0/0|0/0/0|0/0/0|
+|732 / 5389 Tol Barad Peninsula (245)|44/0/44|627/0/627|254/0/254|10/0/10|12/0/12|
+|2570 / 13769 The Forbidden Reach (2118)|44/0/29|49/49/49|39/39/39|0/0/0|0/0/0|
+|870 / 6757 Timeless Isle (554)|40/0/36|10/10/10|0/0/0|0/0/0|0/0/0|
+|0 / 1497 Undercity (90)|38/35/35|763/763/763|431/277/277|16/15/15|43/38/38|
+|648 / 4737 Kezan (194)|38/0/36|2031/0/24|723/0/13|15/0/1|16/0/1|
+|1 / 1638 Thunder Bluff (88)|36/34/34|361/361/361|691/233/233|30/27/27|32/28/28|
+|530 / 4080 Isle of Quel'Danas (122)|35/32/32|987/1004/690|134/350/34|15/4/5|16/16/4|
+|1 / 1941 Caverns of Time ()|34/31/31|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 1657 Darnassus (89)|30/27/27|846/846/846|564/220/220|33/31/31|42/38/38|
+|571 / 4197 Wintergrasp (123)|28/28/28|2165/1799/2064|1088/1467/611|42/31/43|42/30/40|
+|732 / 5095 Tol Barad (244)|26/0/26|201/0/201|71/0/71|0/0/0|0/0/0|
+|2444 / 13642 Dragon Isles (2063)|22/0/15|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 4706 Ruins of Gilneas (217)|18/1/1|671/441/441|150/130/130|4/2/2|3/1/1|
+|974 / 5861 Darkmoon Island ()|17/0/8|127/0/127|23/0/23|6/0/2|7/0/3|
+|1642 / 9664 War Campaign - Horde ()|17/0/16|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 25 Blackrock Mountain ()|15/15/15|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 4395 Dalaran ()|14/6/10|22/0/22|40/6/1|4/0/4|1/0/1|
+|1 / 493 Moonglade (80)|10/10/10|625/607/607|273/82/82|9/8/8|17/15/15|
+|2222 / 13672 Tazavesh, the Veiled Market ()|9/0/7|13/13/13|14/14/14|0/0/0|0/0/0|
+|0 / 7886 Dalaran City ()|8/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2444 / 15105 Amirdrassil (2239)|8/0/7|115/115/115|40/40/40|0/0/0|0/0/0|
+|530 / 3557 The Exodar (103)|7/6/6|627/602/627|1102/1354/60|19/28/34|27/25/23|
+|870 / 6006 The Veiled Stair (433)|7/0/4|2/2/2|4/0/0|1/0/0|1/0/0|
+|530 / 3487 Silvermoon City (Burning Crusade) (110)|6/5/5|777/732/776|1857/2028/272|28/44/45|35/37/27|
+|1220 / 7578 Eye of Azshara (790)|6/0/4|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 5695 Ahn'Qiraj: The Fallen Kingdom ()|5/0/0|3/3/3|0/0/0|3/3/3|3/3/3|
+|369 / 2257 Deeprun Tram ()|5/2/3|0/0/0|0/15/0|0/0/0|0/0/0|
+|870 / 6661 Isle of Giants (507)|5/0/3|1/1/1|0/0/0|0/0/0|0/0/0|
+|1116 / 7490 Garrison ()|5/0/5|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 7679 Acherus: The Ebon Hold ()|5/0/4|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 2037 Quel'Thalas ()|4/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 2817 Crystalsong Forest (127)|4/0/4|2042/2026/1843|2923/2685/1103|60/59/56|69/60/56|
+|0 / 13983 Tirisfal Glades ()|3/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 9663 War Campaign - Alliance ()|3/0/3|0/0/0|0/0/0|0/0/0|0/0/0|
+|1479 / 7813 Skyhold ()|2/0/1|125/0/0|15/0/0|1/0/0|5/0/0|
+|0 / 6936 Blasted Lands (DO NOT USE) ()|1/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 16215 Isle of Quel'Danas (2424)|1/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1860 / 9359 The Vindicaar ()|1/0/1|62/53/53|26/17/17|1/0/0|0/0/0|
+|2222 / 13332 The Maw ()|1/0/1|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 21 Kul Tiras ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 30 Nine ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 170 Lordamere Lake ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 269 Dun Algaz ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 276 UNUSED Stonewrought Pass ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 293 Thoradin's Wall ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 296 South Seas UNUSED ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 330 Thandol Span ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 408 Gillijim's Isle ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 409 Island of Doctor Lapidis ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 1579 Unused The Deadmines 002 ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 2280 DO NOT USE ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 3459 City ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 5152 The Park ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 5351 Ruins of Gilneas City ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 6606 Class Quest ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7884 The Silver Enclave ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7885 Antonidas Memorial ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7887 Circle of Wills ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7888 The Violet Citadel ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7889 The Violet Citadel Spire ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7890 Sewer Exit Pipe ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7891 Sewer Exit Pipe ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7892 Dalaran Floating Rocks ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7893 Sunreaver's Sanctuary ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7894 Dalaran Island ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7895 The Violet Hold ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7896 Runeweaver Square ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7897 The Underbelly ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7898 The Eventide ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7899 Magus Commerce Exchange ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7900 Vargoth's Retreat ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 7901 Violet Citadel Balcony ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 8535 Dalaran (Deadwind Pass) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 9010 Shadow of Azeroth ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 9703 Allied - Dark Iron Dwarf Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 9808 Eastern Kingdoms ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 10267 Questfall ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 13975 Tirisfal Glades ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 14045 Tirisfal Glades ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 16217 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 16838 Atal'Utek (copy) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|0 / 16860 The Great Sea (2668)|0/0/0|7/7/7|72/72/72|0/0/0|0/0/0|
+|1 / 0 unassigned ()|0/0/0|1/1/1|0/0/0|0/0/0|0/0/0|
+|1 / 377 Southfury River ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 457 The Veiled Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 876 GM Island ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 2917 Hall of Legends ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 3478 Gates of Ahn'Qiraj ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 4707 The Lost Isles ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 4795 Slitherblade Shore ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 4826 Storm Cliffs ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 4887 Nightmare Scar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 5060 Steelspark Station ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 6463 Dustwallow Marsh ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 7634 Feralas (copy) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 9704 Allied - Mag'har Orc Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 10397 Mulgore ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 10625 Durotar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1 / 11382 8.2.5 War Campaign ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|369 / 0 unassigned ()|0/0/0|110/28/110|197/91/197|3/1/3|4/2/4|
+|530 / 0 unassigned ()|0/0/0|2/2/2|0/0/0|0/0/0|0/0/0|
+|530 / 3455 The North Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|530 / 3479 The Veiled Sea ()|0/0/0|0/0/0|1/1/1|0/0/0|0/0/0|
+|530 / 3540 Twisting Nether ()|0/0/0|0/0/0|0/31/0|0/0/0|0/0/0|
+|530 / 3917 Auchindoun ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|530 / 7498 Shadowmoon Valley (Outland) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|530 / 7499 Nagrand (Outland) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 0 unassigned ()|0/0/0|0/1/0|0/0/0|0/0/0|0/0/0|
+|571 / 3477 Azjol-Nerub ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 3979 The Frozen Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 4201 Vordrassil's Tears ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 4258 The North Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 4602 Force Interior ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 4630 The North Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 4742 Hrothgar's Landing (170)|0/1/1|1161/1170/1145|405/393/348|61/62/61|64/62/63|
+|571 / 4859 The Frozen Throne ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 8474 Dalaran (Northrend) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 10154 Dragonblight ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 10155 Icecrown ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 10156 Borean Tundra ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|571 / 10157 Sholazar Basin ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|609 / 0 unassigned ()|0/0/0|1939/2041/596|366/777/283|24/23/5|26/26/6|
+|609 / 4298 Plaguelands: The Scarlet Enclave ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|646 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|648 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|654 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|654 / 4774 Gilneas (Do Not Reuse) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|730 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|730 / 5416 The Maelstrom (276)|0/0/0|87/0/7|0/0/0|2/0/2|1/0/1|
+|730 / 5630 The Maelstrom ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|732 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|860 / 0 unassigned ()|0/0/0|2229/0/2223|816/0/810|12/0/12|32/0/32|
+|861 / 0 unassigned ()|0/0/0|430/0/430|0/0/0|0/0/0|0/0/0|
+|861 / 5733 Molten Front ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 10920 The Veiled Stair ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 11024 The Jade Forest ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 11025 Valley of the Four Winds ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 11026 Kun-Lai Summit ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 11027 Townlong Steppes ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|870 / 11054 The Veiled Stair ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|974 / 0 unassigned ()|0/0/0|309/0/309|676/0/676|15/0/13|16/0/16|
+|1064 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1116 / 0 unassigned ()|0/0/0|8/8/8|0/0/0|0/0/0|0/0/0|
+|1116 / 6756 Faralohn ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1116 / 6908 [PH] Heroes Through Time ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1116 / 6975 [PH] Ashran [TRANSITION ZONE] ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1116 / 7229 Town Hall ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1116 / 7230 Great Hall ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 7343 [UNUSED] ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 7656 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8053 The Greater Sea (Don't Use) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8054 Thal'dranath ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8392 Dalaran Sewers ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8445 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8449 xxOLD - Zuldazar City ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8470 VictorCortisLand ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8598 Warden Tower TEMP ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8600 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 8700 The Exodar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 9386 Allied - Highmountain Tauren Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 9387 Allied - Lightforged Draenei Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 9394 Allied - Orgrimmar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 9395 Allied - Stormwind ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 9396 Allied - Void Elf Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 9397 Allied - Nightborne Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 10430 Val'sharah ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 10713 Highmountain ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 10714 Stormheim ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 10727 Suramar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1220 / 10731 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1265 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1265 / 7025 Tanaan Jungle ()|0/0/0|134/27/27|52/2/2|13/0/0|12/0/0|
+|1265 / 7771 Tanaan Invasion ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1464 / 0 unassigned ()|0/0/0|12/12/12|0/0/0|0/0/0|0/0/0|
+|1464 / 7856 Tanaan Jungle Flight Bounds ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1479 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1481 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1481 / 7705 Mardum, the Shattered Abyss ()|0/0/0|919/490/490|33/27/27|9/0/0|5/0/0|
+|1502 / 0 unassigned ()|0/0/0|0/0/0|84/0/0|0/0/0|0/0/0|
+|1642 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1642 / 8502 South Seas ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1642 / 9570 Zuldazar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1642 / 9669 South Seas ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1642 / 10088 Allied - Zandalari Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 8566 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 8978 Tol Dagor (1169)|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 9183 RiverZone_Art ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 9764 Thros, the Blighted Lands ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 10015 Tol Dagor (1169)|0/0/0|0/0/0|1/1/1|0/0/0|0/0/0|
+|1643 / 10380 Allied - Kul Tiran Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 11539 Allied - Mechagnome Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1643 / 11540 Alllied - Vulpera Unlock ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1669 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1860 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1865 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|1865 / 9415 Telogrus Rift ()|0/0/0|70/70/70|46/46/46|1/0/1|1/0/1|
+|2081 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2081 / 10028 Blackrock Depths ()|0/0/0|135/135/135|198/197/197|1/0/1|0/0/0|
+|2127 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2127 / 13416 DEV Lowlands (DO NOT USE) ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2127 / 16108 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2175 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 11508 SinewTestArea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 12847 Bastion - Vignettes ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 12848 Bastion - Treasures ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 13433 The In-Between ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 13553 Escape from the Maw ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2222 / 13633 9.1 Campaign ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2241 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2268 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2268 / 12825 Mechagon City ()|0/0/0|38/0/0|84/0/0|1/0/0|0/0/0|
+|2297 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2297 / 12952 Icecrown Citadel ()|0/0/0|33/33/33|16/16/16|1/0/1|1/0/1|
+|2374 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2374 / 13409 Progenitor Zone Area 1 ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2444 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2444 / 13643 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2454 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2552 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2552 / 15525 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2552 / 15667 Delves ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2552 / 16077 Dornogal Test ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2570 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2570 / 14510 The Great Sea ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2601 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2601 / 14665 Khaz Algar ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2694 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2694 / 15469 Harandar Dev Land ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2738 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2738 / 16579 K'aresh ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2771 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2785 / 0 unassigned ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2785 / 15509 The Forbidden Reach ()|0/0/0|40/36/36|23/21/21|1/0/0|1/0/0|
+|2785 / 15780 Forbidden Reach - (11.0.5 Version) - Dracthyr for All ()|0/0/0|0/0/0|0/0/0|0/0/0|0/0/0|
+|2991 / 0 unassigned ()|0/0/0|0/1662/1662|0/0/0|0/57/57|0/65/65|

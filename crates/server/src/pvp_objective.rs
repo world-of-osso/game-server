@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::battleground::{BgPhase, BgTeam, FlagState, template_by_id};
+use shared::battleground::{
+    BgPhase, BgTeam, BgTemplate, FlagObjective, FlagSite, FlagState, template_by_id,
+};
 use shared::components::{Health, Level, Player, Position};
 use shared::protocol::{
     BattlegroundPlayerScoreSnapshot, GameObjectInfo, WARSONG_ALLIANCE_FLAG_ENTRY,
@@ -77,10 +79,6 @@ fn update_match(
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
-    // Read only this match's two authored homes; never clone the world catalog.
-    let Some(homes) = flag_homes(world.resource::<GameObjectSpawns>(), map) else {
-        return false;
-    };
     let mut changed = false;
     if matched.instance.phase == BgPhase::Waiting
         && roster_ready(matched, actors, map, template.min_players_per_team as usize)
@@ -91,17 +89,42 @@ fn update_match(
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }
+    let delta_ms = world.resource::<Time<Fixed>>().delta().as_millis() as u64;
+    if let Some(nodes) = matched.nodes.as_mut() {
+        let before = nodes.world_states(&matched.instance);
+        nodes.advance(delta_ms, &mut matched.instance, &template);
+        return changed || before != nodes.world_states(&matched.instance);
+    }
+    if matched.eye.is_some() {
+        return update_eye(world, matched, actors, map, &template, delta_ms) || changed;
+    }
+    if matched.kotmogu.is_some() {
+        return update_kotmogu(world, matched, actors, map, &template, delta_ms) || changed;
+    }
+    if matched.silvershard.is_some() {
+        return update_silvershard(world, matched, actors, map, &template, delta_ms) || changed;
+    }
+    let Some(battle) = matched.flags.as_mut() else {
+        return changed;
+    };
+    battle.advance(delta_ms, &mut matched.instance);
+    if matched.instance.phase != BgPhase::InProgress {
+        return true;
+    }
+    // Only flag maps need two authored homes; preserve master's catalog-clone removal.
+    let Some(homes) = flag_homes(world.resource::<GameObjectSpawns>(), map) else {
+        return changed;
+    };
     for team in [BgTeam::A, BgTeam::B] {
         let enemy = enemy_team(team);
-        let flag = flag_state(matched, enemy);
-        let FlagState::Carried { carrier } = flag else {
+        let FlagState::Carried { carrier } = flag_state(&battle.flags, enemy) else {
             continue;
         };
         let actor = actors
             .get(&carrier)
             .filter(|actor| actor.map == map && actor.alive);
         let Some(actor) = actor else {
-            matched.flags.drop_flag(team);
+            battle.flags.drop_flag(team);
             if let Some(position) = matched.flag_positions[team_index(enemy)] {
                 spawn_flag(world, map, &homes[team_index(enemy)], position);
             }
@@ -109,18 +132,16 @@ fn update_match(
             continue;
         };
         matched.flag_positions[team_index(enemy)] = Some(actor.position);
+        // Capture triggers 30/31 sit exactly on the authored flag homes (TDB areatrigger).
         if actor.position.distance(homes[team_index(team)].position) <= CAPTURE_RADIUS
-            && matched
-                .flags
-                .capture(team, carrier, &mut matched.instance, &template)
+            && battle.capture(team, carrier, &mut matched.instance, &template)
         {
-            if let Some(score) = matched
-                .scoreboard
-                .iter_mut()
-                .find(|score| score.character_id == carrier)
-            {
-                score.flag_captures += 1;
-            }
+            credit(
+                &mut matched.scoreboard,
+                carrier,
+                battle.rules.capture_stat,
+                1,
+            );
             let home = &homes[team_index(enemy)];
             spawn_flag(world, map, home, home.position);
             matched.flag_positions[team_index(enemy)] = None;
@@ -128,6 +149,159 @@ fn update_match(
         }
     }
     changed
+}
+
+/// Presence heartbeats and timers, then the carrier: alive on the map it may score at a
+/// trigger, otherwise the flag drops where it was last carried.
+fn update_eye(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let present: Vec<_> = [
+        (BgTeam::A, &matched.instance.team_a_players),
+        (BgTeam::B, &matched.instance.team_b_players),
+    ]
+    .into_iter()
+    .flat_map(|(team, ids)| {
+        ids.iter().filter_map(move |id| {
+            let actor = actors.get(id).filter(|a| a.map == map && a.alive)?;
+            Some((team, actor.position.to_array()))
+        })
+    })
+    .collect();
+    let eye = matched.eye.as_mut().expect("Eye of the Storm match");
+    let before = (eye.world_states(&matched.instance), eye.flag_site());
+    eye.advance(delta_ms, &present, &mut matched.instance, template);
+    if let Some(carrier) = eye
+        .carrier()
+        .filter(|_| matched.instance.phase == BgPhase::InProgress)
+    {
+        let actor = actors.get(&carrier).filter(|actor| actor.map == map);
+        match actor {
+            Some(actor) if actor.alive => {
+                matched.flag_positions[0] = Some(actor.position);
+                let team = if matched.instance.team_a_players.contains(&carrier) {
+                    BgTeam::A
+                } else {
+                    BgTeam::B
+                };
+                let at = actor.position.to_array();
+                if eye.capture(carrier, team, at, &mut matched.instance, template) {
+                    credit(&mut matched.scoreboard, carrier, eye.rules.capture_stat, 1);
+                }
+            }
+            _ => {
+                let at = actor
+                    .map(|actor| actor.position)
+                    .or(matched.flag_positions[0]);
+                eye.drop_flag(at.expect("carried position recorded at pickup").to_array());
+            }
+        }
+    }
+    if eye.flag_site() != before.1 {
+        place_objective(world, map, eye.rules.flag_entry, eye.flag_site());
+    }
+    before.0 != eye.world_states(&matched.instance)
+}
+
+fn update_kotmogu(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let players: Vec<_> = actors
+        .iter()
+        .filter(|(_, actor)| actor.map == map && actor.alive)
+        .map(|(id, actor)| (*id, actor.position.to_array()))
+        .collect();
+    let orbs = matched.kotmogu.as_mut().expect("Kotmogu match");
+    let before = (orbs.world_states(&matched.instance), orbs.holders());
+    let points = orbs.advance(delta_ms, &players, &mut matched.instance, template);
+    for (character, points) in points {
+        credit(
+            &mut matched.scoreboard,
+            character,
+            shared::battleground::ORB_VICTORY_POINTS_STAT,
+            points,
+        );
+    }
+    let held = orbs.holders();
+    for (entry, _, _) in before.1 {
+        if !held.iter().any(|(taken, _, _)| *taken == entry) {
+            place_objective(world, map, entry, Some(FlagSite::Home));
+        }
+    }
+    before.0 != orbs.world_states(&matched.instance)
+}
+
+fn update_silvershard(
+    world: &mut World,
+    matched: &mut InvitedBattleground,
+    actors: &BTreeMap<u64, Participant>,
+    map: InMap,
+    template: &BgTemplate,
+    delta_ms: u64,
+) -> bool {
+    let players: Vec<_> = [
+        (BgTeam::A, &matched.instance.team_a_players),
+        (BgTeam::B, &matched.instance.team_b_players),
+    ]
+    .into_iter()
+    .flat_map(|(team, ids)| {
+        ids.iter().filter_map(move |id| {
+            let actor = actors
+                .get(id)
+                .filter(|actor| actor.map == map && actor.alive)?;
+            Some((*id, team, actor.position.to_array()))
+        })
+    })
+    .collect();
+    let carts = matched.silvershard.as_mut().expect("Silvershard match");
+    let before = carts.battle.world_states(&matched.instance);
+    for event in carts.advance(
+        world,
+        map,
+        delta_ms,
+        &players,
+        &mut matched.instance,
+        template,
+    ) {
+        if let shared::battleground::CartEvent::Controlled(id) = event {
+            credit(
+                &mut matched.scoreboard,
+                id,
+                shared::battleground::CARTS_CONTROLLED_STAT,
+                1,
+            );
+        }
+    }
+    before != carts.battle.world_states(&matched.instance)
+}
+
+fn credit(
+    scoreboard: &mut [BattlegroundPlayerScoreSnapshot],
+    character_id: u64,
+    stat: u32,
+    amount: u32,
+) {
+    let counter = scoreboard
+        .iter_mut()
+        .find(|score| score.character_id == character_id)
+        .and_then(|score| {
+            score
+                .objective_scores
+                .iter_mut()
+                .find(|(id, _)| *id == stat)
+        })
+        .expect("participant row carries every source column of its map");
+    counter.1 += amount;
 }
 
 fn roster_ready(
@@ -173,8 +347,10 @@ fn build_scoreboard(
                 deaths: 0,
                 damage_done: 0,
                 healing_done: 0,
-                flag_captures: 0,
-                flag_returns: 0,
+                objective_scores: shared::battleground::pvp_stat_columns(map_id(matched))
+                    .iter()
+                    .map(|column| (column.stat, 0))
+                    .collect(),
                 honorable_kills: None,
                 honor_level: None,
             })
@@ -208,14 +384,27 @@ fn spawn_flag(world: &mut World, map: InMap, source: &GameObjectSpawn, position:
     ));
 }
 
-pub(crate) fn use_battleground_flag(
+fn map_id(matched: &InvitedBattleground) -> u32 {
+    template_by_id(matched.instance.bg_id)
+        .expect("registered match template")
+        .map_id
+}
+
+pub(crate) fn use_battleground_object(
     world: &mut World,
     connection: Entity,
     player: Entity,
     object: Entity,
 ) {
     let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
-        pickup_or_return_flag(world, &mut state, player, object)
+        if world
+            .get::<GameObjectInfo>(object)
+            .is_some_and(GameObjectInfo::is_battleground_capture_point)
+        {
+            assault_capture_point(world, &mut state, player, object)
+        } else {
+            pickup_or_return_flag(world, &mut state, player, object)
+        }
     });
     super::pvp_invites::send_response(world, connection, player, result.clone());
     if result.is_ok() {
@@ -229,28 +418,21 @@ pub(crate) fn use_battleground_flag(
     }
 }
 
-fn pickup_or_return_flag(
-    world: &mut World,
-    state: &mut PvpServerState,
+/// The user's team and character in its accepted, in-progress match on the object's map.
+fn active_match<'a>(
+    world: &World,
+    state: &'a mut PvpServerState,
     player: Entity,
     object: Entity,
-) -> Result<String, String> {
+) -> Result<(BgTeam, u64, &'a mut InvitedBattleground), String> {
     let snapshot = world
         .get::<PlayerPvpState>(player)
-        .and_then(|player| player.battleground.clone())
+        .and_then(|state| state.battleground.as_ref())
         .ok_or("player is not in a battleground")?;
     let character_id = world
         .get::<ClientId>(player)
         .ok_or("player character missing")?
         .0;
-    let info = world
-        .get::<GameObjectInfo>(object)
-        .ok_or("flag is no longer available")?;
-    let owner = match info.entry {
-        WARSONG_ALLIANCE_FLAG_ENTRY => BgTeam::A,
-        WARSONG_HORDE_FLAG_ENTRY => BgTeam::B,
-        _ => return Err("not a Warsong flag".into()),
-    };
     let matched = state
         .battleground_matches
         .get_mut(&snapshot.match_id)
@@ -259,23 +441,106 @@ fn pickup_or_return_flag(
     if world.get::<InMap>(player) != Some(&map)
         || world.get::<InMap>(object) != Some(&map)
         || matched.instance.phase != BgPhase::InProgress
+        || !matched.accepted.contains(&character_id)
     {
-        return Err("flag is not usable in this player's active match".into());
+        return Err("object is not usable in this player's active match".into());
     }
-    if !matched.accepted.contains(&character_id) {
-        return Err("player has not accepted this match".into());
+    Ok((snapshot.team, character_id, matched))
+}
+
+fn assault_capture_point(
+    world: &World,
+    state: &mut PvpServerState,
+    player: Entity,
+    object: Entity,
+) -> Result<String, String> {
+    let entry = world
+        .get::<GameObjectInfo>(object)
+        .ok_or("capture point is no longer available")?
+        .entry;
+    let (team, character_id, matched) = active_match(world, state, player, object)?;
+    let nodes = matched
+        .nodes
+        .as_mut()
+        .ok_or("match has no capture points")?;
+    let stat = nodes.assault(entry, team)?;
+    credit(&mut matched.scoreboard, character_id, stat, 1);
+    Ok("capture point state updated".into())
+}
+
+fn pickup_or_return_flag(
+    world: &mut World,
+    state: &mut PvpServerState,
+    player: Entity,
+    object: Entity,
+) -> Result<String, String> {
+    let entry = world
+        .get::<GameObjectInfo>(object)
+        .ok_or("flag is no longer available")?
+        .entry;
+    let (team, character_id, matched) = active_match(world, state, player, object)?;
+    let map = matched.map.expect("active match has a map");
+    let position = wow_position(world.get::<Position>(player).expect("positioned player"));
+    if let Some(orbs) = matched.kotmogu.as_mut() {
+        orbs.pickup(entry, character_id, team)?;
+        credit(
+            &mut matched.scoreboard,
+            character_id,
+            shared::battleground::ORB_POSSESSIONS_STAT,
+            1,
+        );
+        world.despawn(object);
+        return Ok("Orb of Power picked up".into());
     }
-    if owner == snapshot.team {
+    if let Some(eye) = matched.eye.as_mut() {
+        if entry != eye.rules.flag_entry || !eye.pickup(team, character_id) {
+            return Err("the flag is not available".into());
+        }
+        matched.flag_positions[0] = Some(position);
+        place_objective(world, map, eye.rules.flag_entry, eye.flag_site());
+        return Ok("flag picked up".into());
+    }
+    let owner = match entry {
+        WARSONG_ALLIANCE_FLAG_ENTRY => BgTeam::A,
+        WARSONG_HORDE_FLAG_ENTRY => BgTeam::B,
+        _ => return Err("not a battleground team flag".into()),
+    };
+    if owner == team {
         return return_own_flag(world, matched, map, object, owner, character_id);
     }
-    if !matched.flags.pickup(snapshot.team, character_id) {
+    let battle = matched.flags.as_mut().ok_or("match has no team flags")?;
+    if !battle.flags.pickup(team, character_id) {
         return Err("enemy flag is not available".into());
     }
-    matched.flag_positions[team_index(owner)] = Some(wow_position(
-        world.get::<Position>(player).expect("positioned player"),
-    ));
+    matched.flag_positions[team_index(owner)] = Some(position);
     world.despawn(object);
     Ok("enemy flag picked up".into())
+}
+
+/// Show an authored objective where its rules place it: home, ground or nowhere.
+fn place_objective(world: &mut World, map: InMap, entry: u32, site: Option<FlagSite>) {
+    let mut objects = world.query::<(Entity, &GameObjectInfo, &InMap)>();
+    let shown: Vec<_> = objects
+        .iter(world)
+        .filter(|(_, info, at)| info.entry == entry && **at == map)
+        .map(|(object, ..)| object)
+        .collect();
+    for object in shown {
+        world.despawn(object);
+    }
+    let Some(site) = site else { return };
+    let home = world
+        .resource::<GameObjectSpawns>()
+        .0
+        .iter()
+        .find(|spawn| spawn.map_id == map.map_id && spawn.info.entry == entry)
+        .cloned()
+        .expect("entry requires the authored objective");
+    let position = match site {
+        FlagSite::Home => home.position,
+        FlagSite::Dropped(at) => Vec3::from_array(at),
+    };
+    spawn_flag(world, map, &home, position);
 }
 
 fn return_own_flag(
@@ -286,29 +551,25 @@ fn return_own_flag(
     owner: BgTeam,
     character_id: u64,
 ) -> Result<String, String> {
-    if !matched.flags.return_flag(owner) {
+    let battle = matched.flags.as_mut().ok_or("match has no team flags")?;
+    if !battle.flags.return_flag(owner) {
         return Err("your flag is not dropped".into());
     }
+    let return_stat = battle.rules.return_stat;
     let sources = world.resource::<GameObjectSpawns>();
     let homes = flag_homes(sources, map).ok_or("authored flag homes missing")?;
     world.despawn(object);
     let home = &homes[team_index(owner)];
     spawn_flag(world, map, home, home.position);
     matched.flag_positions[team_index(owner)] = None;
-    if let Some(score) = matched
-        .scoreboard
-        .iter_mut()
-        .find(|score| score.character_id == character_id)
-    {
-        score.flag_returns += 1;
-    }
+    credit(&mut matched.scoreboard, character_id, return_stat, 1);
     Ok("own flag returned".into())
 }
 
-fn flag_state(matched: &InvitedBattleground, owner: BgTeam) -> FlagState {
+fn flag_state(flags: &FlagObjective, owner: BgTeam) -> FlagState {
     match owner {
-        BgTeam::A => matched.flags.flag_a,
-        BgTeam::B => matched.flags.flag_b,
+        BgTeam::A => flags.flag_a,
+        BgTeam::B => flags.flag_b,
     }
 }
 fn team_index(team: BgTeam) -> usize {
@@ -334,10 +595,11 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
             matched.instance.phase,
             matched.instance.score_a.score,
             matched.instance.score_b.score,
-            matched.flags.clone(),
+            matched.flag_objective(),
             matched.instance.outcome,
             matched.scoreboard.clone(),
             matched.arena.as_ref().map(|arena| arena.snapshot.clone()),
+            matched.world_states(),
         )
     };
     let mut connections =
@@ -364,6 +626,7 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
         snapshot.outcome = values.4;
         snapshot.players = values.5.clone();
         snapshot.arena = values.6.clone();
+        snapshot.world_states = values.7.clone();
         super::pvp_invites::send_response(
             world,
             connection,
