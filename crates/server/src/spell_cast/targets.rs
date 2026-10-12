@@ -184,6 +184,12 @@ pub fn creature_type_allowed(world: &World, spell: &SpellInfo, target: Entity) -
 
 /// `caster` regards `target` as hostile (selects the hostile spell range).
 pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
+    if let Some(relation) = crate::pvp::arena_combat::relation(world, caster, target) {
+        return matches!(
+            relation,
+            crate::pvp::arena_combat::ArenaRelation::Enemy { .. }
+        );
+    }
     if dueling(world, caster, target) {
         return true;
     }
@@ -194,14 +200,24 @@ pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
 
 /// `Unit::IsFriendlyTo`: the caster's reaction to the target is friendly.
 pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
+    if let Some(relation) = crate::pvp::arena_combat::relation(world, caster, target) {
+        return relation == crate::pvp::arena_combat::ArenaRelation::Teammate;
+    }
     let templates = world.resource::<FactionTemplates>();
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
     templates.reaction(caster.template, target.template) == Reaction::Friendly
 }
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
+    let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if relation == Relation::Any {
-        return true;
+        return !matches!(
+            arena,
+            Some(
+                crate::pvp::arena_combat::ArenaRelation::Blocked
+                    | crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: false }
+            )
+        );
     }
     if caster == target {
         return relation == Relation::Ally;
@@ -216,6 +232,19 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
         .is_some_and(|flags| !flags.is_selectable())
     {
         return false;
+    }
+    if let Some(arena) = arena {
+        return match relation {
+            Relation::Enemy => {
+                matches!(
+                    arena,
+                    crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: true }
+                ) && world
+                    .get::<shared::components::UnitFlags>(target)
+                    .is_none_or(|flags| flags.is_attackable())
+            }
+            _ => arena == crate::pvp::arena_combat::ArenaRelation::Teammate,
+        };
     }
     // The duel opponent is hostile: attackable, never assisted.
     let dueling = dueling(world, caster, target);

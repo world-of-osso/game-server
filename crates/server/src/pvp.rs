@@ -26,6 +26,8 @@ mod pvp_war_mode;
 
 #[path = "pvp_arena.rs"]
 pub(crate) mod arena;
+#[path = "pvp_arena_combat.rs"]
+pub(crate) mod arena_combat;
 #[path = "pvp_arena_lifecycle.rs"]
 mod arena_lifecycle;
 #[path = "pvp_arena_objects.rs"]

@@ -123,8 +123,8 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
     let target = Connection::open(dir.path().join("world.db")).unwrap();
     target.execute_batch("CREATE TABLE arena_map(map_id INTEGER);
         CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
-        CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
-        CREATE TABLE game_object_display_info (ID INTEGER,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
+        CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
+        CREATE TABLE game_object_display_info (ID INTEGER PRIMARY KEY,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
     target
         .execute("INSERT INTO arena_map VALUES(?)", [map_id])
         .unwrap();
@@ -154,7 +154,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
         template.extend_from_slice(&values[21..24]);
         target
             .execute(
-                "INSERT INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&template),
             )
             .unwrap();
@@ -162,7 +162,7 @@ fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::Game
         display.extend_from_slice(&values[14..20]);
         target
             .execute(
-                "INSERT INTO game_object_display_info VALUES (?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO game_object_display_info VALUES (?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&display),
             )
             .unwrap();
