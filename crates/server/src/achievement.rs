@@ -607,7 +607,7 @@ fn query_comparison_target(
     if matches!(query, QueryAchievementCatalog::Comparison { .. }) {
         return Err("nested achievement comparison is invalid");
     }
-    let target = Entity::try_from_bits(target_bits).map_err(|_| "invalid comparison target")?;
+    let target = Entity::try_from_bits(target_bits).ok_or("invalid comparison target")?;
     if target == viewer {
         return Err("comparison target must be another player");
     }
