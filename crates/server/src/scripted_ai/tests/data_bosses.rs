@@ -384,6 +384,18 @@ fn encounter_coverage_golden_serpent_not_started_intro_is_friendly_and_uninterac
     assert!(h.inbox(0).engages.is_empty());
 }
 
+fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {
+    for &(busy_start, busy_end) in busy_windows {
+        if busy_start >= next_cast - 0.001 {
+            break;
+        }
+        if busy_start <= due + 0.001 && due < busy_end {
+            due = busy_end;
+        }
+    }
+    due
+}
+
 #[test]
 fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() {
     // Source InitializeAI explicitly handles every state other than NotStarted.
@@ -468,15 +480,7 @@ fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() 
             "authored spell {spell_id} did not repeat: {times:?}"
         );
         for pair in times.windows(2) {
-            let mut expected_due = pair[0] + repeat;
-            for &(busy_start, busy_end) in &busy_windows {
-                if busy_start >= pair[1] - 0.001 {
-                    break;
-                }
-                if busy_start <= expected_due + 0.001 && expected_due < busy_end {
-                    expected_due = busy_end;
-                }
-            }
+            let expected_due = defer_due_time_while_busy(pair[0] + repeat, pair[1], &busy_windows);
             assert!(
                 (pair[1] - expected_due).abs() <= 0.1,
                 "spell {spell_id}: actual {times:?}, due {expected_due}, busy {busy_windows:?}"
