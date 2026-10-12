@@ -648,6 +648,129 @@ fn initial_terrain_on_enter_map(map_id: u32, wow_position: (f32, f32, f32)) -> L
 }
 
 #[test]
+fn character_saved_in_wailing_caverns_logs_in_after_server_restart_with_gathering_nodes() {
+    let directory = tempfile::tempdir().unwrap();
+    let db_path = directory.path().join("wc-login.redb");
+    let account_id = 21;
+    let character_id = {
+        let db = redb::Database::create(&db_path).unwrap();
+        persistence::create_tables(&db);
+        let (id, _) = persistence::create_character(&db, account_id, "Cavewalker", 1, 1).unwrap();
+        let mut data = persistence::load_character(&db, id).unwrap();
+        (data.x, data.y, data.z) = (-151.139, 414.367, -72.6294);
+        data.level = 80;
+        persistence::save_character(&db, id, &data);
+        crate::maps::persistence::save_character_map(&db, id, 43);
+        id
+    };
+    // Each app reopens the real persisted character with a new map manager/pool state.
+    // The second login also has no NPC population index: GO pools still need state.
+    for with_creatures in [true, false] {
+        let path = crate::test_data::world_db_path();
+        let conn = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let mut world_data = crate::world_data::load_world_data(&path);
+        if !with_creatures {
+            world_data.spawns_by_map.remove(&43);
+        }
+        let objects = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+        let pooled_guids: Vec<_> = objects
+            .0
+            .iter()
+            .filter(|spawn| {
+                spawn.map_id == 43
+                    && spawn.info.go_type == shared::protocol::GAMEOBJECT_TYPE_GATHERING_NODE
+            })
+            .filter(|spawn| world_data.pools.gameobject_pool(spawn.guid).is_some())
+            .map(|spawn| spawn.guid)
+            .collect();
+        assert!(
+            !pooled_guids.is_empty(),
+            "authentic saved map has gathering candidates"
+        );
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: Duration::from_millis(50),
+        });
+        app.add_plugins(shared::protocol::ProtocolPlugin);
+        app.add_plugins(DeathPlugin);
+        app.insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+        app.init_resource::<crate::maps::InstanceManager>();
+        app.init_resource::<crate::spawn_pools::PoolSpawns>();
+        app.insert_resource(world_data);
+        app.insert_resource(objects);
+        app.insert_resource(crate::gathering::load_data(&conn).unwrap());
+        app.insert_resource(GameDatabase {
+            db: redb::Database::open(&db_path).unwrap(),
+        });
+        app.init_resource::<TerrainReplies>();
+        app.add_systems(Update, process_select_character);
+        app.add_systems(Last, collect_terrain_replies);
+        app.finish();
+        app.cleanup();
+        let connection = app
+            .world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(account_id)),
+                Connected,
+                HostClient { buffer: Vec::new() },
+                Authenticated { account_id },
+                MessageSender::<SelectCharacter>::default(),
+                MessageReceiver::<SelectCharacter>::default(),
+                MessageSender::<EnterWorldResponse>::default(),
+                MessageReceiver::<EnterWorldResponse>::default(),
+                MessageSender::<LoadTerrain>::default(),
+                MessageReceiver::<LoadTerrain>::default(),
+            ))
+            .id();
+        app.world_mut()
+            .get_mut::<MessageSender<SelectCharacter>>(connection)
+            .unwrap()
+            .send::<AuthChannel>(SelectCharacter { character_id });
+        for _ in 0..4 {
+            app.update();
+        }
+        let map = app
+            .world_mut()
+            .query::<(&ClientId, &crate::maps::InMap)>()
+            .iter(app.world())
+            .find(|(id, _)| id.0 == character_id)
+            .map(|(_, map)| *map)
+            .expect("saved character entered copy");
+        assert_eq!(map.map_id, 43);
+        assert_ne!(map.instance_id, 0);
+        assert_eq!(
+            app.world().resource::<TerrainReplies>().0[0].map_name,
+            "wailingcaverns"
+        );
+        let selected: std::collections::BTreeSet<_> = pooled_guids
+            .iter()
+            .copied()
+            .filter(|guid| {
+                app.world().resource::<crate::spawn_pools::PoolSpawns>().0[&map]
+                    .spawns
+                    .gameobject_spawned(*guid)
+            })
+            .collect();
+        let world = app.world_mut();
+        let spawned: std::collections::BTreeSet<_> = world
+            .query::<(&crate::maps::InMap, &crate::gathering::NodeSource)>()
+            .iter(world)
+            .filter(|(copy, node)| **copy == map && pooled_guids.contains(&node.0.guid))
+            .map(|(_, node)| node.0.guid)
+            .collect();
+        assert_eq!(
+            spawned, selected,
+            "login spawns only this copy's selected authentic nodes"
+        );
+    }
+}
+
+#[test]
 fn a_character_saved_on_kalimdor_enters_kalimdor() {
     // Ratchet, Northern Barrens: tile row 39 (WoW Y), column 33 (WoW X).
     let ratchet = initial_terrain_on_enter_map(1, (-956.0, -3754.0, 5.0));
