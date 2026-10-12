@@ -155,17 +155,18 @@ fn receive_use(world: &mut World) {
             let (account, player) = (auth.account_id, link.0);
             receiver
                 .receive()
-                .map(move |request| (connection, account, player, request.item_id))
+                .map(move |request| (connection, account, player, request))
                 .collect::<Vec<_>>()
         })
         .collect();
-    for (connection, account, player, item_id) in requests {
+    for (connection, account, player, request) in requests {
+        let item_id = request.item_id;
         let spell_id = world
             .resource::<ToyCatalog>()
             .0
             .get(&item_id)
             .and_then(|toy| toy.snapshot.spell_id);
-        let outcome = use_toy(world, account, player, item_id);
+        let outcome = use_toy(world, account, player, item_id, request.destination);
         result(
             world,
             connection,
@@ -203,6 +204,7 @@ pub(crate) fn use_toy(
     account: u64,
     player: Entity,
     item_id: u32,
+    destination: Option<[f32; 3]>,
 ) -> Result<(), String> {
     let toy = world
         .resource::<ToyCatalog>()
@@ -228,7 +230,7 @@ pub(crate) fn use_toy(
                 .retail[&item_id]
                 .scaling,
         );
-    crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level)
+    crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level, destination)
         .map_err(|failure| format!("{failure:?}"))
 }
 
