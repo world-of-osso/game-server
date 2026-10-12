@@ -301,6 +301,33 @@ pub mod test_helpers {
         )
     }
 
+    /// Explicit planar fixture spanning three chunks; no production ground fallback.
+    pub fn flat_arena_ground(
+        map_id: u32,
+        corner: [f32; 2],
+        height: f32,
+    ) -> crate::ground::GroundMap {
+        let mut terrain = TerrainHeightMap::default();
+        for row in 0..3 {
+            for column in 0..3 {
+                terrain.chunks.extend(
+                    flat_terrain(
+                        corner[0] - column as f32 * CHUNK_SIZE,
+                        corner[1] - row as f32 * CHUNK_SIZE,
+                        height,
+                    )
+                    .chunks,
+                );
+            }
+        }
+        let (x, _, z) = wow_to_bevy(corner[0] - 1.0, corner[1] - 1.0, height);
+        crate::ground::GroundMap::with_terrain_on(
+            map_id,
+            crate::ground::bevy_to_tile(x, z),
+            terrain,
+        )
+    }
+
     /// Create a flat terrain chunk at the given corner with uniform height.
     pub fn flat_terrain(corner_x: f32, corner_y: f32, height: f32) -> TerrainHeightMap {
         TerrainHeightMap {
