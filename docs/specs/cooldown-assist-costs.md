@@ -19,7 +19,7 @@ Owner-only effective spell costs for the [client combat assist](../../../game-en
 ## Tests asserting this spec
 - `crates/server/src/spell_cast/assisted_costs.rs`: real Mortal Strike300raw rage admission and threshold updates.
 - Shared protocol wire test retains effective numbers and explicit errors.
-- `crates/server/src/spell_cast/charge_snapshot_tests.rs`: actual Fire Blast category1500 full2/2 owner message before casting.
+- `crates/server/src/spell_cast/charge_snapshot_tests.rs`: actual Fire Blast category1500 authored baseline1/1 (no extra-charge talent) owner message before casting.
 
 ## Known gaps (current cycle)
 - [ ] Native owner transport/live recommendation consumption awaits private proof.
