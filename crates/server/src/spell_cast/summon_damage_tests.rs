@@ -52,6 +52,7 @@ fn guardian(h: &mut Harness, owner: Entity) -> Entity {
             spell_id: spell.id,
             properties_id,
             properties,
+            display_scale: 1.0,
             expires_at: None,
         });
     unit
@@ -255,7 +256,7 @@ fn class_completeness_native_mastery_refresh_preserves_timed_aura_expiry() {
         .world()
         .get::<shared::components::UnitAuras>(owner)
         .unwrap()
-        .0
+        .auras
         .iter()
         .find(|aura| aura.spell_id == SHIFTING_SANDS)
         .unwrap()
@@ -276,7 +277,7 @@ fn class_completeness_native_mastery_refresh_preserves_timed_aura_expiry() {
         .world()
         .get::<shared::components::UnitAuras>(owner)
         .unwrap()
-        .0
+        .auras
         .iter()
         .find(|aura| aura.spell_id == SHIFTING_SANDS)
         .unwrap()
