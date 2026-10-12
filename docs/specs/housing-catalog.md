@@ -30,6 +30,16 @@ No verified first-house exterior/interior grant source is available. Do not infe
 
 The server reads build-qualified NeighborhoodMap entries and NeighborhoodPlot cornerstone/teleport coordinates from the imported catalog. Supported shipping neighborhoods are map2735/2736; record4/map2640 has no matching Map.db2 row. Plot prices retain authored copper amounts under the Retail cornerstone MoneyFrame/GetMoney contract. Names may be authentically empty; do not generate neighborhood/plot names or grants. Missing catalog imports must produce an explicit unavailable error.
 
+## Authored map ground
+
+Neighborhood2735/2736 and interior2783 use their real WDT/ADT and placed WMO collision. No generated flat floor substitutes for a missing map or house grant. Explicit registered-map extraction uses the existing local-CASC ground walker, including maps with no NPC spawns:
+
+```text
+python3 scripts/extract_ground.py --world-db <housing-world.db> --cache <private-housing-assets> --engine <game-engine-checkout> --casc-local <asset-resolver>/target/debug/casc-local --failed <private-housing-assets>/ground-failed.tsv --map 2735 --map 2736 --map 2783
+```
+
+Opt-in `housing_ground_ -- --ignored --nocapture` with `GAME_SERVER_GROUND_DIR=<private-housing-assets>` checks complete root/obj0/WMO geometry, actual210/225/25WDT roots and real support at Founder's authored entry/cornerstone/plot teleport. Client textures/M2 receipts, LOS bake and both-skin rendered admission remain separate proof gates. Map bytes alone do not grant exterior or interior components.
+
 ## Authenticated cornerstones
 
 Use NeighborhoodPlot.CornerstoneGameObjectID only as a reference to the same-build GameObjects record. Preserve that object's actual Pos, quaternion, name, type48, display and GameObjectDisplayInfo bounds. NeighborhoodPlot.CornerstonePosition is a different authored marker; never substitute it for a missing object. First copy arrival spawns available source cornerstones, ordinary later arrivals do not duplicate them. Plot payment requires that exact object in the player's copy and the existing five-yard gameobject model-box reach check, including nonfinite refusal. Ordinary UseGameObject opens the cornerstone through the same living-player/range validation and authenticated account/character link; identical coordinates in another copy and unauthenticated connections are refused. Its HousingReply carries the inspected plot identity without claiming ownership.
