@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Toy-effects14 ordinary caster visual kits (2026-10-11)
+
+Largest remaining group is aura4(273 distinct toys). Complete source audit separates96 zero-shaped bound roots from27 ordinary-model native kit chains, then12 explicit caster-only cosmetic contracts. The unchanged complete-zero predicate admits those12 source-bound spells; it does not accept arbitrary dummy auras. Models/animations/sounds use existing native kit types2/5/6, with no procedural, positioner or conditional payload asserted. Real bag learning/UseToy, exact replicated lifetimes, cancellation and unchanged health/global models are tested. [Exact12 identities/source/gaps](../../toy-effects14-coverage.md#batch3-highest-count-aura4-complete-ordinary-model-caster-kits).
+
 ## Toy-effects14 zero-entry costumes (2026-10-11)
 
 TC a352b1fa `HandleAuraTransform` supplies explicit mappings, not creature-entry joins, for Murloc42365/display21723, Gnomeregan75531/displays31654–31655 and Darkspear75532/displays31737–31738. The native player sex selects the two Pride displays even while another transform is active. Existing transform precedence and native-display restoration apply. Toy preflight accepts only those implemented zero-entry cases; other zero-entry costumes remain explicit refusals. [Source and proof](../../toy-effects14-coverage.md).
