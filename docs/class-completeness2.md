@@ -30,6 +30,7 @@ Verified: 2026-10-12. Full spell/talent goal remains open across all 13 classes 
 | 116d3eff / shared00d33e7 | 2911 | 4734 | 182 | Native467 bonus-stat negation, all7827 memberships, exit0, 606.66s |
 | 1deb60e3 / shared00d33e7 | 2928 | 4717 | 182 | Native142 physical base armor, all7827 memberships, exit0, 539.21s |
 | 1441a273 / shared00d33e7 | 2934 | 4711 | 182 | Native305 player minimum speed, all7827 memberships, exit0, 565.22s |
+| dfc71656 / shared00d33e7 | 2965 | 4680 | 182 | Native466 final player armor, all7827 memberships, exit0, 477.51s |
 
 First census resolves target24 for native117418 in three specs; integrated master's native1804 adds three unsupported item-target26 failures. Net broken change is zero, not zero repairs. Second census repairs fixture fidelity: production already loads authored teleport destinations, while Cargo runs fixture startup from the crate directory, where relative `data/world.db` fails. Census now explicitly loads the same native destination/map data and supplies actor identity, facing, instance manager and ungrouped state. This is not newly implemented production teleport behavior.
 
@@ -174,7 +175,7 @@ Pinned TC a352b1fa Player::UpdateArmor (StatSystem.cpp255–276) applies aura466
 
 Six controls now pass: base/stat ordering with actual incoming physical damage, independent positive/negative stacking, removal to remaining factors, native negative expiry, native zero class fields and fractional rounding. Adjacent stats/itemstats21, physical base armor5, bonus-stat4 and summon4 pass. Concrete calculator fixtures isolate armor arithmetic; only the native selected aura effects are applied, not unrelated ability scripts. Pet owner-armor inheritance, ordinary-NPC aura466 parity and whole abilities remain uncertified.
 
-Logs: `bonus-armor-{red,green,controls-red,controls-green}.log`, `bonus-armor-adjacent-*.log`. No new live proof; full census pending.
+Logs: `bonus-armor-{red,green,controls-red,controls-green}.log`, `bonus-armor-adjacent-*.log`. No new live proof. Batch24 at `dfc71656` records all7827 memberships:2965 working/4680 partial/182 broken. All31 changed memberships belong to the four zero-valued class armor fields; nonzero shared behavior is separately proved by native positive/negative controls.
 
 ## Retained boundaries
 
