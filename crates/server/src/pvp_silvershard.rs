@@ -192,6 +192,7 @@ fn move_cart(world: &mut World, entity: Entity, at: [f32; 3]) {
             z: 0.0,
         },
         shared::components::MovementSpeed(2.0),
+        shared::components::CreatureMotion::Walk,
     ));
     crate::interest::mark_interest_position_changed(
         world.get_resource::<crate::interest::InterestDirtyQueue>(),
