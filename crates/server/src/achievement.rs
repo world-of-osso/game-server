@@ -407,20 +407,29 @@ pub(crate) fn record_player_death(world: &mut World, player: Entity) {
     let Some(map) = world.get::<InMap>(player).copied() else {
         return;
     };
-    let mut events = vec![
-        CriteriaEvent::DieAnywhere,
-        CriteriaEvent::DieOnMap(map.map_id),
-    ];
-    let killer = world
-        .get::<crate::combat::LastDamager>(player)
-        .map(|killer| killer.0);
-    if let Some(npc) = killer.and_then(|killer| world.get::<Npc>(killer)) {
-        events.push(CriteriaEvent::KilledByCreature(npc.template_id));
+    record_criteria_events(
+        world,
+        player,
+        &[
+            CriteriaEvent::DieAnywhere,
+            CriteriaEvent::DieOnMap(map.map_id),
+        ],
+    );
+}
+
+/// TC Unit::Kill uses the actual lethal unit, not a previous nonlethal LastDamager.
+pub(crate) fn record_player_killed_by(world: &mut World, player: Entity, killer: Entity) {
+    if world.get::<Player>(player).is_none() {
+        return;
     }
-    if killer.is_some_and(|killer| killer != player && world.get::<Player>(killer).is_some()) {
-        events.push(CriteriaEvent::KilledByPlayer);
-    }
-    record_criteria_events(world, player, &events);
+    let event = if let Some(npc) = world.get::<Npc>(killer) {
+        CriteriaEvent::KilledByCreature(npc.template_id)
+    } else if killer != player && world.get::<Player>(killer).is_some() {
+        CriteriaEvent::KilledByPlayer
+    } else {
+        return;
+    };
+    record_criteria_event(world, player, event);
 }
 
 /// Pinned CriteriaType245/246 and Retail CraftingOrderType enum: completed delivery only.

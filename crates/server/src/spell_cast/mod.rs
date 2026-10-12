@@ -619,13 +619,12 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
     if event.kind == CombatLogKind::Death {
-        let source = event
-            .source
-            .and_then(Entity::try_from_bits)
-            .map(|unit| combat_event_owner(world, unit));
+        let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
         if let (Some(killer), Some(victim)) = (source, target) {
-            crate::quest::record_player_kill(world, killer, victim);
+            crate::achievement::record_player_killed_by(world, victim, killer);
+            let owner = combat_event_owner(world, killer);
+            crate::quest::record_player_kill(world, owner, victim);
         }
     }
     let mut players: Vec<Entity> = Vec::new();
