@@ -5,6 +5,87 @@ use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 use bevy::prelude::*;
 use shared::components::Health;
+use shared::protocol::CombatLogKind;
+
+#[test]
+fn achievements_criteria_native_fireball_and_melee_each_credit_the_actual_hit_once() {
+    let mut h = harness(Vec::new(), &[133], 8).expect("real Fireball and melee pipeline");
+    let db = persistence::temp_database();
+    let (character, _) = persistence::create_character(&db, 1, "Spellhit", 1, 8).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((ClientId(character), PlayerAchievementState::default()));
+    h.app.world_mut().entity_mut(h.connection).insert(InWorld {
+        character_id: character,
+    });
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    h.app.insert_resource(GameDatabase { db });
+    bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
+    h.cast_and_deliver(133, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&162),
+        "launch is not damage"
+    );
+    h.advance(90);
+    let spell_damage: u64 = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(133))
+        .map(|event| event.amount as u64)
+        .sum();
+    assert!(spell_damage > 0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&162),
+        Some(&spell_damage)
+    );
+    h.attack(h.npc);
+    h.advance(55);
+    h.stop_attack();
+    h.advance(5);
+    let melee_damage: u64 = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id.is_none())
+        .map(|event| event.amount as u64)
+        .sum();
+    assert!(melee_damage > 0, "actual native swing lands");
+    let total = spell_damage + melee_damage;
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&162),
+        Some(&total)
+    );
+    h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&162),
+        Some(&total)
+    );
+}
 
 #[test]
 fn achievements_criteria_native_damage_caps_totals_not_peaks_and_excludes_self_and_dead_replay() {
@@ -67,6 +148,16 @@ fn achievements_criteria_native_damage_caps_totals_not_peaks_and_excludes_self_a
     assert_eq!(state.criteria_progress.get(&162), Some(&100));
     assert_eq!(state.criteria_progress.get(&5371), Some(&20));
     assert!(!state.criteria_progress.contains_key(&5372));
+    crate::combat::kill_unit(h.app.world_mut(), h.caster, h.caster);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5371),
+        Some(&20)
+    );
     h.advance(5);
     assert_eq!(
         h.app
