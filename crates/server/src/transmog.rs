@@ -119,43 +119,6 @@ impl TransmogCatalog {
         sources
     }
 
-    fn catalogue_sources(
-        &self,
-        slots: &[TransmogSlot],
-        templates: &ItemTemplates,
-        character: &crate::persistence::CharacterData,
-        collection: &shared::transmog::AppearanceCollection,
-    ) -> Vec<TransmogCatalogueSource> {
-        self.catalogue
-            .iter()
-            .filter_map(|source| {
-                if !source.template.allows(character.class, character.race) {
-                    return None;
-                }
-                let eligible: Vec<_> = slots
-                    .iter()
-                    .filter(|slot| {
-                        slot.definition_source == ItemDefinitionSource::Retail
-                            && templates
-                                .get(slot.definition_source, slot.item_id)
-                                .is_some_and(|target| {
-                                    catalogue_compatible(target, &source.template)
-                                })
-                    })
-                    .map(|slot| slot.slot)
-                    .collect();
-                if eligible.is_empty() {
-                    return None;
-                }
-                Some(TransmogCatalogueSource {
-                    source: source.view.clone(),
-                    collection: collection_state(source, collection),
-                    slots: eligible,
-                })
-            })
-            .collect()
-    }
-
     /// Sets the account has started. TrinityCore a352b1fa CollectionMgr::IsSetCompleted:
     /// members group by transmog slot and a slot is known when any member is collected.
     /// Members absent from world.db content_item are unknown here and omitted.
@@ -260,8 +223,6 @@ impl TransmogCatalog {
             slots,
             ..Default::default()
         };
-        state.catalogue =
-            self.catalogue_sources(&state.slots, templates, &record.character, collection);
         state.sets = self.available_sets(record.character.class, collection);
         self.wardrobe.populate(&mut state);
         state
@@ -332,18 +293,6 @@ fn compatible(target: &ItemTemplate, source: &ItemTemplate) -> bool {
     if target.scaling.class_id != source.scaling.class_id
         || source.scaling.flags2 & NO_SOURCE_VISUAL != 0
     {
-        return false;
-    }
-    if target.scaling.class_id == WEAPON {
-        return target.scaling.subclass_id == source.scaling.subclass_id
-            || weapon_group(target.scaling.subclass_id)
-                .is_some_and(|group| Some(group) == weapon_group(source.scaling.subclass_id));
-    }
-    compatible_slot_types(target, source)
-}
-
-fn catalogue_compatible(target: &ItemTemplate, source: &ItemTemplate) -> bool {
-    if target.scaling.class_id != source.scaling.class_id {
         return false;
     }
     if target.scaling.class_id == WEAPON {

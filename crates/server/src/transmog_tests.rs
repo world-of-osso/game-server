@@ -347,31 +347,11 @@ fn transmog_set_reports_one_primary_appearance_per_slot_including_unequipped_slo
 }
 
 #[test]
-fn transmog_catalogue_exposes_authored_sets_outfits_illusions_and_ownership() {
-    use shared::protocol::TransmogCollectionState;
+fn transmog_state_exposes_authored_outfits_illusions_and_paid_choices() {
     let mut h = application_harness();
     open_service(&mut h);
     let states = &h.app.world().resource::<Inbox<TransmogState>>().0;
     let state = states.last().unwrap();
-    let collected = state
-        .catalogue
-        .iter()
-        .find(|entry| entry.source.source_id == SOURCE)
-        .unwrap();
-    assert_eq!(collected.collection, TransmogCollectionState::Collected);
-    assert!(collected.slots.contains(&EquipmentSlot::MainHand));
-    assert!(
-        state
-            .catalogue
-            .iter()
-            .any(|entry| entry.collection == TransmogCollectionState::Uncollected)
-    );
-    assert!(
-        state
-            .catalogue
-            .iter()
-            .any(|entry| entry.collection == TransmogCollectionState::NonCollectable)
-    );
     let outfit = state
         .outfit_entries
         .iter()
