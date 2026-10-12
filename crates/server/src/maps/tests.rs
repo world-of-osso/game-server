@@ -326,6 +326,9 @@ fn housing_wire_home_map_admission_restores_visited_identity_without_component_g
     assert_eq!(place.position, position);
 }
 
+#[path = "housing_editor_tests.rs"]
+mod housing_editor_tests;
+
 fn cornerstones_in(world: &mut World, map: InMap) -> usize {
     let mut objects = world.query::<(&InMap, &GameObjectInfo, &Position)>();
     objects
