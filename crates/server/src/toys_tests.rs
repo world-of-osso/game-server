@@ -28,7 +28,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090,
             381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
             128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
-            127803, 128150, 128151, 128152,
+            127803, 128150, 128151, 128152, 176899, 176900,
         ],
         class,
     )
@@ -3729,6 +3729,72 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
         h.advance(100);
         assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
+    }
+}
+
+#[test]
+fn toyfx19_gladiator_banners_respect_faction_and_cancel_persistent_cosmetic_aura() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    for (item, spell, race, wrong_race) in [(119220, 176899, 1, 2), (119221, 176900, 2, 1)] {
+        let (mut h, character) = setup_for_race(
+            &directory.path().join(format!("gladiator-{item}.redb")),
+            race,
+        );
+        learn_effect_toy(&mut h, character, item);
+        let before = *h.app.world().get::<Health>(h.caster).unwrap();
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(40);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.expires_at, None);
+        assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), before);
+        assert!(h.app.world().get::<ModelDisplay>(h.caster).is_none());
+        assert!(
+            h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                spell_id: spell,
+            });
+        h.advance(5);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+
+        let (mut wrong, character) = setup_for_race(
+            &directory
+                .path()
+                .join(format!("gladiator-wrong-{item}.redb")),
+            wrong_race,
+        );
+        learn_effect_toy(&mut wrong, character, item);
+        assert!(activate(&mut wrong, item)[0].error.is_some());
+        wrong.advance(40);
+        assert!(!wrong.inbox.go.iter().any(|go| go.spell_id == spell));
     }
 }
 
