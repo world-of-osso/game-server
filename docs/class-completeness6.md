@@ -131,3 +131,12 @@ Critical Chaos consumer correction: d13f9382 reproduced the custom Chaos Strike 
 Proof ledger at be182624/shared f895cc1: server-check-batch40-final workspace/all-targets exit 0, no warnings, 12.192 s; fmt --check exit 0. Changed Rust hooks/consumer/tests manually audited against rust-readability: no new suppressions, bounded mutation and shallow branching. Fresh batch40 census pending; Combat Wisdom effect 1 remains partial.
 
 Batch40 census at 41fb8930/shared f895cc1: all 7827 receipts, exit 0, 703.800 s; **3139 working / 4506 partial / 182 broken**, zero transitions from batch39. This census adds no whole-ability improvement claim; actual class-proc consumption is now tested independently of the base probe. Code, spec, wiki and proof are pushed; no owned live processes or active builds remain. Next source-backed gap under investigation.
+
+
+## Batch41: native raid-area group healing
+
+fea05442 RED two native145110 casts failed to heal any grouped member. a029f7c7 maps selector56 to living party/raid members (not caster-only), using GroupRegistry and UnitSummonedBy ownership plus existing range/copy/relation rules. AreaTargetFilter now receives World because its new145110 filter requires live health; existing Azure Strike/Epidemic filters retain behavior. Native145110 picks one random target in the best injury/player tier and keeps one full-health target when nobody is injured.
+
+Source: pinned TC SpellInfo.cpp:304, Unit.cpp:12250-12266, spell_druid.cpp:3100-3110, Spell.cpp:9516-9580. Charmed controllers and CreatureStaticFlags TreatAsRaidUnit NPC membership/priority are explicit unmodeled boundaries; no flag or row invented. This does not implement passive145108's periodic hook.
+
+Proof ledger: raid-area-green two passed9.46s; at374f468d controls eight passed/one wrong log expectation failed; 8d4d4f52 changes only that test's log assertion/spec qualifier, full-health targeted rerun passed11.20s. Thus nine scoped controls now proved: actual heal, one target, injury priority, member control ownership, dead/far/copy/departure exclusions, full-health overflow, Azure Strike/Epidemic and mass-resurrection adjacency. server-check-batch41 at8d4d4f52 workspace/all-targets exit0 no warnings15.963s; fmt--check exit0. Manual changed-line Rust readability has bounded functions/explicit world-state reads, no new suppressions. Fresh batch41 census pending; current-head code/spec/wiki is landable after push.
