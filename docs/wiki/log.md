@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Creature-immunity definitions](../class-completeness6.md#native-creature-immunity-definitions--batch31): authentic235-row TDB importer, aura147 definition lookup, per-effect immunity miss logging; RED→GREEN plus403 adjacent passes. Census2983/4662/182, Bladestorm Arms/Fury now working; knockback effect lists and four absent TDB definitions remain gaps.
+
 - 2026-10-12 — [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30): native187 RED2→ten behavior controls, positive/negative/additive fields, actual attack type and expiry/removal; nine adjacent controls. Native form process evidence remains bounded by unverified starter art.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
