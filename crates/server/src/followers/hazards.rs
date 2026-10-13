@@ -129,36 +129,50 @@ fn escape_destination(
         let angle = index as f32 * std::f32::consts::FRAC_PI_4;
         let mut to = field.center + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
         to.y = from.y;
-        let crate::ground::GroundProbe::Supported(height) = world
-            .get_resource_mut::<crate::ground::GroundMap>()?
-            .ground_at(map, to)
-        else {
+        let Some((length, to)) = query_escape_candidate(world, unit, map, from, to, fields) else {
             continue;
         };
-        to.y = height;
-        if fields.iter().any(|field| contains(field, to)) {
-            continue;
-        }
-        let route = match world
-            .resource::<Navigation>()
-            .query_path(map, point(from), to)
-        {
-            Ok(Some(route)) => route,
-            Ok(None) => continue,
-            Err(error) => {
-                debug!("Follower {unit} escape candidate {to:?}: {error}");
-                continue;
-            }
-        };
-        if !route_leaves_fields(&route, fields) {
-            continue;
-        }
-        let length: f32 = route.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
         if best.is_none_or(|(previous, _)| length < previous) {
             best = Some((length, to));
         }
     }
     best.map(|(_, to)| to)
+}
+
+fn query_escape_candidate(
+    world: &mut World,
+    unit: Entity,
+    map: u32,
+    from: Position,
+    mut to: Vec3,
+    fields: &[Field],
+) -> Option<(f32, Vec3)> {
+    let crate::ground::GroundProbe::Supported(height) = world
+        .get_resource_mut::<crate::ground::GroundMap>()?
+        .ground_at(map, to)
+    else {
+        return None;
+    };
+    to.y = height;
+    if fields.iter().any(|field| contains(field, to)) {
+        return None;
+    }
+    let route = match world
+        .resource::<Navigation>()
+        .query_path(map, point(from), to)
+    {
+        Ok(Some(route)) => route,
+        Ok(None) => return None,
+        Err(error) => {
+            debug!("Follower {unit} escape candidate {to:?}: {error}");
+            return None;
+        }
+    };
+    if !route_leaves_fields(&route, fields) {
+        return None;
+    }
+    let length = route.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
+    Some((length, to))
 }
 
 fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
