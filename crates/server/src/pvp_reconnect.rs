@@ -155,7 +155,7 @@ pub(crate) fn logged_out(world: &mut World, player: Entity) {
     // without turning a living departure into a combat death.
 }
 
-pub(crate) fn logged_in(world: &mut World, player: Entity, character_id: u64) {
+fn load_login_entry(world: &World, player: Entity, character_id: u64) -> Option<Entry> {
     let battleground = world
         .get::<InMap>(player)
         .and_then(|map| world.resource::<crate::maps::MapStore>().map(map.map_id))
@@ -167,12 +167,15 @@ pub(crate) fn logged_in(world: &mut World, player: Entity, character_id: u64) {
             )
         });
     if !battleground {
-        return;
+        return None;
     }
-    let Some(entry) = world
+    world
         .get_resource::<GameDatabase>()
         .and_then(|db| load(&db.db, character_id))
-    else {
+}
+
+pub(crate) fn logged_in(world: &mut World, player: Entity, character_id: u64) {
+    let Some(entry) = load_login_entry(world, player, character_id) else {
         return;
     };
     let now = world.resource::<Time>().elapsed_secs_f64();
@@ -191,6 +194,10 @@ pub(crate) fn logged_in(world: &mut World, player: Entity, character_id: u64) {
         map,
         "login must restore the reserved battleground copy"
     );
+    restore_member(world, player, character_id, &entry);
+}
+
+fn restore_member(world: &mut World, player: Entity, character_id: u64, entry: &Entry) {
     let snapshot = rejoined_snapshot(
         &world.resource::<PvpServerState>().battleground_matches[&entry.match_id],
         entry.match_id,
@@ -232,12 +239,8 @@ fn team_of(matched: &InvitedBattleground, character_id: u64) -> Option<BgTeam> {
     }
 }
 
-fn rejoined_snapshot(
-    matched: &InvitedBattleground,
-    match_id: u64,
-    character_id: u64,
-) -> BattlegroundSnapshot {
-    let (id, name, map_id) = match &matched.arena {
+fn describe_match(matched: &InvitedBattleground) -> (u32, String, u32) {
+    match &matched.arena {
         Some(arena) => (
             arena.source.id,
             arena.source.name.clone(),
@@ -248,7 +251,15 @@ fn rejoined_snapshot(
                 template_by_id(matched.instance.bg_id).expect("supported battleground template");
             (template.id, template.name.clone(), template.map_id)
         }
-    };
+    }
+}
+
+fn rejoined_snapshot(
+    matched: &InvitedBattleground,
+    match_id: u64,
+    character_id: u64,
+) -> BattlegroundSnapshot {
+    let (id, name, map_id) = describe_match(matched);
     let (score_a, score_b) = matched.displayed_scores();
     BattlegroundSnapshot {
         match_id,
