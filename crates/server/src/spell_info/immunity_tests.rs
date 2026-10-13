@@ -108,6 +108,7 @@ fn apply_bladestorm(h: &mut Harness, target: Entity) {
     apply_immunity_effect(h, target, BLADESTORM, 1);
 }
 
+#[derive(Debug, PartialEq)]
 struct KnockbackOutcome {
     damage: bool,
     daze: bool,
@@ -120,6 +121,7 @@ fn cast_against_immunity(shield: u32, index: u8, class: u8, spell: u32) -> Knock
     let mut h = harness(vec![load_native_spell(shield, true)], &[spell], class).unwrap();
     let npc = h.npc;
     apply_immunity_effect(&mut h, npc, shield, index);
+    assert!(crate::auras::has_aura(h.app.world(), npc, shield));
     let health = h.health(npc);
     h.cast_and_deliver(spell, None);
     let succeeded = h.inbox.go.iter().any(|go| go.spell_id == spell);
@@ -226,20 +228,28 @@ fn class_completeness_native_missing_berserk_definition_stays_an_explicit_gap() 
     assert!(crate::auras::take_unhandled_auras(h.app.world_mut()).contains(&(BERSERK, 147)));
 }
 
+fn outcome(damage: bool, daze: bool, immune_logged: bool) -> KnockbackOutcome {
+    KnockbackOutcome {
+        damage,
+        daze,
+        immune_logged,
+    }
+}
+
 #[test]
 fn class_completeness_native_knockback_immunity_filters_only_knockback_effects() {
     // TC Spell::AddUnitTarget drops immune effects and keeps the target hit.
     let swipe = cast_against_immunity(DEATHS_ADVANCE, 2, 13, TAIL_SWIPE);
-    assert!(swipe.daze && !swipe.immune_logged);
+    assert_eq!(swipe, outcome(false, true, false));
     let storm = cast_against_immunity(DEATHS_ADVANCE, 2, 7, THUNDERSTORM);
-    assert!(storm.damage && storm.daze && !storm.immune_logged);
+    assert_eq!(storm, outcome(true, true, false));
 }
 
 #[test]
 fn class_completeness_native_mechanic_and_effect_immunity_combine_per_target() {
     // UpdateSpellCastDataTargets logs immunity only for an empty effect mask.
     let swipe = cast_against_immunity(BLADESTORM, 1, 13, TAIL_SWIPE);
-    assert!(!swipe.daze && swipe.immune_logged);
+    assert_eq!(swipe, outcome(false, false, true));
     let storm = cast_against_immunity(BLADESTORM, 1, 7, THUNDERSTORM);
-    assert!(storm.damage && !storm.daze && !storm.immune_logged);
+    assert_eq!(storm, outcome(true, false, false));
 }
