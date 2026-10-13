@@ -16,10 +16,11 @@ use bevy::prelude::*;
 pub(crate) use gold_follow::{
     load_model_reaches as load_gold_model_reaches, update_follows as update_gold_follows,
 };
+#[cfg(test)]
+pub(crate) use gust_slash::GustSlashTrigger;
 pub(crate) use gust_slash::{
-    CREATE_PROPERTIES as GUST_SLASH_CREATE_PROPERTIES, GustSlashTrigger,
-    create as create_gust_slash, load_shape as load_gust_slash_shape,
-    update as update_gust_slashes,
+    CREATE_PROPERTIES as GUST_SLASH_CREATE_PROPERTIES, create as create_gust_slash,
+    load_shape as load_gust_slash_shape, update as update_gust_slashes,
 };
 pub(crate) use molten_gold::{
     handles_effect as handles_molten_gold_effect, load_areas as load_molten_gold_areas,
