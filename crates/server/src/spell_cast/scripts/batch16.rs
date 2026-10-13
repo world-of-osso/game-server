@@ -21,8 +21,6 @@ const TIDAL_WAVES: u32 = 51564;
 const TIDAL_BUFF: u32 = 53390;
 const ARCANE_BLAST: u32 = 30451;
 const ARCANE_CHARGE: u32 = 36032;
-const ARCANE_POWER: u32 = 12042;
-const ARCANE_POWER_RANK: u32 = 343208;
 
 ///82326 explicitly gates the named88852s1 gain on231642, once per cast.
 pub(super) fn energize_holy_light(world: &mut World, caster: Entity, _spell: &SpellInfo) {
@@ -108,24 +106,17 @@ pub(in crate::spell_cast) fn blast_cast_time(
     }
 }
 
-///12042s2 is a mana-school cost percentage, explicitly gated by343208.
-///No generic aura72 support or unrelated school/power contracts are inferred.
+/// Arcane Blast's charge cost follows the generic school-cost aura fold.
+/// Arcane Power's native aura72 is already applied there, without a rank gate.
 pub(in crate::spell_cast) fn mana_cost(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     base: f32,
 ) -> f32 {
-    let charged = if spell.id == ARCANE_BLAST {
+    if spell.id == ARCANE_BLAST {
         base * blast_multiplier(world, caster, 4)
     } else {
         base
-    };
-    let discounted = crate::auras::has_aura(world, caster, ARCANE_POWER)
-        && crate::auras::has_aura(world, caster, ARCANE_POWER_RANK);
-    if discounted {
-        charged * (1.0 + script_effect_value(world, caster, ARCANE_POWER, 1) / 100.0)
-    } else {
-        charged
     }
 }
