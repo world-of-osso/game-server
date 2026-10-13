@@ -233,6 +233,7 @@ fn arena_player_state(
                 shadow_sight_available: false,
                 units: Vec::new(),
                 rating_changes: Vec::new(),
+                shuffle: None,
             }),
         }),
         ..Default::default()
