@@ -24,9 +24,11 @@ pub(crate) fn faction_for_race(race: u8) -> u8 {
 
 /// PlayerCondition encoding differs from this server's legacy Alliance=1/Horde=2.
 pub(crate) fn current_pvp_faction_for_race(race: u8) -> shared::components::CurrentPvpFaction {
-    shared::components::CurrentPvpFaction(match faction_for_race(race) {
-        1 => 2,
-        2 => 1,
+    // TC's outside-match condition treats known neutral Pandaren as non-Alliance.
+    // Keep undefined races unknown instead of manufacturing a racial identity.
+    shared::components::CurrentPvpFaction(match (race, faction_for_race(race)) {
+        (_, 1) => 2,
+        (24, _) | (_, 2) => 1,
         _ => 0,
     })
 }
