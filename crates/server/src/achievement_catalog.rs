@@ -82,6 +82,8 @@ pub(crate) enum CriteriaEvent {
     CaptureBattlePet,
     /// TC BattlePetMgr::AddPet: one newly committed pet GUID of this species.
     LearnedNewPet(u32),
+    /// TC BattlegroundScore::UpdatePvpStat: one native objective credit of this PvpStat.
+    TrackedWorldStateUIModified(u32),
     BattlePetReachedLevel(u8),
     ActivelyEarnedPetLevel(u8),
     Login,
@@ -184,6 +186,7 @@ impl CriteriaEvent {
             Self::PetBattleAchievementPoints(_) => 81,
             Self::CaptureBattlePet => 157,
             Self::LearnedNewPet(_) => 155,
+            Self::TrackedWorldStateUIModified(_) => 30,
             Self::BattlePetReachedLevel(_) => 160,
             Self::ActivelyEarnedPetLevel(_) => 162,
             Self::Login => 74,
@@ -319,6 +322,7 @@ impl CriteriaEvent {
             | Self::WinBattleground(asset)
             | Self::ParticipateInBattleground(asset)
             | Self::DieOnMap(asset)
+            | Self::TrackedWorldStateUIModified(asset)
             | Self::KilledByCreature(asset)
             | Self::DieFromEnvironmentalDamage(asset)
             | Self::DoEmote(asset)
@@ -1059,6 +1063,11 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             area_children.entry(parent).or_default().push(area);
         }
     }
+    let native_pvp_stats: BTreeSet<u32> = shared::battleground::all_templates()
+        .iter()
+        .flat_map(|template| shared::battleground::pvp_stat_columns(template.map_id))
+        .map(|column| column.stat)
+        .collect();
     let mut query = conn.prepare("SELECT c.ID, c.Type, c.Asset, c.ModifierTreeId, c.StartEvent, c.StartTimer, c.FailEvent, c.EligibilityWorldStateID, EXISTS(SELECT 1 FROM spell s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM skill_line s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM toy t WHERE t.ItemID = c.Asset), EXISTS(SELECT 1 FROM scenario s WHERE s.ID = c.Asset), EXISTS(SELECT 1 FROM area_table a WHERE a.ID = c.Asset), EXISTS(SELECT 1 FROM taxi_nodes t WHERE t.ID = c.Asset) FROM criteria c")?;
     let rows = query.query_map([], |row| {
         let kind = row.get(1)?;
@@ -1121,6 +1130,8 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 152 && row.get::<_, bool>(11)?)
                         || (matches!(kind, 11 | 163 | 164 | 225) && row.get::<_, bool>(12)?)
                         || (kind == 262 && row.get::<_, bool>(13)?)
+                        // PvpStat columns credited by native battleground objectives.
+                        || (kind == 30 && native_pvp_stats.contains(&(row.get::<_, i32>(2)? as u32)))
                         // TC CriteriaHandler.cpp:796-807 counts Character0 and Account2 banks.
                         || (kind == 260 && matches!(row.get::<_, i32>(2)?, 0 | 2))
                         // Retail CraftingOrderType Public0/Guild1/Personal2; native NPC3 unavailable.

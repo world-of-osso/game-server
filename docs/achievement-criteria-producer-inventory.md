@@ -2,7 +2,7 @@
 
 verified: 2026-10-12
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **4548 ordinary (3253 account/1295 character),257 statistics; 93 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **4555 ordinary (3260 account/1295 character),259 statistics; 94 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -46,7 +46,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 27 | CompleteQuest | 12627/14115 | 9393/9889 | 3234 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 28 | BeSpellTarget | 653/1839 | 404/1290 | 249 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 29 | CastSpell | 2387/2972 | 1381/1657 | 1006 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 30 | TrackedWorldStateUIModified | 0/87 | 0/78 | 0 | Producer gap: no TrackedWorldStateUI change authority; arbitrary counters are not WorldStateUI events. |
+| 30 | TrackedWorldStateUIModified | 15/87 | 15/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
 | 31 | PVPKillInArea | 0/51 | 0/45 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 32 | WinArena | 0/82 | 0/62 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 33 | ParticipateInArena | 0/87 | 0/61 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |

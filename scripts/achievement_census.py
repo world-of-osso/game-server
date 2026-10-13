@@ -12,8 +12,10 @@ from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_single_modifiers import qualified_single_modifiers
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 30, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
+# shared battleground_columns.rs PvpStat columns credited by native objectives.
+NATIVE_PVP_STATS = {61, 63, 64, 65, 82, 183, 290, 291, 370, 371, 418, 419, 428, 744, 926, 927, 928, 929, 1020, 1021}
 
 
 def read_rows(path):
@@ -59,6 +61,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
         if any(int(row[key]) for key in CONDITIONS):
             continue
         if kind in (28, 29, 34, 69, 110) and asset not in spells:
+            continue
+        if kind == 30 and asset not in NATIVE_PVP_STATS:
             continue
         if kind == 54 and asset not in (34, 101, 86, 87, 59):
             continue  # TC TextEmotes for the five native emotes, not animation IDs.
