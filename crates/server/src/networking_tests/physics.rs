@@ -23,6 +23,151 @@ fn probe_and_clamp(
     );
 }
 
+/// Real authored Cage hull and state through the production GO/gravity schedules.
+#[test]
+fn arena_live_trapdoor_authoritatively_supports_then_opening_drops_player() {
+    use shared::protocol::{GameObjectCollision, GameObjectInfo, GameObjectVisible};
+    use std::{collections::HashMap, path::PathBuf, time::Duration};
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        data.join("diagnostics/arena-coverage-2026-10-12/canonical-proof-data/world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let wdt: u32 = db
+        .query_row("SELECT WdtFileDataID FROM map WHERE ID=2759", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut app = setup_app_with_time();
+    app.insert_resource(GroundMap::new(&data, HashMap::from([(2759, wdt)])));
+    app.insert_resource(crate::pvp::arena::Catalog::load(&db).unwrap());
+    app.add_plugins(crate::game_objects::GameObjectPlugin);
+    app.add_systems(FixedUpdate, apply_terrain_gravity);
+    let map = InMap {
+        map_id: 2759,
+        instance_id: 786,
+    };
+    let player = spawn_player(app.world_mut(), 443.2981, -24.38845, -323.9937);
+    app.world_mut()
+        .entity_mut(player)
+        .insert((map, shared::components::MovementControl::default()));
+    let door = app
+        .world_mut()
+        .spawn((
+            map,
+            Position {
+                x: 443.59,
+                y: -24.8806,
+                z: -321.262,
+            },
+            Rotation {
+                x: 0.0,
+                y: 1.5708 + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+            GameObjectInfo {
+                entry: 505683,
+                go_type: 35,
+                display_id: 99831,
+                name: "Trapdoor".into(),
+                scale: 1.0,
+            },
+            GameObjectCollision(true),
+            GameObjectVisible(true),
+        ))
+        .id();
+    for _ in 0..60 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    let closed = app.world().get::<Position>(player).unwrap().y;
+    assert!(
+        (closed + 24.38845).abs() < 0.05,
+        "closed live trapdoor must hold authoritative feet, got {closed}"
+    );
+    app.world_mut()
+        .entity_mut(door)
+        .insert(GameObjectCollision(false));
+    for _ in 0..120 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    let opened = app.world().get::<Position>(player).unwrap().y;
+    assert!(
+        opened < -30.0,
+        "opening must remove authoritative support: {opened}"
+    );
+}
+
+#[test]
+fn arena_live_collision_leaves_unrelated_map_input_and_gravity_unchanged() {
+    use super::client_height::{flat_app, flat_spot, tick};
+    use shared::protocol::{GameObjectCollision, GameObjectInfo};
+    use std::path::PathBuf;
+    let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        data.join("diagnostics/arena-coverage-2026-10-12/canonical-proof-data/world.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let start = flat_spot(50.0);
+    let (mut app, player, connection) = flat_app(50.0);
+    app.insert_resource(crate::pvp::arena::Catalog::load(&db).unwrap());
+    app.add_systems(
+        FixedUpdate,
+        crate::game_objects::collision::sync_live_objects
+            .before(process_player_inputs)
+            .before(apply_terrain_gravity),
+    );
+    app.world_mut().spawn((
+        InMap::continent(0),
+        Position {
+            x: start.x + 0.2919,
+            y: 50.0,
+            z: start.z + 2.7317,
+        },
+        Rotation {
+            x: 0.0,
+            y: 1.5708 + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+        GameObjectInfo {
+            entry: 505683,
+            go_type: 35,
+            display_id: 99831,
+            name: "Non-arena regression hull".into(),
+            scale: 1.0,
+        },
+        GameObjectCollision(true),
+    ));
+    tick(
+        &mut app,
+        connection,
+        vec![PlayerInput {
+            position: [start.x + 0.35, start.y, start.z],
+            ..make_input(1.0, 0.0, 0.0)
+        }],
+    );
+    for _ in 0..30 {
+        tick(&mut app, connection, vec![]);
+    }
+    let actual = app.world().get::<Position>(player).unwrap();
+    assert!(
+        actual.x > start.x + 0.3,
+        "normal unrelated-map network report must move"
+    );
+    assert!(
+        (actual.y - 50.0).abs() < 0.001,
+        "unrelated-map gravity must stay on its static terrain: {actual:?}"
+    );
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+}
+
 #[test]
 fn speed_recalculates_when_aura_removed() {
     let mut app = setup_app_with_time();

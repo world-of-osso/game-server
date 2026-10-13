@@ -12,6 +12,83 @@ struct EnteredMatch {
 }
 
 #[test]
+fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_race() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match_with(&template, [611, 610], |app| {
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        app.add_plugins(crate::combat::CombatPlugin);
+    });
+    let actor = entered
+        .players
+        .iter()
+        .zip(&entered.teams)
+        .find(|(_, team)| **team == BgTeam::B)
+        .unwrap()
+        .0;
+    let h = &mut entered.h;
+    h.app.world_mut().entity_mut(actor.connection).insert((
+        pair::<shared::protocol::AttackSwing>(),
+        pair::<shared::protocol::AttackStop>(),
+        pair::<shared::protocol::AttackStart>(),
+        pair::<shared::protocol::AttackStopped>(),
+        pair::<shared::protocol::CombatEvent>(),
+    ));
+    let (enemy, before) = find_alterac_source_npc(h, entered.copy, 11949);
+    let at = wow(h.app.world().get::<Position>(enemy).unwrap());
+    h.walk_to(actor, at);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackSwing>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::AttackSwing {
+            target: enemy.to_bits(),
+        });
+    h.advance(20);
+    let after = h.app.world().get::<Health>(enemy).unwrap().current;
+    assert!(
+        after < before,
+        "Human assigned Horde must hit Alliance captain: {before} -> {after}"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackStop>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::AttackStop);
+    h.advance(5);
+    let (friendly, before) = find_alterac_source_npc(h, entered.copy, 11947);
+    let at = wow(h.app.world().get::<Position>(friendly).unwrap());
+    h.walk_to(actor, at);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackSwing>>(actor.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(shared::protocol::AttackSwing {
+            target: friendly.to_bits(),
+        });
+    h.advance(20);
+    assert_eq!(
+        h.app.world().get::<Health>(friendly).unwrap().current,
+        before
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<LeaveBattleground>>(actor.connection)
+        .unwrap()
+        .send::<PvpChannel>(LeaveBattleground {
+            match_id: entered.match_id,
+        });
+    h.receive_pvp_updates(5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(actor.player)
+            .unwrap()
+            .0,
+        1
+    );
+}
+
+#[test]
 fn alterac_channel_last_leave_with_fresh_npc_death_unloads_without_loot_panic() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match_with(&template, [611, 610], |app| {
@@ -817,6 +894,7 @@ fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
                     map_id: 998,
                     info: GameObjectInfo { entry: orb.entry, go_type: row.get(0)?, display_id: row.get(1)?, name: row.get(2)?, scale },
                     position: Vec3::from_array(orb.position), orientation: 0.0,
+                    initial_state: 1,
                     bounds: crate::game_objects::GameObjectBounds {
                         min: Vec3::new(number(4)?,number(5)?,number(6)?),
                         max: Vec3::new(number(7)?,number(8)?,number(9)?),

@@ -332,7 +332,7 @@ impl SightParams<'_, '_> {
         // hostile; IsValidAttackTarget refuses a target immune to NPCs.
         let hostile = self.templates.reaction(me.faction, who.faction) == Reaction::Hostile;
         let attackable = who.targetable
-            && me.invisibility.detects(&who.invisibility)
+            && me.invisibility.detects(&who.invisibility, true)
             && who.flags & (UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_NON_ATTACKABLE) == 0
             && self.templates.can_attack(
                 UnitFaction {

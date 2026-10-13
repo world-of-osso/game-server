@@ -34,7 +34,7 @@ mod transitions;
 use self::support::{
     build_snapshot, current_seconds, send_error, send_update, sync_replicated_life_state,
 };
-use transitions::process_player_death_transitions;
+pub(crate) use transitions::process_player_death_transitions;
 pub(crate) use transitions::{
     PlayerDeathTransition, apply_health_damage, deal_environmental_damage,
 };
@@ -794,21 +794,45 @@ fn resurrect_at_spirit_healer(
 
 fn complete_resurrection(
     health: &mut Health,
+    mana: Option<Mut<Mana>>,
+    death_state: &mut PlayerDeathState,
+) {
+    restore_life(
+        health,
+        mana,
+        death_state,
+        (GHOST_RESURRECT_HEALTH_PCT, GHOST_RESURRECT_MANA_PCT),
+    );
+}
+fn restore_life(
+    health: &mut Health,
     mut mana: Option<Mut<Mana>>,
     death_state: &mut PlayerDeathState,
+    (health_fraction, mana_fraction): (f32, f32),
 ) {
     death_state.state = DeathState::Alive;
     death_state.corpse = None;
     death_state.graveyard = None;
-    health.current = (health.max * GHOST_RESURRECT_HEALTH_PCT).max(1.0);
+    health.current = (health.max * health_fraction).max(1.0);
     if let Some(mana) = mana.as_mut() {
-        mana.current = mana.max * GHOST_RESURRECT_MANA_PCT;
+        mana.current = mana.max * mana_fraction;
     }
 }
 
 /// `Player::ResurrectPlayer(0.5f)` where the player stands (a teleport's
 /// `TELE_REVIVE_AT_TELEPORT`, a ghost entering the dungeon holding its corpse).
 pub(crate) fn resurrect_player(world: &mut World, player: Entity) {
+    resurrect_at_rates(
+        world,
+        player,
+        (GHOST_RESURRECT_HEALTH_PCT, GHOST_RESURRECT_MANA_PCT),
+    );
+}
+/// TC Battleground.cpp:689/848: ResurrectPlayer(1.0f) on completion/exit.
+pub(crate) fn resurrect_player_fully(world: &mut World, player: Entity) {
+    resurrect_at_rates(world, player, (1.0, 1.0));
+}
+fn resurrect_at_rates(world: &mut World, player: Entity, rates: (f32, f32)) {
     let mut entity = world.entity_mut(player);
     let Some(mut death_state) = entity.get::<PlayerDeathState>().cloned() else {
         return;
@@ -816,7 +840,12 @@ pub(crate) fn resurrect_player(world: &mut World, player: Entity) {
     let Some(mut health) = entity.get::<Health>().copied() else {
         return;
     };
-    complete_resurrection(&mut health, entity.get_mut::<Mana>(), &mut death_state);
+    restore_life(
+        &mut health,
+        entity.get_mut::<Mana>(),
+        &mut death_state,
+        rates,
+    );
     entity.insert((health, death_state.clone()));
     if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
         queue.mark(player);

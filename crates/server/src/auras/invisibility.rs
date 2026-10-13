@@ -32,12 +32,14 @@ impl Invisibility {
         state
     }
 
-    pub fn detects(&self, target: &Self) -> bool {
+    /// TC Object.cpp:1003 limits reciprocal detection to units, not arena doors.
+    pub fn detects(&self, target: &Self, target_is_unit: bool) -> bool {
         target.hidden.iter().all(|(kind, value)| {
             self.detection
                 .get(kind)
                 .is_some_and(|detect| detect >= value)
-        }) && (self.detect_while_invisible
+        }) && (!target_is_unit
+            || self.detect_while_invisible
             || self
                 .hidden
                 .keys()
@@ -137,11 +139,11 @@ mod tests {
             ..default()
         };
         assert!(
-            !observer.detects(&target),
+            !observer.detects(&target, true),
             "two 100-point stacks plus a 100-point aura need300 detection"
         );
         observer.detection.insert(35, 300);
-        assert!(observer.detects(&target));
+        assert!(observer.detects(&target, true));
     }
 
     #[test]
@@ -154,21 +156,24 @@ mod tests {
             detection: BTreeMap::from([(12, 99), (35, 100)]),
             ..default()
         };
-        assert!(!observer.detects(&target), "one detection value is too low");
+        assert!(
+            !observer.detects(&target, true),
+            "one detection value is too low"
+        );
         observer.detection.insert(12, 100);
-        assert!(observer.detects(&target));
+        assert!(observer.detects(&target, true));
         observer.detection.remove(&35);
         assert!(
-            !observer.detects(&target),
+            !observer.detects(&target, true),
             "missing a type still hides the unit"
         );
         target.hidden = BTreeMap::from([(35, 0)]);
         assert!(
-            !observer.detects(&target),
+            !observer.detects(&target, true),
             "zero invisibility retains type presence"
         );
         observer.detection.insert(35, 0);
-        assert!(observer.detects(&target));
+        assert!(observer.detects(&target, true));
     }
 
     #[test]
@@ -182,28 +187,41 @@ mod tests {
             hidden: BTreeMap::from([(35, 100)]),
             ..default()
         };
-        assert!(!observer.detects(&target));
+        assert!(!observer.detects(&target, true));
+        assert!(
+            observer.detects(&target, false),
+            "non-units do not need reciprocal flags"
+        );
+        observer.detection.remove(&35);
+        assert!(
+            !observer.detects(&target, false),
+            "the object's own hidden types still require detection"
+        );
+        observer.detection.insert(35, 100);
         target.detection.insert(12, 0);
         assert!(
-            observer.detects(&target),
+            observer.detects(&target, true),
             "reciprocal check needs the type, not its value"
         );
         target.detection.clear();
         observer.detect_while_invisible = true;
-        assert!(observer.detects(&target));
+        assert!(observer.detects(&target, true));
     }
 }
 
 pub fn can_detect(world: &World, observer: Entity, target: Entity) -> bool {
     observer == target
-        || world
-            .get::<Invisibility>(observer)
-            .cloned()
-            .unwrap_or_default()
-            .detects(
-                &world
-                    .get::<Invisibility>(target)
-                    .cloned()
-                    .unwrap_or_default(),
-            )
+        || (super::stealth::can_detect(world, observer, target)
+            && world
+                .get::<Invisibility>(observer)
+                .cloned()
+                .unwrap_or_default()
+                .detects(
+                    &world
+                        .get::<Invisibility>(target)
+                        .cloned()
+                        .unwrap_or_default(),
+                    world.get::<shared::components::Player>(target).is_some()
+                        || world.get::<shared::components::Npc>(target).is_some(),
+                ))
 }
