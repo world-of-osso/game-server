@@ -16,6 +16,7 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 use super::CastFailure;
 use super::effects::{CastEffectHandler, EffectCtx};
 use super::toy_coin::{self, COIN_TEXTS, COIN_TOSS};
+use super::toy_weather::{self, WEATHER_MACHINE};
 
 /// TC worldserver.conf.dist ListenRange.TextEmote, not the ordinary /say range.
 const TEXT_EMOTE_RANGE: f32 = 40.0;
@@ -122,6 +123,12 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
     if spell.id == COIN_TOSS {
         return unsupported_coin(world, spell);
     }
+    if spell.id == WEATHER_MACHINE {
+        if !has_source_signature(spell, EFFECT_SCRIPT) {
+            return Some("weather machine source effect signature differs".into());
+        }
+        return toy_weather::unsupported(world);
+    }
     if spell.id == UNUSUAL_COMPASS {
         return (!has_source_signature(spell, EFFECT_DUMMY))
             .then(|| "compass source effect signature differs".into());
@@ -144,6 +151,9 @@ pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
     if spell == COIN_TOSS {
         return toy_coin::is_toss_effect(effect);
     }
+    if spell == WEATHER_MACHINE {
+        return is_caster_script_effect(effect, EFFECT_SCRIPT);
+    }
     dice_plan(spell).is_some() && is_caster_script_effect(effect, EFFECT_SCRIPT)
 }
 
@@ -154,6 +164,10 @@ pub(crate) fn check_cast(
 ) -> Result<(), CastFailure> {
     if spell.id == UNUSUAL_COMPASS {
         return check_compass_cast(world, caster, spell);
+    }
+    if spell.id == WEATHER_MACHINE {
+        return unsupported(world, spell)
+            .map_or(Ok(()), |reason| Err(CastFailure::Unsupported(reason)));
     }
     let text_script = dice_plan(spell.id).is_some() || spell.id == COIN_TOSS;
     if !text_script {
@@ -179,6 +193,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<CastEffectHandler> {
     }
     if spell == COIN_TOSS && index == 0 {
         return Some(toy_coin::toss_coin);
+    }
+    if spell == WEATHER_MACHINE && index == 0 {
+        return Some(toy_weather::cast_personal_weather);
     }
     (dice_plan(spell).is_some() && index == 0)
         .then_some(emit_dice_emote_and_rolls as CastEffectHandler)
