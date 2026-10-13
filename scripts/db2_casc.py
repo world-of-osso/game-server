@@ -297,8 +297,6 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         struct.unpack_from("<Q8I", data, 204 + 40 * i)
         for i in range(header["section_count"])
     ]
-    if record_ids is None and any(section[0] for section in sections):
-        raise ValueError("encrypted DB2 section is not supported")
     offset = 204 + 40 * header["section_count"]
     metadata = [
         struct.unpack_from("<hH", data, offset + 4 * i)
@@ -328,7 +326,12 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         map_count,
         copies,
     ) in sections:
-        if key:
+        if key and count and not any(data[start:end]):
+            import warnings
+            warnings.warn(
+                f"Skipping zero-filled DB2 section key {key:016X}, {count} records",
+                stacklevel=2,
+            )
             continue
         if strings or map_count != count or id_size not in (0, 4 * count):
             raise ValueError("unsupported sparse DB2 section shape")

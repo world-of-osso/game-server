@@ -94,9 +94,18 @@ class SparseDecodeTest(unittest.TestCase):
             ):
                 decode_fixture(sparse_fixture(), {101, record_id})
 
-    def test_full_table_does_not_skip_encryption(self):
-        with self.assertRaisesRegex(ValueError, "encrypted"):
-            decode_fixture(sparse_fixture(), None)
+    def test_full_table_reports_unreadable_section_and_exports_readable_records(self):
+        with self.assertWarnsRegex(UserWarning, 'Skipping zero-filled DB2 section'):
+            _, rows = decode_fixture(sparse_fixture(), None)
+        self.assertEqual(set(rows), {101, 102, 103})
+        self.assertEqual(rows[102][1], 'Longer name')
+
+    def test_decrypted_keyed_section_is_readable(self):
+        data = bytearray(sparse_fixture())
+        struct.pack_into('<Q', data, 204, 456)
+        _, rows = decode_fixture(bytes(data), {101, 102})
+        self.assertEqual(rows[101][1], 'A')
+        self.assertEqual(rows[102][1], 'Longer name')
 
     def test_unterminated_string_cannot_read_into_next_record(self):
         data = bytearray(sparse_fixture())
@@ -208,7 +217,7 @@ class ItemSparseSourceTest(unittest.TestCase):
     def test_original_selected_rows_despite_unrelated_encrypted_sections(self):
         data = Path(os.environ["ITEM_SPARSE_SOURCE"]).read_bytes()
         self.assert_selected_items(data)
-        with self.assertRaisesRegex(ValueError, "encrypted"):
+        with self.assertWarnsRegex(UserWarning, 'Skipping zero-filled DB2 section'):
             db2_casc.decode(
                 data,
                 text_columns=set(range(1, 6)),
