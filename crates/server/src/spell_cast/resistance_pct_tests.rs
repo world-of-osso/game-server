@@ -12,11 +12,18 @@ const REINFORCED_PLATES: u32 = 382_939;
 /// Aura466 +X final armor (bonus_armor_tests).
 const ARMOR_BUFF: u32 = 161_394;
 const MORTAL_STRIKE: u32 = 12_294;
-const ARMOR_CONSTANT: f32 = 210.0;
+/// Large enough that every fixture armor stays below the 85% mitigation cap.
+const ARMOR_CONSTANT: f32 = 5_000.0;
 const DAMAGE: f32 = 1_000.0;
 const CREATURE_ARMOR: f32 = 300.0;
+/// Near the level-scaled kobold's expected-stat armor (~400), so 6% stays visible.
+const CREATURE_ARMOR_CONSTANT: f32 = 500.0;
 
 fn armor_harness() -> Harness {
+    armor_harness_with(ARMOR_CONSTANT)
+}
+
+fn armor_harness_with(armor_constant: f32) -> Harness {
     let spells = [
         ARMOR_SPECIALIZATION,
         REINFORCED_PLATES,
@@ -24,10 +31,12 @@ fn armor_harness() -> Harness {
         MORTAL_STRIKE,
     ];
     let mut h = harness(Vec::new(), &spells, 1).unwrap();
-    let mut constants = vec![0.0; 11];
-    constants[10] = ARMOR_CONSTANT;
+    // One constant at every attacker level isolates armor from level scaling.
     h.app
-        .insert_resource(crate::level_scaling::ArmorConstants(constants));
+        .insert_resource(crate::level_scaling::ArmorConstants(vec![
+            armor_constant;
+            81
+        ]));
     h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(10));
     h.advance(3);
     h
@@ -65,6 +74,21 @@ fn factor(spell: u32, aura: u32) -> f32 {
 }
 
 fn calculate_armor(h: &Harness) -> crate::stats::CharacterStats {
+    let mods = h
+        .app
+        .world()
+        .get::<StatModifiers>(h.caster)
+        .copied()
+        .unwrap_or_default();
+    armor_with(mods)
+}
+
+/// Gear and stat armor without any aura modifier.
+fn unmodified_armor() -> f32 {
+    armor_with(StatModifiers::default()).armor
+}
+
+fn armor_with(mods: StatModifiers) -> crate::stats::CharacterStats {
     let input = StatInputs {
         class: 1,
         race: 1,
@@ -79,12 +103,6 @@ fn calculate_armor(h: &Harness) -> crate::stats::CharacterStats {
             ..default()
         },
     };
-    let mods = h
-        .app
-        .world()
-        .get::<StatModifiers>(h.caster)
-        .copied()
-        .unwrap_or_default();
     compute_character_stats(&input, Some(&mods)).unwrap()
 }
 
@@ -113,7 +131,7 @@ fn assert_mitigated(loss: f32, armor: f32) {
 fn class_completeness_native_armor_percent_multiplies_final_player_armor() {
     let mut h = armor_harness();
     let caster = h.caster;
-    let baseline = calculate_armor(&h).armor;
+    let baseline = unmodified_armor();
     apply_native(&mut h, caster, ARMOR_SPECIALIZATION, 101);
     apply_native(&mut h, caster, REINFORCED_PLATES, 101);
     apply_native(&mut h, caster, ARMOR_BUFF, 466);
@@ -133,7 +151,7 @@ fn class_completeness_native_armor_percent_multiplies_final_player_armor() {
 fn class_completeness_native_armor_percent_removal_restores_remaining_factor() {
     let mut h = armor_harness();
     let caster = h.caster;
-    let baseline = calculate_armor(&h).armor;
+    let baseline = unmodified_armor();
     apply_native(&mut h, caster, ARMOR_SPECIALIZATION, 101);
     apply_native(&mut h, caster, REINFORCED_PLATES, 101);
     crate::auras::remove_auras(
@@ -148,7 +166,7 @@ fn class_completeness_native_armor_percent_removal_restores_remaining_factor() {
 
 #[test]
 fn class_completeness_native_armor_percent_applies_to_creature_armor() {
-    let mut h = armor_harness();
+    let mut h = armor_harness_with(CREATURE_ARMOR_CONSTANT);
     let (caster, npc) = (h.caster, h.npc);
     h.app.world_mut().entity_mut(npc).insert((
         crate::level_scaling::CreatureArmor(CREATURE_ARMOR),
@@ -160,15 +178,26 @@ fn class_completeness_native_armor_percent_applies_to_creature_armor() {
     // GetArmor() includes TOTAL_PCT before GetArmorMultiplierForTarget scales it, so
     // derive the kobold's effective armor from an unmodified hit.
     let baseline = physical_loss(&mut h, caster, npc);
-    let armor = DAMAGE * ARMOR_CONSTANT / baseline - ARMOR_CONSTANT;
+    let armor = DAMAGE * CREATURE_ARMOR_CONSTANT / baseline - CREATURE_ARMOR_CONSTANT;
     apply_native(&mut h, npc, ARMOR_SPECIALIZATION, 101);
-    let expected =
-        DAMAGE * ARMOR_CONSTANT / (armor * factor(ARMOR_SPECIALIZATION, 101) + ARMOR_CONSTANT);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        npc,
+        ARMOR_SPECIALIZATION
+    ));
+    let total = h
+        .app
+        .world()
+        .get::<StatModifiers>(npc)
+        .map(|mods| mods.total_armor_pct);
+    assert_eq!(total, Some(6.0));
+    let expected = DAMAGE * CREATURE_ARMOR_CONSTANT
+        / (armor * factor(ARMOR_SPECIALIZATION, 101) + CREATURE_ARMOR_CONSTANT);
     let loss = physical_loss(&mut h, caster, npc);
     // One-point damage truncation in each hit bounds the derived armor.
     assert!(
         (loss - expected).abs() <= 1.5,
-        "hit{loss} expected{expected}"
+        "hit{loss} expected{expected} baseline{baseline}"
     );
-    assert!(loss < baseline);
+    assert!(loss < baseline, "hit{loss} baseline{baseline}");
 }
