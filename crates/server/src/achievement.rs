@@ -100,7 +100,7 @@ impl Plugin for AchievementPlugin {
             PostUpdate,
             flush_achievement_updates
                 .after(kills::publish_rewarded_creature_kills)
-                .before(lightyear::messages::plugin::MessageSystems::Send),
+                .before(MessageSystems::Send),
         );
         app.add_systems(
             Update,
