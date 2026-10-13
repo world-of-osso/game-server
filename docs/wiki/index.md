@@ -3,6 +3,10 @@
 - [NPC Felguard learned interrupt](investigations/follower-data.md#npc-felguard-utility-source--2026-10-13) — authentic level17 Axe Toss, owner-cast preservation, five utility and ten pet motion/lifetime/credit boundaries including overlapping fields/stun; player-pet persistence/post-master and full-instance acceptance remain open.
 
 - [Follower class/native follow](investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) — eleven actual basic-role casts, Cobra Shot class-level crash fixed, real Stockade navmesh/collision/progress regression and authored private12-tile Ruby ground package; advanced AI/live completion open.
+- [Player-area criterion alternatives](systems/dungeon-achievements.md#player-area-alternatives) — complete recursive membership; native death fixture uses controlled cached authority, not terrain-travel certification.
+- [Player-map criterion alternatives](systems/dungeon-achievements.md#player-map-alternatives) — complete map membership; native Warsong killing-blow fixture, no legacy-map playability claim.
+- [Target-creature criterion alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) — complete one-of NPC selectors, per-request native negatives and Wave40624 grant; NPC content closure remains separate.
+
 - [Dungeon spawn-leash exemption](../specs/creature-aggro.md) — TC dungeon policy, unchanged open-world40yd test, and [superseded Stockade evidence](systems/navigation.md#stationary-arch-and-leash-acceptance); Slagmaw's authored East teleport stays engaged.
 
 - [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.

@@ -2,9 +2,21 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Player-area alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerIsInArea17 leaves compiles to `CompiledConditions::PlayerAreas`. Loader reuses existing area validation/recursive ancestry, then unions complete member sets into `CriteriaFact::Area`; one missing source area disables the entire predicate. TC a352b1fa CriteriaHandler1738–1750/1842–1847 and DB2Stores1985–1999 define one-of and recursive parent membership. Native queued death fixture exercises109755/character61456 from controlled cached area snapshots; this is not actual terrain travel or every holiday/NPC content lifecycle. [Contract](../../specs/dungeon-achievements.md).
+
+## Player-map alternatives
+
+Plain Some8 Amount0/1 over complete SingleTrue PlayerMap32 leaves compiles to `CompiledConditions::PlayerMaps`. Catalog checks every authored map before constructing `CriteriaFact::PlayerMaps`; missing rows disable the entire predicate. Reference-player map membership implements pinned TC a352b1fa CriteriaHandler1738–1750/1922–1925; missing reference state rejects. TC Unit::Kill11449–11453 emits killing-blow56 independently of battleground kill-reward70, including self/unfinished-match lethal events; map membership does not add accepted-match restrictions. Native accepted Warsong2106 lethal-damage fixture exercises criterion5538, killer-only credit and redb reopen; catalog tests evaluate both sourced489/2106 and wrong maps without claiming legacy-map playability. Mixed/nested children, zero assets and higher amounts remain disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+
+## Target-creature alternatives — verified 2026-10-13
+
+Pinned TC1738–1750 Some8 with Amount0/1 requires one successful child; TargetCreatureId4 reads the request's native unit (1782–1785). Compiler preserves every plain SingleTrue target-entry alternative for DoEmote54 as exact set membership, not AND and not an unconditional event. Native63288/64798 Love requests each credit20817 independently; wrong/foreign/player/absent targets and Wave reject. Six authored Wave selectors grant account40624; idle/reopened counters are covered. Higher amounts, mixed/nested/unknown children and other producer types remain disabled. IDs are sourced selectors, not certification of authored NPC spawns/models. [Inventory](../../achievement-criteria-producer-inventory.md).
+
 ## Single-child Some trees — verified 2026-10-13
 
-TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. General multi-child non-difficulty OR and unknown children stay disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. Other multi-child non-difficulty OR and unknown children stay disabled; bounded area/map/target-creature exceptions are described above. [Inventory](../../achievement-criteria-producer-inventory.md).
 
 ## Empty All modifier trees — verified 2026-10-13
 
