@@ -130,6 +130,12 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Incoming spell and auto-attack damage use half the combined rating/aura versatility percentage, with damage clamped at zero. Spells carrying IgnoreDamageTakenModifiers bypass this new reduction.
 - [ ] Full charm/pet-owner inheritance and native-rendered parity remain unproved; base-probe status is not a whole-ability certificate.
 
+## Cooldown recovery rates
+
+- [x] Aura286 multiplies matching native class-mask cooldown durations by100/(100+amount), with amount floored at−99. Application/removal scales only remaining spell/category time; category timers retain their owning spell for exact mask matching. Existing charge recovery remains separate.
+- [x] Native Trueshot288613 rate60 starts Rapid Fire257044's16s cooldown at10s. Native Deadly Pursuit1259614 rate200 scales Sprint2983's category44 cooldown120s→40s; real active-timer recasts prove application/removal boundaries.
+- [ ] Full Trueshot/Deadly Pursuit ability behavior, global ModTimeRate interactions and native-rendered parity remain unproved.
+
 ## Tests asserting this spec
 
 - `crates/server/src/auras/crit_damage_bonus_tests.rs`: actual static/mixed-school damage, magic/weapon spellmod ordering, dynamic crit percentage, auto-attacks and no crit-heal leakage.

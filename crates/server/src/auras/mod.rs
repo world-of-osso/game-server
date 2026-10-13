@@ -875,6 +875,8 @@ pub(crate) fn apply_aura_with_spell(
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
+    let previous_rate =
+        crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
@@ -902,6 +904,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
@@ -912,6 +915,12 @@ pub(crate) fn apply_aura_with_spell(
     }
     if kind == CombatLogKind::AuraRefreshed {
         linked::on_reapplied(world, target, &aura);
+        crate::spell_cast::recovery_rate::on_refreshed(
+            world,
+            target,
+            previous_rate.as_ref(),
+            &aura,
+        );
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
@@ -1071,6 +1080,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
