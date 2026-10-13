@@ -1,5 +1,7 @@
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Zul +1s activates pool289347 in its own copy; authoritative GO state and collision, with timing/copy isolation proof. Native state animation remains open. [Boss scripts](systems/boss-scripts.md).
+
 - 2026-10-13: Minion of Zul appearance, Bound by Shadow self-death and Fixate128 preference/clear; different-caster channel coexist. Three real Kings' Rest fixtures pass. [Boss scripts](systems/boss-scripts.md).
 
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.

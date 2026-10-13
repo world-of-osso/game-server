@@ -100,6 +100,23 @@ pub struct GameObjectScript(pub String);
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameObjectInUse;
 
+/// Authoritative `GameObjectData::State`. Native animation selection is not yet
+/// driven by this field; model collision is replicated separately.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct GameObjectState(pub u8);
+
+pub(crate) const GO_STATE_ACTIVE: u8 = 0;
+const GO_STATE_READY: u8 = 1;
+
+/// TC `GameObject::SetGoState`: store the state and enable model collision only
+/// in READY. No scripted GO AI/state-type callbacks are bound to the liquid pool.
+pub(crate) fn set_go_state(world: &mut World, object: Entity, state: u8) {
+    world.entity_mut(object).insert((
+        GameObjectState(state),
+        shared::protocol::GameObjectCollision(state == GO_STATE_READY),
+    ));
+}
+
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct GameObjectBounds {
@@ -210,6 +227,7 @@ pub(crate) fn game_object_bundle(
     GameObjectInfo,
     GameObjectBounds,
     shared::protocol::GameObjectCollision,
+    GameObjectState,
 ) {
     (
         bevy_position(spawn.position),
@@ -221,7 +239,8 @@ pub(crate) fn game_object_bundle(
         },
         spawn.info.clone(),
         spawn.bounds,
-        shared::protocol::GameObjectCollision(spawn.initial_state == 1),
+        shared::protocol::GameObjectCollision(spawn.initial_state == GO_STATE_READY),
+        GameObjectState(spawn.initial_state),
     )
 }
 

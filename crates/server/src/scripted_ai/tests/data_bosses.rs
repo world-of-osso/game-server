@@ -598,6 +598,47 @@ fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
         .find(|(_, info)| info.entry == 288466)
         .map(|(entity, _)| entity)
         .expect("Serpentine Seal spawned in the copy");
+    let pool = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, info, copy)| info.entry == 289347 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .expect("liquid pool289347 from the copy's production spawns");
+    let collision = |h: &Harness| {
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(pool)
+            .map(|collision| collision.0)
+    };
+    assert_eq!(collision(&h), Some(true), "pool starts GO_STATE_READY");
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(pool),
+        Some(&crate::game_objects::GameObjectState(1))
+    );
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let sources = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source_pool = sources
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 289347)
+        .unwrap()
+        .clone();
+    let other_pool = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::game_objects::game_object_bundle(&source_pool),
+            InMap {
+                instance_id: map.instance_id + 1,
+                ..map
+            },
+        ))
+        .id();
     let seal_position = *h.app.world().get::<Position>(seal).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(Position {
@@ -639,7 +680,33 @@ fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
             .get::<crate::zones::CreatureStringIds>(zul)
             .is_some_and(|ids| ids.has("SerpentBossEvent"))
     );
-    h.advance(1.1);
+    h.advance(0.8);
+    assert_eq!(collision(&h), Some(true), "Zul waits +1s before SetGoState");
+    h.advance(0.3);
+    assert_eq!(
+        collision(&h),
+        Some(false),
+        "GO_STATE_ACTIVE disables collision"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(pool),
+        Some(&crate::game_objects::GameObjectState(0))
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(other_pool),
+        Some(&crate::game_objects::GameObjectState(1)),
+        "the same source pool in another copy stays READY"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(other_pool),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
     assert!(
         h.inbox(0)
             .chat
