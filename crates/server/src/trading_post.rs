@@ -1,0 +1,280 @@
+//! Server-authoritative Mainline Trading Post, using existing monthly gameplay credit.
+#[path = "trading_post_catalog.rs"]
+mod catalog;
+#[cfg(test)]
+#[path = "trading_post_tests.rs"]
+mod tests;
+use crate::{
+    auth::{Authenticated, InWorld},
+    networking::PlayerLink,
+    persistence::GameDatabase,
+    trading_post_store as store,
+};
+use bevy::prelude::*;
+use lightyear::prelude::*;
+use shared::protocol::*;
+
+pub(crate) struct TradingPostPlugin;
+impl Plugin for TradingPostPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<catalog::Catalog>()
+            .add_systems(Startup, load_catalog)
+            .add_systems(
+                Update,
+                receive_requests.after(crate::npc_interaction::NpcInteractionsProcessed),
+            );
+    }
+}
+fn load_catalog(mut commands: Commands) {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::spell_info::WORLD_DB_PATH,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("open Trading Post world.db");
+    let loaded = catalog::load(&conn);
+    if let Err(error) = &loaded {
+        error!("Trading Post catalog unavailable: {error}");
+    }
+    commands.insert_resource(catalog::Catalog(loaded));
+}
+
+fn receive_requests(world: &mut World) {
+    let requests: Vec<_> = world
+        .query_filtered::<(
+            Entity,
+            &Authenticated,
+            &PlayerLink,
+            &mut MessageReceiver<TradingPostRequest>,
+        ), With<InWorld>>()
+        .iter_mut(world)
+        .flat_map(|(connection, account, link, mut receiver)| {
+            receiver
+                .receive()
+                .map(|request| (connection, account.account_id, link.0, request))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (connection, account, player, request) in requests {
+        crate::adventure_guide::refresh_for_connection(world, connection);
+        let result = execute(world, connection, account, player, &request);
+        if let Ok(Some(grant)) = &result {
+            publish_collections(world, account, grant);
+        }
+        send_snapshot(world, connection, account, result.err());
+    }
+}
+
+fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<Entity, String> {
+    let active = world
+        .get::<crate::npc_interaction::ActiveInteraction>(connection)
+        .ok_or("No active Trading Post interaction.")?;
+    if active.role != Some(NpcRole::TradingPost) {
+        return Err("The active interaction is not a Trading Post vendor.".into());
+    }
+    crate::npc_interaction::find_interactable_trading_vendor(world, player, active.npc)
+        .map_err(|error| format!("Trading Post interaction: {error:?}"))?;
+    Ok(active.npc)
+}
+
+fn execute(
+    world: &World,
+    connection: Entity,
+    account: u64,
+    player: Entity,
+    request: &TradingPostRequest,
+) -> Result<Option<store::Grant>, String> {
+    if matches!(request, TradingPostRequest::Query) {
+        return Ok(None);
+    }
+    active_vendor(world, connection, player)?;
+    let catalog = world
+        .resource::<catalog::Catalog>()
+        .0
+        .as_ref()
+        .map_err(Clone::clone)?;
+    let now = world.resource::<crate::maps::ServerClock>().unix();
+    let db = &world.resource::<GameDatabase>().db;
+    match request {
+        TradingPostRequest::Query => Ok(None),
+        TradingPostRequest::Purchase { vendor_item_id } => {
+            let (row, grant) = catalog
+                .items
+                .get(vendor_item_id)
+                .ok_or("Unknown Trading Post item.")?;
+            let grant = grant.as_ref().map_err(Clone::clone)?;
+            store::purchase(
+                db,
+                account,
+                store::Offer {
+                    vendor: *vendor_item_id,
+                    price: row.price,
+                    grant,
+                    refund_duration: 0,
+                },
+                now,
+            )?;
+            Ok(Some(grant.clone()))
+        }
+        TradingPostRequest::Refund { vendor_item_id } => {
+            let state = store::load(db, account);
+            let receipt = state
+                .purchases
+                .get(vendor_item_id)
+                .ok_or("Trading Post receipt unavailable.")?;
+            let grant = receipt.granted.clone();
+            store::refund(db, account, *vendor_item_id, now)?;
+            Ok(Some(grant))
+        }
+        TradingPostRequest::Freeze { vendor_item_id } => {
+            if let Some(id) = vendor_item_id {
+                let (_, grant) = catalog
+                    .items
+                    .get(id)
+                    .ok_or("Unknown frozen Trading Post item.")?;
+                grant.as_ref().map_err(Clone::clone)?;
+            }
+            store::freeze(db, account, *vendor_item_id);
+            Ok(None)
+        }
+    }
+}
+
+fn send_snapshot(world: &mut World, connection: Entity, account: u64, error: Option<String>) {
+    let now = world.resource::<crate::maps::ServerClock>().unix();
+    let calendar = crate::adventure_guide::calendar_month(now);
+    let summary = world
+        .get::<crate::adventure_guide::MonthlySummary>(connection)
+        .copied()
+        .unwrap_or(crate::adventure_guide::MonthlySummary {
+            points: 0,
+            start_unix: calendar.start_unix,
+            end_unix: calendar.end_unix,
+        });
+    let state = store::settle(
+        &world.resource::<GameDatabase>().db,
+        account,
+        summary.start_unix,
+        0,
+        &[],
+    );
+    let npc = world
+        .get::<PlayerLink>(connection)
+        .and_then(|link| active_vendor(world, connection, link.0).ok())
+        .map(Entity::to_bits);
+    let mut snapshot = TradingPostSnapshot {
+        npc_net_id: npc,
+        tender: state.tender,
+        points: summary.points,
+        now_unix: now,
+        month_end_unix: summary.end_unix,
+        frozen_item_id: state.frozen,
+        categories: Vec::new(),
+        items: Vec::new(),
+        thresholds: Vec::new(),
+        source_gaps: vec![
+            "Monthly featured rotation and seasonal reward binding: no verified calendar epoch."
+                .into(),
+            "Refund duration unsourced: refunds disabled.".into(),
+        ],
+        error,
+    };
+    if let crate::adventure_guide::AdventureCatalog::Ready(data) =
+        world.resource::<crate::adventure_guide::AdventureCatalog>()
+    {
+        snapshot.thresholds = data
+            .thresholds
+            .iter()
+            .map(|row| TradingPostThreshold {
+                id: row.id,
+                points: row.points,
+                tender: row.tender,
+                claimed: state.claimed.contains(&row.id),
+            })
+            .collect();
+    }
+    match &world.resource::<catalog::Catalog>().0 {
+        Ok(catalog) => {
+            snapshot.categories = catalog.categories.clone();
+            snapshot.items = collection_rows(world, account, catalog, &state, now);
+        }
+        Err(error) => snapshot.source_gaps.push(error.clone()),
+    }
+    if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
+        sender.send::<InstanceChannel>(snapshot);
+    }
+}
+
+fn collection_rows(
+    world: &World,
+    account: u64,
+    catalog: &catalog::CatalogData,
+    state: &store::State,
+    now: i64,
+) -> Vec<TradingPostItem> {
+    let db = &world.resource::<GameDatabase>().db;
+    let appearances = crate::persistence::appearance_store::load_account_appearances(db, account);
+    let mounts = crate::persistence::mount_store::load(db, account);
+    let toys = crate::persistence::toy_store::load(db, account);
+    let pets = crate::battle_pets::load_journal(db, account);
+    catalog
+        .items
+        .values()
+        .map(|(row, grant)| {
+            let mut row = row.clone();
+            row.collected = match grant {
+                Ok(store::Grant::Appearances(ids)) => ids.iter().all(|id| appearances.has(*id)),
+                Ok(store::Grant::Mount(id)) => mounts.contains_key(id),
+                Ok(store::Grant::Pet(id)) => pets.count_species(*id) > 0,
+                Ok(store::Grant::Toy(id)) => toys.contains_key(id),
+                _ => false,
+            };
+            if let Some(receipt) = state.purchases.get(&row.id) {
+                row.purchased = true;
+                row.refund_seconds = receipt
+                    .refund_until
+                    .saturating_sub(now)
+                    .clamp(0, i64::from(u32::MAX)) as u32;
+            }
+            row
+        })
+        .collect()
+}
+
+fn publish_collections(world: &mut World, account: u64, grant: &store::Grant) {
+    if matches!(grant, store::Grant::Mount(_)) {
+        crate::mount_journal::broadcast_account(world, account);
+        return;
+    }
+    if matches!(grant, store::Grant::Toy(_)) {
+        crate::toys::broadcast(world, account);
+        return;
+    }
+    let owners: Vec<_> = world
+        .query_filtered::<(Entity, &Authenticated, &PlayerLink), With<InWorld>>()
+        .iter(world)
+        .filter(|(_, auth, _)| auth.account_id == account)
+        .map(|(connection, _, link)| (connection, link.0))
+        .collect();
+    let appearances = crate::persistence::appearance_store::load_account_appearances(
+        &world.resource::<GameDatabase>().db,
+        account,
+    );
+    let journal = crate::battle_pets::load_journal(&world.resource::<GameDatabase>().db, account);
+    for (connection, player) in owners {
+        if matches!(grant, store::Grant::Appearances(_))
+            && let Some(mut sender) =
+                world.get_mut::<MessageSender<AppearanceCollectionUpdate>>(connection)
+        {
+            sender.send::<TooltipChannel>(AppearanceCollectionUpdate {
+                appearances: appearances.all().collect(),
+            });
+        }
+        if matches!(grant, store::Grant::Pet(_) | store::Grant::PetInstance(_))
+            && let Some(mut state) = world.get_mut::<crate::battle_pets::AccountPetJournal>(player)
+        {
+            state.journal = journal.clone();
+            crate::battle_pets::refresh_catalog_snapshot(world, player);
+            crate::battle_pets::send_pet_update(world, connection, player, None);
+        }
+    }
+}
