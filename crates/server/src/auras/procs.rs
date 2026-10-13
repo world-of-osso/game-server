@@ -311,9 +311,12 @@ fn proc_matches(
     if reflect_aura != event.reflected {
         return false;
     }
+    // A scripted OnProc stands for its explicit TDB `spell_proc` row, which TC
+    // honours whatever the effect types (e.g. 472885's aura468 death proc).
     if !aura.effects.iter().any(|effect| {
         handlers::can_proc(effect.aura_type) && effect_checks_proc(aura, effect, event)
-    }) {
+    }) && !scripts::has_proc_script(world, aura.spell_id)
+    {
         return false;
     }
     if mask[0] & SPELL_PROC_MASK == 0 {
