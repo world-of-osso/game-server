@@ -51,6 +51,10 @@ mod arena_rating;
 #[path = "pvp_arena_sight.rs"]
 mod arena_sight;
 
+#[path = "pvp_kill_criteria.rs"]
+mod kill_criteria;
+pub(crate) use kill_criteria::record_battleground_player_kill;
+
 #[path = "pvp_alterac.rs"]
 mod pvp_alterac;
 pub(crate) use pvp_alterac::is_banner as is_alterac_banner;
@@ -161,6 +165,22 @@ impl PlayerPvpState {
             talents: None,
         }
     }
+}
+
+/// TC Player::GetBattleground: current accepted arena copy, not queued preference.
+pub(crate) fn player_arena_conditions(world: &World, player: Entity) -> Option<(u8, bool)> {
+    let character = world.get::<crate::persistence::ClientId>(player)?.0;
+    let map = *world.get::<crate::maps::InMap>(player)?;
+    let snapshot = world.get::<PlayerPvpState>(player)?.battleground.as_ref()?;
+    let matched = world
+        .get_resource::<PvpServerState>()?
+        .battleground_matches
+        .get(&snapshot.match_id)?;
+    if matched.map != Some(map) || !matched.accepted.contains(&character) {
+        return None;
+    }
+    let arena = matched.arena.as_ref()?;
+    Some((arena::team_size(arena.mode)?, arena.rated.is_some()))
 }
 
 pub(crate) fn sync_progress_currencies_from_wallet(
