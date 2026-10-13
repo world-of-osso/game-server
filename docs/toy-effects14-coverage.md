@@ -1,5 +1,13 @@
 # Toy effects14 — active whole-goal coverage
 
+## Titanium Seal coin (2026-10-12)
+
+Read-only canonical census338→346/1166, zero removed. Only44430 is this batch. The other seven came from the origin/master merge, not from toy work here: 33219/33927/139337/210042/234951 are type22 spellcaster objects, plus 199554 (target62) and 200999 (target72). Census JSON: `coin-canonical-after.json`.
+
+Source: TC a352b1fa `spell_item_titanium_seal_of_dalaran_toss` (TextEmote32638 at launch; RelocateHeight +20yd on TARGET_DEST_CASTER) and `_catch` (60476, OnEffectHit TextEmote RAND(32663, 32664)). DB2 60458 effect32 at dest18 triggers 60476, missile Speed10 → 2000ms flight. A script owns the triggered catch; the generic area-entry target8 is not admitted.
+
+RED `682d1bbc` refused `effect 77, target 8`. GREEN `da03865a` 2/2 covers both sexes: immediate toss to caster and 35yd hearer, no catch before the flight, exactly one heads/tails after it, no 500yd hearer, unchanged health/position, and refusals for missing text or toss/catch shape drift. Dice regression 2/2. Native Modern and Forever actual journal use: toss with blue item label, then one catch 2s later (chat timestamps 20:01:18→20:01:20 in Forever). PNGs in `toys/coin18/`. Gap: the 60476 catch SpellVisual12799 is not sent, and the missile visual is not certified.
+
 ## Unusual Compass facing (2026-10-12)
 
 Read-only canonical census337→338/1166 (+45984, zero removed; `compass-canonical-after.json`). Source: TC a352b1fa `spell_item_unusual_compass` turns its caster to `frand(0, 2π)` via `Unit::SetFacingTo` (force=true); DB2 64385 has one caster effect3 with zero payload, cast time2000ms. No new data import.
