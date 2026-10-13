@@ -4197,6 +4197,16 @@ fn toyfx18_cast_kit_visual_toys_cast_without_gameplay() {
         let directory = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&directory.path().join("cast-kit.redb"));
         h.app.insert_resource(store.clone());
+        // Azerite's TARGET_DEST_CASTER_GROUND needs authored ground under the caster.
+        h.app
+            .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+                33.0, 33.0, 2.0,
+            ));
+        h.app.world_mut().entity_mut(h.caster).insert(Position {
+            x: 10.0,
+            y: 2.0,
+            z: -10.0,
+        });
         let model = h.app.world().get::<ModelDisplay>(h.caster).cloned();
         let health = *h.app.world().get::<Health>(h.caster).unwrap();
         let position = *h.app.world().get::<Position>(h.caster).unwrap();
