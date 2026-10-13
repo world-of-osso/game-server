@@ -352,6 +352,7 @@ pub(crate) fn record(world: &mut World, player: Entity, event: CriteriaEvent) {
     }
     ensure_month_state(world, player, character);
     let level = world.get::<Level>(player).expect("realm player Level").0;
+    let conditions = crate::achievement::player_conditions(world, player);
     let state = world
         .get::<PlayerAchievementState>(player)
         .expect("monthly player state");
@@ -374,7 +375,7 @@ pub(crate) fn record(world: &mut World, player: Entity, event: CriteriaEvent) {
         .map(|index| &data.activities[*index])
         .filter(|activity| data.activity_eligibility(activity.id, level) == Ok(true))
         .map(|activity| activity.root);
-    let changed = criteria.update_roots_event(roots, &mut progress, event);
+    let changed = criteria.update_roots_event(roots, &mut progress, event, &conditions);
     if !changed {
         return;
     }

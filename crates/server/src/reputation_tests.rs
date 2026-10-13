@@ -52,16 +52,25 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
 
 #[test]
 fn npc_kill_updates_primary_and_spillover_reputation() {
-    let registry = default_faction_registry();
+    let mut registry = default_faction_registry();
+    // Explicit test policy: the authentic registry does not invent city spillover.
+    let mut stormwind_policy = registry.get(72).unwrap().clone();
+    stormwind_policy.spillover = vec![shared::reputation::SpilloverRule {
+        faction_id: 47,
+        rate: 0.25,
+    }];
+    registry.add(stormwind_policy);
     let world_data = test_world_data(test_template(1001, 72, 5, 5));
     let mut reputation = CharacterReputation::new_for_race(&registry, 1);
+    // Pinned race-class baselines: Human Stormwind/Ironforge/Orgrimmar start values.
+    let [stormwind, ironforge, orgrimmar] = [72, 47, 76].map(|id| reputation.get_value(id));
 
     let message = apply_npc_kill_reputation(&mut reputation, 5, 1001, &world_data, &registry)
         .expect("kill should award reputation");
 
-    assert_eq!(reputation.get_value(72), 21_010);
-    assert_eq!(reputation.get_value(47), 21_002);
-    assert_eq!(reputation.get_value(76), 0);
+    assert_eq!(reputation.get_value(72), stormwind + 10);
+    assert_eq!(reputation.get_value(47), ironforge + 2);
+    assert_eq!(reputation.get_value(76), orgrimmar);
     assert!(message.contains("Stormwind"));
     assert!(message.contains("spillover"));
 }
@@ -71,11 +80,12 @@ fn grey_kill_grants_no_reputation() {
     let registry = default_faction_registry();
     let world_data = test_world_data(test_template(1001, 72, 5, 5));
     let mut reputation = CharacterReputation::new_for_race(&registry, 1);
+    let stormwind = reputation.get_value(72);
 
     let message = apply_npc_kill_reputation(&mut reputation, 20, 1001, &world_data, &registry);
 
     assert!(message.is_none());
-    assert_eq!(reputation.get_value(72), 21_000);
+    assert_eq!(reputation.get_value(72), stormwind);
 }
 
 #[test]
@@ -86,12 +96,12 @@ fn snapshot_lists_known_factions_with_standing_text() {
 
     let snapshot = build_reputation_snapshot(&reputation, &registry);
 
-    assert_eq!(snapshot.entries.len(), 3);
+    assert_eq!(snapshot.entries.len(), registry.iter().count());
     let stormwind = snapshot
         .entries
         .iter()
         .find(|entry| entry.faction_id == 72)
         .expect("stormwind entry");
-    assert_eq!(stormwind.standing, format!("{:?}", Standing::Honored));
+    assert_eq!(stormwind.standing, format!("{:?}", Standing::Revered));
     assert_eq!(stormwind.value, 30_000);
 }

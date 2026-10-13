@@ -69,6 +69,7 @@ def fixture_database():
             "chr_classes",
             "spell_equipped_items",
             "db2_row_source",
+            "spell",
             "spell_name",
             "spell_effect",
             "mount",

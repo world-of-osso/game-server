@@ -185,10 +185,18 @@ struct InvitedBattleground {
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
     alterac: Option<pvp_alterac::AlteracRuntime>,
-    scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    scoreboard: Scoreboard,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
     arena: Option<arena::MatchState>,
+}
+
+/// Displayed rows plus TC Battleground::UpdatePvpStat receipts awaiting criteria credit.
+#[derive(Debug, Default)]
+struct Scoreboard {
+    rows: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    /// (character, PvpStat) once per objective credit, drained to achievements.
+    stat_credits: Vec<(u64, u32)>,
 }
 
 impl InvitedBattleground {
@@ -271,7 +279,7 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             seething: None,
             deephaul: None,
             alterac: None,
-            scoreboard: Vec::new(),
+            scoreboard: Scoreboard::default(),
             flag_positions: [None, None],
             arena: None,
         },
@@ -610,7 +618,7 @@ fn resolve_battleground_matches(
                 flags: invitation.flag_objective(),
                 world_states: invitation.world_states(),
                 outcome: invitation.instance.outcome,
-                players: invitation.scoreboard.clone(),
+                players: invitation.scoreboard.rows.clone(),
                 honor_reward: None,
                 arena: None,
             });

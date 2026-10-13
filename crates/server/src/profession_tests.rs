@@ -140,6 +140,10 @@ struct Harness {
 }
 
 fn harness(level: u8) -> Option<Harness> {
+    harness_with(level, |_| {})
+}
+
+fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let path = world_db_path()?;
     let data = world_db()?;
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -172,6 +176,7 @@ fn harness(level: u8) -> Option<Harness> {
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
+    extra(&mut app);
     app.finish();
     app.cleanup();
     app.update();
@@ -515,6 +520,16 @@ fn learning_tailoring_takes_gold_and_learns_classic_tailoring_with_bolt_of_linen
 }
 
 #[test]
+fn learning_tailoring_sets_parent_line_maximum_from_lower_authored_tier() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    // Tailoring197 is enabled at ParentTierIndex4; SkillTiers462 authors only Value1=75,
+    // so TC GetValueForTierIndex(3) falls back to 75.
+    let parent = h.line(TAILORING_SKILL).unwrap();
+    assert_eq!((parent.step, parent.rank, parent.max_rank), (4, 1, 75));
+}
+
+#[test]
 fn tailoring_purchase_without_ten_copper_fails_and_changes_nothing() {
     let Some(mut h) = harness(10) else { return };
     h.set_gold(9);
@@ -818,4 +833,45 @@ fn online_learn_spell_trainer_publishes_without_relog() {
             "server does not know learned {spell}"
         );
     }
+}
+
+#[test]
+fn achievements_criteria_skill_step_reads_learned_line_maximum_in_seventy_five_point_steps() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let Some(mut h) = harness_with(10, |app| {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    }) else {
+        return;
+    };
+    let player = h.player;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    h.advance(2);
+    let counter = |h: &Harness| {
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&5561)
+            .copied()
+    };
+    // Professions learned1199, Tailoring197 leaf criterion5561: nothing before learning.
+    assert_eq!(counter(&h), None);
+    h.learn_tailoring();
+    let tailoring = h.line(TAILORING_SKILL).unwrap();
+    assert!(tailoring.max_rank >= 75, "{tailoring:?}");
+    assert_eq!(counter(&h), Some(u64::from(tailoring.max_rank)));
+    let catalog = h
+        .app
+        .world()
+        .resource::<crate::achievement::AchievementCatalog>();
+    let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
+    // Tree1165 amount1 means one 75-point step (TC CriteriaHandler.cpp:1278-1279).
+    let leaf = catalog.tree_progress(1165, state);
+    assert_eq!((leaf.required, leaf.completed), (75, true));
 }

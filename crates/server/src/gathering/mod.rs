@@ -402,7 +402,12 @@ pub(crate) fn effect_gather(
         .get::<crate::persistence::ClientId>(ctx.caster)
         .expect("validated character")
         .0;
-    crate::loot::open_item_loot(world, ctx.caster, id, rolled);
+    let kind = if ability.effect == SKIN {
+        crate::loot::LootKind::SKINNING
+    } else {
+        crate::loot::LootKind::CHEST
+    };
+    crate::loot::open_item_loot(world, ctx.caster, id, rolled, kind);
     advance_skill(world, ctx.caster, progress, rng.gen_range(1..=1000));
     mark_resource_collected(world, target, id, ability.effect);
 }

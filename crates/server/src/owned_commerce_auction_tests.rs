@@ -60,6 +60,7 @@ fn owned_commerce_sources_auction_mints_and_settles_both_catalogs_through_mail_r
             .into_iter()
             .map(|a| (a.auction_id, a))
             .collect(),
+        ..Default::default()
     };
     assert_eq!(state.auctions.len(), 2);
     let ids: Vec<_> = state.auctions.keys().copied().collect();

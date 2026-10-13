@@ -145,7 +145,7 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     };
     persistence::save_pvp(&db.db, character_id, &pvp);
 
-    let state = load_selected_character_state(&db, character_id, 1);
+    let state = load_selected_character_state(&db, character_id, 1, 1);
 
     assert_eq!(state.currencies.get(1792), 420);
     assert_eq!(state.currencies.get(1602), 80);

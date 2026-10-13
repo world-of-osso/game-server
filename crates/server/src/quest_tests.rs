@@ -8,13 +8,14 @@ use lightyear::connection::host::HostClient;
 use lightyear::prelude::{AppMessageExt, Connected, Message, PeerId, RemoteId};
 use shared::components::{CharacterAppearance, EquipmentAppearance};
 use shared::protocol::{
-    AbandonQuest, DestroyItem, EquipItem, EquipmentSnapshot, InventoryDelta, InventoryError,
-    InventorySnapshot, LogXpGain, PlayerXpUpdate, QuestFailed, QuestFailedReason,
-    QuestGiverAcceptQuest, QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello,
-    QuestGiverOfferReward, QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails,
-    QuestGiverQuestList, QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus,
-    QuestGiverStatusEntry, QuestGiverStatusQuery, QuestMarkerClass, QuestRewardItem,
-    SetQuestWatched, SortBags, SplitItem, SwapItem, UseItem, XpGainReason,
+    AbandonQuest, AchievementCatalogPage, AchievementStateUpdate, DestroyItem, EquipItem,
+    EquipmentSnapshot, InventoryDelta, InventoryError, InventorySnapshot, LogXpGain,
+    PlayerXpUpdate, QueryAchievementCatalog, QuestFailed, QuestFailedReason, QuestGiverAcceptQuest,
+    QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello, QuestGiverOfferReward,
+    QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails, QuestGiverQuestList,
+    QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus, QuestGiverStatusEntry,
+    QuestGiverStatusQuery, QuestMarkerClass, QuestRewardItem, SetQuestWatched, SortBags, SplitItem,
+    SwapItem, UseItem, XpGainReason,
 };
 
 use super::*;
@@ -235,6 +236,133 @@ fn setup_app() -> Option<App> {
 }
 
 #[test]
+fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_daily() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic quest data");
+    let client = spawn_client(&mut app, 10);
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(PlayerAchievementState::default());
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    enter_world(&mut app, &client);
+    let giver = spawn_npc(&mut app, 37675, 0.0);
+    accept(&mut app, &client, giver, 24629);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    turn_in(&mut app, &client, giver, 24629, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    assert!(
+        !persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .contains_key(&4984)
+    );
+    // Authored objective37990 receives native creature credit; not a perfume-use claim.
+    kill(&mut app, &client, 37990, 10);
+    turn_in(&mut app, &client, giver, 24629, None);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(24629));
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&4984),
+        Some(&1)
+    );
+    turn_in(&mut app, &client, giver, 24629, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    app.update();
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&4984),
+        Some(&1)
+    );
+}
+
+#[test]
+fn achievements_criteria_quest_money_zone_count_and_abandon_credit_only_committed_requests() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use shared::protocol::AchievementStateUpdate;
+    let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic quest data");
+    let client = spawn_client(&mut app, 60);
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(PlayerAchievementState::default());
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    enter_world(&mut app, &client);
+    let progress = |app: &App, criterion: u32| {
+        persistence::load_achievements(db(app), client.character_id)
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    // Real Hellfire quest9355: giver/ender16837, QuestSortID3483, kill16857 x15; its
+    // authored prerequisite10142 (also Hellfire) is seeded as rewarded history.
+    mark_rewarded(&app, &client, 10142);
+    let giver = spawn_npc(&mut app, 16837, 0.0);
+    accept(&mut app, &client, giver, 9355);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    // Statistic94 criterion5289 counts a committed log removal, not a refused one.
+    request(&mut app, &client, AbandonQuest { quest_id: 9355 });
+    assert_eq!(progress(&app, 5289), Some(1));
+    request(&mut app, &client, AbandonQuest { quest_id: 9355 });
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    assert_eq!(progress(&app, 5289), Some(1));
+    accept(&mut app, &client, giver, 9355);
+    turn_in(&mut app, &client, giver, 9355, None);
+    assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    for criterion in [4092, 3912, 3631] {
+        assert_eq!(
+            progress(&app, criterion),
+            None,
+            "refused turn-in credited {criterion}"
+        );
+    }
+    kill(&mut app, &client, 16857, 15);
+    let before = persistence::load_inventory(db(&app), client.character_id).gold;
+    turn_in(&mut app, &client, giver, 9355, Some(0));
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    let paid = persistence::load_inventory(db(&app), client.character_id).gold - before;
+    assert!(paid > 0);
+    // Gold from quest rewards4092, Hellfire quests3912 and Quests completed3631.
+    assert_eq!(progress(&app, 4092), Some(paid));
+    assert_eq!(progress(&app, 3912), Some(1));
+    assert_eq!(progress(&app, 3631), Some(2));
+    let saved = persistence::load_achievements(db(&app), client.character_id);
+    app.world_mut()
+        .entity_mut(client.connection)
+        .remove::<InWorld>();
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(saved.clone());
+    enter_world(&mut app, &client);
+    let reloaded = app
+        .world()
+        .get::<PlayerAchievementState>(client.player)
+        .unwrap();
+    // TC login case: highest of counted rewarded Hellfire quests (10142, 9355); money
+    // and abandons are never replayed.
+    assert_eq!(reloaded.criteria_progress.get(&3912), Some(&2));
+    for criterion in [4092, 3631, 5289] {
+        assert_eq!(
+            reloaded.criteria_progress.get(&criterion),
+            saved.criteria_progress.get(&criterion),
+            "login changed {criterion}"
+        );
+    }
+}
+
+#[test]
 fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog() {
     use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
     use shared::protocol::AchievementStateUpdate;
@@ -298,6 +426,10 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
     let saved = persistence::load_achievements(db(&app), client.character_id);
     assert!(saved.earned_ids.contains(&2357));
     assert_eq!(saved.criteria_progress[&8905], 1);
+    assert!(
+        !saved.criteria_progress.contains_key(&4984),
+        "ordinary reward must not count as daily"
+    );
     assert!(saved.earned_at.contains_key(&2357));
     app.world_mut()
         .entity_mut(client.connection)
@@ -315,12 +447,135 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
         reloaded.account.take().is_some(),
         "login reconstructs account presentation"
     );
+    // Type74 Login (criterion23250) is the one counter each world entry adds to.
+    let mut saved = saved;
+    let logins = saved.criteria_progress.remove(&23250).unwrap();
+    assert_eq!(reloaded.criteria_progress.remove(&23250), Some(logins + 1));
     assert_eq!(reloaded, saved);
     assert!(
         received::<AchievementStateUpdate>(&mut app, &client)
             .iter()
             .all(|update| update.completed.is_none())
     );
+}
+
+#[test]
+fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_balance() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    use crate::currency::{CurrencyPlugin, PlayerCurrencies};
+    use shared::currency::{CurrencyWallet, currency_by_id};
+    use shared::protocol::{CurrencyStateUpdate, EarnCurrency, SpendCurrency};
+
+    let mut app = setup_app_with(|app| {
+        for_currency_messages(app);
+        app.add_plugins((CurrencyPlugin, AchievementPlugin));
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    })
+    .expect("real quest database");
+    let client = spawn_named_client(&mut app, 1, "Currproof");
+    add_message_pair::<EarnCurrency>(&mut app, client.connection);
+    add_message_pair::<SpendCurrency>(&mut app, client.connection);
+    add_message_pair::<CurrencyStateUpdate>(&mut app, client.connection);
+    add_message_pair::<AchievementStateUpdate>(&mut app, client.connection);
+    add_message_pair::<QueryAchievementCatalog>(&mut app, client.connection);
+    add_message_pair::<AchievementCatalogPage>(&mut app, client.connection);
+    let mut wallet = CurrencyWallet::default();
+    wallet.add(4, 990, currency_by_id(4).unwrap()).unwrap();
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert((PlayerCurrencies(wallet), PlayerAchievementState::default()));
+    enter_world(&mut app, &client);
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&41095)
+    );
+    // Valor's authored weekly cap is1000. Only10 of requested100 are granted.
+    request(
+        &mut app,
+        &client,
+        EarnCurrency {
+            currency_id: 4,
+            amount: 100,
+        },
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerCurrencies>(client.player)
+            .unwrap()
+            .0
+            .get(4),
+        1000
+    );
+    // The committed credit crosses the currency system's queued-message boundary.
+    app.update();
+    app.update();
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .criteria_progress
+            .get(&41095),
+        Some(&10)
+    );
+    request(
+        &mut app,
+        &client,
+        SpendCurrency {
+            currency_id: 4,
+            amount: 25,
+        },
+    );
+    request(
+        &mut app,
+        &client,
+        EarnCurrency {
+            currency_id: 4,
+            amount: 100,
+        },
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(client.player)
+            .unwrap()
+            .criteria_progress
+            .get(&41095),
+        Some(&10)
+    );
+    // Failed grants never become achievement progress; request-only PvP gains remain forbidden.
+    request(
+        &mut app,
+        &client,
+        EarnCurrency {
+            currency_id: 1792,
+            amount: 100,
+        },
+    );
+    assert_eq!(
+        app.world()
+            .get::<PlayerCurrencies>(client.player)
+            .unwrap()
+            .0
+            .get(1792),
+        0
+    );
+    let saved = persistence::load_achievements(
+        &app.world().resource::<GameDatabase>().db,
+        client.character_id,
+    );
+    assert_eq!(saved.criteria_progress.get(&41095), Some(&10));
+}
+
+fn for_currency_messages(app: &mut App) {
+    register::<shared::protocol::EarnCurrency>(app);
+    register::<shared::protocol::SpendCurrency>(app);
+    register::<shared::protocol::CurrencyStateUpdate>(app);
+    register::<AchievementStateUpdate>(app);
+    register::<QueryAchievementCatalog>(app);
+    register::<AchievementCatalogPage>(app);
 }
 
 /// `setup_app` plus the plugins `add_plugins` adds before the app is finished.

@@ -24,17 +24,68 @@ pub(crate) fn format_money(copper: u64) -> String {
 pub(crate) struct GoldUpdateQueue {
     pending: HashMap<u64, u64>,
     changed_inventories: HashSet<u64>,
+    acquired_items: Vec<(u64, u32, u32)>,
+    looted_items: Vec<(u64, u32, u32, u8)>,
+    looted_money: Vec<(u64, u64)>,
+    criteria: Vec<(u64, crate::achievement::CriteriaEvent)>,
 }
 
 impl GoldUpdateQueue {
     pub(crate) fn record(&mut self, character_id: u64, gold: u64) {
         self.pending.insert(character_id, gold);
         self.changed_inventories.insert(character_id);
+        // TC Player::SetMoney: highest actual wallet on non-loading money changes.
+        self.record_criteria(
+            character_id,
+            crate::achievement::CriteriaEvent::MostMoneyOwned(gold),
+        );
     }
 
     /// Items changed without a gold change.
     pub(crate) fn record_items(&mut self, character_id: u64) {
         self.changed_inventories.insert(character_id);
+    }
+
+    /// A committed Retail acquisition, not an inventory move or a requested grant.
+    pub(crate) fn record_acquisition(&mut self, character: u64, item: u32, count: u32) {
+        self.acquired_items.push((character, item, count));
+    }
+
+    /// A committed loot-slot award, including group rolls, never a vendor/craft/move.
+    pub(crate) fn record_looted_item(&mut self, character: u64, item: u32, count: u32, kind: u8) {
+        self.looted_items.push((character, item, count, kind));
+    }
+
+    /// Actual committed coin awards, including each member's validated split share.
+    pub(crate) fn record_looted_money(&mut self, character: u64, copper: u64) {
+        if copper != 0 {
+            self.looted_money.push((character, copper));
+        }
+    }
+
+    /// Achievement credit of a committed inventory/money transaction by its character.
+    pub(crate) fn record_criteria(
+        &mut self,
+        character: u64,
+        event: crate::achievement::CriteriaEvent,
+    ) {
+        self.criteria.push((character, event));
+    }
+
+    pub(crate) fn take_criteria(&mut self) -> Vec<(u64, crate::achievement::CriteriaEvent)> {
+        std::mem::take(&mut self.criteria)
+    }
+
+    pub(crate) fn take_looted_money(&mut self) -> Vec<(u64, u64)> {
+        std::mem::take(&mut self.looted_money)
+    }
+
+    pub(crate) fn take_looted_items(&mut self) -> Vec<(u64, u32, u32, u8)> {
+        std::mem::take(&mut self.looted_items)
+    }
+
+    pub(crate) fn take_acquisitions(&mut self) -> Vec<(u64, u32, u32)> {
+        std::mem::take(&mut self.acquired_items)
     }
 
     /// Characters whose bags changed this frame, before `send_inventory_deltas` takes them.
