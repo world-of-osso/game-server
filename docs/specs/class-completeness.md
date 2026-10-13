@@ -84,6 +84,10 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Native aura319 multiplies melee swing time by 100/(100+amount) per aura (negative amounts by (100−amount)/100) for players and creatures, independently of haste and cast time.
 
+## Tiger Dash decay
+
+- [x] Native Tiger Dash 252216 starts at its effect0 run-speed bonus and loses effect1's amount on every 500 ms periodic tick (TC spell_dru_tiger_dash_aura); expiry restores normal speed.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
@@ -99,6 +103,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/inventory_tests.rs`: native Dual Wield off-hand admission, rejection and auto-equip.
 - `crates/server/src/auras/defensives_tests.rs`: six native Parry spells versus none.
 - `crates/server/src/spell_cast/attack_speed_tests.rs`: native Ruthless Aggression/Swift as a Coursing River creature swing intervals and unchanged Fireball cast time.
+- `crates/server/src/auras/tiger_dash_tests.rs`: native Tiger Dash per-tick decay and expiry.
 - `crates/server/src/spell_cast/melee_crit_taken_tests.rs`: native187 real damage, victim ownership, additive fields, expiry/removal, positive and ranged/magic controls.
 - `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
