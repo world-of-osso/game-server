@@ -336,6 +336,12 @@ impl Plugin for PvpPlugin {
         );
         app.add_systems(
             FixedUpdate,
+            crate::transport::store_passenger_offsets
+                .after(crate::networking::process_player_inputs)
+                .after(crate::networking::apply_terrain_gravity),
+        );
+        app.add_systems(
+            FixedUpdate,
             arena::update_matches.after(crate::death::process_player_death_transitions),
         );
         app.add_systems(Update, send_initial_pvp_snapshot);

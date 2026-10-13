@@ -134,6 +134,7 @@ mod transmog;
 mod transmog_store;
 mod transport;
 mod transport_catalog;
+mod transport_movement;
 mod unit_target;
 mod vehicle;
 mod vignettes;
