@@ -55,6 +55,12 @@ class EncounterServersideSpellsTests(unittest.TestCase):
                              [(119297, 28, 61409, 491, 53), (119298, 96, 0, 0, 46)])
             self.assertEqual(connection.execute('SELECT EffectTriggerSpell FROM tdb_serverside_spell_effect WHERE SpellID=119298').fetchone(), (119299,))
             self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchone(), ('retained',))
+            connection.row_factory = sqlite3.Row
+            expected = json.loads(FIXTURE.read_text())['rows']
+            for table, source_rows in expected.items():
+                id_column = 'Id' if table == 'serverside_spell' else 'SpellID'
+                actual = [dict(row) for row in connection.execute(f'SELECT * FROM tdb_{table} ORDER BY {id_column}')]
+                self.assertEqual(actual, source_rows, 'Every actual source field must survive unchanged')
 
     def test_missing_authored_spell_refuses_without_partial_tables(self):
         write_dump(self.dump, missing=('serverside_spell', 119298))
