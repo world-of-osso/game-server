@@ -57,6 +57,7 @@ struct AdminResources<'w, 's> {
     instances: crate::maps::difficulty::AdminInstances<'w, 's>,
     economy: Option<Res<'w, crate::economy::Economy>>,
     economy_config: Option<Res<'w, crate::economy::Config>>,
+    refund_window: Option<ResMut<'w, crate::trading_post::RefundWindow>>,
 }
 
 /// Queries needed by the admin IPC dispatch loop.
@@ -119,6 +120,9 @@ fn dispatch_resource_commands(
             res.economy.as_deref(),
             res.economy_config.as_deref(),
         ));
+    }
+    if let Some(response) = dispatch_trading_post(request, db, res) {
+        return Some(response);
     }
     if let AdminRequest::CombatLog { last_seconds } = request {
         return Some(handle_combat_log(&res.combat_log, &res.time, *last_seconds));
@@ -235,6 +239,33 @@ fn dispatch_resource_commands(
         return Some(handle_taxi_learn(db, &res.taxi, character_name, *node));
     }
     res.instances.dispatch(request, db)
+}
+
+/// Private-server test setup for Trading Post live proof; no player-reachable path.
+fn dispatch_trading_post(
+    request: &AdminRequest,
+    db: &persistence::GameDatabase,
+    res: &mut AdminResources,
+) -> Option<AdminResponse> {
+    match request {
+        AdminRequest::TradingPostGrantTender { username, amount } => Some(
+            match crate::trading_post::admin_grant_tender(&db.db, username, *amount) {
+                Ok(tender) => AdminResponse::TradingPostTenderGranted {
+                    username: username.clone(),
+                    tender,
+                },
+                Err(error) => AdminResponse::Error(error),
+            },
+        ),
+        AdminRequest::TradingPostRefundWindow { seconds } => Some(match &mut res.refund_window {
+            Some(window) => {
+                window.0 = *seconds;
+                AdminResponse::TradingPostRefundWindowSet { seconds: *seconds }
+            }
+            None => AdminResponse::Error("Trading Post not loaded".into()),
+        }),
+        _ => None,
+    }
 }
 
 /// `grant-item`: store the items in the character's bags; an online owner gets the
@@ -710,7 +741,9 @@ fn dispatch(
             &slot,
         ),
         // Handled in early-dispatch functions before this match
-        AdminRequest::TicketList
+        AdminRequest::TradingPostGrantTender { .. }
+        | AdminRequest::TradingPostRefundWindow { .. }
+        | AdminRequest::TicketList
         | AdminRequest::TicketClaim { .. }
         | AdminRequest::TicketClaimNext { .. }
         | AdminRequest::TicketRespond { .. }

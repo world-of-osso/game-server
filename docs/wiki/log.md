@@ -1,4 +1,10 @@
+## 2026-10-12 — Preparation visibility distinguishes unit targets
+
+[Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
+
 # Wiki Log
+
+- 2026-10-13 — [Master arena/class regressions](investigations/master-arena-fixture-regressions.md): pinned TC target/cost/cap rules; duplicate Arcane discount removed, reciprocal Moloch success/refusal controls, unchanged mastery expiry assertions isolated from capped selection. Historical bisect limitations retained explicitly.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
 

@@ -1,0 +1,250 @@
+[
+  {
+    "map_id": 1552,
+    "entry": 250430,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_ashamanes_fall.cpp",
+    "sha256": "4922b446b0ec7a746a44df967c4049240b2764a8ba91c6a938f6038334dadc03"
+  },
+  {
+    "map_id": 1552,
+    "entry": 250431,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_ashamanes_fall.cpp",
+    "sha256": "4922b446b0ec7a746a44df967c4049240b2764a8ba91c6a938f6038334dadc03"
+  },
+  {
+    "map_id": 1504,
+    "entry": 245763,
+    "action": "open",
+    "despawn_secs": 0,
+    "source": "arena_black_rook_hold_arena.cpp",
+    "sha256": "6e97f41118e2de8c3e997f6510b844659615c7e57e4a4952a718d3e348e5e3d3"
+  },
+  {
+    "map_id": 1504,
+    "entry": 245766,
+    "action": "open",
+    "despawn_secs": 0,
+    "source": "arena_black_rook_hold_arena.cpp",
+    "sha256": "6e97f41118e2de8c3e997f6510b844659615c7e57e4a4952a718d3e348e5e3d3"
+  },
+  {
+    "map_id": 1504,
+    "entry": 245767,
+    "action": "open",
+    "despawn_secs": 0,
+    "source": "arena_black_rook_hold_arena.cpp",
+    "sha256": "6e97f41118e2de8c3e997f6510b844659615c7e57e4a4952a718d3e348e5e3d3"
+  },
+  {
+    "map_id": 1504,
+    "entry": 245770,
+    "action": "open",
+    "despawn_secs": 0,
+    "source": "arena_black_rook_hold_arena.cpp",
+    "sha256": "6e97f41118e2de8c3e997f6510b844659615c7e57e4a4952a718d3e348e5e3d3"
+  },
+  {
+    "map_id": 1504,
+    "entry": 245768,
+    "action": "open",
+    "despawn_secs": 0,
+    "source": "arena_black_rook_hold_arena.cpp",
+    "sha256": "6e97f41118e2de8c3e997f6510b844659615c7e57e4a4952a718d3e348e5e3d3"
+  },
+  {
+    "map_id": 1504,
+    "entry": 245781,
+    "action": "open",
+    "despawn_secs": 0,
+    "source": "arena_black_rook_hold_arena.cpp",
+    "sha256": "6e97f41118e2de8c3e997f6510b844659615c7e57e4a4952a718d3e348e5e3d3"
+  },
+  {
+    "map_id": 2759,
+    "entry": 505683,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_cage_of_carnage.cpp",
+    "sha256": "e1a0837384bb553ff2b7fad6e40dc1bcd8fcf47d0072ab044d94e87d9fcfed74"
+  },
+  {
+    "map_id": 2373,
+    "entry": 352927,
+    "action": "delete",
+    "despawn_secs": 0,
+    "source": "arena_empyrean_domain.cpp",
+    "sha256": "6f7f9a831a4da32ac5d7e0ff4a9a471e5d6d009ec7384e3659f4e8174b08beab"
+  },
+  {
+    "map_id": 2547,
+    "entry": 376876,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_enigma_crucible.cpp",
+    "sha256": "0148c8b072ba4e1c62d1c810c60cce526165fb27e697678048f9c6a51c55511c"
+  },
+  {
+    "map_id": 2547,
+    "entry": 376861,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_enigma_crucible.cpp",
+    "sha256": "0148c8b072ba4e1c62d1c810c60cce526165fb27e697678048f9c6a51c55511c"
+  },
+  {
+    "map_id": 1825,
+    "entry": 296728,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_hook_point.cpp",
+    "sha256": "5541ccb2529bc5c79713b677766215614150a62d9cd3c5a900233b24f103c6d6"
+  },
+  {
+    "map_id": 2509,
+    "entry": 375890,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_maldraxxus_coliseum.cpp",
+    "sha256": "a7dc0f09a3aa1d6ad4e91252cd1b7df52ade811d1e0cc41574a385a662a1ce76"
+  },
+  {
+    "map_id": 1911,
+    "entry": 298780,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_mugambala.cpp",
+    "sha256": "669ff71956766e40f1dad31d277f403cdcd7b7eae28f15ef635c0579babe4025"
+  },
+  {
+    "map_id": 1911,
+    "entry": 298781,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_mugambala.cpp",
+    "sha256": "669ff71956766e40f1dad31d277f403cdcd7b7eae28f15ef635c0579babe4025"
+  },
+  {
+    "map_id": 1505,
+    "entry": 260527,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_nagrand_arena_legion.cpp",
+    "sha256": "38d4b480f6d561098b591c4757f038177fc3442169abe2ede5565d71270085c7"
+  },
+  {
+    "map_id": 1505,
+    "entry": 260528,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_nagrand_arena_legion.cpp",
+    "sha256": "38d4b480f6d561098b591c4757f038177fc3442169abe2ede5565d71270085c7"
+  },
+  {
+    "map_id": 2563,
+    "entry": 379282,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_nokhudon_proving_grounds.cpp",
+    "sha256": "687e7e35f407ccf56a609b8613dca4ed18403391afed84db9414890195a32ac3"
+  },
+  {
+    "map_id": 572,
+    "entry": 185918,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_ruins_of_lordaeron.cpp",
+    "sha256": "674a56d0611df35faded2b93e3effe82b4a7335e2e8557eb389b489ffce21072"
+  },
+  {
+    "map_id": 572,
+    "entry": 185917,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_ruins_of_lordaeron.cpp",
+    "sha256": "674a56d0611df35faded2b93e3effe82b4a7335e2e8557eb389b489ffce21072"
+  },
+  {
+    "map_id": 2167,
+    "entry": 329742,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_the_robodrome.cpp",
+    "sha256": "6a667c403ac9336ad664a333446c811db4902a888cd3824eb3e324bed50a3821"
+  },
+  {
+    "map_id": 2167,
+    "entry": 329743,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_the_robodrome.cpp",
+    "sha256": "6a667c403ac9336ad664a333446c811db4902a888cd3824eb3e324bed50a3821"
+  },
+  {
+    "map_id": 1134,
+    "entry": 219395,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_the_tigers_peak.cpp",
+    "sha256": "afd10e7082aa60556c94149cd0d754ed981a8b96cd853aa04b4efe91df48685b"
+  },
+  {
+    "map_id": 1134,
+    "entry": 219396,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_the_tigers_peak.cpp",
+    "sha256": "afd10e7082aa60556c94149cd0d754ed981a8b96cd853aa04b4efe91df48685b"
+  },
+  {
+    "map_id": 980,
+    "entry": 213196,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_tol_viron_arena.cpp",
+    "sha256": "b4545fe000cc9b4387456a7a4a1562d10df74bd4c149cef33494aeee1e1d0f23"
+  },
+  {
+    "map_id": 980,
+    "entry": 213197,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_tol_viron_arena.cpp",
+    "sha256": "b4545fe000cc9b4387456a7a4a1562d10df74bd4c149cef33494aeee1e1d0f23"
+  },
+  {
+    "map_id": 617,
+    "entry": 192642,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_dalaran_sewers.cpp",
+    "sha256": "b2748b526a94e7902641e22d29eb78938edde95fd9d6dfed494493105fa5b44a"
+  },
+  {
+    "map_id": 617,
+    "entry": 192643,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_dalaran_sewers.cpp",
+    "sha256": "b2748b526a94e7902641e22d29eb78938edde95fd9d6dfed494493105fa5b44a"
+  },
+  {
+    "map_id": 1672,
+    "entry": 265571,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_blades_edge_legion.cpp",
+    "sha256": "11bb5e0e6f0c3711f72f13f3353ea8ff42b730154edf46dc59052ffc718e33da"
+  },
+  {
+    "map_id": 1672,
+    "entry": 265569,
+    "action": "open",
+    "despawn_secs": 5,
+    "source": "arena_blades_edge_legion.cpp",
+    "sha256": "11bb5e0e6f0c3711f72f13f3353ea8ff42b730154edf46dc59052ffc718e33da"
+  }
+]

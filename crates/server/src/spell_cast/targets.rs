@@ -31,6 +31,8 @@ use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 use crate::spell_info::{SpellEffect, SpellInfo};
 
 const MELEE_RANGE: f32 = 5.0;
+/// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
+const SPELL_ATTR1_EXCLUDE_CASTER: u32 = 0x0008_0000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Relation {
@@ -63,6 +65,8 @@ enum Selector {
     /// Area center = explicit target (DEST_TARGET_*).
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
+    EntryAreaSource,
+    EntryAreaDestination,
     AreaAroundDest(Relation),
     /// Area center = the explicit target's position, the radius behind it.
     DestTargetBack,
@@ -112,6 +116,8 @@ fn selector(id: u32) -> Option<Selector> {
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
         63 => Selector::CenterExplicit(Any),
+        7 => Selector::EntryAreaSource,
+        8 => Selector::EntryAreaDestination,
         15 | 151 => Selector::AreaAroundSrc(Enemy),
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
@@ -224,6 +230,12 @@ pub fn creature_type_allowed(world: &World, spell: &SpellInfo, target: Entity) -
 
 /// `caster` regards `target` as hostile (selects the hostile spell range).
 pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
+    if let Some(relation) = crate::pvp::arena_combat::relation(world, caster, target) {
+        return matches!(
+            relation,
+            crate::pvp::arena_combat::ArenaRelation::Enemy { .. }
+        );
+    }
     if dueling(world, caster, target) {
         return true;
     }
@@ -234,20 +246,30 @@ pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
 
 /// `Unit::IsFriendlyTo`: the caster's reaction to the target is friendly.
 pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
+    if let Some(relation) = crate::pvp::arena_combat::relation(world, caster, target) {
+        return relation == crate::pvp::arena_combat::ArenaRelation::Teammate;
+    }
     let templates = world.resource::<FactionTemplates>();
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
     templates.reaction(caster.template, target.template) == Reaction::Friendly
 }
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
-    if relation == Relation::Any {
-        return true;
-    }
+    let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if caster == target {
-        return relation == Relation::Ally;
+        return relation != Relation::Enemy;
     }
     if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;
+    }
+    if relation == Relation::Any {
+        return !matches!(
+            arena,
+            Some(
+                crate::pvp::arena_combat::ArenaRelation::Blocked
+                    | crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: false }
+            )
+        );
     }
     // WorldObject::IsValidAttackTarget / IsValidAssistTarget (Object.cpp:2374, 2538): an
     // uninteractible unit is neither attacked nor assisted.
@@ -256,6 +278,19 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
         .is_some_and(|flags| !flags.is_selectable())
     {
         return false;
+    }
+    if let Some(arena) = arena {
+        return match relation {
+            Relation::Enemy => {
+                matches!(
+                    arena,
+                    crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: true }
+                ) && world
+                    .get::<shared::components::UnitFlags>(target)
+                    .is_none_or(|flags| flags.is_attackable())
+            }
+            _ => arena == crate::pvp::arena_combat::ArenaRelation::Teammate,
+        };
     }
     // The duel opponent is hostile: attackable, never assisted.
     let dueling = dueling(world, caster, target);
@@ -412,14 +447,8 @@ pub fn select_targets(
             Selector::AreaAroundSrc(relation) => {
                 selected_any = true;
                 let src = center.unwrap_or(caster_pos);
-                units.extend(area_units(
-                    world,
-                    caster,
-                    src,
-                    radius(effect, slot),
-                    relation,
-                    max_targets,
-                ));
+                let candidates = area_units(world, caster, src, radius(effect, slot), relation, 0);
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
             }
             Selector::ConeEnemy
             | Selector::CasterLine
@@ -445,6 +474,22 @@ pub fn select_targets(
                     max_targets,
                 )?);
             }
+            Selector::EntryAreaSource | Selector::EntryAreaDestination => {
+                selected_any = true;
+                let origin = if matches!(selector, Selector::EntryAreaDestination) {
+                    center.ok_or(id)?
+                } else {
+                    center.unwrap_or(caster_pos)
+                };
+                units.extend(entry_area_units(
+                    world,
+                    caster,
+                    spell,
+                    effect,
+                    origin,
+                    radius(effect, slot),
+                ));
+            }
             Selector::ConeEntry => {
                 selected_any = true;
                 units.extend(cone_entry_units(
@@ -461,22 +506,40 @@ pub fn select_targets(
                     .or_else(|| spell.cast_destination.map(Vec3::from_array))
                     .or_else(|| explicit.and_then(|target| position(world, target)))
                     .unwrap_or(caster_pos);
-                units.extend(area_units(
-                    world,
-                    caster,
-                    dest,
-                    radius(effect, slot),
-                    relation,
-                    max_targets,
-                ));
+                let candidates = area_units(world, caster, dest, radius(effect, slot), relation, 0);
+                units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
             }
         }
     }
     if !selected_any && effect.implicit_targets == [0, 0] {
         units.push(explicit.unwrap_or(caster));
     }
+    units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
     Ok(units)
+}
+
+pub(super) fn excludes_caster(spell: &SpellInfo) -> bool {
+    spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[1] & SPELL_ATTR1_EXCLUDE_CASTER != 0)
+}
+
+/// TC CheckTarget filters candidates before SelectImplicitAreaTargets caps them.
+fn limit_spell_targets(
+    spell: &SpellInfo,
+    caster: Entity,
+    mut units: Vec<Entity>,
+    cap: u32,
+) -> Vec<Entity> {
+    if excludes_caster(spell) {
+        units.retain(|unit| *unit != caster);
+    }
+    if cap > 0 {
+        units.truncate(cap as usize);
+    }
+    units
 }
 
 ///TC a352b1fa SpellInfo.cpp:367/Spell.cpp:9361 selects raid corpse owners.
@@ -574,10 +637,7 @@ fn directed_units(
             half_arc,
         )
     });
-    if cap > 0 {
-        units.truncate(cap as usize);
-    }
-    Ok(units)
+    Ok(limit_spell_targets(spell, caster, units, cap))
 }
 
 fn direction_to_destination(origin: Vec3, destination: Option<Vec3>, facing: f32) -> Vec3 {
@@ -603,6 +663,34 @@ fn within_directed_shape(
     } else {
         across.atan2(along) <= half_arc
     }
+}
+
+/// Source7/8: spherical same-copy area with authored entry conditions, not faction substitution.
+fn entry_area_units(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    origin: Vec3,
+    radius: f32,
+) -> Vec<Entity> {
+    let map = world.get::<crate::maps::InMap>(caster).copied();
+    let targets: Vec<_> = world
+        .query::<(Entity, &Position, &Health, &crate::maps::InMap)>()
+        .iter(world)
+        .filter(|(_, position, health, copy)| {
+            let position = Vec3::new(position.x, position.y, position.z);
+            health.current > 0.0
+                && Some(**copy) == map
+                && position.distance_squared(origin) <= radius * radius
+        })
+        .map(|(entity, ..)| entity)
+        .collect();
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    targets
+        .into_iter()
+        .filter(|&target| conditions.target_meets(world, spell.id, effect.index, target))
+        .collect()
 }
 
 /// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):
@@ -704,7 +792,7 @@ pub fn chain_targets(
     let mut candidates: Vec<Entity> =
         area_units(world, caster, search_center, search_radius, relation, 0)
             .into_iter()
-            .filter(|&unit| unit != target)
+            .filter(|&unit| unit != target && (unit != caster || !excludes_caster(spell)))
             .collect();
     let mut chain = Vec::new();
     while chain.len() < jumps {
@@ -871,8 +959,9 @@ pub fn effect_dest(
     dest
 }
 
-///TC TARGET_DEST_CASTER_GROUND resolves map height when the cast plan owns mutable
-///ground access. Destination selection remains independent of ground-cache mutation.
+///TC TARGET_DEST_CASTER_GROUND resolves map height (`Map::GetHeight`, including enabled
+///GO floors in the caster's copy) when the cast plan owns mutable ground access.
+///Destination selection remains independent of ground-cache mutation.
 pub(super) fn ground_destination(
     world: &mut World,
     caster: Entity,
@@ -892,8 +981,7 @@ pub(super) fn ground_destination(
         .ok_or_else(|| {
             super::CastFailure::Unsupported("caster-ground destination requires ground data".into())
         })?;
-    let crate::ground::GroundProbe::Supported(height) =
-        ground.ground_at(map.map_id, destination.position)
+    let crate::ground::GroundProbe::Supported(height) = ground.ground_in(map, destination.position)
     else {
         return Err(super::CastFailure::InvalidTarget);
     };

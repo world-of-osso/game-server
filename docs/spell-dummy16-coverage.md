@@ -7,7 +7,7 @@ Nine bounded Mainline12.1.0.69933 entries prioritize Arcane, Holy/Ret Paladin an
 | Entry | Implemented / behavioral proof | Missing / uncertified |
 |---|---|---|
 |30451 Arcane Blast|Pre-gain charge damage uses36032s1/60%; cost s5/100% per charge; cast time s4/-8% per charge. Native0/2/4 charge damage/cost/bar and unaffordable-refusal proof.|Charge-aura presentation, mastery/talents and arbitrary mid-cast charge changes. No guessed aura synchronization.|
-|12042 Arcane Power|343208 gates native s2/-30% cast mana cost; no rank preserves base cost; native expiry restores cost.|Generic aura72, channel upkeep/other power costs and full ability parity.|
+|12042 Arcane Power|Native s2/-30% aura72 school/mana masks discount cast cost once, with or without343208; absent12042 preserves base cost and native expiry restores it. TC a352b1fa SpellInfo.cpp:4185–4194 supplies the generic rule.|Channel upkeep/other power costs and full ability parity.|
 |82326 Holy Light|231642 gates named88852's one Holy Power once per completed cast, including overhealing.|Infusion/talents and all healing variants.|
 |20473 Holy Shock|196926s1/-1500ms reduces only running Holy Judgment275773; ready timer untouched and owner update proved.|Offspec Judgment variants, full talent/crit semantics. Existing heal/damage bridge retained.|
 |35395 Crusader Strike|196926s2/-1500ms reduces running275773; rank-absent/ready boundaries and owner update proved.|Other Judgment variants and damage/talent conversions.|

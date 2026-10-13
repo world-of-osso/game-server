@@ -77,7 +77,7 @@ Sources only local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210. Test
 ### Sixteenth-batch low-count rank and charge contracts
 
 - [x] Arcane Blast30451 uses pre-gain Arcane Charges with36032s1/s4/s5 for damage/cast time/mana cost; refusal preserves charges and never hits.
-- [x] Arcane Power12042's s2 mana discount requires343208; expiry removes the discount.
+- [x] Arcane Power12042's native s2 school/power-mask aura72 discounts mana exactly once, with or without343208; expiry removes the discount.
 - [x] Holy Light82326 with231642 casts named88852 once, including overhealing; absent rank gives no Holy Power.
 - [x] Holy Shock20473 and Crusader Strike35395 with196926 reduce only a running Holy Judgment275773 cooldown by their separate native millisecond fields; ready cooldowns remain ready.
 - [x] Holy Judgment275773 and Retribution Judgment20271 with315867 cast named220637 once on actual primary damage; no rank or immune hit gives no gain.
