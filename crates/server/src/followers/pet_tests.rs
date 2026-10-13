@@ -84,6 +84,61 @@ fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
 }
 
 #[test]
+fn follower_felguard_unbaked_follow_does_not_use_direct_movement() {
+    let mut f = fixture();
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
+        .unwrap();
+    f.h.advance(160);
+    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
+    let before =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap();
+    f.h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(f.unit)
+        .unwrap()
+        .x = 15.0;
+    f.h.advance(40);
+    assert_eq!(
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap(),
+        before
+    );
+}
+
+#[test]
+fn follower_felguard_unbaked_chase_does_not_use_direct_movement() {
+    let mut f = fixture();
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
+        .unwrap();
+    f.h.advance(160);
+    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
+    let before =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap();
+    f.h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(f.h.npc)
+        .unwrap()
+        .x = 20.0;
+    crate::pet_control::order_companion_pet(f.h.app.world_mut(), f.unit, Some(f.h.npc));
+    f.h.advance(40);
+    assert_eq!(
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap(),
+        before
+    );
+}
+
+#[test]
 fn follower_felguard_fights_the_companions_selected_enemy() {
     let mut f = fixture();
     for _ in 0..240 {
