@@ -108,7 +108,7 @@ pub(crate) struct GameObjectState(pub u8);
 
 pub(crate) const GO_STATE_ACTIVE: u8 = 0;
 pub(crate) const GO_STATE_DESTROYED: u8 = 2;
-const GO_STATE_READY: u8 = 1;
+pub(crate) const GO_STATE_READY: u8 = 1;
 
 /// TC `GameObject::SetGoState`: store the state and enable model collision only
 /// in READY. No scripted GO AI/state-type callbacks are bound to the liquid pool.
@@ -253,21 +253,26 @@ fn spawn_continent_game_objects(mut commands: Commands, spawns: Res<GameObjectSp
             &spawns,
             crate::maps::InMap::continent(map_id),
             0,
+            None,
         );
         info!("Spawned {count} game objects on map {map_id}");
     }
 }
 
-/// Spawn the game objects of `map`'s map spawned at its `difficulty_id` into that copy.
+/// Spawn the game objects of `map`'s map spawned at its `difficulty_id` into that copy;
+/// members of condition-driven spawn groups are left to their battleground runtime.
 pub(crate) fn spawn_map_game_objects(
     commands: &mut Commands,
     spawns: &GameObjectSpawns,
     map: crate::maps::InMap,
     difficulty_id: u32,
+    spawn_groups: Option<&crate::spawn_groups::SpawnGroups>,
 ) -> usize {
     let population = crate::followers::population_difficulty(difficulty_id);
     let spawns = spawns.0.iter().filter(|spawn| {
-        spawn.map_id == map.map_id && spawn.spawn_difficulties.contains(&population)
+        spawn.map_id == map.map_id
+            && spawn.spawn_difficulties.contains(&population)
+            && !spawn_groups.is_some_and(|groups| groups.is_object_member(spawn.guid))
     });
     let mut count = 0;
     for spawn in spawns {
@@ -279,24 +284,35 @@ pub(crate) fn spawn_map_game_objects(
             count += 1;
             continue;
         }
-        let mut object = commands.spawn((
-            game_object_bundle(spawn),
-            map,
-            Replicate::to_clients(NetworkTarget::All),
-            NetworkVisibility::default(),
-        ));
-        if let Some(quest_object) = &spawn.quest_object {
-            object.insert(quest_object.clone());
-        }
-        if let Some(chair) = &spawn.chair {
-            object.insert(chair.clone());
-        }
-        if crate::scripted_ai::is_game_object_script(&spawn.script_name) {
-            object.insert(GameObjectScript(spawn.script_name.clone()));
-        }
+        spawn_game_object(commands, spawn, map);
         count += 1;
     }
     count
+}
+
+/// One replicated non-gathering game object of `spawn` in `map`'s copy.
+pub(crate) fn spawn_game_object(
+    commands: &mut Commands,
+    spawn: &GameObjectSpawn,
+    map: crate::maps::InMap,
+) -> Entity {
+    let mut object = commands.spawn((
+        game_object_bundle(spawn),
+        shared::protocol::GameObjectVisible(true),
+        map,
+        Replicate::to_clients(NetworkTarget::All),
+        NetworkVisibility::default(),
+    ));
+    if let Some(quest_object) = &spawn.quest_object {
+        object.insert(quest_object.clone());
+    }
+    if let Some(chair) = &spawn.chair {
+        object.insert(chair.clone());
+    }
+    if crate::scripted_ai::is_game_object_script(&spawn.script_name) {
+        object.insert(GameObjectScript(spawn.script_name.clone()));
+    }
+    object.id()
 }
 
 pub struct GameObjectPlugin;
