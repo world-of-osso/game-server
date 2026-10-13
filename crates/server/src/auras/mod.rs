@@ -1722,6 +1722,7 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
             continue;
         }
         state_interrupts(world, unit);
+        crate::spell_cast::toy_area::remove_outside_auras(world, unit);
         remove_casterless(world, unit);
         periodic::run_due_ticks(world, unit, now);
         remove_auras(world, unit, RemoveReason::Expired, |aura| {

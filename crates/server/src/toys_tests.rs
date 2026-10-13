@@ -1,7 +1,7 @@
 use super::*;
 use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::spell_cast::test_harness::*;
-use shared::components::{CombatStatus, Level};
+use shared::components::{CombatStatus, Level, Position};
 use shared::protocol::{ChatMessage, ChatType, InventoryChannel, InventoryError, UseItem};
 
 const FIGURINE: u32 = 32782;
@@ -368,6 +368,7 @@ fn toys_category_override_expires_authoritatively() {
     // spell category44 must not replace the item category.
     let dir = tempfile::tempdir().unwrap();
     let (mut h, _) = setup(&dir.path().join("toys.redb"));
+    place_toy_caster_on_source_area(&mut h, 778032, [-9480.94, -38.5858], 87);
     learn(&mut h, 2);
     assert_eq!(activate(&mut h, 188698)[0].error, None);
     assert!(
@@ -3810,6 +3811,62 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
         h.advance(100);
         assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
     }
+}
+
+fn place_toy_caster_on_source_area(h: &mut Harness, fdid: u32, point: [f32; 2], area: u32) {
+    let data = std::fs::read(crate::ground::ground_data_dir().join(format!("terrain/{fdid}.adt")))
+        .unwrap();
+    let terrain = crate::terrain_height::parse_adt_heights(&data).unwrap();
+    assert_eq!(terrain.area_at(point[0], point[1]), Some(area));
+    let height = terrain.height_at(point[0], point[1]).unwrap();
+    let position = Position {
+        x: point[0],
+        y: height,
+        z: -point[1],
+    };
+    let tile = crate::ground::bevy_to_tile(position.x, position.z);
+    h.app
+        .insert_resource(crate::ground::GroundMap::with_terrain_on(0, tile, terrain));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((position, crate::maps::InMap::continent(0)));
+}
+
+#[test]
+fn toyfx21_required_area_refuses_northshire_without_cast_or_item_cooldown() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("outside-source-area.redb"));
+    // Actual Human source start, Area9; source1103 permits Goldshire87, not Northshire.
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    learn(&mut h, 2);
+    assert_eq!(
+        activate(&mut h, 188698)[0].error.as_deref(),
+        Some("Requires area group1103")
+    );
+    h.advance(5);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 61810));
+    assert!(
+        !h.inbox
+            .cooldowns
+            .iter()
+            .any(|cooldown| cooldown.spell_id == 61810)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .all(|aura| aura.spell_id != 61810)
+    );
 }
 
 #[test]
