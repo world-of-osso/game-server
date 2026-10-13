@@ -87,6 +87,11 @@ const LINGERING_HEALING: u32 = 231_040;
 const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
 const TIGER_DASH: u32 = 252_216;
+const BLOODSURGE: u32 = 384_361;
+const BLOODSURGE_ENERGIZE: u32 = 384_362;
+const REND_AURA: u32 = 388_539;
+/// `Cell::VisitAllObjects(caster, worker, 50.0f)`.
+const BLOODSURGE_RADIUS: f32 = 50.0;
 
 /// Native441675s3: Frenzied Regeneration also increases your maximum health.
 pub(super) fn fount_max_health_pct(unit: Entity, auras: &super::ActiveAuras) -> f32 {
@@ -341,6 +346,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        BLOODSURGE,
+        AuraScript {
+            on_periodic: Some(roll_bloodsurge),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         TIGER_DASH,
         AuraScript {
             on_periodic: Some(decay_tiger_dash),
@@ -405,6 +417,50 @@ fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect
     }
     super::auras_changed(world, unit);
     crate::spell_cast::mark_dirty(world, unit);
+}
+
+/// TC a352b1fa spell_warrior.cpp:282-316, spell_warr_bloodsurge: chance
+/// sqrt(units carrying the warrior's Rend effect0) × effect0 amount per tick. TC
+/// visits the grid cells covering 50 yd without a per-unit distance check; this
+/// counts units within 50 yd on the warrior's map.
+fn roll_bloodsurge(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 0 {
+        return;
+    }
+    let Some(amount) = aura.effects.iter().find(|effect| effect.index == 0) else {
+        return;
+    };
+    let rends = count_owned_rends(world, unit) as f32;
+    let chance = rends.sqrt() * amount.amount;
+    if rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..100.0) < chance {
+        crate::spell_cast::cast_triggered(world, unit, BLOODSURGE_ENERGIZE, Some(unit), 1);
+    }
+}
+
+fn count_owned_rends(world: &mut World, warrior: Entity) -> usize {
+    let Some(center) = world.get::<shared::components::Position>(warrior).copied() else {
+        return 0;
+    };
+    let mut units = world.query::<(Entity, &shared::components::Position, &super::ActiveAuras)>();
+    let candidates: Vec<Entity> = units
+        .iter(world)
+        .filter(|(_, at, _)| {
+            let (dx, dy, dz) = (at.x - center.x, at.y - center.y, at.z - center.z);
+            dx * dx + dy * dy + dz * dz <= BLOODSURGE_RADIUS * BLOODSURGE_RADIUS
+        })
+        .filter(|(_, _, auras)| {
+            auras.iter().any(|aura| {
+                aura.spell_id == REND_AURA
+                    && aura.caster == warrior
+                    && aura.effects.iter().any(|effect| effect.index == 0)
+            })
+        })
+        .map(|(entity, ..)| entity)
+        .collect();
+    candidates
+        .into_iter()
+        .filter(|&target| crate::spell_cast::targets::same_map(world, warrior, target))
+        .count()
 }
 
 /// TrinityCore a352b1fa spell_hun_aspect_of_the_turtle applies catalog 205769
