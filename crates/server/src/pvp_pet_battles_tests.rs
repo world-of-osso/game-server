@@ -324,6 +324,51 @@ fn petbattle_pvp_disconnect_finishes_opponent_and_releases_account() {
     )));
 }
 
+fn finish_battle_with_winner(app: &mut App, winner: Entity, loser: Entity) {
+    let id = app.world().get::<PvpParticipant>(winner).unwrap().id;
+    for _ in 0..100 {
+        let Some(battle) = app.world().resource::<Matchmaker>().battles.get(&id) else {
+            break;
+        };
+        let round = battle.encounter.battle.round;
+        let team = &battle.encounter.battle.teams[1];
+        if team.pets[team.active].health <= 0 {
+            let slot = team.pets.iter().position(|p| p.health > 0).unwrap();
+            advance(
+                app.world_mut(),
+                loser,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Swap(slot as u8 + 1),
+                },
+            )
+            .unwrap();
+        } else {
+            advance(
+                app.world_mut(),
+                winner,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Ability(1),
+                },
+            )
+            .unwrap();
+            advance(
+                app.world_mut(),
+                loser,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Pass,
+                },
+            )
+            .unwrap();
+        }
+    }
+}
+
 #[test]
 fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
@@ -398,48 +443,7 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
         .unwrap()
         .criteria_progress
         .insert(19724, 9);
-    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
-    for _ in 0..100 {
-        let Some(battle) = app.world().resource::<Matchmaker>().battles.get(&id) else {
-            break;
-        };
-        let round = battle.encounter.battle.round;
-        let team = &battle.encounter.battle.teams[1];
-        if team.pets[team.active].health <= 0 {
-            let slot = team.pets.iter().position(|p| p.health > 0).unwrap();
-            advance(
-                app.world_mut(),
-                b,
-                WildPetBattleActionRequest {
-                    battle_id: id,
-                    round,
-                    action: WildPetBattleAction::Swap(slot as u8 + 1),
-                },
-            )
-            .unwrap();
-        } else {
-            advance(
-                app.world_mut(),
-                a,
-                WildPetBattleActionRequest {
-                    battle_id: id,
-                    round,
-                    action: WildPetBattleAction::Ability(1),
-                },
-            )
-            .unwrap();
-            advance(
-                app.world_mut(),
-                b,
-                WildPetBattleActionRequest {
-                    battle_id: id,
-                    round,
-                    action: WildPetBattleAction::Pass,
-                },
-            )
-            .unwrap();
-        }
-    }
+    finish_battle_with_winner(&mut app, a, b);
     assert!(app.world().resource::<Matchmaker>().battles.is_empty());
     app.update();
     let winner = app.world().get::<PlayerAchievementState>(a).unwrap();
