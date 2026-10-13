@@ -1058,6 +1058,10 @@ fn startup_load_world_data(mut commands: Commands) {
     );
     commands.insert_resource(maps);
     commands.insert_resource(
+        crate::scripted_ai::ragefire_chasm::gordoth_intro::load_trigger(&conn)
+            .expect("Failed to load authored Gordoth intro area7899 from local DB2/TDB"),
+    );
+    commands.insert_resource(
         crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn)
             .expect("Failed to load authored Molten Gold area12928 from local TDB"),
     );

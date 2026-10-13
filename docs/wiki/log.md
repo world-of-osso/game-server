@@ -8,6 +8,26 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
+
+- 2026-10-13: Explicit Gordoth landing home/facing independent of respawn coordinates; home-return/leash honor it and respawn resets it. Real return proof,30s boundary test. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Gordoth source DoAction jump/landing, vial state and researcher Bloody Suicide→51744 instakill. Real-population parabola/landing/self-death proof; home/static trigger/cage/animkit/native gaps retained. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Gordoth already-started relocation/first casts/one-shot31% enrage/30s reset; source0x2 bypass with native category/cast-time and GCD/stun/mana proofs. Intro/repeats/native/map389 navigation remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Ragefire Koranthal source appearance/combat/death/evade;119973 dummy exposed missing destination-only effect32 dispatch, now forwards child destination. Three fixtures GREEN; native/credit publication/whole-instance gaps remain. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Executed371652 additive source flags1/2/3, no real death and no cleanup hook. Raw flags2/3 protocol fields added; native pose delivery remains unproved. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Storm Infusion395029 source-oriented(9,0,4) destination hook; actual area-trigger positions tested at two facings. Area actions/native visual behavior remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Ruby Life Pools Ice Shield/Excavate periodic source hooks, immediate initial +1s ticks. Two hook-boundary fixtures pass; SAI prerequisites and absent boss AIs remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Zul +1s activates pool289347 in its own copy; authoritative GO state and collision, with timing/copy isolation proof. Native state animation remains open. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Minion of Zul appearance, Bound by Shadow self-death and Fixate128 preference/clear; different-caster channel coexist. Three real Kings' Rest fixtures pass. [Boss scripts](systems/boss-scripts.md).
+
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
 
 # Wiki Log

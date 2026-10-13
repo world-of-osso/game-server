@@ -242,6 +242,13 @@ pub(crate) fn register_aura_scripts(mut scripts: ResMut<crate::auras::scripts::A
         },
     );
     scripts.0.insert(
+        temple_trash::SPELL_BOUND_BY_SHADOW,
+        crate::auras::scripts::AuraScript {
+            on_remove: Some(temple_trash::kill_when_shadow_broken),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         MOLTEN_GOLD,
         crate::auras::scripts::AuraScript {
             on_apply: Some(apply_molten_immunity),

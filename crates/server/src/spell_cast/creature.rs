@@ -53,6 +53,19 @@ pub(crate) fn creature_cast(
     Ok(())
 }
 
+/// TC source flag0x2: ordinary cast except SpellHistory::IsReady/HandleCooldowns.
+/// GCD, cast time, caster-aura and power checks remain independent.
+pub(crate) fn creature_cast_ignoring_cooldowns(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    spell.cast_ignore_cooldowns = true;
+    start_cast(world, caster, &spell, explicit, None)
+}
+
 /// TC TRIGGERED_IGNORE_CAST_IN_PROGRESS: retain cast time, costs, cooldowns,
 /// caster-aura and school checks; only permit a concurrent scripted cast.
 pub(crate) fn creature_cast_ignoring_in_progress(
