@@ -31,6 +31,8 @@ pub enum AuraKind {
     Taunt,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
+    /// Casts its trigger spell on a health-percent crossing (`health_pct_trigger.rs`).
+    HealthTrigger,
     /// Charge-category max/recovery modifier (`charge_mods`).
     ChargeMod,
     /// Blocks casting (`cast_blocker`); MOD_STUN also roots.
@@ -224,6 +226,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
+        super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
