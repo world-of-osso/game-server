@@ -2,7 +2,7 @@
 """Prepare source-authenticated primary-actor binding SQL; never modify world.db.
 
 Pinned TC instance/header rows identify Kystia, Golden Serpent, Koranthal,
-Adarogg and Gordoth primaries.
+Adarogg, Gordoth and Wailing Caverns Cobrahn primaries.
 Companions never acquire completion credit. The lead applies generated SQL to
 reviewed copies; structural binding is not mechanic or native certification.
 """
@@ -94,12 +94,28 @@ GORDOTH_PRIMARY = dict(
     actor_id=1345,
     display_id=42100,
 )
+COBRAHN_SOURCES = {
+    "Kalimdor/WailingCaverns/wailing_caverns.h": "ea7fbb0733c7dac751470e0c36fb7ab40e8f5a92a3b7790ba22959b26b955f0d",
+    "Kalimdor/WailingCaverns/instance_wailing_caverns.cpp": "01d26ba675612d4a4b06a5c7306da5cd1be29ff2388b80d4685ef61ed667c5fc",
+}
+COBRAHN_PRIMARY = dict(
+    map_id=43,
+    entry=3669,
+    encounter_id=586,
+    bit=1,
+    script="",
+    ai="SmartAI",
+    journal_id=475,
+    actor_id=1046,
+    display_id=4213,
+)
 PROFILES = {
     "kystia": (PRIMARY, SOURCES),
     "golden-serpent": (GOLDEN_PRIMARY, GOLDEN_SOURCES),
     "koranthal": (KORANTHAL_PRIMARY, KORANTHAL_SOURCES),
     "adarogg": (ADAROGG_PRIMARY, ADAROGG_SOURCES),
     "gordoth": (GORDOTH_PRIMARY, GORDOTH_SOURCES),
+    "cobrahn": (COBRAHN_PRIMARY, COBRAHN_SOURCES),
 }
 
 
@@ -118,6 +134,13 @@ def prepare_bindings(connection, bindings):
         ).fetchone()
         if template != (binding["script"],):
             raise ValueError(f"creature script identity changed: {binding['entry']}")
+        if "ai" in binding:
+            source_ai = connection.execute(
+                "SELECT AIName FROM tdb_creature_template WHERE entry=?",
+                (binding["entry"],),
+            ).fetchone()
+            if source_ai != (binding["ai"],):
+                raise ValueError(f"creature AI identity changed: {binding['entry']}")
         existing = connection.execute(
             "SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?",
             (binding["map_id"], binding["entry"]),

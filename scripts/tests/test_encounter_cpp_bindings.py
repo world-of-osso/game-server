@@ -45,6 +45,27 @@ class PrimaryActorTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT count(*) FROM raid_encounter_creature WHERE creature_entry=135406').fetchone()[0],0)
         self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(),[(12118,)])
 
+    def test_cobrahn_smartai_primary_requires_its_authored_ai(self):
+        import encounter_cpp_bindings as bindings
+        profile = bindings.PROFILES.get('cobrahn')
+        self.assertIsNotNone(profile, 'Wailing source primary is not admitted')
+        primary, _ = profile
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(586,43,1);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES(3669,'','SmartAI');
+        ''')
+        rows = prepare_bindings(self.db, [primary])
+        self.db.executescript(binding_sql(rows))
+        self.db.executescript(binding_sql(rows))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=43').fetchall(),
+            [(3669,586,1,475,1046,4213)])
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=3669")
+        with self.assertRaisesRegex(ValueError, 'creature AI identity'):
+            prepare_bindings(self.db, [primary])
+
     def test_source_identity_drift_refused_before_mutation(self):
         binding = dict(map_id=2813,entry=234648,encounter_id=3101,bit=1,
                        script='boss_kystia_manaheart',journal_id=2679,actor_id=5847,display_id=124578)
