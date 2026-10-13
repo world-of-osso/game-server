@@ -454,6 +454,7 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
                 creature_type: 7,
                 family: 0,
                 type_flags: 0,
+                flags_extra: 0,
                 min_level: 1,
                 max_level: 1,
                 faction: 0,

@@ -70,6 +70,133 @@ fn probe_cart_approach(ground: &mut GroundMap, map: u32, center: Vec3) -> Option
     None
 }
 
+fn probe_object_approach(
+    ground: &mut GroundMap,
+    map: u32,
+    center: Vec3,
+    bounds: crate::game_objects::GameObjectBounds,
+) -> Option<[f32; 3]> {
+    for radius in [0.0, 0.5, 1.0, 2.0, 4.0] {
+        for (dx, dy) in [
+            (1.0, 0.0),
+            (-1.0, 0.0),
+            (0.0, 1.0),
+            (0.0, -1.0),
+            (1.0, 1.0),
+            (-1.0, 1.0),
+            (1.0, -1.0),
+            (-1.0, -1.0),
+        ] {
+            let x = center.x + radius * dx;
+            let y = center.y + radius * dy;
+            let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, center.z + 1.0);
+            let GroundProbe::Supported(height) = ground.ground_at(map, Vec3::new(bx, by, bz))
+            else {
+                continue;
+            };
+            let approach = Vec3::new(x, y, height + 0.1);
+            if height >= center.z - 3.0
+                && bounds.reaches(
+                    center,
+                    approach,
+                    crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE,
+                )
+            {
+                return Some(approach.to_array());
+            }
+        }
+    }
+    None
+}
+
+#[test]
+fn alterac_source_starts_banners_and_leaders_have_real_walkable_approaches() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(30, 790112)]));
+    let mut starts = db.prepare("SELECT ID,LocX,LocY,LocZ,TransportSpawnId FROM tdb_world_safe_locs WHERE ID IN (611,610) ORDER BY ID").unwrap();
+    let mut start_approaches = Vec::new();
+    for row in starts
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                Vec3::new(row.get(1)?, row.get(2)?, row.get(3)?),
+                row.get::<_, Option<u32>>(4)?,
+            ))
+        })
+        .unwrap()
+    {
+        let (id, at, transport) = row.unwrap();
+        assert_eq!(transport, None);
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(at.x, at.y, at.z);
+        let GroundProbe::Supported(height) = ground.ground_at(30, Vec3::new(x, y, z)) else {
+            panic!("Alterac source start{id} has missing ground");
+        };
+        assert!(
+            (height - at.z).abs() < 1.5,
+            "Alterac source start{id}: floor{height}, start{at:?}"
+        );
+        start_approaches.push(serde_json::json!({"id":id,"source":at.to_array(),"floor":height}));
+    }
+    assert_eq!(start_approaches.len(), 2);
+    let mut banners = db.prepare("SELECT g.id,g.guid,g.position_x,g.position_y,g.position_z,g.orientation,t.size,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5 FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=30 AND t.ScriptName IN ('go_av_capturable_object','go_av_contested_object') ORDER BY g.id").unwrap();
+    let rows = banners
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, u64>(1)?,
+                Vec3::new(row.get(2)?, row.get(3)?, row.get(4)?),
+                crate::game_objects::GameObjectBounds {
+                    min: Vec3::new(row.get(7)?, row.get(8)?, row.get(9)?),
+                    max: Vec3::new(row.get(10)?, row.get(11)?, row.get(12)?),
+                    scale: row.get(6)?,
+                    orientation: row.get(5)?,
+                },
+            ))
+        })
+        .unwrap();
+    let mut banner_approaches = Vec::new();
+    for row in rows {
+        let (entry, guid, center, bounds) = row.unwrap();
+        let approach = probe_object_approach(&mut ground,30,center,bounds).unwrap_or_else(|| panic!("Alterac source banner{entry}/{guid} has no real floor/reach at{center:?}; missing{:?}",ground.missing_files(30).into_iter().take(12).collect::<Vec<_>>()));
+        assert!(bounds.reaches(
+            center,
+            Vec3::from_array(approach),
+            crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE
+        ));
+        banner_approaches.push(serde_json::json!({"entry":entry,"guid":guid,"source":center.to_array(),"approach":approach}));
+    }
+    assert_eq!(banner_approaches.len(), 45);
+    let mut leaders = db.prepare("SELECT id,guid,position_x,position_y,position_z FROM tdb_creature WHERE map=30 AND id IN (11946,11947,11948,11949) ORDER BY id").unwrap();
+    let mut leader_approaches = Vec::new();
+    for row in leaders
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, u64>(1)?,
+                Vec3::new(row.get(2)?, row.get(3)?, row.get(4)?),
+            ))
+        })
+        .unwrap()
+    {
+        let (entry, guid, center) = row.unwrap();
+        let approach = probe_cart_approach(&mut ground, 30, center).unwrap_or_else(|| {
+            panic!("Alterac leader{entry}/{guid} has no real nearby floor at{center:?}")
+        });
+        // combat.rs currently uses five yards for a normal melee swing.
+        assert!(Vec3::from_array(approach).distance(center) <= 5.0);
+        leader_approaches.push(serde_json::json!({"entry":entry,"guid":guid,"source":center.to_array(),"approach":approach}));
+    }
+    assert_eq!(leader_approaches.len(), 4);
+    if let Some(path) = std::env::var_os("ALTERAC_APPROACH_RECEIPT") {
+        let receipt = serde_json::json!({"starts":start_approaches,"banners":banner_approaches,"leaders":leader_approaches});
+        std::fs::write(path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+    }
+}
+
 #[test]
 fn deephaul_source_starts_flag_and_cart_paths_have_real_walkable_approaches() {
     let db = rusqlite::Connection::open_with_flags(

@@ -6,13 +6,12 @@ use shared::components::Level;
 use shared::currency::{CONQUEST_CURRENCY_ID, CurrencyWallet, HONOR_CURRENCY_ID};
 use shared::protocol::{
     DequeueFromPvp, PvpBracketSnapshot, PvpStateUpdate, QueryPvpStatus, QueueForBattleground,
-    QueueForRatedPvp,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
 use self::pvp_support::{
-    bracket_label, connection_for_character, current_seconds, default_brackets,
-    format_bg_queue_error, queue_label, send_pvp_error, send_pvp_update,
+    connection_for_character, current_seconds, default_brackets, format_bg_queue_error,
+    queue_label, send_pvp_error, send_pvp_update,
 };
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
@@ -24,6 +23,38 @@ pub(crate) mod pvp_talents;
 #[path = "pvp_war_mode.rs"]
 mod pvp_war_mode;
 
+#[path = "pvp_arena.rs"]
+pub(crate) mod arena;
+#[path = "pvp_arena_cage.rs"]
+pub(crate) mod arena_cage;
+#[path = "pvp_arena_combat.rs"]
+pub(crate) mod arena_combat;
+#[path = "pvp_arena_dalaran.rs"]
+pub(crate) mod arena_dalaran;
+#[path = "pvp_arena_lifecycle.rs"]
+mod arena_lifecycle;
+#[path = "pvp_arena_objects.rs"]
+pub(crate) mod arena_objects;
+#[path = "pvp_arena_preparation.rs"]
+mod arena_preparation;
+#[path = "pvp_arena_rated_queue.rs"]
+mod arena_rated_queue;
+#[path = "pvp_arena_rated_results.rs"]
+mod arena_rated_results;
+#[path = "pvp_arena_scores.rs"]
+mod arena_scores;
+pub(crate) use arena_scores::record as record_arena_event;
+#[path = "pvp_arena_rating.rs"]
+mod arena_rating;
+#[path = "pvp_arena_sight.rs"]
+mod arena_sight;
+
+#[path = "pvp_alterac.rs"]
+mod pvp_alterac;
+pub(crate) use pvp_alterac::is_banner as is_alterac_banner;
+pub(crate) use pvp_alterac::{
+    check_banner_target, complete_opening, record_creature_death, record_player_death,
+};
 #[path = "pvp_deephaul.rs"]
 mod pvp_deephaul;
 #[path = "pvp_entry.rs"]
@@ -56,6 +87,8 @@ const HONOR_CAP: u32 = 15_000;
 pub struct PlayerPvpBracketState {
     pub bracket: PvpBracketSnapshot,
     pub rating: Option<u32>,
+    #[serde(default)]
+    pub matchmaker_rating: Option<u32>,
     pub season_wins: u32,
     pub season_losses: u32,
     pub weekly_wins: u32,
@@ -91,8 +124,16 @@ impl Default for PlayerPvpProgress {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlayerPvpQueue {
-    Battleground { battleground_id: u32, name: String },
-    RatedBracket { bracket: PvpBracketSnapshot },
+    Battleground {
+        battleground_id: u32,
+        name: String,
+    },
+    RatedBracket {
+        bracket: PvpBracketSnapshot,
+    },
+    Arena {
+        mode: shared::protocol::ArenaQueueMode,
+    },
 }
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default)]
@@ -100,6 +141,7 @@ pub struct PlayerPvpState {
     pub progress: PlayerPvpProgress,
     pub queue: Option<PlayerPvpQueue>,
     pub battleground: Option<shared::protocol::BattlegroundSnapshot>,
+    pub battleground_original_faction: Option<u32>,
     pub war_mode: Option<shared::protocol::WarModeSnapshot>,
     pub talents: Option<shared::protocol::PvpTalentsSnapshot>,
 }
@@ -110,6 +152,7 @@ impl PlayerPvpState {
             progress,
             queue: None,
             battleground: None,
+            battleground_original_faction: None,
             war_mode: None,
             talents: None,
         }
@@ -141,12 +184,25 @@ struct InvitedBattleground {
     silvershard: Option<pvp_silvershard::CartRuntime>,
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
+    alterac: Option<pvp_alterac::AlteracRuntime>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
+    arena: Option<arena::MatchState>,
 }
 
 impl InvitedBattleground {
+    fn displayed_scores(&self) -> (u32, u32) {
+        if self.instance.bg_id == 1 {
+            (
+                self.instance.score_a.reinforcements,
+                self.instance.score_b.reinforcements,
+            )
+        } else {
+            (self.instance.score_a.score, self.instance.score_b.score)
+        }
+    }
+
     fn flag_objective(&self) -> shared::battleground::FlagObjective {
         self.flags
             .as_ref()
@@ -155,6 +211,9 @@ impl InvitedBattleground {
     }
 
     fn world_states(&self) -> Vec<(u32, i32)> {
+        if let Some(alterac) = &self.alterac {
+            return alterac.battle.world_states(&self.instance);
+        }
         if let Some(nodes) = &self.nodes {
             return nodes.world_states(&self.instance);
         }
@@ -183,7 +242,8 @@ impl InvitedBattleground {
 #[derive(Resource, Default)]
 struct PvpServerState {
     battleground_queue: BgQueue,
-    rated_queues: Vec<u64>,
+    rated_team_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<arena_rating::QueuedTeam>>,
+    arena_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<(u64, u8)>>,
     battleground_matches: BTreeMap<u64, InvitedBattleground>,
     next_battleground_match: u64,
 }
@@ -210,8 +270,10 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             silvershard: None,
             seething: None,
             deephaul: None,
+            alterac: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
+            arena: None,
         },
     );
     Some(match_id)
@@ -248,30 +310,43 @@ fn respond_to_battleground_invitation(
     Ok(())
 }
 
-#[derive(bevy::ecs::system::SystemParam)]
-struct RatedQueueContext<'w, 's> {
-    state: ResMut<'w, PvpServerState>,
-    senders: Query<'w, 's, &'static mut MessageSender<PvpStateUpdate>>,
-}
-
 pub struct PvpPlugin;
 
 impl Plugin for PvpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PvpServerState>();
+        app.init_resource::<arena::Catalog>();
+        app.init_resource::<arena_objects::GateCatalog>();
+        app.init_resource::<arena_objects::SightCatalog>();
+        app.init_resource::<arena_objects::SightTimers>();
+        app.init_resource::<arena_dalaran::Catalog>();
+        app.init_resource::<arena_dalaran::Timers>();
+        app.init_resource::<arena_cage::Catalog>();
+        app.init_resource::<arena_cage::Timers>();
+        app.add_systems(
+            Update,
+            arena::receive_queue_requests.before(process_battleground_invitation_responses),
+        );
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
+        app.add_systems(
+            FixedUpdate,
+            arena::update_matches.after(crate::death::process_player_death_transitions),
+        );
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);
+        // Accept/decline and Leave may retire a map. Update's corpse-loot
+        // commands must finish before either can destroy that map's creatures.
+        app.add_systems(PostUpdate, process_battleground_invitation_responses);
         app.add_systems(
-            Update,
-            process_battleground_invitation_responses.after(process_battleground_queue_requests),
-        );
-        app.add_systems(
-            Update,
+            PostUpdate,
             process_battleground_leave_requests.after(process_battleground_invitation_responses),
         );
-        app.add_systems(Update, process_rated_queue_requests);
+        app.add_systems(
+            Update,
+            arena_rated_queue::receive_requests.before(process_battleground_invitation_responses),
+        );
+        app.add_systems(FixedUpdate, arena_rated_queue::match_queued_teams);
         app.add_systems(Update, process_pvp_dequeue_requests);
         app.add_systems(Update, pvp_talents::receive_requests);
         app.add_systems(PostUpdate, pvp_talents::sync_players);
@@ -398,77 +473,6 @@ fn process_battleground_queue_requests(
     }
 }
 
-fn process_rated_queue_requests(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &InWorld,
-            &mut MessageReceiver<QueueForRatedPvp>,
-        ),
-        With<Authenticated>,
-    >,
-    mut players: Query<(
-        &shared::components::Player,
-        &mut PlayerPvpState,
-        &mut crate::currency::PlayerCurrencies,
-    )>,
-    mut context: RatedQueueContext,
-) {
-    let state = context.state.into_inner();
-    for (conn_entity, link, in_world, mut receiver) in &mut receivers {
-        for request in receiver.receive() {
-            let result = {
-                let Ok((_player, mut player_state, _currencies)) = players.get_mut(link.0) else {
-                    send_pvp_error(
-                        conn_entity,
-                        &mut context.senders,
-                        "pvp unavailable for player",
-                    );
-                    continue;
-                };
-                queue_for_rated_bracket(
-                    &mut player_state,
-                    state,
-                    in_world.character_id,
-                    request.bracket.clone(),
-                )
-            };
-
-            match result {
-                Ok(message) => {
-                    if let Ok((_player, player_state, _currencies)) = players.get(link.0) {
-                        send_pvp_update(
-                            conn_entity,
-                            player_state,
-                            Some(message),
-                            None,
-                            &mut context.senders,
-                        );
-                    }
-                }
-                Err(error) => {
-                    if let Ok((_player, player_state, _currencies)) = players.get(link.0) {
-                        send_pvp_update(
-                            conn_entity,
-                            player_state,
-                            None,
-                            Some(error),
-                            &mut context.senders,
-                        );
-                    } else {
-                        send_pvp_error(
-                            conn_entity,
-                            &mut context.senders,
-                            "pvp unavailable for player",
-                        );
-                    }
-                }
-            }
-        }
-    }
-}
-
 fn process_pvp_dequeue_requests(
     mut receivers: Query<
         (
@@ -534,35 +538,6 @@ fn queue_for_battleground(
     Ok(format!("queued for {}", template.name))
 }
 
-fn queue_for_rated_bracket(
-    player_state: &mut PlayerPvpState,
-    state: &mut PvpServerState,
-    character_id: u64,
-    bracket: PvpBracketSnapshot,
-) -> Result<String, String> {
-    if player_state.battleground.is_some() {
-        return Err("respond to the current battleground invitation first".into());
-    }
-    if let Some(queue) = &player_state.queue {
-        return Err(format!("already queued for {}", queue_label(queue)));
-    }
-    if state
-        .rated_queues
-        .iter()
-        .any(|entry| *entry == character_id)
-    {
-        return Err("already queued for rated pvp".into());
-    }
-    player_state.queue = Some(PlayerPvpQueue::RatedBracket {
-        bracket: bracket.clone(),
-    });
-    state.rated_queues.push(character_id);
-    Ok(format!(
-        "queued for {}; match lifecycle and authored reward/rating policy unavailable",
-        bracket_label(&bracket)
-    ))
-}
-
 fn dequeue_player(
     player_state: &mut PlayerPvpState,
     state: &mut PvpServerState,
@@ -576,7 +551,14 @@ fn dequeue_player(
             state.battleground_queue.leave(character_id);
         }
         PlayerPvpQueue::RatedBracket { .. } => {
-            state.rated_queues.retain(|entry| *entry != character_id);
+            for queue in state.rated_team_queues.values_mut() {
+                queue.retain(|team| !team.members.contains(&character_id));
+            }
+        }
+        PlayerPvpQueue::Arena { .. } => {
+            for queue in state.arena_queues.values_mut() {
+                queue.retain(|(id, _)| *id != character_id);
+            }
         }
     }
     Ok(format!("left {}", queue_label(&queue)))
@@ -623,13 +605,14 @@ fn resolve_battleground_matches(
                 phase: invitation.instance.phase,
                 accepted: false,
                 invitation_time_left_secs: None,
-                score_a: invitation.instance.score_a.score,
-                score_b: invitation.instance.score_b.score,
+                score_a: invitation.displayed_scores().0,
+                score_b: invitation.displayed_scores().1,
                 flags: invitation.flag_objective(),
                 world_states: invitation.world_states(),
                 outcome: invitation.instance.outcome,
                 players: invitation.scoreboard.clone(),
                 honor_reward: None,
+                arena: None,
             });
             send_pvp_update(
                 conn_entity,

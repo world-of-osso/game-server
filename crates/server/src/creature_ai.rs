@@ -51,6 +51,7 @@ const RETRY_CONFUSED_SECS: f32 = 0.1;
 /// Living, active creatures that are not confused: their wander, waypoint and
 /// formation movement runs.
 type Roaming = (
+    Without<crate::knockback::KnockbackFlight>,
     Without<DeathState>,
     Without<GridDormant>,
     Without<Confused>,
@@ -59,7 +60,11 @@ type Roaming = (
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
 );
 /// Active creatures that are not confused: chase and leash run.
-type ActiveUncontrolled = (Without<GridDormant>, Without<Confused>);
+type ActiveUncontrolled = (
+    Without<GridDormant>,
+    Without<Confused>,
+    Without<crate::knockback::KnockbackFlight>,
+);
 
 pub struct CreatureAiPlugin;
 
@@ -255,7 +260,7 @@ fn wander_system(
 /// The ground under `feet` on the creature's map; `Unloaded` without ground data.
 fn probe_ground(ground: Option<&mut GroundMap>, map: Option<&InMap>, feet: Vec3) -> GroundProbe {
     match (ground, map) {
-        (Some(ground), Some(map)) => ground.ground_at(map.map_id, feet),
+        (Some(ground), Some(map)) => ground.ground_in(*map, feet),
         _ => GroundProbe::Unloaded,
     }
 }
@@ -1172,7 +1177,14 @@ fn confused_movement_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
-    mut query: Query<ConfusedMover, (Without<DeathState>, Without<GridDormant>)>,
+    mut query: Query<
+        ConfusedMover,
+        (
+            Without<DeathState>,
+            Without<GridDormant>,
+            Without<crate::knockback::KnockbackFlight>,
+        ),
+    >,
 ) {
     let dt = time.delta_secs();
     for (entity, mut pos, spawn, mut confused, mods, map, bearing) in &mut query {
