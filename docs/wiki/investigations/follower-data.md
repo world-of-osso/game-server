@@ -111,6 +111,16 @@ Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-202
 - Copy/lifecycle: initial2/2 RED; actual party formation→same-map transfer and cross-copy cleanup2/2 GREEN atceec9a1b. Check/fmt exit0 on current Rust scope; no full suite. Eye-data fixture1/1 reloads all142/1,420 authored rows.
 - Live: both-skin first-boss slice above passes; loot source and walked-route gates remain open. All11 specs/full-instance behavior are not certified. UDP5000 and canonical database writes untouched.
 
+## Current strict-nav Ruby boundary — 2026-10-13
+
+Matching private UDP5761 sources: server11ebfd32, engine7218be227, protocol7b76fcfb. Native Modern Group Finder admitted Damage owner30 into difficulty205 copy2 with four companions; real healing restored the owner's health. All24 private Ruby LOS/NAV artifact hashes matched the authored twelve-tile package. This is not full-dungeon proof.
+
+Actual scene positions advanced owner1386.2→1439.6035/128.903/169.75151; companions held1406.0823/127.928696/169.71896. The route query rejected follow1436.7751/128.903/172.57994 and a nearby chase endpoint with no walkable polygon. Party-roster positions were stale: use scene exports and server logs, not that roster snapshot, for movement evidence.
+
+The private diagnostic queried entrance100030→Melidrussa's TDB spawn1551.33/-257.688/129.782. Strict nearest-poly lookup rejected the boss endpoint. Runtime ground and collected collision both reported126.01431 there, with only a terrain support triangle nearby. Grounding the destination still yielded an incomplete corridor. Zero missing collector assets does not prove connectivity. No spawn-height change, enlarged snapping window or synthetic connector was made; the connected authored-route boundary remains unresolved.
+
+Evidence: `/home/osso/.worktrees/follower-dungeons-2026-10-13/routed-modern/`, `ruby-route-diagnostic.rs`, `ruby-entrance-route-probe.log`, `ruby-entrance-floor-trace.log`, `ruby-grounded-endpoint-trace.log`. Temporary diagnostic code is preserved outside the tracked tests. All owned live processes stopped after captures. Startup-only stale private `tdb_transports` schema and obsolete token/layout ownership were resolved with a read-only canonical SQLite backup and fresh private credential login, not product fallbacks.
+
 ## Sources
 
 - [Reference importer](../../../scripts/follower_import.py), [profile importer](../../../scripts/follower_profiles.py), [SQL tests](../../../scripts/tests/test_follower_profiles.py)
