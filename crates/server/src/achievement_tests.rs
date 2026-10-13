@@ -720,6 +720,10 @@ fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_
         h.advance(1);
         assert_eq!(count(&h), None, "no Jaguar aura");
         crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 1459, None, 0);
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.caster, 1459),
+            "real unrelated native aura"
+        );
         crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
         h.advance(1);
         assert_eq!(
