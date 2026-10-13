@@ -975,6 +975,7 @@ pub(crate) struct FallAuras {
 }
 
 impl FallAuras {
+    #[cfg(test)]
     pub(crate) const NONE: Self = Self {
         feather_fall: false,
         damage_multiplier: 1.0,
