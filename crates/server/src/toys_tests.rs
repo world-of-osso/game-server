@@ -3992,6 +3992,64 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
 }
 
 #[test]
+fn toyfx24_tome_actual_learning_five_minute_lifetime_and_retained_recovery() {
+    use shared::components::{Health, ModelDisplay};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("tome-real-use.redb"));
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&source).unwrap().0);
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    let position = *h.app.world().get::<Position>(h.caster).unwrap();
+    let display = h.app.world().get::<ModelDisplay>(h.caster).copied();
+    learn_effect_toy(&mut h, character, 127670);
+    assert_eq!(activate(&mut h, 127670)[0].error, None);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 187146));
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 187146)
+        .unwrap();
+    assert_eq!(aura.duration_ms, 300_000);
+    assert_eq!(aura.caster, h.caster);
+    h.advance(5900);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 187146)
+    );
+    h.advance(110);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .all(|aura| aura.spell_id != 187146)
+    );
+    assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+    assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+    assert_eq!(
+        h.app.world().get::<ModelDisplay>(h.caster).copied(),
+        display
+    );
+    assert_eq!(
+        activate(&mut h, 127670)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+}
+
+#[test]
 fn toyfx23_fountain_actual_learning_source_duration_and_retained_recovery() {
     use shared::components::{Health, ModelDisplay};
     let directory = tempfile::tempdir().unwrap();
@@ -4048,9 +4106,9 @@ fn toyfx23_fountain_actual_learning_source_duration_and_retained_recovery() {
         Some("OnCooldown")
     );
     // Another complete-zero aura contract remains unavailable, not admitted by shape.
-    learn_effect_toy(&mut h, character, 127670);
+    learn_effect_toy(&mut h, character, 90067);
     assert!(
-        activate(&mut h, 127670)[0]
+        activate(&mut h, 90067)[0]
             .error
             .as_deref()
             .is_some_and(|reason| reason.contains("aura 4"))
