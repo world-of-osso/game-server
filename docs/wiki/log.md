@@ -34,6 +34,9 @@
 
 - 2026-10-13 — [Map instance type](systems/dungeon-achievements.md#map-instance-type-verified-2026-10-13): exact authored122 map membership, native arena/BG killing-blow/reward/queued-death RED/GREEN and cross-type/persistence controls; +4 statistics, missing raid-death18 unclaimed.
 
+- 2026-10-13 — [Flat versatility](systems/auras.md#flat-versatility-bonuses): source471 computed percentage and real damage/heal/taken/auto RED/GREEN; pinned69933 CASC rating/curve proof and lifecycle/flag/recipient controls. Owner inheritance/native-rendered parity remains open.
+
+- 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
 - 2026-10-13 — [General arena player predicates](systems/dungeon-achievements.md#general-arena-player-predicates-verified-2026-10-13): accepted/current-copy native24/60 facts for all gated events; real-channel56/17/70 rated statistics RED/GREEN, size/unrated/replay/reopen controls and redundant result fields removed. +5 statistics; current Shuffle unrated/source239/240 gaps explicit.
 
 - 2026-10-13 — [Battleground kill rewards](systems/dungeon-achievements.md#battleground-kill-rewards-verified-2026-10-13): native lethal controlling-player/accepted-team distance and corpse credit, untimed orphan26004 RED/GREEN and persistence controls; four structural ordinary gains. Current-root grants, world/lifetime/scoreboard honor and rendered battle unclaimed.
@@ -1032,3 +1035,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: Native Ysera145108 owner-health ticks/self-group switching and CannotCrit; six Bevy App controls, isolated per-cast override, no rendered parity claim.
 
 - 2026-10-13: Native163 school-mask critical-damage product and KnowYourEnemy percent updater; actual damage/order/lifecycle controls, retained floating-rounding and rendered-parity limits.
+
+## 2026-10-13 — Prepared follower Group Finder catalog
+
+[Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
