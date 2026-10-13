@@ -1,5 +1,5 @@
 //! Runtime loading of TDB server-side spells from a prepared copy: the actual
-//! Adarogg rows (scripts/tests/fixtures/adarogg-serverside-spells.json, captured
+//! Ragefire rows (scripts/tests/fixtures/ragefire-serverside-spells.json, captured
 //! from the TDB dump by scripts/encounter_serverside_spells.py), with every DB2
 //! lookup table read from the canonical world.db without writing it.
 
@@ -9,10 +9,10 @@ use serde_json::Value;
 use super::*;
 
 const FIXTURE: &str =
-    include_str!("../../../../scripts/tests/fixtures/adarogg-serverside-spells.json");
+    include_str!("../../../../scripts/tests/fixtures/ragefire-serverside-spells.json");
 
 /// In-memory copy holding the actual server-side tables, canonical DB2 attached read-only.
-pub(crate) fn adarogg_serverside_copy() -> Connection {
+pub(crate) fn ragefire_serverside_copy() -> Connection {
     let conn = Connection::open_with_flags(
         ":memory:",
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_URI,
@@ -24,12 +24,12 @@ pub(crate) fn adarogg_serverside_copy() -> Connection {
         [format!("file:{}?mode=ro", canonical.display())],
     )
     .unwrap();
-    write_adarogg_serverside_tables(&conn);
+    write_ragefire_serverside_tables(&conn);
     conn
 }
 
 /// The actual rows as `tdb_serverside_spell*` in `conn`'s main schema.
-pub(crate) fn write_adarogg_serverside_tables(conn: &Connection) {
+pub(crate) fn write_ragefire_serverside_tables(conn: &Connection) {
     let fixture: Value = serde_json::from_str(FIXTURE).unwrap();
     for (table, columns) in fixture["schema"].as_object().unwrap() {
         let columns: Vec<&str> = columns
@@ -90,8 +90,13 @@ fn production_store() -> SpellStore {
 fn encounter_coverage_serverside_spells_load_every_modelled_source_field() {
     let mut store = production_store();
     if store.get(119297).is_none() {
-        let added = store.append_serverside(&adarogg_serverside_copy()).unwrap();
-        assert_eq!(added, 2);
+        let added = store
+            .append_serverside(&ragefire_serverside_copy())
+            .unwrap();
+        assert_eq!(
+            added, 6,
+            "Adarogg 119297/119298 and Slagmaw's four teleports"
+        );
     }
 
     let summon = store.get(119297).expect("119297 loaded");
@@ -122,6 +127,17 @@ fn encounter_coverage_serverside_spells_load_every_modelled_source_field() {
         (96, 119299, [46, 0])
     );
 
+    let teleport = store.get(119426).expect("Magnaw Teleport South");
+    assert_eq!(
+        (
+            teleport.effects[0].effect,
+            teleport.effects[0].implicit_targets
+        ),
+        (252, [1, 17]),
+        "TELEPORT_UNITS to its spell_target_position"
+    );
+    assert_eq!(teleport.misc.as_ref().unwrap().attributes[1], 262_144);
+
     let file = store.get(119405).unwrap();
     assert_eq!(
         file.effects[0].trigger_spell, 119298,
@@ -131,7 +147,7 @@ fn encounter_coverage_serverside_spells_load_every_modelled_source_field() {
 
 #[test]
 fn encounter_coverage_serverside_spell_cannot_override_a_db2_spell() {
-    let conn = adarogg_serverside_copy();
+    let conn = ragefire_serverside_copy();
     conn.execute_batch(
         "UPDATE main.tdb_serverside_spell SET Id = 119405, SpellName = 'Override' WHERE Id = 119297;
          UPDATE main.tdb_serverside_spell_effect SET SpellID = 119405 WHERE SpellID = 119297;",
@@ -139,8 +155,11 @@ fn encounter_coverage_serverside_spell_cannot_override_a_db2_spell() {
     .unwrap();
     let mut store = production_store();
     let before = store.get(119405).unwrap().clone();
-    let new_charge = usize::from(store.get(119298).is_none());
-    assert_eq!(store.append_serverside(&conn).unwrap(), new_charge);
+    let fresh = [119298, 119424, 119425, 119426, 119428]
+        .into_iter()
+        .filter(|id| store.get(*id).is_none())
+        .count();
+    assert_eq!(store.append_serverside(&conn).unwrap(), fresh);
     let after = store.get(119405).unwrap();
     assert_eq!(after.name, before.name);
     assert_eq!(after.effects.len(), before.effects.len());

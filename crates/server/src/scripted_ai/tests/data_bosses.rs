@@ -28,7 +28,7 @@ fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path:
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
-    if encounter == "adarogg" {
+    if ["adarogg", "slagmaw"].contains(&encounter) {
         // encounter_serverside_spells.py's actual TDB rows precede the summon import.
         let copy = Connection::open(&path).unwrap();
         let prepared: bool = copy
@@ -39,25 +39,53 @@ fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path:
             )
             .unwrap();
         if !prepared {
-            crate::spell_info::serverside_tests::write_adarogg_serverside_tables(&copy);
+            crate::spell_info::serverside_tests::write_ragefire_serverside_tables(&copy);
         }
     }
-    let script =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/encounter_summons.py");
+    if encounter == "slagmaw" {
+        let dump = world_db_path()
+            .parent()
+            .unwrap()
+            .join("reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql");
+        run_preparation_script(
+            "encounter_model_geometry.py",
+            &[
+                "--db".as_ref(),
+                path.as_os_str(),
+                "--source-dump".as_ref(),
+                dump.as_os_str(),
+            ],
+        );
+    } else {
+        run_preparation_script(
+            "encounter_summons.py",
+            &[
+                "--encounter".as_ref(),
+                encounter.as_ref(),
+                "--db".as_ref(),
+                path.as_os_str(),
+            ],
+        );
+    }
+    (directory, path)
+}
+
+/// Run a copy-only source producer from scripts/ against the fixture snapshot.
+fn run_preparation_script(script: &str, args: &[&std::ffi::OsStr]) {
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts")
+        .join(script);
     let result = std::process::Command::new("python3")
-        .arg(script)
-        .arg("--encounter")
-        .arg(encounter)
-        .arg("--db")
-        .arg(&path)
+        .arg(&script)
+        .args(args)
         .output()
-        .expect("run authenticated mirror template importer");
+        .expect("run authenticated source preparation");
     assert!(
         result.status.success(),
-        "mirror source preparation failed: {}",
+        "{} failed: {}",
+        script.display(),
         String::from_utf8_lossy(&result.stderr)
     );
-    (directory, path)
 }
 
 fn bound_boss_at_difficulty(
@@ -137,6 +165,7 @@ fn encounter_fixture(
         234648 => Some(prepare_encounter_database("kystia")),
         135322 => Some(prepare_encounter_database("golden-serpent")),
         ADAROGG => Some(prepare_encounter_database("adarogg")),
+        SLAGMAW => Some(prepare_encounter_database("slagmaw")),
         _ => None,
     };
     let path = prepared
@@ -152,6 +181,7 @@ fn encounter_fixture(
     app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+    app.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let spawns: Vec<_> = if populate {
         crate::world_data::load_spawns(&conn)
@@ -289,7 +319,7 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if [ADAROGG, 61412, 61528].contains(&entry)
+        let near = if [ADAROGG, 61412, SLAGMAW, 61528].contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
         {
             // Keep these hostile source actors idle until their fixture explicitly pulls.
@@ -1626,6 +1656,7 @@ fn encounter_coverage_koranthal_death_and_evade_use_source_lifecycle() {
 
 const ADAROGG: u32 = 61408;
 const DEMONIC_LEAP: u32 = 61409;
+const SLAGMAW: u32 = 61463;
 
 /// Adarogg engaged by the first player (the tank) 3 yards away; `healer` adds a
 /// second threat-list player 8 yards away in the same copy.
@@ -1868,6 +1899,225 @@ fn encounter_coverage_adarogg_path_end_eats_two_troggs() {
         2,
         "_eatCounter stops at two"
     );
+}
+
+/// TDB spell_target_position (map389) of the three teleports Slagmaw may pick after
+/// its initial `_lastTeleportSpell` West: North119424, East119425, South119426.
+const SLAGMAW_FIRST_TELEPORTS: [[f32; 3]; 3] = [
+    [-222.94, 165.703, -19.721],
+    [-226.477, 135.704, -19.721],
+    [-263.212, 136.244, -19.721],
+];
+
+fn engaged_slagmaw() -> (Harness, Entity, InMap) {
+    let (mut h, boss, map) =
+        encounter_fixture(SLAGMAW, 389, 2, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    let tank = h.player();
+    h.app.world_mut().entity_mut(tank).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.05);
+    (h, boss, map)
+}
+
+/// TC boss_slagmaw: Lava Spit119434 at a random threat target from1s, re-armed1s
+/// (one event per UpdateAI, waiting out each3s cast); after five, Magnaw Submerge
+/// 120384, a server-side teleport other than the last (initially West) 3s later
+/// and emerge1s after that, then Lava Spit resumes1s later.
+#[test]
+fn encounter_coverage_slagmaw_spits_five_then_submerges_and_teleports() {
+    let (mut h, boss, map) = engaged_slagmaw();
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::InProgress)
+    );
+    h.advance(0.85);
+    assert_eq!(casting(&h, boss), None, "Lava Spit waits1s");
+    h.advance(0.15);
+    assert_eq!(casting(&h, boss), Some(119434));
+    let tank = h.player();
+    let full = h.health(tank).max;
+    h.advance(3.2);
+    assert_eq!(h.casts(0, boss, 119434), 1);
+    assert!(
+        h.health(tank).current < full,
+        "119433 missile damages the target area"
+    );
+    // Each due event runs the update after the previous3s cast ends.
+    h.advance(11.7);
+    assert_eq!(h.casts(0, boss, 119434), 4);
+    let mut waited = 0.0;
+    while h.casts(0, boss, 119434) < 5 {
+        assert!(waited < 0.6, "fifth spit by ~16s");
+        h.advance(0.05);
+        waited += 0.05;
+    }
+    h.advance(0.1);
+    assert!(
+        h.has_aura(boss, 120384),
+        "sixth event submerges instead of spitting"
+    );
+    assert_ne!(casting(&h, boss), Some(119434));
+    let submerged = h.wow_position(boss);
+    h.advance(2.8);
+    assert!(
+        h.wow_position(boss).distance(submerged) < 1.0,
+        "teleport waits3s"
+    );
+    let mut waited = 0.0;
+    while h.wow_position(boss).distance(submerged) < 10.0 {
+        assert!(waited < 0.4, "teleport by3s");
+        h.advance(0.05);
+        waited += 0.05;
+    }
+    // Chase resumes after the teleport: within one 0.05s update, at most two fixed
+    // ticks of run speed (7 x speed_run1.28571 x 0.1s = 0.9yd).
+    let landed = h.wow_position(boss);
+    assert!(
+        SLAGMAW_FIRST_TELEPORTS
+            .iter()
+            .any(|point| landed.distance(Vec3::from_array(*point)) < 1.0),
+        "server-side teleport to an authored non-West position: {landed:?}"
+    );
+    assert!(h.has_aura(boss, 120384));
+    h.advance(0.9);
+    assert!(h.has_aura(boss, 120384), "still submerged");
+    h.advance(0.15);
+    assert!(!h.has_aura(boss, 120384), "emerges1s after teleport");
+    assert_eq!(h.casts(0, boss, 119434), 5);
+    h.advance(1.1);
+    assert_eq!(casting(&h, boss), Some(119434), "Lava Spit resumes1s later");
+}
+
+/// The2.5s boundary check (deferred, like every event, until the1-4s Lava Spit
+/// cast ends) evades a victim farther than50yd (_DespawnAtEvade).
+#[test]
+fn encounter_coverage_slagmaw_boundary_check_evades_a_distant_victim() {
+    let (mut h, boss, map) = engaged_slagmaw();
+    h.advance(2.3);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::InProgress),
+        "victim within50yd at no check yet"
+    );
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    let tank = h.player();
+    h.app.world_mut().entity_mut(tank).insert(Position {
+        x: position.x + 200.0,
+        ..position
+    });
+    h.advance(1.5);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::InProgress),
+        "check waits for the cast; no other leash"
+    );
+    h.advance(0.4);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::Fail)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_some(),
+        "despawned without a kill"
+    );
+    assert!(!h.inbox(0).disengages.is_empty());
+}
+
+/// Magnaw Teleport East119425 lands ~48yd from Slagmaw's spawn. TC has no creature
+/// leash in a dungeon (`CanCreatureAttack`, Creature.cpp:2731), so it stays engaged and
+/// its Submerge (AuraInterruptFlags EnteringCombat) survives the relocation.
+#[test]
+fn encounter_coverage_slagmaw_east_teleport_keeps_it_engaged() {
+    let (mut h, boss, map) = engaged_slagmaw();
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 120384, Some(boss), true).unwrap();
+    h.advance(0.1);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 119425, Some(boss), true).unwrap();
+    h.advance(0.3);
+    assert_ne!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+    let east = Vec3::new(-226.477, 135.704, -19.721);
+    assert!(
+        h.wow_position(boss).distance(east) < 3.0,
+        "{:?}",
+        h.wow_position(boss)
+    );
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::InProgress)
+    );
+    assert!(h.has_aura(boss, 120384), "submerged until EVENT_EMERGE");
+}
+
+/// `GetDistance` subtracts Slagmaw's display42247 CombatReach24 and the player's1.5:
+/// a victim held 70yd away (44.5) stays engaged through every check; 80yd (54.5) evades.
+/// Frost Nova122 (6s MOD_ROOT_2) holds Slagmaw at home so only the boundary is measured.
+#[test]
+fn encounter_coverage_slagmaw_boundary_measures_beyond_both_combat_reaches() {
+    for (offset, evades) in [(70.0, false), (80.0, true)] {
+        let (mut h, boss, map) = engaged_slagmaw();
+        let tank = h.player();
+        let mut failed_at = None;
+        for step in 0..160 {
+            if step % 100 == 0 {
+                root(&mut h, tank, boss);
+            }
+            let Some(position) = h.app.world().get::<Position>(boss).copied() else {
+                break;
+            };
+            h.app.world_mut().entity_mut(tank).insert(Position {
+                x: position.x + offset,
+                ..position
+            });
+            h.advance(0.05);
+            if get_boss_state(h.app.world_mut(), map, 2) == Some(EncounterState::Fail) {
+                failed_at = Some(step);
+                break;
+            }
+        }
+        assert_eq!(failed_at.is_some(), evades, "victim {offset}yd from center");
+    }
+}
+
+fn root(h: &mut Harness, caster: Entity, target: Entity) {
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(122)
+        .cloned()
+        .unwrap();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: 122,
+            effect_mask: crate::auras::aura_effect_mask(&spell),
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+}
+
+#[test]
+fn encounter_coverage_slagmaw_death_completes_its_boss_state() {
+    let (mut h, boss, map) = engaged_slagmaw();
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::Done)
+    );
+    assert!(!h.inbox(0).disengages.is_empty());
 }
 
 /// NonTankTargetSelector(me): only players other than the current victim qualify.

@@ -10,7 +10,7 @@ from encounter_summons import (import_animated_gold_template, import_demonic_lea
                                import_mirror_template, import_shadow_of_zul_template)
 
 SOURCE = Path(__file__).resolve().parents[2] / 'data/world.db'
-SERVERSIDE = Path(__file__).resolve().parent / 'fixtures/adarogg-serverside-spells.json'
+SERVERSIDE = Path(__file__).resolve().parent / 'fixtures/ragefire-serverside-spells.json'
 
 
 def write_actual_serverside_rows(db):
