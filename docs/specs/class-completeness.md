@@ -60,6 +60,12 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Effect and mechanic immunity remove only the immune effects from a target. The spell still lands its other effects without an immune miss; the immune miss is logged only when no planned effect remains on that target (TC `Spell::AddUnitTarget`, `UpdateSpellCastDataTargets`).
 - [ ] Knockback/pull effects98/124/144/145 are not executed, so the definition effect-list filter has no observable runtime boundary yet; it is not certified as knockback immunity.
 
+## Fear control state
+
+- [x] Native aura7 makes the unit fleeing: its cast stops, auto-attacks stop, a creature shows no target and stops chasing, and a fleeing victim cannot dodge, parry or block. Removal restores swings and the creature's target.
+- [x] A fleeing caster fails with "Can't do that while fleeing" unless the spell purges every active fear effect through its own mechanic, school or definition immunity (Attr1 ImmunityPurgesEffect). Spells with Attr5 AllowWhileFleeing pass only when each fear spell's mechanics intersect the spell's allowed mechanics, including TC's Barkskin/Dispersion/Lichborne cases.
+- [ ] Flee movement (TC FleeingMovementGenerator) is pending a direction decision: pinned TC adds the owner's orientation to the away-from-caster angle. Aura7 therefore remains an unhandled census type. Player client-control loss is not modelled.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
@@ -69,6 +75,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/spell_cast/class_completeness_probe.rs`: executed membership receipts (manifest supplied explicitly).
 - `crates/server/src/spell_cast/bonus_armor_tests.rs`: native466 factors, actual physical damage, removal/expiry, zero class fields and final rounding.
 - `crates/server/src/spell_cast/cast_while_moving_tests.rs`: native330 masks, real cast/channel damage, live cast permission gain/removal/expiry and metadata veto controls.
+- `crates/server/src/auras/fear_tests.rs`: native fear swings/target/removal, Slam/Berserker Rage/Will of the Forsaken/Barkskin admission against Intimidating Shout, Sleep Walk and Turn Evil, and fleeing dodge loss.
 - `crates/server/src/spell_cast/melee_crit_taken_tests.rs`: native187 real damage, victim ownership, additive fields, expiry/removal, positive and ranged/magic controls.
 - `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
