@@ -1715,7 +1715,9 @@ fn arena_disconnect_last_living_logout_ends_the_arena_without_false_deaths() {
 
 #[test]
 fn solo_shuffle_six_rounds_restore_source_gates_and_return_all_origins() {
-    exercise_arena_channel(ArenaQueueMode::SoloShuffle, false, 1134);
+    for map in [1134, 1505, 617, 2759] {
+        exercise_arena_channel(ArenaQueueMode::SoloShuffle, false, map);
+    }
 }
 
 fn exercise_arena_channel_with_reconnect(
