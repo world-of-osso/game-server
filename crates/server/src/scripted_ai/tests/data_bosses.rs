@@ -257,24 +257,25 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near =
-            if entry == 61412 || (entry == 135322 && initial_state != EncounterState::NotStarted) {
-                // Keep these hostile source actors idle until their fixture explicitly pulls.
-                let position = app.world().get::<Position>(boss).unwrap();
-                [
-                    position.x + 500.0,
-                    -position.z,
-                    position.y,
-                    std::f32::consts::PI,
-                ]
-            } else {
-                [
-                    spawn.position_x + 3.0,
-                    spawn.position_y,
-                    spawn.position_z,
-                    std::f32::consts::PI,
-                ]
-            };
+        let near = if [61412, 61528].contains(&entry)
+            || (entry == 135322 && initial_state != EncounterState::NotStarted)
+        {
+            // Keep these hostile source actors idle until their fixture explicitly pulls.
+            let position = app.world().get::<Position>(boss).unwrap();
+            [
+                position.x + 500.0,
+                -position.z,
+                position.y,
+                std::f32::consts::PI,
+            ]
+        } else {
+            [
+                spawn.position_x + 3.0,
+                spawn.position_y,
+                spawn.position_z,
+                std::f32::consts::PI,
+            ]
+        };
         (Some(boss), near)
     };
     let (player, connection) = spawn_player(&mut app, map, near, 1);
@@ -883,6 +884,109 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(!h.has_aura(champion, 269928));
     h.advance(0.3);
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
+/// TC Gordoth's already-started InitializeAI branch relocates to the source jump
+/// landing point, without inventing an intro bypass.
+#[test]
+fn encounter_coverage_gordoth_relocates_started_actor_and_casts_source_schedule() {
+    let (mut h, boss, _) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::InProgress, false);
+    let boss = boss.unwrap();
+    assert!(
+        h.wow_position(boss)
+            .distance(Vec3::new(-363.5392, 203.36604, -22.005634))
+            < 0.001
+    );
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    let casting = |h: &Harness| {
+        h.app
+            .world()
+            .get::<CastState>(boss)
+            .map(|cast| cast.spell_id)
+    };
+    h.advance(7.2);
+    assert_eq!(casting(&h), None);
+    h.advance(0.2);
+    assert_eq!(
+        casting(&h),
+        Some(119999),
+        "Ground Rupture at7.3s, real1s cast"
+    );
+    h.advance(1.1);
+    assert_eq!(h.casts(0, boss, 119999), 1);
+    // Restore the victim after authentic knockback; category bypass is covered
+    // separately through actual native cast/cooldown history.
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.advance(4.7);
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(120024)),
+        "Seismic waits13.3s"
+    );
+    h.advance(0.2);
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(120024)
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(player.to_bits())
+        }),
+        "Seismic13.3s source cast performs normal damage"
+    );
+}
+
+#[test]
+fn encounter_coverage_gordoth_enrages_once_below31_and_evade_resets_it() {
+    let (mut h, boss, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::InProgress, false);
+    let boss = boss.unwrap();
+    h.set_health_pct(boss, 36.0);
+    h.hit_pct(boss, 1.0);
+    assert!(!h.has_aura(boss, 50420), "still above31 percent");
+    h.hit_pct(boss, 6.0);
+    assert!(h.health(boss).current < h.health(boss).max * 0.31);
+    assert!(
+        h.has_aura(boss, 50420),
+        "projected loss crossed source31 percent"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 50420,
+    );
+    h.hit_pct(boss, 1.0);
+    assert!(!h.has_aura(boss, 50420), "source one-shot _enrageTriggered");
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::Fail)
+    );
+    h.advance(30.2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    h.set_health_pct(boss, 32.0);
+    h.hit_pct(boss, 3.0);
+    assert!(
+        h.has_aura(boss, 50420),
+        "fresh source AI after30s respawn resets enrage"
+    );
 }
 
 /// TC boss_dark_shaman_koranthal: appearance Vortex, engage Talk/remove Vortex,

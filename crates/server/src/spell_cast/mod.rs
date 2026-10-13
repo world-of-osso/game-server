@@ -158,7 +158,8 @@ use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_in_progress,
+    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
+    creature_cast_ignoring_in_progress,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -1402,11 +1403,16 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
         return Ok(());
     };
     let now = now(world);
-    if history.school_locked(spell.school_mask(), now) {
+    // TC source 0x2 skips SpellHistory::IsReady, including its school/charge
+    // readiness checks; GCD and caster-aura checks are independent.
+    if !spell.cast_ignore_cooldowns && history.school_locked(spell.school_mask(), now) {
         return Err(CastFailure::SchoolLockedOut);
     }
     if history.on_gcd(spell, now) {
         return Err(CastFailure::OnGlobalCooldown);
+    }
+    if spell.cast_ignore_cooldowns {
+        return Ok(());
     }
     if history.on_cooldown(spell, now) {
         return Err(CastFailure::OnCooldown);
@@ -2472,6 +2478,11 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
 }
 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // SpellHistory::HandleCooldowns returns before consuming a charge or starting
+    // a clock when source flag 0x2 is set. The cast's GCD remains independent.
+    if spell.cast_ignore_cooldowns {
+        return;
+    }
     let now = now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
     let (base_recovery_ms, base_category_ms) = spell
@@ -2756,6 +2767,8 @@ mod regen_tests;
 mod rezrtap_tests;
 #[cfg(test)]
 mod rogue_stealth_tests;
+#[cfg(test)]
+mod source_cast_flags_tests;
 #[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]

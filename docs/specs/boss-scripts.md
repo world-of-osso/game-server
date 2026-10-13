@@ -27,6 +27,9 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then Deadmines). Source: TC a352b1fa `RagefireChasm`.
 
+- [x] Gordoth61528 relocates already-started actors to its source landing point, casts Ground Rupture119999 at7.3s (native1s cast) and Seismic Slam120024 at13.3s with only source flag0x2. It enrages50420 once when projected health falls below31%, resetting through source30s evade/respawn.
+- [x] Flag0x2 per-cast clones skip SpellHistory::IsReady and HandleCooldowns (including charge writes), retaining GCD, cast-time, caster-aura and power checks. Native category1152 history is not restarted by the flagged cast. No FULL_MASK shortcut.
+- [ ] Gordoth repeat12.1s/36.3s callbacks are coded but moving-target proof, jump/cage/vial/animkit intro and map389 navigation remain open.
 - [x] Koranthal61412 appearance casts119928, engage removes it/talks, Twisted119300 first6s/repeat7.3s, Storm119971 first20.5s/repeat47.2s and reschedules Twisted to15.7s. Casting blocks event dispatch as source.
 - [x] Shadow Storm119973 effect0 dummy casts its actual effect value119965 triggered; destination-only missile effect32 forwards its destination to119964 and deals real damage.
 - [x] Koranthal death marks DONE/talks; evade retires without kill credit and respawns after source30s, recasting appearance Vortex.

@@ -65,6 +65,10 @@ pub struct SpellInfo {
     /// Owned bag GUID on this cast's queued/active snapshot.
     #[serde(skip)]
     pub(crate) cast_target_item_guid: Option<u64>,
+    /// Source TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD (0x2), on per-cast clones only.
+    /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
+    #[serde(skip)]
+    pub(crate) cast_ignore_cooldowns: bool,
     /// Successful-launch charged modifiers; None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
