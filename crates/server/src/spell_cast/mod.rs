@@ -37,6 +37,8 @@ mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
 #[cfg(test)]
+mod category_cooldown_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
