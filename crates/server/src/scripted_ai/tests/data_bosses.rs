@@ -758,6 +758,64 @@ fn encounter_coverage_zul_despawns_only_untagged_cosmetic_spirits() {
     }
 }
 
+/// TC kings_rest.cpp Shadow-Borne witch doctor/champion: temple_basic summon visual on
+/// appearance, then their EventMap schedules from JustEngagedWith.
+#[test]
+fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedules() {
+    let (mut h, map) = kings_rest_copy(23);
+    let raised = crate::zones::spawn_group_spawn(
+        h.app.world_mut(),
+        map,
+        23,
+        false,
+        super::super::kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    );
+    assert_eq!(raised.len(), 17);
+    h.advance(0.1);
+    let doctor = h.creatures_of(134174)[0];
+    let champion = h.creatures_of(134158)[0];
+    for unit in [doctor, champion] {
+        assert!(h.has_aura(unit, 269619), "temple_basic JustAppeared visual");
+    }
+    let player = h.player();
+    let at_doctor = *h.app.world().get::<Position>(doctor).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        at_doctor,
+        Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    h.engage(doctor);
+    let casting = |h: &Harness, unit: Entity| {
+        h.app
+            .world()
+            .get::<CastState>(unit)
+            .map(|cast| cast.spell_id)
+    };
+    h.advance(4.9);
+    assert_eq!(casting(&h, doctor), None);
+    h.advance(0.2);
+    assert_eq!(
+        casting(&h, doctor),
+        Some(269973),
+        "Deathly Chill at 5s on the victim"
+    );
+    // 1500ms cast; the event repeated 2.5s after it fired, at 7.5s.
+    h.advance(2.3);
+    assert_eq!(h.casts(0, doctor, 269973), 1);
+    assert_eq!(casting(&h, doctor), None);
+    h.advance(0.2);
+    assert_eq!(casting(&h, doctor), Some(269973), "repeat 2.5s");
+    let at_champion = *h.app.world().get::<Position>(champion).unwrap();
+    h.app.world_mut().entity_mut(player).insert(at_champion);
+    h.engage(champion);
+    h.advance(20.9);
+    assert!(!h.has_aura(champion, 269928));
+    h.advance(0.3);
+    assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
 fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {
     for &(busy_start, busy_end) in busy_windows {
         if busy_start >= next_cast - 0.001 {
