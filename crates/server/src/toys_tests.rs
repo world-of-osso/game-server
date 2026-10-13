@@ -3991,6 +3991,146 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
     assert!(h.inbox.cooldowns.is_empty());
 }
 
+fn facing25_fixture(path: &std::path::Path, item: u32) -> (Harness, Entity) {
+    let (mut h, character) = setup(path);
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    let target = spawn_player(&mut h.app, 8, -3.0);
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(shared::components::UnitFactionTemplate(25));
+    learn_effect_toy(&mut h, character, item);
+    h.select(Some(target));
+    h.advance(2);
+    (h, target)
+}
+
+#[test]
+fn toyfx25_facing_actual_use_rejects_rear_selected_unit_before_cast_and_recovery() {
+    let directory = tempfile::tempdir().unwrap();
+    for item in [141300, 204818] {
+        let (mut h, _) = facing25_fixture(&directory.path().join(format!("rear{item}.redb")), item);
+        assert_eq!(
+            activate(&mut h, item)[0].error.as_deref(),
+            Some("NotInFront")
+        );
+        assert!(
+            h.inbox
+                .failed
+                .iter()
+                .any(|failed| failed.reason == shared::spell_data::CastFailReason::NotInFront)
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(h.caster)
+                .is_none()
+        );
+        assert!(h.inbox.go.is_empty());
+        assert!(h.inbox.cooldowns.is_empty());
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Rotation>(h.caster)
+            .unwrap()
+            .y += std::f32::consts::PI;
+        assert_eq!(
+            activate(&mut h, item)[0].error,
+            None,
+            "refusal must not spend recovery"
+        );
+    }
+}
+
+#[test]
+fn toyfx25_facing_uses_inclusive_half_arc_and_strict_scaled_exact3d_boundary() {
+    let directory = tempfile::tempdir().unwrap();
+    // WoW forward +X; Bevy Y is altitude. Target scale, not caster reach,
+    // controls the boundary. Exact2yd is outside TC Position::IsInDist.
+    let cases = [
+        ([-1.999, 0.0, 0.0], 1.0, true),
+        ([-2.0, 0.0, 0.0], 1.0, false),
+        ([-1.5, 2.0, 0.0], 1.0, false),
+        ([-3.88, 0.0, 0.0], 10.0, true),
+        ([-3.90, 0.0, 0.0], 10.0, false),
+        ([0.0, 0.0, -3.0], 1.0, true),
+        ([0.0, 0.0, 3.0], 1.0, true),
+        ([-0.01, 0.0, 3.0], 1.0, false),
+        ([0.01, 0.0, 3.0], 1.0, true),
+    ];
+    for (index, (position, scale, permitted)) in cases.into_iter().enumerate() {
+        let (mut h, target) = facing25_fixture(
+            &directory.path().join(format!("boundary{index}.redb")),
+            204818,
+        );
+        h.app.world_mut().entity_mut(target).insert((
+            Position {
+                x: position[0],
+                y: position[1],
+                z: position[2],
+            },
+            shared::components::UnitScale(scale),
+        ));
+        // An enormous caster must not contribute reach to the exemption.
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::UnitScale(100.0));
+        let expected = if permitted { None } else { Some("NotInFront") };
+        assert_eq!(
+            activate(&mut h, 204818)[0].error.as_deref(),
+            expected,
+            "case{index}"
+        );
+    }
+}
+
+#[test]
+fn toyfx25_facing_rechecks_noninstant_completion_without_spending_recovery() {
+    let directory = tempfile::tempdir().unwrap();
+    for (item, spell) in [(141300, 225826), (204818, 406870)] {
+        let (mut h, _) = facing25_fixture(
+            &directory.path().join(format!("completion{item}.redb")),
+            item,
+        );
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Rotation>(h.caster)
+            .unwrap()
+            .y += std::f32::consts::PI;
+        assert_eq!(activate(&mut h, item)[0].error, None);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Rotation>(h.caster)
+            .unwrap()
+            .y -= std::f32::consts::PI;
+        h.advance(45);
+        assert!(h.inbox.failed.iter().any(|failed| failed.spell_id == spell
+            && failed.reason == shared::spell_data::CastFailReason::NotInFront));
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+        assert!(h.inbox.cooldowns.is_empty());
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Rotation>(h.caster)
+            .unwrap()
+            .y += std::f32::consts::PI;
+        assert_eq!(activate(&mut h, item)[0].error, None);
+    }
+}
+
 #[test]
 fn toyfx24_tome_actual_learning_five_minute_lifetime_and_retained_recovery() {
     use shared::components::{Health, ModelDisplay};

@@ -300,6 +300,8 @@ pub enum CastFailure {
     InvalidTarget,
     OutOfRange,
     TooClose,
+    /// `SPELL_FAILED_UNIT_NOT_INFRONT`.
+    NotInFront,
     /// `SPELL_FAILED_LINE_OF_SIGHT`.
     LineOfSight,
     /// `SPELL_FAILED_AFFECTING_COMBAT`.
@@ -367,6 +369,7 @@ impl CastFailure {
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
+            Self::NotInFront => (R::NotInFront, None),
             Self::LineOfSight => (R::LineOfSight, None),
             Self::AffectingCombat => (R::AffectingCombat, None),
             Self::NotMounted => (R::NotMounted, None),
@@ -1101,6 +1104,7 @@ pub(crate) fn cast_item_spell(
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
+mod toy_facing;
 
 pub(crate) fn cast_toy_spell(
     world: &mut World,
@@ -1417,6 +1421,7 @@ fn validate_start(
         )));
     }
     let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
+    toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
@@ -1901,6 +1906,9 @@ pub(crate) fn execute_cast(
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
+    if cast_time_ms(world, caster, spell) > 0 {
+        toy_facing::check_cast(world, caster, spell.id, explicit)?;
+    }
     blooming_infusion::check_children(world, caster, spell)?;
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
