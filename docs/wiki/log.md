@@ -12,6 +12,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage): native25%-of-owner-crit aura updater, real Aimed Shot RED/GREEN, live crit/unlearn and heal isolation; full-class/rendered parity remains open.
+
 - 2026-10-13 — [Rated arena map criteria](systems/dungeon-achievements.md#rated-map-wins-and-participation-verified-2026-10-13): committed WinArena32/ParticipateInArena33, qualified native team-size24/ranked60, real-channel2v2/3v3 RED/GREEN and persistence controls; +World Wide Winner699/+40 statistics.5v5/rating39 mapping remain disabled.
 
 - 2026-10-13 — [Per-request emote targets](systems/dungeon-achievements.md#per-request-emote-targets-verified-2026-10-13): native target-entry snapshots, text-only Love225, emote-only TargetCreatureId4; real-channel RED/GREEN and persistence controls. Structural census gains five account achievements; spawn completeness and other target modifiers unclaimed.
