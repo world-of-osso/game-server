@@ -1,5 +1,8 @@
 use super::*;
 use crate::persistence::GameDatabase;
+
+#[path = "pvp_kill_criteria_tests.rs"]
+mod kill_criteria;
 use crate::pvp::pvp_support::build_pvp_snapshot;
 use shared::currency::{CurrencyWallet, currency_by_id};
 use shared::protocol::CurrencyStateUpdate;
@@ -233,6 +236,7 @@ fn arena_player_state(
                 shadow_sight_available: false,
                 units: Vec::new(),
                 rating_changes: Vec::new(),
+                shuffle: None,
             }),
         }),
         ..Default::default()

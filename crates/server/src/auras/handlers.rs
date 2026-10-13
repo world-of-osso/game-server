@@ -33,6 +33,8 @@ pub enum AuraKind {
     Fixate,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
+    /// Casts its trigger spell on a health-percent crossing (`health_pct_trigger.rs`).
+    HealthTrigger,
     /// Charge-category max/recovery modifier (`charge_mods`).
     ChargeMod,
     /// Blocks casting (`cast_blocker`); MOD_STUN also roots.
@@ -167,6 +169,8 @@ pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
 pub const ADV_FLYING: u32 = 446;
 /// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
 pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
+/// Flat percentage points, outside combat-rating diminishing returns.
+pub const MOD_VERSATILITY: u32 = 471;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -209,6 +213,8 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 /// TC a352b1fa SpellHistory::StartCooldown: spell-mask-scoped haste regen.
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
+/// SpellHistory::StartCooldown adds signed milliseconds to matching categories.
+pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
@@ -242,6 +248,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
+        super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
         MOD_FIXATE => Fixate,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
@@ -312,7 +319,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DODGE_PERCENT
         | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT
-        | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
+        | OVERRIDE_SPELL_POWER_BY_AP_PCT
+        | MOD_VERSATILITY => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL
@@ -335,7 +343,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
-        | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
+        | MOD_COOLDOWN_BY_HASTE_REGEN
+        | MOD_SPELL_CATEGORY_COOLDOWN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,

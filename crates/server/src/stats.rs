@@ -157,6 +157,12 @@ pub struct CharacterStats {
 }
 
 impl CharacterStats {
+    /// Unit.cpp7036/8229: incoming damage uses half the combined rating and
+    /// aura471 percentage; damage cannot fall below zero.
+    pub(crate) fn versatility_damage_taken_multiplier(&self) -> f32 {
+        (1.0 - self.versatility_pct / 200.0).max(0.0)
+    }
+
     /// What the owner's character sheet and spell tooltips read. TrinityCore keeps the
     /// same values in `ActivePlayerData`: spell power (`Unit::SpellBaseDamageBonusDone`,
     /// Unit.cpp:7101-7119), crit (`UpdateCritPercentage` / `UpdateSpellCritChance`,

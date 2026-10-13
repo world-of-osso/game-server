@@ -116,7 +116,19 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Aura163 multiplies existing critical-damage paths by every matching school-mask effect once, including mixed-school hits and melee auto-attacks; it does not modify critical healing.
 - [x] Know Your Enemy388118 calculates effect0 from effect1's native40% of the owner's crit on application and every1s effect1 tick; live damage consumes the recalculated amount.
+- [x] Penetrating Shots459783 calculates effect0 from effect1's native25% of the owner's crit on application and every1s effect1 tick; real ranged critical damage consumes the live bonus. Noncritical damage and healing remain unchanged; unlearning removes the bonus.
 - [x] CritDamageAndHealing spell modifiers precede aura163 for weapon attacks and follow its critical bonus for magic. Existing floating damage/final-rounding behavior is retained; exact Retail intermediate-integer parity is not asserted.
+
+## Category cooldown modifiers
+
+- [x] Aura341 sums signed milliseconds for the spell's native nonzero category and applies after cooldown spellmods/haste to each positive spell/category cooldown, clamping at zero. It does not create cooldowns for zero-duration entries, retime running cooldowns or alter charge recovery.
+- [x] Native Quick Witted382297 reduces Counterspell2139 category88 lockout from25s to20s; real casts remain blocked before recovery and succeed afterward.
+
+## Versatility bonuses
+
+- [x] Aura471 adds native integer percentage points to computed player versatility outside rating diminishing returns. Actual spell damage and healing consume the combined value.
+- [x] Incoming spell and auto-attack damage use half the combined rating/aura versatility percentage, with damage clamped at zero. Spells carrying IgnoreDamageTakenModifiers bypass this new reduction.
+- [ ] Full charm/pet-owner inheritance and native-rendered parity remain unproved; base-probe status is not a whole-ability certificate.
 
 ## Tests asserting this spec
 
