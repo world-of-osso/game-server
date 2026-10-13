@@ -8,6 +8,26 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
+
+- 2026-10-13: Explicit Gordoth landing home/facing independent of respawn coordinates; home-return/leash honor it and respawn resets it. Real return proof,30s boundary test. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Gordoth source DoAction jump/landing, vial state and researcher Bloody Suicide→51744 instakill. Real-population parabola/landing/self-death proof; home/static trigger/cage/animkit/native gaps retained. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Gordoth already-started relocation/first casts/one-shot31% enrage/30s reset; source0x2 bypass with native category/cast-time and GCD/stun/mana proofs. Intro/repeats/native/map389 navigation remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Ragefire Koranthal source appearance/combat/death/evade;119973 dummy exposed missing destination-only effect32 dispatch, now forwards child destination. Three fixtures GREEN; native/credit publication/whole-instance gaps remain. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Executed371652 additive source flags1/2/3, no real death and no cleanup hook. Raw flags2/3 protocol fields added; native pose delivery remains unproved. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Storm Infusion395029 source-oriented(9,0,4) destination hook; actual area-trigger positions tested at two facings. Area actions/native visual behavior remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Ruby Life Pools Ice Shield/Excavate periodic source hooks, immediate initial +1s ticks. Two hook-boundary fixtures pass; SAI prerequisites and absent boss AIs remain gaps. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Zul +1s activates pool289347 in its own copy; authoritative GO state and collision, with timing/copy isolation proof. Native state animation remains open. [Boss scripts](systems/boss-scripts.md).
+
+- 2026-10-13: Minion of Zul appearance, Bound by Shadow self-death and Fixate128 preference/clear; different-caster channel coexist. Three real Kings' Rest fixtures pass. [Boss scripts](systems/boss-scripts.md).
+
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
 
 # Wiki Log
@@ -16,6 +36,10 @@
 
 - 2026-10-13 — [Flat versatility](systems/auras.md#flat-versatility-bonuses): source471 computed percentage and real damage/heal/taken/auto RED/GREEN; pinned69933 CASC rating/curve proof and lifecycle/flag/recipient controls. Owner inheritance/native-rendered parity remains open.
 
+- 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
+- 2026-10-13 — [General arena player predicates](systems/dungeon-achievements.md#general-arena-player-predicates-verified-2026-10-13): accepted/current-copy native24/60 facts for all gated events; real-channel56/17/70 rated statistics RED/GREEN, size/unrated/replay/reopen controls and redundant result fields removed. +5 statistics; current Shuffle unrated/source239/240 gaps explicit.
+
+- 2026-10-13 — [Battleground kill rewards](systems/dungeon-achievements.md#battleground-kill-rewards-verified-2026-10-13): native lethal controlling-player/accepted-team distance and corpse credit, untimed orphan26004 RED/GREEN and persistence controls; four structural ordinary gains. Current-root grants, world/lifetime/scoreboard honor and rendered battle unclaimed.
 - 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
 
 - 2026-10-13 — [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage): native25%-of-owner-crit aura updater, real Aimed Shot RED/GREEN, live crit/unlearn and heal isolation; full-class/rendered parity remains open.
@@ -1011,3 +1035,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: Native Ysera145108 owner-health ticks/self-group switching and CannotCrit; six Bevy App controls, isolated per-cast override, no rendered parity claim.
 
 - 2026-10-13: Native163 school-mask critical-damage product and KnowYourEnemy percent updater; actual damage/order/lifecycle controls, retained floating-rounding and rendered-parity limits.
+
+## 2026-10-13 — Prepared follower Group Finder catalog
+
+[Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.

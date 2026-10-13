@@ -131,6 +131,7 @@ fn encounter_fixture(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
+    app.insert_resource(super::super::ragefire_chasm::gordoth_intro::load_trigger(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -265,8 +266,10 @@ fn encounter_fixture(
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
         let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-        let near = if entry == 135322 && initial_state != EncounterState::NotStarted {
-            // Keep the relocated source branch idle until its fixture explicitly pulls.
+        let near = if [61412, 61528].contains(&entry)
+            || (entry == 135322 && initial_state != EncounterState::NotStarted)
+        {
+            // Keep these hostile source actors idle until their fixture explicitly pulls.
             let position = app.world().get::<Position>(boss).unwrap();
             [
                 position.x + 500.0,
@@ -606,6 +609,47 @@ fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
         .find(|(_, info)| info.entry == 288466)
         .map(|(entity, _)| entity)
         .expect("Serpentine Seal spawned in the copy");
+    let pool = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, info, copy)| info.entry == 289347 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .expect("liquid pool289347 from the copy's production spawns");
+    let collision = |h: &Harness| {
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(pool)
+            .map(|collision| collision.0)
+    };
+    assert_eq!(collision(&h), Some(true), "pool starts GO_STATE_READY");
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(pool),
+        Some(&crate::game_objects::GameObjectState(1))
+    );
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let sources = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source_pool = sources
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 289347)
+        .unwrap()
+        .clone();
+    let other_pool = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::game_objects::game_object_bundle(&source_pool),
+            InMap {
+                instance_id: map.instance_id + 1,
+                ..map
+            },
+        ))
+        .id();
     let seal_position = *h.app.world().get::<Position>(seal).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(Position {
@@ -647,7 +691,33 @@ fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
             .get::<crate::zones::CreatureStringIds>(zul)
             .is_some_and(|ids| ids.has("SerpentBossEvent"))
     );
-    h.advance(1.1);
+    h.advance(0.8);
+    assert_eq!(collision(&h), Some(true), "Zul waits +1s before SetGoState");
+    h.advance(0.3);
+    assert_eq!(
+        collision(&h),
+        Some(false),
+        "GO_STATE_ACTIVE disables collision"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(pool),
+        Some(&crate::game_objects::GameObjectState(0))
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(other_pool),
+        Some(&crate::game_objects::GameObjectState(1)),
+        "the same source pool in another copy stays READY"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(other_pool),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
     assert!(
         h.inbox(0)
             .chat
@@ -823,6 +893,1067 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(!h.has_aura(champion, 269928));
     h.advance(0.3);
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
+/// TC at_lava_guard_gordoth_intro7899: a normal player's actual DB2 box entry
+/// triggers only its copy, once per instance, not on repeated polls or re-entry.
+#[test]
+fn encounter_coverage_gordoth_static_intro_trigger_is_box_scoped_and_once() {
+    let (mut h, _, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(61528)[0];
+    let original = *h.app.world().get::<Position>(boss).unwrap();
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let trigger: (f32, f32, f32, f32, f32) = conn
+        .query_row(
+            "SELECT Pos_0,Pos_1,Pos_2,Box_length,Box_yaw FROM area_trigger WHERE ID=7899",
+            [],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
+        )
+        .unwrap();
+    let (x, y, z, length, yaw) = trigger;
+    let player = h.player();
+    let outside_x = x + yaw.cos() * (length / 2.0 + 0.5);
+    let outside_y = y + yaw.sin() * (length / 2.0 + 0.5);
+    let (px, py, pz) = crate::terrain_height::wow_to_bevy(outside_x, outside_y, z);
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: px,
+        y: py,
+        z: pz,
+    });
+    h.advance(0.1);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        original,
+        "outside the rotated narrow axis"
+    );
+    let (px, py, pz) = crate::terrain_height::wow_to_bevy(x, y, z);
+    let inside = Position {
+        x: px,
+        y: py,
+        z: pz,
+    };
+    let other_player = h.players[1].0;
+    h.app.world_mut().entity_mut(other_player).insert(inside);
+    h.advance(0.1);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        original,
+        "entry in an unpopulated other copy cannot use this copy's boss"
+    );
+    h.app.world_mut().entity_mut(player).insert(inside);
+    h.advance(0.25);
+    let moved = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        Vec3::new(
+            moved.x - original.x,
+            moved.y - original.y,
+            moved.z - original.z
+        )
+        .length()
+            > 5.0,
+        "actual AT entry dispatches sourced jump, without direct DoAction"
+    );
+    h.advance(0.8);
+    // Give a later repeated action an observable destination delta. Successful
+    // OnlyOnce must retain the new position through leave/re-enter.
+    let landing = *h.app.world().get::<Position>(boss).unwrap();
+    let displaced = Position {
+        x: landing.x + 10.0,
+        ..landing
+    };
+    h.app.world_mut().entity_mut(boss).insert(displaced);
+    h.advance(0.1);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        displaced,
+        "no repeat while inside"
+    );
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: px + 100.0,
+        ..inside
+    });
+    h.advance(0.1);
+    h.app.world_mut().entity_mut(player).insert(inside);
+    h.advance(0.25);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        displaced,
+        "instance OnlyOnce survives re-entry"
+    );
+    assert_eq!(*h.app.world().get::<InMap>(boss).unwrap(), map);
+    // The failed other-copy entry must not consume OnlyOnce: create that real
+    // copy and its authored boss, then leave/re-enter to retry successfully.
+    let maps = h.app.world().resource::<crate::maps::MapStore>().clone();
+    let other_map = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            389,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 2002,
+                leader: 2002,
+                difficulty_id: 1,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 0,
+            },
+        )
+        .unwrap()
+        .map;
+    assert_eq!(
+        *h.app.world().get::<InMap>(other_player).unwrap(),
+        other_map
+    );
+    let (other_boss, _) = spawn_authored_actor(&mut h.app, &conn, 61528, other_map, 1);
+    h.app.world_mut().entity_mut(other_player).insert(Position {
+        x: px + 500.0,
+        ..inside
+    });
+    h.advance(0.1);
+    let other_original = *h.app.world().get::<Position>(other_boss).unwrap();
+    h.app.world_mut().entity_mut(other_player).insert(inside);
+    h.advance(0.25);
+    assert_ne!(
+        *h.app.world().get::<Position>(other_boss).unwrap(),
+        other_original,
+        "missing-boss retry succeeds and first copy's OnlyOnce cannot consume another copy"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        displaced,
+        "second copy jump leaves first copy unchanged"
+    );
+}
+
+/// Source DoAction(ACTION_JUMP): MoveJump50 speed/min-height4, then effect-motion
+/// landing sets the vials DESTROYED and the nearby researchers cast Bloody Suicide.
+/// The pinned UpdateAI does not pump its separately scheduled cage task.
+#[test]
+fn encounter_coverage_gordoth_source_jump_lands_breaks_vials_and_researchers_die() {
+    let (mut h, _, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(61528)[0];
+    let from = *h.app.world().get::<Position>(boss).unwrap();
+    let origin = Vec3::new(from.x, from.y, from.z);
+    let landing = Vec3::new(-363.5392, -22.005634, -203.36604);
+    let vials: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(_, info, copy)| info.entry == 211784 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert_eq!(vials.len(), 3);
+    let researchers = h.creatures_of(61644);
+    assert_eq!(researchers.len(), 7);
+    let ready = |h: &Harness, object| {
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(object)
+            .is_some_and(|state| state.0 == 1)
+    };
+    assert!(vials.iter().all(|&vial| ready(&h, vial)));
+    dispatch(h.app.world_mut(), boss, Hook::DoAction(1));
+    h.advance(0.35);
+    let at = *h.app.world().get::<Position>(boss).unwrap();
+    let duration_ms = 1 + (origin.distance(landing) * 1000.0 / 50.0) as u32;
+    let t = 350.0 / duration_ms as f32;
+    let mut expected = origin.lerp(landing, t);
+    expected.y += 4.0 * 4.0 * t * (1.0 - t);
+    assert!(
+        Vec3::new(at.x, at.y, at.z).distance(expected) < 0.001,
+        "authentic linear spline plus parabolic height, not relocation: {at:?}"
+    );
+    assert!(
+        vials.iter().all(|&vial| ready(&h, vial)),
+        "not destroyed before arrival"
+    );
+    assert!(researchers.iter().all(|&researcher| {
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(researcher)
+            .is_none()
+    }));
+    h.advance(0.55);
+    let at = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(Vec3::new(at.x, at.y, at.z).distance(landing) < 0.001);
+    let orientation = h
+        .app
+        .world()
+        .get::<shared::components::Rotation>(boss)
+        .unwrap()
+        .y
+        - std::f32::consts::FRAC_PI_2;
+    assert!(
+        (orientation - 0.30812347).abs() < 0.001,
+        "source facing after landing"
+    );
+    for vial in vials {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::game_objects::GameObjectState>(vial),
+            Some(&crate::game_objects::GameObjectState(2))
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::protocol::GameObjectCollision>(vial),
+            Some(&shared::protocol::GameObjectCollision(false))
+        );
+    }
+    for researcher in researchers {
+        assert!(
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(researcher)
+                .is_some(),
+            "real120022 extra initial periodic tick ->51744 INSTAKILL"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::combat::LastDamager>(researcher)
+                .map(|killer| killer.0),
+            Some(researcher)
+        );
+    }
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::NotStarted),
+        "researcher self-deaths never grant Gordoth credit"
+    );
+    let original_spawn = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(boss)
+        .unwrap()
+        .clone();
+    // Exercise HomeMovementGenerator after source SetHomePosition, not a field or
+    // controller-selection assertion. Original respawn coordinates must survive.
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(crate::creature_ai::CreatureState::Returning);
+    h.advance(0.2);
+    let returned = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        Vec3::new(returned.x, returned.y, returned.z).distance(landing) < 0.001,
+        "source home is landing point, not the original cage spawn"
+    );
+    assert!(
+        (h.app
+            .world()
+            .get::<shared::components::Rotation>(boss)
+            .unwrap()
+            .y
+            - std::f32::consts::FRAC_PI_2
+            - 0.30812347)
+            .abs()
+            < 0.001
+    );
+    let spawn = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(boss)
+        .unwrap();
+    assert_eq!(
+        (spawn.x, spawn.y, spawn.z),
+        (original_spawn.x, original_spawn.y, original_spawn.z)
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(30.2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    let respawned = *h.app.world().get::<Position>(boss).unwrap();
+    let spawn_point = Vec3::new(original_spawn.x, original_spawn.y, original_spawn.z);
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(crate::creature_ai::CreatureState::Returning);
+    h.advance(0.2);
+    let returning = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        Vec3::new(returning.x, returning.y, returning.z).distance(spawn_point)
+            < Vec3::new(respawned.x, respawned.y, respawned.z).distance(spawn_point),
+        "respawn resets home to spawn before source InitializeAI relocates the actor"
+    );
+}
+
+/// A real Mortimer POINT1 callback schedules self-death7s later. A competing
+/// point must not arrive while the highest-priority source jump owns movement.
+#[test]
+fn encounter_coverage_jump_suspends_lower_point_until_after_landing() {
+    let (mut h, parent) = Harness::new(NPC_RANDOLPH_MOLOCH, &[]).unwrap();
+    let player = h.player();
+    let at_parent = *h.app.world().get::<Position>(parent).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: at_parent.x + 500.0,
+        ..at_parent
+    });
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), parent);
+    let at = h.wow_position(parent);
+    let observer =
+        crate::zones::summon_creature(h.app.world_mut(), parent, 46482, [at.x, at.y, at.z, 0.0])
+            .unwrap();
+    let from = *h.app.world().get::<Position>(observer).unwrap();
+    super::super::movement::set_walk(h.app.world_mut(), observer, false);
+    super::super::movement::move_point(
+        h.app.world_mut(),
+        observer,
+        1,
+        Position {
+            x: from.x + 0.1,
+            ..from
+        },
+    );
+    super::super::jump_movement::move_jump(
+        h.app.world_mut(),
+        observer,
+        7,
+        Position {
+            x: from.x + 10.0,
+            ..from
+        },
+        1.0,
+        4.0,
+    );
+    h.advance(7.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(observer)
+            .is_none(),
+        "lower POINT1 never arrived and scheduled Mortimer death during the jump"
+    );
+    assert!(h.health(observer).current > 0.0);
+    h.advance(2.6);
+    let run_speed = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(observer)
+        .unwrap()
+        .speed_run
+        * 7.0;
+    h.advance(10.0 / run_speed + 6.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(observer)
+            .is_none(),
+        "after resuming the source point, its7s death callback has not yet fired"
+    );
+    h.advance(1.0);
+    assert!(
+        h.app.world().get_entity(observer).is_err()
+            || h.app
+                .world()
+                .get::<crate::combat::DeathState>(observer)
+                .is_some(),
+        "lower point resumes, reaches its target and executes the real callback"
+    );
+}
+
+#[test]
+fn encounter_coverage_gordoth_death_interrupts_jump_without_landing_effects() {
+    let (mut h, _, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(61528)[0];
+    dispatch(h.app.world_mut(), boss, Hook::DoAction(1));
+    h.advance(0.2);
+    h.hit_pct(boss, 1_000.0);
+    h.advance(1.1);
+    let vials: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(_, info, copy)| info.entry == 211784 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert_eq!(vials.len(), 3);
+    for vial in vials {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::game_objects::GameObjectState>(vial),
+            Some(&crate::game_objects::GameObjectState(1))
+        );
+    }
+    for researcher in h.creatures_of(61644) {
+        assert!(
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(researcher)
+                .is_none()
+        );
+    }
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::Done)
+    );
+}
+
+/// TC Gordoth's already-started InitializeAI branch relocates to the source jump
+/// landing point, without inventing an intro bypass.
+#[test]
+fn encounter_coverage_gordoth_relocates_started_actor_and_casts_source_schedule() {
+    let (mut h, boss, _) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::InProgress, false);
+    let boss = boss.unwrap();
+    assert!(
+        h.wow_position(boss)
+            .distance(Vec3::new(-363.5392, 203.36604, -22.005634))
+            < 0.001
+    );
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    let casting = |h: &Harness| {
+        h.app
+            .world()
+            .get::<CastState>(boss)
+            .map(|cast| cast.spell_id)
+    };
+    h.advance(7.2);
+    assert_eq!(casting(&h), None);
+    h.advance(0.2);
+    assert_eq!(
+        casting(&h),
+        Some(119999),
+        "Ground Rupture at7.3s, real1s cast"
+    );
+    h.advance(1.1);
+    assert_eq!(h.casts(0, boss, 119999), 1);
+    // Restore the victim after authentic knockback; category bypass is covered
+    // separately through actual native cast/cooldown history.
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.advance(4.7);
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(120024)),
+        "Seismic waits13.3s"
+    );
+    h.advance(0.2);
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(120024)
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(player.to_bits())
+        }),
+        "Seismic13.3s source cast performs normal damage"
+    );
+}
+
+#[test]
+fn encounter_coverage_gordoth_enrages_once_below31_and_evade_resets_it() {
+    let (mut h, boss, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::InProgress, false);
+    let boss = boss.unwrap();
+    h.set_health_pct(boss, 36.0);
+    h.hit_pct(boss, 1.0);
+    assert!(!h.has_aura(boss, 50420), "still above31 percent");
+    h.hit_pct(boss, 6.0);
+    assert!(h.health(boss).current < h.health(boss).max * 0.31);
+    assert!(
+        h.has_aura(boss, 50420),
+        "projected loss crossed source31 percent"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 50420,
+    );
+    h.hit_pct(boss, 1.0);
+    assert!(!h.has_aura(boss, 50420), "source one-shot _enrageTriggered");
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::Fail)
+    );
+    h.advance(30.2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    h.set_health_pct(boss, 32.0);
+    h.hit_pct(boss, 3.0);
+    assert!(
+        h.has_aura(boss, 50420),
+        "fresh source AI after30s respawn resets enrage"
+    );
+}
+
+/// TC boss_dark_shaman_koranthal: appearance Vortex, engage Talk/remove Vortex,
+/// Twisted6s/7.3s, Storm20.5s/47.2s; Storm reschedules Twisted to +15.7s.
+#[test]
+fn encounter_coverage_koranthal_uses_source_combat_schedule_and_storm_damage() {
+    let (mut h, boss, map) =
+        encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    h.advance(0.1);
+    assert!(h.has_aura(boss, 119928), "Shadow Vortex on appearance");
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert!(!h.has_aura(boss, 119928));
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 1),
+        Some(EncounterState::InProgress)
+    );
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|chat| chat.content.contains("overwhelm"))
+    );
+    let casting = |h: &Harness| {
+        h.app
+            .world()
+            .get::<CastState>(boss)
+            .map(|cast| cast.spell_id)
+    };
+    h.advance(5.8);
+    assert_eq!(casting(&h), None, "Twisted waits6s");
+    h.advance(0.2);
+    assert_eq!(casting(&h), Some(119300));
+    h.advance(2.1);
+    assert_eq!(
+        h.casts(0, boss, 119300),
+        1,
+        "real2s cast completes on victim"
+    );
+    h.advance(5.0);
+    assert_eq!(casting(&h), None);
+    h.advance(0.2);
+    assert_eq!(casting(&h), Some(119300), "repeat at13.3s");
+    h.advance(7.0);
+    assert!(!h.has_aura(boss, 119971), "Storm waits20.5s");
+    h.advance(0.2);
+    assert!(h.has_aura(boss, 119971));
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|chat| chat.content.contains("Shadow Storm"))
+    );
+    let before = h.health(h.player()).current;
+    h.advance(3.2);
+    assert!(
+        h.health(h.player()).current < before,
+        "119973 dummy ->119965 missile -> actual storm damage"
+    );
+    assert_eq!(
+        h.casts(0, boss, 119300),
+        2,
+        "Storm reschedules, no Twisted at20.6s"
+    );
+    h.advance(12.3);
+    assert_eq!(casting(&h), None);
+    h.advance(0.2);
+    assert_eq!(casting(&h), Some(119300), "rescheduled to36.2s");
+    h.advance(31.3);
+    assert!(!h.has_aura(boss, 119971), "next Storm waits until67.7s");
+    h.advance(0.2);
+    assert!(h.has_aura(boss, 119971), "Storm repeats47.2s after20.5s");
+}
+
+/// TC119973 effect0 dummy reads its effect value119965 and casts that triggered;
+/// the actual missile chain hits with119964, independently of119971's other effect.
+#[test]
+fn encounter_coverage_koranthal_shadow_storm_dummy_launches_authored_damage() {
+    let (mut h, boss, _) =
+        encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+    let boss = boss.unwrap();
+    let target = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(target).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    let before = h.health(target).current;
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 119973, None, true)
+        .expect("real119973 source-area-enemy dummy");
+    h.advance(1.0);
+    assert!(h.health(target).current < before);
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(119964)
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(target.to_bits())
+        }),
+        "effect value119965 triggers actual119964 damage on the selected enemy"
+    );
+}
+
+#[test]
+fn encounter_coverage_koranthal_death_and_evade_use_source_lifecycle() {
+    for killed in [false, true] {
+        let (mut h, boss, map) =
+            encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, false);
+        let boss = boss.unwrap();
+        let player = h.player();
+        let position = *h.app.world().get::<Position>(boss).unwrap();
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: position.x + 3.0,
+            ..position
+        });
+        h.engage(boss);
+        h.advance(0.1);
+        if killed {
+            h.hit_pct(boss, 1_000.0);
+            h.advance(0.1);
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, 1),
+                Some(EncounterState::Done)
+            );
+            assert!(
+                h.inbox(0)
+                    .chat
+                    .iter()
+                    .any(|chat| chat.content.contains("My death"))
+            );
+        } else {
+            crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+            h.advance(0.1);
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, 1),
+                Some(EncounterState::Fail)
+            );
+            assert!(
+                h.app
+                    .world()
+                    .get::<crate::combat::DeathState>(boss)
+                    .is_some(),
+                "_DespawnAtEvade retires actor without a kill"
+            );
+            assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+            h.app.world_mut().entity_mut(player).insert(Position {
+                x: position.x + 500.0,
+                ..position
+            });
+            h.advance(30.1);
+            assert!(
+                h.app
+                    .world()
+                    .get::<crate::combat::DeathState>(boss)
+                    .is_none(),
+                "authored30s respawn"
+            );
+            assert!(h.has_aura(boss, 119928), "reappearance Shadow Vortex");
+        }
+    }
+}
+
+/// TC Executed371652 effect0 apply sets three independent flag fields, preserves
+/// their other bits, never performs a real death, and has no removal callback.
+#[test]
+fn encounter_coverage_ruby_executed_sets_source_flags_without_killing() {
+    use shared::components::{UnitFlags, UnitFlags2, UnitFlags3};
+    let (mut h, actor, _) =
+        encounter_fixture(189162, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let actor = actor.unwrap();
+    h.app.world_mut().entity_mut(actor).insert((
+        UnitFlags(UnitFlags::IMMUNE_TO_PC),
+        UnitFlags2(4),
+        UnitFlags3(2),
+    ));
+    let health = h.health(actor);
+    crate::spell_cast::creature_cast(h.app.world_mut(), actor, 371652, None, true)
+        .expect("realExecuted371652 self cast");
+    let expected = (
+        UnitFlags(UnitFlags::IMMUNE_TO_PC | UnitFlags::PREVENT_EMOTES_FROM_CHAT_TEXT),
+        UnitFlags2(4 | UnitFlags2::FEIGN_DEATH),
+        UnitFlags3(2 | UnitFlags3::FAKE_DEAD),
+    );
+    assert_eq!(h.app.world().get::<UnitFlags>(actor), Some(&expected.0));
+    assert_eq!(h.app.world().get::<UnitFlags2>(actor), Some(&expected.1));
+    assert_eq!(h.app.world().get::<UnitFlags3>(actor), Some(&expected.2));
+    assert_eq!(h.health(actor), health);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(actor)
+            .is_none()
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 371652,
+    );
+    h.advance(0.1);
+    assert_eq!(
+        h.app.world().get::<UnitFlags2>(actor),
+        Some(&expected.1),
+        "source has no cleanup hook"
+    );
+    assert_eq!(h.app.world().get::<UnitFlags3>(actor), Some(&expected.2));
+    // A hit containing only effect1 (MOD_UNATTACKABLE) must not run effect0's hook.
+    let other = h.player();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: other,
+            target: other,
+            spell_id: 371652,
+            effect_mask: 2,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(h.app.world().get::<UnitFlags2>(other).is_none());
+    assert!(h.app.world().get::<UnitFlags3>(other).is_none());
+}
+
+/// TC spell_ruby_life_pools_storm_infusion offsets effect1 TARGET_DEST_DEST by
+/// Position::RelocateOffset(local9,0,4), relative to the destination's orientation.
+#[test]
+fn encounter_coverage_ruby_storm_infusion_creates_trigger_at_oriented_offset() {
+    let (mut h, _, map) =
+        encounter_fixture(195119, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let caster = h.player();
+    let origin = Position {
+        x: 12.0,
+        y: 20.0,
+        z: 31.0,
+    };
+    for (orientation, expected) in [
+        (0.0, Vec3::new(21.0, 24.0, 31.0)),
+        (std::f32::consts::FRAC_PI_2, Vec3::new(12.0, 24.0, 22.0)),
+    ] {
+        h.app.world_mut().entity_mut(caster).insert((
+            origin,
+            shared::components::Rotation {
+                x: 0.0,
+                y: orientation + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 395029, None, true)
+            .expect("real395029 self/destination cast");
+        let triggers: Vec<_> = h
+            .app
+            .world_mut()
+            .query::<(
+                Entity,
+                &crate::spell_cast::area_trigger::SpellAreaTrigger,
+                &Position,
+                &InMap,
+            )>()
+            .iter(h.app.world())
+            .filter(|(_, trigger, _, copy)| trigger.spell_id == 395029 && **copy == map)
+            .map(|(entity, _, position, _)| (entity, Vec3::new(position.x, position.y, position.z)))
+            .collect();
+        assert_eq!(triggers.len(), 1);
+        assert!(
+            triggers[0].1.distance(expected) < 0.001,
+            "oriented9yd forward/4yd up: {:?}",
+            triggers[0].1
+        );
+        h.app.world_mut().despawn(triggers[0].0);
+    }
+}
+
+/// TC spell_ruby_life_pools_ice_shield ticks every1s and refreshes an existing
+/// 372749 aura, without reapplying/refilling its absorb or creating a missing shield.
+#[test]
+fn encounter_coverage_ruby_ice_shield_refreshes_existing_duration_only() {
+    let (mut h, target, _) =
+        encounter_fixture(188011, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let target = target.unwrap();
+    let caster = h.player();
+    for spell_id in [372749, 384933] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    let shield = |h: &Harness| {
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 372749)
+            .unwrap()
+            .clone()
+    };
+    let initial = shield(&h);
+    h.advance(0.1);
+    let first_tick = shield(&h);
+    assert!(
+        first_tick.expires_at.unwrap() > initial.expires_at.unwrap(),
+        "DB2 EXTRA_INITIAL_PERIOD ticks immediately"
+    );
+    h.advance(0.8);
+    assert_eq!(
+        shield(&h).expires_at,
+        first_tick.expires_at,
+        "next tick waits 1s"
+    );
+    h.advance(0.2);
+    let refreshed = shield(&h);
+    assert!(
+        refreshed.expires_at.unwrap() >= initial.expires_at.unwrap() + 0.95,
+        "1s periodic tick refreshes max duration"
+    );
+    assert_eq!(refreshed.instance_id, initial.instance_id);
+    assert_eq!(
+        refreshed.effects, initial.effects,
+        "no absorb reset/reapplication"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 372749,
+    );
+    h.advance(1.1);
+    assert!(
+        !h.has_aura(target, 372749),
+        "periodic callback never creates a missing shield"
+    );
+}
+
+/// TC spell_ruby_life_pools_excavate: effect0 periodic dummy casts373497 triggered
+/// from its original caster on its bearer, and stops when that aura is removed.
+#[test]
+fn encounter_coverage_ruby_excavate_periodic_cast_uses_original_caster_and_target() {
+    let (mut h, target, _) =
+        encounter_fixture(189162, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let target = target.unwrap();
+    let caster = h.player();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: 372793,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(0.1);
+    assert_eq!(h.casts(0, caster, 373497), 1, "DB2 EXTRA_INITIAL_PERIOD");
+    h.advance(0.8);
+    assert_eq!(h.casts(0, caster, 373497), 1, "next tick waits1s");
+    let casts: Vec<_> = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(373497))
+        .collect();
+    assert_eq!(
+        casts[0].target,
+        Some(target.to_bits()),
+        "not the caster/self"
+    );
+    h.advance(0.2);
+    assert_eq!(h.casts(0, caster, 373497), 2);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 372793,
+    );
+    h.advance(1.1);
+    assert_eq!(h.casts(0, caster, 373497), 2, "no more ticks after removal");
+}
+
+/// TC kings_rest.cpp npc_kings_rest_minion_of_zul: only TempleEvent minions run the
+/// temple_basic visual; every minion appears with Bound by Shadow 269935.
+#[test]
+fn encounter_coverage_minion_of_zul_appears_bound_by_shadow() {
+    let (mut h, map) = kings_rest_copy(23);
+    h.advance(0.1);
+    let resident = h.creatures_of(133943);
+    assert_eq!(
+        resident.len(),
+        8,
+        "untagged map1762 minions; group1255 withheld"
+    );
+    for &minion in &resident {
+        assert!(
+            h.has_aura(minion, 269935),
+            "Bound by Shadow on JustAppeared"
+        );
+        assert!(!h.has_aura(minion, 269619), "no TempleEvent StringId");
+    }
+    crate::zones::spawn_group_spawn(
+        h.app.world_mut(),
+        map,
+        23,
+        false,
+        super::super::kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    );
+    h.advance(0.1);
+    let raised: Vec<Entity> = h
+        .creatures_of(133943)
+        .into_iter()
+        .filter(|minion| !resident.contains(minion))
+        .collect();
+    assert_eq!(raised.len(), 6);
+    for minion in raised {
+        assert!(h.has_aura(minion, 269935));
+        assert!(
+            h.has_aura(minion, 269619),
+            "TempleEvent temple_basic visual"
+        );
+    }
+}
+
+/// TC spell_kings_rest_bound_by_shadow: only AURA_REMOVE_BY_ENEMY_SPELL (the absorb
+/// used up) kills the minion.
+#[test]
+fn encounter_coverage_minion_of_zul_dies_when_bound_by_shadow_is_broken() {
+    let (mut h, _) = kings_rest_copy(23);
+    h.advance(0.1);
+    let minions = h.creatures_of(133943);
+    let (broken, cancelled) = (minions[0], minions[1]);
+    let absorb = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(broken)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 269935))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map(|effect| effect.amount)
+        .expect("269935 effect0 SCHOOL_ABSORB");
+    assert!(absorb > 0.0 && absorb < h.health(broken).max / 2.0);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        cancelled,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 269935,
+    );
+    h.hit(broken, absorb + 1.0);
+    h.advance(0.1);
+    assert!(!h.has_aura(broken, 269935));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(broken)
+            .is_some(),
+        "KillSelf once the shield is used up"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(cancelled)
+            .is_none(),
+        "other removal modes keep it alive"
+    );
+}
+
+/// TC npc_kings_rest_minion_of_zul::JustEngagedWith casts Fixate 269936 on one enemy
+/// within 300yd; HandleAuraModFixate makes ReselectVictim prefer it over higher threat.
+#[test]
+fn encounter_coverage_minion_of_zul_fixates_one_enemy_over_threat() {
+    let (mut h, map) = kings_rest_copy(23);
+    h.advance(0.1);
+    let minion = h.creatures_of(133943)[0];
+    let at = h.wow_position(minion);
+    let first = h.player();
+    let (second, _) = super::spawn_player(&mut h.app, map, [at.x + 400.0, at.y, at.z, 0.0], 2);
+    let near = *h.app.world().get::<Position>(minion).unwrap();
+    h.app.world_mut().entity_mut(first).insert(Position {
+        x: near.x + 2.0,
+        ..near
+    });
+    crate::creature_aggro::add_threat(h.app.world_mut(), minion, first, 1.0);
+    h.advance(0.1);
+    let fixated: Vec<Entity> = [first, second]
+        .into_iter()
+        .filter(|&player| {
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(player)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 269936 && aura.caster == minion)
+                })
+        })
+        .collect();
+    assert_eq!(fixated.len(), 1, "MaxTargets1 fixate");
+    let fixated = fixated[0];
+    assert_eq!(fixated, first, "only the engaged player is within 300yd");
+    let other = second;
+    h.app.world_mut().entity_mut(other).insert(Position {
+        x: near.x + 3.0,
+        ..near
+    });
+    crate::creature_aggro::add_threat(h.app.world_mut(), minion, other, 1_000_000.0);
+    h.advance(0.5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(minion)
+            .and_then(|target| target.0),
+        Some(fixated),
+        "the fixate target outranks a far larger threat"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        fixated,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 269936,
+    );
+    h.advance(0.5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(minion)
+            .and_then(|target| target.0),
+        Some(other),
+        "ClearFixate returns to threat order"
+    );
 }
 
 /// TC at_kings_rest_gust_slash: 269931 creates AT17933 5yd ahead of the warrior; it

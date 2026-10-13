@@ -108,3 +108,5 @@ impl Plugin for FollowerPlugin {
 mod catalog_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod wire_tests;
