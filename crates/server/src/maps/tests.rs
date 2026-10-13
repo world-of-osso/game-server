@@ -1746,11 +1746,10 @@ fn exercise_arena_channel_with_reconnect(
             assert_eq!(created_id, id);
             data.level = 90;
             crate::persistence::save_character(db, id, &data);
-            let server = h.app.world_mut().spawn_empty().id();
             h.app
                 .world_mut()
                 .entity_mut(who.connection)
-                .insert(lightyear::prelude::server::ClientOf(server));
+                .insert(lightyear::prelude::server::ClientOf);
         }
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
