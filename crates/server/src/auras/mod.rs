@@ -1296,6 +1296,14 @@ pub fn damage_taken_multiplier(
     attacker: Entity,
     spell: &SpellInfo,
 ) -> f32 {
+    const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x0000_0100;
+    let versatility = if attributes(spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0 {
+        world
+            .get::<crate::stats::CharacterStats>(target)
+            .map_or(1.0, |stats| stats.versatility_damage_taken_multiplier())
+    } else {
+        1.0
+    };
     let school_mask = spell.school_mask();
     let taken = world
         .get::<AuraStatMods>(target)
@@ -1322,6 +1330,7 @@ pub fn damage_taken_multiplier(
             .product()
     });
     taken
+        * versatility
         * from_caster
         * scripts::unstable_affliction_multiplier(world, attacker, target)
         * scripts::outgoing_to_owner_multiplier(world, attacker, target)

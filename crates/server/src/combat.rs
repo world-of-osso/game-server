@@ -1075,7 +1075,9 @@ fn try_swing(
             &attacker_scaling,
             target_mods,
             context.summon_modifiers.multiplier(attacker.entity),
-        ),
+        ) * armor
+            .1
+            .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier),
         target_armor(armor, &target, &attacker_scaling),
         &attacker_scaling,
         &target,
