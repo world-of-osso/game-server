@@ -3658,6 +3658,91 @@ fn toyfx14_scaled_scenery_census() {
     }
 }
 
+#[test]
+fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitScale};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, displays, scale) in [
+        (122126, 179942, 90335, vec![41343, 11686], 1.0),
+        (198646, 384618, 194793, vec![108683], 0.7),
+        (204405, 405204, 203158, vec![111821], 1.0),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("statue-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.insert_resource(store.clone());
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(
+            activate_at(&mut h, item, None)[0].error,
+            None,
+            "item {item}"
+        );
+        h.advance(50);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        let now = crate::auras::aura_now(h.app.world());
+        let world = h.app.world_mut();
+        let actors: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, summon)| (entity, summon.expires_at))
+            .collect();
+        assert_eq!(actors.len(), 1, "item {item}");
+        let (actor, expires_at) = actors[0];
+        // Authored SpellDuration 300000ms; 50 frames already elapsed.
+        let remaining = expires_at.unwrap() - now;
+        assert!(
+            (297.0..=300.0).contains(&remaining),
+            "item {item}: {remaining}"
+        );
+        assert!(displays.contains(&world.get::<ModelDisplay>(actor).unwrap().display_id));
+        assert_eq!(
+            world.get::<UnitScale>(actor).copied().unwrap_or_default().0,
+            scale
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(actor)
+                .is_none()
+        );
+        let placed = *world.get::<Position>(actor).unwrap();
+        world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
+        h.advance(100);
+        assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
+    }
+}
+
+#[test]
+fn toyfx18_placed_statues_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX18_STATUE_CENSUS_REPORT");
+    let toys = report["toys"].as_array().unwrap();
+    let find = |item: u32| toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+    for item in [122126, 198646, 204405] {
+        assert!(find(item)["unavailable"].is_null(), "{}", find(item));
+    }
+    // Seats, target dummies and wormholes keep their interaction gap.
+    for item in [116689, 88375, 172924] {
+        assert!(!find(item)["unavailable"].is_null(), "{}", find(item));
+    }
+}
+
 #[derive(Resource, Default)]
 struct ToyChatCapture(std::collections::HashMap<Entity, Vec<ChatMessage>>);
 
