@@ -29,6 +29,7 @@ Pure Rust, ACID, embedded B-tree. No external server process. Tables:
 | `auctions` | `AuctionId` | AuctionData |
 | `guilds` | `GuildId` | GuildData |
 | `pvp_states` | `CharacterId` | PlayerPvpProgress |
+| `character_battleground_entries` | `CharacterId` | Captured match/copy, original entry point/facing and pre-mercenary faction; separate from unchanged character encoding |
 | `character_progression` | `CharacterId` | Active spec ID and action bar ([[class-progression]]) |
 | `character_traits` | `CharacterId` | Trait purchases per spec ([[talents]]) |
 | `character_death_states` | `CharacterId` | JSON `PlayerDeathState`: Alive/Dead/Ghost, corpse and exact selected graveyard; atomically saved with character HP and restored during character selection before entering the world |
@@ -45,6 +46,12 @@ Full state now uses an additive table, leaving character and corpse encodings un
 Pre-change records have no full-state row: existing HP/corpse reconstruction remains their explicit compatibility path. Legacy ghost restoration and the initial snapshot run together in PostUpdate, after Update login commands. Old records cannot recover a graveyard never stored; they retain the existing nearest-corpse graveyard lookup. Reopened-redb → SelectCharacter tests cover ghost/exact graveyard, unreleased dead, alive after resurrection, and a frozen pre-change corpse record.
 
 Reference: [TrinityCore 3.3.5 Player.cpp](https://github.com/TrinityCore/TrinityCore/blob/3.3.5/src/server/game/Entities/Player/Player.cpp), `Player::LoadFromDB` restores ghost/dead state before restoring saved health; `Player::LoadCorpse` restores the saved corpse instead of reviving on login. This server represents both unreleased Dead and released Ghost with HP 0.
+
+## PvP reconnect (verified: 2026-10-13)
+
+Arena/battleground entry checkpoints a durable entry point before a disconnect can save instance coordinates. Shared PvP membership retains offline characters for TC's300s. Normal `SelectCharacter` restores a surviving exact reserved copy and match/team state; if the match is missing or membership expired, map-login resolution chooses the captured origin before spawning the player. This works after closing/reopening redb. Explicit leave clears the entry; offline expiry keeps it until login can resolve the origin. Old orphaned instance coordinates without an entry row cannot recover an origin that was never stored.
+
+`pvp_reconnect.rs` owns the row, offline deadline and restoration; `maps/login.rs` resolves the location; `auth_character.rs` restores state after ordinary spawn; the existing disconnect cleanup registers the offline member before retiring the entity. Last-living arena logout is settled by the authoritative alive census without a fake combat death. Same-map movement uses reserved PvP-copy lookup, not dungeon lock lookup, so a full arena does not reject its own occupants' near teleports. [Arena contract](../../specs/arenas.md) and [native proof](../../../../game-engine/docs/wiki/systems/arenas.md#pvp-reconnect--verified-2026-10-13) retain the verification boundary.
 
 ## Legacy Database Incident: Missing `pvp_states`
 

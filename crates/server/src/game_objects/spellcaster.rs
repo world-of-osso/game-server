@@ -57,21 +57,20 @@ fn may_use(
 }
 
 fn shares_owner_group(world: &World, player: Entity, object: Entity) -> bool {
-    let Some(summoned) = world.get::<SummonedObject>(object) else {
+    let Some(owner) = world.get::<SummonedObject>(object).and_then(|s| s.owner) else {
         return false;
     };
-    if summoned.owner == player {
+    if owner == player {
         return true;
     }
-    let (Some(owner), Some(user)) = (
-        world.get::<ClientId>(summoned.owner),
-        world.get::<ClientId>(player),
-    ) else {
+    let (Some(owner_id), Some(user)) =
+        (world.get::<ClientId>(owner), world.get::<ClientId>(player))
+    else {
         return false;
     };
     world
         .resource::<crate::group::GroupRegistry>()
-        .is_in_same_group(owner.0, user.0)
+        .is_in_same_group(owner_id.0, user.0)
 }
 
 fn in_reach(world: &World, player: Entity, object: Entity, data: &SpellcasterObject) -> bool {

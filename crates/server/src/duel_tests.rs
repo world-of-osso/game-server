@@ -61,6 +61,7 @@ fn resolve_active_duel_detects_out_of_bounds_loss() {
         Some(DuelResolution::WinLoss {
             winner: target,
             loser: challenger,
+            defeated: false,
         })
     );
 }
@@ -96,6 +97,7 @@ fn resolve_active_duel_detects_health_loss() {
         Some(DuelResolution::WinLoss {
             winner: target,
             loser: challenger,
+            defeated: true,
         })
     );
 }
@@ -302,5 +304,60 @@ mod combat {
         assert!(d.damage_to_opponent().is_empty());
         // Out of combat the loser regenerates again (Player::RegenerateHealth).
         assert!(d.h.health(opponent) >= 1.0);
+    }
+
+    /// TC Player::DuelComplete: only DUEL_WON credits WinDuel76/LoseDuel77; DUEL_FLED does not.
+    #[test]
+    fn achievements_criteria_beaten_duelist_credits_win_and_loss_but_fleeing_does_not() {
+        use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+        let Some(mut d) = duel_harness() else {
+            return;
+        };
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        d.h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        d.h.app.init_resource::<crate::maps::ServerClock>();
+        let (caster, opponent) = (d.h.caster, d.opponent);
+        for player in [caster, opponent] {
+            d.h.app
+                .world_mut()
+                .entity_mut(player)
+                .insert(PlayerAchievementState::default());
+        }
+        // Statistics Duels won319 (criterion3629) and Duels lost320 (3630).
+        let counters = |d: &Duel| {
+            [
+                (caster, 3629),
+                (caster, 3630),
+                (opponent, 3629),
+                (opponent, 3630),
+            ]
+            .map(|(player, criterion)| {
+                d.h.app
+                    .world()
+                    .get::<PlayerAchievementState>(player)
+                    .unwrap()
+                    .criteria_progress
+                    .get(&criterion)
+                    .copied()
+            })
+        };
+        d.start();
+        d.h.app.world_mut().get_mut::<Position>(opponent).unwrap().x += 200.0;
+        d.h.advance(3);
+        assert!(d.h.app.world().get::<DuelOpponent>(opponent).is_none());
+        assert_eq!(counters(&d), [None; 4]);
+        d.h.app.world_mut().get_mut::<Position>(opponent).unwrap().x -= 200.0;
+        d.start();
+        d.h.app.world_mut().entity_mut(opponent).insert(Health {
+            current: 300.0,
+            max: 1000.0,
+        });
+        d.h.attack(opponent);
+        d.h.advance(1);
+        d.h.cast_and_deliver(MORTAL_STRIKE, Some(opponent));
+        d.h.advance(3);
+        assert_eq!(d.h.health(opponent), 1.0);
+        assert_eq!(counters(&d), [Some(1), None, None, Some(1)]);
     }
 }

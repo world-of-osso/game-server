@@ -284,8 +284,11 @@ impl InstanceManager {
         entrant: InstanceEntrant,
         unix: i64,
     ) -> Option<InMap> {
-        if let Some(copy) = self.battleground_copy_for(map_id, entrant.character_id) {
-            return Some(copy);
+        if matches!(
+            store.map(map_id)?.instance_type,
+            InstanceType::Battleground | InstanceType::Arena
+        ) {
+            return self.find_battleground_copy(map_id, entrant.character_id);
         }
         let (instance_id, entries, owner) = self.bound_instance(store, map_id, entrant, unix)?;
         let map = InMap {
@@ -299,7 +302,7 @@ impl InstanceManager {
             .filter(|_| copy.difficulty.difficulty_id == entries.difficulty_id)
     }
 
-    fn battleground_copy_for(&self, map_id: u32, character_id: u64) -> Option<InMap> {
+    fn find_battleground_copy(&self, map_id: u32, character_id: u64) -> Option<InMap> {
         self.battleground_by_character
             .get(&character_id)
             .copied()
@@ -332,7 +335,7 @@ impl InstanceManager {
                 self.create_dungeon(store, map_id, entrant, now)
             }
             InstanceType::Battleground | InstanceType::Arena => self
-                .battleground_copy_for(map_id, entrant.character_id)
+                .find_battleground_copy(map_id, entrant.character_id)
                 .map(|map| ResolvedMap {
                     map,
                     created: false,
@@ -668,10 +671,8 @@ impl InstanceManager {
                     .and_then(|map| self.cannot_enter(map, entrant, unix))
             }
             InstanceType::Battleground | InstanceType::Arena => {
-                match self.battleground_by_character.get(&entrant.character_id) {
-                    Some(&map) if map.map_id == map_id && self.copies.contains_key(&map) => {
-                        self.cannot_enter(map, entrant, unix)
-                    }
+                match self.find_battleground_copy(map_id, entrant.character_id) {
+                    Some(map) => self.cannot_enter(map, entrant, unix),
                     _ => Some(TransferAbortReason::MapNotAllowed),
                 }
             }

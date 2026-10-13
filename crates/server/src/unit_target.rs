@@ -1,12 +1,12 @@
 //! Replicated `UnitTarget` (target-of-target) mirrors each unit's current
 //! target: players from `CombatTarget` (SetTarget), NPCs from their
-//! `CreatureState::Pursuing` chase target, none while confused
-//! (`Unit::SetConfused` → `SetTarget(Empty)`). Written only on change.
+//! `CreatureState::Pursuing` chase target, none while confused or feared
+//! (`Unit::SetConfused`/`SetFeared` → `SetTarget(Empty)`). Written only on change.
 
 use bevy::prelude::*;
 use shared::components::UnitTarget;
 
-use crate::auras::Confused;
+use crate::auras::{Confused, Feared};
 use crate::creature_ai::CreatureState;
 use crate::grid_activity::GridDormant;
 use crate::networking::CombatTarget;
@@ -46,14 +46,15 @@ type CreatureTargets<'w, 's, F> = Query<
         Entity,
         &'static CreatureState,
         Has<Confused>,
+        Has<Feared>,
         Option<&'static UnitTarget>,
     ),
     F,
 >;
 
-/// Active creatures whose chase state changed or that became confused.
+/// Active creatures whose chase state changed or that became confused or feared.
 type Retargeted = (
-    Or<(Changed<CreatureState>, Added<Confused>)>,
+    Or<(Changed<CreatureState>, Added<Confused>, Added<Feared>)>,
     Without<GridDormant>,
 );
 
@@ -66,14 +67,16 @@ fn sync_creature_unit_target(
     all: CreatureTargets<()>,
     mut woke: RemovedComponents<GridDormant>,
     mut unconfused: RemovedComponents<Confused>,
+    mut unfeared: RemovedComponents<Feared>,
 ) {
     let resync = woke
         .read()
         .chain(unconfused.read())
+        .chain(unfeared.read())
         .filter_map(|entity| all.get(entity).ok());
-    for (entity, state, confused, current) in changed.iter().chain(resync) {
+    for (entity, state, confused, feared, current) in changed.iter().chain(resync) {
         let target = match *state {
-            CreatureState::Pursuing { target } if !confused => Some(target),
+            CreatureState::Pursuing { target } if !confused && !feared => Some(target),
             _ => None,
         };
         write_if_changed(&mut commands, entity, current, target);

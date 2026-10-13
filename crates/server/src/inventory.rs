@@ -70,16 +70,34 @@ type Requests<'w, 's, M> =
 type ErrorSenders<'w, 's> = Query<'w, 's, &'static mut MessageSender<InventoryError>>;
 type OpResult = Result<(), InventoryError>;
 
-/// Persistence plus item templates: everything `load_model` reads.
+/// Persistence plus item templates: everything `load_model` reads, and the
+/// requesting player's learned spells for `Player::CanDualWield`.
 #[derive(SystemParam)]
-struct InventoryStore<'w> {
+struct InventoryStore<'w, 's> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
+    links: Query<'w, 's, &'static PlayerLink>,
+    known: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
+    spells: Option<Res<'w, crate::spell_info::SpellStore>>,
 }
 
-impl InventoryStore<'_> {
+impl InventoryStore<'_, '_> {
     fn get(&self) -> Option<(&Database, &ItemTemplates)> {
         Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
+    }
+
+    /// SPELL_EFFECT_DUAL_WIELD sets `CanDualWield` (TC Spell::EffectDualWield).
+    fn can_dual_wield(&self, connection: Entity) -> bool {
+        let known = self
+            .links
+            .get(connection)
+            .ok()
+            .and_then(|link| self.known.get(link.0).ok());
+        crate::stats::knows_effect(
+            known,
+            self.spells.as_deref(),
+            crate::stats::EFFECT_DUAL_WIELD,
+        )
     }
 }
 
@@ -219,8 +237,10 @@ fn process_requests<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
+        let can_dual_wield = store.can_dual_wield(connection);
         for request in receiver.receive() {
             let result = load_model(db, templates, character_id).and_then(|mut model| {
+                model.set_can_dual_wield(can_dual_wield);
                 apply(&mut model, request, db)?;
                 save_inventory_record(db, character_id, &model.into_record());
                 Ok(())
@@ -247,7 +267,7 @@ type MoveRequests<'w, 's, M> = Query<
 
 #[derive(SystemParam)]
 struct MoveStore<'w, 's> {
-    store: InventoryStore<'w>,
+    store: InventoryStore<'w, 's>,
     updates: ResMut<'w, GoldUpdateQueue>,
     errors: ErrorSenders<'w, 's>,
     banks: ResMut<'w, crate::bank::ChangedCharacterBanks>,
@@ -266,6 +286,7 @@ fn process_item_moves<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, interaction, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
+        let can_dual_wield = store.store.can_dual_wield(connection);
         for request in receiver.receive() {
             let (from, to) = locations(&request);
             let bank_move = matches!(from, ItemLocation::Bank { .. })
@@ -278,7 +299,10 @@ fn process_item_moves<M: lightyear::prelude::Message>(
                 character_id,
                 bank_move,
                 banker_open,
-                |model| apply(model, request, db),
+                |model| {
+                    model.set_can_dual_wield(can_dual_wield);
+                    apply(model, request, db)
+                },
             );
             match result {
                 Ok(()) => {
@@ -431,6 +455,10 @@ fn use_item(
     let (db, templates) = use_store(world)?;
     let model = load_model(db, templates, character_id)?;
     let (on_use, item_scaling) = model.use_spell(request.location)?;
+    let item = model.existing(request.location)?;
+    let retail_item_id = (model.definition_source(item.item_guid)
+        == shared::item_data::ItemDefinitionSource::Retail)
+        .then_some(item.item_id);
     let item_level = world
         .resource::<crate::item_stats::ItemScalingTables>()
         .item_level(&item_scaling);
@@ -468,6 +496,9 @@ fn use_item(
         world
             .resource_mut::<GoldUpdateQueue>()
             .record_items(character_id);
+        if let Some(item) = retail_item_id {
+            crate::achievement::record_item_use(world, player, item);
+        }
         return Ok(());
     }
     if let Err(failure) = crate::spell_cast::cast_item_spell(
@@ -477,6 +508,7 @@ fn use_item(
         target,
         on_use.cooldown,
         item_level,
+        retail_item_id,
     ) {
         debug!("Item use spell {spell} by {player} failed: {failure:?}");
         return Ok(());

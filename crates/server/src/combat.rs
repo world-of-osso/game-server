@@ -470,15 +470,17 @@ type AutoAttackTargets<'w, 's> = Query<
 >;
 
 /// What decides whether a victim can dodge, parry or block: casting
-/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned or
-/// confused here) it cannot (Unit.cpp:2408-2413).
+/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned,
+/// confused or fleeing here) it cannot (Unit.cpp:2408-2413).
 type CanAvoid<'a> = (
     Has<shared::casting::CastState>,
     Option<&'a mut crate::auras::ActiveAuras>,
 );
 
 fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bool {
-    !casting && !auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused())
+    !casting
+        && !auras
+            .is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared())
 }
 
 /// A creature's own armor or a player's gear armor.
@@ -758,7 +760,9 @@ impl Attacker<'_> {
     /// players, the flat interval over aura haste otherwise
     /// (Unit::ApplyAttackTimePercentMod), times the MOD_SPEED_SLOW_ALL multiplier.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
-        let slow = self.mods.map_or(1.0, |mods| mods.attack_cast_time_mult);
+        let slow = self.mods.map_or(1.0, |mods| {
+            mods.attack_cast_time_mult * mods.attack_time_mult
+        });
         self.stats.map_or(
             AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01),
             |stats| melee::swing_time(weapon.speed, stats.haste_pct),
@@ -831,6 +835,7 @@ fn target_armor(
         (Some(armor), _) => {
             let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
             target.armor_against(armor.0 * multiplier, attacker)
+                * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
@@ -897,6 +902,10 @@ fn roll_outcome(
         attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
     };
     chances.miss = (base_miss - player_hit_modifier - hit_modifier).clamp(0.0, 100.0);
+    let crit_modifier = target_auras.map_or(0.0, |auras| {
+        auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
+    });
+    chances.crit = (chances.crit + crit_modifier).max(0.0);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -1094,7 +1103,16 @@ fn try_swing(
         level_difference,
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
-    let outcome_damage = if immune { 0.0 } else { outcome_damage };
+    let critical_multiplier = if kind == MeleeOutcome::Crit {
+        attacker.mods.map_or(1.0, |mods| mods.critical_damage(1))
+    } else {
+        1.0
+    };
+    let outcome_damage = if immune {
+        0.0
+    } else {
+        outcome_damage * critical_multiplier
+    };
     let absorption = crate::auras::consume_absorbs(
         avoidance
             .1
@@ -1157,7 +1175,13 @@ fn try_swing(
     if intercepted {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
-            commit_intercepted_melee_loss(world, attacker_entity, target_entity, incoming_loss);
+            commit_intercepted_melee_loss(
+                world,
+                attacker_entity,
+                target_entity,
+                damage,
+                incoming_loss,
+            );
         });
     }
     let rescue = if intercepted {
@@ -1193,6 +1217,19 @@ fn try_swing(
                 Some(attacker_entity),
                 health_before,
                 incoming_loss,
+            );
+        });
+    }
+    if !intercepted {
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::achievement::record_damage(
+                world,
+                attacker_entity,
+                target_entity,
+                health_before,
+                damage,
+                loss,
             );
         });
     }
@@ -1442,6 +1479,7 @@ fn commit_intercepted_melee_loss(
     world: &mut World,
     attacker: Entity,
     victim: Entity,
+    damage: f32,
     incoming: f32,
 ) {
     let Some(health) = world.get::<Health>(victim) else {
@@ -1458,6 +1496,7 @@ fn commit_intercepted_melee_loss(
     );
     crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming);
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
     }
@@ -1502,6 +1541,7 @@ pub(crate) fn deal_health_damage(
         crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming_loss);
     }
     let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::stand_state::stand_on_damage(world, victim);
@@ -1782,7 +1822,7 @@ pub(crate) fn respawn_system(
         }
         let mut respawned = commands.entity(entity);
         respawned
-            .remove::<(DeathState, Corpse)>()
+            .remove::<(DeathState, Corpse, crate::creature_ai::HomePosition)>()
             .insert(Replicate::to_clients(NetworkTarget::All));
         if let Some(&vignette) = vignette {
             crate::vignettes::show(&mut respawned, vignette);

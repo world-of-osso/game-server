@@ -1,0 +1,246 @@
+//! Native aura7 MOD_FEAR control state (TC a352b1fa Unit::SetControlled/SetFeared,
+//! Spell::CheckCasterAuras, SpellInfo::SpellCancelsAuraEffect/_LoadImmunityInfo).
+//! Flee movement is a separate boundary.
+
+use rusqlite::{Connection, OpenFlags};
+use shared::components::{
+    CreatureMotion, Health, ModelDisplay, Position, UnitLevel, UnitTarget, WeaponType,
+};
+use shared::protocol::{CombatLogKind, MissKind};
+
+use super::*;
+use crate::creature_ai::SpawnPoint;
+use crate::item_stats::WeaponDamage;
+use crate::spell_cast::test_harness::{Harness, harness, harness_with, harness_with_plugins};
+use crate::stats::CharacterStats;
+use crate::world_data::WorldData;
+
+const INTIMIDATING_SHOUT: u32 = 5246;
+const SLEEP_WALK: u32 = 360806;
+const SLAM: u32 = 1464;
+const TURN_EVIL: u32 = 10326;
+const BERSERKER_RAGE: u32 = 18499;
+const WILL_OF_THE_FORSAKEN: u32 = 7744;
+const BARKSKIN: u32 = 22812;
+const EVASION: u32 = 5277;
+const KOBOLD_VERMIN: u32 = 6;
+const KOBOLD_DISPLAY: u32 = 10913;
+const WARRIOR: u8 = 1;
+const ROGUE: u8 = 4;
+const DRUID: u8 = 11;
+const FLEEING: &str = "Can't do that while fleeing";
+
+fn kobold_data() -> WorldData {
+    let path = crate::test_data::world_db_path();
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let expected = crate::world_data::load_expected_stats(&conn);
+    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    templates.retain(|entry, _| *entry == KOBOLD_VERMIN);
+    crate::world_data::load_template_models(&conn, &mut templates);
+    WorldData {
+        templates,
+        ..Default::default()
+    }
+}
+
+/// A warrior with Intimidating Shout and a world kobold with creature AI and aggro.
+fn shout_harness() -> Harness {
+    let mut h = harness_with_plugins(Vec::new(), &[INTIMIDATING_SHOUT], WARRIOR, false, |app| {
+        app.insert_resource(kobold_data());
+        app.add_plugins((
+            crate::creature_ai::CreatureAiPlugin,
+            crate::creature_aggro::CreatureAggroPlugin,
+            crate::unit_target::UnitTargetPlugin,
+        ));
+    })
+    .expect("real world.db required");
+    let position = *h.app.world().get::<Position>(h.npc).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Health {
+            current: 5000.0,
+            max: 5000.0,
+        },
+        UnitLevel(5),
+        ModelDisplay {
+            display_id: KOBOLD_DISPLAY,
+        },
+        CreatureMotion::Still,
+        SpawnPoint {
+            x: position.x,
+            y: position.y,
+            z: position.z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+            speed_run: 1.14286,
+        },
+    ));
+    let mut commands = h.app.world_mut().commands();
+    let mut entity = commands.entity(h.npc);
+    crate::creature_aggro::insert_aggro_components(
+        &mut entity,
+        crate::creature_aggro::AggroMode::Reactive,
+        0.0,
+    );
+    h.app.world_mut().flush();
+    h.advance(1);
+    h
+}
+
+fn kobold_swings_within(h: &mut Harness, frames: usize) -> bool {
+    let health = h.health(h.caster);
+    h.advance(frames);
+    h.health(h.caster) < health
+}
+
+/// The npc fears the harness player with one native fear effect.
+fn fear_player(h: &mut Harness, spell_id: u32, index: u8) {
+    let (npc, player) = (h.npc, h.caster);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: npc,
+            target: player,
+            spell_id,
+            effect_mask: 1 << index,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), player, spell_id));
+}
+
+fn cast_outcome(
+    h: &mut Harness,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), Option<String>> {
+    h.inbox.failed.clear();
+    h.inbox.go.clear();
+    h.cast_and_deliver(spell_id, target);
+    if h.inbox.go.iter().any(|go| go.spell_id == spell_id) {
+        return Ok(());
+    }
+    let failure = h
+        .inbox
+        .failed
+        .iter()
+        .find(|failed| failed.spell_id == spell_id);
+    Err(failure.and_then(|failed| failed.detail.clone()))
+}
+
+#[test]
+fn class_completeness_native_fear_stops_swings_and_clears_target_until_removed() {
+    let mut h = shout_harness();
+    let (npc, warrior) = (h.npc, h.caster);
+    crate::creature_aggro::attack_start(h.app.world_mut(), npc, warrior);
+    assert!(kobold_swings_within(&mut h, 100), "the kobold never hit");
+    h.advance(30);
+    assert_eq!(cast_outcome(&mut h, INTIMIDATING_SHOUT, Some(npc)), Ok(()));
+    assert!(has_aura(h.app.world(), npc, INTIMIDATING_SHOUT));
+    assert_eq!(
+        h.app.world().get::<UnitTarget>(npc),
+        Some(&UnitTarget(None))
+    );
+    assert!(!kobold_swings_within(&mut h, 120), "a feared kobold swung");
+    remove_auras(h.app.world_mut(), npc, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == INTIMIDATING_SHOUT
+    });
+    assert!(kobold_swings_within(&mut h, 120), "the kobold fights again");
+    assert_eq!(
+        h.app.world().get::<UnitTarget>(npc),
+        Some(&UnitTarget(Some(warrior.to_bits())))
+    );
+}
+
+#[test]
+fn class_completeness_native_fear_blocks_casts_unless_the_spell_purges_its_mechanic() {
+    let mut h = harness(
+        Vec::new(),
+        &[INTIMIDATING_SHOUT, SLAM, BERSERKER_RAGE],
+        WARRIOR,
+    )
+    .expect("real world.db required");
+    h.set_power(shared::components::PowerType::Rage, 1000.0);
+    fear_player(&mut h, INTIMIDATING_SHOUT, 1);
+    let npc = h.npc;
+    assert_eq!(
+        cast_outcome(&mut h, SLAM, Some(npc)),
+        Err(Some(FLEEING.into()))
+    );
+    // Native18499: Attr1 ImmunityPurgesEffect with aura77 fear mechanic.
+    assert_eq!(cast_outcome(&mut h, BERSERKER_RAGE, None), Ok(()));
+    assert!(!has_aura(h.app.world(), h.caster, INTIMIDATING_SHOUT));
+}
+
+#[test]
+fn class_completeness_native_sleep_fear_requires_a_matching_purge_mechanic() {
+    let mut h = harness(
+        Vec::new(),
+        &[SLEEP_WALK, BERSERKER_RAGE, WILL_OF_THE_FORSAKEN],
+        WARRIOR,
+    )
+    .expect("real world.db required");
+    fear_player(&mut h, SLEEP_WALK, 0);
+    // Sleep Walk carries mechanic10; Berserker Rage purges5/14/30/23 only.
+    assert_eq!(
+        cast_outcome(&mut h, BERSERKER_RAGE, None),
+        Err(Some(FLEEING.into()))
+    );
+    assert_eq!(cast_outcome(&mut h, WILL_OF_THE_FORSAKEN, None), Ok(()));
+    assert!(!has_aura(h.app.world(), h.caster, SLEEP_WALK));
+}
+
+#[test]
+fn class_completeness_native_allow_while_fleeing_uses_allowed_mechanics() {
+    // TC adds stun/freeze/knockout/sleep plus fear/horror for Barkskin22812; Turn Evil
+    // carries mechanic23, outside that allowed mask.
+    let cases = [
+        (INTIMIDATING_SHOUT, 1, true),
+        (SLEEP_WALK, 0, true),
+        (TURN_EVIL, 0, false),
+    ];
+    for (fear, index, allowed) in cases {
+        let mut h = harness(Vec::new(), &[fear, BARKSKIN], DRUID).expect("real world.db required");
+        fear_player(&mut h, fear, index);
+        let outcome = cast_outcome(&mut h, BARKSKIN, None);
+        assert_eq!(outcome.is_ok(), allowed, "{fear}: {outcome:?}");
+        // Barkskin does not purge fear; only admission changes.
+        assert!(has_aura(h.app.world(), h.caster, fear));
+    }
+}
+
+#[test]
+fn class_completeness_native_feared_victim_cannot_dodge() {
+    for feared in [false, true] {
+        let mut h = harness_with(Vec::new(), &[EVASION, INTIMIDATING_SHOUT], ROGUE, true)
+            .expect("real world.db and computed stats required");
+        h.advance(3);
+        let rogue = h.caster;
+        assert_eq!(cast_outcome(&mut h, EVASION, Some(rogue)), Ok(()));
+        if feared {
+            fear_player(&mut h, INTIMIDATING_SHOUT, 1);
+        }
+        let npc = h.npc;
+        h.app.world_mut().entity_mut(npc).insert((
+            CharacterStats {
+                main_hand: WeaponDamage {
+                    min: 10.0,
+                    max: 10.0,
+                    speed: 2.6,
+                    kind: WeaponType::OneHand,
+                },
+                ..Default::default()
+            },
+            AuraStatMods {
+                melee_hit_chance_pct: 100.0,
+                ..Default::default()
+            },
+            crate::combat::AutoAttack::new(rogue),
+        ));
+        h.advance(4);
+        let dodged = h.inbox.log.iter().any(|event| {
+            event.source == Some(npc.to_bits())
+                && event.kind == CombatLogKind::Miss(MissKind::Dodge)
+        });
+        assert_eq!(dodged, !feared);
+    }
+}

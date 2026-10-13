@@ -43,6 +43,8 @@ mod arena_rated_queue;
 mod arena_rated_results;
 #[path = "pvp_arena_scores.rs"]
 mod arena_scores;
+#[path = "pvp_arena_shuffle.rs"]
+mod arena_shuffle;
 pub(crate) use arena_scores::record as record_arena_event;
 #[path = "pvp_arena_rating.rs"]
 mod arena_rating;
@@ -76,6 +78,8 @@ pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
+#[path = "pvp_reconnect.rs"]
+pub(crate) mod reconnect;
 use pvp_leave::process_battleground_leave_requests;
 #[path = "pvp_objective.rs"]
 mod pvp_objective;
@@ -171,6 +175,11 @@ pub(crate) fn sync_progress_currencies_from_wallet(
     changed
 }
 
+#[cfg(test)]
+pub(crate) fn forget_matches_for_reconnect_fixture(world: &mut World) {
+    world.insert_resource(PvpServerState::default());
+}
+
 #[derive(Debug)]
 struct InvitedBattleground {
     instance: BgInstance,
@@ -185,10 +194,18 @@ struct InvitedBattleground {
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
     alterac: Option<pvp_alterac::BannerRuntime>,
-    scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    scoreboard: Scoreboard,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
     arena: Option<arena::MatchState>,
+}
+
+/// Displayed rows plus TC Battleground::UpdatePvpStat receipts awaiting criteria credit.
+#[derive(Debug, Default)]
+struct Scoreboard {
+    rows: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
+    /// (character, PvpStat) once per objective credit, drained to achievements.
+    stat_credits: Vec<(u64, u32)>,
 }
 
 impl InvitedBattleground {
@@ -240,7 +257,8 @@ impl InvitedBattleground {
 }
 
 #[derive(Resource, Default)]
-struct PvpServerState {
+pub(crate) struct PvpServerState {
+    offline_players: BTreeMap<u64, reconnect::OfflinePlayer>,
     battleground_queue: BgQueue,
     rated_team_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<arena_rating::QueuedTeam>>,
     arena_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<(u64, u8)>>,
@@ -271,7 +289,7 @@ fn form_battleground_invitation(state: &mut PvpServerState, battleground_id: u32
             seething: None,
             deephaul: None,
             alterac: None,
-            scoreboard: Vec::new(),
+            scoreboard: Scoreboard::default(),
             flag_positions: [None, None],
             arena: None,
         },
@@ -356,6 +374,10 @@ impl Plugin for PvpPlugin {
         app.add_systems(
             PostUpdate,
             process_battleground_leave_requests.after(process_battleground_invitation_responses),
+        );
+        app.add_systems(
+            PostUpdate,
+            reconnect::expire_offline_players.after(process_battleground_leave_requests),
         );
         app.add_systems(
             Update,
@@ -625,7 +647,7 @@ fn resolve_battleground_matches(
                 flags: invitation.flag_objective(),
                 world_states: invitation.world_states(),
                 outcome: invitation.instance.outcome,
-                players: invitation.scoreboard.clone(),
+                players: invitation.scoreboard.rows.clone(),
                 honor_reward: None,
                 arena: None,
             });

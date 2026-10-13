@@ -676,6 +676,112 @@ fn fall_for(
     )
 }
 
+#[test]
+fn achievements_criteria_native_fall_death_distinguishes_ground_from_void() {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use crate::auth::{Authenticated, InWorld};
+    use crate::networking::PlayerLink;
+    use crate::persistence::{self, ClientId, GameDatabase};
+    for (coordinates, expected) in [
+        ((-8950.0, -132.0, 183.0), Some(1)),
+        ((-4500.0, -3210.0, -1100.0), None),
+    ] {
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins)
+            .add_message::<crate::death::PlayerDeathTransition>();
+        app.insert_resource(GroundMap::new(
+            &client_data_dir(),
+            std::collections::HashMap::from([(0, AZEROTH_WDT_FDID)]),
+        ));
+        app.init_resource::<crate::maps::ServerClock>();
+        let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let db = redb::Database::create(file.path()).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Fallproof", 1, 1).unwrap();
+        app.insert_resource(GameDatabase { db });
+        app.update();
+        let (x, y, z) =
+            crate::terrain_height::wow_to_bevy(coordinates.0, coordinates.1, coordinates.2);
+        let player = app
+            .world_mut()
+            .spawn((
+                Position { x, y, z },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                VerticalVelocity::default(),
+                FallTracker::grounded(y),
+                MovementControl::default(),
+                crate::maps::InMap {
+                    map_id: 0,
+                    instance_id: 1,
+                },
+                Player {
+                    name: "Fallproof".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                ClientId(character),
+                PlayerAchievementState::default(),
+            ))
+            .id();
+        app.world_mut().spawn((
+            Authenticated { account_id: 1 },
+            InWorld {
+                character_id: character,
+            },
+            PlayerLink(player),
+        ));
+        for _ in 0..20 * 10 {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_millis(50));
+            app.world_mut()
+                .run_system_once(crate::networking::apply_terrain_gravity)
+                .unwrap();
+            if app.world().get::<Health>(player).unwrap().current <= 0.0 {
+                break;
+            }
+        }
+        assert_eq!(app.world().get::<Health>(player).unwrap().current, 0.0);
+        // TC's void6 is logged as Falling2, but must not credit the ordinary fall criterion149.
+        assert_eq!(
+            app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&149)
+                .copied(),
+            expected
+        );
+        app.world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+        assert_eq!(
+            app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&149)
+                .copied(),
+            expected
+        );
+        drop(app);
+        let db = redb::Database::open(file.path()).unwrap();
+        assert_eq!(
+            persistence::load_achievements(&db, character)
+                .criteria_progress
+                .get(&149)
+                .copied(),
+            expected
+        );
+    }
+}
+
 /// Player::HandleFall under the map (MovementHandler.cpp:594-612): the Stockade has no grid,
 /// so `Map::GetMinHeight` is -500 (TerrainMgr.cpp:671). Teleported into the rock at (99, 77),
 /// the player falls, dies of DAMAGE_FALL_TO_VOID below -500 and is out of bounds.

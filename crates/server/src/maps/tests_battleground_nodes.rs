@@ -1243,6 +1243,7 @@ fn source_kotmogu_objects() -> crate::game_objects::GameObjectSpawns {
                         scale, orientation: 0.0,
                     },
                     spawn_difficulties: vec![0], chair: None, quest_object: None,
+                    script_name: String::new(),
                 })
             },
         ).unwrap()

@@ -66,6 +66,18 @@ pub(super) fn enter_battleground(
         return Err("battleground map entry was refused".into());
     }
     apply_team_reaction(world, player, reaction);
+    let entry = super::reconnect::Entry::new(
+        match_id,
+        state.battleground_matches[&match_id]
+            .map
+            .expect("created match copy"),
+        origin,
+        world
+            .get::<PlayerPvpState>(player)
+            .expect("participant PvP state")
+            .battleground_original_faction,
+    );
+    super::reconnect::save(world, character_id, &entry);
     state
         .battleground_matches
         .get_mut(&match_id)
@@ -73,6 +85,18 @@ pub(super) fn enter_battleground(
         .origins
         .insert(character_id, origin);
     Ok(())
+}
+
+pub(super) fn restore_team_reaction(world: &mut World, player: Entity) {
+    let arena = world
+        .get::<PlayerPvpState>(player)
+        .and_then(|state| state.battleground.as_ref())
+        .is_some_and(|snapshot| snapshot.arena.is_some());
+    if !arena {
+        let reaction =
+            read_team_reaction(world, player).expect("restored battleground participant");
+        apply_team_reaction(world, player, reaction);
+    }
 }
 
 /// TC Battleground::AddPlayer's mercenary reactions: local195838/195843

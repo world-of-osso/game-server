@@ -24,6 +24,8 @@ pub struct AuraStatMods {
     pub damage_done_mult: [f32; SCHOOL_COUNT],
     /// MOD_DAMAGE_PERCENT_TAKEN 87 per school bit.
     pub damage_taken_mult: [f32; SCHOOL_COUNT],
+    ///163: each (school mask, multiplier) applies once when any school intersects.
+    pub critical_damage_mods: Vec<(u32, f32)>,
     /// MOD_HEALING_DONE_PERCENT 136.
     pub healing_done_mult: f32,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
@@ -67,6 +69,9 @@ pub struct AuraStatMods {
     /// `ApplyCastTimePercentMod`): × 100 / (100 + amount) for a positive amount,
     /// × (100 − amount) / 100 for a negative one.
     pub attack_cast_time_mult: f32,
+    /// MOD_MELEE_HASTE_3 319 melee attack time multiplier (`HandleModMeleeSpeedPct`
+    /// → `ApplyAttackTimePercentMod`), same per-aura factor as 252.
+    pub attack_time_mult: f32,
     /// WATER_BREATHING 82: no breath timer (`Player::getMaxTimer`).
     pub water_breathing: bool,
     /// MOD_WATER_BREATHING 155 breath duration multiplier (`GetTotalAuraMultiplier`).
@@ -88,6 +93,7 @@ impl Default for AuraStatMods {
         Self {
             damage_done_mult: [1.0; SCHOOL_COUNT],
             damage_taken_mult: [1.0; SCHOOL_COUNT],
+            critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
             autoattack_damage_mult: 1.0,
@@ -102,6 +108,7 @@ impl Default for AuraStatMods {
             swim_speed: 1.0,
             melee_hit_chance_pct: 0.0,
             attack_cast_time_mult: 1.0,
+            attack_time_mult: 1.0,
             water_breathing: false,
             water_breathing_mult: 1.0,
             health_regen_mult: 1.0,
@@ -132,6 +139,14 @@ impl AuraStatMods {
         Self::school_mult(&self.damage_taken_mult, school_mask)
     }
 
+    pub fn critical_damage(&self, school_mask: u32) -> f32 {
+        self.critical_damage_mods
+            .iter()
+            .filter(|(mask, _)| mask & school_mask != 0)
+            .map(|(_, multiplier)| multiplier)
+            .product()
+    }
+
     pub fn power_regen(&self, power_type: i32) -> f32 {
         self.power_regen_mult
             .iter()
@@ -147,6 +162,15 @@ impl AuraStatMods {
             .map(|(_, amount)| amount)
             .sum()
     }
+}
+
+/// HandleModRating snapshots points; TC Aura::Update keeps its duration even
+/// with a null caster. Other aura kinds retain their existing source requirements.
+pub(crate) fn retains_rating_snapshot(aura: &AuraInstance) -> bool {
+    !aura.effects.is_empty()
+        && aura.effects.iter().all(|effect| {
+            effect.aura_type == MOD_RATING && effect.misc_values[0] == VERSATILITY_RATING_MASK
+        })
 }
 
 fn pct(amount: f32) -> f32 {
@@ -312,6 +336,17 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     );
                 }
             }
+            MOD_RESISTANCE_PCT => {
+                if misc & 1 != 0 {
+                    stats.total_armor_pct += amount * (1.0 + stats.total_armor_pct / 100.0);
+                }
+                if misc & !1 != 0 {
+                    warn!(
+                        "Aura101 spell{} has unmodeled nonphysical resistance mask{misc}",
+                        aura.spell_id
+                    );
+                }
+            }
             MOD_ARMOR_PCT_FROM_STAT => {
                 if misc == -2 {
                     stats.armor_from_primary_stat_pct += amount;
@@ -322,6 +357,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_CRIT_PCT => stats.crit_pct += amount,
+            // HandleModRating truncates each effect before ApplyRatingMod. Do not
+            // triple-count the same rating for damage/healing/damage-taken bits.
+            MOD_RATING if misc == VERSATILITY_RATING_MASK => {
+                stats.ratings_flat.versatility += effect.amount.trunc() * stacks;
+            }
             // Retail 12.x haste is one stat: melee, ranged and spell haste
             // auras all add to it.
             MOD_MELEE_HASTE
@@ -344,6 +384,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             // Player::UpdateDodgePercentage adds aura 49 outside rating DR.
             MOD_DODGE_PERCENT => stats.dodge_pct += amount,
             MOD_PARRY_PERCENT => stats.parry_pct += amount,
+            MOD_CRIT_DAMAGE_BONUS => combat.critical_damage_mods.push((misc as u32, pct(amount))),
             MOD_DAMAGE_PERCENT_DONE => each_school(misc, |school| {
                 combat.damage_done_mult[school] *= pct(amount)
             }),
@@ -384,6 +425,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,
             MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
+            MOD_MELEE_HASTE_3 => combat.attack_time_mult *= time_percent_mod(amount),
             WATER_BREATHING => combat.water_breathing = true,
             MOD_WATER_BREATHING => combat.water_breathing_mult *= pct(amount),
             MOD_HEALTH_REGEN_PERCENT => combat.health_regen_mult *= pct(amount),

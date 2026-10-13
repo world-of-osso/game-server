@@ -15,7 +15,7 @@
 //! `IN_PROGRESS` to `NOT_STARTED` (a wipe; TrinityCore sends nothing) also sends
 //! `EncounterEnd` without success, as Retail's SMSG_ENCOUNTER_END does.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -35,6 +35,8 @@ const BOSS_FRAME_PRIORITY: u8 = 1;
 pub enum EncounterState {
     NotStarted,
     InProgress,
+    /// TC BossAI::_DespawnAtEvade; not a completed or saved encounter.
+    Fail,
     Done,
 }
 
@@ -54,6 +56,8 @@ pub struct InstanceScript {
     pub name: &'static str,
     pub bosses: Vec<BossInfo>,
     pub boss_creatures: Vec<(u32, u32)>,
+    /// `OnlyOnceAreaTriggerScript` success state; discarded when this copy unloads.
+    pub(crate) handled_area_triggers: HashSet<u32>,
 }
 
 impl InstanceScript {
@@ -100,6 +104,7 @@ fn compatibility_catalog(map_id: u32) -> InstanceScript {
         name: "data_encounters",
         bosses: Vec::new(),
         boss_creatures: Vec::new(),
+        handled_area_triggers: HashSet::new(),
     };
     for row in include_str!("encounter_compat.csv")
         .lines()
@@ -314,17 +319,21 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
             crate::mythic_plus::record_boss(world, map, encounter_id);
             crate::raid_history::record_first_kill(world, map, encounter_id, difficulty_id);
         }
-        EncounterState::NotStarted if previous == EncounterState::InProgress => send_to_players(
-            world,
-            map,
-            EncounterEnd {
-                encounter_id,
-                difficulty_id,
-                group_size,
-                success: false,
-            },
-        ),
-        EncounterState::NotStarted => {}
+        EncounterState::NotStarted | EncounterState::Fail
+            if previous == EncounterState::InProgress =>
+        {
+            send_to_players(
+                world,
+                map,
+                EncounterEnd {
+                    encounter_id,
+                    difficulty_id,
+                    group_size,
+                    success: false,
+                },
+            )
+        }
+        EncounterState::NotStarted | EncounterState::Fail => {}
     }
     true
 }

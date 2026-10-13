@@ -48,6 +48,8 @@ pub(crate) struct InventoryModel {
     appearance_account: Option<u64>,
     appearance_grants: Vec<u32>,
     transmogs: HashMap<u64, crate::transmog_store::ItemTransmog>,
+    /// `Player::CanDualWield`: the player knows a SPELL_EFFECT_DUAL_WIELD spell.
+    can_dual_wield: bool,
 }
 
 pub(crate) fn error(reason: InventoryErrorReason, detail: impl Into<String>) -> InventoryError {
@@ -93,6 +95,7 @@ impl InventoryModel {
             appearance_account: record.appearance_account,
             appearance_grants: record.appearance_grants,
             transmogs: record.transmogs,
+            can_dual_wield: false,
         };
         for entry in record.equipped {
             model
@@ -856,6 +859,37 @@ impl InventoryModel {
         self.swap(from, ItemLocation::Equipment(*target))
     }
 
+    pub(crate) fn set_can_dual_wield(&mut self, can_dual_wield: bool) {
+        self.can_dual_wield = can_dual_wield;
+    }
+
+    /// TC a352b1fa `Player::CanEquipItem` off-hand weapons (Player.cpp:10866-10886).
+    /// No content off-hand weapon carries ITEM_FLAG3_ALWAYS_ALLOW_DUAL_WIELD and Titan's
+    /// Grip is unmodelled, so two-handers never fit the off hand.
+    fn validate_off_hand_weapon(&self, item: &InventoryItemData, inventory_type: u8) -> OpResult {
+        const WEAPON: u8 = 13;
+        const WEAPON_OFF_HAND: u8 = 22;
+        const ITEM_CLASS_WEAPON: u8 = 2;
+        const SUBCLASS_POLEARM: u8 = 6;
+        let scaling = self.template(item).map(|template| template.scaling);
+        let polearm = scaling.is_some_and(|scaling| {
+            scaling.class_id == ITEM_CLASS_WEAPON && scaling.subclass_id == SUBCLASS_POLEARM
+        });
+        if inventory_type == WEAPON && polearm {
+            return Err(error(
+                InventoryErrorReason::WrongSlot,
+                "one-hand polearms cannot go in the off hand",
+            ));
+        }
+        if matches!(inventory_type, WEAPON | WEAPON_OFF_HAND) && !self.can_dual_wield {
+            return Err(error(
+                InventoryErrorReason::CantDualWield,
+                "the character cannot dual wield",
+            ));
+        }
+        Ok(())
+    }
+
     fn validate_equip(&self, item: &InventoryItemData, slot: EquipmentSlot) -> OpResult {
         let inventory_type = self.inventory_type(item);
         let allowed = self.equip_slots(item);
@@ -868,11 +902,8 @@ impl InventoryModel {
                 format!("inventory type {inventory_type} cannot go in {slot:?}"),
             ));
         }
-        if inventory_type == 13 && slot == EquipmentSlot::OffHand {
-            return Err(error(
-                InventoryErrorReason::CantDualWield,
-                "dual wield is not tracked by the server",
-            ));
+        if slot == EquipmentSlot::OffHand {
+            self.validate_off_hand_weapon(item, inventory_type)?;
         }
         let template = self
             .template(item)

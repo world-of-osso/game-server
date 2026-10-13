@@ -7,8 +7,9 @@
 //! has one, `DB2Manager::GetBroadcastTextValue`), else `creature_text.Text`. The
 //! chat type is `Type` (12 say, 14 yell, 16 emote, 41 boss emote) and it reaches
 //! `TextRange` 3 (map: every player of the speaker's map copy) or 0 (the chat
-//! type's listen range: say and emotes 25 yards, yell 300). Emotes, sounds and the
-//! area, zone, world and personal ranges are not used by the ported scripts.
+//! type's listen range: say and emotes 25 yards, yell 300). Normal-play sounds share
+//! that audience; gender-specific BroadcastText SoundKit overrides the text's Sound.
+//! Emotes and area, zone, world and personal ranges are not used by the ported scripts.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -17,7 +18,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{ModelDisplay, Npc, Player, Position};
-use shared::protocol::{ChatChannel, ChatMessage, ChatType};
+use shared::protocol::{ChatChannel, ChatMessage, ChatType, CreatureTextSound};
 
 use crate::maps::InMap;
 use crate::networking::PlayerLink;
@@ -47,6 +48,9 @@ pub struct CreatureTextEntry {
     pub male_text: String,
     /// BroadcastText `Text1`; empty when the text has no female form.
     pub female_text: String,
+    pub sound: u32,
+    pub sound_play_type: u8,
+    pub broadcast_sounds: [u32; 2],
 }
 
 #[derive(Resource, Debug, Default)]
@@ -66,9 +70,12 @@ pub fn load_creature_texts(conn: &Connection) -> rusqlite::Result<CreatureTexts>
     let mut texts = CreatureTexts::default();
     let mut statement = conn.prepare(
         "SELECT t.CreatureID, t.GroupID, t.ID, t.Type, t.TextRange, t.Probability, t.Text,
-                COALESCE(b.MaleText, ''), COALESCE(b.FemaleText, ''), b.ID IS NOT NULL
+                COALESCE(b.MaleText, ''), COALESCE(b.FemaleText, ''), b.ID IS NOT NULL,
+                t.Sound, t.SoundPlayType, COALESCE(r.SoundKitID1, 0), COALESCE(r.SoundKitID2, 0)
          FROM content_creature_text t
          LEFT JOIN content_broadcast_text b ON b.ID = t.BroadcastTextId AND t.BroadcastTextId <> 0
+         LEFT JOIN tdb_broadcast_text r ON r.ID = t.BroadcastTextId
+           AND r.VerifiedBuild = (SELECT MAX(latest.VerifiedBuild) FROM tdb_broadcast_text latest WHERE latest.ID = r.ID)
          ORDER BY t.CreatureID, t.GroupID, t.ID",
     )?;
     let rows = statement.query_map([], |row| {
@@ -82,6 +89,9 @@ pub fn load_creature_texts(conn: &Connection) -> rusqlite::Result<CreatureTexts>
                 chat_type: row.get(3)?,
                 text_range: row.get(4)?,
                 probability: row.get::<_, f64>(5)? as f32,
+                sound: row.get(10)?,
+                sound_play_type: row.get(11)?,
+                broadcast_sounds: [row.get(12)?, row.get(13)?],
                 male_text: if broadcast { row.get(7)? } else { own_text },
                 female_text: if broadcast {
                     row.get(8)?
@@ -186,8 +196,43 @@ pub fn talk(world: &mut World, speaker: Entity, group: u8) {
         "[{:?}] {}: {}",
         message.channel, message.sender, message.content
     );
+    let gender = speaker_gender(world, speaker);
+    let broadcast_sound = text.broadcast_sounds[usize::from(gender == Some(GENDER_FEMALE))];
+    let sound_kit = if broadcast_sound != 0 {
+        broadcast_sound
+    } else {
+        text.sound
+    };
     for player in hearers(world, speaker, range) {
         send_chat(world, player, message.clone());
+        // Native voice coverage is currently Naminze only; other creature sounds
+        // remain outside this arena change instead of emitting unsupported kits.
+        if npc.template_id == crate::pvp::arena_cage::NAMINZE && sound_kit != 0 {
+            if text.sound_play_type == 0 {
+                send_sound(
+                    world,
+                    player,
+                    CreatureTextSound {
+                        speaker: speaker_bits,
+                        sound_kit,
+                    },
+                );
+            } else {
+                warn!(
+                    "creature_text SoundPlayType {} of {} is not ported",
+                    text.sound_play_type, speaker_bits
+                );
+            }
+        }
+    }
+}
+
+fn send_sound(world: &mut World, player: Entity, message: CreatureTextSound) {
+    let mut connections = world.query::<(&PlayerLink, &mut MessageSender<CreatureTextSound>)>();
+    for (link, mut sender) in connections.iter_mut(world) {
+        if link.0 == player {
+            sender.send::<ChatChannel>(message.clone());
+        }
     }
 }
 

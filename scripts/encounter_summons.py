@@ -3,7 +3,8 @@
 
 No placements, guessed stats, loot or schedules. Kystia: local TDB255050/models/
 Normal1 and DB2 summon1264098. Golden Serpent: pinned Spit Gold removal summons
-TDB135406, its actual base0 row and models; no new difficulty row is fabricated.
+TDB135406 and the Serpentine Seal summons Shadow of Zul137020; each gets its actual
+base0 row, models and template addon; no new difficulty row is fabricated.
 """
 import argparse
 import sqlite3
@@ -14,6 +15,7 @@ import retail_content
 
 MIRROR = 255050
 ANIMATED_GOLD = 135406
+SHADOW_OF_ZUL = 137020
 
 
 def import_mirror_template(connection):
@@ -46,18 +48,31 @@ def import_mirror_template(connection):
     return MIRROR
 
 
-def import_animated_gold_template(connection):
-    row = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?',(ANIMATED_GOLD,)).fetchone()
-    if row != ('','npc_animated_gold'):
-        raise ValueError('Animated Gold source AI identity changed')
+def import_base_template(connection, entry, script_name):
+    """Project one source script's actual base difficulty0 template and models."""
+    row = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?',(entry,)).fetchone()
+    if row != ('',script_name):
+        raise ValueError(f'{entry} source AI identity changed')
     connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
     connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
-    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=? AND DifficultyID=0',(ANIMATED_GOLD,))
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=? AND DifficultyID=0',(entry,))
     if connection.execute('SELECT count(*) FROM temp.tdb_difficulty').fetchone()[0] != 1:
-        raise ValueError('Missing authored Animated Gold base difficulty0')
-    retail_content.insert_tdb_templates(connection,str(ANIMATED_GOLD))
-    connection.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(ANIMATED_GOLD,))
-    return ANIMATED_GOLD
+        raise ValueError(f'Missing authored {entry} base difficulty0')
+    retail_content.insert_tdb_templates(connection,str(entry))
+    connection.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(entry,))
+    # retail_content.build_addons' projection of the template's actual addon row.
+    connection.execute(f'''INSERT OR IGNORE INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=?''',(entry,))
+    return entry
+
+
+def import_animated_gold_template(connection):
+    return import_base_template(connection, ANIMATED_GOLD, 'npc_animated_gold')
+
+
+def import_shadow_of_zul_template(connection):
+    """go_kings_rest_serpentine_seal summons NPC_SHADOW_OF_ZUL137020."""
+    return import_base_template(connection, SHADOW_OF_ZUL, 'npc_kings_rest_shadow_of_zul')
 
 
 def main():
@@ -72,8 +87,11 @@ def main():
         parser.error('copy must be an existing independent regular file')
     with closing(sqlite3.connect(args.db)) as conn:
         with conn:
-            entry = import_animated_gold_template(conn) if args.encounter == 'golden-serpent' else import_mirror_template(conn)
-    print(f'Imported sourced encounter summon template/model:{entry}; no placement inserted')
+            if args.encounter == 'golden-serpent':
+                entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
+            else:
+                entries = [import_mirror_template(conn)]
+    print(f'Imported sourced encounter summon templates/models:{entries}; no placement inserted')
 
 
 if __name__ == '__main__':
