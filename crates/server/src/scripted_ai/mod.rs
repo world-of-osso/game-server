@@ -23,7 +23,7 @@ pub mod instance_script;
 pub mod kings_rest;
 pub mod movement;
 pub mod murder_row;
-mod ruby_life_pools;
+pub(crate) mod ruby_life_pools;
 pub mod smart_ai;
 pub mod the_stockade;
 pub mod waypoint_path;

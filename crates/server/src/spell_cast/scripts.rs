@@ -137,6 +137,12 @@ pub(super) fn relocate_destination(
     {
         crate::scripted_ai::murder_row::relocate_mirror_destination(dest);
     }
+    if spell_id == crate::scripted_ai::ruby_life_pools::STORM_INFUSION
+        && effect.index == 1
+        && effect.implicit_targets.contains(&87)
+    {
+        crate::scripted_ai::ruby_life_pools::relocate_storm_destination(dest);
+    }
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {

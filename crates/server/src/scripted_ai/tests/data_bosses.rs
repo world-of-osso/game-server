@@ -884,6 +884,55 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
 }
 
+/// TC spell_ruby_life_pools_storm_infusion offsets effect1 TARGET_DEST_DEST by
+/// Position::RelocateOffset(local9,0,4), relative to the destination's orientation.
+#[test]
+fn encounter_coverage_ruby_storm_infusion_creates_trigger_at_oriented_offset() {
+    let (mut h, _, map) =
+        encounter_fixture(195119, 2521, 0, 23, None, EncounterState::NotStarted, false);
+    let caster = h.player();
+    let origin = Position {
+        x: 12.0,
+        y: 20.0,
+        z: 31.0,
+    };
+    for (orientation, expected) in [
+        (0.0, Vec3::new(21.0, 24.0, 31.0)),
+        (std::f32::consts::FRAC_PI_2, Vec3::new(12.0, 24.0, 22.0)),
+    ] {
+        h.app.world_mut().entity_mut(caster).insert((
+            origin,
+            shared::components::Rotation {
+                x: 0.0,
+                y: orientation + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 395029, None, true)
+            .expect("real395029 self/destination cast");
+        let triggers: Vec<_> = h
+            .app
+            .world_mut()
+            .query::<(
+                Entity,
+                &crate::spell_cast::area_trigger::SpellAreaTrigger,
+                &Position,
+                &InMap,
+            )>()
+            .iter(h.app.world())
+            .filter(|(_, trigger, _, copy)| trigger.spell_id == 395029 && **copy == map)
+            .map(|(entity, _, position, _)| (entity, Vec3::new(position.x, position.y, position.z)))
+            .collect();
+        assert_eq!(triggers.len(), 1);
+        assert!(
+            triggers[0].1.distance(expected) < 0.001,
+            "oriented9yd forward/4yd up: {:?}",
+            triggers[0].1
+        );
+        h.app.world_mut().despawn(triggers[0].0);
+    }
+}
+
 /// TC spell_ruby_life_pools_ice_shield ticks every1s and refreshes an existing
 /// 372749 aura, without reapplying/refilling its absorb or creating a missing shield.
 #[test]
