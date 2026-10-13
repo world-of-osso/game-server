@@ -5,6 +5,7 @@ use shared::components::Health;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 use super::*;
+use crate::class_progression::KnownSpells;
 use crate::combat::AutoAttack;
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 use crate::spell_info::SpellStore;
@@ -20,6 +21,8 @@ const HAVOC_CRIT_BONUS: u32 = 201_455;
 const BURNING_GAZE: u32 = 194_312;
 const PHYSICAL_CRIT_NOTES: u32 = 80_554;
 const FLASH_HEAL: u32 = 2061;
+const ZERO_MASK_SHARD: u32 = 171_751;
+const PYRETIC_INCANTATION: u32 = 194_329;
 const DEMON_HUNTER: u8 = 12;
 
 fn set_crit(h: &mut Harness, chance: f32) {
@@ -188,4 +191,53 @@ fn class_completeness_native_163_precise_killer_increases_auto_attack_crit_damag
         crits.iter().all(|event| (74..=77).contains(&event.amount)),
         "{crits:?}"
     );
+}
+
+#[test]
+fn class_completeness_native_163_does_not_modify_noncritical_damage() {
+    let mut h = harness(Vec::new(), &[PRECISE_KILLER, INNER_DEMONS], DEMON_HUNTER).unwrap();
+    set_crit(&mut h, 0.0);
+    apply_native(&mut h, PRECISE_KILLER);
+    let damage = cast_damage(&mut h, INNER_DEMONS);
+    assert!(!damage.crit);
+    assert_eq!(damage.amount, 137);
+}
+
+#[test]
+fn class_completeness_native_163_zero_school_mask_does_not_become_all_schools() {
+    let mut h = harness(Vec::new(), &[ZERO_MASK_SHARD, INNER_DEMONS], DEMON_HUNTER).unwrap();
+    set_crit(&mut h, 100.0);
+    apply_native(&mut h, ZERO_MASK_SHARD);
+    assert_eq!(cast_damage(&mut h, INNER_DEMONS).amount, 273);
+}
+
+#[test]
+fn class_completeness_native_163_unlearning_removes_the_damage_multiplier() {
+    let mut h = harness(Vec::new(), &[PRECISE_KILLER, INNER_DEMONS], DEMON_HUNTER).unwrap();
+    set_crit(&mut h, 100.0);
+    apply_native(&mut h, PRECISE_KILLER);
+    assert_eq!(cast_damage(&mut h, INNER_DEMONS).amount, 300);
+    let unit = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(KnownSpells::fixture(vec![INNER_DEMONS]));
+    h.advance(1);
+    assert_eq!(cast_damage(&mut h, INNER_DEMONS).amount, 273);
+}
+
+#[test]
+fn class_completeness_native_163_stacked_amount_caps_at_native_five_uses_not_five_products() {
+    let mut h = harness(
+        Vec::new(),
+        &[PYRETIC_INCANTATION, INNER_DEMONS],
+        DEMON_HUNTER,
+    )
+    .unwrap();
+    set_crit(&mut h, 100.0);
+    for _ in 0..6 {
+        apply_native(&mut h, PYRETIC_INCANTATION);
+    }
+    // Native2% ×five stacks =10%, not1.02^5 and not a sixth stack.
+    assert_eq!(cast_damage(&mut h, INNER_DEMONS).amount, 300);
 }
