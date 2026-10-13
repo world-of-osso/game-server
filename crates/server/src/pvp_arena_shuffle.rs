@@ -6,6 +6,10 @@ use shared::battleground::{BgOutcome, BgPhase, BgTeam};
 use shared::components::{ActiveSpec, Player};
 use shared::protocol::{ArenaQueueMode, SoloShuffleSnapshot};
 
+#[cfg(test)]
+#[path = "pvp_arena_shuffle_tests.rs"]
+mod tests;
+
 const HEALER: u32 = 1;
 const DAMAGE: u32 = 2;
 const PAIRS: [[usize; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
