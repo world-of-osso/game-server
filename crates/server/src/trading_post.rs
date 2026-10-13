@@ -276,6 +276,15 @@ fn send_snapshot(
         }
         Err(error) => snapshot.source_gaps.push(error.clone()),
     }
+    eprintln!(
+        "TP_SNAPSHOT_ENQUEUE complete={} frozen={:?} rows={} sender={}",
+        snapshot.catalog_complete,
+        snapshot.frozen_item_id,
+        snapshot.items.len(),
+        world
+            .get::<MessageSender<TradingPostSnapshot>>(connection)
+            .is_some()
+    );
     if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
         sender.send::<InstanceChannel>(snapshot);
     }
