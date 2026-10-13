@@ -39,6 +39,8 @@ mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
 #[cfg(test)]
+mod charge_rate_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
