@@ -252,6 +252,13 @@ fn achievements_criteria_native_fireball_and_melee_each_credit_the_actual_hit_on
             .get(&162),
         Some(&spell_damage)
     );
+    // This tests damage credit, not the random melee hit table. The native
+    // stat-less player path has zero miss/avoidance chances and still executes
+    // AttackSwing, timers, damage delivery, combat logs and achievement credit.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<crate::stats::CharacterStats>();
     h.attack(h.npc);
     h.advance(55);
     h.stop_attack();
