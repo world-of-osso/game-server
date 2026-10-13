@@ -135,7 +135,7 @@ fn encounter_fixture(
     templates.retain(|id, _| {
         *id == entry
             || (entry == 234648 && [234660, 255050].contains(id))
-            || (entry == 135322 && *id == 135406)
+            || (entry == 135322 && [135406, 137020].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
@@ -153,8 +153,9 @@ fn encounter_fixture(
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    let (spawn_string_ids, script_spawn_groups) = if populate {
+    let (template_string_ids, spawn_string_ids, script_spawn_groups) = if populate {
         (
+            crate::world_data::load_template_string_ids(&conn).unwrap(),
             crate::world_data::load_spawn_string_ids(&conn).unwrap(),
             crate::world_data::load_script_spawn_groups(&conn, super::super::SCRIPT_SPAWN_GROUPS)
                 .unwrap(),
@@ -167,6 +168,7 @@ fn encounter_fixture(
         difficulty_templates,
         spawns_by_map: crate::world_data::build_spawns_by_map(&spawns),
         spawns,
+        template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
         class_level_base_hp: hp,
@@ -234,6 +236,11 @@ fn encounter_fixture(
             content,
             false,
         );
+        // Object spawns and their lock sidecar are unchanged by the template import.
+        let canonical =
+            Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let objects = crate::game_objects::load_game_object_spawns(&canonical).unwrap();
+        crate::game_objects::spawn_map_game_objects(&mut commands, &objects, map, difficulty);
         queue.apply(app.world_mut());
         // 500 yards east of the Serpent's spawn, outside every aggro radius.
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
@@ -565,9 +572,9 @@ fn encounter_coverage_golden_serpent_spawns_after_last_temple_event_death() {
     let temple: Vec<Entity> = h
         .app
         .world_mut()
-        .query::<(Entity, &InMap, &crate::zones::CreatureStringId)>()
+        .query::<(Entity, &InMap, &crate::zones::CreatureStringIds)>()
         .iter(h.app.world())
-        .filter(|(_, other, id)| **other == map && id.0 == "TempleEvent")
+        .filter(|(_, other, ids)| **other == map && ids.has("TempleEvent"))
         .map(|(entity, _, _)| entity)
         .collect();
     assert_eq!(temple.len(), 17, "TDB1210 TempleEvent creatures on map1762");
@@ -596,6 +603,73 @@ fn encounter_coverage_golden_serpent_spawns_after_last_temple_event_death() {
         "spawned Serpent starts its NotStarted intro"
     );
     assert!(h.has_aura(serpent, 271598));
+}
+
+#[test]
+fn encounter_coverage_zul_despawns_only_untagged_cosmetic_spirits() {
+    let (mut h, map) = kings_rest_copy(23);
+    let seal = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(h.app.world())
+        .find(|(_, info)| info.entry == 288466)
+        .map(|(entity, _)| entity)
+        .expect("Serpentine Seal spawned in the copy");
+    // go_kings_rest_serpentine_seal's summon point.
+    let zul = crate::zones::summon_creature(
+        h.app.world_mut(),
+        seal,
+        137020,
+        [-1066.0365, 2643.302, 819.37024, 5.028946],
+    )
+    .expect("Shadow of Zul template");
+    let spirits: Vec<(Entity, bool)> = h
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &InMap,
+            &shared::components::Npc,
+            Option<&crate::zones::CreatureStringIds>,
+        )>()
+        .iter(h.app.world())
+        .filter(|(_, other, npc, _)| {
+            **other == map && [137650, 137651, 137652].contains(&npc.template_id)
+        })
+        .map(|(entity, _, _, ids)| {
+            let kept = ids.is_some_and(|ids| ids.has("DontForceRespawn"));
+            (entity, kept)
+        })
+        .collect();
+    let kept = spirits.iter().filter(|(_, kept)| *kept).count();
+    assert_eq!(
+        (spirits.len(), kept),
+        (132, 27),
+        "map1762 content spirit rows"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), zul, 270692, None, false)
+        .expect("real 270692 dest-area cast");
+    h.advance(2.9);
+    assert!(
+        spirits.iter().all(|(spirit, _)| h
+            .app
+            .world()
+            .get::<crate::combat::DeathState>(*spirit)
+            .is_none()),
+        "authored SmartAI waits 3s after the hit"
+    );
+    h.advance(0.3);
+    for (spirit, kept) in spirits {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(spirit)
+                .is_none(),
+            kept,
+            "condition58 spares DontForceRespawn; others despawn"
+        );
+    }
 }
 
 fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {

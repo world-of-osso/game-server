@@ -6,8 +6,8 @@
 //! A unit meets an effect's list when every condition of one `ElseGroup` holds
 //! (`IsObjectMeetToConditionList`), each negated by `NegativeCondition`; an effect
 //! without conditions takes every unit. Object-entry conditions (current51 and
-//! source-supported legacy31) without a spawn id are modelled for units/players;
-//! other conditions are unmet and reported when loaded.
+//! source-supported legacy31) without a spawn id and creature StringId (58) are
+//! modelled for units/players; other conditions are unmet and reported when loaded.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -21,6 +21,8 @@ const SOURCE_SPELL_IMPLICIT_TARGET: u32 = 13;
 /// `CONDITION_OBJECT_ENTRY_GUID`.
 const CONDITION_OBJECT_ENTRY_GUID: u32 = 51;
 const CONDITION_OBJECT_ENTRY_GUID_LEGACY: u32 = 31;
+/// `CONDITION_STRING_ID`.
+const CONDITION_STRING_ID: i64 = 58;
 /// `TypeID` values `CONDITION_OBJECT_ENTRY_GUID` compares (ObjectGuid.h).
 const TYPEID_UNIT: u32 = 5;
 const TYPEID_PLAYER: u32 = 6;
@@ -31,6 +33,8 @@ const LEGACY_TYPEID_PLAYER: u32 = 4;
 enum Check {
     /// `ConditionValue1` type id, `ConditionValue2` entry (0 = any).
     ObjectEntry { type_id: u32, entry: u32 },
+    /// `ConditionStringValue1`: `Creature::HasStringId`.
+    StringId(String),
     /// A condition type or form not modelled: never met.
     Unsupported,
 }
@@ -85,6 +89,9 @@ fn condition_meets(world: &World, check: &Check, unit: Entity) -> bool {
             };
             unit_type == type_id && (entry == 0 || unit_entry == entry)
         }
+        Check::StringId(ref id) => world
+            .get::<crate::zones::CreatureStringIds>(unit)
+            .is_some_and(|ids| ids.has(id)),
         Check::Unsupported => false,
     }
 }
@@ -105,7 +112,8 @@ fn decode_object_entry(kind: i64, type_id: u32, entry: u32) -> Check {
 }
 
 const CONDITION_QUERY: &str = "SELECT SourceEntry, SourceGroup, ElseGroup, ConditionTypeOrReference, \
-     ConditionTarget, ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition \
+     ConditionTarget, ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition, \
+     ConditionStringValue1 \
      FROM tdb_conditions WHERE SourceTypeOrReferenceId = ?1 \
      ORDER BY SourceEntry, SourceGroup, ElseGroup";
 
@@ -122,17 +130,27 @@ pub(crate) fn load_spell_target_conditions(path: &Path) -> rusqlite::Result<Spel
             row.get::<_, u32>(4)?,
             [row.get::<_, u32>(5)?, row.get(6)?, row.get(7)?],
             row.get::<_, u32>(8)? != 0,
+            row.get::<_, Option<String>>(9)?.unwrap_or_default(),
         ))
     })?;
     let mut conditions = SpellTargetConditions::default();
     let mut unsupported = 0;
     for row in rows {
-        let (spell, effect_mask, else_group, kind, target, [value1, value2, value3], negative) =
-            row?;
-        let check = if target == 0 && value3 == 0 {
-            decode_object_entry(kind, value1, value2)
-        } else {
-            Check::Unsupported
+        let (
+            spell,
+            effect_mask,
+            else_group,
+            kind,
+            target,
+            [value1, value2, value3],
+            negative,
+            text,
+        ) = row?;
+        let check = match kind {
+            _ if target != 0 => Check::Unsupported,
+            CONDITION_STRING_ID => Check::StringId(text),
+            _ if value3 == 0 => decode_object_entry(kind, value1, value2),
+            _ => Check::Unsupported,
         };
         if check == Check::Unsupported {
             unsupported += 1;

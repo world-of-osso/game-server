@@ -204,7 +204,9 @@ pub struct WorldData {
     pub pools: crate::spawn_pools::SpawnPools,
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
     pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
-    /// TDB `creature.StringId` keyed by content spawn guid (`HasStringId`).
+    /// TDB `creature_template.StringId` keyed by entry.
+    pub(crate) template_string_ids: HashMap<u32, String>,
+    /// TDB `creature.StringId` keyed by content spawn guid.
     pub(crate) spawn_string_ids: HashMap<u32, String>,
     /// Members of the manual spawn groups ported scripts spawn (`SpawnGroupSpawn`),
     /// keyed by group; copy fill withholds them.
@@ -256,6 +258,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let pools = crate::spawn_pools::SpawnPools::load(&conn)
         .expect("Failed to load content_pool_*; run scripts/import-spawn-pools.sh");
     let vignettes = crate::vignettes::load_creature_vignettes(&conn);
+    let template_string_ids =
+        load_template_string_ids(&conn).expect("Failed to load TDB creature_template.StringId");
     let spawn_string_ids =
         load_spawn_string_ids(&conn).expect("Failed to load TDB creature.StringId");
     let script_spawn_groups =
@@ -287,6 +291,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         armor_constants,
         pools,
         vignettes,
+        template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
     }
@@ -294,6 +299,14 @@ pub fn load_world_data(path: &Path) -> WorldData {
 
 /// `import_instance_population.OFFSET`: content guid of a TDB creature row.
 const TDB_GUID_OFFSET: u32 = 20_000_000;
+
+pub(crate) fn load_template_string_ids(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<u32, String>> {
+    conn.prepare("SELECT entry, StringId FROM tdb_creature_template WHERE StringId <> ''")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect()
+}
 
 pub(crate) fn load_spawn_string_ids(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
     conn.prepare(

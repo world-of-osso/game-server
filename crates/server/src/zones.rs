@@ -59,9 +59,23 @@ impl MapContent {
     }
 }
 
-/// The spawn's `creature.StringId` (`Creature::HasStringId`).
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub struct CreatureStringId(pub String);
+/// `Creature::m_stringIds`: template, spawn and script StringIds.
+#[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
+pub struct CreatureStringIds {
+    pub template: Option<String>,
+    pub spawn: Option<String>,
+    pub script: Option<String>,
+}
+
+impl CreatureStringIds {
+    /// `Creature::HasStringId`.
+    pub fn has(&self, id: &str) -> bool {
+        [&self.template, &self.spawn, &self.script]
+            .into_iter()
+            .flatten()
+            .any(|string_id| string_id == id)
+    }
+}
 
 /// `Map::SpawnGroupSpawn(groupId)` for a script-owned group withheld at copy fill.
 pub(crate) fn spawn_group_spawn(
@@ -221,11 +235,6 @@ fn spawn_creatures<'a>(
                 .entity(entity)
                 .insert(CreatureDifficulty(difficulty_id));
         }
-        if let Some(string_id) = world_data.spawn_string_ids.get(&spawn.guid) {
-            commands
-                .entity(entity)
-                .insert(CreatureStringId(string_id.clone()));
-        }
         entities.insert(spawn.guid, entity);
     }
     insert_formation_members(commands, world_data, &entities);
@@ -315,6 +324,14 @@ pub(crate) fn spawn_creature(
         );
         crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
         crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
+        let string_ids = CreatureStringIds {
+            template: world_data.template_string_ids.get(&template.entry).cloned(),
+            spawn: world_data.spawn_string_ids.get(&spawn.guid).cloned(),
+            script: None,
+        };
+        if string_ids != CreatureStringIds::default() {
+            entity.insert(string_ids);
+        }
         insert_mana(&mut entity, world_data, template, level);
         if template.regenerates_health {
             entity.insert(crate::spell_cast::powers::CreatureHealthRegenTimer::default());
@@ -921,7 +938,8 @@ mod tests {
                 poolSpawnId INTEGER NOT NULL, chance REAL NOT NULL, description TEXT,
                 PRIMARY KEY (type, spawnId));
              CREATE TABLE content_gameobject (guid INTEGER PRIMARY KEY, map INTEGER);
-             CREATE TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, VignetteID INTEGER);
+             CREATE TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, VignetteID INTEGER,
+                StringId TEXT);
              CREATE TABLE tdb_creature (guid INTEGER PRIMARY KEY, id INTEGER, StringId TEXT);
              CREATE TABLE tdb_spawn_group (groupId INTEGER, spawnType INTEGER, spawnId INTEGER);
              CREATE TABLE tdb_spawn_group_template (groupId INTEGER PRIMARY KEY, groupName TEXT,

@@ -157,14 +157,14 @@ pub(crate) fn spawn_serpent_after_temple_event(
     died: Query<
         (
             &crate::maps::InMap,
-            &crate::zones::CreatureStringId,
+            &crate::zones::CreatureStringIds,
             Option<&crate::zones::CreatureDifficulty>,
             Has<lightyear::prelude::Replicate>,
         ),
         Added<crate::combat::DeathState>,
     >,
     living: Query<
-        (&crate::maps::InMap, &crate::zones::CreatureStringId),
+        (&crate::maps::InMap, &crate::zones::CreatureStringIds),
         Without<crate::combat::DeathState>,
     >,
     mut commands: Commands,
@@ -172,8 +172,8 @@ pub(crate) fn spawn_serpent_after_temple_event(
     for (&map, string_id, difficulty, replicate) in &died {
         let remaining = living
             .iter()
-            .any(|(other, id)| *other == map && id.0 == TEMPLE_EVENT);
-        if string_id.0 != TEMPLE_EVENT || remaining {
+            .any(|(other, ids)| *other == map && ids.has(TEMPLE_EVENT));
+        if !string_id.has(TEMPLE_EVENT) || remaining {
             continue;
         }
         let difficulty = difficulty.map_or(0, |difficulty| difficulty.0);
