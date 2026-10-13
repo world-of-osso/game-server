@@ -1,7 +1,7 @@
 //! Mechanic immunity is keyed by the catalog's spell and effect mechanics.
 use bevy::prelude::*;
 
-use super::{ActiveAuras, AuraInstance, RemoveReason, handlers};
+use super::{ActiveAuras, AuraEffectState, AuraInstance, RemoveReason, handlers};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
@@ -15,6 +15,27 @@ fn matches_mechanic(spell: &SpellInfo, effect_mechanic: u32, mechanic: i32) -> b
                 .is_some_and(|categories| categories.mechanic == mechanic as u32))
 }
 
+fn mask_matches(spell: &SpellInfo, effect_mechanic: u32, mask: u64) -> bool {
+    let category = spell
+        .categories
+        .as_ref()
+        .map_or(0, |categories| categories.mechanic);
+    [category, effect_mechanic]
+        .into_iter()
+        .any(|mechanic| mechanic > 0 && mechanic < u64::BITS && mask & (1u64 << mechanic) != 0)
+}
+
+fn effect_matches(spell: &SpellInfo, mechanic: u32, immunity: &AuraEffectState) -> bool {
+    match immunity.aura_type {
+        handlers::MECHANIC_IMMUNITY => matches_mechanic(spell, mechanic, immunity.misc_values[0]),
+        handlers::MECHANIC_IMMUNITY_MASK => immunity
+            .immunity
+            .as_ref()
+            .is_some_and(|definition| mask_matches(spell, mechanic, definition.mechanics_mask)),
+        _ => false,
+    }
+}
+
 /// Pass zero for category-only hit rejection; effect hits also supply their mechanic.
 pub(crate) fn blocks_mechanic(
     world: &World,
@@ -26,21 +47,28 @@ pub(crate) fn blocks_mechanic(
         return false;
     }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
-        auras.iter().flat_map(|aura| &aura.effects).any(|immunity| {
-            immunity.aura_type == handlers::MECHANIC_IMMUNITY
-                && matches_mechanic(spell, effect_mechanic, immunity.misc_values[0])
-        })
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .any(|immunity| effect_matches(spell, effect_mechanic, immunity))
     })
 }
 
 /// Remove the whole existing aura when any applied effect matches, preserving
 /// normal removal hooks, combat logs and stat reconciliation.
 pub(super) fn remove_matching(world: &mut World, target: Entity, immunity: &AuraInstance) {
-    let mechanics: Vec<i32> = immunity
+    const IMMUNITY_PURGES_EFFECT: u32 = 0x0000_8000;
+    let purges = world
+        .resource::<SpellStore>()
+        .get(immunity.spell_id)
+        .is_some_and(|spell| super::attributes(spell, 1) & IMMUNITY_PURGES_EFFECT != 0);
+    let mechanics: Vec<&AuraEffectState> = immunity
         .effects
         .iter()
-        .filter(|effect| effect.aura_type == handlers::MECHANIC_IMMUNITY)
-        .map(|effect| effect.misc_values[0])
+        .filter(|effect| {
+            effect.aura_type == handlers::MECHANIC_IMMUNITY
+                || effect.aura_type == handlers::MECHANIC_IMMUNITY_MASK && purges
+        })
         .collect();
     if mechanics.is_empty() {
         return;
@@ -58,7 +86,7 @@ pub(super) fn remove_matching(world: &mut World, target: Entity, immunity: &Aura
     });
 }
 
-fn aura_matches(world: &World, aura: &AuraInstance, mechanics: &[i32]) -> bool {
+fn aura_matches(world: &World, aura: &AuraInstance, mechanics: &[&AuraEffectState]) -> bool {
     let Some(spell) = world.resource::<SpellStore>().get(aura.spell_id) else {
         return false;
     };
@@ -70,6 +98,6 @@ fn aura_matches(world: &World, aura: &AuraInstance, mechanics: &[i32]) -> bool {
         applied
             && mechanics
                 .iter()
-                .any(|&mechanic| matches_mechanic(spell, effect.mechanic, mechanic))
+                .any(|immunity| effect_matches(spell, effect.mechanic, immunity))
     })
 }

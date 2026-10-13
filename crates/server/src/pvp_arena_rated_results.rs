@@ -7,7 +7,7 @@ use shared::protocol::ArenaRatingChange;
 use std::collections::BTreeMap;
 
 pub(super) fn apply_result(world: &mut World, id: u64) {
-    let result = {
+    let (mode, winner, rated, map) = {
         let matched = &world.resource::<PvpServerState>().battleground_matches[&id];
         let Some(arena) = matched.arena.as_ref() else {
             return;
@@ -18,7 +18,7 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         let Some(BgOutcome::Winner(winner)) = matched.instance.outcome else {
             return;
         };
-        (arena.mode, winner, rated.clone())
+        (arena.mode, winner, rated.clone(), arena.source.map_id)
     };
     let mut query = world.query::<(Entity, &ClientId, &PlayerPvpState)>();
     let online: BTreeMap<_, _> = query
@@ -26,8 +26,9 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         .map(|(entity, id, _)| (id.0, entity))
         .collect();
     let mut changes = Vec::new();
-    let mut win_credits = Vec::new();
-    for before in &result.2.players {
+    let mut result_credits = Vec::new();
+    let team_size = super::arena::team_size(mode).expect("validated rated mode");
+    for before in &rated.players {
         let mut progress = match online.get(&before.id) {
             Some(entity) => world
                 .get::<PlayerPvpState>(*entity)
@@ -36,19 +37,19 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
                 .clone(),
             None => persistence::load_pvp(&world.resource::<GameDatabase>().db, before.id),
         };
-        let bracket = arena_rated_queue::bracket(result.0);
+        let bracket = arena_rated_queue::bracket(mode);
         let entry = progress
             .brackets
             .iter_mut()
             .find(|entry| entry.bracket == bracket)
             .expect("arena bracket");
-        let won = before.team == result.1;
+        let won = before.team == winner;
         let own = if before.team == BgTeam::A { 0 } else { 1 };
-        let opponent_mmr = result.2.team_mmr[1 - own];
+        let opponent_mmr = rated.team_mmr[1 - own];
         let rating_after = before
             .rating
             .saturating_add_signed(arena_rating::rating_delta(before.rating, opponent_mmr, won));
-        let mmr_delta = arena_rating::matchmaker_delta(result.2.team_mmr[own], opponent_mmr, won);
+        let mmr_delta = arena_rating::matchmaker_delta(rated.team_mmr[own], opponent_mmr, won);
         let mmr_after = before.mmr.saturating_add_signed(mmr_delta);
         entry.rating = Some(rating_after);
         entry.matchmaker_rating = Some(mmr_after);
@@ -65,9 +66,7 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
                 .get_mut::<PlayerPvpState>(*entity)
                 .expect("arena player")
                 .progress = progress;
-            if won {
-                win_credits.push((*entity, before.rating));
-            }
+            result_credits.push((*entity, before.rating, won));
         }
         changes.push(ArenaRatingChange {
             character_id: before.id,
@@ -89,7 +88,14 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         arena.snapshot.rating_changes = changes;
         arena.rated.as_mut().expect("rated match").applied = true;
     }
-    for (player, before_rating) in win_credits {
-        crate::achievement::record_ranked_arena_win(world, player, before_rating);
+    for (player, before_rating, won) in result_credits {
+        crate::achievement::record_ranked_arena_result(
+            world,
+            player,
+            before_rating,
+            map,
+            team_size,
+            won,
+        );
     }
 }

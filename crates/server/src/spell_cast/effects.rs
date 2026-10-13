@@ -568,7 +568,9 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
                 world.get::<crate::hunter_pet::HunterPet>(target),
                 world.get::<super::summon::SummonedCreature>(target),
             );
+            let modifiers = world.get::<crate::stats::StatModifiers>(target);
             target_scaling.armor_against(armor.0 * multiplier, &caster_scaling)
+                * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
@@ -582,15 +584,63 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
     )
 }
 
-/// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
-fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if let Some(chance) = super::scripts::crit_chance(world, caster, target, spell.id) {
-        return chance;
+/// TC SpellInfo::IsRangedWeaponSpell; ItemTemplate.h weapon subclass mask.
+fn is_ranged_weapon_spell(spell: &SpellInfo) -> bool {
+    const HUNTER_FAMILY: u32 = 9;
+    const HUNTER_NON_WEAPON_FLAG: u32 = 0x1000_0000;
+    const RANGED_WEAPON_SUBCLASSES: u32 = (1 << 2) | (1 << 3) | (1 << 18);
+    const USES_RANGED_SLOT: u32 = 0x2;
+    let hunter_weapon = spell.class_options.as_ref().is_some_and(|options| {
+        options.spell_class_set == HUNTER_FAMILY
+            && options.spell_class_mask[1] & HUNTER_NON_WEAPON_FLAG == 0
+    });
+    let ranged_item = spell
+        .equipped_items
+        .as_ref()
+        .is_some_and(|items| items.item_subclass & RANGED_WEAPON_SUBCLASSES != 0);
+    hunter_weapon || ranged_item || super::attributes(spell, 0) & USES_RANGED_SLOT != 0
+}
+
+/// Unit::SpellCritChanceTaken plus SpellInfo::GetAttackType (a352b1fa).
+fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
+    const DEFENSE_MELEE: u32 = 2;
+    const DEFENSE_RANGED: u32 = 3;
+    match spell
+        .categories
+        .as_ref()
+        .map(|categories| categories.defense_type)
+    {
+        Some(DEFENSE_MELEE) => true,
+        Some(DEFENSE_RANGED) => !is_ranged_weapon_spell(spell),
+        _ => false,
     }
-    let base = world
-        .get::<CharacterStats>(caster)
-        .map_or(0.0, |stats| stats.crit_pct);
-    spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+}
+
+/// SharedDefines.h:539, SPELL_ATTR2_CANT_CRIT.
+const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
+
+/// CritChance mods and script values precede the victim's melee crit modifier.
+fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT != 0 {
+        return 0.0;
+    }
+    let chance =
+        super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
+            let base = world
+                .get::<CharacterStats>(caster)
+                .map_or(0.0, |stats| stats.crit_pct);
+            spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+        });
+    let modifier = if takes_melee_crit_modifier(spell) {
+        world
+            .get::<crate::auras::ActiveAuras>(target)
+            .map_or(0.0, |auras| {
+                auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
+            })
+    } else {
+        0.0
+    };
+    (chance + modifier).max(0.0)
 }
 
 fn with_crit(
