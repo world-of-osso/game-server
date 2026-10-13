@@ -3,11 +3,11 @@
 ## Source area-group closure — active2026-10-13
 
 - [x] Preserve the69 authored Toy root `RequiredAreasID` bindings and42 complete area groups from local69933 source exports; producer reads world.db without mutation and refuses missing groups before replacing its manifest.
-- [ ] Cast start and completion require the player's actual area or an authored parent to match a source group member, before item cooldown/effect spending. Missing actual area fails explicitly, never through a guessed map/zone fallback.
-- [ ] Player-owned restricted auras interrupt when a real area change leaves the source group, following TC a352b1fa `Player::UpdateAreaDependentAuras`; changing areas within the group preserves them.
-- [ ] Preserve ordinary unrestricted casts and actual item/category cooldown history; no test reset.
+- [x] Cast start and completion require the player's actual area or an authored parent to match a source group member, before item cooldown/effect spending. Missing actual area fails explicitly, never through a guessed map/zone fallback.
+- [x] Player-owned restricted auras interrupt when a real area change leaves the source group, following TC a352b1fa `Player::UpdateAreaDependentAuras`; changing areas within the group preserves them.
+- [x] Preserve ordinary unrestricted casts and actual item/category cooldown history; no test reset.
 
-Runtime guards consume the committed source manifest at cast start and completion. Terrain-area ancestry uses AreaTable ParentAreaID; absent terrain or metadata rejects with typed `IncorrectArea` and the source group detail. Player-owned restricted auras use ordinary interrupted removal; native and lifecycle acceptance remains pending until recorded proof.
+Runtime guards consume the committed source manifest at cast start and completion. Terrain-area ancestry uses AreaTable ParentAreaID; absent terrain or metadata rejects with typed `IncorrectArea` and the source group detail. Player-owned restricted auras use ordinary interrupted removal. Real ADT fixtures cover all69 refusals, Goldshire activation/category history, Draenor parent membership and natural five-second completion refusal. Both native skins prove actual Eagger Basket learning/use, Northshire refusal, Goldshire activation and exit removal while remaining category time decreases normally. Evidence: area21-proof-ledger.json in the toy-effects14 continuation evidence directory.
 
 Facing-only requirements225826/406870, procedural/positioner rendering and generic non-Toy redesign are separate. WMO-only actual-area identification remains an explicit capability gap. Producer: `scripts/generate_toy_area_requirements.py`; behavioral tests: `scripts/tests/test_generate_toy_area_requirements.py`. New visual admission (Pendant115503/171352) waits for full region/lifecycle/native proof.
 

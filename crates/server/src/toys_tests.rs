@@ -3962,9 +3962,12 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
         ));
     for (spell, group) in spells {
         let spell: u32 = spell.parse().unwrap();
-        for absent in [false, true] {
-            if absent {
+        for missing_location in 0..3 {
+            if missing_location == 1 {
                 h.app.world_mut().entity_mut(h.caster).remove::<Position>();
+            }
+            if missing_location == 2 {
+                h.app.insert_resource(crate::ground::GroundMap::default());
             }
             let failure = crate::spell_cast::cast_granted(h.app.world_mut(), h.caster, spell, None)
                 .unwrap_err();
@@ -3974,9 +3977,9 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
                     shared::spell_data::CastFailReason::IncorrectArea,
                     Some(format!("Requires area group{}", group.as_u64().unwrap()))
                 ),
-                "spell{spell}, absent={absent}"
+                "spell{spell}, missing_location={missing_location}"
             );
-            if absent {
+            if missing_location != 0 {
                 place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
             }
         }
