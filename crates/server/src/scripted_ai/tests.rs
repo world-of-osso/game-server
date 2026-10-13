@@ -162,6 +162,11 @@ struct Harness {
 }
 
 fn stockade_app(data: &'static Data) -> App {
+    stockade_app_with(data, |_| {})
+}
+
+/// `extra` adds plugins before the app is finished.
+fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -177,6 +182,7 @@ fn stockade_app(data: &'static Data) -> App {
         ScriptedAiPlugin,
         crate::achievement::AchievementPlugin,
     ));
+    extra(&mut app);
     app.insert_resource(bossmod::Catalog::default());
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
@@ -275,6 +281,16 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 MessageReceiver::<EncounterEngageUnit>::default(),
                 MessageSender::<EncounterDisengageUnit>::default(),
                 MessageReceiver::<EncounterDisengageUnit>::default(),
+            ),
+            (
+                MessageSender::<shared::protocol::UseGameObject>::default(),
+                MessageReceiver::<shared::protocol::UseGameObject>::default(),
+                MessageSender::<shared::protocol::InteractionOpened>::default(),
+                MessageReceiver::<shared::protocol::InteractionOpened>::default(),
+                MessageSender::<shared::protocol::InteractionClosed>::default(),
+                MessageReceiver::<shared::protocol::InteractionClosed>::default(),
+                MessageSender::<shared::protocol::InteractionFailed>::default(),
+                MessageReceiver::<shared::protocol::InteractionFailed>::default(),
             ),
             (
                 MessageSender::<CombatLogEvent>::default(),

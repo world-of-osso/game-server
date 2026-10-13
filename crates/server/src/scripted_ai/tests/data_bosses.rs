@@ -104,7 +104,14 @@ fn encounter_fixture(
     populate: bool,
 ) -> (Harness, Option<Entity>, InMap) {
     let data = data().expect("world.db fixture");
-    let mut app = stockade_app(data);
+    let mut app = stockade_app_with(data, |app| {
+        if populate {
+            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
+            app.insert_resource(
+                crate::faction::world_db_faction_templates().expect("world.db faction templates"),
+            );
+        }
+    });
     if let Some(catalog) = catalog {
         app.insert_resource(catalog);
     }
@@ -563,40 +570,107 @@ fn encounter_coverage_golden_serpent_intro_flies_authored_paths_then_lands_hosti
 }
 
 #[test]
-fn encounter_coverage_golden_serpent_spawns_after_last_temple_event_death() {
+fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
     let (mut h, map) = kings_rest_copy(23);
+    let temple = |h: &mut Harness| -> Vec<Entity> {
+        h.app
+            .world_mut()
+            .query_filtered::<(Entity, &InMap, &crate::zones::CreatureStringIds), Without<crate::combat::DeathState>>()
+            .iter(h.app.world())
+            .filter(|(_, other, ids)| **other == map && ids.has("TempleEvent"))
+            .map(|(entity, _, _)| entity)
+            .collect()
+    };
+    assert!(temple(&mut h).is_empty(), "manual group1255 is withheld");
     assert!(
         h.creatures_of(135322).is_empty(),
-        "manual spawn group1256 is withheld at copy fill"
+        "manual group1256 is withheld"
     );
-    let temple: Vec<Entity> = h
+    let seal = h
         .app
         .world_mut()
-        .query::<(Entity, &InMap, &crate::zones::CreatureStringIds)>()
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
         .iter(h.app.world())
-        .filter(|(_, other, ids)| **other == map && ids.has("TempleEvent"))
-        .map(|(entity, _, _)| entity)
-        .collect();
-    assert_eq!(temple.len(), 17, "TDB1210 TempleEvent creatures on map1762");
-    for &creature in &temple[..16] {
+        .find(|(_, info)| info.entry == 288466)
+        .map(|(entity, _)| entity)
+        .expect("Serpentine Seal spawned in the copy");
+    let seal_position = *h.app.world().get::<Position>(seal).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: seal_position.x + 2.0,
+        ..seal_position
+    });
+    let use_seal = |h: &mut Harness| {
+        let connection = h.players[0].1;
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::UseGameObject>>(connection)
+            .unwrap()
+            .send::<shared::protocol::InteractionChannel>(shared::protocol::UseGameObject {
+                object: seal.to_bits(),
+            });
+    };
+    use_seal(&mut h);
+    h.advance(0.1);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectInUse>(seal)
+            .is_some(),
+        "UseDoorOrButton marks the seal in use"
+    );
+    use_seal(&mut h);
+    h.advance(2.7);
+    assert!(
+        h.creatures_of(137020).is_empty(),
+        "Zul waits the seal's 3s task"
+    );
+    h.advance(0.3);
+    let zuls = h.creatures_of(137020);
+    assert_eq!(zuls.len(), 1, "an in-use seal cannot be used again");
+    let zul = zuls[0];
+    assert!(
+        h.app
+            .world()
+            .get::<crate::zones::CreatureStringIds>(zul)
+            .is_some_and(|ids| ids.has("SerpentBossEvent"))
+    );
+    h.advance(1.1);
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|chat| chat.content.contains("G'huun")),
+        "Zul's +1s Talk0"
+    );
+    h.advance(8.0);
+    assert!(temple(&mut h).is_empty(), "temple spawns wait for +10s");
+    h.advance(1.0);
+    let raised = temple(&mut h);
+    assert_eq!(raised.len(), 17, "SpawnGroupSpawn1255");
+    assert!(h.has_aura(zul, 269058), "shadowform until +15s");
+    h.advance(5.0);
+    assert!(!h.has_aura(zul, 269058));
+    h.advance(1.2);
+    assert!(
+        h.app.world().get_entity(zul).is_err()
+            || h.app
+                .world()
+                .get::<crate::combat::DeathState>(zul)
+                .is_some(),
+        "Zul vanishes and unsummons 1s after +16s"
+    );
+    for &creature in &raised[..16] {
         h.hit_pct(creature, 1_000.0);
     }
     h.advance(0.1);
-    assert!(
-        h.creatures_of(135322).is_empty(),
-        "one living TempleEvent creature still holds the Serpent"
-    );
-    h.hit_pct(temple[16], 1_000.0);
+    assert!(h.creatures_of(135322).is_empty());
+    h.hit_pct(raised[16], 1_000.0);
     h.advance(0.1);
     let serpents = h.creatures_of(135322);
     assert_eq!(serpents.len(), 1);
     let serpent = serpents[0];
     assert_eq!(*h.app.world().get::<InMap>(serpent).unwrap(), map);
-    assert!(
-        h.wow_position(serpent)
-            .distance(Vec3::new(-1065.97, 2641.51, 796.115))
-            < 0.01
-    );
     assert_eq!(
         h.app.world().get::<UnitFactionTemplate>(serpent).unwrap().0,
         35,

@@ -4,7 +4,7 @@
 No placements, guessed stats, loot or schedules. Kystia: local TDB255050/models/
 Normal1 and DB2 summon1264098. Golden Serpent: pinned Spit Gold removal summons
 TDB135406 and the Serpentine Seal summons Shadow of Zul137020; each gets its actual
-base0 row and models; no new difficulty row is fabricated.
+base0 row, models and template addon; no new difficulty row is fabricated.
 """
 import argparse
 import sqlite3
@@ -60,6 +60,9 @@ def import_base_template(connection, entry, script_name):
         raise ValueError(f'Missing authored {entry} base difficulty0')
     retail_content.insert_tdb_templates(connection,str(entry))
     connection.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(entry,))
+    # retail_content.build_addons' projection of the template's actual addon row.
+    connection.execute(f'''INSERT OR IGNORE INTO content_creature_template_addon
+        SELECT a.entry, {retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon a WHERE a.entry=?''',(entry,))
     return entry
 
 

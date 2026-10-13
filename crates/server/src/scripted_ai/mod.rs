@@ -42,7 +42,25 @@ use crate::networking::CombatTarget;
 pub use event_map::EventMap;
 
 /// Manual spawn groups ported scripts spawn; copy fill withholds their members.
-pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[kings_rest::SPAWN_GROUP_SERPENT_BOSS];
+pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
+    kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    kings_rest::SPAWN_GROUP_SERPENT_BOSS,
+];
+
+/// `gameobject_template.ScriptName`s with a ported `GameObjectAI`.
+pub(crate) fn is_game_object_script(script_name: &str) -> bool {
+    script_name == kings_rest::SERPENTINE_SEAL_SCRIPT
+}
+
+/// `GameObjectAI::OnGossipHello` of the object's ported script.
+pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object: Entity) {
+    let Some(script) = world.get::<crate::game_objects::GameObjectScript>(object) else {
+        return;
+    };
+    if script.0 == kings_rest::SERPENTINE_SEAL_SCRIPT {
+        kings_rest::serpentine_seal_gossip_hello(world, player, object);
+    }
+}
 
 pub struct ScriptedAiPlugin;
 
@@ -55,6 +73,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
+            .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(
                 FixedUpdate,
                 (
@@ -77,6 +96,7 @@ impl Plugin for ScriptedAiPlugin {
                         .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
                     kings_rest::spawn_serpent_after_temple_event,
+                    kings_rest::update_serpentine_seals.before(update_creature_ai),
                     kings_rest::update_molten_gold_areas
                         .after(update_creature_ai)
                         .after(crate::combat::auto_attack_system),
@@ -311,8 +331,14 @@ fn initialize_ai(world: &mut World, creature: Entity) {
     if name != SMART_AI && !name.is_empty() {
         dispatch(world, creature, Hook::InitializeAi);
     }
-    dispatch(world, creature, Hook::JustAppeared);
+    world.entity_mut(creature).insert(TriggerJustAppeared);
 }
+
+/// `Creature::m_triggerJustAppeared`: set at AddToMap and Respawn, consumed by the
+/// creature's next `Update`, so a summoner's post-summon setup (e.g.
+/// `SetScriptStringId`) is visible to `JustAppeared`.
+#[derive(Component)]
+struct TriggerJustAppeared;
 
 /// `Creature::Respawn`: the creature starts over with a new AI.
 pub(crate) fn reinitialize(world: &mut World, creature: Entity) {
@@ -334,6 +360,29 @@ fn update_creature_ai(world: &mut World) {
         .collect();
     for creature in creatures {
         dispatch(world, creature, Hook::UpdateAi(diff_ms));
+    }
+}
+
+/// The head of `Creature::Update`: `JustAppeared` once after AddToMap or Respawn.
+/// `Map::Update` updates objects before relocation notifies, so this precedes the
+/// tick's sight and aggro.
+fn trigger_just_appeared(world: &mut World) {
+    let creatures: Vec<Entity> = world
+        .query_filtered::<Entity, (
+            With<TriggerJustAppeared>,
+            With<CreatureAiState>,
+            Without<DeathState>,
+            Without<GridDormant>,
+        )>()
+        .iter(world)
+        .collect();
+    for creature in creatures {
+        // An earlier creature's hook may have despawned this one.
+        let Ok(mut entity) = world.get_entity_mut(creature) else {
+            continue;
+        };
+        entity.remove::<TriggerJustAppeared>();
+        dispatch(world, creature, Hook::JustAppeared);
     }
 }
 

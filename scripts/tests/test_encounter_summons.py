@@ -37,13 +37,17 @@ class MirrorTemplateTests(unittest.TestCase):
                 source_models = db.execute('SELECT CreatureDisplayID,DisplayScale FROM tdb_creature_template_model WHERE CreatureID=137020').fetchall()
                 db.execute('DELETE FROM content_creature_template WHERE entry=137020')
                 db.execute('DELETE FROM content_creature_template_model WHERE CreatureID=137020')
+                db.execute('DELETE FROM content_creature_template_addon WHERE entry=137020')
                 db.commit()
                 import_shadow_of_zul_template(db)
+                # TDB AnimTier3 packs into bytes1 bits 24-31; auras carry Shadowform269058.
+                self.assertEqual(db.execute('SELECT bytes1,bytes2,auras FROM content_creature_template_addon WHERE entry=137020').fetchone(), (3 << 24,1,'269058'))
                 self.assertEqual(db.execute('SELECT name,ScriptName,faction FROM content_creature_template WHERE entry=137020').fetchone(), ('Shadow of Zul','npc_kings_rest_shadow_of_zul',16))
                 self.assertEqual(db.execute('SELECT CreatureDisplayID,DisplayScale FROM content_creature_template_model WHERE CreatureID=137020').fetchall(),source_models)
                 self.assertEqual(db.execute('SELECT count(*) FROM content_creature').fetchone()[0],before)
                 import_shadow_of_zul_template(db)
                 self.assertEqual(db.execute('SELECT count(*) FROM content_creature_template WHERE entry=137020').fetchone()[0],1)
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature_template_addon WHERE entry=137020').fetchone()[0],1)
 
     def test_exact_source_template_models_and_unrelated_population_preserved(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1564,6 +1564,7 @@ pub fn interrupt_auras(
         (aura.interrupt_flags[0] & flags[0] != 0 || aura.interrupt_flags[1] & flags[1] != 0)
             && Some(aura.spell_id) != except_spell
     });
+    crate::spell_cast::interrupt_channel_with_flags(world, unit, flags, except_spell);
 }
 
 // --- Systems ---
