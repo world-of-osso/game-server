@@ -4177,6 +4177,153 @@ fn toyfx18_weather_machine_refuses_unaudited_weather_shape() {
     }
 }
 
+/// TC spell_item_wormhole_pandaria WormholeTargetLocations.
+const WORMHOLE_PANDARIA_DESTINATIONS: [u32; 9] = [
+    126756, 126757, 126758, 126759, 126760, 126761, 126762, 126763, 126764,
+];
+
+fn prepare_world_port(h: &mut Harness, conn: &rusqlite::Connection, character: u64) {
+    use lightyear::prelude::*;
+    use shared::protocol::{NewWorld, WorldPortAck};
+    h.app
+        .insert_resource(crate::spell_cast::teleport_positions::load_positions(conn).unwrap());
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(conn).unwrap());
+    h.app.init_resource::<crate::maps::InstanceManager>();
+    h.app
+        .add_systems(Update, crate::maps::transfer::receive_world_port_acks);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::persistence::ClientId(character),
+        shared::components::CombatStatus(false),
+    ));
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<NewWorld>::default(),
+        MessageReceiver::<NewWorld>::default(),
+        MessageSender::<WorldPortAck>::default(),
+        MessageReceiver::<WorldPortAck>::default(),
+    ));
+}
+
+#[test]
+fn toyfx18_wormhole_pandaria_transfers_to_one_authored_pandaria_point() {
+    use lightyear::prelude::*;
+    use shared::components::Position;
+    use shared::protocol::{NewWorld, TransferChannel, WorldPortAck};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("wormhole.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    prepare_world_port(&mut h, &conn, character);
+    let positions = crate::spell_cast::teleport_positions::load_positions(&conn).unwrap();
+    let destinations: Vec<_> = WORMHOLE_PANDARIA_DESTINATIONS
+        .iter()
+        .map(|spell| positions.0[&(*spell, 0)])
+        .collect();
+    assert!(destinations.iter().all(|point| point.map_id == 870));
+    learn_effect_toy(&mut h, character, 87215);
+    assert_eq!(activate(&mut h, 87215)[0].error, None);
+    let mut worlds = Vec::new();
+    for _ in 0..250 {
+        h.advance(1);
+        worlds.extend(drain::<NewWorld>(&mut h.app, h.connection));
+    }
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 126755));
+    let teleports: Vec<_> = h
+        .inbox
+        .go
+        .iter()
+        .filter(|go| WORMHOLE_PANDARIA_DESTINATIONS.contains(&go.spell_id))
+        .map(|go| go.spell_id)
+        .collect();
+    assert_eq!(teleports.len(), 1, "{teleports:?}");
+    let destination = positions.0[&(teleports[0], 0)];
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::maps::MapTransfer>(h.caster)
+            .unwrap()
+            .destination,
+        destination
+    );
+    assert_eq!(worlds.len(), 1);
+    assert_eq!(worlds[0].map_id, 870);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<WorldPortAck>>(h.connection)
+        .unwrap()
+        .send::<TransferChannel>(WorldPortAck);
+    h.advance(4);
+    assert_eq!(
+        *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap(),
+        crate::maps::InMap::continent(870)
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        destination.bevy_position()
+    );
+}
+
+#[test]
+fn toyfx18_wormhole_refuses_missing_destination_or_source_drift() {
+    use shared::components::Position;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for drift in [
+        "missing point",
+        "missing teleport",
+        "teleport target",
+        "extra effect",
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("wormhole-refusal.redb"));
+        prepare_world_port(&mut h, &conn, character);
+        let mut spells: Vec<_> = std::iter::once(126755)
+            .chain(WORMHOLE_PANDARIA_DESTINATIONS)
+            .map(|id| store.get(id).unwrap().clone())
+            .collect();
+        match drift {
+            "missing point" => {
+                h.app
+                    .world_mut()
+                    .resource_mut::<crate::spell_cast::teleport_positions::SpellTargetPositions>()
+                    .0
+                    .remove(&(126760, 0));
+            }
+            "missing teleport" => {
+                spells.pop();
+            }
+            "teleport target" => spells[3].effects[0].implicit_targets = [25, 0],
+            "extra effect" => spells[0].effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(spells));
+        let position = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, 87215);
+        assert!(activate(&mut h, 87215)[0].error.is_some(), "{drift}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{drift}");
+        assert!(h.inbox.cooldowns.is_empty(), "{drift}");
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+    }
+}
+
 #[test]
 fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
     use shared::components::{Health, Position, Rotation};

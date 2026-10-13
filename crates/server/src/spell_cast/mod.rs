@@ -189,7 +189,7 @@ mod assisted_costs;
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
 pub(crate) mod teleport;
-mod teleport_positions;
+pub(crate) mod teleport_positions;
 mod toy_coin;
 pub(crate) mod toy_scripts;
 mod toy_weather;
