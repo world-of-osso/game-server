@@ -53,6 +53,30 @@ class CreatureImmunitiesImportTests(unittest.TestCase):
         with sqlite3.connect(self.db) as conn:
             self.assertEqual(conn.execute("SELECT * FROM creature_immunities ORDER BY ID").fetchall(), rows)
 
+    def test_changed_source_fingerprint_fails_before_any_database_change(self):
+        parts = []
+        in_ddl = False
+        with SOURCE.open(encoding="utf-8") as stream:
+            for line in stream:
+                if line.startswith("CREATE TABLE `creature_immunities`"):
+                    in_ddl = True
+                if in_ddl:
+                    parts.append(line)
+                    if line.startswith(")"):
+                        in_ddl = False
+                if line.startswith("INSERT INTO `creature_immunities`"):
+                    parts.append(line)
+        native = "".join(parts)
+        changed = native.replace("Immune CC+Stun+Move", "changed source comment", 1)
+        self.assertNotEqual(changed, native)
+        source = Path(self.directory.name) / "changed-source.sql"
+        source.write_text(changed)
+        before = self.db.read_bytes()
+        result = self.run_import(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("fingerprint", result.stderr)
+        self.assertEqual(self.db.read_bytes(), before)
+
     def test_missing_source_table_fails_before_any_database_change(self):
         source = Path(self.directory.name) / "absent-table.sql"
         source.write_text("-- no creature_immunities table\n")
