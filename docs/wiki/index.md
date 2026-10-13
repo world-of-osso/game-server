@@ -10,6 +10,8 @@
 
 - [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
 
+- [Recovery rates](systems/auras.md#cooldown-recovery-rates) — native286 future/running spell/category timers, real Rapid Fire/Sprint/Hot Hand boundaries and owner updates; full ability/rendered limits retained.
+
 - [Flat versatility](systems/auras.md#flat-versatility-bonuses) — native471 stats, real damage/heal/half-taken/auto controls and pinned rating-curve proof; owner inheritance/rendered limits retained.
 
 - [Category cooldowns](systems/auras.md#category-cooldown-offsets) — native341 signed offsets, real Counterspell/Prayer/pet lockouts and lifecycle proof; whole class coverage remains open.
