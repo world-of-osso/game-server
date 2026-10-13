@@ -4071,6 +4071,112 @@ fn toyfx18_coin_refuses_missing_text_or_source_shape_drift() {
     }
 }
 
+const PERSONALIZED_WEATHER: [u32; 4] = [46740, 46739, 46738, 46736];
+
+fn weather_auras(h: &Harness) -> Vec<(u32, u32, Entity)> {
+    h.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .map_or(Vec::new(), |auras| {
+            auras
+                .iter()
+                .filter(|aura| PERSONALIZED_WEATHER.contains(&aura.spell_id))
+                .map(|aura| (aura.spell_id, aura.duration_ms, aura.caster))
+                .collect()
+        })
+}
+
+#[test]
+fn toyfx18_weather_machine_applies_one_authored_personal_weather() {
+    use crate::persistence::ClientId;
+    use shared::components::{Health, Position};
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&source).unwrap().0;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("weather.redb"));
+    h.app.insert_resource(store);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    learn_effect_toy(&mut h, character, 35227);
+    assert_eq!(activate(&mut h, 35227)[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 46203));
+    let applied = weather_auras(&h);
+    assert_eq!(applied.len(), 1, "{applied:?}");
+    let (weather, duration, caster) = applied[0];
+    // SpellDuration9: 30000ms; the caster weathers itself (target->CastSpell(target)).
+    assert_eq!((duration, caster), (30000, h.caster));
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == weather));
+    // 46736's 5000ms periodic dummy has no TDB script: its ticks change nothing.
+    h.advance(140);
+    assert_eq!(weather_auras(&h).len(), 1);
+    assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+    assert_eq!(h.app.world().get::<Position>(h.caster), Some(&origin));
+    h.advance(470);
+    assert!(weather_auras(&h).is_empty(), "authored 30s weather expires");
+}
+
+#[test]
+fn toyfx18_weather_machine_refuses_unaudited_weather_shape() {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for drift in [
+        "missing weather",
+        "weather trigger",
+        "no visual",
+        "extra effect",
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("weather-refusal.redb"));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        let mut machine = store.get(46203).unwrap().clone();
+        let mut weathers: Vec<_> = PERSONALIZED_WEATHER
+            .iter()
+            .map(|id| store.get(*id).unwrap().clone())
+            .collect();
+        match drift {
+            "missing weather" => {
+                weathers.pop();
+            }
+            "weather trigger" => weathers[3].effects[0].trigger_spell = 116,
+            "no visual" => weathers[0].has_spell_visual = false,
+            "extra effect" => machine.effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        weathers.push(machine);
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(weathers));
+        learn_effect_toy(&mut h, character, 35227);
+        assert!(activate(&mut h, 35227)[0].error.is_some(), "{drift}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{drift}");
+        assert!(h.inbox.cooldowns.is_empty(), "{drift}");
+        assert!(weather_auras(&h).is_empty(), "{drift}");
+    }
+}
+
 #[test]
 fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
     use shared::components::{Health, Position, Rotation};
