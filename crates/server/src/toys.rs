@@ -70,7 +70,23 @@ fn send_initial(world: &mut World) {
 }
 
 fn send_snapshot(world: &mut World, connection: Entity, account: u64) {
+    let started = std::time::Instant::now();
     let update = snapshot(world, account);
+    eprintln!(
+        "toyfx24 snapshot account={account} duration_ms={} tome_learned={} bff_learned={} sender={}",
+        started.elapsed().as_millis(),
+        update
+            .toys
+            .iter()
+            .any(|toy| toy.item_id == 127670 && toy.learned),
+        update
+            .toys
+            .iter()
+            .any(|toy| toy.item_id == 90067 && toy.learned),
+        world
+            .get::<MessageSender<ToyCollectionUpdate>>(connection)
+            .is_some()
+    );
     if let Some(mut sender) = world.get_mut::<MessageSender<ToyCollectionUpdate>>(connection) {
         sender.send::<CollectionChannel>(update);
     }
