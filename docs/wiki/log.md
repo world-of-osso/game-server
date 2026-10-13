@@ -1,3 +1,7 @@
+## 2026-10-13 — PlayerHasAura Some alternatives
+
+[Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
+
 ## 2026-10-13 — PlayerIsInArea Some alternatives
 
 [Complete area alternatives](systems/dungeon-achievements.md#player-area-alternatives) reuse recursive ancestry and retain every authenticated leaf. Five controlled cached authority snapshots drive real queued death109755/character61456 and reopened persistence; no terrain-travel or holiday/NPC content claim. Focused3/3, compiler24/24; four additional ordinary definitions are structural only.
