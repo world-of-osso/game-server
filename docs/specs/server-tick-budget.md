@@ -11,7 +11,8 @@ Keep login, catalog publication and admission from stalling the server's 20 Hz s
 - [x] Health-percent aura observation must not scan idle world populations; preserve threshold crossing, removal, reapplication and apply-below-threshold behavior.
 - [x] Keep admission pending while surrounding ground, M2 floors, LOS and navigation are loaded off the tick thread. No successful entry or player activation before preparation completes.
 - [x] Missing tile files count as prepared/no geometry; read or parse errors log explicitly and fail admission. No timeout admits unready geometry.
-- [ ] Connection bootstrap must not enumerate every hidden world entity; visibility changes and component filters must retain the same network results.
+- [x] Connection bootstrap must not enumerate every hidden world entity; visibility changes, unlink/re-entry and component filters must retain the same network results.
+- [ ] Password verification runs off the tick thread; successful completion rechecks bans and credential rotation before minting a token and authenticating.
 - [ ] Sleeping-unit detection geometry is initialized once and refreshed on activation, not rescanned every tick.
 
 ## How it works

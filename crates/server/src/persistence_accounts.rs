@@ -35,24 +35,12 @@ pub fn login_with_credentials(
     password: &str,
 ) -> Result<(u64, String), String> {
     let _span = bevy::log::info_span!("system", name = "tick_db::login_with_credentials").entered();
-    if let Some(tok) = token
-        && !tok.is_empty()
-        && let Some(account_id) = find_account_by_token(db, tok)
-    {
-        ensure_account_not_banned(db, account_id)?;
-        return Ok((account_id, tok.to_string()));
-    }
-    let account_id = find_account_by_username(db, username).ok_or_else(|| {
-        if is_username_pending(db, username) {
-            "Account pending admin approval".to_string()
-        } else {
-            "Account not found — please register first".to_string()
+    match prepare_login(db, token, username)? {
+        PreparedLogin::Token(account, token) => Ok((account, token)),
+        PreparedLogin::Password(prepared) => {
+            complete_password_login(db, prepared.verify(password)?)
         }
-    })?;
-    ensure_account_not_banned(db, account_id)?;
-    verify_account_password(db, account_id, password)?;
-    let token = generate_token_for_account(db, account_id);
-    Ok((account_id, token))
+    }
 }
 
 fn ensure_account_not_banned(db: &Database, account_id: u64) -> Result<(), String> {
@@ -75,8 +63,68 @@ pub(crate) fn find_account_by_username(db: &Database, username: &str) -> Option<
         .map(|g| g.value())
 }
 
-/// Verify password against stored argon2 hash.
+pub(crate) struct PreparedPasswordLogin {
+    account_id: u64,
+    hash: String,
+}
+
+impl PreparedPasswordLogin {
+    pub(crate) fn verify(self, password: &str) -> Result<Self, String> {
+        verify_password_hash(&self.hash, password)?;
+        Ok(self)
+    }
+}
+
+pub(crate) enum PreparedLogin {
+    Token(u64, String),
+    Password(PreparedPasswordLogin),
+}
+
+pub(crate) fn prepare_login(
+    db: &Database,
+    token: Option<&str>,
+    username: &str,
+) -> Result<PreparedLogin, String> {
+    let _span = bevy::log::info_span!("system", name = "tick_db::prepare_login").entered();
+    if let Some(token) = token.filter(|token| !token.is_empty())
+        && let Some(account) = find_account_by_token(db, token)
+    {
+        ensure_account_not_banned(db, account)?;
+        return Ok(PreparedLogin::Token(account, token.into()));
+    }
+    let account_id = find_account_by_username(db, username).ok_or_else(|| {
+        if is_username_pending(db, username) {
+            "Account pending admin approval".into()
+        } else {
+            "Account not found — please register first".into()
+        }
+    })?;
+    ensure_account_not_banned(db, account_id)?;
+    Ok(PreparedLogin::Password(PreparedPasswordLogin {
+        account_id,
+        hash: read_account_password_hash(db, account_id)?,
+    }))
+}
+
+pub(crate) fn complete_password_login(
+    db: &Database,
+    prepared: PreparedPasswordLogin,
+) -> Result<(u64, String), String> {
+    let _span =
+        bevy::log::info_span!("system", name = "tick_db::complete_password_login").entered();
+    ensure_account_not_banned(db, prepared.account_id)?;
+    if read_account_password_hash(db, prepared.account_id)? != prepared.hash {
+        return Err("Password changed during authentication; retry login".into());
+    }
+    let token = generate_token_for_account(db, prepared.account_id);
+    Ok((prepared.account_id, token))
+}
+
 fn verify_account_password(db: &Database, account_id: u64, password: &str) -> Result<(), String> {
+    verify_password_hash(&read_account_password_hash(db, account_id)?, password)
+}
+
+fn read_account_password_hash(db: &Database, account_id: u64) -> Result<String, String> {
     let txn = db.begin_read().expect("Failed to begin read txn");
     let table = txn.open_table(PASSWORDS).expect("Failed to open passwords");
     let hash_bytes = table
@@ -85,7 +133,11 @@ fn verify_account_password(db: &Database, account_id: u64, password: &str) -> Re
         .ok_or_else(|| "No password set for account".to_string())?;
     let hash_str =
         std::str::from_utf8(hash_bytes.value()).map_err(|_| "Corrupt password hash".to_string())?;
-    let parsed = PasswordHash::new(hash_str).map_err(|_| "Corrupt password hash".to_string())?;
+    Ok(hash_str.to_owned())
+}
+
+fn verify_password_hash(hash: &str, password: &str) -> Result<(), String> {
+    let parsed = PasswordHash::new(hash).map_err(|_| "Corrupt password hash".to_string())?;
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed)
         .map_err(|_| "Invalid password".to_string())

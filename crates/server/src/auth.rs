@@ -106,6 +106,14 @@ pub fn deliver_forced_disconnects(
     }
 }
 
+#[derive(Default)]
+pub(crate) struct PasswordLogins(
+    std::collections::HashMap<
+        Entity,
+        bevy::tasks::Task<Result<persistence_accounts::PreparedPasswordLogin, String>>,
+    >,
+);
+
 /// Process login requests from pending-auth connections.
 pub fn process_login_requests(
     mut receivers: Query<(Entity, &mut MessageReceiver<LoginRequest>)>,
@@ -113,18 +121,57 @@ pub fn process_login_requests(
     mut connected: ResMut<ConnectedAccounts>,
     mut senders: Query<&mut MessageSender<LoginResponse>>,
     mut commands: Commands,
+    mut pending: Local<PasswordLogins>,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let logins = collect_pending_auth_requests(&mut receivers);
-    for (entity, req) in logins {
-        handle_login(
+    pending.0.retain(|entity, _| receivers.contains(*entity));
+    let completed: Vec<_> = pending
+        .0
+        .iter_mut()
+        .filter_map(|(entity, task)| {
+            bevy::tasks::block_on(bevy::tasks::poll_once(task)).map(|result| (*entity, result))
+        })
+        .collect();
+    for (entity, result) in completed {
+        pending.0.remove(&entity);
+        let result = result
+            .and_then(|prepared| persistence_accounts::complete_password_login(&db.db, prepared));
+        finish_login(
             entity,
-            &req,
+            result,
             db,
             &mut connected,
             &mut senders,
             &mut commands,
         );
+    }
+    let logins = collect_pending_auth_requests(&mut receivers);
+    for (entity, req) in logins {
+        if pending.0.contains_key(&entity) {
+            send_login_error(entity, &mut senders, "Login request already in progress");
+            continue;
+        }
+        match persistence_accounts::prepare_login(&db.db, req.token.as_deref(), &req.username) {
+            Ok(persistence_accounts::PreparedLogin::Password(prepared)) => {
+                let pool =
+                    bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+                pending.0.insert(
+                    entity,
+                    pool.spawn(async move { prepared.verify(&req.password) }),
+                );
+            }
+            Ok(persistence_accounts::PreparedLogin::Token(account, token)) => {
+                finish_login(
+                    entity,
+                    Ok((account, token)),
+                    db,
+                    &mut connected,
+                    &mut senders,
+                    &mut commands,
+                );
+            }
+            Err(error) => send_login_error(entity, &mut senders, &error),
+        }
     }
 }
 
@@ -140,22 +187,14 @@ fn collect_pending_auth_requests<M: lightyear::prelude::Message>(
     out
 }
 
-fn handle_login(
+fn finish_login(
     entity: Entity,
-    req: &LoginRequest,
+    result: Result<(u64, String), String>,
     db: &GameDatabase,
     connected: &mut ConnectedAccounts,
     senders: &mut Query<&mut MessageSender<LoginResponse>>,
     commands: &mut Commands,
 ) {
-    let token_ref = req.token.as_deref();
-    let result = persistence_accounts::login_with_credentials(
-        &db.db,
-        token_ref,
-        &req.username,
-        &req.password,
-    );
-
     let (account_id, token) = match result {
         Ok(pair) => pair,
         Err(e) => {
@@ -310,6 +349,10 @@ fn send_register_response(
         error: error.map(|s| s.to_string()),
     });
 }
+
+#[cfg(test)]
+#[path = "auth_password_tests.rs"]
+mod password_tests;
 
 #[cfg(test)]
 mod tests {
