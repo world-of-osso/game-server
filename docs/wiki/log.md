@@ -1051,3 +1051,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 ## 2026-10-13 — Prepared follower Group Finder catalog
 
 [Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
+
+- 2026-10-13: [Pendant](systems/toys.md#blazing-diamond-pendant-2026-10-13) exact source admission and both-skin natural expiry; restored coin-script precedence before generic targetless missile dispatch.

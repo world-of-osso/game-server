@@ -1,10 +1,10 @@
 # Toy effects14 — active whole-goal coverage
 
-## Blazing Diamond Pendant — active native proof (2026-10-13)
+## Blazing Diamond Pendant — bounded lifecycle proof (2026-10-13)
 
 115503/171352 is the exact source Molten Path contract: one zero-payload self dummy aura, natural5000ms cast and120000ms duration; group4031 contains11 authored areas. Visual44786 starts kit48964 on AuraStart7 and ends on AuraEnd8; Type2 attachment305309 uses ground19/zero offsets/scale1, ordinary model937030 and no positioner/conditional binding. TDB1210 scanned4066 root script bindings, none for171352; this absence alone does not authorize admission. Description promises only magma-covered feet in Draenor; no gameplay damage, speed or model replacement.
 
-Evidence `pendant22-source-db.json`, `pendant22-kit-source.json`, `pendant22-script-source.json`: readable pinned69933 plus TC a352b1fa geography contract. Maintained asset closure authenticates all7 model/skin/textures against frozen local CASC content keys and publishes privately (7 receipts,1 alias); no canonical publication. Actual learning/use initially RED unsupported aura4 (`pendant22-red.log`); admission is exact171352 plus existing zero-payload shape checks, not generic aura4. Server/native lifecycle and census proof remain in progress.
+Evidence `pendant22-source-db.json`, `pendant22-kit-source.json`, `pendant22-script-source.json`: readable pinned69933 plus TC a352b1fa geography contract. Maintained asset closure authenticates all7 model/skin/textures against frozen local CASC content keys and publishes privately (7 receipts,1 alias); no canonical publication. Actual learning/use initially RED unsupported aura4 (`pendant22-red.log`); admission is exact171352 plus existing zero-payload shape checks, not generic aura4. Server2 tests prove actual learning, five-second completion rejection,120000ms aura expiry, health/display preservation and retained recovery. Canonical census358→359 adds115503 alone; no removals. Native Modern/Forever completion rejection and area exit retain cooldown (`*-pendant22-safe-exit`). Dedicated post-merge natural-expiry runs keep the same Lunarfall7078→6719 position: model937030 exists after cast and at110s, then aura and kit remove naturally. Observation from model readiness: Modern137365ms, Forever126164ms; these wall observations do not assert exact120s wall duration under host contention. Cooldowns remain1660.49s/1673.51s. Actual expiry receipts: `modern-pendant22-natural-postmerge2/receipts.json`, `forever-pendant22-natural-postmerge/receipts.json`; no movement/cancel/relog/reset while active. Both screenshots inspected; no audible/cloth/procedural certification.
 
 ## Source RequiredAreasID lifecycle (2026-10-13)
 
@@ -18,7 +18,7 @@ Pinned69933 exports preserve69 Toy root bindings and42 complete groups; read-onl
 | Native area lifecycle | Actual Eagger Basket188698 bag learning/journal use, rejection/activation/exit in Modern and Forever; remaining cooldown decreases normally |
 | Preserved exclusions | War Banners unrestricted regression; WMO actual-area lookup, facing-only/procedural effects remain separate gaps; no new visual admission |
 
-Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `area21-proof-ledger.json`, `area21-*-site.json`, source exports/receipts and native `*-area21/receipts.json`. Native source metadata and output, not every one of the69 toys' effects, are certified. Independent verifier's ancestry counterexample was source-checked and reproduced before correction; other findings were evaluated against literal scope. Whole1166 scope remains open; Pendant115503 admission/native lifecycle remains separate.
+Evidence root `/home/osso/.worktrees/logs/toy-effects14-continuation/`: `area21-proof-ledger.json`, `area21-*-site.json`, source exports/receipts and native `*-area21/receipts.json`. Native source metadata and output, not every one of the69 toys' effects, are certified. Independent verifier's ancestry counterexample was source-checked and reproduced before correction; other findings were evaluated against literal scope. Whole1166 scope remains open; Pendant115503's exact admission/native lifecycle is documented above.
 
 ## Current PvP faction and War Banners (2026-10-13)
 

@@ -236,3 +236,7 @@ Pinned local export:1166 decrypted toys. Concrete behavioural fixtures cover Orb
 - [[inventory]] — physical UseItem and inventory delta publication.
 - [[spell-casting]] — cast history, effects and cooldown transport.
 - [[auras]] — transform and script-only aura limitations.
+
+## Blazing Diamond Pendant (2026-10-13)
+
+Exact171352 admission uses source zero-payload shape, ordinary ground model937030 and existing area group4031 lifecycle; not generic dummy-aura support. Source/server/native evidence and wall-time limits: [Pendant coverage](../../toy-effects14-coverage.md#blazing-diamond-pendant--bounded-lifecycle-proof-2026-10-13). Dedicated expiry fixture keeps position unchanged and waits for natural aura/kit removal while recovery continues.
