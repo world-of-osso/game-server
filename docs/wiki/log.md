@@ -5,6 +5,22 @@
 ## 2026-10-13 — Follower utilities and strict-nav boundaries
 
 [Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.
+## 2026-10-13 — Single-child Some criterion semantics
+
+[Some1-of-1](systems/dungeon-achievements.md#single-child-some-trees--verified-2026-10-13) preserves the supported child check. Native per-request target negatives and slime/wave credit add structural40475/1065; NPC spawn/model closure remains unclaimed.
+
+## 2026-10-13 — Empty All criterion semantics
+
+[Plain empty All4](systems/dungeon-achievements.md#empty-all-modifier-trees--verified-2026-10-13) matches TC's true result. Seven native goggle casts/store outcomes grant18905 in a sourced private fixture; missing canonical item projections and production/UI closure remain explicit.
+
+## 2026-10-13 — Exact-level criterion facts
+
+[Level39](systems/dungeon-achievements.md#exact-reference-player-levels--verified-2026-10-13) reuses inclusive minimum/maximum facts. Native level1/2/3 deaths and reopen prove raw orphan counters without linking them to current achievements; census unchanged.
+
+## 2026-10-13 — Instance-death criteria capacity
+
+[Type18](systems/dungeon-achievements.md#instance-death-capacity--verified-2026-10-13) uses allocated dungeon-copy capacity. Native party5/raid10/25 death, negative capacity/copy cases and reopened persistence pass; three statistics become structural, with no delve-content claim.
+
 ## 2026-10-13 — Known-solo achievement predicates
 
 [Solo35](systems/dungeon-achievements.md#solo-group-predicates--verified-2026-10-13) requires native roster authority, not absence of visible peers. Actual marker casts and real joined groups prove credit/exclusion and reopened persistence; originating timed quest content remains unclaimed.
