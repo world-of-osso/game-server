@@ -269,7 +269,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 256 | Newer ID — no pinned enum name | 0/16 | 0/16 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 257 | CompleteQuestsCountOnAccount | 0/2 | 0/1 | 0 | Source/state gap: pinned enum marks NYI; distinct/repeat/account quest-count policy is not supplied by a type9 per-character maximum. |
 | 260 | BankTabPurchased | 3/3 | 2/2 | 1 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 261 | ReachRenownLevel | 0/42 | 0/36 | 0 | Producer/state gap: no native Renown amount/level authority; traditional reputation cannot stand in for renown currencies. |
+| 261 | ReachRenownLevel | 0/42 | 0/36 | 0 | Producer gap: native renown progress now exists but only admin setup writes it. TC Player7165 requires a positive RenownRepGain currency mutation and current capped quantity, keyed by CurrencyID; admin/major-faction IDs cannot substitute. |
 | 262 | LearnTaxiNode | 45/45 | 41/41 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 263 | Newer ID — no pinned enum name | 0/4 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
 | 266 | Newer ID — no pinned enum name | 0/12 | 0/0 | 0 | Source gap: newer raw ID absent from pinned primary enum/progress rules; no guessed producer or Asset interpretation. |
