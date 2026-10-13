@@ -1897,6 +1897,8 @@ mod defensives_tests;
 #[cfg(test)]
 mod fear_tests;
 #[cfg(test)]
+mod monster_rising_tests;
+#[cfg(test)]
 mod tiger_dash_tests;
 
 #[cfg(test)]
