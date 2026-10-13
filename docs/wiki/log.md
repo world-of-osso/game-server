@@ -32,6 +32,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Map instance type](systems/dungeon-achievements.md#map-instance-type-verified-2026-10-13): exact authored122 map membership, native arena/BG killing-blow/reward/queued-death RED/GREEN and cross-type/persistence controls; +4 statistics, missing raid-death18 unclaimed.
+
 - 2026-10-13 — [General arena player predicates](systems/dungeon-achievements.md#general-arena-player-predicates-verified-2026-10-13): accepted/current-copy native24/60 facts for all gated events; real-channel56/17/70 rated statistics RED/GREEN, size/unrated/replay/reopen controls and redundant result fields removed. +5 statistics; current Shuffle unrated/source239/240 gaps explicit.
 
 - 2026-10-13 — [Battleground kill rewards](systems/dungeon-achievements.md#battleground-kill-rewards-verified-2026-10-13): native lethal controlling-player/accepted-team distance and corpse credit, untimed orphan26004 RED/GREEN and persistence controls; four structural ordinary gains. Current-root grants, world/lifetime/scoreboard honor and rendered battle unclaimed.
