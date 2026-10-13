@@ -288,7 +288,7 @@ fn send_snapshot(
 fn item_usability(world: &World, connection: Entity, item_id: u32) -> Option<bool> {
     let player_id = world.get::<PlayerLink>(connection)?.0;
     let player = world.get::<shared::components::Player>(player_id)?;
-    let level = world.get::<shared::components::Level>(player_id)?.0;
+    let level = u16::from(world.get::<shared::components::Level>(player_id)?.0);
     let templates = world.get_resource::<crate::item_templates::ItemTemplates>()?;
     let item = templates.get(shared::item_data::ItemDefinitionSource::Retail, item_id)?;
     Some(item.allows(player.class, player.race) && item.required_level <= level)
