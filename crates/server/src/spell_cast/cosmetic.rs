@@ -50,6 +50,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     225826, 225828, // Magi crystal cone and Powder Box friendly-area attachment kits
     280053, 335276, 340276, // Light snowfall, back vessel, quill/parchment
     403491, 467285, 1264653, // Hraxian's Will, Explosive Victory, wine toast
+    // Cast-event ordinary-model kits; no aura, script binding or payload.
+    103740, 290627, 187150, // Darkmoon Firework, Azerite Firework Launcher, Jewel of Hellfire
 ];
 
 /// Source-audited dummy aura slots, not a blanket mixed-spell exemption.
