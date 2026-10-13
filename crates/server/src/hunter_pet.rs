@@ -769,6 +769,7 @@ fn spawn_pet(
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
+    let companion = world.get::<crate::followers::Follower>(owner).is_some();
     let power = match owner_class(world, owner)? {
         CLASS_HUNTER => PowerType::Focus,
         CLASS_WARLOCK => demon_spell_power(world),
@@ -822,6 +823,11 @@ fn spawn_pet(
             CombatTarget::default(),
         ),
     ));
+    if companion {
+        pet.insert(crate::followers::FollowerReach(
+            crate::creature_ai::CHASE_REACH,
+        ));
+    }
     if demon {
         pet.insert(SummonedDemon);
     }

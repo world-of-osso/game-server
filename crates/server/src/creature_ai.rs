@@ -25,7 +25,7 @@ const BASE_RUN_SPEED: f32 = 7.0;
 const LEASH_DISTANCE: f32 = 40.0;
 /// Horizontal distance a chaser closes to (yards), inside the 5 yard
 /// melee range (`ATTACK_DISTANCE`) so auto-attacks land.
-const CHASE_REACH: f32 = 2.0;
+pub(crate) const CHASE_REACH: f32 = 2.0;
 /// TrinityCore a352b1fa `CREATURE_NOPATH_EVADE_TIME` (CreatureData.h).
 const NO_PATH_EVADE_TIME: Duration = Duration::from_secs(5);
 
@@ -961,6 +961,7 @@ type Follower = (
     Option<&'static InMap>,
     Bearing,
     Option<&'static crate::followers::Follower>,
+    Option<&'static crate::followers::FollowerReach>,
 );
 
 /// Where an owner stands and how fast it runs.
@@ -1028,7 +1029,7 @@ fn follow_owner_system(
             ))
         })
         .collect();
-    for (entity, mut pos, mut follow, health, cast, mods, map, bearing, companion) in
+    for (entity, mut pos, mut follow, health, cast, mods, map, bearing, companion, companion_pet) in
         &mut units.p0()
     {
         let Some(leader) = leaders.get(&follow.owner) else {
@@ -1053,7 +1054,7 @@ fn follow_owner_system(
         }
         let point = follow_point(&leader, *pos, reach);
         let run_speed = leader.speed * speed_mod * catch_up_factor(gap);
-        let movement = if companion.is_some() {
+        let movement = if companion.is_some() || companion_pet.is_some() {
             let request = map.map(|map| MoveRequest {
                 map_id: map.map_id,
                 goal: Goal::Follow(follow.owner.to_bits()),
@@ -1066,7 +1067,7 @@ fn follow_owner_system(
                 distance: run_speed * dt,
                 reach: 0.0,
             });
-            advance_companion_follow(nav.as_deref_mut(), entity, request)
+            advance_companion_route(nav.as_deref_mut(), entity, request)
         } else {
             let (reached, x, z) = move_toward(pos.x, pos.z, point.0, point.1, run_speed * dt);
             Some((Position { x, y: pos.y, z }, reached))
@@ -1094,7 +1095,7 @@ fn follow_owner_system(
 
 /// Follower dungeons require an authored bake; unavailable or blocked routes never
 /// become direct movement. Other existing FollowOwner consumers keep their behavior.
-fn advance_companion_follow(
+fn advance_companion_route(
     nav: Option<&mut Navigation>,
     entity: Entity,
     request: Option<MoveRequest>,
@@ -1188,6 +1189,7 @@ type PetMover = (
     Option<&'static AuraStatMods>,
     Option<&'static InMap>,
     Bearing,
+    Option<&'static crate::followers::FollowerReach>,
 );
 
 /// `PetAI` movement at the base run speed × the aura speed multiplier, on the floor: a
@@ -1199,6 +1201,7 @@ fn pet_motion_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
+    mut nav: Option<ResMut<Navigation>>,
     mut units: ParamSet<(Query<PetMover, ActiveUncontrolled>, Query<&Position>)>,
 ) {
     let dt = time.delta_secs();
@@ -1217,7 +1220,9 @@ fn pet_motion_system(
             .filter_map(|victim| positions.get(victim).ok().map(|at| (victim, *at)))
             .collect()
     };
-    for (entity, mut pos, mut motion, health, cast, mods, map, bearing) in &mut units.p0() {
+    for (entity, mut pos, mut motion, health, cast, mods, map, bearing, companion_pet) in
+        &mut units.p0()
+    {
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
         let held = health.current <= 0.0
             || speed <= 0.0
@@ -1231,24 +1236,52 @@ fn pet_motion_system(
                 let Some(target) = victim_positions.get(&victim) else {
                     continue;
                 };
-                let next = chase_step(here, target, run_speed * dt, CHASE_REACH);
+                let next = if companion_pet.is_some() {
+                    let request = map.map(|map| MoveRequest {
+                        map_id: map.map_id,
+                        goal: Goal::Chase(victim.to_bits()),
+                        from: here,
+                        to: *target,
+                        distance: run_speed * dt,
+                        reach: CHASE_REACH,
+                    });
+                    advance_companion_route(nav.as_deref_mut(), entity, request)
+                        .map_or(here, |(position, _)| position)
+                } else {
+                    chase_step(here, target, run_speed * dt, CHASE_REACH)
+                };
                 let face = (next == here)
                     .then(|| facing_along(target.x - here.x, target.z - here.z))
                     .flatten();
                 (next, face)
             }
             PetMotion::Point(point) => {
-                let (reached, x, z) = move_toward(here.x, here.z, point.x, point.z, run_speed * dt);
+                let movement = if companion_pet.is_some() {
+                    let request = map.map(|map| MoveRequest {
+                        map_id: map.map_id,
+                        goal: Goal::Point,
+                        from: here,
+                        to: point,
+                        distance: run_speed * dt,
+                        reach: 0.0,
+                    });
+                    advance_companion_route(nav.as_deref_mut(), entity, request)
+                } else {
+                    let (reached, x, z) =
+                        move_toward(here.x, here.z, point.x, point.z, run_speed * dt);
+                    Some((Position { x, y: here.y, z }, reached))
+                };
+                let (position, reached) = movement.unwrap_or((here, false));
                 if reached {
                     *motion = PetMotion::Idle;
                 }
-                (Position { x, y: here.y, z }, None)
+                (position, None)
             }
         };
         let mut next = next_position;
         if next != here {
-            let feet = Vec3::new(next.x, here.y, next.z);
-            next.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), here.y);
+            let feet = Vec3::new(next.x, next.y, next.z);
+            next.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), next.y);
         }
         let mut stride = if next == here {
             Stride::still(here)

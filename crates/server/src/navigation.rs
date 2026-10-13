@@ -14,6 +14,7 @@ pub enum Goal {
     Chase(u64),
     Follow(u64),
     Hazard(u64),
+    Point,
     Home,
     Waypoint(u32, usize),
 }
