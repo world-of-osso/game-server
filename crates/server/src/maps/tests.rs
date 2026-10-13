@@ -1434,6 +1434,195 @@ fn arena_dalaran_authored_waterfall_and_pipe_hazards_follow_actual_lifetime() {
 }
 
 fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
+    exercise_arena_channel_with_reconnect(mode, forfeit, map_id, None);
+}
+
+fn exercise_arena_reconnect(
+    h: &mut Harness,
+    players: &[Traveler],
+    invitations: &[shared::protocol::BattlegroundSnapshot],
+    origins: &[Vec3],
+    case: ReconnectCase,
+) {
+    let who = &players[0];
+    let old_map = h.map_of(who).unwrap();
+    let original = origins[0];
+    let prior = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(who.player)
+        .unwrap()
+        .battleground
+        .clone()
+        .unwrap();
+    assert_eq!(prior.phase, shared::battleground::BgPhase::InProgress);
+    if matches!(case, ReconnectCase::LastLivingLogout) {
+        let ally = players
+            .iter()
+            .zip(invitations)
+            .skip(1)
+            .find(|(_, invite)| invite.team == prior.team)
+            .unwrap()
+            .0;
+        h.app
+            .world_mut()
+            .entity_mut(ally.connection)
+            .remove::<Connected>();
+        h.advance(3);
+        let state = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap();
+        assert_eq!(
+            state.battleground.as_ref().unwrap().phase,
+            shared::battleground::BgPhase::InProgress
+        );
+    }
+    h.app
+        .world_mut()
+        .entity_mut(who.connection)
+        .remove::<Connected>();
+    h.advance(3);
+    assert!(
+        h.app.world().get_entity(who.player).is_err(),
+        "the actual disconnect cleanup despawned the old player"
+    );
+    if matches!(case, ReconnectCase::LastLivingLogout) {
+        let opponent = players
+            .iter()
+            .zip(invitations)
+            .find(|(_, invite)| invite.team != prior.team)
+            .unwrap()
+            .0;
+        let ended = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(opponent.player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap();
+        assert_eq!(ended.phase, shared::battleground::BgPhase::Ended);
+        assert_eq!(
+            ended.outcome,
+            Some(shared::battleground::BgOutcome::Winner(
+                invitations
+                    .iter()
+                    .find(|invite| invite.team != prior.team)
+                    .unwrap()
+                    .team
+            ))
+        );
+        assert!(ended.players.iter().all(|score| score.deaths == 0));
+        return;
+    }
+    if matches!(case, ReconnectCase::MissingMatch) {
+        crate::pvp::forget_matches_for_reconnect_fixture(h.app.world_mut());
+    }
+    let connection = h
+        .app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(1001)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            pair::<shared::protocol::SelectCharacter>(),
+            pair::<shared::protocol::EnterWorldResponse>(),
+            pair::<shared::protocol::LoadTerrain>(),
+            pair::<NewWorld>(),
+            pair::<WorldPortAck>(),
+            pair::<TransferAborted>(),
+            pair::<InstanceSaveCreated>(),
+            pair::<PvpStateUpdate>(),
+        ))
+        .id();
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::SelectCharacter>>(connection)
+        .unwrap()
+        .send::<shared::protocol::AuthChannel>(shared::protocol::SelectCharacter {
+            character_id: 1,
+        });
+    h.advance(10);
+    let player = h
+        .app
+        .world()
+        .get::<PlayerLink>(connection)
+        .expect("real SelectCharacter restores the saved character")
+        .0;
+    let state = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(player)
+        .unwrap();
+    match case {
+        ReconnectCase::SurvivingMatch => {
+            assert_eq!(h.app.world().get::<InMap>(player), Some(&old_map));
+            let joined = state
+                .battleground
+                .as_ref()
+                .expect("rejoin must restore match membership, not only arena coordinates");
+            assert_eq!(joined.match_id, prior.match_id);
+            assert_eq!(joined.team, prior.team);
+            assert!(joined.accepted);
+            assert_eq!(joined.phase, shared::battleground::BgPhase::InProgress);
+        }
+        ReconnectCase::MissingMatch => {
+            assert_eq!(h.app.world().get::<InMap>(player), Some(&STORMWIND));
+            assert!(state.battleground.is_none());
+            assert!(
+                (wow(h.app.world().get::<Position>(player).unwrap()) - original).length() < 0.001
+            );
+        }
+        ReconnectCase::LastLivingLogout => unreachable!(),
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ReconnectCase {
+    SurvivingMatch,
+    MissingMatch,
+    LastLivingLogout,
+}
+
+#[test]
+fn arena_disconnect_rejoins_surviving_match_over_real_channels() {
+    exercise_arena_channel_with_reconnect(
+        ArenaQueueMode::Skirmish2v2,
+        false,
+        572,
+        Some(ReconnectCase::SurvivingMatch),
+    );
+}
+
+#[test]
+fn arena_disconnect_returns_to_captured_origin_when_match_is_missing() {
+    exercise_arena_channel_with_reconnect(
+        ArenaQueueMode::Skirmish2v2,
+        false,
+        572,
+        Some(ReconnectCase::MissingMatch),
+    );
+}
+
+#[test]
+fn arena_disconnect_last_living_logout_ends_the_arena_without_false_deaths() {
+    exercise_arena_channel_with_reconnect(
+        ArenaQueueMode::Skirmish2v2,
+        false,
+        572,
+        Some(ReconnectCase::LastLivingLogout),
+    );
+}
+
+fn exercise_arena_channel_with_reconnect(
+    mode: ArenaQueueMode,
+    forfeit: bool,
+    map_id: u32,
+    reconnect: Option<ReconnectCase>,
+) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
     let team_size = match mode {
@@ -1512,6 +1701,10 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
     let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
     let mut h = harness_with(move |app| {
         app.insert_resource(crate::persistence::GameDatabase { db });
+        if reconnect.is_some() {
+            crate::networking::install_disconnect_fixture(app);
+            app.add_systems(Update, crate::auth_character::process_select_character);
+        }
         app.insert_resource(objects);
         app.insert_resource(world_data);
         app.insert_resource(spells);
@@ -1539,7 +1732,26 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         .iter()
         .map(|who| wow(h.app.world().get::<Position>(who.player).unwrap()))
         .collect();
-    for who in &players {
+    for (index, who) in players.iter().enumerate() {
+        if reconnect.is_some() {
+            let id = index as u64 + 1;
+            let db = &h
+                .app
+                .world()
+                .resource::<crate::persistence::GameDatabase>()
+                .db;
+            let (created_id, mut data) =
+                crate::persistence::create_character(db, id, &format!("Traveler{id}"), 1, 1)
+                    .unwrap();
+            assert_eq!(created_id, id);
+            data.level = 90;
+            crate::persistence::save_character(db, id, &data);
+            let server = h.app.world_mut().spawn_empty().id();
+            h.app
+                .world_mut()
+                .entity_mut(who.connection)
+                .insert(lightyear::prelude::server::ClientOf(server));
+        }
         h.app.world_mut().entity_mut(who.player).insert((
             crate::pvp::PlayerPvpState::default(),
             crate::death::PlayerDeathState::default(),
@@ -1908,6 +2120,10 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         0,
         "before source90second activation"
     );
+    if let Some(case) = reconnect {
+        exercise_arena_reconnect(&mut h, &players, &invitations, &origins, case);
+        return;
+    }
     h.receive_pvp_updates(101);
     assert_eq!(object_count(h.app.world_mut(), 6), 2);
     for (gate, entry) in &source_gates {

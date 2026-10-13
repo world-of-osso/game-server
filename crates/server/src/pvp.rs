@@ -171,6 +171,11 @@ pub(crate) fn sync_progress_currencies_from_wallet(
     changed
 }
 
+#[cfg(test)]
+pub(crate) fn forget_matches_for_reconnect_fixture(world: &mut World) {
+    world.insert_resource(PvpServerState::default());
+}
+
 #[derive(Debug)]
 struct InvitedBattleground {
     instance: BgInstance,
