@@ -1,5 +1,7 @@
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Ruby Life Pools Ice Shield/Excavate periodic source hooks, immediate initial +1s ticks. Two hook-boundary fixtures pass; SAI prerequisites and absent boss AIs remain gaps. [Boss scripts](systems/boss-scripts.md).
+
 - 2026-10-13: Zul +1s activates pool289347 in its own copy; authoritative GO state and collision, with timing/copy isolation proof. Native state animation remains open. [Boss scripts](systems/boss-scripts.md).
 
 - 2026-10-13: Minion of Zul appearance, Bound by Shadow self-death and Fixate128 preference/clear; different-caster channel coexist. Three real Kings' Rest fixtures pass. [Boss scripts](systems/boss-scripts.md).

@@ -23,6 +23,7 @@ pub mod instance_script;
 pub mod kings_rest;
 pub mod movement;
 pub mod murder_row;
+mod ruby_life_pools;
 pub mod smart_ai;
 pub mod the_stockade;
 pub mod waypoint_path;
@@ -73,6 +74,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
+            .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(
                 FixedUpdate,

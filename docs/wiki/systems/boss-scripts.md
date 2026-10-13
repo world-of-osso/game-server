@@ -10,6 +10,10 @@ Creature scripts by `creature_template.ScriptName`, ported from TrinityCore mast
 - `Ctx` holds `&mut World` and `me`: the `ScriptedAI` helpers (`DoCast*`, `Talk`, `SelectTarget(Random)`, `SetReactState`, `RemoveAllAuras`, `SummonCreature`, `MovePoint`, `KillSelf`, `DoZoneInCombat`).
 - `BossAI` is a struct each boss embeds; `boss_update_ai` is `BossAI::UpdateAI`. Warden/Mortimer's `TaskScheduler` tasks are `EventMap` events.
 
+## Ruby Life Pools spell hooks
+
+`ruby_life_pools.rs` ports the periodic hooks from pinned TC a352b1fa `ruby_life_pools.cpp`:384933 refreshes an existing372749 to its stored maximum duration without resetting absorb capacity;372793 casts373497 triggered from the original caster on the bearer. Both local DB2 spells have EXTRA_INITIAL_PERIOD, then1000ms ticks. Removal stops the callback; shield absence never creates a new shield. Two fixtures use real spell data and map2521 actor templates but inject aura application at the hook boundary; they do not prove the SAI movement/cast prerequisites. Remaining source hooks: Executed371652 flags and Storm Infusion395029 destination offset. The pinned folder has no boss AI files; local188252/189232/190484/190485 have empty AIName/ScriptName, so no boss mechanics or full-instance acceptance is claimed.
+
 ## Creature spells
 
 `spell_cast::creature_cast`: victim default target, triggered casts, no GCD. Base points of damage effects follow ExpectedStat `CreatureSpellDamage` (`effects::calc_base_value`); weapon % damage uses `combat::creature_weapon_damage`. `area_aura` holds persistent area aura dynamic objects. `auras::unit_state` derives invisibility (interest `set_hidden`) and `NON_ATTACKABLE_2` from the aura set.

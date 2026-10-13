@@ -1071,6 +1071,26 @@ pub fn remove_auras(
     removed
 }
 
+/// Reset an existing finite aura to its stored maximum duration, without
+/// refilling absorb capacity or changing its periodic timer (Aura::RefreshDuration).
+pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32) {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id)
+    else {
+        return;
+    };
+    if aura.expires_at.is_some() {
+        aura.expires_at = Some(now + f64::from(aura.duration_ms) / 1_000.0);
+        auras.dirty = true;
+    }
+}
+
 /// Extend existing finite auras owned by this caster without restarting ticks.
 pub(crate) fn extend_owned_duration(
     world: &mut World,
