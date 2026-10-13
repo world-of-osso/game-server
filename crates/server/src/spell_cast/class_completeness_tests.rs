@@ -10,6 +10,406 @@ const FROSTBOLT: u32 = 116;
 const PALADIN_PASSIVE: u32 = 137026;
 const CRUSADER_STRIKE: u32 = 35395;
 const CHARGE: u32 = 100;
+const FISTS_OF_FURY_DAMAGE: u32 = 117418;
+
+#[test]
+fn class_completeness_native_raise_dead_uses_destination_radius_and_owned_ghoul() {
+    let mut h = harness(Vec::new(), &[46585], 6).unwrap();
+    let data = world_db().unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+    let conn = rusqlite::Connection::open_with_flags(
+        &data.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    let spell = data.store.get(46585).unwrap().clone();
+    let expected_distance = super::targets::radius(&spell.effects[0], 1);
+    let destination =
+        super::targets::effect_dest(h.app.world(), h.caster, None, &spell.effects[0], None)
+            .expect("native destination radius");
+    assert!((destination.position.length() - expected_distance).abs() < 0.001);
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native Raise Dead");
+    let caster = h.caster;
+    let world = h.app.world_mut();
+    let summons: Vec<_> = world
+        .query::<(
+            &shared::components::Npc,
+            &shared::components::UnitSummonedBy,
+            &shared::components::Position,
+        )>()
+        .iter(world)
+        .filter(|(npc, _, _)| npc.template_id == 26125)
+        .collect();
+    assert_eq!(summons.len(), 1);
+    assert_eq!(summons[0].1.0, caster.to_bits());
+    let point = summons[0].2;
+    assert!((Vec3::new(point.x, point.y, point.z).length() - expected_distance).abs() < 0.001);
+}
+
+#[test]
+fn class_completeness_native_real_points_per_level_scales_pick_lock_skill() {
+    let mut h = harness(Vec::new(), &[1804], 4).unwrap();
+    let spell = world_db().unwrap().store.get(1804).unwrap().clone();
+    for (level, skill) in [(28, 14.0), (29, 15.0), (80, 66.0)] {
+        h.app.world_mut().entity_mut(h.caster).insert((
+            shared::components::Level(level),
+            shared::components::UnitLevel(level),
+        ));
+        let value =
+            super::effects::modded_base_points(h.app.world(), h.caster, &spell, &spell.effects[0]);
+        assert_eq!(value, skill, "native1804 real-points per level at{level}");
+    }
+}
+
+#[test]
+fn class_completeness_native_caster_rectangle_selects_front_width_not_back_allies_or_far() {
+    for (spell_id, class) in [(197214, 7), (392983, 10)] {
+        let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
+        let spell = world_db().unwrap().store.get(spell_id).unwrap().clone();
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.implicit_targets.contains(&129))
+            .unwrap();
+        let radius = super::targets::radius(effect, 0);
+        let width = spell.target_restrictions.as_ref().unwrap().width;
+        let inside = spawn_npc(&mut h.app, 1.0);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Position>(inside)
+            .unwrap()
+            .z = width * 0.5;
+        let back = spawn_npc(&mut h.app, -3.0);
+        let outside = spawn_npc(&mut h.app, 1.0);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Position>(outside)
+            .unwrap()
+            .z = width + 2.0;
+        let far = spawn_npc(&mut h.app, radius + 1.0);
+        let ally = spawn_player(&mut h.app, class, 3.0);
+        let selected = super::targets::select_targets(
+            h.app.world_mut(),
+            h.caster,
+            Some(back),
+            &spell,
+            effect,
+            0,
+            false,
+        )
+        .expect("native caster-facing rectangle129");
+        assert!(selected.contains(&h.npc));
+        assert!(selected.contains(&inside));
+        for excluded in [back, outside, far, ally] {
+            assert!(
+                !selected.contains(&excluded),
+                "excluded {excluded:?} for {spell_id}"
+            );
+        }
+    }
+}
+
+#[test]
+fn class_completeness_native_darkness_ground_destination_snaps_to_authored_terrain() {
+    let mut h = harness(Vec::new(), &[196718], 12).unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (x, y, z): (f32, f32, f32) = conn.query_row("SELECT position_x,position_y,position_z FROM tdb_playercreateinfo WHERE race=1 AND class=1", [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    let standing = Vec3::new(x, y, z);
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut ground = crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        maps.maps
+            .values()
+            .map(|map| (map.id, map.wdt_file_data_id))
+            .collect(),
+    );
+    let crate::ground::GroundProbe::Supported(height) =
+        ground.ground_at(0, standing + Vec3::Y * 2.0)
+    else {
+        panic!("native start terrain required");
+    };
+    h.app.insert_resource(ground);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .x = standing.x;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .z = standing.z;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .y = height + 2.0;
+    let spell = world_db().unwrap().store.get(196718).unwrap().clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native caster-ground target62");
+    let world = h.app.world_mut();
+    let areas: Vec<_> = world
+        .query::<(
+            &super::area_trigger::SpellAreaTrigger,
+            &shared::components::Position,
+        )>()
+        .iter(world)
+        .filter(|(area, _)| area.spell_id == 196718)
+        .collect();
+    assert_eq!(areas.len(), 1);
+    assert!(
+        (areas[0].1.y - height).abs() < 0.01,
+        "area rests on native ground, not airborne caster"
+    );
+}
+
+#[test]
+fn class_completeness_native_random_summons_use_authored_caster_or_target_ring() {
+    let prepared = prepare_class_world();
+    for (spell_id, class, entry, effect_index) in [(1276452, 9, 258584, 1), (123904, 10, 63508, 0)]
+    {
+        let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
+        let data = world_db().unwrap();
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&prepared.path()));
+        let conn = rusqlite::Connection::open_with_flags(
+            &data.powers_db,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+        let spell = data.store.get(spell_id).unwrap().clone();
+        let effect = &spell.effects[effect_index];
+        let slot = usize::from(spell_id == 123904);
+        let origin = if spell_id == 123904 {
+            super::targets::position(h.app.world(), h.npc).unwrap()
+        } else {
+            Vec3::ZERO
+        };
+        let authored_radius = super::targets::radius(effect, slot);
+        let points: Vec<_> = (0..32)
+            .map(|_| {
+                super::targets::effect_dest(h.app.world(), h.caster, Some(h.npc), effect, None)
+                    .expect("native random destination")
+                    .position
+            })
+            .collect();
+        for point in &points {
+            assert!((point.distance(origin) - authored_radius).abs() < 0.001);
+        }
+        assert!(points.iter().any(|point| point.distance(points[0]) > 0.1));
+        super::execute_cast(h.app.world_mut(), h.caster, &spell, Some(h.npc))
+            .expect("native random summon");
+        let caster = h.caster;
+        let world = h.app.world_mut();
+        let owned: Vec<_> = world
+            .query::<(
+                &shared::components::Npc,
+                &shared::components::UnitSummonedBy,
+            )>()
+            .iter(world)
+            .filter(|(npc, owner)| npc.template_id == entry && owner.0 == caster.to_bits())
+            .collect();
+        assert_eq!(owned.len(), 1, "native summon {spell_id}");
+    }
+}
+
+#[test]
+fn class_completeness_native_destination_radius_uses_random_direction_not_fixed_front() {
+    let h = harness(Vec::new(), &[46585], 6).unwrap();
+    let spell = world_db().unwrap().store.get(46585).unwrap();
+    let effect = &spell.effects[0];
+    let native_radius = super::targets::radius(effect, 1);
+    let points: Vec<_> = (0..32)
+        .map(|_| {
+            super::targets::effect_dest(h.app.world(), h.caster, None, effect, None)
+                .unwrap()
+                .position
+        })
+        .collect();
+    for point in &points {
+        assert!((point.length() - native_radius).abs() < 0.001);
+    }
+    assert!(
+        points.iter().any(|point| point.distance(points[0]) > 0.1),
+        "native target91 uses random direction"
+    );
+}
+
+#[test]
+fn class_completeness_native_mass_resurrection_offers_to_group_corpse_not_ghost_position() {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use crate::persistence::ClientId;
+    use lightyear::prelude::{MessageReceiver, MessageSender};
+    use shared::death::{Corpse, DeathState};
+    use shared::protocol::{ResurrectionOffer, ResurrectionResponse};
+
+    let mut h = harness(Vec::new(), &[212036], 5).unwrap();
+    h.app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&world_db().unwrap().powers_db).unwrap(),
+    );
+    h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
+    let target = spawn_player(&mut h.app, 5, 200.0);
+    let stranger = spawn_player(&mut h.app, 5, 3.0);
+    for (unit, id) in [(target, 2), (stranger, 3)] {
+        h.app.world_mut().entity_mut(unit).insert((
+            ClientId(id),
+            crate::death::PlayerDeathState {
+                state: DeathState::Ghost,
+                corpse: Some(Corpse {
+                    player: unit.to_bits(),
+                    map_id: 0,
+                    x: 3.0,
+                    y: 0.0,
+                    z: 0.0,
+                    created_at: 0,
+                }),
+                graveyard: None,
+            },
+        ));
+        h.app.world_mut().get_mut::<Health>(unit).unwrap().current = 0.0;
+    }
+    let online: OnlineView = [(1, h.caster), (2, target)]
+        .into_iter()
+        .map(|(id, unit)| {
+            (
+                id,
+                OnlineMember {
+                    entity: unit.to_bits(),
+                    name: format!("Member{id}"),
+                    class: 5,
+                    level: 80,
+                    portrait: Default::default(),
+                    dungeon_difficulty: 0,
+                    raid_difficulty: Default::default(),
+                },
+            )
+        })
+        .collect();
+    let mut groups = GroupRegistry::default();
+    groups.invite(1, "Member2", &online);
+    groups.respond_invite(2, true);
+    assert!(groups.is_in_same_group(1, 2));
+    h.app.insert_resource(groups);
+    let conn = spawn_peer_connection(&mut h.app, target, 99);
+    h.app.world_mut().entity_mut(conn).insert((
+        MessageSender::<ResurrectionOffer>::default(),
+        MessageReceiver::<ResurrectionOffer>::default(),
+    ));
+    let spell = world_db().unwrap().store.get(212036).unwrap().clone();
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native raid corpse selector");
+    h.advance(1);
+    let offers = drain::<ResurrectionOffer>(&mut h.app, conn);
+    assert_eq!(offers.len(), 1);
+    assert_eq!(offers[0].spell_id, 212036);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::death::resurrection::PendingResurrection>(stranger)
+            .is_none()
+    );
+    crate::death::resurrection::respond(
+        h.app.world_mut(),
+        target,
+        ResurrectionResponse {
+            caster: h.caster.to_bits(),
+            spell_id: 212036,
+            accept: true,
+        },
+    );
+    let percent = spell
+        .effects
+        .iter()
+        .find(|effect| crate::death::resurrection::is_resurrection(effect))
+        .unwrap()
+        .base_points;
+    assert_eq!(
+        h.health(target),
+        (h.app.world().get::<Health>(target).unwrap().max * percent / 100.0).floor()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(target)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
+}
+
+#[test]
+fn class_completeness_native_enemy_cone_hits_front_not_allies_back_or_far() {
+    let mut h = harness(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
+    let back = spawn_npc(&mut h.app, -4.0);
+    let far = spawn_npc(&mut h.app, 30.0);
+    let side = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(side)
+        .unwrap()
+        .z = 4.0;
+    let ally = spawn_player(&mut h.app, 10, 3.0);
+    let spell = world_db()
+        .unwrap()
+        .store
+        .get(FISTS_OF_FURY_DAMAGE)
+        .unwrap()
+        .clone();
+    let before = [h.npc, back, far, side, ally].map(|unit| h.health(unit));
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None)
+        .expect("native caster-facing enemy cone must be supported");
+    h.advance(3);
+    assert!(
+        h.health(h.npc) < before[0],
+        "front hostile takes native AP damage"
+    );
+    for (unit, initial) in [back, far, side, ally].into_iter().zip(&before[1..]) {
+        assert_eq!(h.health(unit), *initial, "excluded unit {unit:?}");
+    }
+}
+
+#[test]
+fn class_completeness_native_enemy_cone_follows_caster_facing_and_target_cap() {
+    let mut h = harness(Vec::new(), &[FISTS_OF_FURY_DAMAGE], 10).unwrap();
+    let back = spawn_npc(&mut h.app, -4.0);
+    let farther_back = spawn_npc(&mut h.app, -5.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    let spell = world_db()
+        .unwrap()
+        .store
+        .get(FISTS_OF_FURY_DAMAGE)
+        .unwrap()
+        .clone();
+    let targets = super::targets::select_targets(
+        h.app.world_mut(),
+        h.caster,
+        Some(h.npc),
+        &spell,
+        &spell.effects[0],
+        1,
+        false,
+    )
+    .expect("native cone target selection");
+    assert_eq!(targets, vec![back]);
+    assert!(!targets.contains(&farther_back));
+}
 
 fn fixture() -> Harness {
     let data = world_db().expect("real world.db");

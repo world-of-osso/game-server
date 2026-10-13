@@ -554,13 +554,16 @@ fn percent_mana_cost_uses_base_mana_not_max_pool() {
 /// follows base mana, not the pool). Returns the
 /// mana gained over 1 s in combat, then over 1 s out of combat.
 fn mana_regen_per_second(class: u8, passives: &[u32]) -> Option<(f32, f32)> {
+    mana_regen_at_level(class, passives, 80)
+}
+
+fn mana_regen_at_level(class: u8, passives: &[u32], level: u8) -> Option<(f32, f32)> {
     let mut h = harness(Vec::new(), passives, class)?;
-    let base_mana = crate::stats::base_mana(class, 80).unwrap();
-    assert_eq!(base_mana, 50_000.0);
+    let base_mana = crate::stats::base_mana(class, level).unwrap();
     let world = h.app.world_mut();
     world
         .entity_mut(h.caster)
-        .insert(shared::components::Level(80));
+        .insert(shared::components::Level(level));
     world.get_mut::<CharacterStats>(h.caster).unwrap().base_mana = base_mana;
     // Let the passives apply before measuring.
     h.advance(2);
@@ -610,12 +613,14 @@ fn frost_mage_regenerates_one_percent_base_mana_per_second() {
 
 #[test]
 fn arcane_mage_power_regen_aura_raises_mana_regen_by_its_percentage() {
-    // Arcane Mage 137021: MOD_POWER_REGEN_PERCENT +60 on mana: 500 × 1.6.
-    let Some((in_combat, out_of_combat)) = mana_regen_per_second(8, &[137018, 137021]) else {
-        return;
-    };
-    assert_near(in_combat, 800.0);
-    assert_near(out_of_combat, 800.0);
+    // Native137021s4:60 points, -3/level above SpellLevel10, MaxLevel30.
+    // Pinned TC CalcValue clamps the caster level first; level80 has zero bonus.
+    for (level, multiplier) in [(10, 1.6), (20, 1.3), (30, 1.0), (80, 1.0)] {
+        let (in_combat, out_of_combat) = mana_regen_at_level(8, &[137018, 137021], level).unwrap();
+        let baseline = crate::stats::base_mana(8, level).unwrap() * 0.01;
+        assert_near(in_combat, baseline * multiplier);
+        assert_near(out_of_combat, baseline * multiplier);
+    }
 }
 
 #[test]
