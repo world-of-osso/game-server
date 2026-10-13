@@ -102,11 +102,14 @@ mod quest_time;
 mod quest_view;
 mod race_class;
 mod raid_history;
+mod renown;
 mod reputation;
 mod rest;
 mod scripted_ai;
+mod seething_parachute;
 mod sheet_visibility;
 mod skyriding;
+mod spawn_groups;
 mod spawn_pools;
 mod spell_area;
 mod spell_cast;
@@ -131,6 +134,9 @@ mod trading_post_store;
 mod trait_config;
 mod transmog;
 mod transmog_store;
+mod transport;
+mod transport_catalog;
+mod transport_movement;
 mod unit_target;
 mod vehicle;
 mod vignettes;
@@ -194,7 +200,8 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(achievement::AchievementPlugin)
         .add_plugins(adventure_guide::AdventureGuidePlugin)
-        .add_plugins(trading_post::TradingPostPlugin);
+        .add_plugins(trading_post::TradingPostPlugin)
+        .add_plugins(renown::RenownPlugin);
     add_social_plugins(app);
     add_progression_plugins(app);
     add_world_plugins(app);

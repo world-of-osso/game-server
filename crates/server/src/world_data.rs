@@ -204,6 +204,8 @@ pub struct WorldData {
     pub armor_constants: ArmorConstants,
     /// `content_pool_*` spawn pools (PoolMgr).
     pub pools: crate::spawn_pools::SpawnPools,
+    /// TDB `spawn_group` members whose battleground runtime spawns them by condition.
+    pub spawn_groups: crate::spawn_groups::SpawnGroups,
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
     pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
     /// TDB `creature_template.StringId` keyed by entry.
@@ -252,6 +254,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let armor_constants = expected_stats.armor_constants();
     let pools = crate::spawn_pools::SpawnPools::load(&conn)
         .expect("Failed to load content_pool_*; run scripts/import-spawn-pools.sh");
+    let spawn_groups = crate::spawn_groups::SpawnGroups::load(&conn)
+        .unwrap_or_else(|error| panic!("Failed to load TDB spawn groups: {error}"));
     let vignettes = crate::vignettes::load_creature_vignettes(&conn);
     let template_string_ids =
         load_template_string_ids(&conn).expect("Failed to load TDB creature_template.StringId");
@@ -285,6 +289,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         class_level_base_mana,
         armor_constants,
         pools,
+        spawn_groups,
         vignettes,
         template_string_ids,
         spawn_string_ids,
@@ -1058,8 +1063,8 @@ fn startup_load_world_data(mut commands: Commands) {
     );
     commands.insert_resource(maps);
     commands.insert_resource(
-        crate::scripted_ai::ragefire_chasm::gordoth_intro::load_trigger(&conn)
-            .expect("Failed to load authored Gordoth intro area7899 from local DB2/TDB"),
+        crate::scripted_ai::ragefire_chasm::intro_triggers::load_triggers(&conn)
+            .expect("Failed to load authored Ragefire intro areas7899/7904 from local DB2/TDB"),
     );
     commands.insert_resource(
         crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn)
@@ -1090,6 +1095,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
+    commands.insert_resource(
+        crate::transport_catalog::TransportCatalog::load(&conn)
+            .expect("Load authored transport routes; run scripts/import-battlegrounds.py"),
+    );
     commands.insert_resource(
         crate::pvp::arena_objects::GateCatalog::load(&conn)
             .expect("Load source-backed arena gates; run scripts/import-arenas.py before startup"),

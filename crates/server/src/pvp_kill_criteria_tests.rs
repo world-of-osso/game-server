@@ -2,7 +2,57 @@ use super::*;
 use crate::achievement::PlayerAchievementState;
 use crate::maps::InMap;
 use crate::spell_cast::effects::{EffectCtx, deal_damage};
+use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Health, Position};
+
+#[test]
+fn achievements_criteria_native_player_map_some_credits_only_actual_warsong_killing_blow() {
+    let (mut world, players, file) = kill_match();
+    let killer = players[0].1;
+    let victim = players[1].1;
+    assert_eq!(world.get::<InMap>(killer).unwrap().map_id, 2106);
+    damage(&mut world, killer, victim, 1.0);
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5538)
+    );
+    damage(&mut world, killer, victim, 1000.0);
+    assert_eq!(world.get::<Health>(victim).unwrap().current, 0.0);
+    for (index, (_, player)) in players.iter().enumerate() {
+        assert_eq!(
+            world
+                .get::<PlayerAchievementState>(*player)
+                .unwrap()
+                .criteria_progress
+                .get(&5538),
+            (index == 0).then_some(&1),
+            "only killer, not eligible teammate or victim {index}"
+        );
+    }
+    damage(&mut world, killer, victim, 1000.0);
+    pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&5538),
+        Some(&1),
+        "dead/idle replay"
+    );
+    drop(world);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_achievements(&reopened, players[0].0)
+            .criteria_progress
+            .get(&5538),
+        Some(&1),
+        "native killing blow survives storage reopen"
+    );
+}
 
 fn player_kills(world: &World, player: Entity) -> Option<u64> {
     world
@@ -36,6 +86,8 @@ fn kill_match() -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
             .clone(),
     );
     world.init_resource::<Messages<crate::death::PlayerDeathTransition>>();
+    world.init_resource::<crate::death::DeathServerState>();
+    world.init_resource::<crate::death::DeathTransitionCounters>();
     pvp_objective::update_battleground_objectives(&mut world);
     (world, players, file)
 }
@@ -101,6 +153,18 @@ fn achievements_criteria_native_battleground_kill_rejects_world_self_and_unaccep
         );
         for (_, player) in &players {
             assert_eq!(player_kills(&world, *player), None, "no reward {control}");
+            // TC Unit::Kill11449–11453 credits56 independently of BG reward70,
+            // including self/unfinished matches; only PlayerMap32 gates5538 here.
+            let expected_blow = (*player == killer && control != "world").then_some(&1);
+            assert_eq!(
+                world
+                    .get::<PlayerAchievementState>(*player)
+                    .unwrap()
+                    .criteria_progress
+                    .get(&5538),
+                expected_blow,
+                "killing blow is not a battleground kill reward {control}"
+            );
         }
     }
 }
@@ -158,6 +222,35 @@ fn achievements_criteria_native_battleground_kill_credits_killer_and_team_at_rew
             .criteria_progress
             .contains_key(&20124),
         "Power Orb aura requirement remains conjunctive"
+    );
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&50458),
+        Some(&1),
+        "BG map-type killing blow"
+    );
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&50457),
+        "BG cannot count as arena"
+    );
+    world
+        .run_system_once(crate::death::process_player_death_transitions)
+        .unwrap();
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(victim)
+            .unwrap()
+            .criteria_progress
+            .get(&50460),
+        Some(&1),
+        "actual BG death transition"
     );
     for index in [0, 2, 4] {
         assert_eq!(

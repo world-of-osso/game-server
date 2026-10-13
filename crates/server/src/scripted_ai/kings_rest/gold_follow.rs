@@ -1,13 +1,11 @@
 //! Animated Gold's TC a352b1fa unconstrained, non-pet follow.
 //! Real baked paths only; near-point collision-angle search remains unconverted.
 use bevy::prelude::*;
-use shared::components::{
-    CreatureMotion, ModelDisplay, MovementSpeed, Npc, Position, Rotation, UnitScale,
-};
-use std::collections::HashMap;
+use shared::components::{CreatureMotion, MovementSpeed, Npc, Position, Rotation};
 
 use crate::maps::InMap;
 use crate::navigation::{Goal, MoveRequest, Navigation, Step};
+use crate::scripted_ai::model_reach::{ModelReaches, combat_reach};
 use crate::scripted_ai::{Hook, MotionType};
 
 const FOLLOW_RANGE: f32 = 2.0;
@@ -15,22 +13,19 @@ const FOLLOW_RANGE_TOLERANCE: f32 = 1.0;
 const CHECK_INTERVAL_MS: u32 = 100;
 const BASE_WALK_SPEED: f32 = 2.5;
 
-#[derive(Resource)]
-pub(crate) struct GoldModelReaches(HashMap<u32, f32>);
+/// Serpent84202, Animated Gold88651 and invisible11686 (TDB1210 model info).
+const GOLD_DISPLAYS: [u32; 3] = [11686, 84202, 88651];
 
-pub(crate) fn load_model_reaches(
-    conn: &rusqlite::Connection,
-) -> rusqlite::Result<GoldModelReaches> {
-    let mut statement = conn.prepare(
-        "SELECT DisplayID,CombatReach FROM encounter_creature_model_info \
-         WHERE DisplayID IN (11686,84202,88651)",
-    )?;
-    let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
-    let reaches: HashMap<u32, f32> = rows.collect::<rusqlite::Result<_>>()?;
-    if reaches.len() != 3 {
+/// The prepared model reaches, requiring the Kings' Rest follow displays.
+pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
+    let reaches = crate::scripted_ai::model_reach::load_model_reaches(conn)?;
+    if !GOLD_DISPLAYS
+        .iter()
+        .all(|display| reaches.0.contains_key(display))
+    {
         return Err(rusqlite::Error::QueryReturnedNoRows);
     }
-    Ok(GoldModelReaches(reaches))
+    Ok(reaches)
 }
 
 #[derive(Component, Clone)]
@@ -69,15 +64,6 @@ pub(super) fn start(world: &mut World, actor: Entity, target: Entity) {
 
 pub(super) fn clear(world: &mut World, actor: Entity) {
     world.entity_mut(actor).remove::<GoldFollow>();
-}
-
-fn combat_reach(world: &World, actor: Entity) -> Option<f32> {
-    let model = world.get::<ModelDisplay>(actor)?;
-    let reach = world
-        .get_resource::<GoldModelReaches>()?
-        .0
-        .get(&model.display_id)?;
-    Some(reach * world.get::<UnitScale>(actor).map_or(1.0, |scale| scale.0))
 }
 
 fn point(position: Position) -> Vec3 {

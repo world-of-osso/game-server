@@ -26,6 +26,11 @@ class Conditions(unittest.TestCase):
         compiled = rules.qualified_conditions(criteria or self.criteria, modifiers, LEGACY)
         return {row: rest for row, (_, *rest) in compiled.items()}
 
+    def test_plain_empty_all_is_true_but_empty_some_and_single_are_false(self):
+        self.assertEqual(self.compile({10: node(0, 4)}), {1: [None, ()]})
+        self.assertEqual(self.compile({10: node(0, 8)}), {})
+        self.assertEqual(self.compile({10: node(0, 2)}), {})
+
     def test_all_single_true_mythic_requires_that_difficulty(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 68, 23)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (23,)), ()]})
@@ -71,16 +76,28 @@ class Conditions(unittest.TestCase):
             'difference empties': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 3, 68, 1)},
             'unknown legacy value': {10: node(0, 4), 11: node(10, 2, 20, 7)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
-            'some of facts': {10: node(0, 8), 11: node(10, 2, 8, 1)},
+            'some of multiple facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 8, 2)},
             'negated fact': {10: node(0, 4), 11: node(10, 3, 8, 46598)},
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
             'zero fact asset': {10: node(0, 4), 11: node(10, 2, 32, 0)},
-            'empty tree': {10: node(0, 4)},
         }
         for name, modifiers in cases.items():
             with self.subTest(name):
                 self.assertEqual(self.compile(modifiers), {})
+
+    def test_single_child_some_preserves_the_supported_target_condition(self):
+        emote = copy.deepcopy(self.criteria)
+        emote[1]['Type'] = '54'
+        modifiers = {10: node(0, 8, amount=1), 11: node(10, 2, 4, 216058)}
+        self.assertEqual(self.compile(modifiers, emote), {1: [None, ((4, 216058),)]})
+        modifiers[10]['Amount'] = '0'
+        self.assertEqual(self.compile(modifiers, emote), {1: [None, ((4, 216058),)]})
+        modifiers[10]['Amount'] = '2'
+        self.assertEqual(self.compile(modifiers, emote), {})
+        modifiers[10]['Amount'] = '1'
+        modifiers[11]['Type'] = '5'
+        self.assertEqual(self.compile(modifiers, emote), {}, 'unknown target fields remain blocked')
 
     def test_target_creature_requires_a_per_request_emote_producer(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 4, 1412)}
@@ -104,9 +121,98 @@ class Conditions(unittest.TestCase):
         derived[1]['Type'] = '8'
         self.assertEqual(self.compile(modifiers, derived), {}, 'structural recomputation has no player facts')
 
+    def test_player_zone_preserves_the_authored_id_and_other_conditions(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 41, 1519), 12: node(10, 2, 69, 10)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((41, 1519), (69, 10))]})
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers), {}, 'negated zone remains unsupported')
+
+    def test_exact_player_level_lowers_to_matching_minimum_and_maximum(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 39, 3)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((69, 3), (71, 3))]})
+        modifiers[11]['Asset'] = '0'
+        self.assertEqual(self.compile(modifiers), {}, 'no playable zero level')
+        modifiers[11] = node(10, 3, 39, 3)
+        self.assertEqual(self.compile(modifiers), {}, 'negated level stays unsupported')
+
+    def test_known_solo_condition_admits_the_pinned_zero_asset(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 35, 0)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((35, 0),)]})
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers), {}, 'negated party conditions remain unsupported')
+
     def test_group_roster_limit_preserves_strict_threshold(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
+
+    def test_map_instance_type_preserves_exact_type_including_world_zero(self):
+        for instance_type in (0, 1, 2, 3, 4, 5):
+            modifiers = {10: node(0, 4), 11: node(10, 2, 122, instance_type)}
+            self.assertEqual(self.compile(modifiers), {1: [None, ((122, instance_type),)]})
+        modifiers[11]['Asset'] = '128'
+        self.assertEqual(self.compile(modifiers), {}, 'unknown out-of-range type stays disabled')
+
+    def test_emote_some_accepts_every_plain_target_alternative_without_dropping_children(self):
+        criteria = copy.deepcopy(self.criteria)
+        criteria[1]['Type'] = '54'
+        modifiers = {10: node(0, 8, amount=1),
+                     11: node(10, 2, 4, 63288), 12: node(10, 2, 4, 64798)}
+        self.assertEqual(self.compile(modifiers, criteria),
+                         {1: [None, ((4, 63288), (4, 64798))]})
+        modifiers[10]['Amount'] = '0'
+        self.assertEqual(self.compile(modifiers, criteria),
+                         {1: [None, ((4, 63288), (4, 64798))]})
+        for change in ({'Amount': '2'}, {'Asset': '99'}, {'SecondaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[10].update(change)
+            self.assertEqual(self.compile(rejected, criteria), {})
+        for change in ({'Type': '8'}, {'Operator': '3'}, {'Asset': '0'},
+                       {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[12].update(change)
+            self.assertEqual(self.compile(rejected, criteria), {})
+        modifiers[13] = node(12, 2, 4, 1412)
+        self.assertEqual(self.compile(modifiers, criteria), {}, 'nested unknown child is not dropped')
+        del modifiers[13]
+        self.assertEqual(self.compile(modifiers), {}, 'other event types have no target snapshot')
+
+    def test_player_map_some_preserves_every_complete_alternative(self):
+        modifiers = {10: node(0, 8, amount=1),
+                     11: node(10, 2, 32, 489), 12: node(10, 2, 32, 2106)}
+        for amount in ('0', '1'):
+            modifiers[10]['Amount'] = amount
+            self.assertEqual(self.compile(modifiers),
+                             {1: [None, ((32, 489), (32, 2106))]})
+        for change in ({'Amount': '2'}, {'Asset': '99'}, {'SecondaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[10].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        for change in ({'Type': '8'}, {'Operator': '3'}, {'Asset': '0'},
+                       {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[12].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        modifiers[13] = node(12, 2, 32, 1)
+        self.assertEqual(self.compile(modifiers), {}, 'nested child cannot be dropped')
+
+    def test_player_area_some_preserves_every_complete_alternative(self):
+        modifiers = {10: node(0, 8, amount=1),
+                     11: node(10, 2, 17, 1377), 12: node(10, 2, 17, 9310)}
+        for amount in ('0', '1'):
+            modifiers[10]['Amount'] = amount
+            self.assertEqual(self.compile(modifiers),
+                             {1: [None, ((17, 1377), (17, 9310))]})
+        for change in ({'Amount': '2'}, {'Type': '32'}, {'Asset': '99'}, {'SecondaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[10].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        for change in ({'Type': '41'}, {'Operator': '3'}, {'Asset': '0'},
+                       {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[12].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        modifiers[13] = node(12, 2, 17, 2738)
+        self.assertEqual(self.compile(modifiers), {}, 'nested child cannot be dropped')
 
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
         with closing(sqlite3.connect(':memory:')) as db:

@@ -283,6 +283,12 @@ enum AdminRequest {
     TradingPostRefundWindow {
         seconds: u32,
     },
+    /// Private-server test setup: add renown reputation for a sourced major faction.
+    RenownGrant {
+        character_name: String,
+        major_faction: u32,
+        amount: u32,
+    },
 }
 
 /// Mirror of the server's `CombatLogSummary` (same field order: msgpack
@@ -491,6 +497,12 @@ enum AdminResponse {
     TradingPostRefundWindowSet {
         seconds: u32,
     },
+    RenownGranted {
+        character_name: String,
+        major_faction: u32,
+        level: u32,
+        standing: u32,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -565,6 +577,7 @@ fn print_usage() {
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
     eprintln!("  game-server-admin trading-post-grant-tender <username> <amount>");
     eprintln!("  game-server-admin trading-post-refund-window <seconds>");
+    eprintln!("  game-server-admin renown-grant <character_name> <major_faction_id> <amount>");
     eprintln!("  game-server-admin grant-item <character_name> <item_id> <count>");
     eprintln!("  game-server-admin mail-deliver-now <character_name>");
     eprintln!("  game-server-admin quest-complete <character_name> <quest_id>");
@@ -687,6 +700,18 @@ fn parse_request(args: &[String]) -> AdminRequest {
             AdminRequest::TradingPostGrantTender {
                 username: args[2].clone(),
                 amount: parse_number(&args[3], "amount"),
+            }
+        }
+        "renown-grant" => {
+            require_args(
+                args,
+                5,
+                "renown-grant <character_name> <major_faction_id> <amount>",
+            );
+            AdminRequest::RenownGrant {
+                character_name: args[2].clone(),
+                major_faction: parse_number(&args[3], "major_faction_id"),
+                amount: parse_number(&args[4], "amount"),
             }
         }
         "trading-post-refund-window" => {
@@ -1297,6 +1322,22 @@ mod tests {
         assert!(matches!(
             durability,
             AdminRequest::SetDurability { ref character_name, percent: 40 } if character_name == "Shopper"
+        ));
+    }
+
+    #[test]
+    fn parse_renown_grant_request() {
+        let grant = parse_request(&args(&[
+            "game-server-admin",
+            "renown-grant",
+            "Guidefourm",
+            "12",
+            "6000",
+        ]));
+        assert!(matches!(
+            grant,
+            AdminRequest::RenownGrant { ref character_name, major_faction: 12, amount: 6000 }
+                if character_name == "Guidefourm"
         ));
     }
 

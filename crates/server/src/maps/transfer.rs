@@ -117,6 +117,7 @@ fn near_teleport(
     if options.revive && !crate::spell_cast::targets::is_alive(world, player) {
         crate::death::resurrect_player(world, player);
     }
+    crate::transport::clear_passenger(world, player);
     place_player(world, player, destination);
 }
 
@@ -181,6 +182,7 @@ fn begin_transfer(
     crate::combat::combat_stop(world, player);
     crate::spell_cast::cancel_cast(world, player);
     crate::taxi::finish_flight(world.entity_mut(player));
+    crate::transport::clear_passenger(world, player);
     // oldmap->RemovePlayerFromMap; the saved position becomes m_teleport_dest.
     world.entity_mut(player).remove::<InMap>().insert((
         destination.bevy_position(),
@@ -267,6 +269,7 @@ fn complete_transfer(world: &mut World, player: Entity) {
         .entity_mut(player)
         .insert((resolved.map, ArrivalPending));
     place_player(world, player, &transfer.destination);
+    crate::transport::finish_entry(world, player, resolved.map);
     reset_sent_tiles(world, player);
     let corpse_here = world
         .get::<crate::death::PlayerDeathState>(player)
@@ -367,7 +370,13 @@ pub(crate) fn queue_map_content(
         crate::zones::spawn_map_creatures(commands, world_data, content, true);
     }
     if let Some(objects) = objects {
-        crate::game_objects::spawn_map_game_objects(commands, objects, map, difficulty_id);
+        crate::game_objects::spawn_map_game_objects(
+            commands,
+            objects,
+            map,
+            difficulty_id,
+            world_data.map(|data| &data.spawn_groups),
+        );
     }
 }
 

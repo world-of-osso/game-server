@@ -15,9 +15,9 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62, 63,
-    65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157,
-    158, 160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 18, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62,
+    63, 65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152,
+    157, 158, 160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -44,6 +44,8 @@ pub(crate) enum CriteriaEvent {
     LootItem(u32, u32),
     ParticipateInBattleground(u32),
     DieOnMap(u32),
+    /// Native dungeon/raid copy maximum, not the number of players currently inside.
+    DieInInstance(u32),
     DieAnywhere,
     KilledByCreature(u32),
     KilledByPlayer,
@@ -162,6 +164,7 @@ impl CriteriaEvent {
             Self::ParticipateInBattleground(_) => 15,
             Self::DieOnMap(_) => 16,
             Self::DieAnywhere => 17,
+            Self::DieInInstance(_) => 18,
             Self::KilledByCreature(_) => 20,
             Self::KilledByPlayer => 23,
             Self::DieFromEnvironmentalDamage(_) => 26,
@@ -337,6 +340,7 @@ impl CriteriaEvent {
             | Self::WinBattleground(asset)
             | Self::ParticipateInBattleground(asset)
             | Self::DieOnMap(asset)
+            | Self::DieInInstance(asset)
             | Self::TrackedWorldStateUIModified(asset)
             | Self::KilledByCreature(asset)
             | Self::DieFromEnvironmentalDamage(asset)
@@ -410,12 +414,16 @@ impl DifficultyRule {
     }
 }
 
-/// A compiled criteria ModifierTree: an optional difficulty rule and raw fact
-/// leaves `(ModifierTreeType, Asset)`, all of which must hold.
+/// Compiled All facts or a plain Some of complete target-creature/map/area alternatives.
 #[derive(Debug, Clone, Copy)]
-struct CompiledConditions {
-    difficulty: Option<DifficultyRule>,
-    facts: &'static [(u32, u32)],
+enum CompiledConditions {
+    All {
+        difficulty: Option<DifficultyRule>,
+        facts: &'static [(u32, u32)],
+    },
+    TargetCreatures(&'static [u32]),
+    PlayerMaps(&'static [u32]),
+    PlayerAreas(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -452,15 +460,22 @@ enum CriteriaFact {
     Aura(u32),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
+    /// Some8 requiring one of these complete TargetCreatureId4 leaves.
+    TargetCreatures(BTreeSet<u32>),
     ArenaTeamSize(u8),
     RankedArena,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
     LessThanGroupMembers(u32),
-    /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
+    NotInParty,
+    /// Accepted current areas: descendants for17, one flagged parent for Zone41.
     Area(BTreeSet<u32>),
     Race(u8),
     Class(u8),
     Map(u32),
+    /// Some8 requiring one of these complete, authenticated PlayerMap32 leaves.
+    PlayerMaps(BTreeSet<u32>),
+    /// Authenticated Map.InstanceType members, compared by raw type ID.
+    MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
     MaxLevel(u8),
 }
@@ -473,6 +488,9 @@ impl CriteriaFact {
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
+            Self::TargetCreatures(entries) => {
+                matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if entries.contains(&target))
+            }
             Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
             Self::RankedArena => player.in_ranked_arena,
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
@@ -481,7 +499,10 @@ impl CriteriaFact {
             Self::LessThanGroupMembers(limit) => {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
+            Self::NotInParty => player.group_size == Some(0),
             Self::Map(map) => player.map == *map,
+            Self::PlayerMaps(maps) => maps.contains(&player.map),
+            Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
         }
@@ -1198,6 +1219,29 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
     descendants
 }
 
+fn load_map_instance_type(
+    conn: &Connection,
+    instance_type: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query = conn.prepare_cached("SELECT ID FROM map WHERE InstanceType = ?1")?;
+    let members = query
+        .query_map([instance_type], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!members.is_empty()).then_some(CriteriaFact::MapInstanceType(members)))
+}
+
+/// TC Zone41 uses the current area, or its immediate parent only when flagged subzone.
+fn load_zone_members(conn: &Connection, zone: u32) -> rusqlite::Result<BTreeSet<u32>> {
+    let areas = crate::area_table::load_area_table(conn)?;
+    let mut query = conn.prepare_cached("SELECT ID, ContinentID FROM area_table")?;
+    let rows = query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    let members = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(members
+        .into_iter()
+        .filter_map(|(area, map)| (areas.zone_id(area, map) == Some(zone)).then_some(area))
+        .collect())
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1234,11 +1278,21 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Class),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            35 => Some(CriteriaFact::NotInParty),
+            41 => {
+                if !exists("area_table")? {
+                    return Ok(None);
+                }
+                Some(CriteriaFact::Area(load_zone_members(conn, asset)?))
+            }
+            122 => load_map_instance_type(conn, asset)?,
             69 => small
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/60/69/71"),
+            _ => {
+                unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/35/41/60/69/71/122")
+            }
         };
         let Some(fact) = fact else {
             return Ok(None);
@@ -1246,6 +1300,43 @@ fn load_criteria_facts(
         facts.push(fact);
     }
     Ok(Some(facts))
+}
+
+/// Reject the entire Some when even one authored map is missing.
+fn load_player_map_alternatives(
+    conn: &Connection,
+    maps: &[u32],
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query = conn.prepare_cached("SELECT EXISTS(SELECT 1 FROM map WHERE ID = ?1)")?;
+    for map in maps {
+        let exists = query.query_row([map], |row| row.get::<_, bool>(0))?;
+        if !exists {
+            return Ok(None);
+        }
+    }
+    Ok(Some(CriteriaFact::PlayerMaps(
+        maps.iter().copied().collect(),
+    )))
+}
+
+/// Reuse complete17 validation/ancestry, then union their accepted area members.
+fn load_player_area_alternatives(
+    conn: &Connection,
+    areas: &[u32],
+    area_children: &HashMap<u32, Vec<u32>>,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let leaves: Vec<_> = areas.iter().map(|area| (17, *area)).collect();
+    let Some(facts) = load_criteria_facts(conn, &leaves, area_children)? else {
+        return Ok(None);
+    };
+    let members = facts
+        .into_iter()
+        .flat_map(|fact| match fact {
+            CriteriaFact::Area(members) => members,
+            _ => unreachable!("validated17 leaves produce only Area facts"),
+        })
+        .collect();
+    Ok(Some(CriteriaFact::Area(members)))
 }
 
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
@@ -1293,8 +1384,19 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         let compiled = conditions::criteria_conditions(criteria_id, conditional[0])
             .filter(|_| modifier_asset.is_none());
         let resolved = match compiled {
-            Some(compiled) => load_criteria_facts(conn, compiled.facts, &area_children)?
-                .map(|facts| (compiled.difficulty, facts)),
+            Some(CompiledConditions::All { difficulty, facts }) => {
+                load_criteria_facts(conn, facts, &area_children)?.map(|facts| (difficulty, facts))
+            }
+            Some(CompiledConditions::TargetCreatures(entries)) => Some((
+                None,
+                vec![CriteriaFact::TargetCreatures(entries.iter().copied().collect())],
+            )),
+            Some(CompiledConditions::PlayerMaps(maps)) => {
+                load_player_map_alternatives(conn, maps)?.map(|fact| (None, vec![fact]))
+            }
+            Some(CompiledConditions::PlayerAreas(areas)) => {
+                load_player_area_alternatives(conn, areas, &area_children)?.map(|fact| (None, vec![fact]))
+            }
             None => None,
         };
         let condition_tree = resolved.is_some();
@@ -1317,7 +1419,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 // TDB1210 criteria_data:11118-11127 require holiday404;
                 // 5258 has data_type0 (no condition). No holiday inference.
                 supported: supported_predicate
-                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 16 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
+                    || ((matches!(kind, 0 | 1 | 5 | 8 | 12 | 15 | 16 | 18 | 27 | 36 | 42 | 46 | 57 | 68 | 73 | 165)
                         // TDB1210 criteria_data11134-11140 require orphan aura66303/holiday404.
                         || (kind == 41 && !(11134..=11140).contains(&criteria_id))
                         // TC completion1288-1293 makes type20 statistic-only; new ordinary61917

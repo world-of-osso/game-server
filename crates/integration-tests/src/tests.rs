@@ -434,6 +434,7 @@ fn client_message_received_by_server() {
         swimming: false,
         flying: false,
         position: [0.0, 0.0, 0.0],
+        transport: None,
         epoch: 0,
     };
     // Register a system to collect messages before they get cleared in Last schedule
@@ -540,6 +541,7 @@ fn input_direction(direction: [f32; 3]) -> PlayerInput {
         swimming: false,
         flying: false,
         position: [0.0, 0.0, 0.0],
+        transport: None,
         epoch: 0,
     }
 }
