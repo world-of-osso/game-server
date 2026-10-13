@@ -66,6 +66,29 @@ class PrimaryActorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'creature AI identity'):
             prepare_bindings(self.db, [primary])
 
+    def test_wailing_primaries_keep_all_eight_authored_normal_bits(self):
+        import encounter_cpp_bindings as bindings
+        names = ['anacondra', 'cobrahn', 'kresh', 'pythas', 'skum', 'serpentis', 'verdan', 'mutanus']
+        missing = [name for name in names if name not in bindings.PROFILES]
+        self.assertEqual(missing, [], 'Wailing source identities missing')
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            INSERT INTO dungeon_encounter VALUES(585,43,0),(586,43,1),(587,43,2),
+                (588,43,3),(589,43,4),(590,43,5),(591,43,6),(592,43,7);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (3671,'','SmartAI'),(3669,'','SmartAI'),(3653,'',''),(3670,'','SmartAI'),
+                (3674,'','SmartAI'),(3673,'','SmartAI'),(5775,'','SmartAI'),(3654,'','SmartAI');
+        ''')
+        rows = prepare_bindings(self.db, [bindings.PROFILES[name][0] for name in names])
+        for _ in range(2):
+            self.db.executescript(binding_sql(rows))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit FROM raid_encounter_creature WHERE map_id=43 ORDER BY bit'
+        ).fetchall(), [(3671,585,0),(3669,586,1),(3653,587,2),(3670,588,3),
+                      (3674,589,4),(3673,590,5),(5775,591,6),(3654,592,7)])
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(), [(12118,)])
+
     def test_source_identity_drift_refused_before_mutation(self):
         binding = dict(map_id=2813,entry=234648,encounter_id=3101,bit=1,
                        script='boss_kystia_manaheart',journal_id=2679,actor_id=5847,display_id=124578)
