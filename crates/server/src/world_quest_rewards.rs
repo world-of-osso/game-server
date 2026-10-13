@@ -91,6 +91,7 @@ fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losse
         reputation.get_standing(1090),
         shared::reputation::Standing::Exalted
     );
+    let exalted = reputation.get_value(1090);
     crate::persistence::save_reputation(&db, 31, &reputation);
     let settlement = load_settlement(&db, 31, 1, Some(&rewards[&45068]))
         .unwrap()
@@ -102,7 +103,7 @@ fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losse
         crate::persistence::load_reputation(&db, 31, || panic!("persisted reputation required"));
     assert_eq!(
         persisted.get_value(1090),
-        63000,
+        exalted,
         "TDB cap7 blocks gains while already Exalted"
     );
     rewards.get_mut(&45068).unwrap().reputation[0].amount = -75;
@@ -111,7 +112,7 @@ fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losse
         .unwrap();
     assert_eq!(
         settlement.reputation.get_value(1090),
-        62925,
+        exalted - 75,
         "caps never block negative rewards"
     );
 }
