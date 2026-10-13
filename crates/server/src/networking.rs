@@ -633,7 +633,6 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                 }
             };
             if passenger.is_some() && input.transport.is_none() {
-                info!(player=?link.0, epoch=input.epoch, report=?input.position, "TRANSPORT_WORLD_INPUT_ON_ATTACHED_PLAYER");
                 let player = link.0;
                 params
                     .commands
