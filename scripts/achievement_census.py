@@ -13,7 +13,7 @@ from import_achievement_single_modifiers import qualified_single_modifiers
 from import_achievement_conditions import load_identity_condition_ids, legacy_difficulties, qualified_conditions
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 30, 34, 36, 37, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 # shared battleground_columns.rs PvpStat columns credited by native objectives.
 MAX_LEVEL = 90  # crate::experience::MAX_LEVEL
@@ -69,6 +69,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue
         if kind == 30 and asset not in NATIVE_PVP_STATS:
             continue
+        if kind in (32, 33) and asset <= 0:
+            continue  # TC requires exact map ID, not a zero/all-arena alias.
         if kind == 54 and asset not in (34, 101, 86, 87, 59, 225):
             continue  # TC TextEmotes for the six native emotes, not animation IDs.
         if kind == 26 and asset not in (0, 1, 2, 6):
@@ -111,7 +113,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
 
 def fact_can_hold(kind, asset, spells, zones, maps, identities):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
-    return {2: asset in identities, 4: asset > 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
