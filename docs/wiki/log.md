@@ -1,6 +1,6 @@
 # Wiki Log
 
-- 2026-10-12 — [Golden spawn gate](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): manual group1256 withheld at copy fill and spawned on the copy's last TempleEvent death; group1255's SerpentBossEvent Zul trigger is absent from TDB1210.
+- 2026-10-12 — [Golden spawn gate](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): manual group1256 withheld at copy fill and spawned on the copy's last TempleEvent death; group1255 comes from the Serpentine Seal → Shadow of Zul `SerpentBossEvent` chain (script-set StringId), not yet ported.
 - 2026-10-12 — [Golden intro paths](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): script `MovePath` ports the used WaypointMovementGenerator/Catmull-Rom subset; NotStarted Serpent flies TDB 13532200/01/02, drops emerge at the apex and lands hostile. Spawn-group trigger and fly/hover visuals still open.
 - 2026-10-12 — [Golden partial TC combat](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12): explicit lead timing authorization separates exact pinned TC combat events from unavailable Retail12.1 timeline inputs; stale alerts rejected, friendly intro remains closed, InitializeAI/FAIL/30s evade lifecycle ported. Moving Gold stop, authenticated model geometry and last-definition-wins Retail boss-mod extraction have focused proof. Full current union gate/native/remaining mechanics pending; no complete boss claimed.
 
