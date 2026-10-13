@@ -2726,6 +2726,8 @@ mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
 #[cfg(test)]
+mod rogue_stealth_tests;
+#[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]
 mod tests;
