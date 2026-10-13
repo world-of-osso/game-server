@@ -98,7 +98,17 @@ fn follower_felguard_fights_the_companions_selected_enemy() {
             .any(|event| event.source == Some(pet.to_bits())
                 && event.target == Some(f.h.npc.to_bits())
                 && event.kind == shared::protocol::CombatLogKind::Damage),
-        "actual Felguard damage missing: {:?}",
+        "actual Felguard damage missing: pos {:?}, target {:?}, state {:?}, charm {:?}, hp {:?}, attack {:?}, flags {:?}, enemy hp {:?}; combat {:?}",
+        f.h.app.world().get::<shared::components::Position>(pet),
+        f.h.app.world().get::<crate::networking::CombatTarget>(pet),
+        f.h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(pet),
+        f.h.app.world().get::<crate::pet_control::PetCharm>(pet),
+        f.h.app.world().get::<shared::components::Health>(pet),
+        f.h.app.world().get::<crate::combat::AutoAttack>(pet),
+        f.h.app.world().get::<shared::components::UnitFlags>(pet),
+        f.h.app.world().get::<shared::components::Health>(f.h.npc),
         f.h.inbox.log
     );
 }
