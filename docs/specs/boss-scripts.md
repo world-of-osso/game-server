@@ -30,6 +30,7 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [x] Koranthal61412 appearance casts119928, engage removes it/talks, Twisted119300 first6s/repeat7.3s, Storm119971 first20.5s/repeat47.2s and reschedules Twisted to15.7s. Casting blocks event dispatch as source.
 - [x] Shadow Storm119973 effect0 dummy casts its actual effect value119965 triggered; destination-only missile effect32 forwards its destination to119964 and deals real damage.
 - [x] Koranthal death marks DONE/talks; evade retires without kill credit and respawns after source30s, recasting appearance Vortex.
+- [x] Prepare Koranthal primary-binding SQL with `encounter_cpp_bindings.py --encounter koranthal`: pinned source hashes and local Journal695/actor1321/display42101; idempotent output preserves unrelated bindings. No canonical data mutation.
 - [ ] Canonical primary credit-binding publication, loot/lockout/native acceptance and the other Ragefire boss/intro scripts remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
 
 ## Ruby Life Pools source hooks
