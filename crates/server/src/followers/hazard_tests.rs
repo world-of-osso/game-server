@@ -85,14 +85,21 @@ fn point(position: Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
 
-const FROM: Position = Position {
+pub(super) const FROM: Position = Position {
     x: 116.0,
     y: -34.85623,
     z: -76.0,
 };
 
 fn hostile_field(h: &mut crate::spell_cast::test_harness::Harness, unit: Entity) -> Entity {
-    let from = FROM;
+    hostile_field_at(h, unit, FROM)
+}
+
+pub(super) fn hostile_field_at(
+    h: &mut crate::spell_cast::test_harness::Harness,
+    unit: Entity,
+    from: Position,
+) -> Entity {
     let enemy = spawn_npc(&mut h.app, 0.0);
     h.app
         .world_mut()
