@@ -5,6 +5,55 @@ use crate::spell_cast::effects::{EffectCtx, deal_damage};
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Health, Position};
 
+#[test]
+fn achievements_criteria_native_player_map_some_credits_only_actual_warsong_killing_blow() {
+    let (mut world, players, file) = kill_match();
+    let killer = players[0].1;
+    let victim = players[1].1;
+    assert_eq!(world.get::<InMap>(killer).unwrap().map_id, 2106);
+    damage(&mut world, killer, victim, 1.0);
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&5538)
+    );
+    damage(&mut world, killer, victim, 1000.0);
+    assert_eq!(world.get::<Health>(victim).unwrap().current, 0.0);
+    for (index, (_, player)) in players.iter().enumerate() {
+        assert_eq!(
+            world
+                .get::<PlayerAchievementState>(*player)
+                .unwrap()
+                .criteria_progress
+                .get(&5538),
+            (index == 0).then_some(&1),
+            "only killer, not eligible teammate or victim {index}"
+        );
+    }
+    damage(&mut world, killer, victim, 1000.0);
+    pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&5538),
+        Some(&1),
+        "dead/idle replay"
+    );
+    drop(world);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        crate::persistence::load_achievements(&reopened, players[0].0)
+            .criteria_progress
+            .get(&5538),
+        Some(&1),
+        "native killing blow survives storage reopen"
+    );
+}
+
 fn player_kills(world: &World, player: Entity) -> Option<u64> {
     world
         .get::<PlayerAchievementState>(player)
@@ -104,6 +153,14 @@ fn achievements_criteria_native_battleground_kill_rejects_world_self_and_unaccep
         );
         for (_, player) in &players {
             assert_eq!(player_kills(&world, *player), None, "no reward {control}");
+            assert!(
+                !world
+                    .get::<PlayerAchievementState>(*player)
+                    .unwrap()
+                    .criteria_progress
+                    .contains_key(&5538),
+                "no Warsong killing-blow credit {control}"
+            );
         }
     }
 }

@@ -1,6 +1,77 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_player_map_some_requires_an_authored_reference_map() {
+    let catalog = catalog();
+    for (map, qualifies) in [
+        (Some(489), true),
+        (Some(2106), true),
+        (Some(0), false),
+        (Some(726), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: map.map(|map| ReferencePlayer {
+                map,
+                race: 1,
+                class: 1,
+                level: 30,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::DeliveredKillingBlow,
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&5538),
+            qualifies.then_some(&1),
+            "map {map:?}"
+        );
+    }
+}
+
+#[test]
+fn achievements_criteria_player_map_some_rejects_a_missing_alternative_at_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("map-some.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let conn = Connection::open(&path).unwrap();
+    conn.execute("DELETE FROM map WHERE ID = 489", []).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    let conditions = PlayerConditions {
+        player: Some(ReferencePlayer {
+            map: 2106,
+            race: 1,
+            class: 1,
+            level: 30,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::DeliveredKillingBlow,
+        None,
+        1,
+        &conditions,
+    );
+    assert!(
+        !state.criteria_progress.contains_key(&5538),
+        "missing alternative cannot be silently removed"
+    );
+}
+
+#[test]
 fn achievements_criteria_zone_pet_win_uses_one_flagged_parent_not_ancestry() {
     let catalog = catalog();
     for (area, qualifies) in [

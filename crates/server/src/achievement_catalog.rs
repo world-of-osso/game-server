@@ -414,7 +414,7 @@ impl DifficultyRule {
     }
 }
 
-/// Compiled All facts or a plain Some of complete target-creature alternatives.
+/// Compiled All facts or a plain Some of complete target-creature/map alternatives.
 #[derive(Debug, Clone, Copy)]
 enum CompiledConditions {
     All {
@@ -422,6 +422,7 @@ enum CompiledConditions {
         facts: &'static [(u32, u32)],
     },
     TargetCreatures(&'static [u32]),
+    PlayerMaps(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -470,6 +471,8 @@ enum CriteriaFact {
     Race(u8),
     Class(u8),
     Map(u32),
+    /// Some8 requiring one of these complete, authenticated PlayerMap32 leaves.
+    PlayerMaps(BTreeSet<u32>),
     /// Authenticated Map.InstanceType members, compared by raw type ID.
     MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
@@ -497,6 +500,7 @@ impl CriteriaFact {
             }
             Self::NotInParty => player.group_size == Some(0),
             Self::Map(map) => player.map == *map,
+            Self::PlayerMaps(maps) => maps.contains(&player.map),
             Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
@@ -1297,6 +1301,23 @@ fn load_criteria_facts(
     Ok(Some(facts))
 }
 
+/// Reject the entire Some when even one authored map is missing.
+fn load_player_map_alternatives(
+    conn: &Connection,
+    maps: &[u32],
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query = conn.prepare_cached("SELECT EXISTS(SELECT 1 FROM map WHERE ID = ?1)")?;
+    for map in maps {
+        let exists = query.query_row([map], |row| row.get::<_, bool>(0))?;
+        if !exists {
+            return Ok(None);
+        }
+    }
+    Ok(Some(CriteriaFact::PlayerMaps(
+        maps.iter().copied().collect(),
+    )))
+}
+
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
     let mut areas = conn.prepare("SELECT ID, ParentAreaID FROM area_table WHERE ID != 0")?;
     let mut area_children = HashMap::<u32, Vec<u32>>::new();
@@ -1349,6 +1370,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                 None,
                 vec![CriteriaFact::TargetCreatures(entries.iter().copied().collect())],
             )),
+            Some(CompiledConditions::PlayerMaps(maps)) => {
+                load_player_map_alternatives(conn, maps)?.map(|fact| (None, vec![fact]))
+            }
             None => None,
         };
         let condition_tree = resolved.is_some();
