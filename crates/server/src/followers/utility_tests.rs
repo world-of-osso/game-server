@@ -92,6 +92,71 @@ interrupt_case!(follower_bo_spear_hand_strike_interrupts, 227734, 116705);
 interrupt_case!(follower_ralia_skull_bash_interrupts, 232800, 93985);
 
 #[test]
+fn follower_meredy_stops_her_cast_for_a_ready_counterspell() {
+    let (mut h, unit, _) = spawn_profile_fixture(209059);
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 133, Some(h.npc), false).unwrap();
+    start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    assert!(h.app.world().get::<CastState>(h.npc).is_none());
+    assert!(h.app.world().get::<CastState>(unit).is_none());
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt && event.spell_id == Some(2139))
+    );
+}
+
+#[test]
+fn follower_counterspell_cooldown_preserves_damage_priority() {
+    let (mut h, unit, _) = spawn_profile_fixture(209059);
+    start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    h.advance(160);
+    start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    assert!(h.app.world().get::<CastState>(h.npc).is_some());
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|cast| cast.caster == unit.to_bits() && cast.spell_id == 2139)
+            .count(),
+        1
+    );
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|cast| cast.caster == unit.to_bits() && cast.spell_id == 108853)
+    );
+}
+
+#[test]
+fn follower_unready_interrupt_does_not_cancel_her_current_cast() {
+    let (mut h, unit, _) = spawn_profile_fixture(209059);
+    start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    h.advance(160);
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 133, Some(h.npc), false).unwrap();
+    start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    assert_eq!(h.app.world().get::<CastState>(unit).unwrap().spell_id, 133);
+    assert!(h.app.world().get::<CastState>(h.npc).is_some());
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|cast| cast.caster == unit.to_bits() && cast.spell_id == 2139)
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn follower_does_not_waste_counterspell_on_non_interruptible_cast() {
     let (mut h, unit, _) = spawn_profile_fixture(209059);
     start_enemy_fireball(&mut h, unit);

@@ -176,7 +176,7 @@ use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
     AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress,
+    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
