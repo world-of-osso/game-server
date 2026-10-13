@@ -199,7 +199,7 @@ fn mark_replication(world: &World, entity: Entity) {
     if let Some(queue) = world.get_resource::<crate::interest::InterestDirtyQueue>() {
         queue.mark(entity);
     }
-    if let Some(queue) = world.get_resource::<crate::interest::ReplicationDirtyQueue>() {
+    if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
         queue.mark(entity);
     }
 }
