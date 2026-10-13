@@ -129,6 +129,11 @@ fn alterac_channel_last_leave_with_retargeting_npc_settles_target_mirror_before_
     entered.h.receive_pvp_updates(5);
     assert!(entered.h.app.world().get_entity(captain).is_err());
     for actor in &entered.players {
+        let returns = entered.h.new_worlds(actor);
+        assert_eq!(returns.len(), 1);
+        assert_eq!(returns[0].map_id, 0);
+        entered.h.ack(actor);
+        assert!(close(entered.h.position(actor), entered.origin));
         assert_eq!(
             entered.h.app.world().get::<InMap>(actor.player),
             Some(&STORMWIND)
