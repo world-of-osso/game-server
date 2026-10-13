@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Dungeon spawn-leash exemption](../specs/creature-aggro.md) — TC dungeon policy, unchanged open-world40yd test, and [superseded Stockade evidence](systems/navigation.md#stationary-arch-and-leash-acceptance); Slagmaw's authored East teleport stays engaged.
+
 - [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.
 - [Unrated Solo Shuffle](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13) — six source-role rounds, item cast-time/category reset RED/GREEN, four-map exact origins and both-skin real-kill/return proof; rated/leaver and dampening gaps explicit.
 

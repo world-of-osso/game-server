@@ -53,6 +53,33 @@ class CoverageTests(unittest.TestCase):
         self.assertFalse(any('infusion' in reason or 'Fel Spray' in reason for reason in gaps))
         self.assertEqual(actor['proof'], 'structural inspection only')
 
+    def test_deadmines_source_primary_is_not_its_journal_companion(self):
+        source = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+        journals = [['Helix Gearbreaker', '', 0, 0, 90, 1, 2977]]
+        actors = [['Lumbering Oaf', '', 101, 90, 33003, 0, 0, 0, 0]]
+        with closing(sqlite3.connect(source.as_uri()+'?mode=ro', uri=True)) as connection:
+            order = {row[0]: dict(tier=3, sort=(3,row[0]), reason='test source inventory')
+                     for row in connection.execute('SELECT ID FROM map')}
+            records = coverage.collect(connection, journals, actors, {1: 36}, [], order)
+        expected = {2976: 47162, 2981: 47162, 2977: 47296, 2982: 47296,
+                    2975: 43778, 2980: 43778, 2974: 47626, 2979: 47626,
+                    2973: 47739, 2978: 47739, 1081: 49541}
+        deadmines = {r['encounter_id']: r for r in records if r['map_id'] == 36}
+        for encounter, primary in expected.items():
+            self.assertIn(primary, {a['entry'] for a in deadmines[encounter]['actors']})
+        helix = deadmines[2977]
+        by_entry = {a['entry']: a for a in helix['actors']}
+        self.assertEqual(set(by_entry), {47296, 47297})
+        self.assertEqual(by_entry[47296]['name'], 'Helix Gearbreaker')
+        self.assertEqual(by_entry[47297]['name'], 'Lumbering Oaf')
+        for actor in by_entry.values():
+            self.assertEqual(actor['kill_credit'], 'blocked: no binding/spawn')
+            self.assertEqual(actor['admitted_casts'], [])
+        rendered = coverage.render([helix], source, 'fixture')
+        self.assertIn('Lumbering Oaf [47297]', rendered)
+        self.assertNotIn('Helix Gearbreaker [47297]', rendered)
+        self.assertIn('pinned TC has no Deadmines boss AI', rendered)
+
     def test_ambiguous_display_does_not_assign_kill_credit(self):
         actors = [['Council', '', 30, 9, 123, 0, 0, 0, 9]]
         candidates = {(43, 123): [3669, 3670]}

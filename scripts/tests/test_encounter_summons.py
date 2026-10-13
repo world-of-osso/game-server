@@ -1,12 +1,25 @@
 """Real source-copy mirror-template admission; no canonical writes."""
+import json
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
 
-from encounter_summons import import_animated_gold_template, import_mirror_template, import_shadow_of_zul_template
+import encounter_serverside_spells
+from encounter_summons import (import_animated_gold_template, import_demonic_leap_template,
+                               import_mirror_template, import_shadow_of_zul_template)
 
 SOURCE = Path(__file__).resolve().parents[2] / 'data/world.db'
+SERVERSIDE = Path(__file__).resolve().parent / 'fixtures/ragefire-serverside-spells.json'
+
+
+def write_actual_serverside_rows(db):
+    """The captured TDB rows, written by the production table writer."""
+    fixture = json.loads(SERVERSIDE.read_text())
+    selected = {table: {index: [row[column] for column in fixture['schema'][table]]
+                        for index, row in enumerate(rows)}
+                for table, rows in fixture['rows'].items()}
+    encounter_serverside_spells.write_source_tables(db, fixture['schema'], selected)
 
 
 class MirrorTemplateTests(unittest.TestCase):
@@ -68,6 +81,42 @@ class MirrorTemplateTests(unittest.TestCase):
                 self.assertEqual(db.execute('SELECT * FROM content_creature_template WHERE entry=234648').fetchone(),unrelated)
                 import_mirror_template(db)
                 self.assertEqual(db.execute('SELECT count(*) FROM content_creature_template WHERE entry=255050').fetchone()[0],1)
+
+    def test_demonic_leap_requires_prepared_serverside_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'adarogg.sqlite'
+            with sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro',uri=True) as source, sqlite3.connect(copy) as db:
+                source.backup(db)
+                db.execute('DROP TABLE IF EXISTS tdb_serverside_spell_effect')
+                db.execute('DELETE FROM content_creature_template WHERE entry=61409')
+                db.commit()
+                with self.assertRaisesRegex(ValueError, 'encounter_serverside_spells'):
+                    import_demonic_leap_template(db)
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature_template WHERE entry=61409').fetchone()[0],0)
+
+    def test_demonic_leap_uses_actual_base_models_and_normal_difficulty(self):
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'adarogg.sqlite'
+            with sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro',uri=True) as source, sqlite3.connect(copy) as db:
+                source.backup(db)
+                for table in ('tdb_serverside_spell', 'tdb_serverside_spell_effect'):
+                    db.execute(f'DROP TABLE IF EXISTS {table}')
+                for table, column in (('content_creature_template','entry'),('content_creature_template_model','CreatureID'),
+                                      ('content_creature_template_difficulty','entry')):
+                    db.execute(f'DELETE FROM {table} WHERE {column}=61409')
+                write_actual_serverside_rows(db)
+                db.commit()
+                before = db.execute('SELECT count(*) FROM content_creature').fetchone()[0]
+                source_models = db.execute('SELECT CreatureDisplayID,DisplayScale FROM tdb_creature_template_model WHERE CreatureID=61409').fetchall()
+                self.assertEqual(import_demonic_leap_template(db), 61409)
+                self.assertEqual(db.execute('SELECT name,AIName,ScriptName,faction FROM content_creature_template WHERE entry=61409').fetchone(),
+                                 ('Demonic Leap','','',16))
+                self.assertEqual(db.execute('SELECT CreatureDisplayID,DisplayScale FROM content_creature_template_model WHERE CreatureID=61409').fetchall(),source_models)
+                self.assertEqual(db.execute('SELECT DifficultyID,ContentTuningID,HealthModifier FROM content_creature_template_difficulty WHERE entry=61409').fetchall(),
+                                 [(1,207,15.0)])
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature').fetchone()[0],before)
+                import_demonic_leap_template(db)
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature_template WHERE entry=61409').fetchone()[0],1)
 
 
 if __name__ == '__main__':
