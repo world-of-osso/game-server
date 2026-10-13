@@ -76,7 +76,7 @@ class Conditions(unittest.TestCase):
             'difference empties': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 3, 68, 1)},
             'unknown legacy value': {10: node(0, 4), 11: node(10, 2, 20, 7)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
-            'some of multiple facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 8, 2)},
+            'some of mixed aura/map facts': {10: node(0, 8), 11: node(10, 2, 8, 1), 12: node(10, 2, 32, 2)},
             'negated fact': {10: node(0, 4), 11: node(10, 3, 8, 46598)},
             'target leaf': {10: node(0, 4), 11: node(10, 2, 4, 448)},
             'nested all': {10: node(0, 4), 11: node(10, 4), 12: node(11, 2, 8, 1)},
@@ -212,6 +212,26 @@ class Conditions(unittest.TestCase):
             rejected[12].update(change)
             self.assertEqual(self.compile(rejected), {})
         modifiers[13] = node(12, 2, 17, 2738)
+        self.assertEqual(self.compile(modifiers), {}, 'nested child cannot be dropped')
+
+    def test_player_aura_some_preserves_every_complete_spell_alternative(self):
+        modifiers = {10: node(0, 8, amount=1),
+                     11: node(10, 2, 8, 136775), 12: node(10, 2, 8, 136777),
+                     13: node(10, 2, 8, 136778)}
+        for amount in ('0', '1'):
+            modifiers[10]['Amount'] = amount
+            self.assertEqual(self.compile(modifiers),
+                             {1: [None, ((8, 136775), (8, 136777), (8, 136778))]})
+        for change in ({'Amount': '2'}, {'Asset': '99'}, {'SecondaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[10].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        for change in ({'Type': '9'}, {'Operator': '3'}, {'Asset': '0'},
+                       {'SecondaryAsset': '1'}, {'TertiaryAsset': '1'}):
+            rejected = copy.deepcopy(modifiers)
+            rejected[13].update(change)
+            self.assertEqual(self.compile(rejected), {})
+        modifiers[14] = node(13, 2, 8, 1459)
         self.assertEqual(self.compile(modifiers), {}, 'nested child cannot be dropped')
 
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):

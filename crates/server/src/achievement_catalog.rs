@@ -414,7 +414,7 @@ impl DifficultyRule {
     }
 }
 
-/// Compiled All facts or a plain Some of complete target-creature/map/area alternatives.
+/// Compiled All facts or a plain Some of complete target-creature/map/area/aura alternatives.
 #[derive(Debug, Clone, Copy)]
 enum CompiledConditions {
     All {
@@ -424,6 +424,7 @@ enum CompiledConditions {
     TargetCreatures(&'static [u32]),
     PlayerMaps(&'static [u32]),
     PlayerAreas(&'static [u32]),
+    PlayerAuras(&'static [u32]),
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -458,6 +459,8 @@ enum CriteriaFact {
     /// Bounded native PlayerCondition2 class/race rule; all other fields reject at load.
     Identity(crate::game_objects::identity_conditions::IdentityCondition),
     Aura(u32),
+    /// Some8 requiring one of these complete, authenticated PlayerHasAura8 spells.
+    PlayerAuras(BTreeSet<u32>),
     /// TargetCreatureId4: only DoEmote has a per-request native target snapshot.
     TargetCreature(u32),
     /// Some8 requiring one of these complete TargetCreatureId4 leaves.
@@ -485,6 +488,7 @@ impl CriteriaFact {
         match self {
             Self::Identity(identity) => identity.permits_race_class(player.race, player.class),
             Self::Aura(spell) => player.auras.contains(spell),
+            Self::PlayerAuras(spells) => !player.auras.is_disjoint(spells),
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
@@ -1339,6 +1343,16 @@ fn load_player_area_alternatives(
     Ok(Some(CriteriaFact::Area(members)))
 }
 
+/// Reuse complete8 spell validation; no area ancestry participates in aura leaves.
+fn load_player_aura_alternatives(
+    conn: &Connection,
+    spells: &[u32],
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let leaves: Vec<_> = spells.iter().map(|spell| (8, *spell)).collect();
+    Ok(load_criteria_facts(conn, &leaves, &HashMap::new())?
+        .map(|_| CriteriaFact::PlayerAuras(spells.iter().copied().collect())))
+}
+
 fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlite::Result<()> {
     let mut areas = conn.prepare("SELECT ID, ParentAreaID FROM area_table WHERE ID != 0")?;
     let mut area_children = HashMap::<u32, Vec<u32>>::new();
@@ -1396,6 +1410,9 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
             }
             Some(CompiledConditions::PlayerAreas(areas)) => {
                 load_player_area_alternatives(conn, areas, &area_children)?.map(|fact| (None, vec![fact]))
+            }
+            Some(CompiledConditions::PlayerAuras(spells)) => {
+                load_player_aura_alternatives(conn, spells)?.map(|fact| (None, vec![fact]))
             }
             None => None,
         };
