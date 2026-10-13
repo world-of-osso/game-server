@@ -817,6 +817,14 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
         snapshot.outcome = values.4;
         snapshot.players = values.5.clone();
         snapshot.arena = values.6.clone();
+        if let Some(unit) = snapshot.arena.as_ref().and_then(|arena| {
+            arena
+                .units
+                .iter()
+                .find(|unit| unit.entity == player.to_bits())
+        }) {
+            snapshot.team = unit.team;
+        }
         snapshot.world_states = values.7.clone();
         super::pvp_invites::send_response(
             world,

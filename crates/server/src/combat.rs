@@ -1103,7 +1103,16 @@ fn try_swing(
         level_difference,
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
-    let outcome_damage = if immune { 0.0 } else { outcome_damage };
+    let critical_multiplier = if kind == MeleeOutcome::Crit {
+        attacker.mods.map_or(1.0, |mods| mods.critical_damage(1))
+    } else {
+        1.0
+    };
+    let outcome_damage = if immune {
+        0.0
+    } else {
+        outcome_damage * critical_multiplier
+    };
     let absorption = crate::auras::consume_absorbs(
         avoidance
             .1

@@ -419,6 +419,7 @@ fn save_and_despawn(
 
 pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     commands.queue(move |world: &mut World| {
+        crate::pvp::reconnect::logged_out(world, entity);
         crate::hunter_pet::persist_current_pet_health(world, entity);
         // The transport can outlive its retired player while ForcedDisconnect is
         // delivered. Revoke its world link before PostUpdate removes that player.
@@ -444,6 +445,13 @@ pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
         "Removed replication for player entity {:?}, pending despawn",
         entity
     );
+}
+
+#[cfg(test)]
+pub(crate) fn install_disconnect_fixture(app: &mut App) {
+    app.init_resource::<ConnectedAccounts>();
+    app.add_observer(on_client_disconnected);
+    app.add_systems(PreUpdate, despawn_pending);
 }
 
 fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDespawn>>) {
