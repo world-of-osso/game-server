@@ -103,6 +103,22 @@ struct MatchTimes {
 #[derive(Resource, Default)]
 pub(crate) struct Timers(BTreeMap<InMap, Clock>);
 
+pub(super) fn reset_map(world: &mut World, map: InMap) {
+    world.resource_mut::<Timers>().0.remove(&map);
+    if map.map_id != MAP {
+        return;
+    }
+    for player in players_on(world, map) {
+        // Warning removal must not teleport a player to the previous team's exit.
+        crate::auras::remove_auras(world, player, crate::auras::RemoveReason::Expired, |aura| {
+            aura.spell_id == STARTING_AREA_MARKER
+        });
+        crate::auras::remove_auras(world, player, crate::auras::RemoveReason::Expired, |aura| {
+            aura.spell_id == WARNING
+        });
+    }
+}
+
 pub(super) fn update(world: &mut World, now: f64) {
     let maps: BTreeMap<_, _> = world
         .resource::<super::PvpServerState>()

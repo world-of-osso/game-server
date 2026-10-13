@@ -56,6 +56,7 @@ pub(super) struct MatchState {
     pub snapshot: ArenaMatchSnapshot,
     pub rated: Option<super::arena_rating::RatedMatch>,
     pub score_dirty: bool,
+    pub shuffle: Option<super::arena_shuffle::Shuffle>,
 }
 impl MatchState {
     pub fn template(&self) -> BgTemplate {
@@ -77,7 +78,7 @@ pub(super) fn team_size(mode: ArenaQueueMode) -> Option<u8> {
     match mode {
         ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Rated2v2 => Some(2),
         ArenaQueueMode::Skirmish3v3 | ArenaQueueMode::Rated3v3 => Some(3),
-        ArenaQueueMode::SoloShuffle => None,
+        ArenaQueueMode::SoloShuffle => Some(3),
     }
 }
 pub(super) fn queue_player(
@@ -93,10 +94,8 @@ pub(super) fn queue_player(
             "rated arena requires a full group and its leader's rated queue request".into(),
         );
     }
-    if team_size(mode).is_none() {
-        return Err(
-            "Solo Shuffle six-player roles are sourced; complete 12.1 round reset and preparation policy is unverified".into(),
-        );
+    if mode == ArenaQueueMode::SoloShuffle && !(60..=90).contains(&level) {
+        return Err("Solo Shuffle source level bracket is60–90".into());
     }
     if player.battleground.is_some() || player.queue.is_some() {
         return Err("already queued or invited to PvP".into());
@@ -183,12 +182,14 @@ pub(super) fn create_match(
         started: None,
         rated: None,
         score_dirty: false,
+        shuffle: None,
         snapshot: ArenaMatchSnapshot {
             mode,
             preparation_remaining_secs: None,
             shadow_sight_available: false,
             units: Vec::new(),
             rating_changes: Vec::new(),
+            shuffle: None,
         },
     };
     let template = arena.template();
@@ -241,6 +242,9 @@ pub(super) fn receive_queue_requests(world: &mut World) {
         let level = world.get::<Level>(player).map(|level| level.0);
         let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
             world.resource_scope(|world, catalog: Mut<Catalog>| {
+                if mode == ArenaQueueMode::SoloShuffle {
+                    super::arena_shuffle::validate_entrant(world, player, id)?;
+                }
                 let mut actor = world
                     .get_mut::<PlayerPvpState>(player)
                     .ok_or("PvP state unavailable")?;
@@ -258,7 +262,13 @@ pub(super) fn receive_queue_requests(world: &mut World) {
         if result.is_ok() {
             while let Some(match_id) =
                 world.resource_scope(|world, mut state: Mut<PvpServerState>| {
-                    form_match(&mut state, world.resource::<Catalog>(), mode)
+                    world.resource_scope(|world, catalog: Mut<Catalog>| {
+                        if mode == ArenaQueueMode::SoloShuffle {
+                            super::arena_shuffle::form_match(world, &mut state, &catalog)
+                        } else {
+                            form_match(&mut state, &catalog, mode)
+                        }
+                    })
                 })
             {
                 publish_invitation(world, match_id);
