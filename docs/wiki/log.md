@@ -8,6 +8,7 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Deadmines pinned source has instance wiring only; exact six primaries authenticated, Oaf47297 no longer labeled Helix. Missing AI/spawns and difficulty-specific bit binding gaps retained. [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Slagmaw source port: Lava Spit/Submerge/server-side teleports, GetDistance boundary with source CombatReach24 (shared `model_reach.rs`). Dungeon-map spawn leash exempted per TC; open-world40yd boundary retained and tested. Historical Stockade39.888yd leash proof [superseded, evidence preserved](systems/navigation.md#stationary-arch-and-leash-acceptance). [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
 
