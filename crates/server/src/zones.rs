@@ -577,7 +577,7 @@ fn insert_formation_members(
 pub(crate) struct AddonAuras(pub Vec<u32>);
 
 /// Self-cast addon auras once the creature exists (Creature::LoadCreaturesAddon `AddAura`).
-fn apply_addon_auras(world: &mut World) {
+pub(crate) fn apply_addon_auras(world: &mut World) {
     let pending: Vec<(Entity, Vec<u32>)> = world
         .query::<(Entity, &AddonAuras)>()
         .iter(world)

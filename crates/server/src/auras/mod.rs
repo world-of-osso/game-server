@@ -1564,7 +1564,6 @@ pub fn interrupt_auras(
         (aura.interrupt_flags[0] & flags[0] != 0 || aura.interrupt_flags[1] & flags[1] != 0)
             && Some(aura.spell_id) != except_spell
     });
-    crate::spell_cast::interrupt_channel_with_flags(world, unit, flags, except_spell);
 }
 
 // --- Systems ---
@@ -1778,6 +1777,9 @@ fn state_interrupts(world: &mut World, unit: Entity) {
         auras.bypass_change_detection().spec = spec;
     }
     interrupt_auras(world, unit, flags, None);
+    // Proc-derived interrupt flags approximate other TC call sites (triggered casts
+    // skip Action there), so only these state changes end matching channels.
+    crate::spell_cast::interrupt_channel_with_flags(world, unit, flags);
 }
 
 /// Rebuild `UnitAuras` for units whose auras changed; remaining times are

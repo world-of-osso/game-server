@@ -105,6 +105,7 @@ fn encounter_fixture(
 ) -> (Harness, Option<Entity>, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app_with(data, |app| {
+        app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
         if populate {
             app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
             app.insert_resource(
@@ -178,6 +179,8 @@ fn encounter_fixture(
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
+        addons: crate::world_data::load_spawn_addons(&conn),
+        template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
@@ -651,14 +654,23 @@ fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
     assert!(h.has_aura(zul, 269058), "shadowform until +15s");
     h.advance(5.0);
     assert!(!h.has_aura(zul, 269058));
-    h.advance(1.2);
+    h.advance(1.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(zul)
+            .map(|display| display.display_id),
+        Some(11686),
+        "+16s DISPLAY_INVISIBLE_ZUL, not yet unsummoned"
+    );
+    h.advance(1.0);
     assert!(
         h.app.world().get_entity(zul).is_err()
             || h.app
                 .world()
                 .get::<crate::combat::DeathState>(zul)
                 .is_some(),
-        "Zul vanishes and unsummons 1s after +16s"
+        "DespawnOrUnsummon(1s) after +16s"
     );
     for &creature in &raised[..16] {
         h.hit_pct(creature, 1_000.0);
@@ -978,10 +990,9 @@ fn encounter_coverage_golden_serpent_evade_retires_and_respawns_without_credit()
     );
 }
 
-#[test]
-fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_death() {
-    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
-    let position = h.wow_position(boss);
+/// Animated Gold as Lucre's Call leaves it: its TDB template addon spawns it molten
+/// (265915) and the call's aura removal animates it (covered by the Lucre's Call test).
+fn animated_gold(h: &mut Harness, boss: Entity, position: Vec3) -> Entity {
     let gold = crate::zones::summon_creature(
         h.app.world_mut(),
         boss,
@@ -990,6 +1001,24 @@ fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_deat
     )
     .unwrap();
     h.advance(0.1);
+    assert!(
+        h.has_aura(gold, 265915),
+        "TDB creature_template_addon spawns Animated Gold molten"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    gold
+}
+
+#[test]
+fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_death() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = animated_gold(&mut h, boss, position);
     let amount = h.health(gold).max * 2_000.0;
     h.hit(gold, amount);
     assert_eq!(
@@ -1028,14 +1057,7 @@ fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_deat
 fn encounter_coverage_animated_gold_direct_self_loss_also_intercepts_lethal_damage() {
     let (mut h, boss, map) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let amount = h.health(gold).max * 2_000.0;
     crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, amount);
     assert_eq!(
@@ -1080,14 +1102,7 @@ fn encounter_coverage_animated_gold_direct_self_loss_also_intercepts_lethal_dama
 fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let player = h.player();
     let location = *h.app.world().get::<Position>(gold).unwrap();
     h.app.world_mut().entity_mut(player).insert((
@@ -1172,14 +1187,7 @@ fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
 fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is_not_lethal() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let player = h.player();
     let before = h.health(gold).current;
     crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, before - 1.0);
@@ -1219,14 +1227,7 @@ fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is
 fn encounter_coverage_animated_gold_molten_transition_stops_active_motion() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let start = *h.app.world().get::<Position>(gold).unwrap();
     let destination = Position {
         x: start.x + 30.0,

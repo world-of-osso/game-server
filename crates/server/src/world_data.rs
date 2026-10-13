@@ -241,15 +241,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let spawns = load_spawns(&conn);
     let spawns_by_map = build_spawns_by_map(&spawns);
     let waypoints = load_waypoints(&conn);
-    let addons = load_addons(
-        &conn,
-        "SELECT guid, path_id, mount, auras, bytes1, bytes2, emote FROM content_creature_addon",
-    );
-    let template_addons = load_addons(
-        &conn,
-        "SELECT entry, path_id, mount, auras, bytes1, bytes2, emote
-         FROM content_creature_template_addon",
-    );
+    let addons = load_spawn_addons(&conn);
+    let template_addons = load_template_addons(&conn);
     let formations = load_formations(&conn);
     let equipment = load_equipment(&conn);
     let class_level_base_hp = load_class_level_base_hp(&conn);
@@ -830,6 +823,23 @@ fn parse_addon_auras(text: &str) -> Vec<u32> {
         }
     }
     auras
+}
+
+/// `content_creature_addon` keyed by spawn guid.
+pub(crate) fn load_spawn_addons(conn: &Connection) -> HashMap<u32, CreatureAddon> {
+    load_addons(
+        conn,
+        "SELECT guid, path_id, mount, auras, bytes1, bytes2, emote FROM content_creature_addon",
+    )
+}
+
+/// `content_creature_template_addon` keyed by template entry.
+pub(crate) fn load_template_addons(conn: &Connection) -> HashMap<u32, CreatureAddon> {
+    load_addons(
+        conn,
+        "SELECT entry, path_id, mount, auras, bytes1, bytes2, emote
+         FROM content_creature_template_addon",
+    )
 }
 
 fn load_addons(conn: &Connection, sql: &str) -> HashMap<u32, CreatureAddon> {
