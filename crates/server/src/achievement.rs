@@ -642,6 +642,18 @@ pub(crate) fn record_pvp_stat(world: &mut World, player: Entity, map: u32, stat:
     }
 }
 
+/// TC Battleground::HandleKillPlayer: one native reward in this match's map.
+pub(crate) fn record_battleground_kill(world: &mut World, player: Entity, map: u32) {
+    let event = CriteriaEvent::KillPlayer;
+    scenario::record(world, player, event);
+    crate::adventure_guide::record(world, player, event);
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &[event], Some(map))
+        && let Some(connection) = connection_for_player(world, player)
+    {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
 /// TC BattlePetMgr::AddPet:483 after a new GUID is saved; never journal loads or changes.
 pub(crate) fn record_learned_pet(world: &mut World, player: Entity, species: u32) {
     record_criteria_event(world, player, CriteriaEvent::LearnedNewPet(species));

@@ -2,6 +2,7 @@ import copy
 import sqlite3
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -106,7 +107,7 @@ class Conditions(unittest.TestCase):
         self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
 
     def test_native_identity_loader_rejects_extra_fields_flags_and_source34(self):
-        with sqlite3.connect(':memory:') as db:
+        with closing(sqlite3.connect(':memory:')) as db:
             db.executescript('''
                 CREATE TABLE tdb_conditions(SourceTypeOrReferenceId INTEGER, SourceEntry INTEGER);
                 CREATE TABLE player_condition(
