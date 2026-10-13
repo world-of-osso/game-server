@@ -807,6 +807,7 @@ mod tests {
             .collect(),
             forever: Default::default(),
             loot_need: Default::default(),
+            retail_learning_spells: Default::default(),
         };
         let mut catalog = crate::merchant::VendorCatalog::default();
         catalog.goods.insert(

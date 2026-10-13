@@ -123,7 +123,12 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
 }
 
 /// A logged-in connection (peer `peer`) whose player is `name` at the origin.
-fn spawn_connection(app: &mut App, peer: u64, character_id: u64, name: &str) -> (Entity, Entity) {
+pub(crate) fn spawn_connection(
+    app: &mut App,
+    peer: u64,
+    character_id: u64,
+    name: &str,
+) -> (Entity, Entity) {
     let player = app
         .world_mut()
         .spawn((

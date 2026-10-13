@@ -5,6 +5,10 @@
 - [Source summon flags and privacy](systems/toys.md#source-summon-flag-import-2026-10-12) —3610 readable source records, atomic legacy import, real owner/observer UDP proof and preserved337 census; group/private flag boundaries explicit.
 
 - [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
+- [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13) — native evaluator reused; actual faction-isolated XP-cap Double Agent and reopened account persistence.
+
+- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
+
 - [Master arena/class regressions](investigations/master-arena-fixture-regressions.md) — duplicate Arcane school discount, source-correct reciprocal Moloch controls, and mastery cap/tie fixture isolation; qualified bisect evidence.
 
 - [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29) — player-only263 admission/completion, caster-class and parent flags, thirteen controls; cooking-focus/spellcaster integration preserves both payload contracts.
@@ -214,7 +218,7 @@ Server gameplay systems.
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
-| [[dungeon-achievements]] | Account aggregation/migration, local cast/skill/target criteria, bounded pages/dates, ordered dungeon objectives and Stockade grants |
+| [[dungeon-achievements]] | Account aggregation/migration, raw producer/current-root inventory, earned level/class predicates, area/rank criteria, bounded pages/dates and ordered dungeon grants |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
 | [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
 | [[toys]] | Local Toy.db2 catalog, atomic account learning/favourites, account broadcasts and authoritative UseToy cooldowns; explicit effect/data gaps |
