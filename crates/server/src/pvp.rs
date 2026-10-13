@@ -43,6 +43,8 @@ mod arena_rated_queue;
 mod arena_rated_results;
 #[path = "pvp_arena_scores.rs"]
 mod arena_scores;
+#[path = "pvp_arena_shuffle.rs"]
+mod arena_shuffle;
 pub(crate) use arena_scores::record as record_arena_event;
 #[path = "pvp_arena_rating.rs"]
 mod arena_rating;

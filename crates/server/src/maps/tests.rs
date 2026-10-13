@@ -1713,6 +1713,11 @@ fn arena_disconnect_last_living_logout_ends_the_arena_without_false_deaths() {
     );
 }
 
+#[test]
+fn solo_shuffle_six_rounds_restore_source_gates_and_return_all_origins() {
+    exercise_arena_channel(ArenaQueueMode::SoloShuffle, false, 1134);
+}
+
 fn exercise_arena_channel_with_reconnect(
     mode: ArenaQueueMode,
     forfeit: bool,
@@ -1724,7 +1729,7 @@ fn exercise_arena_channel_with_reconnect(
     let team_size = match mode {
         ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Rated2v2 => 2,
         ArenaQueueMode::Skirmish3v3 | ArenaQueueMode::Rated3v3 => 3,
-        ArenaQueueMode::SoloShuffle => panic!("fixture requires a sourced arena bracket"),
+        ArenaQueueMode::SoloShuffle => 3,
     };
     let bracket = if team_size == 2 {
         PvpBracketSnapshot::Arena2v2
@@ -1795,7 +1800,12 @@ fn exercise_arena_channel_with_reconnect(
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
+    let classes = (mode == ArenaQueueMode::SoloShuffle)
+        .then(|| crate::spell_info::load_spell_data(&source).unwrap().1);
     let mut h = harness_with(move |app| {
+        if let Some(classes) = classes {
+            app.insert_resource(classes);
+        }
         app.insert_resource(crate::persistence::GameDatabase { db });
         if reconnect.is_some() {
             crate::networking::install_disconnect_fixture(app);
@@ -1870,6 +1880,22 @@ fn exercise_arena_channel_with_reconnect(
             pair::<PvpStateUpdate>(),
             pair::<shared::protocol::AttackSwing>(),
         ));
+        if mode == ArenaQueueMode::SoloShuffle {
+            let healer = index < 2;
+            h.app
+                .world_mut()
+                .get_mut::<Player>(who.player)
+                .unwrap()
+                .class = if healer { 5 } else { 1 };
+            h.app
+                .world_mut()
+                .entity_mut(who.player)
+                .insert(shared::components::ActiveSpec(if healer {
+                    257
+                } else {
+                    71
+                }));
+        }
         if !rated {
             h.app
                 .world_mut()
@@ -2088,6 +2114,10 @@ fn exercise_arena_channel_with_reconnect(
                 .animation_id,
             147
         );
+    }
+    if mode == ArenaQueueMode::SoloShuffle {
+        exercise_shuffle_rounds(&mut h, &players, &origins, match_id, map, &gate_actions);
+        return;
     }
     let preparing = players[0].player;
     assert_eq!(
@@ -2362,6 +2392,219 @@ fn exercise_arena_channel_with_reconnect(
     h.receive_pvp_updates(5);
     for (who, origin) in players.iter().zip(&origins) {
         h.ack(who);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(
+            wow(h.app.world().get::<Position>(who.player).unwrap()),
+            *origin
+        ));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+fn exercise_shuffle_rounds(
+    h: &mut Harness,
+    players: &[Traveler],
+    origins: &[Vec3],
+    match_id: u64,
+    map: InMap,
+    gates: &[(u32, String, u32)],
+) {
+    use shared::battleground::{BgPhase, BgTeam};
+    let mut combinations = std::collections::BTreeSet::new();
+    for round in 1..=6 {
+        let matched = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(players[0].player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap()
+            .clone();
+        let arena = matched.arena.as_ref().unwrap();
+        let shuffle = arena.shuffle.as_ref().expect("six-round state");
+        assert_eq!(shuffle.round, round);
+        assert_eq!(matched.phase, BgPhase::Waiting);
+        let team_a: Vec<_> = arena
+            .units
+            .iter()
+            .filter(|unit| unit.team == BgTeam::A)
+            .map(|unit| unit.character_id)
+            .collect();
+        assert_eq!(team_a.len(), 3);
+        assert_eq!(
+            arena
+                .units
+                .iter()
+                .filter(|unit| unit.team == BgTeam::B)
+                .count(),
+            3
+        );
+        combinations.insert(team_a);
+        for who in players {
+            assert_eq!(h.map_of(who), Some(map));
+            let health = h.app.world().get::<Health>(who.player).unwrap();
+            assert_eq!(health.current, health.max, "every round resets health");
+            assert!(crate::auras::has_aura(h.app.world(), who.player, 32727));
+        }
+        let present: Vec<_> = h
+            .app
+            .world_mut()
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                &shared::protocol::GameObjectCollision,
+            )>()
+            .iter(h.app.world())
+            .filter(|(copy, _, _)| **copy == map)
+            .map(|(_, info, collision)| (info.entry, collision.0))
+            .collect();
+        for (entry, _, _) in gates {
+            assert!(
+                present.contains(&(*entry, true)),
+                "deleted/open gate{entry} restored in round{round}"
+            );
+        }
+        h.receive_pvp_updates(1205);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(players[0].player)
+                .unwrap()
+                .battleground
+                .as_ref()
+                .unwrap()
+                .phase,
+            BgPhase::InProgress
+        );
+        h.receive_pvp_updates(110); // source5s door despawns must actually occur before reset
+        let victim_id = matched
+            .arena
+            .as_ref()
+            .unwrap()
+            .units
+            .iter()
+            .find(|unit| unit.team == BgTeam::B)
+            .unwrap()
+            .character_id;
+        let victim = players
+            .iter()
+            .find(|who| {
+                h.app
+                    .world()
+                    .get::<crate::persistence::ClientId>(who.player)
+                    .unwrap()
+                    .0
+                    == victim_id
+            })
+            .unwrap();
+        h.app
+            .world_mut()
+            .get_mut::<Health>(victim.player)
+            .unwrap()
+            .current = 0.0;
+        h.receive_pvp_updates(5);
+        let matched = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(players[0].player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap()
+            .clone();
+        assert_eq!(
+            matched.phase,
+            if round == 6 {
+                BgPhase::Ended
+            } else {
+                BgPhase::Waiting
+            },
+            "first kill finishes a round, not team elimination"
+        );
+        assert!(matched.arena.as_ref().unwrap().rating_changes.is_empty());
+        assert_eq!(
+            matched
+                .arena
+                .as_ref()
+                .unwrap()
+                .shuffle
+                .as_ref()
+                .unwrap()
+                .rounds_won
+                .iter()
+                .map(|(_, wins)| u32::from(*wins))
+                .sum::<u32>(),
+            u32::from(round) * 3
+        );
+        for who in players {
+            let snapshot = h
+                .app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .as_ref()
+                .unwrap();
+            let id = h
+                .app
+                .world()
+                .get::<crate::persistence::ClientId>(who.player)
+                .unwrap()
+                .0;
+            let expected = matched
+                .arena
+                .as_ref()
+                .unwrap()
+                .units
+                .iter()
+                .find(|unit| unit.character_id == id)
+                .unwrap()
+                .team;
+            assert_eq!(snapshot.team, expected, "replicated team follows rotation");
+            assert!(crate::auras::has_aura(h.app.world(), who.player, 32727) == (round < 6));
+        }
+    }
+    assert_eq!(combinations.len(), 6);
+    let snapshot = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(players[0].player)
+        .unwrap()
+        .battleground
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        snapshot
+            .arena
+            .as_ref()
+            .unwrap()
+            .shuffle
+            .as_ref()
+            .unwrap()
+            .rounds_won,
+        vec![(1, 6), (2, 0), (3, 3), (4, 3), (5, 3), (6, 3)]
+    );
+    for who in players {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in players {
+        h.ack(who);
+    }
+    h.receive_pvp_updates(5);
+    for (who, origin) in players.iter().zip(origins) {
         assert_eq!(h.map_of(who), Some(STORMWIND));
         assert!(close(
             wow(h.app.world().get::<Position>(who.player).unwrap()),
