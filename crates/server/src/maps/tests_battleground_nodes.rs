@@ -623,7 +623,7 @@ fn deephaul_carts_in(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
 }
 
 #[test]
-fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return() {
+fn seething_channel_authored_entry_then_ground_gathering_cancellation_victory_and_return() {
     let template = shared::battleground::seething_shore();
     let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
     let actor = &entered.players[0];
@@ -633,7 +633,26 @@ fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return()
     let nodes = seething_objects(h, entered.copy);
     assert_eq!(nodes.len(), 3);
     let (object, at) = nodes[0];
-    h.walk_to(actor, at);
+    // Fixture travel to the actual fissure uses normal near-teleport cleanup, not
+    // a position overwrite that leaves the player attached to its moving ship.
+    let orientation = h
+        .app
+        .world()
+        .get::<shared::components::Rotation>(actor.player)
+        .unwrap()
+        .y
+        - std::f32::consts::FRAC_PI_2;
+    assert!(crate::maps::teleport_to(
+        h.app.world_mut(),
+        actor.player,
+        crate::maps::WorldLocation {
+            map_id: 1803,
+            position: at,
+            orientation
+        },
+        crate::maps::TeleportOptions::default()
+    ));
+    h.advance(2);
     h.app.world_mut().entity_mut(object).insert(InMap {
         instance_id: entered.copy.instance_id + 1,
         ..entered.copy
@@ -739,10 +758,14 @@ fn seething_channel_authored_ship_entry_and_carry_use_transport_frames() {
         let passenger = world
             .get::<shared::components::TransportPassenger>(player.player)
             .unwrap();
-        assert_eq!(
-            *passenger, before[index].1,
-            "carrying preserves ship-local feet/facing"
-        );
+        assert_eq!(passenger.transport, before[index].1.transport);
+        for axis in 0..3 {
+            assert!(
+                (passenger.position[axis] - before[index].1.position[axis]).abs() < 0.002,
+                "ship-local pose preserves feet within world-space float precision: {passenger:?}"
+            );
+        }
+        assert!((passenger.orientation - before[index].1.orientation).abs() < 0.001);
         let distance = Vec3::new(
             at.x - before[index].0.x,
             at.y - before[index].0.y,
