@@ -98,10 +98,6 @@ impl SpawnGroups {
         self.object_members.contains(&guid)
     }
 
-    pub fn groups(&self) -> &[SpawnGroup] {
-        &self.groups
-    }
-
     /// Every instance data id a group condition reads.
     pub fn instance_data_ids(&self) -> BTreeSet<u32> {
         self.groups
