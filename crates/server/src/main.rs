@@ -105,6 +105,7 @@ mod raid_history;
 mod reputation;
 mod rest;
 mod scripted_ai;
+mod seething_parachute;
 mod sheet_visibility;
 mod skyriding;
 mod spawn_groups;

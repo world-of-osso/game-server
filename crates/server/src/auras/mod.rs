@@ -87,7 +87,13 @@ impl Plugin for AuraPlugin {
         app.init_resource::<procs::PendingAuraEvents>()
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
-            .add_systems(Startup, scripts::register_class_scripts)
+            .add_systems(
+                Startup,
+                (
+                    scripts::register_class_scripts,
+                    crate::seething_parachute::register_aura_scripts,
+                ),
+            )
             .init_resource::<PendingPassiveSync>()
             .add_systems(
                 Startup,
