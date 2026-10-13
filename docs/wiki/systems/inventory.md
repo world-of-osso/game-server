@@ -37,6 +37,8 @@ Contract: [item definition source](../../specs/item-definition-source.md). The a
 
 `bag_count`, `bag_item_ids`, `destroy_bag_items` and `owned_count` require an explicit source. Removal prechecks only that source and preserves bag order; insufficient selected-source counts leave every stack unchanged. `owned_count` includes bags, equipment and overflow. Retail profession reagents/tools (including categories), static/economic merchant purchases and loot limits select Retail, matching their existing producer. Quest views and removal read each matching GUID's persisted source, counting/removing Retail only; snapshot, progress, giver markers, turn-in and abandon share these predicates. No numeric-ID remap or recipient-race lookup is involved. Unowned reward provenance remains a [contract gap](../../specs/item-definition-source.md#known-gaps-current-cycle).
 
+Off-hand weapons follow TC `Player::CanEquipItem` (Player.cpp:10866-10886): one-hand (13) and off-hand (22) weapons need `Player::CanDualWield`, i.e. a learned SPELL_EFFECT_DUAL_WIELD spell (`stats::knows_effect`, set per request by the inventory systems). One-hand polearms never fit the off hand, and auto-equip offers the off hand only to dual wielders. No content off-hand weapon has ITEM_FLAG3_ALWAYS_ALLOW_DUAL_WIELD; Titan's Grip and TC's unlearn-time off-hand removal (`AutoUnequipOffhandIfNeed`) are not modelled ([spec](../../specs/class-completeness.md#dual-wield-and-parry-knowledge)).
+
 Operations mutate the model; `with_appearance_sync` then rewrites the appearance entry of each equipment slot whose item changed, keeping `hidden`. `into_record` writes placements in bag order.
 
 ## Sources

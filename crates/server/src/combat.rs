@@ -470,15 +470,17 @@ type AutoAttackTargets<'w, 's> = Query<
 >;
 
 /// What decides whether a victim can dodge, parry or block: casting
-/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned or
-/// confused here) it cannot (Unit.cpp:2408-2413).
+/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned,
+/// confused or fleeing here) it cannot (Unit.cpp:2408-2413).
 type CanAvoid<'a> = (
     Has<shared::casting::CastState>,
     Option<&'a mut crate::auras::ActiveAuras>,
 );
 
 fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bool {
-    !casting && !auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused())
+    !casting
+        && !auras
+            .is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared())
 }
 
 /// A creature's own armor or a player's gear armor.
@@ -758,7 +760,9 @@ impl Attacker<'_> {
     /// players, the flat interval over aura haste otherwise
     /// (Unit::ApplyAttackTimePercentMod), times the MOD_SPEED_SLOW_ALL multiplier.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
-        let slow = self.mods.map_or(1.0, |mods| mods.attack_cast_time_mult);
+        let slow = self.mods.map_or(1.0, |mods| {
+            mods.attack_cast_time_mult * mods.attack_time_mult
+        });
         self.stats.map_or(
             AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01),
             |stats| melee::swing_time(weapon.speed, stats.haste_pct),
@@ -831,6 +835,7 @@ fn target_armor(
         (Some(armor), _) => {
             let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
             target.armor_against(armor.0 * multiplier, attacker)
+                * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
@@ -897,6 +902,10 @@ fn roll_outcome(
         attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
     };
     chances.miss = (base_miss - player_hit_modifier - hit_modifier).clamp(0.0, 100.0);
+    let crit_modifier = target_auras.map_or(0.0, |auras| {
+        auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
+    });
+    chances.crit = (chances.crit + crit_modifier).max(0.0);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
