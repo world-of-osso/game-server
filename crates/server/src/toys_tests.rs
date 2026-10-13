@@ -4008,7 +4008,7 @@ fn facing25_fixture(path: &std::path::Path, item: u32) -> (Harness, Entity) {
             y: std::f32::consts::FRAC_PI_2,
             z: 0.0,
         });
-    let target = spawn_player(&mut h.app, 8, -3.0);
+    let target = spawn_player(&mut h.app, 8, -10.0);
     h.app
         .world_mut()
         .entity_mut(target)
@@ -4074,7 +4074,7 @@ fn toyfx25_facing_uses_inclusive_half_arc_and_strict_scaled_exact3d_boundary() {
     for (index, (position, scale, permitted)) in cases.into_iter().enumerate() {
         let (mut h, target) = facing25_fixture(
             &directory.path().join(format!("boundary{index}.redb")),
-            204818,
+            141300,
         );
         h.app.world_mut().entity_mut(target).insert((
             Position {
@@ -4091,7 +4091,7 @@ fn toyfx25_facing_uses_inclusive_half_arc_and_strict_scaled_exact3d_boundary() {
             .insert(shared::components::UnitScale(100.0));
         let expected = if permitted { None } else { Some("NotInFront") };
         assert_eq!(
-            activate(&mut h, 204818)[0].error.as_deref(),
+            activate(&mut h, 141300)[0].error.as_deref(),
             expected,
             "case{index}"
         );
