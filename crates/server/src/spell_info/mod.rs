@@ -11,6 +11,8 @@
 //! `crate::spell_cast` resolves casts from these records.
 
 mod class_data;
+#[cfg(test)]
+mod immunity_tests;
 mod load;
 pub mod positivity;
 mod trait_data;
