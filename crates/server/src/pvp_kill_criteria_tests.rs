@@ -2,6 +2,7 @@ use super::*;
 use crate::achievement::PlayerAchievementState;
 use crate::maps::InMap;
 use crate::spell_cast::effects::{EffectCtx, deal_damage};
+use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Health, Position};
 
 fn player_kills(world: &World, player: Entity) -> Option<u64> {
@@ -36,6 +37,8 @@ fn kill_match() -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
             .clone(),
     );
     world.init_resource::<Messages<crate::death::PlayerDeathTransition>>();
+    world.init_resource::<crate::death::DeathServerState>();
+    world.init_resource::<crate::death::DeathTransitionCounters>();
     pvp_objective::update_battleground_objectives(&mut world);
     (world, players, file)
 }
@@ -158,6 +161,35 @@ fn achievements_criteria_native_battleground_kill_credits_killer_and_team_at_rew
             .criteria_progress
             .contains_key(&20124),
         "Power Orb aura requirement remains conjunctive"
+    );
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .get(&50458),
+        Some(&1),
+        "BG map-type killing blow"
+    );
+    assert!(
+        !world
+            .get::<PlayerAchievementState>(killer)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&50457),
+        "BG cannot count as arena"
+    );
+    world
+        .run_system_once(crate::death::process_player_death_transitions)
+        .unwrap();
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(victim)
+            .unwrap()
+            .criteria_progress
+            .get(&50460),
+        Some(&1),
+        "actual BG death transition"
     );
     for index in [0, 2, 4] {
         assert_eq!(
