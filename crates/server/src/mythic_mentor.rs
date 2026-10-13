@@ -18,21 +18,19 @@ fn load_party_snapshot(world: &World, character: u64) -> PartyKeystoneSnapshot {
     members.insert(0, character);
     let leader = registry.leader_of(character);
     let db = &world.resource::<GameDatabase>().db;
-    let definition = world.resource::<Challenges>().definition.as_ref();
+    let summaries = &world.resource::<Challenges>().summaries;
     let members = members
         .into_iter()
         .map(|id| {
             let (name, class) = load_member_identity(db, registry, id);
-            let key = definition.and_then(|definition| {
-                owned_keys(db, id)
-                    .into_iter()
-                    .find(|key| key.challenge_id == definition.challenge_id && key.level > 0)
-                    .map(|key| PartyKeystone {
-                        challenge_id: key.challenge_id,
-                        level: key.level,
-                        dungeon_name: definition.name.clone(),
-                        time_limit_ms: definition.timers_ms[0],
-                    })
+            let key = owned_keys(db, id).into_iter().find_map(|key| {
+                let summary = summaries.get(&key.challenge_id)?;
+                (key.level > 0).then(|| PartyKeystone {
+                    challenge_id: key.challenge_id,
+                    level: key.level,
+                    dungeon_name: summary.name.clone(),
+                    time_limit_ms: summary.time_limit_ms,
+                })
             });
             PartyKeystoneMember {
                 character_id: id,
@@ -122,6 +120,59 @@ mod tests {
     }
 
     #[test]
+    fn mythic_mentor_catalog_keys_are_not_misreported_as_no_key() {
+        let mut h = crate::bank_test_harness::harness().unwrap();
+        h.app.init_resource::<GroupRegistry>();
+        let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").unwrap();
+        let conn =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        h.app.insert_resource(Challenges {
+            definition: load_azure(&conn).unwrap(),
+            summaries: load_summaries(&conn).unwrap(),
+            ..Default::default()
+        });
+        let txn = h.db().begin_write().unwrap();
+        txn.open_table(KEYS).unwrap();
+        txn.commit().unwrap();
+        let owner = h.character_id;
+        put_key(&h, owner, 4242, 8);
+        // Installed BossHelper MythicTeleport.lua's eight maps, plus existing Azure401.
+        for (challenge_id, name, time_limit_ms) in [
+            (249, "Kings' Rest", 1_980_000),
+            (250, "Temple of Sethraliss", 1_920_000),
+            (399, "Ruby Life Pools", 1_680_000),
+            (401, "The Azure Vault", 2_250_000),
+            (584, "The Blinding Vale", 1_800_000),
+            (585, "Voidscar Arena", 1_800_000),
+            (586, "Den of Nalorakk", 1_920_000),
+            (587, "Murder Row", 2_040_000),
+            (588, "Altar of Fangs", 1_800_000),
+        ] {
+            save_key(
+                h.db(),
+                &KeystoneInfo {
+                    item_guid: 4242,
+                    item_id: KEYSTONE_ITEM,
+                    challenge_id,
+                    level: 8,
+                    affixes: vec![],
+                },
+            );
+            let snapshot = load_party_snapshot(h.app.world(), owner);
+            let key = snapshot.members[0]
+                .key
+                .as_ref()
+                .expect("Real bag key must be shared");
+            assert_eq!((key.challenge_id, key.level), (challenge_id, 8));
+            assert_eq!(
+                (key.dungeon_name.as_str(), key.time_limit_ms),
+                (name, time_limit_ms)
+            );
+        }
+    }
+
+    #[test]
     fn mythic_mentor_runtime_companions_have_no_key() {
         use shared::group::GroupRole;
         let mut h = crate::bank_test_harness::harness().unwrap();
@@ -175,6 +226,7 @@ mod tests {
                 .unwrap();
         h.app.insert_resource(Challenges {
             definition: load_azure(&conn).unwrap(),
+            summaries: load_summaries(&conn).unwrap(),
             ..Default::default()
         });
         put_key(&h, owner, 4242, 8);
@@ -212,6 +264,7 @@ mod tests {
                 .unwrap();
         h.app.insert_resource(Challenges {
             definition: load_azure(&conn).unwrap(),
+            summaries: load_summaries(&conn).unwrap(),
             ..Default::default()
         });
         h.app.init_resource::<GroupRegistry>();

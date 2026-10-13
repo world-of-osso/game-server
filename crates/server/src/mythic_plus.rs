@@ -3,7 +3,9 @@ use crate::auth::{Authenticated, InWorld};
 use crate::maps::{InMap, InstanceManager};
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase};
-use ::server::mythic_plus_catalog::{FontContext, load_azure, validate_font};
+use ::server::mythic_plus_catalog::{
+    ChallengeSummary, FontContext, load_azure, load_summaries, load_summary, validate_font,
+};
 use ::server::mythic_plus_runtime::{ChallengeDefinition, Run, UnsourcedChallengeConfig};
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -28,6 +30,7 @@ struct Active {
 #[derive(Resource, Default)]
 struct Challenges {
     definition: Option<ChallengeDefinition>,
+    summaries: HashMap<u32, ChallengeSummary>,
     config: UnsourcedChallengeConfig,
     fonts: HashMap<Entity, Entity>,
     slots: HashMap<Entity, Active>,
@@ -56,6 +59,7 @@ fn load_startup(world: &mut World) {
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .expect("open challenge world data");
     let definition = load_azure(&conn).expect("qualify imported Azure challenge");
+    let summaries = load_summaries(&conn).expect("load imported challenge summaries");
     let config = match std::env::var_os("GAME_SERVER_UNSOURCED_CHALLENGE_CONFIG") {
         Some(path) => {
             serde_json::from_slice(&std::fs::read(path).expect("read unsourced challenge config"))
@@ -68,6 +72,7 @@ fn load_startup(world: &mut World) {
         .expect("validate unsourced challenge config");
     let mut challenges = world.resource_mut::<Challenges>();
     challenges.definition = definition;
+    challenges.summaries = summaries;
     challenges.config = config;
 }
 fn save_key(db: &redb::Database, key: &KeystoneInfo) {
@@ -100,9 +105,17 @@ pub(crate) fn issue_keystone(
     challenge: u32,
     level: u32,
 ) -> Result<(), String> {
-    if challenge != 401 || level == 0 {
-        return Err("Requires qualified challenge401 and a positive explicit level".into());
+    if level == 0 {
+        return Err("Requires a positive explicit keystone level".into());
     }
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::spell_info::WORLD_DB_PATH,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .map_err(|error| format!("Read keystone challenge catalog: {error}"))?;
+    load_summary(&conn, challenge)
+        .map_err(|error| format!("Read challenge{challenge}: {error}"))?
+        .ok_or_else(|| format!("Challenge{challenge} has no authored keystone summary"))?;
     let before = persistence::load_inventory(db, character);
     crate::inventory::grant_item(db, templates, catalog, character, (KEYSTONE_ITEM, 1))?;
     let inventory = persistence::load_inventory(db, character);
