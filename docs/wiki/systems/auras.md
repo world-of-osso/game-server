@@ -293,6 +293,10 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
 
 ## Script hooks
 
+Combat Wisdom 121817's effect-0 tick casts Power Strike Proc 129914 (first due tick immediately via ExtraInitialPeriod, then every 15 s). Its proc hook casts 121283 for one Chi before the generic charge consumer removes it. Combat Wisdom effect 1 remains unmodeled.
+
+Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's percentage of owner crit on apply and each effect-1 tick. Chaos Strike's custom refund roll in `spell_cast/scripts/batch5.rs` consumes this modifier through `spell_mods::modify`; merely updating the live aura amount did not affect that custom roll. Native cast tests cover actual Fury gain, one roll per root, and a no-talent control. Source: TC a352b1fa `spell_dh_critical_chaos`, `spell_monk_power_strike_periodic` and `spell_monk_power_strike_proc`; [contract and tests](../../specs/class-completeness.md#periodic-class-proc-hooks).
+
 `AuraScripts(HashMap<spell_id, AuraScript>)` holds four optional hooks: `on_apply`, `on_remove`, `on_periodic` and `on_proc`. Production registers Aspect of the Turtle186265 apply/remove and Barkskin22812's Brambles periodic hook. Other DUMMY4/PERIODIC_DUMMY226 values still require per-spell consumers; `AuraKind::Script` alone is not implementation. See [class scripts](spell-casting.md#class-dummy-scripts).
 
 ## Coverage
