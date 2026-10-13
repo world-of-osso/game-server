@@ -53,6 +53,12 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     known.push(spell.id);
     h.app.world_mut().entity_mut(h.caster).insert((
         Level(80),
+        crate::persistence::ClientId(u64::from(spell.id)),
+        shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
         ActiveSpec(spec.id),
         KnownSpells::fixture(known),
         Health {
@@ -180,11 +186,35 @@ fn cast_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
     h.advance(cast_ms / 50 + 200); // Native cast time plus ten seconds of ticks/flight.
 }
 
+fn place_ground_case(h: &mut Harness, spell: &crate::spell_info::SpellInfo) {
+    if !spell
+        .effects
+        .iter()
+        .any(|effect| effect.implicit_targets.contains(&62))
+    {
+        return;
+    }
+    // Generic zero-coordinate actors do not stand on an authored terrain tile.
+    // Use the native Human arena location, not invented ground or a successful no-op.
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (x, y, z): (f32, f32, f32) = conn.query_row("SELECT position_x,position_y,position_z FROM tdb_playercreateinfo WHERE race=1 AND class=1", [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(Position { x, y, z });
+}
+
 fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
     let Some(spell) = world_db().unwrap().store.get(row.id).cloned() else {
         return json!({"spec": spec.id, "spell": row.id, "missing_store": true});
     };
     spawn_case(h, spec, row);
+    place_ground_case(h, &spell);
     let baseline_warnings = crate::auras::take_unhandled_auras(h.app.world_mut());
     h.app
         .world_mut()
@@ -226,6 +256,134 @@ fn despawn_case(h: &mut Harness, retained: &HashSet<Entity>) {
     }
 }
 
+fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
+    let data = world_db().unwrap();
+    let mut h = harness(Vec::new(), &[], class).unwrap();
+    h.app.insert_resource(data.store.clone());
+    h.app
+        .insert_resource(crate::world_data::load_world_data(world_path));
+    // Cargo executes tests from the crate directory; production's relative
+    // data/world.db startup path is not this fixture's authored database.
+    let conn = rusqlite::Connection::open_with_flags(
+        &data.powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::teleport_positions::load_positions(&conn).unwrap());
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    h.app
+        .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
+    h.app
+        .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        maps.maps
+            .values()
+            .map(|map| (map.id, map.wdt_file_data_id))
+            .collect(),
+    ));
+    h.app.insert_resource(maps);
+    h.app.init_resource::<crate::maps::InstanceManager>();
+    h.app.init_resource::<crate::group::GroupRegistry>();
+    h.app
+        .insert_resource(crate::conditions::load_spell_target_conditions(&data.powers_db).unwrap());
+    h
+}
+
+#[test]
+fn class_completeness_probe_native_warlock_rituals_use_retail_template_spells() {
+    let prepared = prepare_class_world();
+    for (id, entry, casters, completion) in [(698, 194108, 3, 62330), (342601, 177193, 5, 342607)] {
+        let mut h = census_harness(9, &prepared.path());
+        let spec = Spec {
+            id: 265,
+            class: 9,
+            spells: Vec::new(),
+        };
+        let spell = Spell {
+            id,
+            passive: false,
+            origin: vec!["talent".into()],
+        };
+        let receipt = record_case(&mut h, &spec, &spell);
+        assert_eq!(
+            receipt["failed"],
+            json!([]),
+            "native ritual {id}: {receipt}"
+        );
+        let world = h.app.world_mut();
+        let rituals: Vec<_> = world
+            .query::<(
+                &shared::protocol::GameObjectInfo,
+                &crate::meeting_stone::ritual::Ritual,
+            )>()
+            .iter(world)
+            .filter(|(info, _)| info.entry == entry)
+            .collect();
+        assert_eq!(rituals.len(), 1);
+        assert_eq!(rituals[0].1.casters, casters);
+        assert_eq!(rituals[0].1.spell, completion);
+    }
+}
+
+#[test]
+fn class_completeness_probe_native_rewind_uses_ungrouped_player_state() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(13, &prepared.path());
+    let spec = Spec {
+        id: 1468,
+        class: 13,
+        spells: Vec::new(),
+    };
+    let spell = Spell {
+        id: 363534,
+        passive: false,
+        origin: vec!["talent".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &spell);
+    assert_eq!(
+        receipt["failed"],
+        json!([]),
+        "native Rewind cast: {receipt}"
+    );
+    assert!(!receipt["go"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(8, &prepared.path());
+    let spec = Spec {
+        id: 62,
+        class: 8,
+        spells: Vec::new(),
+    };
+    let spell = Spell {
+        id: 3567,
+        passive: false,
+        origin: vec!["SkillLineAbility".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &spell);
+    assert_eq!(receipt["failed"], json!([]), "native city cast: {receipt}");
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let destinations = super::teleport_positions::load_positions(&conn).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::maps::MapTransfer>(h.caster)
+            .unwrap()
+            .destination,
+        destinations.0[&(3567, 0)],
+    );
+}
+
 #[test]
 #[ignore = "explicit read-only census with manifest/output paths; not a full suite"]
 fn class_completeness_level80_probe() {
@@ -234,15 +392,10 @@ fn class_completeness_level80_probe() {
     let manifest: Manifest =
         serde_json::from_str(&std::fs::read_to_string(input).unwrap()).unwrap();
     let mut file = std::fs::File::create(output).unwrap();
-    let data = world_db().unwrap();
+    let prepared = prepare_class_world();
     let mut records = 0;
     for spec in &manifest.specs {
-        let mut h = harness(Vec::new(), &[], spec.class).unwrap();
-        // Script-consumed rows are not necessarily linked by EffectTriggerSpell.
-        // Use the complete native store, just as production does.
-        h.app.insert_resource(data.store.clone());
-        h.app
-            .insert_resource(crate::world_data::load_world_data(&data.powers_db));
+        let mut h = census_harness(spec.class, &prepared.path());
         let retained: HashSet<_> = h
             .app
             .world_mut()

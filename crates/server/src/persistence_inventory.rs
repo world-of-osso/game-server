@@ -60,6 +60,25 @@ pub struct EquippedBagData {
 pub(crate) const ITEM_DURABILITIES: TableDefinition<u64, &[u8]> =
     TableDefinition::new("item_durabilities");
 
+/// ITEM_FIELD_FLAG_UNLOCKED: GUID state follows the item across owner transfers.
+/// Separate table preserves the existing ItemInstanceData encoding.
+pub(crate) const ITEM_UNLOCKED: TableDefinition<u64, u8> = TableDefinition::new("item_unlocked");
+
+pub(crate) fn is_item_unlocked(db: &Database, guid: u64) -> bool {
+    let txn = db.begin_read().expect("begin item unlock read");
+    let table = txn
+        .open_table(ITEM_UNLOCKED)
+        .expect("open item unlock state");
+    table.get(guid).expect("read item unlock state").is_some()
+}
+
+pub(crate) fn unlock_item(db: &Database, guid: u64) -> Result<(), Box<dyn std::error::Error>> {
+    let txn = db.begin_write()?;
+    txn.open_table(ITEM_UNLOCKED)?.insert(guid, 1)?;
+    txn.commit()?;
+    Ok(())
+}
+
 /// Per-instance item state (template attributes live in `ItemTemplates`).
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ItemInstanceData {

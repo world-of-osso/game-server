@@ -11,7 +11,7 @@ use super::handlers::{
     ADD_PCT_MODIFIER_BY_SPELL_LABEL,
 };
 use super::{ActiveAuras, AuraEffectState, AuraInstance};
-use crate::spell_info::SpellInfo;
+use crate::spell_info::{ChargedSpellModifier, SpellInfo};
 
 /// TrinityCore `SpellModOp` values read by this server.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,7 +96,7 @@ fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> 
 
 /// `AuraEffect::IsAffectingSpell` (SpellAuraEffects.cpp:1286-1296): `spell` is of the
 /// aura's `SpellClassSet` and shares a bit of the effect's `SpellClassMask`.
-pub(super) fn class_mask_affects(
+pub(crate) fn class_mask_affects(
     aura: &AuraInstance,
     effect: &AuraEffectState,
     spell: &SpellInfo,
@@ -144,26 +144,66 @@ fn matching<'a>(
     })
 }
 
+fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
+    //Tidal Waves/Backdraft stacks are next-spell uses, not magnitude.
+    let stacks = if matches!(aura.spell_id, 53390 | 117828) {
+        1.0
+    } else {
+        aura.stack_multiplier()
+    };
+    effect.amount * stacks
+}
+
+fn add_modifier((flat, mult): (f32, f32), amount: f32, percent: bool) -> (f32, f32) {
+    if percent {
+        (flat, mult * (1.0 + amount / 100.0))
+    } else {
+        (flat + amount, mult)
+    }
+}
+
+/// TC Spell.cpp8569 retains launch-target damage/healing before impact.
+/// Retain consumed modifier values without retaining or reusing their aura charge.
+pub(crate) fn snapshot_charged_modifiers(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Vec<ChargedSpellModifier> {
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return Vec::new();
+    };
+    let charged = auras.iter().filter(|aura| aura.charges > 0);
+    charged
+        .flat_map(|aura| {
+            let effects = aura.effects.iter().filter(move |effect| {
+                is_spell_mod(effect.aura_type) && affects(aura, effect, spell)
+            });
+            effects.map(move |effect| ChargedSpellModifier {
+                op: effect.misc_values[0],
+                percent: is_pct(effect.aura_type),
+                amount: stacked_amount(aura, effect),
+            })
+        })
+        .collect()
+}
+
 /// `base` modified by `caster`'s spell modifiers for `op` on `spell`.
 pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
-    let Some(auras) = world.get::<ActiveAuras>(caster) else {
-        return base;
-    };
-    let (flat, mult) =
-        matching(auras, spell, op).fold((0.0, 1.0), |(flat, mult), (aura, effect)| {
-            //Tidal Waves/Backdraft stacks are next-spell uses, not magnitude.
-            let stacks = if matches!(aura.spell_id, 53390 | 117828) {
-                1.0
-            } else {
-                aura.stack_multiplier()
-            };
-            let amount = effect.amount * stacks;
-            if is_pct(effect.aura_type) {
-                (flat, mult * (1.0 + amount / 100.0))
-            } else {
-                (flat + amount, mult)
-            }
+    let frozen = spell
+        .cast_charge_mods
+        .iter()
+        .flatten()
+        .filter(|modifier| modifier.op == op as i32)
+        .fold((0.0, 1.0), |sum, modifier| {
+            add_modifier(sum, modifier.amount, modifier.percent)
         });
+    let (flat, mult) = world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
+        matching(auras, spell, op)
+            .filter(|(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0)
+            .fold(frozen, |sum, (aura, effect)| {
+                add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
+            })
+    });
     (base + flat) * mult
 }
 
