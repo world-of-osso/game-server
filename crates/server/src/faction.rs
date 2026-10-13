@@ -22,6 +22,15 @@ pub(crate) fn faction_for_race(race: u8) -> u8 {
     }
 }
 
+/// PlayerCondition encoding differs from this server's legacy Alliance=1/Horde=2.
+pub(crate) fn current_pvp_faction_for_race(race: u8) -> shared::components::CurrentPvpFaction {
+    shared::components::CurrentPvpFaction(match faction_for_race(race) {
+        1 => 2,
+        2 => 1,
+        _ => 0,
+    })
+}
+
 /// `FactionTemplate.FactionGroup` of each race's `ChrRaces.FactionID` template
 /// (build 12.1.0.69933): 3 (player | Alliance) for Alliance races, 5 (player |
 /// Horde) for Horde races, 1 (player) for neutral Pandaren.

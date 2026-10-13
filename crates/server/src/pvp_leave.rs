@@ -40,9 +40,16 @@ fn return_to_origin(
 ) -> Result<String, String> {
     let (map, origin) = return_destination(world, state, player, character_id, match_id)?;
     let arena = state.battleground_matches[&match_id].arena.is_some();
+    let race = world
+        .get::<shared::components::Player>(player)
+        .ok_or("battleground player race missing")?
+        .race;
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
     }
+    world
+        .entity_mut(player)
+        .insert(crate::faction::current_pvp_faction_for_race(race));
     if arena {
         super::arena_preparation::clear_preparation(world, player);
     }
