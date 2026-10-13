@@ -213,7 +213,7 @@ struct InvitedBattleground {
     silvershard: Option<pvp_silvershard::CartRuntime>,
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
-    alterac: Option<pvp_alterac::AlteracRuntime>,
+    alterac: Option<pvp_alterac::BannerRuntime>,
     scoreboard: Scoreboard,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
@@ -230,7 +230,7 @@ struct Scoreboard {
 
 impl InvitedBattleground {
     fn displayed_scores(&self) -> (u32, u32) {
-        if self.instance.bg_id == 1 {
+        if self.alterac.is_some() {
             (
                 self.instance.score_a.reinforcements,
                 self.instance.score_b.reinforcements,
@@ -366,6 +366,18 @@ impl Plugin for PvpPlugin {
             arena::receive_queue_requests.before(process_battleground_invitation_responses),
         );
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
+        app.add_systems(
+            FixedUpdate,
+            crate::transport::advance_ships
+                .before(crate::game_objects::collision::sync_live_objects)
+                .before(crate::networking::process_player_inputs),
+        );
+        app.add_systems(
+            FixedUpdate,
+            crate::transport::store_passenger_offsets
+                .after(crate::networking::process_player_inputs)
+                .after(crate::networking::apply_terrain_gravity),
+        );
         app.add_systems(
             FixedUpdate,
             arena::update_matches.after(crate::death::process_player_death_transitions),

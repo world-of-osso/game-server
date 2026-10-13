@@ -2469,6 +2469,17 @@ pub(crate) fn cast_triggered(
     cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
 }
 
+/// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
+pub(crate) fn try_cast_triggered(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> bool {
+    cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None)
+}
+
 pub(super) fn cast_triggered_with_item_level(
     world: &mut World,
     caster: Entity,
@@ -2476,12 +2487,12 @@ pub(super) fn cast_triggered_with_item_level(
     explicit: Option<Entity>,
     depth: u8,
     item_level: Option<u16>,
-) {
+) -> bool {
     let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
-        return;
+        return false;
     };
     spell.cast_item_level = item_level;
-    launch_triggered_spell(world, caster, &spell, explicit, depth);
+    launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
@@ -2528,14 +2539,18 @@ fn launch_triggered_spell(
     spell: &SpellInfo,
     explicit: Option<Entity>,
     depth: u8,
-) {
+) -> bool {
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
     match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
+            true
         }
-        Err(failure) => warn!("Triggered spell {} skipped: {failure:?}", spell.id),
+        Err(failure) => {
+            warn!("Triggered spell {} skipped: {failure:?}", spell.id);
+            false
+        }
     }
 }
 

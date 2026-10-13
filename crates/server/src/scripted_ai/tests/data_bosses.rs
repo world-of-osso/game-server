@@ -313,7 +313,7 @@ fn encounter_fixture(
         let canonical =
             Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let objects = crate::game_objects::load_game_object_spawns(&canonical).unwrap();
-        crate::game_objects::spawn_map_game_objects(&mut commands, &objects, map, difficulty);
+        crate::game_objects::spawn_map_game_objects(&mut commands, &objects, map, difficulty, None);
         queue.apply(app.world_mut());
         // 500 yards east of the Serpent's spawn, outside every aggro radius.
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])

@@ -73,6 +73,7 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 
 ### Continued source-backed coverage
 
+- Modifier41 PlayerIsInZone matches the reference player's current terrain area, replacing it with its immediate parent only when the authored area is flagged as a subzone. A parent link alone and recursive ancestry cannot qualify. Missing reference area cannot credit; native pet-battle winners, not losers or idle replay, earn the matching city criterion and retain it after storage reopen. This does not add world-honor eligibility or certify every city's pet-battle content.
 - Modifier122 PlayerMapInstanceType compares the reference map's authored raw InstanceType, not guessed map/copy/difficulty categories. World0 is valid; unknown types and absent reference map cannot qualify. Arena4/Battleground3 predicates remain distinct through native killing-blow, kill-reward and queued death events. This does not enable missing type18 raid-death production.
 
 - Type70 BG/arena kill rewards use committed lethal damage, controlling player and accepted in-progress match. Killer receives one credit; same-team online in-world recipients require that copy and group reward distance, using corpse position when dead and combat reaches in the distance. Nonlethal/dead replay, self/world/inactive/unaccepted cases cannot credit this path. World honor eligibility, lifetime honor counters and scoreboard honorable-kill availability remain separate missing producers; no generic killing-blow substitute.

@@ -149,6 +149,9 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::seething_parachute::PARACHUTE, 1) => {
+            Some(crate::seething_parachute::reset_fall_information)
+        }
         (crate::scripted_ai::murder_row::SPELL_FEL_NOVA_SELECTOR, 0) => {
             Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
         }

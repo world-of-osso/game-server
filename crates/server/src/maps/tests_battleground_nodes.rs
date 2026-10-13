@@ -308,6 +308,168 @@ fn alterac_channel_source_opening_cancel_tower_captain_general_and_origin_return
     win_leave_and_return(&mut entered, 700);
 }
 
+/// TDB1210 spawn groups 1041-1173 with their source-33 conditions: only the owner's
+/// tier-0 defenders, neutral mine crews and intact-tower warmasters exist at the start;
+/// a destroyed tower despawns its warmaster (flag 0x20) and keeps its flag-0 bowmen.
+#[test]
+fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match(&template, [611, 610]);
+    let actor = &entered.players[0];
+    let (h, copy) = (&mut entered.h, entered.copy);
+    use_second_frames(h);
+    // Aid Station/Stormpike/Stonehearth Alliance and Iceblood/Frostwolf/Hut Horde
+    // graveyards (1325/1333/1302, 1347/1338/1330) each spawn four tier-0 guards;
+    // neutral Snowfall (1966) spawns none.
+    assert_eq!(creatures_in(h, copy, 12050), 12, "Stormpike Defender");
+    assert_eq!(creatures_in(h, copy, 12053), 12, "Frostwolf Guardian");
+    for upgraded in [13326, 13328, 13331, 13332, 13421, 13422] {
+        assert_eq!(
+            creatures_in(h, copy, upgraded),
+            0,
+            "defender tier {upgraded}"
+        );
+    }
+    // Neutral Irondeep (1360, group 1170) and not the Alliance crew (1358, group 1124).
+    assert_eq!(creatures_in(h, copy, 10987), 50, "neutral Irondeep Trogg");
+    assert_eq!(creatures_in(h, copy, 13396), 0, "Alliance Irondeep Miner");
+    assert_eq!(creatures_in(h, copy, 14773), 1, "Iceblood Warmaster");
+    assert_eq!(creatures_in(h, copy, 13359), 16, "Frostwolf Bowman");
+    // Banner variants are TDB spawn-group objects too: neutral Snowfall (group 1053,
+    // world state 1966) and the Horde-owned Iceblood tower banner (group 1100, 1385).
+    assert_eq!(
+        objects_in(h, copy, 180418).len(),
+        1,
+        "neutral Snowfall banner"
+    );
+    assert!(
+        objects_in(h, copy, 178365).is_empty(),
+        "Alliance Snowfall banner"
+    );
+    let (banner, at) = objects_in(h, copy, 178946)[0];
+    h.walk_to(actor, at);
+    use_object(h, actor, banner);
+    h.advance(8);
+    h.advance(240);
+    assert_eq!(battleground(h, actor).score_b, 625);
+    assert_eq!(
+        creatures_in(h, copy, 14773),
+        0,
+        "destroyed Iceblood despawns its warmaster"
+    );
+    assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
+}
+
+/// Isle of Conquest (TC a352b1fa battleground_isle_of_conquest.cpp, TDB spawn groups
+/// 1201-1239): a normal Opening assaults the neutral Quarry, its contested banner captures
+/// one minute later with the Alliance miners, owned Quarry ticks one reinforcement per
+/// 45 s and each death costs one. The keep bosses only spawn once a keep gate is breached
+/// (groups 1238/1239, world states 4320-4325), so with intact gates the Horde loses by
+/// running out of its 400 reinforcements.
+#[test]
+fn isle_channel_quarry_capture_tick_gated_bosses_reinforcement_victory_and_origin_return() {
+    let template = shared::battleground::isle_of_conquest();
+    let mut entered = enter_source_match(&template, [1299, 1245]);
+    let actor_index = entered
+        .teams
+        .iter()
+        .position(|team| *team == BgTeam::A)
+        .unwrap();
+    let victim_index = entered
+        .teams
+        .iter()
+        .position(|team| *team == BgTeam::B)
+        .unwrap();
+    {
+        let EnteredMatch {
+            h, players, copy, ..
+        } = &mut entered;
+        let (actor, victim, copy) = (&players[actor_index], &players[victim_index], *copy);
+        use_second_frames(h);
+        assert_eq!(battleground(h, actor).score_a, 400);
+        assert_eq!(
+            objects_in(h, copy, 195338).len(),
+            1,
+            "neutral Quarry banner"
+        );
+        assert!(
+            objects_in(h, copy, 195334).is_empty(),
+            "Alliance Quarry banner"
+        );
+        assert_eq!(objects_in(h, copy, 195396).len(), 1, "Alliance Keep banner");
+        assert_eq!(creatures_in(h, copy, 61696), 0, "Alliance Quarry miners");
+        assert_eq!(
+            creatures_in(h, copy, 34922),
+            0,
+            "Overlord Agmar behind intact gates"
+        );
+        assert_eq!(
+            creatures_in(h, copy, 34924),
+            0,
+            "High Commander Halford behind intact gates"
+        );
+        let (banner, at) = objects_in(h, copy, 195338)[0];
+        h.walk_to(actor, at);
+        use_object(h, actor, banner);
+        assert!(
+            objects_in(h, copy, 195335).is_empty(),
+            "Opening is not instant"
+        );
+        h.advance(8);
+        assert!(objects_in(h, copy, 195338).is_empty());
+        assert_eq!(
+            objects_in(h, copy, 195335).len(),
+            1,
+            "Alliance contested Quarry"
+        );
+        assert!(battleground(h, actor).world_states.contains(&(4310, 1)));
+        h.advance(60);
+        assert_eq!(
+            objects_in(h, copy, 195334).len(),
+            1,
+            "Alliance Quarry banner"
+        );
+        assert_eq!(creatures_in(h, copy, 61696), 13, "Alliance Quarry miners");
+        h.advance(45);
+        assert_eq!(battleground(h, actor).score_a, 401);
+        assert!(battleground(h, actor).world_states.contains(&(4226, 401)));
+        crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim.player, 1.0e7);
+        h.advance(2);
+        assert_eq!(battleground(h, actor).score_b, 399);
+        for _ in 1..400 {
+            crate::death::resurrect_player(h.app.world_mut(), victim.player);
+            crate::combat::deal_direct_damage(
+                h.app.world_mut(),
+                actor.player,
+                victim.player,
+                1.0e7,
+            );
+            h.advance(1);
+        }
+        h.receive_pvp_updates(5);
+        assert_eq!(battleground(h, actor).score_b, 0);
+        let row = battleground(h, actor)
+            .players
+            .iter()
+            .find(|row| row.character_id == h.app.world().get::<ClientId>(actor.player).unwrap().0)
+            .unwrap()
+            .clone();
+        assert!(row.objective_scores.contains(&(245, 1)));
+    }
+    let score = battleground(&mut entered.h, &entered.players[actor_index]).score_a;
+    assert!(score > 401, "the owned Quarry kept ticking: {score}");
+    win_leave_and_return(&mut entered, score);
+}
+
+fn creatures_in(h: &mut Harness, copy: InMap, entry: u32) -> usize {
+    let world = h.app.world_mut();
+    let mut query = world.query::<(&shared::components::Npc, &InMap)>();
+    query
+        .iter(world)
+        .filter(|(npc, map)| npc.template_id == entry && **map == copy)
+        .count()
+}
+
 fn kill_alterac_source_npc(h: &mut Harness, actor: &Traveler, copy: InMap, entry: u32) {
     let (victim, health) = find_alterac_source_npc(h, copy, entry);
     crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim, health + 1.0);
@@ -461,7 +623,7 @@ fn deephaul_carts_in(h: &mut Harness, copy: InMap) -> Vec<(Entity, Vec3)> {
 }
 
 #[test]
-fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return() {
+fn seething_channel_authored_entry_then_ground_gathering_cancellation_victory_and_return() {
     let template = shared::battleground::seething_shore();
     let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
     let actor = &entered.players[0];
@@ -471,7 +633,37 @@ fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return()
     let nodes = seething_objects(h, entered.copy);
     assert_eq!(nodes.len(), 3);
     let (object, at) = nodes[0];
-    h.walk_to(actor, at);
+    // Fixture travel to the actual fissure uses normal near-teleport cleanup, not
+    // a position overwrite that leaves the player attached to its moving ship.
+    let orientation = h
+        .app
+        .world()
+        .get::<shared::components::Rotation>(actor.player)
+        .unwrap()
+        .y
+        - std::f32::consts::FRAC_PI_2;
+    assert!(crate::maps::teleport_to(
+        h.app.world_mut(),
+        actor.player,
+        crate::maps::WorldLocation {
+            map_id: 1803,
+            position: at,
+            orientation
+        },
+        crate::maps::TeleportOptions::default()
+    ));
+    h.advance(2);
+    assert_eq!(
+        h.map_of(actor),
+        Some(entered.copy),
+        "same-map travel retains the reserved battleground copy"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::TransportPassenger>(actor.player)
+            .is_none()
+    );
     h.app.world_mut().entity_mut(object).insert(InMap {
         instance_id: entered.copy.instance_id + 1,
         ..entered.copy
@@ -541,7 +733,98 @@ fn seething_channel_grounded_fixture_gathering_cancellation_victory_and_return()
 }
 
 #[test]
-fn seething_channel_refuses_unimplemented_transport_relative_entry() {
+fn seething_channel_authored_ship_entry_and_carry_use_transport_frames() {
+    let template = shared::battleground::seething_shore();
+    let mut entered = enter_source_match(&template, shared::battleground::SEETHING_STARTS);
+    let world = entered.h.app.world_mut();
+    let mut objects = world.query::<(&shared::protocol::GameObjectInfo, &InMap)>();
+    let ships = objects
+        .iter(world)
+        .filter(|(info, map)| **map == entered.copy && info.go_type == 15)
+        .count();
+    assert_eq!(
+        ships, 2,
+        "both authored airships exist only in their match copy"
+    );
+    let before: Vec<_> = entered
+        .players
+        .iter()
+        .map(|player| {
+            let at = *world.get::<Position>(player.player).unwrap();
+            assert!(
+                at.y > 290.0,
+                "source ship deck arrival, not a ground substitute: {at:?}"
+            );
+            let passenger = *world
+                .get::<shared::components::TransportPassenger>(player.player)
+                .unwrap();
+            (at, passenger)
+        })
+        .collect();
+    use_second_frames(&mut entered.h);
+    entered.h.advance(30);
+    for (index, player) in entered.players.iter().enumerate() {
+        let world = entered.h.app.world();
+        let at = world.get::<Position>(player.player).unwrap();
+        let passenger = world
+            .get::<shared::components::TransportPassenger>(player.player)
+            .unwrap();
+        assert_eq!(passenger.transport, before[index].1.transport);
+        for axis in 0..3 {
+            assert!(
+                (passenger.position[axis] - before[index].1.position[axis]).abs() < 0.002,
+                "ship-local pose preserves feet within world-space float precision: {passenger:?}"
+            );
+        }
+        assert!((passenger.orientation - before[index].1.orientation).abs() < 0.001);
+        let distance = Vec3::new(
+            at.x - before[index].0.x,
+            at.y - before[index].0.y,
+            at.z - before[index].0.z,
+        )
+        .length();
+        assert!(
+            distance > 5.0,
+            "source ship carries idle player: {distance}"
+        );
+        let ship = world
+            .get::<shared::components::TransportState>(Entity::from_bits(passenger.transport))
+            .unwrap();
+        let expected = if entered.teams[index] == BgTeam::A {
+            35
+        } else {
+            36
+        };
+        assert_eq!(ship.spawn_id, expected);
+        entered
+            .h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(player.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground {
+                match_id: entered.match_id,
+            });
+    }
+    entered.h.receive_pvp_updates(5);
+    for player in &entered.players {
+        assert!(
+            entered
+                .h
+                .app
+                .world()
+                .get::<shared::components::TransportPassenger>(player.player)
+                .is_none()
+        );
+        assert_eq!(entered.h.new_worlds(player).len(), 1);
+        entered.h.ack(player);
+        assert_eq!(entered.h.map_of(player), Some(STORMWIND));
+        assert!(close(entered.h.position(player), entered.origin));
+    }
+}
+
+#[test]
+fn seething_channel_refuses_missing_authored_transport_catalog() {
     let template = shared::battleground::seething_shore();
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
@@ -644,25 +927,7 @@ fn enter_source_match_with(
         }
         if template.map_id == 1803 {
             let (world_data, templates) = seething_source_world();
-            // Partial objective proof only: the parent's approved grounded fixture
-            // starts at an actual authored fissure, not a fabricated airship transform.
-            // The separate refusal test retains genuine TransportSpawnId35/36.
-            let fissure = world_data
-                .spawns
-                .iter()
-                .find(|spawn| spawn.map == 1803 && spawn.template_entry == 125253)
-                .unwrap();
-            let ground_start =
-                Vec3::new(fissure.position_x, fissure.position_y, fissure.position_z);
-            {
-                let mut store = app.world_mut().resource_mut::<MapStore>();
-                assert_eq!(store.safe_loc_transports.get(&6337), Some(&35));
-                assert_eq!(store.safe_loc_transports.get(&6380), Some(&36));
-                for start in starts {
-                    store.safe_loc_transports.remove(&start);
-                    store.safe_locs.get_mut(&start).unwrap().position = ground_start;
-                }
-            }
+            app.insert_resource(crate::transport_catalog::fixture_catalog());
             app.insert_resource(world_data);
             app.insert_resource(templates);
             app.insert_resource(crate::ground::GroundMap::new(
@@ -678,8 +943,8 @@ fn enter_source_match_with(
             app.insert_resource(crate::spell_cast::test_harness::power_table(data));
             app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
         }
-        if template.map_id == 30 {
-            app.insert_resource(alterac_source_world());
+        if matches!(template.map_id, 30 | 628) {
+            app.insert_resource(promoted_source_world(template.map_id));
             let data = crate::spell_cast::test_harness::world_db().unwrap();
             app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
                 data.store.get(21651).unwrap().clone(),
@@ -761,7 +1026,21 @@ fn enter_source_match_with(
         let destinations = h.new_worlds(who);
         assert_eq!(destinations.len(), 1);
         let start = starts[if invitation.team == BgTeam::A { 0 } else { 1 }];
-        let source = h.app.world().resource::<MapStore>().safe_locs[&start];
+        let store = h.app.world().resource::<MapStore>();
+        let mut source = store.safe_locs[&start];
+        if let Some(spawn_id) = store.safe_loc_transports.get(&start) {
+            let ships = h
+                .app
+                .world()
+                .resource::<crate::transport_catalog::TransportCatalog>();
+            let world_pose = ships.0[spawn_id].route.pose_at(0).local_to_world(
+                shared::transport_route::TransportPose {
+                    position: source.position.to_array(),
+                    orientation: source.orientation,
+                },
+            );
+            source.position = Vec3::from_array(world_pose.position);
+        }
         assert_eq!(destinations[0].map_id, source.map_id);
         let position = destinations[0].position;
         assert!(close(
@@ -856,6 +1135,7 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
         assert_eq!(result.players.len(), players.len());
         let score_state = match copy.map_id {
             30 => 3127,
+            628 => 4226,
             998 => 6303,
             727 => 6437,
             1803 => 13845,
@@ -1041,14 +1321,14 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     win_leave_and_return(&mut entered, 1500);
 }
 
-fn alterac_source_world() -> crate::world_data::WorldData {
+fn promoted_source_world(map_id: u32) -> crate::world_data::WorldData {
     let copy = tempfile::NamedTempFile::new().unwrap();
     std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
     let promoted = std::process::Command::new("python3")
         .args([
             "../../scripts/promote_battlegrounds.py",
             "--maps",
-            "30",
+            &map_id.to_string(),
             "--db",
         ])
         .arg(copy.path())
