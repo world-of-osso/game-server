@@ -366,6 +366,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        crate::pvp::arena_cage::WARNING,
+        AuraScript {
+            on_remove: Some(crate::pvp::arena_cage::warning_removed),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         ROGUE_STEALTH,
         AuraScript {
             on_apply: Some(apply_rogue_stealth),
