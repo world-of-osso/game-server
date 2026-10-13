@@ -534,7 +534,7 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
         g.spawntimesecs,t.Data3,t.Data5,t.Data6
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
-        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=?1 AND t.type IN (36,42) ORDER BY g.guid").unwrap();
+        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=?1 AND (t.type IN (36,42) OR (g.map IN (30,628) AND t.type IN (1,10))) ORDER BY g.guid").unwrap();
     let mut rows = query.query([map_id]).unwrap();
     while let Some(row) = rows.next().unwrap() {
         let values: Vec<rusqlite::types::Value> =

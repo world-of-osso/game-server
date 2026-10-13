@@ -46,6 +46,8 @@ pub struct StatModifiers {
     pub primary_flat: UnitStats,
     /// Percent increase per primary stat, applied after `primary_flat`.
     pub primary_pct: UnitStats,
+    /// Aura467: additive percent of gear/flat bonuses, excluding create/base stats.
+    pub primary_bonus_pct: UnitStats,
     /// Added to gear ratings before conversion.
     pub ratings_flat: CombatRatings,
     pub crit_pct: f32,
@@ -68,6 +70,10 @@ pub struct StatModifiers {
     pub armor_from_stat_pct: UnitStats,
     /// MiscValue -2 selects the specialization's primary stat.
     pub armor_from_primary_stat_pct: f32,
+    /// Aura142: composed base/gear armor percentage, excluding stat-derived armor.
+    pub base_armor_pct: f32,
+    /// Aura466: composed final armor percentage, applied after stat-derived armor.
+    pub bonus_armor_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -130,6 +136,8 @@ pub struct CharacterStats {
     pub crit_pct: f32,
     pub haste_pct: f32,
     pub mastery_pct: f32,
+    /// Raw points before the active specialization's display coefficient.
+    pub mastery_points: f32,
     pub versatility_pct: f32,
     /// Tertiary ratings after their diminishing returns.
     pub leech_pct: f32,
@@ -311,7 +319,7 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
         Some(PrimaryStat::Intellect) => primary.intellect,
         None => 0.0,
     };
-    ((explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0).floor()
+    (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
 /// Retail stats for `input`, with aura `mods` folded in. `None` for a class
@@ -323,8 +331,9 @@ pub fn compute_character_stats(
     let level = level_index(input.level)?;
     let mods = mods.copied().unwrap_or_default();
     let mut primary = base_primary_stats(input.class, input.race, input.level)?;
-    primary += usable_gear_primary(input.gear_primary, input.primary_stat);
-    primary += mods.primary_flat;
+    let mut bonus = usable_gear_primary(input.gear_primary, input.primary_stat);
+    bonus += mods.primary_flat;
+    primary += apply_primary_pct(bonus, mods.primary_bonus_pct);
     let primary = apply_primary_pct(primary, mods.primary_pct);
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
@@ -365,12 +374,16 @@ pub fn compute_character_stats(
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
         haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
+        mastery_points,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
             + mods.versatility_pct,
         leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
-        armor: ratings.armor + armor_from_stats(&primary, input.primary_stat, &mods),
+        armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
+            + armor_from_stats(&primary, input.primary_stat, &mods))
+            * (1.0 + mods.bonus_armor_pct / 100.0))
+            .floor(),
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
         defense: PlayerDefense::default(),

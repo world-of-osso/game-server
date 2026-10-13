@@ -14,11 +14,16 @@
 //! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
+pub(crate) mod area_avoidance;
+pub(crate) mod base_armor;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 pub(crate) mod handlers;
 pub mod invisibility;
+mod linked;
 pub(crate) mod linked_summon;
+pub(crate) mod mastery;
+mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod periodic;
@@ -28,6 +33,7 @@ pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
+pub(crate) mod summon_damage;
 mod unit_state;
 pub use invisibility::Invisibility;
 
@@ -97,6 +103,7 @@ impl Plugin for AuraPlugin {
                     mount::receive_cancel_mount_aura
                         .after(crate::spell_cast::receive_cast_requests),
                     queue_passive_sync,
+                    mastery::refresh_amounts.after(crate::stats::update_character_stats),
                 ),
             )
             .add_systems(
@@ -441,8 +448,8 @@ fn is_harmful(
     }
 }
 
-fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo, passive: bool) -> u32 {
-    if passive {
+fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) -> u32 {
+    if is_passive(spell) {
         return 0;
     }
     let base = spell
@@ -453,7 +460,16 @@ fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo, passive: bool) 
     if base <= 0 {
         return 0;
     }
-    spell_mods::modify(world, caster, spell, SpellModOp::Duration, base as f32).max(0.0) as u32
+    let duration = spell_mods::modify(
+        world,
+        application.caster,
+        spell,
+        SpellModOp::Duration,
+        base as f32,
+    );
+    let extension = scripts::self_regrowth_duration_bonus(world, application);
+    let duration = (duration + extension).max(0.0) as u32;
+    mechanic_duration::modify_duration(world, application, spell, duration)
 }
 
 fn build_effect(
@@ -510,7 +526,6 @@ fn build_instance(
 ) -> AuraInstance {
     let caster = application.caster;
     let passive = is_passive(spell);
-    let duration_ms = duration_ms(world, caster, spell, passive);
     let options = spell.aura_options.as_deref();
     let max_stacks = options.map_or(0.0, |options| options.cumulative_aura as f32);
     let max_stacks =
@@ -528,6 +543,14 @@ fn build_instance(
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
+    let applied_mask = effects
+        .iter()
+        .fold(0, |mask, effect| mask | (1 << effect.index));
+    let effective_application = AuraApplication {
+        effect_mask: applied_mask,
+        ..*application
+    };
+    let duration_ms = duration_ms(world, &effective_application, spell);
     // AuraEffect::CalculateAmount: breakable crowd control of a spell with proc flags
     // holds 10% of the target's max health (CountPctFromMaxHealth) against damage.
     if options.is_some_and(|options| options.proc_type_mask != [0; 2]) {
@@ -584,18 +607,44 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        if handlers::is_handled(effect.aura_type)
-            || scripts::consumes_named_field(aura.spell_id, effect.index)
-        {
+        let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
+        let duration_gap = mechanic_duration::positive_source_gap(effect)
+            || mechanic_duration::invalid_mechanic_source_gap(effect);
+        let duration_supported = !duration_gap;
+        let handled =
+            handlers::is_handled(effect.aura_type) && supported_amount && duration_supported;
+        if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
         if logged.0.insert((aura.spell_id, effect.aura_type)) {
+            let reason = describe_unhandled_aura(effect);
             warn!(
-                "Spell {}: aura type {} has no handler; tracked only",
+                "Spell {}: aura type {} {reason}; tracked only",
                 aura.spell_id, effect.aura_type
             );
         }
+    }
+}
+
+fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if linked::is_linked(effect.aura_type) {
+        format!(
+            "nonzero linked amount {} for child {} remains a source gap",
+            effect.amount, effect.trigger_spell
+        )
+    } else if mechanic_duration::invalid_mechanic_source_gap(effect) {
+        format!(
+            "duration mechanic {} does not fit the pinned mask; source gap",
+            effect.misc_values[0]
+        )
+    } else if mechanic_duration::positive_source_gap(effect) {
+        format!(
+            "positive duration amount {} remains a source gap; pinned rule cannot extend positive-only values",
+            effect.amount
+        )
+    } else {
+        "has no handler".into()
     }
 }
 
@@ -817,6 +866,7 @@ pub(crate) fn apply_aura_with_spell(
             shapeshift::remove_other_forms(world, target, id);
         }
         scripts::run_apply(world, target, &aura);
+        linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
@@ -825,6 +875,9 @@ pub(crate) fn apply_aura_with_spell(
             .iter()
             .any(|effect| effect.aura_type == handlers::MOD_STUN);
         crate::stand_state::on_aura_applied(world, target, aura.interrupt_flags, stuns);
+    }
+    if kind == CombatLogKind::AuraRefreshed {
+        linked::on_reapplied(world, target, &aura);
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
@@ -982,6 +1035,7 @@ pub(crate) fn apply_attack_damage(world: &mut World, unit: Entity, loss: f32) ->
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     scripts::run_remove(world, unit, aura, reason);
+    linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
@@ -1096,7 +1150,12 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         return;
     };
     auras.dirty = true;
-    let (stats, combat) = stat_mods::compute(&auras);
+    let (mut stats, mut combat) = stat_mods::compute(&auras);
+    stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
+    let growth = scripts::protective_growth_multiplier(unit, &auras);
+    for multiplier in &mut combat.damage_taken_mult {
+        *multiplier *= growth;
+    }
     if let Some(mut stored) = world.get_mut::<AuraStatMods>(unit)
         && *stored != combat
     {
@@ -1111,6 +1170,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         world.entity_mut(unit).insert(stats);
     }
     unit_state::reconcile(world, unit);
+    crate::spell_cast::refresh_cast_movement_permission(world, unit);
 }
 
 /// TrinityCore AuraEffect::HandleAuraModIncreaseHealth adds/removes the fixed
@@ -1572,6 +1632,9 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
                 },
             );
         }
+    }
+    if source == AuraSource::KnownSpell {
+        crate::spell_cast::control_dream::sync_known_ready_credit(world, unit, spells);
     }
 }
 
