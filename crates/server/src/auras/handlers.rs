@@ -93,6 +93,8 @@ pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_DODGE_PERCENT: u32 = 49;
 pub const MOD_PARRY_PERCENT: u32 = 47;
 pub const MECHANIC_IMMUNITY: u32 = 77;
+/// MiscValue0 is a creature_immunities row ID, not the mechanics bitmask itself.
+pub const MECHANIC_IMMUNITY_MASK: u32 = 147;
 pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
 pub const MOD_ATTACKER_RANGED_HIT_CHANCE: u32 = 185;
 pub const MOD_ATTACKER_SPELL_HIT_CHANCE: u32 = 186;
@@ -302,7 +304,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
-        MECHANIC_IMMUNITY => MechanicImmunity,
+        MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
         MOD_MAX_CHARGES

@@ -169,6 +169,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     let mut spells = load_names(conn)?;
     load_misc(conn, &lookups, &mut spells)?;
     load_effects(conn, &lookups, &mut spells)?;
+    super::immunity::attach_definitions(conn, &mut spells)?;
     load_power_costs(conn, &mut spells)?;
     load_aura_options(conn, &lookups, &mut spells)?;
     load_categories(conn, &mut spells)?;
@@ -280,6 +281,7 @@ fn load_effects(conn: &Connection, lookups: &Lookups, spells: &mut Spells) -> ru
         |r| {
             Ok(SpellEffect {
                 index: uint(r, 1)? as u8,
+                immunity: None,
                 effect: uint(r, 2)?,
                 aura: uint(r, 3)?,
                 base_points: real(r, 4)?,
