@@ -514,14 +514,27 @@ pub(crate) fn record_player_death(world: &mut World, player: Entity) {
     let Some(map) = world.get::<InMap>(player).copied() else {
         return;
     };
-    record_criteria_events(
-        world,
-        player,
-        &[
-            CriteriaEvent::DieAnywhere,
-            CriteriaEvent::DieOnMap(map.map_id),
-        ],
-    );
+    let mut events = vec![
+        CriteriaEvent::DieAnywhere,
+        CriteriaEvent::DieOnMap(map.map_id),
+    ];
+    if let Some(capacity) = dungeon_copy_capacity(world, map) {
+        events.push(CriteriaEvent::DieInInstance(capacity));
+    }
+    record_criteria_events(world, player, &events);
+}
+
+/// TC CriteriaHandler1481–1493: IsDungeon and the actual InstanceMap::GetMaxPlayers.
+fn dungeon_copy_capacity(world: &World, map: InMap) -> Option<u32> {
+    let entry = world
+        .get_resource::<crate::maps::MapStore>()?
+        .map(map.map_id)?;
+    if !entry.is_dungeon() {
+        return None;
+    }
+    world
+        .get_resource::<crate::maps::InstanceManager>()?
+        .copy_capacity(map)
 }
 
 /// TC Player::EnvironmentalDamage credits the actual lethal environmental type.

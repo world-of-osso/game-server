@@ -51,7 +51,7 @@ Every movement system writes the creature's replicated `CreatureMotion` (Still, 
 
 ## Leash and Evade
 
-`leash_check_system` runs after chase each tick. A pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, health unchanged, `CreatureState` → `Returning`; see [[creature-aggro]]).
+`leash_check_system` runs after chase each tick. Party/raid/scenario maps skip it, matching TC `Creature::CanCreatureAttack`'s dungeon home-distance exemption; script-authored boundaries remain active. Open-world behavior is unchanged. [Contract and superseded Stockade proof](../../specs/creature-aggro.md). Outside dungeon maps, a pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, health unchanged, `CreatureState` → `Returning`; see [[creature-aggro]]).
 
 `return_to_spawn_system` follows the [navigation route](navigation.md) back to its spawn point at `speed_run × 7` yd/s (`MoveTargetedHome` runs by default). On arrival, `CreatureState` → `Idle` and normal AI resumes.
 

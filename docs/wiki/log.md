@@ -1,3 +1,19 @@
+## 2026-10-13 — Exact-level criterion facts
+
+[Level39](systems/dungeon-achievements.md#exact-reference-player-levels--verified-2026-10-13) reuses inclusive minimum/maximum facts. Native level1/2/3 deaths and reopen prove raw orphan counters without linking them to current achievements; census unchanged.
+
+## 2026-10-13 — Instance-death criteria capacity
+
+[Type18](systems/dungeon-achievements.md#instance-death-capacity--verified-2026-10-13) uses allocated dungeon-copy capacity. Native party5/raid10/25 death, negative capacity/copy cases and reopened persistence pass; three statistics become structural, with no delve-content claim.
+
+## 2026-10-13 — Known-solo achievement predicates
+
+[Solo35](systems/dungeon-achievements.md#solo-group-predicates--verified-2026-10-13) requires native roster authority, not absence of visible peers. Actual marker casts and real joined groups prove credit/exclusion and reopened persistence; originating timed quest content remains unclaimed.
+
+## 2026-10-13 — Achievement zone predicates
+
+[Zone41](systems/dungeon-achievements.md#player-zone-predicates--verified-2026-10-13) uses one flagged parent, not ancestry. Native Stormwind pet win and reopened storage prove city credit; six account definitions become structurally evaluable without a world-honor or all-city-content claim.
+
 ## 2026-10-13 — Unrated Shuffle and authored cooldown reset
 
 [Native arenas](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13): six source-role solo entrants, real first-kill rounds, spec lock, source gate/start/reset restoration and character wins; both-skin live proof and four-map full-channel exact origins. Item overrides survive real cast-time completion and reset only the actual category; RED/GREEN fixtures preserve unrelated600s timers, charges/GCD/school locks and prove active-pet reset. Current Retail rated/leaver policy and dampening remain unclaimed.
@@ -8,6 +24,8 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Deadmines pinned source has instance wiring only; exact six primaries authenticated, Oaf47297 no longer labeled Helix. Missing AI/spawns and difficulty-specific bit binding gaps retained. [Boss scripts](systems/boss-scripts.md).
+- 2026-10-13: Slagmaw source port: Lava Spit/Submerge/server-side teleports, GetDistance boundary with source CombatReach24 (shared `model_reach.rs`). Dungeon-map spawn leash exempted per TC; open-world40yd boundary retained and tested. Historical Stockade39.888yd leash proof [superseded, evidence preserved](systems/navigation.md#stationary-arch-and-leash-acceptance). [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
 
 - 2026-10-13: Explicit Gordoth landing home/facing independent of respawn coordinates; home-return/leash honor it and respawn resets it. Real return proof,30s boundary test. [Boss scripts](systems/boss-scripts.md).
@@ -33,6 +51,7 @@
 # Wiki Log
 
 - 2026-10-13 — [Recovery rates](systems/auras.md#cooldown-recovery-rates): native286 start/apply/remove/refresh/expiry, owning spell attribution for category-only timers, real Rapid Fire/Sprint/Hot Hand controls and current owner updates; full ability/global-time/native-rendered parity remains open.
+- 2026-10-13 — [Map instance type](systems/dungeon-achievements.md#map-instance-type-verified-2026-10-13): exact authored122 map membership, native arena/BG killing-blow/reward/queued-death RED/GREEN and cross-type/persistence controls; +4 statistics, missing raid-death18 unclaimed.
 
 - 2026-10-13 — [Flat versatility](systems/auras.md#flat-versatility-bonuses): source471 computed percentage and real damage/heal/taken/auto RED/GREEN; pinned69933 CASC rating/curve proof and lifecycle/flag/recipient controls. Owner inheritance/native-rendered parity remains open.
 

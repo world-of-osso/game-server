@@ -1,12 +1,19 @@
 use super::*;
 
 fn app() -> App {
+    build_app(false)
+}
+
+fn build_app(track_achievements: bool) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: std::time::Duration::from_millis(50),
     });
     app.add_plugins(shared::ProtocolPlugin);
+    if track_achievements {
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    }
     app.finish();
     app.cleanup();
     app.insert_resource(super::super::tests::catalog());
@@ -317,11 +324,61 @@ fn petbattle_pvp_disconnect_finishes_opponent_and_releases_account() {
     )));
 }
 
+fn finish_battle_with_winner(app: &mut App, winner: Entity, loser: Entity) {
+    let id = app.world().get::<PvpParticipant>(winner).unwrap().id;
+    for _ in 0..100 {
+        let Some(battle) = app.world().resource::<Matchmaker>().battles.get(&id) else {
+            break;
+        };
+        let round = battle.encounter.battle.round;
+        let team = &battle.encounter.battle.teams[1];
+        if team.pets[team.active].health <= 0 {
+            let slot = team.pets.iter().position(|p| p.health > 0).unwrap();
+            advance(
+                app.world_mut(),
+                loser,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Swap(slot as u8 + 1),
+                },
+            )
+            .unwrap();
+        } else {
+            advance(
+                app.world_mut(),
+                winner,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Ability(1),
+                },
+            )
+            .unwrap();
+            advance(
+                app.world_mut(),
+                loser,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action: WildPetBattleAction::Pass,
+                },
+            )
+            .unwrap();
+        }
+    }
+}
+
 #[test]
 fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     use shared::components::{CharacterAppearance, Player};
-    let mut app = app();
+    let mut app = build_app(true);
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("pet-zone-proof.redb");
+    app.insert_resource(GameDatabase {
+        db: redb::Database::create(&db_path).unwrap(),
+    });
     crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
     let characters = [(41, "Petwinner"), (42, "Petloser")].map(|(account, name)| {
         crate::persistence::create_character(
@@ -336,6 +393,17 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
     });
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
+    app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real ground asset directory");
+    let ground = crate::ground::GroundMap::new(
+        std::path::Path::new(&data),
+        maps.maps
+            .iter()
+            .map(|(&id, map)| (id, map.wdt_file_data_id))
+            .collect(),
+    );
+    app.insert_resource(ground);
     app.init_resource::<crate::maps::ServerClock>();
     let [a, b] = matched(&mut app);
     for (owner, character) in [a, b].into_iter().zip(characters) {
@@ -354,60 +422,35 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
                 appearance: CharacterAppearance::default(),
             },
             PlayerAchievementState::default(),
+            shared::components::Level(1),
+            crate::maps::InMap::continent(0),
         ));
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(-8833.38, 628.62, 94.0);
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(shared::components::Position { x, y, z });
+        let connection = connection(app.world_mut(), owner).unwrap();
+        let character_id = app.world().get::<InWorld>(connection).unwrap().character_id;
+        app.world_mut().entity_mut(connection).remove::<InWorld>();
+        app.world_mut()
+            .entity_mut(connection)
+            .insert(InWorld { character_id });
     }
+    app.update();
     // Nine previous wins are setup; the actual engine win must cross the real tenth-win threshold.
     app.world_mut()
         .get_mut::<PlayerAchievementState>(a)
         .unwrap()
         .criteria_progress
         .insert(19724, 9);
-    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
-    for _ in 0..100 {
-        let Some(battle) = app.world().resource::<Matchmaker>().battles.get(&id) else {
-            break;
-        };
-        let round = battle.encounter.battle.round;
-        let team = &battle.encounter.battle.teams[1];
-        if team.pets[team.active].health <= 0 {
-            let slot = team.pets.iter().position(|p| p.health > 0).unwrap();
-            advance(
-                app.world_mut(),
-                b,
-                WildPetBattleActionRequest {
-                    battle_id: id,
-                    round,
-                    action: WildPetBattleAction::Swap(slot as u8 + 1),
-                },
-            )
-            .unwrap();
-        } else {
-            advance(
-                app.world_mut(),
-                a,
-                WildPetBattleActionRequest {
-                    battle_id: id,
-                    round,
-                    action: WildPetBattleAction::Ability(1),
-                },
-            )
-            .unwrap();
-            advance(
-                app.world_mut(),
-                b,
-                WildPetBattleActionRequest {
-                    battle_id: id,
-                    round,
-                    action: WildPetBattleAction::Pass,
-                },
-            )
-            .unwrap();
-        }
-    }
+    finish_battle_with_winner(&mut app, a, b);
     assert!(app.world().resource::<Matchmaker>().battles.is_empty());
     app.update();
     let winner = app.world().get::<PlayerAchievementState>(a).unwrap();
     assert_eq!(winner.criteria_progress.get(&19724), Some(&10));
+    assert_eq!(winner.criteria_progress.get(&19845), Some(&1));
+    assert!(!winner.criteria_progress.contains_key(&19846));
+    assert!(!winner.criteria_progress.contains_key(&19849));
     assert!(
         winner
             .account
@@ -432,6 +475,15 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
         .criteria_progress
         .get(&19724),
         Some(&10)
+    );
+    assert_eq!(
+        crate::persistence::load_achievements(
+            &app.world().resource::<GameDatabase>().db,
+            characters[0]
+        )
+        .criteria_progress
+        .get(&19845),
+        Some(&1)
     );
     for (owner, expected) in [
         (a, WildPetBattleOutcome::Won),
@@ -467,6 +519,13 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
             3
         );
     }
+    assert!(
+        !app.world()
+            .get::<PlayerAchievementState>(b)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&19845)
+    );
     // Consume terminal network messages before advancing their receiver lifetime.
     app.update();
     assert_eq!(
@@ -477,4 +536,16 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
             .get(&19724),
         Some(&10)
     );
+    assert_eq!(
+        app.world()
+            .get::<PlayerAchievementState>(a)
+            .unwrap()
+            .criteria_progress
+            .get(&19845),
+        Some(&1)
+    );
+    drop(app);
+    let reopened = redb::Database::open(&db_path).unwrap();
+    let saved = crate::persistence::load_achievements(&reopened, characters[0]);
+    assert_eq!(saved.criteria_progress.get(&19845), Some(&1));
 }

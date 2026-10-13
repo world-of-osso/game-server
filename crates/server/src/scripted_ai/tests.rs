@@ -153,6 +153,7 @@ struct Inbox {
     disengages: Vec<EncounterDisengageUnit>,
     timeline: Vec<shared::protocol::EncounterTimelineEvent>,
     log: Vec<CombatLogEvent>,
+    spell_gos: Vec<shared::protocol::SpellGo>,
 }
 
 struct Harness {
@@ -297,6 +298,8 @@ fn spawn_player(app: &mut App, map: InMap, wow: [f32; 4], id: u64) -> (Entity, E
                 MessageReceiver::<CombatLogEvent>::default(),
                 MessageSender::<CastFailed>::default(),
                 MessageReceiver::<CastFailed>::default(),
+                MessageSender::<shared::protocol::SpellGo>::default(),
+                MessageReceiver::<shared::protocol::SpellGo>::default(),
             ),
         ))
         .id();
@@ -388,6 +391,9 @@ impl Harness {
                 inbox
                     .log
                     .extend(drain::<CombatLogEvent>(world, *connection));
+                inbox
+                    .spell_gos
+                    .extend(drain::<shared::protocol::SpellGo>(world, *connection));
             }
         }
     }
