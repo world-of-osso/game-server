@@ -2,7 +2,8 @@
 """Prepare Adarogg's authentic TDB server-side spells in independent copies.
 
 Retain all source columns in tdb_serverside_spell/tdb_serverside_spell_effect;
-no DB2 rows, substitute spells, derived effect IDs or runtime activation.
+no DB2 rows, substitute spells or derived effect IDs. The server's spell store
+loads these tables (spell_info/load/serverside.rs).
 """
 import argparse
 import re
@@ -109,7 +110,7 @@ def main():
     parser.add_argument('--source-dump', type=Path, required=True)
     args = parser.parse_args()
     counts = import_spells(args.db, args.source_dump)
-    print(f'Prepared authored Adarogg server-side spell rows: {counts}; runtime loading remains separate')
+    print(f'Prepared authored Adarogg server-side spell rows: {counts}')
 
 
 if __name__ == '__main__':

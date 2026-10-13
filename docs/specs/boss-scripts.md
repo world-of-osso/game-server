@@ -25,7 +25,9 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 ## Ragefire Chasm source hooks
 
-- [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. These raw `tdb_` tables are not runtime spell admission or AI/charge certification. No DB2 substitutes or derived effect IDs.
+- [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. No DB2 substitutes or derived effect IDs.
+- [x] The spell store loads those tables like TC `LoadSpellInfoServerside` (DifficultyID0): every modelled source field becomes SpellInfo; an ID already in DB2 is refused, never overridden. Copies without the tables have no server-side spells.
+- [x] `encounter_summons.py --encounter adarogg` admits Demonic Leap61409 (actual base row/models plus authored Normal difficulty1) only after the server-side import establishes 119297's summon identity.
 
 Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then Deadmines). Source: TC a352b1fa `RagefireChasm`.
 
@@ -39,7 +41,13 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [x] Shadow Storm119973 effect0 dummy casts its actual effect value119965 triggered; destination-only missile effect32 forwards its destination to119964 and deals real damage.
 - [x] Koranthal death marks DONE/talks; evade retires without kill credit and respawns after source30s, recasting appearance Vortex.
 - [x] Prepare Koranthal primary-binding SQL with `encounter_cpp_bindings.py --encounter koranthal`: pinned source hashes and local Journal695/actor1321/display42101; idempotent output preserves unrelated bindings. No canonical data mutation.
-- [ ] Canonical primary credit-binding publication, loot/lockout/native acceptance and the other Ragefire boss/intro scripts remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
+- [x] Adarogg61408 engage schedules Inferno Charge at10s and Fire Breath119420 at20s, both repeating15–20s. Inferno targets a random non-tank threat-list player (`NonTankTargetSelector`), summons server-side119297 Demonic Leap there and channels119405 onto it through its NEARBY_ENTRY condition. Death despawns summons; evade uses `_DespawnAtEvade` and leaves the wild summon to its5s expiry.
+- [x] TC `EffectCharge` returns without a unit target, so the Leap's dest-only charge119298 (target46) never casts119299; Inferno Charge deals no damage in pinned source.
+- [x] AT7904 (`at_adarogg_intro`) shares AT7899's OnlyOnce DB2-box detector. DoAction makes the nearest StringId houndmasters_1/_2 within70yd yell groups0/1, then Adjules Chow Time120113 at +2s/+1s/+1.2s with the two authored MovePoints and MovePath6140800. Path ends schedule the next path (6148/6996ms) and Eat Trogg120064 at1s, repeating2–3s, twice. Engaging cancels the intro scheduler.
+- [ ] Ground MovePath6140800–6140802 needs map389 navigation, so the walked intro cycle is unproved; path-end behaviour is proved by dispatching the source WaypointPathEnded at the authored last node. Unit-target `EFFECT_CHARGE` (Chow Time's charge) is unmodelled; the following MovePoint replaces it in source. Dead houndmasters are not found (DeathState also marks respawn-pending actors).
+- [x] Unbound copies: canonical binds only Koranthal on map389, so Gordoth has no boss state there and initializes at its spawn instead of panicking.
+- [x] `encounter_cpp_bindings.py --encounter adarogg|gordoth` prepares 61408→1443 bit0 (Journal694/actor1343/display38759) and 61528→1446 bit3 (697/1345/42100) from pinned instance/header hashes.
+- [ ] Canonical publication of the Adarogg/Gordoth bindings and server-side/summon rows, Slagmaw, loot/lockout/native acceptance remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
 
 ## Ruby Life Pools source hooks
 
