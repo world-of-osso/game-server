@@ -33,6 +33,9 @@ const QUEST_SPECIAL_FLAGS_REPEATABLE: u32 = 0x1;
 /// `SpecialFlags` bit (AzerothCore `QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT`): the
 /// quest also needs an area explored or a scripted event (`AreaExploredOrEventHappens`).
 const QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT: u32 = 0x2;
+/// `SpecialFlags` bits (TrinityCore QuestDef.h:323-324 `DF_QUEST`, `MONTHLY`).
+const QUEST_SPECIAL_FLAGS_DF_QUEST: u32 = 0x8;
+const QUEST_SPECIAL_FLAGS_MONTHLY: u32 = 0x10;
 
 /// What an objective counts. The protocol kinds plus AzerothCore's exploration/event
 /// requirement (TrinityCore `QUEST_OBJECTIVE_AREATRIGGER` or a completion flag, mapped
@@ -181,6 +184,17 @@ impl QuestTemplate {
     pub fn is_repeatable(&self) -> bool {
         self.special_flags & QUEST_SPECIAL_FLAGS_REPEATABLE != 0
             && self.repeatability() == QuestRepeatability::Normal
+    }
+
+    /// TrinityCore `Quest::CanIncreaseRewardedQuestCounters` (QuestDef.cpp:644-649):
+    /// Dungeon Finder, daily and plain repeatable quests are never counted as rewarded.
+    pub fn increases_rewarded_counters(&self) -> bool {
+        let repeatable = self.special_flags & QUEST_SPECIAL_FLAGS_REPEATABLE != 0;
+        self.special_flags & QUEST_SPECIAL_FLAGS_DF_QUEST == 0
+            && self.flags & QUEST_FLAGS_DAILY == 0
+            && (!repeatable
+                || self.flags & QUEST_FLAGS_WEEKLY != 0
+                || self.special_flags & QUEST_SPECIAL_FLAGS_MONTHLY != 0)
     }
 }
 

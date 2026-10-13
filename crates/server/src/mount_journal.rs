@@ -203,6 +203,18 @@ fn sync_accounts(world: &mut World) {
     }
 }
 
+/// Source spells of an account's owned mounts.
+pub(crate) fn owned_spells<'a>(
+    world: &'a World,
+    mounts: Option<&'a AccountMounts>,
+) -> impl Iterator<Item = u32> + 'a {
+    let catalog = world.get_resource::<MountCatalog>();
+    mounts
+        .into_iter()
+        .flat_map(|mounts| mounts.0.keys())
+        .filter_map(move |id| catalog?.entries.get(id).map(|entry| entry.spell_id))
+}
+
 pub(crate) fn knows_spell(world: &World, player: Entity, spell: u32) -> bool {
     world
         .get_resource::<MountCatalog>()

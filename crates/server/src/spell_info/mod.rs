@@ -11,6 +11,9 @@
 //! `crate::spell_cast` resolves casts from these records.
 
 mod class_data;
+mod immunity;
+#[cfg(test)]
+mod immunity_tests;
 mod load;
 pub mod positivity;
 mod trait_data;
@@ -26,6 +29,7 @@ pub(crate) use class_data::MAX_LEVEL;
 #[cfg(test)]
 pub(crate) use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
+pub use immunity::SpellImmunityDefinition;
 pub(crate) use trait_data::load_trait_tree_by_id;
 pub use trait_data::{
     COND_FLAG_GATE, COND_FLAG_SUFFICIENT, TraitCond, TraitCondType, TraitCost, TraitEdgeType,
@@ -59,6 +63,9 @@ pub struct SpellInfo {
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
     pub(crate) cast_item_level: Option<u16>,
+    /// Retail item actually used by this cast; delayed casts credit only on execution.
+    #[serde(skip)]
+    pub(crate) cast_retail_item_id: Option<u32>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,
@@ -145,6 +152,8 @@ pub struct SpellRadius {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct SpellEffect {
     pub index: u8,
+    /// Resolved TDB creature_immunities row for aura147; missing IDs stay None.
+    pub immunity: Option<Box<SpellImmunityDefinition>>,
     /// SpellEffects ID (e.g. 2 school damage, 6 apply aura, 38 dispel, 68 interrupt).
     pub effect: u32,
     /// AuraType ID for aura-applying effects.

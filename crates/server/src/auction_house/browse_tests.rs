@@ -532,6 +532,7 @@ mod session {
         app.insert_resource(AuctionHouseState {
             initialized: true,
             auctions,
+            ..Default::default()
         });
         app.finish();
         app.cleanup();

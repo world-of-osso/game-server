@@ -16,6 +16,12 @@ const LINEN: u32 = 2589;
 const PEACEBLOOM: u32 = 2447;
 const COPPER_ORE: u32 = 2770;
 const WORN_SHORTSWORD: u32 = 25;
+/// Retail inventory type 13 (one-hand) dagger.
+const WORN_DAGGER: u32 = 2092;
+/// Retail inventory type 22 (off-hand weapon).
+const TRIBAL_GUARDIAN: u32 = 12939;
+/// Native SPELL_EFFECT_DUAL_WIELD 40.
+const DUAL_WIELD: u32 = 674;
 const VERIGANS_FIST: u32 = 6953;
 const SMALL_BROWN_POUCH: u32 = 4496;
 const BLUE_LEATHER_BAG: u32 = 856;
@@ -52,6 +58,8 @@ fn test_templates() -> ItemTemplates {
     ItemTemplates {
         retail: [
             (WORN_SHORTSWORD, template(21, 1, 2, 1, -1)),
+            (WORN_DAGGER, template(13, 1, 2, 1, -1)),
+            (TRIBAL_GUARDIAN, template(22, 1, 1, 0, -1)),
             (LINEN, reagent(template(0, 1000, 0, 0, -1))),
             (PEACEBLOOM, reagent(template(0, 1000, 0, 0, -1))),
             (COPPER_ORE, reagent(template(0, 1000, 0, 0, -1))),
@@ -64,6 +72,7 @@ fn test_templates() -> ItemTemplates {
         .collect(),
         forever: Default::default(),
         loot_need: Default::default(),
+        retail_learning_spells: Default::default(),
     }
 }
 
@@ -778,6 +787,61 @@ fn swap_within_backpack_moves_item_and_emits_delta() {
 }
 
 #[test]
+fn achievements_criteria_equipped_retail_item_is_actual_wear_not_bag_ownership_or_rejected_move() {
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut app = setup_app_with(persistence::temp_database(), |app| {
+        app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+        app.insert_resource(
+            crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap(),
+        );
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    });
+    let client = spawn_client(&mut app, 1, "Tabardproof");
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    grant_bag_item(&app, client.character_id, 20132, "Arathor Battle Tabard");
+    enter_world(&mut app, &client);
+    assert!(
+        !persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .contains_key(&2335)
+    );
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: ItemLocation::Equipment(EquipmentSlot::Head),
+        },
+    );
+    assert!(!received::<InventoryError>(&mut app, &client).is_empty());
+    app.update();
+    assert!(
+        !persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .contains_key(&2335)
+    );
+    request(&mut app, &client, EquipItem { from: bag(3) });
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    app.update();
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&2335),
+        Some(&1)
+    );
+    request(&mut app, &client, EquipItem { from: bag(3) });
+    app.update();
+    assert_eq!(
+        persistence::load_achievements(db(&app), client.character_id)
+            .criteria_progress
+            .get(&2335),
+        Some(&1)
+    );
+}
+
+#[test]
 fn equipping_weapon_into_main_hand_updates_equipment_appearance() {
     let mut app = setup_app(persistence::temp_database());
     let client = spawn_client(&mut app, 1, "Bagger");
@@ -1222,3 +1286,100 @@ fn an_equipped_sword_dropped_on_an_empty_bag_slot_is_unequipped_there() {
 
 #[path = "inventory_bag_tests.rs"]
 mod bags;
+
+/// The character knows `spells`, resolved through native DB2 rows.
+fn learn_spells(app: &mut App, client: &Client, spells: &[u32]) {
+    let data = crate::spell_cast::test_harness::world_db().expect("real world.db required");
+    let rows = spells
+        .iter()
+        .map(|id| data.store.get(*id).expect("native spell").clone())
+        .collect();
+    app.insert_resource(crate::spell_info::SpellStore::fixture(rows));
+    app.world_mut().entity_mut(client.player).insert(
+        crate::class_progression::KnownSpells::fixture(spells.to_vec()),
+    );
+}
+
+fn off_hand_item(app: &App, character_id: u64) -> Option<u32> {
+    persistence::load_character(db(app), character_id)
+        .unwrap()
+        .equipment_appearance
+        .entries
+        .iter()
+        .find(|entry| entry.slot == EquipmentVisualSlot::OffHand)
+        .and_then(|entry| entry.item_id)
+}
+
+fn equip_off_hand(app: &mut App, client: &Client, from: ItemLocation) -> Vec<InventoryError> {
+    request(
+        app,
+        client,
+        SwapItem {
+            from,
+            to: ItemLocation::Equipment(EquipmentSlot::OffHand),
+        },
+    );
+    received::<InventoryError>(app, client)
+}
+
+#[test]
+fn dual_wield_spell_permits_off_hand_weapons() {
+    for (item, name) in [
+        (WORN_DAGGER, "Worn Dagger"),
+        (TRIBAL_GUARDIAN, "Tribal Guardian"),
+    ] {
+        let mut app = setup_app(persistence::temp_database());
+        let client = spawn_client(&mut app, 1, "Rogue");
+        learn_spells(&mut app, &client, &[DUAL_WIELD]);
+        grant_bag_item(&app, client.character_id, item, name);
+        enter_world(&mut app, &client);
+        assert_eq!(equip_off_hand(&mut app, &client, bag(3)), Vec::new());
+        assert_eq!(off_hand_item(&app, client.character_id), Some(item));
+    }
+}
+
+#[test]
+fn off_hand_weapons_require_dual_wield() {
+    for (item, name) in [
+        (WORN_DAGGER, "Worn Dagger"),
+        (TRIBAL_GUARDIAN, "Tribal Guardian"),
+    ] {
+        let mut app = setup_app(persistence::temp_database());
+        let client = spawn_client(&mut app, 1, "Paladin");
+        learn_spells(&mut app, &client, &[]);
+        grant_bag_item(&app, client.character_id, item, name);
+        enter_world(&mut app, &client);
+        let errors = equip_off_hand(&mut app, &client, bag(3));
+        assert_eq!(errors.len(), 1, "{item}");
+        assert_eq!(errors[0].reason, InventoryErrorReason::CantDualWield);
+        assert_eq!(off_hand_item(&app, client.character_id), None);
+    }
+}
+
+#[test]
+fn auto_equip_offers_the_off_hand_only_to_dual_wielders() {
+    for (spells, off_hand) in [(&[DUAL_WIELD][..], Some(WORN_DAGGER)), (&[][..], None)] {
+        let mut app = setup_app(persistence::temp_database());
+        let client = spawn_client(&mut app, 1, "Wielder");
+        learn_spells(&mut app, &client, spells);
+        grant_bag_item(
+            &app,
+            client.character_id,
+            WORN_SHORTSWORD,
+            "Worn Shortsword",
+        );
+        grant_bag_item(&app, client.character_id, WORN_DAGGER, "Worn Dagger");
+        enter_world(&mut app, &client);
+        request(
+            &mut app,
+            &client,
+            SwapItem {
+                from: bag(3),
+                to: ItemLocation::Equipment(EquipmentSlot::MainHand),
+            },
+        );
+        request(&mut app, &client, EquipItem { from: bag(4) });
+        assert!(received::<InventoryError>(&mut app, &client).is_empty());
+        assert_eq!(off_hand_item(&app, client.character_id), off_hand);
+    }
+}
