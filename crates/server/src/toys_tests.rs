@@ -4322,7 +4322,7 @@ fn toyfx14_dice_learn_emote_and_roll_to_only_the_authored_audience() {
         h.app.insert_resource(store.clone());
         h.app.init_resource::<GroupRegistry>();
         h.app.init_resource::<ToyChatCapture>();
-        h.app.add_systems(PostUpdate, capture_toy_chat.after(MessageSystems::Send));
+        h.app.add_systems(PostUpdate, capture_toy_chat);
         h.app
             .world_mut()
             .entity_mut(h.caster)
@@ -4522,7 +4522,7 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
             MessageReceiver::<ChatMessage>::default(),
         ));
         h.app.init_resource::<ToyChatCapture>();
-        h.app.add_systems(PostUpdate, capture_toy_chat.after(MessageSystems::Send));
+        h.app.add_systems(PostUpdate, capture_toy_chat);
         learn_effect_toy(&mut h, character, 36863);
         assert!(activate(&mut h, 36863)[0].error.is_some(), "{missing}");
         h.advance(5);
@@ -4584,7 +4584,7 @@ fn toyfx18_coin_tosses_then_catches_heads_or_tails_after_source_flight() {
         let (mut h, character) = setup(&directory.path().join("coin.redb"));
         h.app.insert_resource(store.clone());
         h.app.init_resource::<ToyChatCapture>();
-        h.app.add_systems(PostUpdate, capture_toy_chat.after(MessageSystems::Send));
+        h.app.add_systems(PostUpdate, capture_toy_chat);
         h.app
             .world_mut()
             .entity_mut(h.caster)
@@ -4687,7 +4687,7 @@ fn toyfx18_coin_refuses_missing_text_or_source_shape_drift() {
             MessageReceiver::<ChatMessage>::default(),
         ));
         h.app.init_resource::<ToyChatCapture>();
-        h.app.add_systems(PostUpdate, capture_toy_chat.after(MessageSystems::Send));
+        h.app.add_systems(PostUpdate, capture_toy_chat);
         learn_effect_toy(&mut h, character, 44430);
         assert!(activate(&mut h, 44430)[0].error.is_some(), "{missing}");
         h.advance(50);
