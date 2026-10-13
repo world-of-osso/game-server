@@ -797,6 +797,7 @@ fn target_armor(
         (Some(armor), _) => {
             let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
             target.armor_against(armor.0 * multiplier, attacker)
+                * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,

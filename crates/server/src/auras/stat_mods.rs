@@ -312,6 +312,17 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     );
                 }
             }
+            MOD_RESISTANCE_PCT => {
+                if misc & 1 != 0 {
+                    stats.total_armor_pct += amount * (1.0 + stats.total_armor_pct / 100.0);
+                }
+                if misc & !1 != 0 {
+                    warn!(
+                        "Aura101 spell{} has unmodeled nonphysical resistance mask{misc}",
+                        aura.spell_id
+                    );
+                }
+            }
             MOD_ARMOR_PCT_FROM_STAT => {
                 if misc == -2 {
                     stats.armor_from_primary_stat_pct += amount;

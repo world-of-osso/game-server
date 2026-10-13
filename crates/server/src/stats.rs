@@ -74,6 +74,8 @@ pub struct StatModifiers {
     pub base_armor_pct: f32,
     /// Aura466: composed final armor percentage, applied after stat-derived armor.
     pub bonus_armor_pct: f32,
+    /// Aura101 physical: composed armor TOTAL_PCT, applied after stat-derived armor.
+    pub total_armor_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -382,6 +384,7 @@ pub fn compute_character_stats(
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
             + armor_from_stats(&primary, input.primary_stat, &mods))
+            * (1.0 + mods.total_armor_pct / 100.0)
             * (1.0 + mods.bonus_armor_pct / 100.0))
             .floor(),
         main_hand: WeaponDamage::UNARMED,
