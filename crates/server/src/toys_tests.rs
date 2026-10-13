@@ -4177,6 +4177,80 @@ fn toyfx18_weather_machine_refuses_unaudited_weather_shape() {
     }
 }
 
+/// Cast-event caster kits with no aura, script binding or gameplay payload.
+const CAST_KIT_TOYS: [(u32, u32); 3] = [
+    (122119, 103740), // Everlasting Darkmoon Firework
+    (166877, 290627), // Azerite Firework Launcher
+    (127668, 187150), // Jewel of Hellfire
+];
+
+#[test]
+fn toyfx18_cast_kit_visual_toys_cast_without_gameplay() {
+    use shared::components::{Health, ModelDisplay, Position, UnitAuras};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell) in CAST_KIT_TOYS {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("cast-kit.redb"));
+        h.app.insert_resource(store.clone());
+        let model = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+        let health = *h.app.world().get::<Health>(h.caster).unwrap();
+        let position = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(5);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), model.as_ref());
+        assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), health);
+        assert_eq!(*h.app.world().get::<Position>(h.caster).unwrap(), position);
+        assert!(
+            h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .is_none_or(|auras| auras.auras.iter().all(|aura| aura.spell_id != spell)),
+            "item {item} has no aura"
+        );
+    }
+}
+
+#[test]
+fn toyfx18_cast_kit_visual_toys_refuse_lost_visual_or_payload() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for drift in ["no visual", "payload"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("cast-kit-drift.redb"));
+        let mut spell = store.get(103740).unwrap().clone();
+        match drift {
+            "no visual" => spell.has_spell_visual = false,
+            "payload" => spell.effects[0].base_points = 50.0,
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        learn_effect_toy(&mut h, character, 122119);
+        assert!(activate(&mut h, 122119)[0].error.is_some(), "{drift}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{drift}");
+    }
+}
+
 /// TC spell_gen_upper_deck_create_foam_sword item choices.
 const FOAM_SWORDS: [u32; 5] = [45061, 45176, 45177, 45178, 45179];
 
