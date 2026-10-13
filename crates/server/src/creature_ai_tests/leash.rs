@@ -133,6 +133,46 @@ fn leash_evade_beyond_distance() {
     assert_eq!(health.current, 50.0, "evade leaves health to regeneration");
 }
 
+/// A real continent map keeps the existing 40yd spawn leash. Dungeon exemptions
+/// must not change either the inclusive boundary or the open-world evade path.
+#[test]
+fn leash_open_world_map_keeps_forty_yard_boundary() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.insert_resource(MapStore::continents());
+    app.update();
+    for (distance, expected) in [
+        (40.0, CreatureState::Pursuing { target: 1 }),
+        (40.1, CreatureState::Returning),
+    ] {
+        let creature = app
+            .world_mut()
+            .spawn((
+                InMap::continent(0),
+                Position {
+                    x: distance,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                SpawnPoint {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    wander_distance: 0.0,
+                    speed_walk: 1.0,
+                    speed_run: 1.0,
+                },
+                CreatureState::Pursuing { target: 1 },
+            ))
+            .id();
+        app.world_mut().run_system_once(leash_check_system).unwrap();
+        assert_eq!(app.world().get::<CreatureState>(creature), Some(&expected));
+        app.world_mut().despawn(creature);
+    }
+}
+
 #[test]
 fn leash_within_range_no_evade() {
     use bevy::ecs::system::RunSystemOnce;

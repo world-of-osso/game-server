@@ -1,6 +1,9 @@
 ## 2026-10-13 — Follower utilities and strict-nav boundaries
 
 [Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.
+## 2026-10-13 — Known-solo achievement predicates
+
+[Solo35](systems/dungeon-achievements.md#solo-group-predicates--verified-2026-10-13) requires native roster authority, not absence of visible peers. Actual marker casts and real joined groups prove credit/exclusion and reopened persistence; originating timed quest content remains unclaimed.
 
 ## 2026-10-13 — Achievement zone predicates
 
@@ -16,6 +19,8 @@
 
 ## 2026-10-12 — Preparation visibility distinguishes unit targets
 
+- 2026-10-13: Deadmines pinned source has instance wiring only; exact six primaries authenticated, Oaf47297 no longer labeled Helix. Missing AI/spawns and difficulty-specific bit binding gaps retained. [Boss scripts](systems/boss-scripts.md).
+- 2026-10-13: Slagmaw source port: Lava Spit/Submerge/server-side teleports, GetDistance boundary with source CombatReach24 (shared `model_reach.rs`). Dungeon-map spawn leash exempted per TC; open-world40yd boundary retained and tested. Historical Stockade39.888yd leash proof [superseded, evidence preserved](systems/navigation.md#stationary-arch-and-leash-acceptance). [Boss scripts](systems/boss-scripts.md).
 - 2026-10-13: Gordoth ordinary-player AT7899 source rotated-box entry, same-copy lookup and instance-lifetime OnlyOnce; missed-boss entries remain retryable. GM/native/cage gaps retained. [Boss scripts](systems/boss-scripts.md#gordoth-combat-slice).
 
 - 2026-10-13: Explicit Gordoth landing home/facing independent of respawn coordinates; home-return/leash honor it and respawn resets it. Real return proof,30s boundary test. [Boss scripts](systems/boss-scripts.md).

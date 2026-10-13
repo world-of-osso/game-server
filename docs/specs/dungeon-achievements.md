@@ -73,6 +73,7 @@ Specified phase-2 acceptance cases pass; see the wiki proof ledger for exact rev
 
 ### Continued source-backed coverage
 
+- Modifier35 PlayerIsNotInParty admits pinned zero-asset leaves only for an authoritatively known ungrouped character. Missing group authority or character identity cannot imply solo; offline group members count. Native successful marker casts can credit, while depth refusal, grouped casts and idle replay cannot. This does not certify the originating timed quest's gameplay lifecycle.
 - Modifier41 PlayerIsInZone matches the reference player's current terrain area, replacing it with its immediate parent only when the authored area is flagged as a subzone. A parent link alone and recursive ancestry cannot qualify. Missing reference area cannot credit; native pet-battle winners, not losers or idle replay, earn the matching city criterion and retain it after storage reopen. This does not add world-honor eligibility or certify every city's pet-battle content.
 - Modifier122 PlayerMapInstanceType compares the reference map's authored raw InstanceType, not guessed map/copy/difficulty categories. World0 is valid; unknown types and absent reference map cannot qualify. Arena4/Battleground3 predicates remain distinct through native killing-blow, kill-reward and queued death events. This does not enable missing type18 raid-death production.
 
