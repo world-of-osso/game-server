@@ -681,7 +681,13 @@ fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
     let conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.execute_batch("CREATE TABLE summon_properties (ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER); INSERT INTO summon_properties VALUES (64,0,0,0,0);").unwrap();
+    conn.execute_batch(
+        "CREATE TABLE summon_properties (
+            ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER,
+            Flags_0 INTEGER, Flags_1 INTEGER
+        ); INSERT INTO summon_properties VALUES (64,0,0,0,0,0,0);",
+    )
+    .unwrap();
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     learn_effect_toy(&mut h, character, 34686);
