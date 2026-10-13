@@ -2,7 +2,7 @@
 
 verified: 2026-10-12
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5377 ordinary (3402 account/1975 character),1751 statistics; 94 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5381 ordinary (3405 account/1976 character),1751 statistics; 95 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
@@ -57,9 +57,9 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 34 | LearnOrKnowSpell | 530/578 | 441/467 | 89 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 35 | EarnHonorableKill | 0/62 | 0/52 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 36 | AcquireItem | 1650/1759 | 1123/1132 | 527 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 37 | WinAnyRankedArena | 0/60 | 0/34 | 0 | Native candidate now exists: pvp_arena_rated_results::apply_result persists rated 2v2/3v3 outcomes once. Still unwired. TC Arena.cpp249 credits only online winners, using pre-result personal rating (minimum1); season/timer qualifiers remain separate. |
+| 37 | WinAnyRankedArena | 2/60 | 1/34 | 1 | Native rated2v2/3v3 committed settlement: authenticated online winners only; pre-result rating minimum1 (TC Arena.cpp249), one accumulated win. Real-channel rated wins/skirmish/losers/no-replay/redb-reopen proved. Timers and unsupported qualifiers stay disabled. |
 | 38 | EarnTeamArenaRating | 0/6 | 0/3 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
-| 39 | EarnPersonalArenaRating | 0/88 | 0/68 | 0 | Native candidate now exists: rated arena settlement persists personal rating for 2v2/3v3. Still unwired. TC ArenaTeam.cpp448 supplies post-result rating and team size; CriteriaHandler758 requires the criterion's team-size asset and retains the highest rating. No native rated5v5. |
+| 39 | EarnPersonalArenaRating | 0/88 | 0/68 | 0 | Native rated settlement exists, but source/data mapping unresolved: pinned TC ArenaTeam.cpp448 passes team size2/3/5 while local Retail criteria447/451/452 use slot-like assets1/0/2. No guessed remap; still unwired. No native rated5v5. |
 | 40 | AchieveSkillStep | 12/36 | 12/12 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 41 | UseItem | 1292/1404 | 1213/1231 | 79 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 42 | LootItem | 388/579 | 292/292 | 96 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |

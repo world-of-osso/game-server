@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
+
 - [Master arena/class regressions](investigations/master-arena-fixture-regressions.md) — duplicate Arcane school discount, source-correct reciprocal Moloch controls, and mastery cap/tie fixture isolation; qualified bisect evidence.
 
 - [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29) — player-only263 admission/completion, caster-class and parent flags, thirteen controls; cooking-focus/spellcaster integration preserves both payload contracts.

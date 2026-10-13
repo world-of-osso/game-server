@@ -102,6 +102,10 @@ The standalone native check uses `--config 'patch."https://github.com/world-of-o
 
 Earned player levels are published at the native XP persistence boundary, not from `Changed<Level>`; generated max-level class predicates admit actual current tree leaves without stripping conditions. Area transitions use authored full ancestry for IsInArea but retain the separate one-parent terrain-zone rule. Traditional faction rank totals exclude friendship, renown and paragon-target state. Raw CriteriaTree references outside all Achievement roots remain orphan counters, not artificial achievement gains.
 
+## Rated arena win criteria (verified 2026-10-13)
+
+`pvp_arena_rated_results::apply_result` collects online winners while persisting their ratings, sets the match result’s once-only `applied` marker, then publishes Type37 credit through the authenticated achievement boundary. Pre-result rating follows TC Arena.cpp249 (minimum1); the criterion increments by one, not the rating amount. Native-channel 2v2/3v3 tests cover winner/loser isolation, skirmishes, no queue/preparation credit, idle replay and redb reopen. Type39 remains disabled: pinned TC uses team sizes2/3/5 while current Retail assets are slot-like0/1/2; mapping is unresolved. [Producer inventory](../../achievement-criteria-producer-inventory.md) owns the current census and remaining gaps.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
