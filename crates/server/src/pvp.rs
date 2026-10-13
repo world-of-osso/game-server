@@ -149,7 +149,7 @@ struct InvitedBattleground {
     silvershard: Option<pvp_silvershard::CartRuntime>,
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
-    alterac: Option<pvp_alterac::AlteracRuntime>,
+    alterac: Option<pvp_alterac::BannerRuntime>,
     scoreboard: Vec<shared::protocol::BattlegroundPlayerScoreSnapshot>,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
@@ -157,7 +157,7 @@ struct InvitedBattleground {
 
 impl InvitedBattleground {
     fn displayed_scores(&self) -> (u32, u32) {
-        if self.instance.bg_id == 1 {
+        if self.alterac.is_some() {
             (
                 self.instance.score_a.reinforcements,
                 self.instance.score_b.reinforcements,

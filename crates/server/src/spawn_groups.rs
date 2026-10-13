@@ -3,7 +3,8 @@
 //!
 //! TDB1210 `spawn_group` / `spawn_group_template` rows with
 //! `CONDITION_SOURCE_TYPE_SPAWN_GROUP` (33) conditions decide which member creatures a
-//! battleground copy holds (Alterac Valley node owners, defender tiers, mine crews). A
+//! battleground copy holds (Alterac Valley node owners, defender tiers, mine crews; Isle of
+//! Conquest node banners, spirit guides, miners and vehicles). A
 //! group's members never spawn with ordinary map content; its battleground runtime
 //! spawns them while the conditions hold. A group meets its conditions when every
 //! condition of one `ElseGroup` holds, each negated by `NegativeCondition`.
@@ -13,7 +14,7 @@ use rusqlite::Connection;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 /// Maps whose battleground runtime evaluates spawn group conditions.
-const CONDITIONED_MAPS: [u16; 1] = [30];
+const CONDITIONED_MAPS: [u16; 2] = [30, 628];
 /// TDB1210 spawn guids are promoted into the content namespace at this offset.
 const RETAIL_GUID_OFFSET: u32 = 20_000_000;
 /// `SPAWNGROUP_FLAG_DESPAWN_ON_CONDITION_FAILURE`.

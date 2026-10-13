@@ -360,6 +360,107 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
     assert_eq!(creatures_in(h, copy, 13359), 16, "flag-0 tower guards stay");
 }
 
+/// Isle of Conquest (TC a352b1fa battleground_isle_of_conquest.cpp, TDB spawn groups
+/// 1201-1239): a normal Opening assaults the neutral Quarry, its contested banner captures
+/// one minute later with the Alliance miners, owned Quarry ticks one reinforcement per
+/// 45 s and each death costs one. The keep bosses only spawn once a keep gate is breached
+/// (groups 1238/1239, world states 4320-4325), so with intact gates the Horde loses by
+/// running out of its 400 reinforcements.
+#[test]
+fn isle_channel_quarry_capture_tick_gated_bosses_reinforcement_victory_and_origin_return() {
+    let template = shared::battleground::isle_of_conquest();
+    let mut entered = enter_source_match(&template, [1299, 1245]);
+    let actor_index = entered
+        .teams
+        .iter()
+        .position(|team| *team == BgTeam::A)
+        .unwrap();
+    let victim_index = entered
+        .teams
+        .iter()
+        .position(|team| *team == BgTeam::B)
+        .unwrap();
+    {
+        let EnteredMatch {
+            h, players, copy, ..
+        } = &mut entered;
+        let (actor, victim, copy) = (&players[actor_index], &players[victim_index], *copy);
+        use_second_frames(h);
+        assert_eq!(battleground(h, actor).score_a, 400);
+        assert_eq!(
+            objects_in(h, copy, 195338).len(),
+            1,
+            "neutral Quarry banner"
+        );
+        assert!(
+            objects_in(h, copy, 195334).is_empty(),
+            "Alliance Quarry banner"
+        );
+        assert_eq!(objects_in(h, copy, 195396).len(), 1, "Alliance Keep banner");
+        assert_eq!(creatures_in(h, copy, 61696), 0, "Alliance Quarry miners");
+        assert_eq!(
+            creatures_in(h, copy, 34922),
+            0,
+            "Overlord Agmar behind intact gates"
+        );
+        assert_eq!(
+            creatures_in(h, copy, 34924),
+            0,
+            "High Commander Halford behind intact gates"
+        );
+        let (banner, at) = objects_in(h, copy, 195338)[0];
+        h.walk_to(actor, at);
+        use_object(h, actor, banner);
+        assert!(
+            objects_in(h, copy, 195335).is_empty(),
+            "Opening is not instant"
+        );
+        h.advance(8);
+        assert!(objects_in(h, copy, 195338).is_empty());
+        assert_eq!(
+            objects_in(h, copy, 195335).len(),
+            1,
+            "Alliance contested Quarry"
+        );
+        assert!(battleground(h, actor).world_states.contains(&(4310, 1)));
+        h.advance(60);
+        assert_eq!(
+            objects_in(h, copy, 195334).len(),
+            1,
+            "Alliance Quarry banner"
+        );
+        assert_eq!(creatures_in(h, copy, 61696), 13, "Alliance Quarry miners");
+        h.advance(45);
+        assert_eq!(battleground(h, actor).score_a, 401);
+        assert!(battleground(h, actor).world_states.contains(&(4226, 401)));
+        crate::combat::deal_direct_damage(h.app.world_mut(), actor.player, victim.player, 1.0e7);
+        h.advance(2);
+        assert_eq!(battleground(h, actor).score_b, 399);
+        for _ in 1..400 {
+            crate::death::resurrect_player(h.app.world_mut(), victim.player);
+            crate::combat::deal_direct_damage(
+                h.app.world_mut(),
+                actor.player,
+                victim.player,
+                1.0e7,
+            );
+            h.advance(1);
+        }
+        h.receive_pvp_updates(5);
+        assert_eq!(battleground(h, actor).score_b, 0);
+        let row = battleground(h, actor)
+            .players
+            .iter()
+            .find(|row| row.character_id == h.app.world().get::<ClientId>(actor.player).unwrap().0)
+            .unwrap()
+            .clone();
+        assert!(row.objective_scores.contains(&(245, 1)));
+    }
+    let score = battleground(&mut entered.h, &entered.players[actor_index]).score_a;
+    assert!(score > 401, "the owned Quarry kept ticking: {score}");
+    win_leave_and_return(&mut entered, score);
+}
+
 fn creatures_in(h: &mut Harness, copy: InMap, entry: u32) -> usize {
     let world = h.app.world_mut();
     let mut query = world.query::<(&shared::components::Npc, &InMap)>();
@@ -739,8 +840,8 @@ fn enter_source_match_with(
             app.insert_resource(crate::spell_cast::test_harness::power_table(data));
             app.add_plugins((crate::spell_cast::SpellCastPlugin, crate::auras::AuraPlugin));
         }
-        if template.map_id == 30 {
-            app.insert_resource(alterac_source_world());
+        if matches!(template.map_id, 30 | 628) {
+            app.insert_resource(promoted_source_world(template.map_id));
             let data = crate::spell_cast::test_harness::world_db().unwrap();
             app.insert_resource(crate::spell_info::SpellStore::fixture(vec![
                 data.store.get(21651).unwrap().clone(),
@@ -917,6 +1018,7 @@ fn win_leave_and_return(entered: &mut EnteredMatch, score: u32) {
         assert_eq!(result.players.len(), players.len());
         let score_state = match copy.map_id {
             30 => 3127,
+            628 => 4226,
             998 => 6303,
             727 => 6437,
             1803 => 13845,
@@ -1100,14 +1202,14 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
     win_leave_and_return(&mut entered, 1500);
 }
 
-fn alterac_source_world() -> crate::world_data::WorldData {
+fn promoted_source_world(map_id: u32) -> crate::world_data::WorldData {
     let copy = tempfile::NamedTempFile::new().unwrap();
     std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
     let promoted = std::process::Command::new("python3")
         .args([
             "../../scripts/promote_battlegrounds.py",
             "--maps",
-            "30",
+            &map_id.to_string(),
             "--db",
         ])
         .arg(copy.path())
