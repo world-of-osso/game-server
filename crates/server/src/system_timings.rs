@@ -24,6 +24,7 @@ const REPORT_TOP: usize = 15;
 struct SystemTotal {
     time: Duration,
     runs: u64,
+    max: Duration,
 }
 
 type Totals = Arc<Mutex<HashMap<String, SystemTotal>>>;
@@ -88,6 +89,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for SystemTimingLayer {
         let total = totals.entry(name.0.clone()).or_default();
         total.time += elapsed;
         total.runs += 1;
+        total.max = total.max.max(elapsed);
     }
 }
 
@@ -125,11 +127,12 @@ fn report_system_timings(mut timings: ResMut<SystemTimings>) {
     for (name, total) in rows.iter().take(REPORT_TOP) {
         let ms = total.time.as_secs_f64() * 1000.0;
         info!(
-            "  {:6.2} ms/s {:5.1}% {:6} runs {:.3} ms/run  {name}",
+            "  {:6.2} ms/s {:5.1}% {:6} runs {:.3} ms/run max {:.3} ms  {name}",
             ms * 1000.0 / wall_ms,
             ms * 100.0 / wall_ms,
             total.runs,
             ms / total.runs.max(1) as f64,
+            total.max.as_secs_f64() * 1000.0,
         );
     }
 }

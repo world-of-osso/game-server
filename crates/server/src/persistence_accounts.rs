@@ -34,6 +34,7 @@ pub fn login_with_credentials(
     username: &str,
     password: &str,
 ) -> Result<(u64, String), String> {
+    let _span = bevy::log::info_span!("system", name = "tick_db::login_with_credentials").entered();
     if let Some(tok) = token
         && !tok.is_empty()
         && let Some(account_id) = find_account_by_token(db, tok)

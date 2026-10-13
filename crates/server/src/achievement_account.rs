@@ -50,6 +50,7 @@ pub(super) fn save_account_progress(
     catalog: &AchievementCatalog,
     update: AccountUpdate,
 ) -> (PlayerAchievementState, Vec<AchievementToastSnapshot>) {
+    let _span = bevy::log::info_span!("system", name = "tick_db::save_account_progress").entered();
     let characters = persistence::load_account_char_ids(db, update.account);
     let txn = db
         .begin_write()
@@ -86,6 +87,7 @@ pub(super) fn save_monthly_contribution(
     character: u64,
     state: &PlayerAchievementState,
 ) {
+    let _span = bevy::log::info_span!("system", name = "tick_db::save_monthly_contribution").entered();
     let characters = persistence::load_account_char_ids(db, account);
     let txn = db
         .begin_write()
@@ -111,6 +113,7 @@ pub(super) fn monthly_contributions(
     db: &redb::Database,
     account: u64,
 ) -> Vec<PlayerAchievementState> {
+    let _span = bevy::log::info_span!("system", name = "tick_db::monthly_contributions").entered();
     let txn = db.begin_read().expect("read monthly account contributions");
     let table = txn
         .open_table(ACCOUNTS)
