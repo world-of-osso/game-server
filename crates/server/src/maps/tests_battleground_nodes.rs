@@ -335,6 +335,17 @@ fn alterac_channel_spawns_only_condition_met_source_spawn_groups() {
     assert_eq!(creatures_in(h, copy, 13396), 0, "Alliance Irondeep Miner");
     assert_eq!(creatures_in(h, copy, 14773), 1, "Iceblood Warmaster");
     assert_eq!(creatures_in(h, copy, 13359), 16, "Frostwolf Bowman");
+    // Banner variants are TDB spawn-group objects too: neutral Snowfall (group 1053,
+    // world state 1966) and the Horde-owned Iceblood tower banner (group 1100, 1385).
+    assert_eq!(
+        objects_in(h, copy, 180418).len(),
+        1,
+        "neutral Snowfall banner"
+    );
+    assert!(
+        objects_in(h, copy, 178365).is_empty(),
+        "Alliance Snowfall banner"
+    );
     let (banner, at) = objects_in(h, copy, 178946)[0];
     h.walk_to(actor, at);
     use_object(h, actor, banner);

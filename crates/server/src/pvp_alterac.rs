@@ -1,14 +1,12 @@
-//! Authored AV banner variants, normal Opening casts and authoritative creature deaths.
+//! AV spawn-group banner variants, normal Opening casts and authoritative creature deaths.
 use super::{InvitedBattleground, PlayerPvpState, PvpServerState};
-use crate::game_objects::{
-    GameObjectBounds, GameObjectSpawn, GameObjectSpawns, game_object_bundle, wow_position,
-};
+use crate::game_objects::{GameObjectBounds, GameObjectSpawns, wow_position};
 use crate::maps::InMap;
 use crate::spell_cast::CastFailure;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::battleground::{
-    ALTERAC_NODE_COUNT, ALTERAC_OPENING_SPELL as OPENING_SPELL, AlteracBattle, BgPhase, BgTeam,
+    ALTERAC_OPENING_SPELL as OPENING_SPELL, AlteracBattle, BgPhase, BgTeam,
 };
 use shared::components::{Health, Npc, Position};
 use shared::protocol::GameObjectInfo;
@@ -30,7 +28,7 @@ fn defender_tier(_data: u32) -> u32 {
 #[derive(Debug)]
 pub(super) struct AlteracRuntime {
     pub battle: AlteracBattle,
-    sources: BTreeMap<u32, GameObjectSpawn>,
+    banners: BTreeSet<u32>,
 }
 
 impl AlteracRuntime {
@@ -38,20 +36,25 @@ impl AlteracRuntime {
         let catalog = world
             .get_resource::<GameObjectSpawns>()
             .ok_or("Alterac source objects missing")?;
-        let mut sources = BTreeMap::new();
-        for entry in shared::battleground::alterac_banner_entries() {
-            let source = catalog
+        let world_data = world
+            .get_resource::<crate::world_data::WorldData>()
+            .ok_or("Alterac creature catalog missing")?;
+        let banners: BTreeSet<u32> = shared::battleground::alterac_banner_entries()
+            .into_iter()
+            .collect();
+        for &entry in &banners {
+            // Every banner variant must be an authored spawn its TDB spawn group gates.
+            catalog
                 .0
                 .iter()
-                .find(|spawn| spawn.map_id == 30 && spawn.info.entry == entry)
+                .find(|spawn| {
+                    spawn.map_id == 30
+                        && spawn.info.entry == entry
+                        && world_data.spawn_groups.is_object_member(spawn.guid)
+                })
                 .ok_or_else(|| format!("Alterac source banner {entry} missing"))?;
-            sources.insert(entry, source.clone());
         }
-        let data_ids = world
-            .get_resource::<crate::world_data::WorldData>()
-            .ok_or("Alterac creature catalog missing")?
-            .spawn_groups
-            .instance_data_ids();
+        let data_ids = world_data.spawn_groups.instance_data_ids();
         if let Some(unknown) = data_ids.iter().find(|id| !DEFENDER_TIER_DATA.contains(id)) {
             return Err(format!(
                 "Alterac spawn group reads unknown instance data {unknown}"
@@ -59,42 +62,23 @@ impl AlteracRuntime {
         }
         Ok(Self {
             battle: AlteracBattle::default(),
-            sources,
+            banners,
         })
     }
 
-    /// Banner variants and TDB spawn group creatures for the battle's world states.
+    /// TDB spawn group creatures and objects (banner variants included) for the battle's
+    /// world states; the spawned banners accept the normal Opening.
     pub fn synchronize(&self, world: &mut World, map: InMap, states: &[(u32, i32)]) {
-        self.synchronize_banners(world, map);
         crate::spawn_groups::synchronize(world, map, states, defender_tier);
-    }
-
-    fn synchronize_banners(&self, world: &mut World, map: InMap) {
-        let desired: BTreeSet<_> = (0..ALTERAC_NODE_COUNT)
-            .filter_map(|node| self.battle.banner_entry(node))
-            .collect();
-        let mut objects = world.query::<(Entity, &GameObjectInfo, &InMap)>();
-        let existing: Vec<_> = objects
+        let mut objects =
+            world.query_filtered::<(Entity, &GameObjectInfo, &InMap), Without<AlteracBanner>>();
+        let unmarked: Vec<_> = objects
             .iter(world)
-            .filter(|(_, info, copy)| **copy == map && self.sources.contains_key(&info.entry))
-            .map(|(entity, info, _)| (entity, info.entry))
+            .filter(|(_, info, copy)| **copy == map && self.banners.contains(&info.entry))
+            .map(|(entity, _, _)| entity)
             .collect();
-        let mut present = BTreeSet::new();
-        for (object, entry) in existing {
-            if desired.contains(&entry) && present.insert(entry) {
-                world.entity_mut(object).insert(AlteracBanner);
-            } else {
-                world.despawn(object);
-            }
-        }
-        for entry in desired.difference(&present) {
-            world.spawn((
-                game_object_bundle(&self.sources[entry]),
-                map,
-                AlteracBanner,
-                Replicate::to_clients(NetworkTarget::All),
-                crate::interest::NetworkVisibility::default(),
-            ));
+        for banner in unmarked {
+            world.entity_mut(banner).insert(AlteracBanner);
         }
     }
 }

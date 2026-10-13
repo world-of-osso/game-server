@@ -367,7 +367,13 @@ pub(crate) fn queue_map_content(
         crate::zones::spawn_map_creatures(commands, world_data, content, true);
     }
     if let Some(objects) = objects {
-        crate::game_objects::spawn_map_game_objects(commands, objects, map, difficulty_id);
+        crate::game_objects::spawn_map_game_objects(
+            commands,
+            objects,
+            map,
+            difficulty_id,
+            world_data.map(|data| &data.spawn_groups),
+        );
     }
 }
 
