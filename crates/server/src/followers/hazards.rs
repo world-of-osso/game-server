@@ -121,7 +121,7 @@ fn escape_destination(
     {
         return Some(to);
     }
-    let radius = field.radius + shared::los::BODY_RADIUS * 2.0;
+    let radius = field.radius + shared::los::body::BODY_RADIUS * 2.0;
     let mut best: Option<(f32, Vec3)> = None;
     // Eight compass candidates are movement decisions, not authored spawn coordinates.
     // Every candidate must have real support and a complete baked corridor.

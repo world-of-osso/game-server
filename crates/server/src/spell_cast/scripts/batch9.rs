@@ -198,10 +198,7 @@ pub(super) fn inside_owned_consecration(world: &mut World, caster: Entity) -> bo
 }
 
 /// Active harmful bound fields affecting this unit, not friendly healing fields.
-pub(crate) fn hostile_ground_fields(
-    world: &mut World,
-    unit: Entity,
-) -> Vec<(Entity, glam::Vec3, f32)> {
+pub(crate) fn hostile_ground_fields(world: &mut World, unit: Entity) -> Vec<(Entity, Vec3, f32)> {
     let now = crate::auras::aura_now(world);
     let map = world.get::<crate::maps::InMap>(unit).copied();
     world
@@ -221,7 +218,7 @@ pub(crate) fn hostile_ground_fields(
         .map(|(entity, field, position, _)| {
             (
                 entity,
-                glam::Vec3::new(position.x, position.y, position.z),
+                Vec3::new(position.x, position.y, position.z),
                 field.radius,
             )
         })
