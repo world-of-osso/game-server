@@ -100,6 +100,13 @@ class SparseDecodeTest(unittest.TestCase):
         self.assertEqual(set(rows), {101, 102, 103})
         self.assertEqual(rows[102][1], 'Longer name')
 
+    def test_sparse_secondary_key_flag_preserves_foreign_relationship(self):
+        data = bytearray(sparse_fixture())
+        struct.pack_into('<H', data, 172, 7)
+        _, rows = decode_fixture(bytes(data), {101, 103})
+        self.assertEqual(rows[101][-1], 77)
+        self.assertEqual(rows[103][-1], 77)
+
     def test_decrypted_keyed_section_is_readable(self):
         data = bytearray(sparse_fixture())
         struct.pack_into('<Q', data, 204, 456)
