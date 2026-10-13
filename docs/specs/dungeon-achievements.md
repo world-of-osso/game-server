@@ -24,7 +24,8 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 - [x] Send ordered encounter names and defeated state on instance entry, reconnect and each successful encounter defeat, scoped to the copy; preserve raw flags and unknown optionality.
 - [x] Clear dungeon objective rows on leaving an instance, even when DungeonEncounter also contains world-boss rows for the continent.
 - [x] Serve categories, category achievements and criterion lines on request with bounded pages; never push the catalog on login.
-- [x] Coalesce achievement progress publication within an outer frame: send one final achievement snapshot and one Adventure Guide refresh per connection, retaining every newly earned toast and durable event credit. Idle frames publish neither.
+- [x] Coalesce achievement progress publication within an outer frame: build and send one final achievement snapshot and one Adventure Guide refresh per connection, retaining every newly earned toast and durable event credit. Idle frames publish neither.
+- [x] Reconstruct simultaneously observed login/journal/rank facts in one grant pass, retaining criteria counters and dependency cascades; separate committed gameplay boundaries remain separate credits.
 - [x] Include character earned state, known completion dates and numeric criterion progress in category responses; preserve unknown historical dates.
 
 ### Native Summary

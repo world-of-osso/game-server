@@ -983,12 +983,8 @@ fn update_player_events(
         });
     world.resource_scope(|world, catalog: Mut<AchievementCatalog>| {
         let mut state = world.get::<PlayerAchievementState>(player)?.clone();
-        let mut toasts: Vec<_> = events
-            .iter()
-            .flat_map(|event| {
-                catalog.update_at(&mut state, *event, completed_map, race, &conditions)
-            })
-            .collect();
+        let mut toasts =
+            catalog.update_observed_facts_at(&mut state, events, completed_map, race, &conditions);
         for toast in &toasts {
             state.earned_at.insert(toast.achievement_id, now);
         }

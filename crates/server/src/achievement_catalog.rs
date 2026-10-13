@@ -653,10 +653,24 @@ impl AchievementCatalog {
 
     /// Apply one event by a player with `conditions`, and return newly earned toasts. Map achievements are granted
     /// only at the complete-run boundary, not on a partial dungeon's boss kill.
+    #[cfg(test)]
     pub fn update_at(
         &self,
         state: &mut PlayerAchievementState,
         event: CriteriaEvent,
+        completed_map: Option<u32>,
+        race: u8,
+        conditions: &PlayerConditions,
+    ) -> Vec<AchievementToastSnapshot> {
+        self.update_observed_facts_at(state, &[event], completed_map, race, conditions)
+    }
+
+    /// One observation boundary (login/journal/ranks): rebuild its counters before
+    /// evaluating grants, rather than rescanning every achievement per known fact.
+    pub(super) fn update_observed_facts_at(
+        &self,
+        state: &mut PlayerAchievementState,
+        events: &[CriteriaEvent],
         completed_map: Option<u32>,
         race: u8,
         conditions: &PlayerConditions,
@@ -667,14 +681,24 @@ impl AchievementCatalog {
                 .retain(|id, _| self.criteria.get(id).is_none_or(|row| row.kind != 46));
             state.signed_reputation = true;
         }
-        for &id in self.event_criteria.get(&event.kind()).into_iter().flatten() {
-            let criteria = &self.criteria[&id];
-            if !event.matches(criteria) || !criteria.conditions_hold(conditions, event) {
-                continue;
-            }
-            Self::update_counter(state, id, event);
+        for &event in events {
+            self.update_event_counters(state, event, conditions);
         }
         self.grant_completed(state, completed_map, race, false)
+    }
+
+    fn update_event_counters(
+        &self,
+        state: &mut PlayerAchievementState,
+        event: CriteriaEvent,
+        conditions: &PlayerConditions,
+    ) {
+        for &id in self.event_criteria.get(&event.kind()).into_iter().flatten() {
+            let criteria = &self.criteria[&id];
+            if event.matches(criteria) && criteria.conditions_hold(conditions, event) {
+                Self::update_counter(state, id, event);
+            }
+        }
     }
 
     pub(super) fn grant_completed(
