@@ -1836,6 +1836,99 @@ fn dungeonach_retail_level_ids_replace_placeholders() {
     );
 }
 
+/// Predator10334: criterion28899 KillCreature96235 behind TC PlayerHasAura8 Nether Trap190820
+/// (CriteriaHandler1798): a native kill credits only while the killer holds the aura.
+#[test]
+fn achievements_criteria_player_has_aura_gates_native_kill_credit() {
+    use shared::components::Npc;
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(vec![], &[190820], 1, false, |app| {
+            app.add_plugins(AchievementPlugin);
+        })
+        .unwrap();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let map = InMap::continent(1);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((PlayerAchievementState::default(), map));
+    let progress = |h: &crate::spell_cast::test_harness::Harness| {
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&28899)
+            .copied()
+    };
+    let kill_trapped_demon = |h: &mut crate::spell_cast::test_harness::Harness| {
+        let demon = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 3.0);
+        h.app.world_mut().entity_mut(demon).insert((
+            Npc {
+                template_id: 96235,
+                name: "Trapped demon".into(),
+            },
+            map,
+        ));
+        crate::combat::kill_unit(h.app.world_mut(), h.caster, demon);
+        h.advance(1);
+    };
+    kill_trapped_demon(&mut h);
+    assert_eq!(progress(&h), None, "no Nether Trap aura");
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 190820,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 190820));
+    kill_trapped_demon(&mut h);
+    assert_eq!(progress(&h), Some(1), "kill under Nether Trap");
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .earned_ids
+            .contains(&10334)
+    );
+}
+
+/// Scenario and Adventure Guide credit use the same reference-player conditions:
+/// criterion16784 (legacy Heroic Erudax) under Erudax kills5733 needs a Heroic copy.
+#[test]
+fn achievements_criteria_tree_event_credit_honors_difficulty_conditions() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    for (difficulty, credited) in [(1, false), (2, true)] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            difficulty,
+            ..Default::default()
+        };
+        assert_eq!(
+            catalog.update_tree_event(
+                20570,
+                &mut state,
+                CriteriaEvent::KillCreature(40484),
+                &conditions
+            ),
+            credited,
+            "difficulty {difficulty}"
+        );
+        assert_eq!(
+            state.criteria_progress.get(&16784).copied(),
+            credited.then_some(1)
+        );
+    }
+}
+
 #[test]
 fn dungeonach_scheduled_instance_lock_round_trip_restores_bosses_and_encounters() {
     use crate::maps::instances::{InstanceEntrant, Now};

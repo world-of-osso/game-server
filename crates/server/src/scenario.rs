@@ -43,11 +43,12 @@ impl ScenarioRun {
         def: &ScenarioDefinition,
         catalog: &AchievementCatalog,
         event: CriteriaEvent,
+        conditions: &PlayerConditions,
     ) -> bool {
         let Some(step) = def.steps.get(self.step) else {
             return false;
         };
-        if !catalog.update_tree_event(step.root, &mut self.criteria, event) {
+        if !catalog.update_tree_event(step.root, &mut self.criteria, event, conditions) {
             return false;
         }
         if catalog.tree_progress(step.root, &self.criteria).completed {
@@ -233,11 +234,17 @@ fn send_snapshot(world: &mut World, connection: Entity, map: InMap) {
 
 pub(super) fn record(world: &mut World, player: Entity, event: CriteriaEvent) {
     if let Some(map) = world.get::<InMap>(player).copied() {
-        record_map(world, map, event);
+        let conditions = player_conditions(world, player);
+        record_map(world, map, event, &conditions);
     }
 }
 
-pub(super) fn record_map(world: &mut World, map: InMap, event: CriteriaEvent) {
+pub(super) fn record_map(
+    world: &mut World,
+    map: InMap,
+    event: CriteriaEvent,
+    conditions: &PlayerConditions,
+) {
     let Some(scenarios) = world.get_resource::<ScenarioCatalog>() else {
         return;
     };
@@ -257,7 +264,7 @@ pub(super) fn record_map(world: &mut World, map: InMap, event: CriteriaEvent) {
         criteria: run.criteria.clone(),
     };
     let was_complete = run.step >= def.steps.len();
-    if !run.apply(def, criteria, event) {
+    if !run.apply(def, criteria, event, conditions) {
         return;
     }
     let completed = !was_complete && run.step >= def.steps.len();
