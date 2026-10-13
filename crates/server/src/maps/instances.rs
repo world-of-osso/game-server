@@ -284,6 +284,9 @@ impl InstanceManager {
         entrant: InstanceEntrant,
         unix: i64,
     ) -> Option<InMap> {
+        if let Some(copy) = self.battleground_copy_for(map_id, entrant.character_id) {
+            return Some(copy);
+        }
         let (instance_id, entries, owner) = self.bound_instance(store, map_id, entrant, unix)?;
         let map = InMap {
             map_id,
@@ -294,6 +297,13 @@ impl InstanceManager {
         (entries.is_instance_id_bound() || copy.lock_owner.is_none_or(|o| o == owner))
             .then_some(map)
             .filter(|_| copy.difficulty.difficulty_id == entries.difficulty_id)
+    }
+
+    fn battleground_copy_for(&self, map_id: u32, character_id: u64) -> Option<InMap> {
+        self.battleground_by_character
+            .get(&character_id)
+            .copied()
+            .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
     }
 
     /// `MapManager::CreateMap` for a player: the continent itself, or the dungeon copy
@@ -322,10 +332,7 @@ impl InstanceManager {
                 self.create_dungeon(store, map_id, entrant, now)
             }
             InstanceType::Battleground | InstanceType::Arena => self
-                .battleground_by_character
-                .get(&entrant.character_id)
-                .copied()
-                .filter(|map| map.map_id == map_id && self.copies.contains_key(map))
+                .battleground_copy_for(map_id, entrant.character_id)
                 .map(|map| ResolvedMap {
                     map,
                     created: false,

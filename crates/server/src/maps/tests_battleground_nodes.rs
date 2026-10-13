@@ -653,6 +653,17 @@ fn seething_channel_authored_entry_then_ground_gathering_cancellation_victory_an
         crate::maps::TeleportOptions::default()
     ));
     h.advance(2);
+    assert_eq!(
+        h.map_of(actor),
+        Some(entered.copy),
+        "same-map travel retains the reserved battleground copy"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::TransportPassenger>(actor.player)
+            .is_none()
+    );
     h.app.world_mut().entity_mut(object).insert(InMap {
         instance_id: entered.copy.instance_id + 1,
         ..entered.copy
