@@ -321,7 +321,7 @@ impl InstanceManager {
             InstanceType::Party | InstanceType::Raid => {
                 self.create_dungeon(store, map_id, entrant, now)
             }
-            InstanceType::Battleground => self
+            InstanceType::Battleground | InstanceType::Arena => self
                 .battleground_by_character
                 .get(&entrant.character_id)
                 .copied()
@@ -348,10 +348,12 @@ impl InstanceManager {
         capacity: u32,
         now: Now,
     ) -> Result<InMap, TransferAbortReason> {
-        if store
-            .map(map_id)
-            .is_none_or(|entry| entry.instance_type != InstanceType::Battleground)
-            || participants.is_empty()
+        if store.map(map_id).is_none_or(|entry| {
+            !matches!(
+                entry.instance_type,
+                InstanceType::Battleground | InstanceType::Arena
+            )
+        }) || participants.is_empty()
             || participants.len() > capacity as usize
             || participants
                 .iter()
@@ -658,7 +660,7 @@ impl InstanceManager {
                 self.find_instance(store, map_id, entrant, unix)
                     .and_then(|map| self.cannot_enter(map, entrant, unix))
             }
-            InstanceType::Battleground => {
+            InstanceType::Battleground | InstanceType::Arena => {
                 match self.battleground_by_character.get(&entrant.character_id) {
                     Some(&map) if map.map_id == map_id && self.copies.contains_key(&map) => {
                         self.cannot_enter(map, entrant, unix)

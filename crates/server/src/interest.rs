@@ -3,10 +3,11 @@ use std::sync::Mutex;
 use bevy::ecs::entity::{EntityHashMap, EntityHashSet};
 use bevy::platform::collections::HashMap;
 
+use crate::auras::stealth::{DetectionGeometry, Stealth};
 use bevy::prelude::*;
 use bevy_replicon::server::visibility::client_visibility::ClientVisibility;
 use lightyear::prelude::*;
-use shared::components::Position;
+use shared::components::{Level, Npc, Player, Position, Rotation, UnitScale};
 use shared::death::{DeathState, ghost_visible};
 
 use crate::maps::InMap;
@@ -131,6 +132,17 @@ pub(crate) fn set_invisibility(
     }
 }
 
+pub(crate) fn set_stealth(world: &mut World, entity: Entity, state: Stealth) {
+    let Some(mut index) = world.get_resource_mut::<InterestIndex>() else {
+        return;
+    };
+    index.stealth.insert(entity, state);
+    index.dirty_targets.insert(entity);
+    if let Some(&connection) = index.connection_by_player.get(&entity) {
+        index.dirty_observers.insert(connection);
+    }
+}
+
 pub(crate) fn mark_interest_position_changed(queue: Option<&InterestDirtyQueue>, entity: Entity) {
     if let Some(queue) = queue {
         queue.mark(entity);
@@ -166,6 +178,8 @@ struct InterestIndex {
     dirty_targets: EntityHashSet,
     dirty_observers: EntityHashSet,
     invisibility: EntityHashMap<crate::auras::Invisibility>,
+    stealth: EntityHashMap<Stealth>,
+    detection_geometry: EntityHashMap<DetectionGeometry>,
     /// Targets no player sees (decayed corpses).
     hidden: EntityHashSet,
     life_states: EntityHashMap<DeathState>,
@@ -203,7 +217,26 @@ impl InterestIndex {
                         .get(&observer.player)
                         .cloned()
                         .unwrap_or_default()
-                        .detects(&self.invisibility.get(&entity).cloned().unwrap_or_default())
+                        .detects(
+                            &self.invisibility.get(&entity).cloned().unwrap_or_default(),
+                            self.detection_geometry
+                                .get(&entity)
+                                .is_some_and(DetectionGeometry::is_unit),
+                        )
+                    && self
+                        .stealth
+                        .get(&observer.player)
+                        .cloned()
+                        .unwrap_or_default()
+                        .detects(
+                            &self.stealth.get(&entity).cloned().unwrap_or_default(),
+                            self.detection_geometry
+                                .get(&observer.player)
+                                .copied()
+                                .unwrap_or_default(),
+                            observer.position,
+                            *position,
+                        )
                     && self.ghost_visible_to(observer.player, entity)))
     }
 
@@ -230,6 +263,8 @@ impl InterestIndex {
         self.life_states.remove(&entity);
         self.private_owners.remove(&entity);
         self.invisibility.remove(&entity);
+        self.stealth.remove(&entity);
+        self.detection_geometry.remove(&entity);
         if let Some(bucket) = self.target_buckets.remove(&entity) {
             let remove_bucket = self.buckets.get_mut(&bucket).is_some_and(|entities| {
                 entities.remove(&entity);
@@ -346,7 +381,12 @@ impl Plugin for InterestPlugin {
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
-            .add_systems(FixedUpdate, update_interest.in_set(InterestUpdate))
+            .add_systems(
+                FixedUpdate,
+                (sync_detection_geometry, update_interest)
+                    .chain()
+                    .in_set(InterestUpdate),
+            )
             .add_systems(
                 PostUpdate,
                 forward_position_changes_to_replication.before(ReplicationSystems::Send),
@@ -472,6 +512,41 @@ fn forward_position_changes_to_replication(
     }
 }
 
+type ChangedDetectionGeometry<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        Option<&'static Level>,
+        Option<&'static Rotation>,
+        Option<&'static UnitScale>,
+        Has<Player>,
+        Has<Npc>,
+        Option<&'static shared::protocol::GameObjectInfo>,
+    ),
+    Or<(
+        Changed<Level>,
+        Changed<Rotation>,
+        Changed<UnitScale>,
+        Added<Player>,
+        Added<Npc>,
+        Added<shared::protocol::GameObjectInfo>,
+    )>,
+>;
+
+fn sync_detection_geometry(units: ChangedDetectionGeometry, mut index: ResMut<InterestIndex>) {
+    for (entity, level, rotation, scale, player, npc, object) in &units {
+        index.detection_geometry.insert(
+            entity,
+            DetectionGeometry::from_parts((level, rotation, scale, player, npc, object)),
+        );
+        index.dirty_targets.insert(entity);
+        if let Some(&connection) = index.connection_by_player.get(&entity) {
+            index.dirty_observers.insert(connection);
+        }
+    }
+}
+
 type VisibilityTargets<'w, 's> = Query<
     'w,
     's,
@@ -574,28 +649,21 @@ fn update_target_visibility(
         return;
     };
 
-    let target_state = index.life_states.get(&entity).copied().unwrap_or_default();
-    let private_owner = index.private_owners.get(&entity).copied();
-    let hidden = index.hidden.contains(&entity);
-    let life_states = &index.life_states;
-    let invisibility = &index.invisibility;
-    let target_invisibility = invisibility.get(&entity).cloned().unwrap_or_default();
-    for (&connection, observer) in index.observers.iter_mut() {
-        let observer_state = life_states
-            .get(&observer.player)
-            .copied()
-            .unwrap_or_default();
-        let visible_in_death_phase = ghost_visible(observer_state, target_state, false);
-        let should_be_visible = observer.sees(entity, &position, map)
-            && (entity == observer.player
-                || (!hidden
-                    && private_object_visible(private_owner, observer.player)
-                    && visible_in_death_phase
-                    && invisibility
-                        .get(&observer.player)
-                        .cloned()
-                        .unwrap_or_default()
-                        .detects(&target_invisibility)));
+    let visibility: Vec<_> = index
+        .observers
+        .iter()
+        .map(|(&connection, observer)| {
+            (
+                connection,
+                index.observer_sees(observer, entity, &position, map),
+            )
+        })
+        .collect();
+    for (connection, should_be_visible) in visibility {
+        let observer = index
+            .observers
+            .get_mut(&connection)
+            .expect("indexed observer");
         apply_target_visibility_transition(
             &mut state,
             observer,
