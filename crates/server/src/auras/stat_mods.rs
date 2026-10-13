@@ -24,6 +24,8 @@ pub struct AuraStatMods {
     pub damage_done_mult: [f32; SCHOOL_COUNT],
     /// MOD_DAMAGE_PERCENT_TAKEN 87 per school bit.
     pub damage_taken_mult: [f32; SCHOOL_COUNT],
+    ///163: each (school mask, multiplier) applies once when any school intersects.
+    pub critical_damage_mods: Vec<(u32, f32)>,
     /// MOD_HEALING_DONE_PERCENT 136.
     pub healing_done_mult: f32,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
@@ -91,6 +93,7 @@ impl Default for AuraStatMods {
         Self {
             damage_done_mult: [1.0; SCHOOL_COUNT],
             damage_taken_mult: [1.0; SCHOOL_COUNT],
+            critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
             autoattack_damage_mult: 1.0,
@@ -134,6 +137,14 @@ impl AuraStatMods {
 
     pub fn damage_taken(&self, school_mask: u32) -> f32 {
         Self::school_mult(&self.damage_taken_mult, school_mask)
+    }
+
+    pub fn critical_damage(&self, school_mask: u32) -> f32 {
+        self.critical_damage_mods
+            .iter()
+            .filter(|(mask, _)| mask & school_mask != 0)
+            .map(|(_, multiplier)| multiplier)
+            .product()
     }
 
     pub fn power_regen(&self, power_type: i32) -> f32 {
@@ -359,6 +370,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             // Player::UpdateDodgePercentage adds aura 49 outside rating DR.
             MOD_DODGE_PERCENT => stats.dodge_pct += amount,
             MOD_PARRY_PERCENT => stats.parry_pct += amount,
+            MOD_CRIT_DAMAGE_BONUS => combat.critical_damage_mods.push((misc as u32, pct(amount))),
             MOD_DAMAGE_PERCENT_DONE => each_school(misc, |school| {
                 combat.damage_done_mult[school] *= pct(amount)
             }),
