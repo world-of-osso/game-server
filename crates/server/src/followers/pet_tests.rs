@@ -83,6 +83,91 @@ fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
     );
 }
 
+fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
+    let mut f = fixture();
+    f.h.app.world_mut().entity_mut(f.h.caster).insert((
+        shared::components::Level(level),
+        shared::components::UnitLevel(level),
+    ));
+    let profile =
+        f.h.app
+            .world()
+            .get::<super::Follower>(f.unit)
+            .unwrap()
+            .profile
+            .clone();
+    super::spawning::initialize(f.h.app.world_mut(), f.h.caster, f.unit, profile).unwrap();
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
+        .unwrap();
+    f.h.advance(160);
+    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
+    crate::pet_control::order_companion_pet(f.h.app.world_mut(), f.unit, None);
+    f.h.app
+        .world_mut()
+        .get_mut::<crate::pet_control::PetCharm>(pet)
+        .unwrap()
+        .react = shared::protocol::REACT_PASSIVE;
+    (f, pet)
+}
+
+#[test]
+fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_owner_cast() {
+    let (mut f, pet) = felguard_at_level(17); // SpellLevels89766: learned at17, CreatureFamily29/SkillLine761.
+    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 686, Some(f.h.npc), false)
+        .unwrap();
+    super::update_ai(f.h.app.world_mut());
+    f.h.advance(3);
+    assert!(
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.h.npc)
+            .is_none(),
+        "actual enemy Fireball must be interrupted"
+    );
+    assert_eq!(
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.unit)
+            .unwrap()
+            .spell_id,
+        686,
+        "pet kick must not cancel companion's own Shadow Bolt"
+    );
+    assert!(
+        f.h.inbox.log.iter().any(
+            |event| event.kind == shared::protocol::CombatLogKind::Interrupt
+                && event.source == Some(pet.to_bits())
+                && event.target == Some(f.h.npc.to_bits())
+                && event.spell_id == Some(347008)
+                && event.extra_spell_id == Some(133)
+        ),
+        "authored Axe Toss child347008 interrupt missing: {:?}",
+        f.h.inbox.log
+    );
+    assert_eq!(count_persisted_rows(f.h.app.world()), 0);
+}
+
+#[test]
+fn follower_lantha_felguard_does_not_invent_axe_toss_below_its_authored_level() {
+    let (mut f, pet) = felguard_at_level(16);
+    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
+    super::update_ai(f.h.app.world_mut());
+    f.h.advance(3);
+    assert!(
+        f.h.app
+            .world()
+            .get::<shared::casting::CastState>(f.h.npc)
+            .is_some()
+    );
+    assert!(
+        !f.h.inbox
+            .go
+            .iter()
+            .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
+    );
+}
+
 fn stockade_pet() -> (PetFixture, Entity, std::path::PathBuf) {
     let mut f = fixture();
     crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
