@@ -239,9 +239,9 @@ fn encounter_fixture(
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
-    if entry == 3674 {
-        // Pin the successful branch of Skum's authored80% chance; keep the
-        // real3–4s selected timer, spell and target. Production is unchanged.
+    if [3674, 3669].contains(&entry) {
+        // Pin the successful branch of the authored80% chance; keep the
+        // selected source timer, spell and target. Production is unchanged.
         for row in std::sync::Arc::make_mut(scripts.0.get_mut(&entry).unwrap()) {
             if row.action_type == 11 {
                 assert_eq!(row.chance, 80);
@@ -1652,6 +1652,61 @@ fn encounter_coverage_koranthal_death_and_evade_use_source_lifecycle() {
             assert!(h.has_aura(boss, 119928), "reappearance Shadow Vortex");
         }
     }
+}
+
+/// Actual Cobrahn SAI: first Lightning Bolt20805 is due immediately, repeats6–8s.
+/// Pin only its80% chance successful branch; all timings/targets/spell effects are real.
+/// Generic BossAi completes encounter586; this does NOT prove SET_INST_DATA34 support.
+#[test]
+fn encounter_coverage_cobrahn_lightning_damage_repeat_and_generic_lifecycle() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 1.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert_eq!(casting(&h, boss), Some(20805));
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::InProgress)
+    );
+    let before = h.health(player).current;
+    // Three-second cast plus max(distance,5)/24 missile flight and fixed-tick margin.
+    h.advance(3.4);
+    assert_eq!(h.casts(0, boss, 20805), 1);
+    assert!(h.health(player).current < before);
+    assert!(
+        h.inbox(0).log.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(20805)
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(player.to_bits())
+        }),
+        "combat events: {:?}; player {:?}; caster {:?}",
+        h.inbox(0).log,
+        h.health(player),
+        h.app.world().get::<shared::components::Position>(boss)
+    );
+    h.advance(2.2);
+    assert_eq!(casting(&h, boss), None, "no repeat before6s");
+    h.advance(2.6);
+    assert_eq!(casting(&h, boss), Some(20805), "repeat selected within6–8s");
+    h.hit_pct(boss, 1_000.0);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 586 && end.success)
+    );
+    assert!(h.inbox(0).ends.iter().all(|end| end.encounter_id != 585));
 }
 
 const ADAROGG: u32 = 61408;
