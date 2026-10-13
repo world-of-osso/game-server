@@ -204,17 +204,47 @@ fn replicate_step(
     }
 }
 
+fn movement_prevented(world: &World, actor: Entity) -> bool {
+    let immobile = world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .is_some_and(|auras| {
+            auras.is_stunned()
+                || auras.has_type(crate::auras::handlers::MOD_ROOT)
+                || auras.has_type(crate::auras::handlers::MOD_ROOT_2)
+        });
+    let casting = world
+        .get::<shared::casting::CastState>(actor)
+        .is_some_and(|cast| !cast.cast_while_moving);
+    immobile || casting
+}
+
+fn pause_follow(world: &mut World, actor: Entity, mut follow: GoldFollow) {
+    follow.last_target_position = None;
+    follow.destination = None;
+    crate::scripted_ai::movement::clear_point_movement(world, actor);
+    world.entity_mut(actor).insert(follow);
+}
+
+fn position_check_due(follow: &mut GoldFollow, diff_ms: u32) -> bool {
+    follow.check_ms += diff_ms;
+    let due = follow.check_ms >= CHECK_INTERVAL_MS;
+    if due {
+        follow.check_ms = 0;
+    }
+    due
+}
+
 fn update_follow(world: &mut World, actor: Entity, mut follow: GoldFollow, diff_ms: u32) {
     let Some(positions) = follow_positions(world, actor, follow.target) else {
         clear(world, actor);
         crate::scripted_ai::movement::clear_point_movement(world, actor);
         return;
     };
-    follow.check_ms += diff_ms;
-    let check = follow.check_ms >= CHECK_INTERVAL_MS;
-    if check {
-        follow.check_ms = 0;
+    if movement_prevented(world, actor) {
+        pause_follow(world, actor, follow);
+        return;
     }
+    let check = position_check_due(&mut follow, diff_ms);
     let in_reach = point(positions.from).distance(point(positions.target)) < positions.reach;
     update_destination(&mut follow, &positions);
     if (check && in_reach) || advance_path(world, actor, &follow, &positions) {

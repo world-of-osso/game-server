@@ -1298,6 +1298,88 @@ fn encounter_coverage_gold_follow_repaths_subyard_primary_displacement() {
     );
 }
 
+fn walking_gold_fixture() -> (Harness, Entity, Entity) {
+    let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| crate::ground::ground_data_dir().join("navmesh"));
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        x: center.x - 25.0,
+        ..center
+    });
+    cast_real_lucre(&mut h, boss);
+    h.advance(3.5);
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+    (h, gold, boss)
+}
+
+#[test]
+fn encounter_coverage_gold_follow_root_stops_then_resumes_the_real_path() {
+    let (mut h, gold, _) = walking_gold_fixture();
+    // Actual root122 aura through Unit's aura boundary, not a fabricated movement flag.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: gold,
+            target: gold,
+            spell_id: 122,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(h.has_aura(gold, 122));
+    let rooted_at = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(0.5);
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        rooted_at,
+        "source UNIT_STATE_NOT_MOVE must prevent follow path advancement"
+    );
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Still
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 122,
+    );
+    h.advance(0.2);
+    assert_ne!(*h.app.world().get::<Position>(gold).unwrap(), rooted_at);
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_follow_respects_real_movement_interrupting_cast() {
+    let (mut h, gold, _) = walking_gold_fixture();
+    // Genuine4s Gust is a Unit-level cast fixture; Gold's authored AI never casts it.
+    crate::spell_cast::creature_cast(h.app.world_mut(), gold, 265781, Some(gold), false)
+        .expect("real movement-interrupting NPC cast");
+    let casting_at = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(0.5);
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        casting_at,
+        "source IsMovementPreventedByCasting stops the following owner"
+    );
+    h.advance(3.8);
+    assert_ne!(*h.app.world().get::<Position>(gold).unwrap(), casting_at);
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+}
+
 #[test]
 fn encounter_coverage_golden_absorption_announcement_is_once_until_source_reset() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
