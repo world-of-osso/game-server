@@ -74,6 +74,10 @@ pub(super) fn spawn_scripted_object(
                 z: 0.0,
             },
             info,
+            // Script summons use the source default GO_STATE_READY; publish that
+            // state explicitly, just as ordinary authored GO spawns do.
+            shared::protocol::GameObjectCollision(true),
+            shared::protocol::GameObjectVisible(true),
             GameObjectBounds {
                 orientation,
                 ..bounds
