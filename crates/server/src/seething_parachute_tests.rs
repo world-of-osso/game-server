@@ -132,6 +132,10 @@ fn seething_parachute_ticks_deploy_once_at_floor_threshold_and_land_without_fall
     assert_eq!(height(&h), 0.0);
     assert_eq!(applied(&h, PARACHUTE), 1, "the ground check deploys once");
     assert_eq!(applied(&h, PARACHUTE_AURA), 1);
+    assert!(
+        !has_aura(&h, ROCKET_PARACHUTE_2) && !has_aura(&h, ROCKET_PARACHUTE),
+        "269776 effect164 removes250921, whose removal stops250917 ticks"
+    );
     assert_eq!(h.health(h.caster), 1000.0);
     assert_eq!(falling_logs(&h), 0);
 }
@@ -153,7 +157,7 @@ fn seething_parachute_ground_check_removal_removes_rocket_parachute() {
 }
 
 /// 269779 Effect1 `SetFallInformation(0, GetPositionZ())`: the landing measures the
-/// fall from the deploy height, without a knockback.
+/// fall from the deploy height while retaining the source default upward knockback.
 #[test]
 fn seething_parachute_resets_authoritative_fall_at_deploy_height() {
     let mut h = falling_harness(60.0);
@@ -165,20 +169,27 @@ fn seething_parachute_resets_authoritative_fall_at_deploy_height() {
     crate::spell_cast::cast_triggered(h.app.world_mut(), player, PARACHUTE, Some(player), 0);
     assert!(has_aura(&h, PARACHUTE_AURA));
     assert!(
-        !h.app
+        h.app
             .world()
             .get::<MovementControl>(player)
             .unwrap()
             .controlled
     );
-    let mut previous = deploy;
-    while height(&h) > 0.0 {
+    let mut peak = deploy;
+    for _ in 0..200 {
         h.advance(1);
-        assert!(height(&h) <= previous, "no knockback lift");
-        previous = height(&h);
+        peak = peak.max(height(&h));
+        if height(&h) == 0.0 {
+            break;
+        }
     }
+    assert!(
+        peak > deploy,
+        "source default effect98 produces its upward hop"
+    );
+    assert_eq!(height(&h), 0.0);
     h.advance(2);
-    let expected = 1000.0 * (1.0 - shared::movement::fall_damage_percent(deploy));
+    let expected = 1000.0 * (1.0 - shared::movement::fall_damage_percent(peak));
     assert!(
         (h.health(player) - expected).abs() < 0.5,
         "health {} expected {expected} from {deploy}",

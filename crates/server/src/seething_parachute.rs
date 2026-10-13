@@ -4,7 +4,7 @@
 //!   when the unit is at most 30 yd above the floor; removing its Effect0 removes 250917.
 //! - 269779 Parachute: Effect0 casts the spell its calculated value names plus the two
 //!   achievement trackers; Effect1 restarts the player's fall at its current height
-//!   (`SetFallInformation(0, GetPositionZ())`) in place of the knockback.
+//!   (`SetFallInformation(0, GetPositionZ())`) after the normal knockback.
 
 use bevy::prelude::*;
 use shared::components::{Player, Position};
@@ -13,8 +13,6 @@ use crate::auras::scripts::{AuraScript, AuraScripts};
 use crate::auras::{AuraInstance, RemoveReason};
 use crate::ground::{GroundMap, GroundProbe};
 use crate::maps::InMap;
-use crate::spell_cast::effects::EffectCtx;
-use crate::spell_info::SpellEffect;
 
 const ROCKET_PARACHUTE: u32 = 250_917;
 const ROCKET_PARACHUTE_2: u32 = 250_921;
@@ -78,18 +76,21 @@ fn check_ground(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8
     let Some(delta) = height_above_floor(world, unit) else {
         return;
     };
-    if delta <= DEPLOY_HEIGHT
-        && crate::spell_cast::try_cast_triggered(
-            world,
-            unit,
-            PARACHUTE,
-            Some(unit),
-            HOOK_TRIGGER_DEPTH,
-        )
-    {
-        world
-            .entity_mut(unit)
-            .insert(ParachuteDeployed(aura.instance_id));
+    if delta > DEPLOY_HEIGHT {
+        return;
+    }
+    // The synchronous child cast can remove this aura, including its deployment state.
+    world
+        .entity_mut(unit)
+        .insert(ParachuteDeployed(aura.instance_id));
+    if !crate::spell_cast::try_cast_triggered(
+        world,
+        unit,
+        PARACHUTE,
+        Some(unit),
+        HOOK_TRIGGER_DEPTH,
+    ) {
+        world.entity_mut(unit).remove::<ParachuteDeployed>();
     }
 }
 
@@ -140,8 +141,12 @@ fn apply_parachute_aura(world: &mut World, unit: Entity, aura: &AuraInstance) {
 }
 
 /// `spell_bg_seething_shore_parachute::ResetFallDamage` (EFFECT_1 KNOCK_BACK, TARGET_UNIT_CASTER).
-pub(crate) fn reset_fall_information(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
-    let player = ctx.caster;
+pub(crate) fn reset_fall_information(
+    world: &mut World,
+    _caster: Entity,
+    player: Entity,
+    _effect: u8,
+) {
     if world.get::<Player>(player).is_none() {
         return;
     }
