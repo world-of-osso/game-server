@@ -397,6 +397,8 @@ pub fn compute_character_stats(
 /// SPELL_EFFECT_PARRY 22 and SPELL_EFFECT_BLOCK 23: a player who knows such a spell
 /// can parry or block (Spell::EffectParry / EffectBlock, SpellEffects.cpp:3703-3719).
 const EFFECT_PARRY: u32 = 22;
+/// SPELL_EFFECT_DUAL_WIELD (Spell::EffectDualWield → `Player::SetCanDualWield`).
+pub(crate) const EFFECT_DUAL_WIELD: u32 = 40;
 const EFFECT_BLOCK: u32 = 23;
 /// `ActivePlayerData` base parry and block (StatSystem.cpp:497, 664).
 const BASE_PARRY_PCT: f32 = 5.0;
@@ -495,7 +497,11 @@ pub fn player_defense(
 }
 
 /// Whether `known` holds a spell with `effect` (`Player::m_canParry` / `m_canBlock`).
-fn knows_effect(known: Option<&KnownSpells>, spells: Option<&SpellStore>, effect: u32) -> bool {
+pub(crate) fn knows_effect(
+    known: Option<&KnownSpells>,
+    spells: Option<&SpellStore>,
+    effect: u32,
+) -> bool {
     let (Some(known), Some(spells)) = (known, spells) else {
         return false;
     };
