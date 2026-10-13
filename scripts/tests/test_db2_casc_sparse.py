@@ -107,6 +107,19 @@ class SparseDecodeTest(unittest.TestCase):
         self.assertEqual(rows[101][1], 'A')
         self.assertEqual(rows[102][1], 'Longer name')
 
+    def test_malformed_source_string_reports_exact_row_without_synthesizing_text(self):
+        data = sparse_fixture([(101, b'Foxton\xa0text\0'), (102, b'Valid text\0')])
+        # Remove the copy referring to the unreadable source from this fixture.
+        end = struct.unpack_from('<I', data, 224)[0]
+        data = bytearray(data)
+        struct.pack_into('<II', data, end + 8, 103, 102)
+        with self.assertWarnsRegex(UserWarning, 'unreadable UTF-8.*101'):
+            _, rows = decode_fixture(bytes(data), None)
+        self.assertEqual(set(rows), {102, 103})
+        self.assertEqual(rows[102][1], 'Valid text')
+        with self.assertRaisesRegex(ValueError, 'missing readable DB2 rows:.*101'):
+            decode_fixture(bytes(data), {101})
+
     def test_unterminated_string_cannot_read_into_next_record(self):
         data = bytearray(sparse_fixture())
         start = struct.unpack_from("<I", data, 212)[0]
