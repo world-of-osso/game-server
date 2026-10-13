@@ -1,3 +1,7 @@
+## 2026-10-13 — PlayerIsInArea Some alternatives
+
+[Complete area alternatives](systems/dungeon-achievements.md#player-area-alternatives) reuse recursive ancestry and retain every authenticated leaf. Five controlled cached authority snapshots drive real queued death109755/character61456 and reopened persistence; no terrain-travel or holiday/NPC content claim. Focused3/3, compiler24/24; four additional ordinary definitions are structural only.
+
 ## 2026-10-13 — PlayerMap Some alternatives
 
 [Complete map alternatives](systems/dungeon-achievements.md#player-map-alternatives) retain every sourced leaf and reject a missing map at load. Native Warsong2106 lethal damage credits5538 once to its killer and survives reopen; source489 catalog evaluation is not legacy-map playability. Type56 is independent of accepted battleground reward70. Focused5/5, compiler23/23; census5430 ordinary/1812 statistics is structural only.
