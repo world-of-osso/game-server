@@ -992,7 +992,21 @@ fn enter_source_match_with(
         let destinations = h.new_worlds(who);
         assert_eq!(destinations.len(), 1);
         let start = starts[if invitation.team == BgTeam::A { 0 } else { 1 }];
-        let source = h.app.world().resource::<MapStore>().safe_locs[&start];
+        let store = h.app.world().resource::<MapStore>();
+        let mut source = store.safe_locs[&start];
+        if let Some(spawn_id) = store.safe_loc_transports.get(&start) {
+            let ships = h
+                .app
+                .world()
+                .resource::<crate::transport_catalog::TransportCatalog>();
+            let world_pose = ships.0[spawn_id].route.pose_at(0).local_to_world(
+                shared::transport_route::TransportPose {
+                    position: source.position.to_array(),
+                    orientation: source.orientation,
+                },
+            );
+            source.position = Vec3::from_array(world_pose.position);
+        }
         assert_eq!(destinations[0].map_id, source.map_id);
         let position = destinations[0].position;
         assert!(close(
