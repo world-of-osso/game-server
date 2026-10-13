@@ -103,3 +103,9 @@ Batch36 census at 33e236e9: all7827, exit0, 797.93sec: **3122 working/4523 parti
 ## Bloodsurge — batch37
 
 18c4717a ports TC spell_warr_bloodsurge (spell_warrior.cpp:282-316): each 3 s effect0 PERIODIC_DUMMY tick casts 384362 (50 raw Rage) with chance sqrt(owned Rend388539 effect0 carriers) × 30. TC counts units in the grid cells covering 50 yd with no per-unit distance check; the server counts units within 50 yd on the same map, an approximation at the cell boundary. Deterministic controls without seeding: 12 owned Rends (103.9%) always energize; none or 12 foreign Rends never do. RED (`bloodsurge-red.log`) → GREEN; adjacent auras/resource scope 142 passed.
+
+Batch37 census at b2b5b164: all7827, exit0, 1164.94sec: **3124 working/4521 partial/182 broken**; two Bloodsurge memberships partial→working.
+
+## Demon Hunter Metamorphosis toggles — batch38
+
+e27c28d0/6533d0d3 port TC spell_dh_monster_rising (spell_dh.cpp:1659-1689) and spell_dh_enduring_torment/_buff (1086-1140). Each 1 s PERIODIC_DUMMY tick casts the buff outside Metamorphosis and removes it inside (Monster Rising: 162264/187827; Enduring Torment: 162264/1217607). For player casters, 453314 keeps effects 0–1 only as Havoc (577) and 2–3 only as Devourer (1480), through the existing per-effect `scripts::effect_enabled` gate. Neither parent has Attr5 ExtraInitialPeriod, so the first buff arrives on the first tick. RED2+RED2 → GREEN; auras scope 114 passed.

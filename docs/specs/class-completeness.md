@@ -92,6 +92,10 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - [x] Native Bloodsurge 384361 rolls every 3 s periodic tick with chance sqrt(units carrying the warrior's own Rend 388539 within 50 yd) × its amount and energizes 384362 on success; Rends from another caster do not count.
 
+## Demon Hunter Metamorphosis toggles
+
+- [x] Monster Rising 452414 and Enduring Torment 452410 apply their buff (452550, 453314) on each 1 s tick outside Metamorphosis (Havoc/Vengeance, Havoc/Devourer) and remove it inside. A player's 453314 keeps effects 0–1 only as Havoc and 2–3 only as Devourer.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
@@ -109,6 +113,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `crates/server/src/spell_cast/attack_speed_tests.rs`: native Ruthless Aggression/Swift as a Coursing River creature swing intervals and unchanged Fireball cast time.
 - `crates/server/src/auras/tiger_dash_tests.rs`: native Tiger Dash per-tick decay and expiry.
 - `crates/server/src/auras/bloodsurge_tests.rs`: native Bloodsurge certain (12 owned Rends) and zero-chance (none, foreign) controls.
+- `crates/server/src/auras/monster_rising_tests.rs`, `enduring_torment_tests.rs`: native tick toggles, Metamorphosis removal/return and spec-filtered buff effects.
 - `crates/server/src/spell_cast/melee_crit_taken_tests.rs`: native187 real damage, victim ownership, additive fields, expiry/removal, positive and ranged/magic controls.
 - `crates/server/src/spell_cast/mechanic_duration_tests.rs`: native232/234 stacking, mixed signs, actual clocks/expiry, integer arithmetic and named source-gap exclusions.
 - Existing targeted resource/regen/generator tests remain bounded proofs, not every talent combination.
