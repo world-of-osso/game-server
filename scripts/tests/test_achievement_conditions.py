@@ -110,6 +110,12 @@ class Conditions(unittest.TestCase):
         modifiers[11]['Operator'] = '3'
         self.assertEqual(self.compile(modifiers), {}, 'negated zone remains unsupported')
 
+    def test_known_solo_condition_admits_the_pinned_zero_asset(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 35, 0)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((35, 0),)]})
+        modifiers[11]['Operator'] = '3'
+        self.assertEqual(self.compile(modifiers), {}, 'negated party conditions remain unsupported')
+
     def test_group_roster_limit_preserves_strict_threshold(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 29, 9)}
         self.assertEqual(self.compile(modifiers), {1: [(True, (1, 3, 38, 236)), ((29, 9),)]})
