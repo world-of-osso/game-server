@@ -1209,7 +1209,7 @@ fn toyfx4_destination_request_does_not_select_a_unit_or_use_target_facing() {
             .get::<crate::game_objects::summoned::SummonedObject>(objects[0])
             .unwrap()
             .owner,
-        h.caster
+        Some(h.caster)
     );
 }
 
@@ -4207,7 +4207,7 @@ fn place_foam_sword_rack(h: &mut Harness, character: u64) -> Entity {
         .insert(ClientId(character));
     learn_effect_toy(h, character, 45063);
     assert_eq!(activate_at(h, 45063, Some([2.0, 0.0, 0.0]))[0].error, None);
-    h.advance(5);
+    h.advance(70); // Source CastingTimeIndex14: 3000ms; harness frames are 50ms.
     assert!(h.inbox.go.iter().any(|go| go.spell_id == 62985));
     let world = h.app.world_mut();
     let racks: Vec<_> = world
@@ -4285,10 +4285,13 @@ fn toyfx18_wild_display_with_unscripted_object_spell_stays_unavailable() {
     let (mut h, _) = setup(&directory.path().join("blaster.redb"));
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
     // 441724 casts dummy 445930, which TDB1210 binds to no script.
     let reasons = toy_catalog::unsupported_types(h.app.world(), 445938);
     assert!(reasons.contains("effect 3"), "{reasons:?}");
-    assert!(toy_catalog::unsupported_types(h.app.world(), 62985).is_empty());
+    let rack = toy_catalog::unsupported_types(h.app.world(), 62985);
+    assert!(rack.is_empty(), "{rack:?}");
 }
 
 /// TC spell_item_wormhole_pandaria WormholeTargetLocations.
@@ -4608,7 +4611,7 @@ fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
         let lifetime = world
             .get::<crate::game_objects::summoned::SummonedObject>(fire)
             .unwrap();
-        assert_eq!((lifetime.owner, lifetime.spell_id), (h.caster, spell));
+        assert_eq!((lifetime.owner, lifetime.spell_id), (Some(h.caster), spell));
         let source_ms = store
             .get(spell)
             .unwrap()
@@ -4920,7 +4923,7 @@ fn toyfx16_no_trap_cooking_fires_spawn_with_authored_identity_and_expiry() {
             world.get::<crate::maps::InMap>(h.caster)
         );
         let lifetime = world.get::<SummonedObject>(*object).unwrap();
-        assert_eq!(lifetime.owner, h.caster);
+        assert_eq!(lifetime.owner, Some(h.caster));
         assert_eq!(lifetime.spell_id, spell);
         let source_duration = store
             .get(spell)
@@ -5106,6 +5109,8 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
     world.insert_resource(crate::world_data::load_world_data(path));
     world.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
+    world.insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    world.insert_resource(crate::item_templates::load_item_templates(path).unwrap());
     let has_summon_properties: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",
