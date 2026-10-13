@@ -676,6 +676,93 @@ fn achievements_criteria_login_credits_authenticated_world_entry_once_and_surviv
 }
 
 #[test]
+fn achievements_criteria_native_death_player_area_some_uses_cached_authority_and_persists() {
+    for (area, qualifies) in [
+        (Some(153), true),
+        (Some(1497), true),
+        (Some(4617), true),
+        (Some(8299), true),
+        (Some(13979), true),
+        (Some(1519), false),
+        (None, false),
+    ] {
+        let mut h =
+            crate::spell_cast::test_harness::harness_with_plugins(vec![], &[], 1, false, |app| {
+                app.add_plugins((AchievementPlugin, crate::death::DeathPlugin));
+            })
+            .unwrap();
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        h.app
+            .insert_resource(load_achievement_catalog(&conn).unwrap());
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("area-death.redb");
+        let db = redb::Database::create(&path).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) = persistence::create_character(&db, 1, "Areadeath", 1, 1).unwrap();
+        h.app.insert_resource(GameDatabase { db });
+        h.app
+            .world_mut()
+            .get_mut::<InWorld>(h.connection)
+            .unwrap()
+            .character_id = character;
+        h.app.world_mut().entity_mut(h.caster).insert((
+            persistence::ClientId(character),
+            PlayerAchievementState::default(),
+            InMap::continent(0),
+        ));
+        h.app.update();
+        // Controlled cached authoritative area, not a rendered terrain-travel claim.
+        // Native Unit::Kill and queued player-death processing remain real.
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(AchievementTracker {
+                last_processed_level: 1,
+                last_processed_zone: None,
+                last_processed_area: area,
+            });
+        assert!(
+            !h.app
+                .world()
+                .get::<PlayerAchievementState>(h.caster)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&109755),
+            "area alone is not a death"
+        );
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+        h.advance(3);
+        assert_eq!(h.health(h.caster), 0.0);
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap();
+        assert_eq!(
+            state.criteria_progress.get(&109755),
+            qualifies.then_some(&1),
+            "native death area {area:?}"
+        );
+        assert_eq!(
+            state.earned_ids.contains(&61456),
+            qualifies,
+            "native character grant area {area:?}"
+        );
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, h.caster);
+        h.advance(3);
+        drop(h);
+        let reopened = redb::Database::open(&path).unwrap();
+        let saved = persistence::load_achievements(&reopened, character);
+        assert_eq!(
+            saved.criteria_progress.get(&109755),
+            qualifies.then_some(&1),
+            "reopened death area {area:?}"
+        );
+        assert_eq!(saved.earned_ids.contains(&61456), qualifies);
+    }
+}
+
+#[test]
 fn achievements_criteria_native_death_exact_level_rejects_lower_and_higher_levels() {
     for (level, expected) in [(1, None), (2, Some(16188)), (3, Some(16402))] {
         let mut h =
