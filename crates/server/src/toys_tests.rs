@@ -4195,6 +4195,12 @@ fn prepare_world_port(h: &mut Harness, conn: &rusqlite::Connection, character: u
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::persistence::ClientId(character),
         shared::components::CombatStatus(false),
+        shared::components::MovementControl::default(),
+        shared::components::Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
     ));
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<NewWorld>::default(),
@@ -4234,23 +4240,14 @@ fn toyfx18_wormhole_pandaria_transfers_to_one_authored_pandaria_point() {
     }
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.inbox.go.iter().any(|go| go.spell_id == 126755));
-    let teleports: Vec<_> = h
-        .inbox
-        .go
-        .iter()
-        .filter(|go| WORMHOLE_PANDARIA_DESTINATIONS.contains(&go.spell_id))
-        .map(|go| go.spell_id)
-        .collect();
-    assert_eq!(teleports.len(), 1, "{teleports:?}");
-    let destination = positions.0[&(teleports[0], 0)];
-    assert_eq!(
-        h.app
-            .world()
-            .get::<crate::maps::MapTransfer>(h.caster)
-            .unwrap()
-            .destination,
-        destination
-    );
+    // Triggered teleports send no SpellGo; the transfer names the chosen point.
+    let destination = h
+        .app
+        .world()
+        .get::<crate::maps::MapTransfer>(h.caster)
+        .unwrap()
+        .destination;
+    assert!(destinations.contains(&destination), "{destination:?}");
     assert_eq!(worlds.len(), 1);
     assert_eq!(worlds[0].map_id, 870);
     h.app
