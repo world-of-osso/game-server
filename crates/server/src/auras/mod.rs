@@ -1893,6 +1893,8 @@ mod toy_effects_tests;
 #[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]
+mod critical_chaos_tests;
+#[cfg(test)]
 mod defensives_tests;
 #[cfg(test)]
 mod enduring_torment_tests;
