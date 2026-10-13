@@ -141,6 +141,7 @@ pub struct PlayerPvpState {
     pub progress: PlayerPvpProgress,
     pub queue: Option<PlayerPvpQueue>,
     pub battleground: Option<shared::protocol::BattlegroundSnapshot>,
+    pub battleground_original_faction: Option<u32>,
     pub war_mode: Option<shared::protocol::WarModeSnapshot>,
     pub talents: Option<shared::protocol::PvpTalentsSnapshot>,
 }
@@ -151,6 +152,7 @@ impl PlayerPvpState {
             progress,
             queue: None,
             battleground: None,
+            battleground_original_faction: None,
             war_mode: None,
             talents: None,
         }
