@@ -105,7 +105,9 @@ class SparseDecodeTest(unittest.TestCase):
         struct.pack_into('<H', data, 172, 7)
         end = struct.unpack_from('<I', data, 224)[0]
         relation_at = end + 8 + 8 + 12
-        relation = data[relation_at:relation_at + 20]
+        relation = bytearray(data[relation_at:relation_at + 20])
+        # Flag 0x2 relationships use record IDs, not ordinal record indexes.
+        struct.pack_into('<I', relation, 16, 101)
         ids = data[relation_at + 20:relation_at + 28]
         # Active 70340 secondary-key sparse tables put offset-map IDs before relations.
         data[relation_at:relation_at + 28] = ids + relation
