@@ -188,6 +188,10 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
+mod knockback;
+#[cfg(test)]
+mod knockback_tests;
+mod school_costs;
 pub(crate) mod teleport;
 mod teleport_positions;
 pub(crate) mod toy_scripts;
@@ -196,6 +200,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(crate::knockback::KnockbackPlugin);
         app.init_resource::<disenchant::DisenchantData>()
             .add_systems(Startup, (disenchant::load_startup, open_lock::load_startup))
             .init_resource::<UnhandledEffects>()
@@ -729,6 +734,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
+    crate::pvp::record_arena_event(world, &event);
     scripts::record_health_change(world, &event);
     if event.kind == CombatLogKind::Death {
         let source = event
@@ -1430,6 +1436,10 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    // TC SpellInfo::CheckTarget rejects explicit self before any selector runs.
+    if explicit == Some(caster) && targets::excludes_caster(spell) {
+        return Err(CastFailure::InvalidTarget);
+    }
     if spell.id == shared::battleground::ALTERAC_OPENING_SPELL
         && explicit.is_some_and(|target| crate::pvp::is_alterac_banner(world, target))
     {
@@ -1488,6 +1498,9 @@ fn validate_target(
         Some(_) => return Err(CastFailure::InvalidTarget),
         None => return Err(CastFailure::NoTarget),
     };
+    if target == caster && targets::excludes_caster(spell) {
+        return Err(CastFailure::InvalidTarget);
+    }
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
     let target_alive = targets::is_alive(world, target);
@@ -1599,9 +1612,11 @@ pub(crate) fn applicable_costs(
             _ => max,
         };
         let initial = amount_with(base);
+        let school_modified =
+            school_costs::modify_school_cost(world, caster, spell, cost.power_type, initial);
         let modified = match SpellModOp::power_cost(cost.order_index) {
-            Some(op) => modify(world, caster, spell, op, initial),
-            None => initial,
+            Some(op) => modify(world, caster, spell, op, school_modified),
+            None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
             scripts::mana_cost(world, caster, spell, modified)
@@ -2695,6 +2710,8 @@ mod class_resource_tests;
 #[cfg(test)]
 mod line_of_sight_tests;
 #[cfg(test)]
+mod live_ground_destination_tests;
+#[cfg(test)]
 mod mechanics_talent_tests;
 #[cfg(test)]
 mod mechanics_tests;
@@ -2708,6 +2725,8 @@ mod queue_tests;
 mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
+#[cfg(test)]
+mod rogue_stealth_tests;
 #[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]

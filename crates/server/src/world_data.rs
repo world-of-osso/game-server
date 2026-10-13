@@ -24,6 +24,8 @@ pub struct CreatureTemplate {
     pub family: u32,
     /// `type_flags`: Retail `CreatureTypeFlags` of the difficulty row (TAMEABLE, TAMEABLE_EXOTIC …).
     pub type_flags: u32,
+    /// Source creature_template.flags_extra, including dungeon-boss/knockback immunity.
+    pub flags_extra: u32,
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
@@ -472,6 +474,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         creature_type: row.get::<_, i64>(10)? as u8,
         family: row.get::<_, i64>(28)? as u32,
         type_flags: row.get::<_, i64>(29)? as u32,
+        flags_extra: row.get::<_, i64>(11)? as u32,
         rank: classification_rank(row, 8)?,
         experience_modifier: row.get(9)?,
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
@@ -950,6 +953,10 @@ fn startup_load_world_data(mut commands: Commands) {
     let game_objects = crate::game_objects::load_game_object_spawns(&conn)
         .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
     info!("Loaded {} game object spawns", game_objects.0.len());
+    commands.insert_resource(
+        crate::pvp::arena_objects::SightCatalog::load(&conn, &game_objects)
+            .expect("Load authored arena Shadow Sight metadata"),
+    );
     commands.insert_resource(game_objects);
     commands.insert_resource(
         crate::pvp::load_battleground_objects(&conn)
@@ -990,6 +997,20 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
     commands.insert_resource(load_creature_spell_stats(&conn));
+    commands.insert_resource(
+        crate::pvp::arena_objects::GateCatalog::load(&conn)
+            .expect("Load source-backed arena gates; run scripts/import-arenas.py before startup"),
+    );
+    commands.insert_resource(crate::pvp::arena_dalaran::Catalog::load(&conn).expect(
+        "Load source Dalaran spout identities/pipe triggers; run scripts/import-arenas.py",
+    ));
+    commands.insert_resource(crate::pvp::arena_cage::Catalog::load(&conn).expect(
+        "Load Cage of Carnage entrance areatrigger actions; run scripts/import-battlegrounds.py",
+    ));
+    commands.insert_resource(
+        crate::pvp::arena::Catalog::load(&conn)
+            .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),
+    );
     commands
         .insert_resource(crate::pvp::pvp_talents::Catalog::load(&conn).expect(
             "Load local PvP catalog; run scripts/import-pvp-progression.py before startup",
