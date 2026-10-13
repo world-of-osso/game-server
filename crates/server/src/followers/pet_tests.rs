@@ -28,7 +28,11 @@ fn fixture() -> PetFixture {
         app.insert_resource(data);
         app.insert_resource(spells);
         app.insert_resource(crate::persistence::GameDatabase { db });
-        app.add_plugins(crate::hunter_pet::HunterPetPlugin);
+        app.add_plugins((
+            crate::hunter_pet::HunterPetPlugin,
+            crate::pet_control::PetControlPlugin,
+            crate::creature_ai::CreatureAiPlugin,
+        ));
     });
     PetFixture {
         h,
@@ -76,6 +80,26 @@ fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
         count_persisted_rows(f.h.app.world()),
         before,
         "runtime NPC pet must not write a persistent character or stable"
+    );
+}
+
+#[test]
+fn follower_felguard_fights_the_companions_selected_enemy() {
+    let mut f = fixture();
+    for _ in 0..240 {
+        super::update_ai(f.h.app.world_mut());
+        f.h.advance(1);
+    }
+    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
+    assert!(
+        f.h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(pet.to_bits())
+                && event.target == Some(f.h.npc.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "actual Felguard damage missing: {:?}",
+        f.h.inbox.log
     );
 }
 

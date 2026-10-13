@@ -645,6 +645,32 @@ fn can_attack(world: &World, pet: Entity, target: Entity) -> bool {
 /// `PetAI::_AttackStart` → `DoAttack`: attack `target` (`Unit::Attack` through the pet's
 /// AI target) going after it (`UNIT_FLAG_PET_IN_COMBAT`), chasing it unless held by Stay
 /// without an order.
+/// Server-side orders from an authenticated NPC companion, using the same pet AI.
+pub(crate) fn order_companion_pet(world: &mut World, owner: Entity, target: Option<Entity>) {
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    let at = world.get::<Position>(pet).copied();
+    update_charm(world, pet, |charm| {
+        charm.command = if target.is_some() {
+            COMMAND_FOLLOW
+        } else {
+            COMMAND_STAY
+        };
+        charm.command_attack = target.is_some();
+        charm.follow_ordered = false;
+        if target.is_none() {
+            charm.stay_at = at;
+        }
+    });
+    if let Some(target) = target {
+        attack_start(world, pet, target);
+    } else {
+        stop_attacking(world, pet);
+        set_motion(world, pet, PetMotion::Idle);
+    }
+}
+
 fn attack_start(world: &mut World, pet: Entity, target: Entity) {
     if !can_attack(world, pet, target) {
         return;

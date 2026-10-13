@@ -26,6 +26,11 @@ pub(super) fn update(world: &mut World) {
 }
 
 fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) {
+        if super::hazards::escape(world, pet) {
+            crate::pet_control::order_companion_pet(world, unit, None);
+        }
+    }
     if super::hazards::escape(world, unit) {
         return;
     }
@@ -51,6 +56,18 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
+    let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) else {
+        return;
+    };
+    let inside_field = super::hazards::target_is_hazardous(world, pet, pet);
+    let unsafe_approach = super::hazards::target_is_hazardous(world, pet, enemy)
+        || super::hazards::path_crosses_hostile_field(world, pet, enemy);
+    let hold = inside_field || unsafe_approach;
+    let target = (!hold).then_some(enemy);
+    crate::pet_control::order_companion_pet(world, unit, target);
 }
 
 fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
@@ -99,6 +116,7 @@ fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Ent
         regroup(world, unit, follower.owner);
         return;
     }
+    order_pet_attack(world, unit, enemy);
     if needs_taunt(world, unit, enemy, follower)
         && cast(world, unit, enemy, follower.profile.taunt_spell)
     {
