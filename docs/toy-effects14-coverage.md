@@ -1,5 +1,15 @@
 # Toy effects14 — active whole-goal coverage
 
+## Conditional Gladiator back banners (2026-10-13)
+
+Canonical census354→356 (+119220/119221, zero removed; `gladiator19-canonical-after.json`). This is separate from the prepared-copy statue gain: importing194793/203158 additionally would bring the current prepared count to358.
+
+Alliance/Horde Gladiator's Banner uses176899/176900, a zero-payload caster aura4 with infinite source duration. The item masks enforce faction eligibility. All source race/sex-conditioned variants resolve ordinary back models1332368/1332364 through the existing PlayerCondition evaluator; conditions40064-40067/49526/49669-49671/69443 contain only supported race/sex/flags fields. Core behavioral proof covers26 races ×2 sexes ×2 spells, including held AuraStart→AuraEnd kits. All4066 TDB1210 spell-script bindings were checked; neither spell has a binding. No new broad aura admission or condition bypass was added.
+
+Server RED rejects aura4. GREEN proves actual learning/use/persistent replicated aura/cancellation, unchanged native model and health, and learned-toy refusal for an ineligible race. Native private5911 PASS both skins: actual bag learning, journal use, model1332368 attached on the Human player's back, then cancellation removes the kit without changing the native player model. Horde variants have server/core proof, not a separate native witness. Nine authenticated model/skin/texture assets were published privately from the11-file local closure; two authored `.phys` files are not imported by the maintained chain importer, so cloth simulation is not certified. PNGs: `toys/gladiator19/`. Runtime stopped after captures.
+
+Alliance/Horde War Banner300104/300144 remains blocked: conditions36349/36348 require CurrentPvpFaction, not evaluated by the client, and their source combat removal requires separate proof.
+
 ## Placed statues and the missing-template audit (2026-10-12)
 
 Prepared-copy census354→356/1166 (+198646/204405, zero removed; `statue-canonical-after.json`). Canonical stays354 until `scripts/add_toy_summon_templates.py --db data/world.db` runs there.
