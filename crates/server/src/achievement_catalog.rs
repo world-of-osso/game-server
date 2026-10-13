@@ -100,9 +100,9 @@ pub(crate) enum CriteriaEvent {
     WinAnyBattleground,
     /// TC Arena.cpp249: winner's pre-result personal rating, minimum1.
     WinAnyRankedArena(u32),
-    /// Native rated result: map and team size of the completed arena.
-    WinArena(u32, u8),
-    ParticipateInArena(u32, u8),
+    /// Native rated result: map of the completed arena.
+    WinArena(u32),
+    ParticipateInArena(u32),
     CompleteMythicPlus(MythicCompletion),
     CompleteScenario(u32),
     CompleteAnyScenario,
@@ -144,8 +144,8 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::KillAnyCreature => 78,
             Self::WinAnyRankedArena(_) => 37,
-            Self::WinArena(_, _) => 32,
-            Self::ParticipateInArena(_, _) => 33,
+            Self::WinArena(_) => 32,
+            Self::ParticipateInArena(_) => 33,
             Self::ReachLevel(_) => 5,
             Self::ActivelyReachLevel(_) => 196,
             Self::ReachMaxLevel(_) => 221,
@@ -247,7 +247,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
-            Self::WinArena(map, _) | Self::ParticipateInArena(map, _) => criteria.asset == map,
+            Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
             Self::WinAnyRankedArena(rating) => rating > 0 && criteria.asset == 0,
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
             Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
@@ -440,6 +440,8 @@ pub(crate) struct ReferencePlayer {
     pub level: u8,
     /// Full group roster, including offline members;0 means known solo, None unknown.
     pub group_size: Option<usize>,
+    pub arena_team_size: Option<u8>,
+    pub in_ranked_arena: bool,
 }
 
 /// A compiled ModifierTree leaf resolved at catalog load.
@@ -471,13 +473,8 @@ impl CriteriaFact {
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
-            Self::ArenaTeamSize(size) => matches!(event,
-                CriteriaEvent::WinArena(_, actual) | CriteriaEvent::ParticipateInArena(_, actual)
-                if actual == *size),
-            Self::RankedArena => matches!(
-                event,
-                CriteriaEvent::WinArena(..) | CriteriaEvent::ParticipateInArena(..)
-            ),
+            Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
+            Self::RankedArena => player.in_ranked_arena,
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
             Self::Class(class) => player.class == *class,

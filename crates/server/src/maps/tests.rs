@@ -2372,6 +2372,7 @@ fn exercise_arena_channel_with_reconnect(
         assert_eq!(state.criteria_progress.get(&306).copied(), expected);
         assert_eq!(state.earned_ids.contains(&397), expected.is_some());
         assert_rated_arena_map_credits(state, rated && map_id == 572, index % 2 == 0, team_size);
+        assert_rated_arena_combat_credits(state, rated, index, team_size);
     }
     h.receive_pvp_updates(5);
     for (index, who) in players.iter().enumerate() {
@@ -2387,6 +2388,7 @@ fn exercise_arena_channel_with_reconnect(
             "idle replay"
         );
         assert_rated_arena_map_credits(state, rated && map_id == 572, index % 2 == 0, team_size);
+        assert_rated_arena_combat_credits(state, rated, index, team_size);
     }
     if rated {
         assert_eq!(ended.arena.as_ref().unwrap().mode, mode);
@@ -2462,6 +2464,7 @@ fn exercise_arena_channel_with_reconnect(
             "redb reopen"
         );
         assert_rated_arena_map_credits(&saved, rated && map_id == 572, index % 2 == 0, team_size);
+        assert_rated_arena_combat_credits(&saved, rated, index, team_size);
     }
 }
 
@@ -2675,6 +2678,35 @@ fn exercise_shuffle_rounds(
                 .battleground
                 .is_none()
         );
+    }
+}
+
+fn assert_rated_arena_combat_credits(
+    state: &crate::achievement::PlayerAchievementState,
+    rated: bool,
+    index: usize,
+    team_size: usize,
+) {
+    for (size, blow, death, kill) in [(2, 5541, 4962, 4959), (3, 5542, 4963, 4960)] {
+        let expected_blow = (rated && team_size == size && index == 0).then_some(team_size as u64);
+        let expected_death = (rated && team_size == size && index % 2 == 1).then_some(1);
+        assert_eq!(
+            state.criteria_progress.get(&blow).copied(),
+            expected_blow,
+            "rated{size} killing blows"
+        );
+        assert_eq!(
+            state.criteria_progress.get(&death).copied(),
+            expected_death,
+            "rated{size} deaths"
+        );
+        if index == 0 {
+            assert_eq!(
+                state.criteria_progress.get(&kill).copied(),
+                expected_blow,
+                "rated{size} native kill rewards"
+            );
+        }
     }
 }
 
