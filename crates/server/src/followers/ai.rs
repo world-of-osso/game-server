@@ -37,20 +37,37 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     if world.get::<CastState>(unit).is_some() {
         return;
     }
-    if follower.profile.heal_spell != 0 {
-        if let Some(patient) = lowest_health(world, &party, unit) {
-            if !pursue(world, unit, patient, follower.profile.heal_spell, false) {
-                regroup(world, unit, follower.owner);
-                return;
-            }
-            cast(world, unit, patient, follower.profile.heal_spell);
-            return;
-        }
+    if heal_party_member(world, unit, follower, &party) {
+        return;
     }
     let Some(enemy) = enemy else {
         regroup(world, unit, follower.owner);
         return;
     };
+    attack_enemy(world, unit, follower, enemy);
+}
+
+fn heal_party_member(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+) -> bool {
+    if follower.profile.heal_spell == 0 {
+        return false;
+    }
+    let Some(patient) = lowest_health(world, party, unit) else {
+        return false;
+    };
+    if pursue(world, unit, patient, follower.profile.heal_spell, false) {
+        cast(world, unit, patient, follower.profile.heal_spell);
+    } else {
+        regroup(world, unit, follower.owner);
+    }
+    true
+}
+
+fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Entity) {
     if !pursue(
         world,
         unit,
@@ -61,10 +78,10 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         regroup(world, unit, follower.owner);
         return;
     }
-    if needs_taunt(world, unit, enemy, follower) {
-        if cast(world, unit, enemy, follower.profile.taunt_spell) {
-            return;
-        }
+    if needs_taunt(world, unit, enemy, follower)
+        && cast(world, unit, enemy, follower.profile.taunt_spell)
+    {
+        return;
     }
     if follower.profile.cooldown_spell != 0
         && cast(world, unit, enemy, follower.profile.cooldown_spell)
