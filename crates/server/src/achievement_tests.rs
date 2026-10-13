@@ -2005,6 +2005,24 @@ fn achievements_criteria_mixed_difficulty_and_aura_tree_needs_both() {
     }
 }
 
+/// Glory of the War Within Delver40438: criterion112574 KillCreature221427 behind
+/// HasTimeEventPassed289 600, which TC defaults to now (CriteriaHandler3578-3611), so
+/// it holds even for map-wide credit without a reference player.
+#[test]
+fn achievements_criteria_untimestamped_time_event_has_always_passed() {
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&conn).unwrap();
+    let mut state = PlayerAchievementState::default();
+    catalog.update_at(
+        &mut state,
+        CriteriaEvent::KillCreature(221427),
+        None,
+        1,
+        &PlayerConditions::default(),
+    );
+    assert_eq!(state.criteria_progress.get(&112574).copied(), Some(1));
+}
+
 /// Scenario and Adventure Guide credit use the same reference-player conditions:
 /// criterion16784 (legacy Heroic Erudax) under Erudax kills5733 needs a Heroic copy.
 #[test]

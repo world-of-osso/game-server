@@ -55,6 +55,14 @@ class Conditions(unittest.TestCase):
         mixed[12] = node(10, 8)
         self.assertEqual(self.compile(mixed), {1: [(True, (1, 2)), ((8, 46598),)]})
 
+    def test_untimestamped_time_event_always_passed(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 289, 600), 12: node(10, 2, 8, 46598)}
+        self.assertEqual(self.compile(modifiers), {1: [None, ((8, 46598),)]})
+        timestamped = {10: node(0, 4), 11: node(10, 2, 289, 350)}
+        self.assertEqual(self.compile(timestamped), {})
+        window = {10: node(0, 4), 11: node(10, 2, 289, 350), 12: node(10, 3, 289, 353)}
+        self.assertEqual(self.compile(window), {})
+
     def test_unsatisfiable_foreign_nested_or_negated_facts_stay_disabled(self):
         cases = {
             'all of two different difficulties': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
