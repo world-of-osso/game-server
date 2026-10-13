@@ -43,6 +43,8 @@ mod arena_rated_queue;
 mod arena_rated_results;
 #[path = "pvp_arena_scores.rs"]
 mod arena_scores;
+#[path = "pvp_arena_shuffle.rs"]
+mod arena_shuffle;
 pub(crate) use arena_scores::record as record_arena_event;
 #[path = "pvp_arena_rating.rs"]
 mod arena_rating;
@@ -76,6 +78,8 @@ pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
+#[path = "pvp_reconnect.rs"]
+pub(crate) mod reconnect;
 use pvp_leave::process_battleground_leave_requests;
 #[path = "pvp_objective.rs"]
 mod pvp_objective;
@@ -171,6 +175,11 @@ pub(crate) fn sync_progress_currencies_from_wallet(
     changed
 }
 
+#[cfg(test)]
+pub(crate) fn forget_matches_for_reconnect_fixture(world: &mut World) {
+    world.insert_resource(PvpServerState::default());
+}
+
 #[derive(Debug)]
 struct InvitedBattleground {
     instance: BgInstance,
@@ -248,7 +257,8 @@ impl InvitedBattleground {
 }
 
 #[derive(Resource, Default)]
-struct PvpServerState {
+pub(crate) struct PvpServerState {
+    offline_players: BTreeMap<u64, reconnect::OfflinePlayer>,
     battleground_queue: BgQueue,
     rated_team_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<arena_rating::QueuedTeam>>,
     arena_queues: BTreeMap<shared::protocol::ArenaQueueMode, Vec<(u64, u8)>>,
@@ -352,6 +362,10 @@ impl Plugin for PvpPlugin {
         app.add_systems(
             PostUpdate,
             process_battleground_leave_requests.after(process_battleground_invitation_responses),
+        );
+        app.add_systems(
+            PostUpdate,
+            reconnect::expire_offline_players.after(process_battleground_leave_requests),
         );
         app.add_systems(
             Update,

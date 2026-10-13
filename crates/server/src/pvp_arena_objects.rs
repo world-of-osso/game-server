@@ -62,6 +62,38 @@ pub(super) fn prepare_map(world: &mut World, map: InMap) {
     }
 }
 
+pub(super) fn reset_map(world: &mut World, map: InMap) {
+    use lightyear::prelude::{NetworkTarget, Replicate};
+    let gates = world.resource::<GateCatalog>().0.clone();
+    let mut query = world.query::<(Entity, &InMap, &GameObjectInfo)>();
+    let old: Vec<_> = query
+        .iter(world)
+        .filter(|(_, copy, info)| **copy == map && gates.contains_key(&(map.map_id, info.entry)))
+        .map(|(entity, _, _)| entity)
+        .collect();
+    for entity in old {
+        world.despawn(entity);
+    }
+    let spawns: Vec<_> = world
+        .resource::<crate::game_objects::GameObjectSpawns>()
+        .0
+        .iter()
+        .filter(|spawn| {
+            spawn.map_id == map.map_id && gates.contains_key(&(map.map_id, spawn.info.entry))
+        })
+        .cloned()
+        .collect();
+    for spawn in spawns {
+        world.spawn((
+            crate::game_objects::game_object_bundle(&spawn),
+            map,
+            Replicate::to_clients(NetworkTarget::All),
+            crate::interest::NetworkVisibility::default(),
+        ));
+    }
+    prepare_map(world, map);
+}
+
 pub(super) fn update_gates(world: &mut World, now: f64) {
     let maps: BTreeMap<_, _> = world
         .resource::<PvpServerState>()
