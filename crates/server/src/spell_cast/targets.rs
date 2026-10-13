@@ -959,8 +959,9 @@ pub fn effect_dest(
     dest
 }
 
-///TC TARGET_DEST_CASTER_GROUND resolves map height when the cast plan owns mutable
-///ground access. Destination selection remains independent of ground-cache mutation.
+///TC TARGET_DEST_CASTER_GROUND resolves map height (`Map::GetHeight`, including enabled
+///GO floors in the caster's copy) when the cast plan owns mutable ground access.
+///Destination selection remains independent of ground-cache mutation.
 pub(super) fn ground_destination(
     world: &mut World,
     caster: Entity,
@@ -980,8 +981,7 @@ pub(super) fn ground_destination(
         .ok_or_else(|| {
             super::CastFailure::Unsupported("caster-ground destination requires ground data".into())
         })?;
-    let crate::ground::GroundProbe::Supported(height) =
-        ground.ground_at(map.map_id, destination.position)
+    let crate::ground::GroundProbe::Supported(height) = ground.ground_in(map, destination.position)
     else {
         return Err(super::CastFailure::InvalidTarget);
     };
