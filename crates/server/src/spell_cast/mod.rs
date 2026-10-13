@@ -209,7 +209,8 @@ pub struct SpellCastPlugin;
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::knockback::KnockbackPlugin);
-        app.init_resource::<disenchant::DisenchantData>()
+        app.init_resource::<crate::group::GroupRegistry>()
+            .init_resource::<disenchant::DisenchantData>()
             .add_systems(Startup, (disenchant::load_startup, open_lock::load_startup))
             .init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
@@ -2048,7 +2049,7 @@ fn plan_targets(
             }
         };
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
-            filter(spell, explicit, &mut units);
+            filter(world, spell, explicit, &mut units);
         }
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {

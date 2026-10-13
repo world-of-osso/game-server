@@ -102,7 +102,14 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Power Strike Proc 129914 casts native 121283 for one Chi on its authored melee-ability proc event and consumes its one charge; a later ability cannot trigger the spent proc.
 - [x] Critical Chaos 320413 adds effect 1's percentage of the owner's crit chance to Chaos Strike's proc chance on application and recalculates it on each 1 s effect-1 tick. Chaos Strike's refund roll consumes that live modifier once per landed root, not per weapon child.
 
+## Raid-area healing
+
+- [x] Native selector 56 selects living members of the caster's party/raid and their controlled units in range and the same map copy, not just the caster. ExcludeCaster applies before caps.
+- [x] Ysera's Gift group heal 145110 selects one target, preferring injured players over full-health members; outsiders and the caster are excluded. This does not certify passive 145108's missing periodic hook.
+
 ## Tests asserting this spec
+
+- `crates/server/src/spell_cast/raid_area_tests.rs`: real native group healing, one target and injured-member priority.
 
 - `crates/server/src/auras/power_strike_tests.rs`, `critical_chaos_tests.rs`: native periodic proc application and live crit-scaled proc modifier.
 
