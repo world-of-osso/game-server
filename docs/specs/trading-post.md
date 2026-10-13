@@ -19,11 +19,15 @@ Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Bliz
 - `crates/server/src/adventure_guide.rs`: monthly gameplay projection and award boundary.
 - `crates/server/src/adventure_guide_catalog.rs`: load sourced default thresholds.
 - `crates/server/src/trading_post_store.rs`: durable account threshold receipts, atomic balance/collection purchases, refund deltas and freeze.
+- `crates/server/src/trading_post.rs`, `trading_post_catalog.rs`: requests, source joins, NPC validation and account collection publication.
+- `scripts/retail_content.py`: retains sourced Trading Post high service flag.
 
 ## Tests asserting this spec
 
 - `trading_post_store::tests::trading_post_thresholds_once_per_account_month_survive_database_reopen`.
 - `trading_post_store::tests::trading_post_purchase_atomic_collection_grants_and_refund_survive_reopen`: all four collection stores, duplicate/insufficient-funds refusal, zero-duration/expiry/repeated refund and database reopen.
+- `trading_post_tests.rs`: real gameplay death credit/Tender/midnight reset, real message dispatch and sourced vendor gossip, paid purchase/refund refusal/distance closure.
+- `scripts/tests/test_trading_post_npc.py`: production importer preserves authentic Seabraid flag and source spawn.
 - Existing Adventure Guide live-event/alt projection tests.
 
 ## Known gaps (current cycle)

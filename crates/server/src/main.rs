@@ -3,7 +3,6 @@ mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
 mod adventure_guide;
-mod trading_post_store;
 mod appearance_collection;
 mod area_table;
 mod auction_house;
@@ -126,6 +125,8 @@ mod threat_updates;
 mod toy_catalog;
 mod toys;
 mod trade;
+mod trading_post;
+mod trading_post_store;
 mod trait_config;
 mod transmog;
 mod transmog_store;
@@ -191,7 +192,8 @@ fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(achievement::AchievementPlugin)
-        .add_plugins(adventure_guide::AdventureGuidePlugin);
+        .add_plugins(adventure_guide::AdventureGuidePlugin)
+        .add_plugins(trading_post::TradingPostPlugin);
     add_social_plugins(app);
     add_progression_plugins(app);
     add_world_plugins(app);

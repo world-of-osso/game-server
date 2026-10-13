@@ -65,9 +65,6 @@ pub(crate) fn purchase(
             granted,
         },
     );
-    if state.frozen == Some(offer.vendor) {
-        state.frozen = None;
-    }
     write_state(&txn, account, &state);
     txn.commit().expect("commit atomic Trading Post purchase");
     Ok(state)
@@ -258,6 +255,14 @@ fn read_state(txn: &WriteTransaction, account: u64) -> State {
         .expect("read Trading Post account")
         .map(|row| serde_json::from_slice(row.value()).expect("decode Trading Post account"))
         .unwrap_or_default()
+}
+
+pub(crate) fn load(db: &Database, account: u64) -> State {
+    let txn = db.begin_write().expect("begin Trading Post account read");
+    let state = read_state(&txn, account);
+    txn.commit()
+        .expect("commit Trading Post table initialization");
+    state
 }
 
 fn write_state(txn: &WriteTransaction, account: u64, state: &State) {
