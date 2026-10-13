@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Fear control and armor percentage](../class-completeness6.md#fear-control-state-and-armor-percentage--batch32): native aura7 cast admission/swings/target/avoidance (flee movement pending direction decision) and aura101 armor TOTAL_PCT for players and creatures; census2992/4653/182, nine armor memberships now working.
+
 - 2026-10-12 — [Creature-immunity definitions](../class-completeness6.md#native-creature-immunity-definitions--batch31): authentic235-row TDB importer, aura147 definition lookup, per-effect immunity miss logging; RED→GREEN plus403 adjacent passes. Census2983/4662/182, Bladestorm Arms/Fury now working; knockback effect lists and four absent TDB definitions remain gaps.
 
 - 2026-10-12 — [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30): native187 RED2→ten behavior controls, positive/negative/additive fields, actual attack type and expiry/removal; nine adjacent controls. Native form process evidence remains bounded by unverified starter art.
