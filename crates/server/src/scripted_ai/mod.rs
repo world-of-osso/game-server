@@ -97,6 +97,7 @@ impl Plugin for ScriptedAiPlugin {
                         .before(crate::creature_ai::chase_system),
                     kings_rest::spawn_serpent_after_temple_event,
                     kings_rest::update_serpentine_seals.before(update_creature_ai),
+                    kings_rest::update_gust_slashes.after(update_creature_ai),
                     kings_rest::update_molten_gold_areas
                         .after(update_creature_ai)
                         .after(crate::combat::auto_attack_system),
