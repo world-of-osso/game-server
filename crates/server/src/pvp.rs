@@ -353,9 +353,12 @@ impl Plugin for PvpPlugin {
         app.add_systems(Update, send_initial_pvp_snapshot);
         app.add_systems(Update, process_pvp_queries);
         app.add_systems(Update, process_battleground_queue_requests);
-        // Accept/decline and Leave may retire a map. Update's corpse-loot
-        // commands must finish before either can destroy that map's creatures.
-        app.add_systems(PostUpdate, process_battleground_invitation_responses);
+        // Retiring a copy must follow Update's corpse-loot commands and
+        // PostUpdate's target-mirror commands, including their deferred inserts.
+        app.add_systems(
+            PostUpdate,
+            process_battleground_invitation_responses.after(crate::unit_target::UnitTargetSync),
+        );
         app.add_systems(
             PostUpdate,
             process_battleground_leave_requests.after(process_battleground_invitation_responses),

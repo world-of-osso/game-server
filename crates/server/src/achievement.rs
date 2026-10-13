@@ -762,18 +762,33 @@ pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
 }
 
-/// TC Arena.cpp249: online rated winners only, after committed result settlement.
-pub(crate) fn record_ranked_arena_win(world: &mut World, player: Entity, before_rating: u32) {
-    let authenticated = world
-        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+/// TC Arena.cpp241–250: online rated participants/winners, after committed settlement.
+pub(crate) fn record_ranked_arena_result(
+    world: &mut World,
+    player: Entity,
+    before_rating: u32,
+    map: u32,
+    team_size: u8,
+    won: bool,
+) {
+    let connection = world
+        .query::<(Entity, &Authenticated, &PlayerLink, &InWorld)>()
         .iter(world)
-        .any(|(_, link, _)| link.0 == player);
-    if authenticated {
-        record_criteria_event(
-            world,
-            player,
+        .find_map(|(connection, _, link, _)| (link.0 == player).then_some(connection));
+    let Some(connection) = connection else { return };
+    let mut events = vec![CriteriaEvent::ParticipateInArena(map, team_size)];
+    if won {
+        events.extend([
             CriteriaEvent::WinAnyRankedArena(before_rating.max(1)),
-        );
+            CriteriaEvent::WinArena(map, team_size),
+        ]);
+    }
+    for &event in &events {
+        scenario::record(world, player, event);
+        crate::adventure_guide::record(world, player, event);
+    }
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map)) {
+        send_updates(world, connection, snapshot, toasts);
     }
 }
 

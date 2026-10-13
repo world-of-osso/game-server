@@ -70,16 +70,34 @@ type Requests<'w, 's, M> =
 type ErrorSenders<'w, 's> = Query<'w, 's, &'static mut MessageSender<InventoryError>>;
 type OpResult = Result<(), InventoryError>;
 
-/// Persistence plus item templates: everything `load_model` reads.
+/// Persistence plus item templates: everything `load_model` reads, and the
+/// requesting player's learned spells for `Player::CanDualWield`.
 #[derive(SystemParam)]
-struct InventoryStore<'w> {
+struct InventoryStore<'w, 's> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
+    links: Query<'w, 's, &'static PlayerLink>,
+    known: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
+    spells: Option<Res<'w, crate::spell_info::SpellStore>>,
 }
 
-impl InventoryStore<'_> {
+impl InventoryStore<'_, '_> {
     fn get(&self) -> Option<(&Database, &ItemTemplates)> {
         Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
+    }
+
+    /// SPELL_EFFECT_DUAL_WIELD sets `CanDualWield` (TC Spell::EffectDualWield).
+    fn can_dual_wield(&self, connection: Entity) -> bool {
+        let known = self
+            .links
+            .get(connection)
+            .ok()
+            .and_then(|link| self.known.get(link.0).ok());
+        crate::stats::knows_effect(
+            known,
+            self.spells.as_deref(),
+            crate::stats::EFFECT_DUAL_WIELD,
+        )
     }
 }
 
@@ -219,8 +237,10 @@ fn process_requests<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
+        let can_dual_wield = store.can_dual_wield(connection);
         for request in receiver.receive() {
             let result = load_model(db, templates, character_id).and_then(|mut model| {
+                model.set_can_dual_wield(can_dual_wield);
                 apply(&mut model, request, db)?;
                 save_inventory_record(db, character_id, &model.into_record());
                 Ok(())
@@ -247,7 +267,7 @@ type MoveRequests<'w, 's, M> = Query<
 
 #[derive(SystemParam)]
 struct MoveStore<'w, 's> {
-    store: InventoryStore<'w>,
+    store: InventoryStore<'w, 's>,
     updates: ResMut<'w, GoldUpdateQueue>,
     errors: ErrorSenders<'w, 's>,
     banks: ResMut<'w, crate::bank::ChangedCharacterBanks>,
@@ -266,6 +286,7 @@ fn process_item_moves<M: lightyear::prelude::Message>(
     };
     for (connection, in_world, interaction, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
+        let can_dual_wield = store.store.can_dual_wield(connection);
         for request in receiver.receive() {
             let (from, to) = locations(&request);
             let bank_move = matches!(from, ItemLocation::Bank { .. })
@@ -278,7 +299,10 @@ fn process_item_moves<M: lightyear::prelude::Message>(
                 character_id,
                 bank_move,
                 banker_open,
-                |model| apply(model, request, db),
+                |model| {
+                    model.set_can_dual_wield(can_dual_wield);
+                    apply(model, request, db)
+                },
             );
             match result {
                 Ok(()) => {

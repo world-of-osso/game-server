@@ -89,6 +89,69 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
 }
 
 #[test]
+fn alterac_channel_last_leave_with_retargeting_npc_settles_target_mirror_before_unload() {
+    let template = shared::battleground::alterac_valley();
+    let mut entered = enter_source_match_with(&template, [611, 610], |app| {
+        app.add_plugins(crate::unit_target::UnitTargetPlugin);
+    });
+    let (captain, _) = find_alterac_source_npc(&mut entered.h, entered.copy, 11947);
+    let target = entered.players[0].player.to_bits();
+    entered
+        .h
+        .app
+        .world_mut()
+        .entity_mut(captain)
+        .remove::<crate::grid_activity::GridDormant>();
+    entered.h.app.add_systems(
+        Update,
+        move |mut states: Query<&mut crate::creature_ai::CreatureState>| {
+            if let Ok(mut state) = states.get_mut(captain) {
+                *state = match *state {
+                    crate::creature_ai::CreatureState::Pursuing { .. } => {
+                        crate::creature_ai::CreatureState::Idle
+                    }
+                    _ => crate::creature_ai::CreatureState::Pursuing { target },
+                };
+            }
+        },
+    );
+    for actor in &entered.players {
+        entered
+            .h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(actor.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground {
+                match_id: entered.match_id,
+            });
+    }
+    entered.h.receive_pvp_updates(5);
+    assert!(entered.h.app.world().get_entity(captain).is_err());
+    for actor in &entered.players {
+        let returns = entered.h.new_worlds(actor);
+        assert_eq!(returns.len(), 1);
+        assert_eq!(returns[0].map_id, 0);
+        entered.h.ack(actor);
+        assert!(close(entered.h.position(actor), entered.origin));
+        assert_eq!(
+            entered.h.app.world().get::<InMap>(actor.player),
+            Some(&STORMWIND)
+        );
+        assert!(
+            entered
+                .h
+                .app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(actor.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn alterac_channel_last_leave_with_fresh_npc_death_unloads_without_loot_panic() {
     let template = shared::battleground::alterac_valley();
     let mut entered = enter_source_match_with(&template, [611, 610], |app| {
@@ -634,11 +697,10 @@ fn enter_source_match_with(
             app.insert_resource(templates);
         }
         app.insert_resource(crate::faction::FactionTemplates::default());
+        app.add_plugins(crate::pvp::PvpPlugin);
+        // Match production ordering: PvP registers before target-mirror systems.
         setup(app);
-        app.add_plugins((
-            crate::pvp::PvpPlugin,
-            crate::npc_interaction::NpcInteractionPlugin,
-        ));
+        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
     })
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);

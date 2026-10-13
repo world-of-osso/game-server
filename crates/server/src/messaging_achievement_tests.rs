@@ -2,10 +2,12 @@ use super::*;
 use crate::achievement::{AchievementPlugin, PlayerAchievementState};
 use crate::auth::{Authenticated, InWorld};
 use lightyear::connection::host::HostClient;
-use shared::components::{CharacterAppearance, Level};
+use shared::components::{CharacterAppearance, Level, Npc};
 
-#[test]
-fn achievements_criteria_native_dance_chat_and_intent_persist_without_idle_replay() {
+#[path = "messaging_targeted_emote_tests.rs"]
+mod targeted;
+
+fn emote_app() -> (tempfile::NamedTempFile, App, Entity, Entity, u64) {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     persistence::create_tables(&db);
@@ -58,6 +60,12 @@ fn achievements_criteria_native_dance_chat_and_intent_persist_without_idle_repla
             MessageSender::<EmoteIntent>::default(),
         ))
         .id();
+    (file, app, player, connection, character)
+}
+
+#[test]
+fn achievements_criteria_native_dance_chat_and_intent_persist_without_idle_replay() {
+    let (file, mut app, player, connection, character) = emote_app();
     let dance = || ChatMessage {
         sender: "spoof".into(),
         content: "/dance".into(),
@@ -101,6 +109,7 @@ fn achievements_criteria_native_dance_chat_and_intent_persist_without_idle_repla
         .unwrap()
         .send::<ChatChannel>(EmoteIntent {
             emote: EmoteKind::Dance,
+            target_entity: None,
         });
     for _ in 0..3 {
         app.update();
