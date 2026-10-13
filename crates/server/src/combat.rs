@@ -684,6 +684,7 @@ fn record_swing(
             .0
             .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
     }
+    let caused_damage = outcome.damage > 0.0;
     record_swing_events(
         &mut params.commands,
         events,
@@ -692,6 +693,12 @@ fn record_swing(
         target_entity,
         outcome,
     );
+    if caused_damage {
+        // TC Unit::DealMeleeDamage: after health/death and only for damaging swings.
+        params.commands.queue(move |world: &mut World| {
+            crate::auras::damage_shield::retaliate(world, target_entity, attacker_entity);
+        });
+    }
 }
 
 /// Melee swing proc/interrupt events: DEAL/TAKE_MELEE_SWING and
