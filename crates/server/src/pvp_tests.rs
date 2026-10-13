@@ -421,6 +421,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         silvershard: None,
         seething: None,
         deephaul: None,
+        alterac: None,
         scoreboard: Vec::new(),
         flag_positions: [None, None],
     };
