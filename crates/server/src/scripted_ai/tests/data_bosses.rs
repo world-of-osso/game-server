@@ -1200,14 +1200,8 @@ fn encounter_coverage_gold_lucre_task_checks_molten_at_callback_not_at_hit() {
     );
 }
 
-#[test]
-fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credit() {
-    // Source NotStarted spawn is in the unported flying intro, not a walkable start.
-    let (mut h, gold, _, center, map) = molten_gold_fixture_in_state(EncounterState::Fail);
-    let boss = h.creatures_of(135322)[0];
-    let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| crate::ground::ground_data_dir().join("navmesh"));
+fn insert_kings_rest_navigation(h: &mut Harness) {
+    let nav_dir = crate::ground::ground_data_dir().join("navmesh");
     assert!(
         nav_dir.join("1762").read_dir().unwrap().any(|entry| entry
             .unwrap()
@@ -1218,6 +1212,14 @@ fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credi
     );
     h.app
         .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credit() {
+    // Source NotStarted spawn is in the unported flying intro, not a walkable start.
+    let (mut h, gold, _, center, map) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    insert_kings_rest_navigation(&mut h);
     // This west ray has an actual nav corridor; the east fixture ray was outside the chamber.
     let start = Position {
         x: center.x - 25.0,
@@ -1315,11 +1317,7 @@ fn encounter_coverage_gold_follow_checks_source_three_dimensional_reach() {
 fn encounter_coverage_gold_follow_repaths_subyard_primary_displacement() {
     let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
     let boss = h.creatures_of(135322)[0];
-    let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| crate::ground::ground_data_dir().join("navmesh"));
-    h.app
-        .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+    insert_kings_rest_navigation(&mut h);
     h.app.world_mut().entity_mut(gold).insert(Position {
         x: center.x - 25.0,
         ..center
@@ -1356,11 +1354,7 @@ fn encounter_coverage_gold_follow_repaths_subyard_primary_displacement() {
 fn walking_gold_fixture() -> (Harness, Entity, Entity) {
     let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
     let boss = h.creatures_of(135322)[0];
-    let nav_dir = std::env::var_os("ENCOUNTER_GOLD_NAV_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| crate::ground::ground_data_dir().join("navmesh"));
-    h.app
-        .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+    insert_kings_rest_navigation(&mut h);
     h.app.world_mut().entity_mut(gold).insert(Position {
         x: center.x - 25.0,
         ..center
