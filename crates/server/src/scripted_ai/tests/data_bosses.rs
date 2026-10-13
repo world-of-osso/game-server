@@ -1882,6 +1882,79 @@ fn encounter_coverage_verdan_real_vines_root_and_expire() {
     );
 }
 
+/// Actual Anacondra row7 casts8148 at7s and repeats every63s. This proves
+/// aura application/reapplication only, not DAMAGE_SHIELD15 retaliation or missingSpell2.
+#[test]
+fn encounter_coverage_anacondra_thorns_application_and_source_repeat() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(3671, 43, 0, 1, None);
+    h.engage(boss);
+    h.advance(6.6);
+    assert!(!h.has_aura(boss, 8148), "Thorns waits7s");
+    h.advance(0.7);
+    assert!(h.has_aura(boss, 8148), "actual self/party aura");
+    let removed = crate::auras::remove_auras(
+        h.app.world_mut(),
+        boss,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == 8148,
+    );
+    assert_eq!(removed.len(), 1);
+    h.advance(62.0);
+    assert!(!h.has_aura(boss, 8148), "no repeat before63s");
+    h.advance(1.5);
+    assert!(
+        h.has_aura(boss, 8148),
+        "source repeat reapplies removed buff"
+    );
+}
+
+/// Real deaths/evades use each bound encounter, never another Wailing boss.
+/// Generic BossAi lifecycle is not proof of Mutanus escort spawning or source action34.
+#[test]
+fn encounter_coverage_wailing_kresh_serpentis_mutanus_generic_lifecycle() {
+    for (entry, bit, encounter) in [(3653, 2, 587), (3673, 5, 590), (3654, 7, 592)] {
+        for killed in [false, true] {
+            let (mut h, boss, map) = bound_boss_at_difficulty(entry, 43, bit, 1, None);
+            h.engage(boss);
+            h.advance(0.1);
+            let slot =
+                instance_script::boss_id_for_encounter(h.app.world_mut(), map, encounter).unwrap();
+            assert_eq!(
+                get_boss_state(h.app.world_mut(), map, slot),
+                Some(EncounterState::InProgress)
+            );
+            if killed {
+                h.hit_pct(boss, 1_000.0);
+            } else {
+                crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+            }
+            h.advance(0.1);
+            let expected = if killed {
+                EncounterState::Done
+            } else {
+                EncounterState::Fail
+            };
+            assert_eq!(get_boss_state(h.app.world_mut(), map, slot), Some(expected));
+            assert!(
+                h.inbox(0)
+                    .ends
+                    .iter()
+                    .any(|end| end.encounter_id == encounter && end.success == killed)
+            );
+            assert!(
+                h.inbox(0)
+                    .ends
+                    .iter()
+                    .all(|end| end.encounter_id == encounter)
+            );
+            assert!(
+                h.inbox(1).ends.is_empty(),
+                "other instance receives no completion"
+            );
+        }
+    }
+}
+
 /// The source Disciple combat clock is independent of the unavailable escort activation.
 /// First Sleep1090 is due5–10s; Druid's Potion8141 only below80% health.
 #[test]
