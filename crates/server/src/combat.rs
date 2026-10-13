@@ -441,15 +441,17 @@ type AutoAttackTargets<'w, 's> = Query<
 >;
 
 /// What decides whether a victim can dodge, parry or block: casting
-/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned or
-/// confused here) it cannot (Unit.cpp:2408-2413).
+/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned,
+/// confused or fleeing here) it cannot (Unit.cpp:2408-2413).
 type CanAvoid<'a> = (
     Has<shared::casting::CastState>,
     Option<&'a mut crate::auras::ActiveAuras>,
 );
 
 fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bool {
-    !casting && !auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused())
+    !casting
+        && !auras
+            .is_some_and(|auras| auras.is_stunned() || auras.is_confused() || auras.is_feared())
 }
 
 /// A creature's own armor or a player's gear armor.

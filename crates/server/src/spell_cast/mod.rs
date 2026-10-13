@@ -312,7 +312,10 @@ impl CastFailure {
                 crate::auras::CastBlock::NoActions => {
                     (R::NotSupported, Some("Can't do that right now".into()))
                 }
-                // SPELL_FAILED_CONFUSED has no CastFailReason in shared-protocol yet.
+                // SPELL_FAILED_FLEEING/CONFUSED have no CastFailReason in shared-protocol yet.
+                crate::auras::CastBlock::Fleeing => {
+                    (R::NotSupported, Some("Can't do that while fleeing".into()))
+                }
                 crate::auras::CastBlock::Confused => {
                     (R::NotSupported, Some("Can't do that while confused".into()))
                 }

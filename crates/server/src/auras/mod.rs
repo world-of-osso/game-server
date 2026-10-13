@@ -18,6 +18,7 @@ pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
+mod fear;
 pub(crate) mod handlers;
 pub mod invisibility;
 mod linked;
@@ -53,7 +54,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub use unit_state::{Confused, is_polymorphed};
+pub use unit_state::{Confused, Feared, is_polymorphed};
 pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
@@ -304,10 +305,15 @@ impl ActiveAuras {
         self.has_type(handlers::MOD_CONFUSE)
     }
 
-    /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned or confused (fear and charges are
-    /// not modelled).
+    /// Under a `SPELL_AURA_MOD_FEAR` effect (TrinityCore `UNIT_STATE_FLEEING`).
+    pub fn is_feared(&self) -> bool {
+        self.has_type(handlers::MOD_FEAR)
+    }
+
+    /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned, confused or fleeing (charges are not
+    /// modelled).
     pub fn cannot_auto_attack(&self) -> bool {
-        self.is_stunned() || self.is_confused() || self.is_pacified()
+        self.is_stunned() || self.is_confused() || self.is_feared() || self.is_pacified()
     }
 
     pub fn is_pacified(&self) -> bool {
@@ -1427,6 +1433,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
     if no_actions_prevention(spell) && has(&[handlers::MOD_NO_ACTIONS]) {
         return Some(CastBlock::NoActions);
     }
+    if fear::blocks_cast(world, auras, spell) {
+        return Some(CastBlock::Fleeing);
+    }
     if attributes(spell, 5) & ATTR5_ALLOW_WHILE_CONFUSED == 0 && has(&[handlers::MOD_CONFUSE]) {
         return Some(CastBlock::Confused);
     }
@@ -1439,6 +1448,7 @@ pub enum CastBlock {
     Silenced,
     Pacified,
     NoActions,
+    Fleeing,
     Confused,
 }
 
