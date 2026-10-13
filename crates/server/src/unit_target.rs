@@ -11,13 +11,16 @@ use crate::creature_ai::CreatureState;
 use crate::grid_activity::GridDormant;
 use crate::networking::CombatTarget;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct UnitTargetSync;
+
 pub struct UnitTargetPlugin;
 
 impl Plugin for UnitTargetPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            (sync_player_unit_target, sync_creature_unit_target),
+            (sync_player_unit_target, sync_creature_unit_target).in_set(UnitTargetSync),
         );
     }
 }
