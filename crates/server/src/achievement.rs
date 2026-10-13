@@ -629,6 +629,17 @@ pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
     record_criteria_event(world, player, CriteriaEvent::CaptureBattlePet);
 }
 
+/// TC BattlegroundScore::UpdatePvpStat:80 TrackedWorldStateUIModified, keyed by PvpStat,
+/// completed in the battleground's map.
+pub(crate) fn record_pvp_stat(world: &mut World, player: Entity, map: u32, stat: u32) {
+    let events = [CriteriaEvent::TrackedWorldStateUIModified(stat)];
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
+        && let Some(connection) = connection_for_player(world, player)
+    {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
 /// TC BattlePetMgr::AddPet:483 after a new GUID is saved; never journal loads or changes.
 pub(crate) fn record_learned_pet(world: &mut World, player: Entity, species: u32) {
     record_criteria_event(world, player, CriteriaEvent::LearnedNewPet(species));

@@ -11,7 +11,7 @@ use shared::protocol::{
     WARSONG_HORDE_FLAG_ENTRY,
 };
 
-use super::{InvitedBattleground, PlayerPvpState, PvpServerState};
+use super::{InvitedBattleground, PlayerPvpState, PvpServerState, Scoreboard};
 use crate::auth::{Authenticated, InWorld};
 use crate::game_objects::{GameObjectSpawn, GameObjectSpawns, game_object_bundle, wow_position};
 use crate::interest::NetworkVisibility;
@@ -43,6 +43,7 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             })
             .collect::<Vec<_>>()
     });
+    credit_pvp_stats(world);
     for match_id in changed {
         credit_completed_match(world, match_id);
         send_match_snapshot(world, match_id);
@@ -122,7 +123,7 @@ fn update_match(
     if matched.instance.phase == BgPhase::Waiting
         && roster_ready(matched, actors, map, template.min_players_per_team as usize)
     {
-        matched.scoreboard = build_scoreboard(matched, actors);
+        matched.scoreboard.rows = build_scoreboard(matched, actors);
         changed = matched.instance.start();
     }
     if matched.instance.phase != BgPhase::InProgress {
@@ -426,13 +427,9 @@ fn update_crystal_carrier(
     }
 }
 
-pub(super) fn credit(
-    scoreboard: &mut [BattlegroundPlayerScoreSnapshot],
-    character_id: u64,
-    stat: u32,
-    amount: u32,
-) {
+pub(super) fn credit(scoreboard: &mut Scoreboard, character_id: u64, stat: u32, amount: u32) {
     let counter = scoreboard
+        .rows
         .iter_mut()
         .find(|score| score.character_id == character_id)
         .and_then(|score| {
@@ -443,6 +440,32 @@ pub(super) fn credit(
         })
         .expect("participant row carries every source column of its map");
     counter.1 += amount;
+    scoreboard.stat_credits.push((character_id, stat));
+}
+
+/// TC BattlegroundScore.cpp:78-80: each PvpStat update credits the connected player once,
+/// whatever the stat amount.
+fn credit_pvp_stats(world: &mut World) {
+    let credits: Vec<_> = world
+        .resource_mut::<PvpServerState>()
+        .battleground_matches
+        .values_mut()
+        .filter_map(|matched| Some((matched.map?.map_id, &mut matched.scoreboard.stat_credits)))
+        .flat_map(|(map, credits)| std::mem::take(credits).into_iter().map(move |c| (map, c)))
+        .collect();
+    if credits.is_empty() {
+        return;
+    }
+    let players: BTreeMap<u64, Entity> = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .map(|(link, owner)| (owner.character_id, link.0))
+        .collect();
+    for (map, (character, stat)) in credits {
+        if let Some(&player) = players.get(&character) {
+            crate::achievement::record_pvp_stat(world, player, map, stat);
+        }
+    }
 }
 
 fn roster_ready(
@@ -762,7 +785,7 @@ pub(super) fn send_match_snapshot(world: &mut World, match_id: u64) {
             matched.displayed_scores().1,
             matched.flag_objective(),
             matched.instance.outcome,
-            matched.scoreboard.clone(),
+            matched.scoreboard.rows.clone(),
             matched.world_states(),
         )
     };

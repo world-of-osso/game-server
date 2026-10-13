@@ -126,7 +126,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             seething: None,
             deephaul: None,
             alterac: None,
-            scoreboard: Vec::new(),
+            scoreboard: Scoreboard::default(),
             flag_positions: [None, None],
         },
     );
@@ -313,15 +313,19 @@ fn new_pvp_progress_does_not_invent_rated_or_season_cap_numbers() {
     assert_eq!(snapshot.honor_max, 15000);
 }
 
-#[test]
-fn achievements_criteria_native_flag_capture_credits_present_participants_and_winners_once() {
+/// Ten authenticated in-world players accepted into one native flag match (copy17) whose
+/// fixture homes use the shared flag entries; returns the world, (character, player) pairs
+/// and the redb file backing persistence.
+fn native_flag_match(
+    template: &shared::battleground::BgTemplate,
+) -> (World, Vec<(u64, Entity)>, tempfile::NamedTempFile) {
     use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
     use crate::auth::{Authenticated, InWorld};
     use crate::game_objects::{GameObjectBounds, GameObjectSpawn, GameObjectSpawns};
     use crate::maps::InMap;
     use crate::networking::PlayerLink;
     use crate::persistence::{self, ClientId};
-    use shared::battleground::{BgInstance, BgMatch, BgPhase, BgTeam};
+    use shared::battleground::{BgInstance, BgMatch};
     use shared::components::{Health, Player, Position};
     use shared::protocol::{GameObjectInfo, WARSONG_ALLIANCE_FLAG_ENTRY, WARSONG_HORDE_FLAG_ENTRY};
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
@@ -333,7 +337,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
     world.init_resource::<crate::maps::ServerClock>();
     world.init_resource::<Time<Fixed>>();
     let map = InMap {
-        map_id: 2106,
+        map_id: template.map_id,
         instance_id: 17,
     };
     let mut players = Vec::new();
@@ -402,7 +406,6 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         })
         .collect();
     world.insert_resource(GameObjectSpawns(homes));
-    let template = shared::battleground::warsong_gulch();
     let matched = BgMatch {
         bg_id: template.id,
         team_a: players.iter().step_by(2).map(|p| p.0).collect(),
@@ -422,12 +425,23 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
         seething: None,
         deephaul: None,
         alterac: None,
-        scoreboard: Vec::new(),
+        scoreboard: Scoreboard::default(),
         flag_positions: [None, None],
     };
     let mut state = PvpServerState::default();
     state.battleground_matches.insert(17, invitation);
     world.insert_resource(state);
+    (world, players, file)
+}
+
+#[test]
+fn achievements_criteria_native_flag_capture_credits_present_participants_and_winners_once() {
+    use crate::achievement::PlayerAchievementState;
+    use crate::maps::InMap;
+    use crate::persistence;
+    use shared::battleground::{BgPhase, BgTeam};
+    let template = shared::battleground::warsong_gulch();
+    let (mut world, players, file) = native_flag_match(&template);
     // Native readiness starts the match and builds its authored scoreboard columns.
     pvp_objective::update_battleground_objectives(&mut world);
     {
@@ -478,6 +492,20 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
                 .contains_key(&45085)
         );
     }
+    // TrackedWorldStateUIModified45084 is PvpStat928 Flag Captures, credited to the connected
+    // capturer only (TC BattlegroundScore.cpp:78-80). Its Capture the Flag199 keeps
+    // Instance_ID489 (legacy Warsong); native WSG is map2106, so the native completion-map
+    // gate leaves 199 unearned.
+    let flag_captures = |world: &World, i: usize| {
+        let state = world.get::<PlayerAchievementState>(players[i].1).unwrap();
+        let account = state.account.as_deref().expect("account aggregate loaded");
+        (
+            account.criteria_progress.get(&45084).copied(),
+            account.earned_ids.contains(&199),
+        )
+    };
+    assert_eq!(flag_captures(&world, 0), (Some(1), false));
+    assert_eq!(flag_captures(&world, 2), (None, false));
     // ParticipateInBattleground45067 ("Warsong Gulch battles"): present winner and loser.
     let battles = |world: &World, i: usize| {
         world
@@ -492,6 +520,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
     assert_eq!(battles(&world, 8), None, "left the copy before the end");
     pvp_objective::update_battleground_objectives(&mut world);
     assert_eq!(battles(&world, 1), Some(1));
+    assert_eq!(flag_captures(&world, 0), (Some(1), false), "idle tick");
     assert_eq!(
         world
             .get::<PlayerAchievementState>(players[0].1)
@@ -503,10 +532,66 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
     let winner = players[0].0;
     drop(world);
     let db = redb::Database::open(file.path()).unwrap();
+    let reopened = persistence::load_achievements(&db, winner);
+    assert_eq!(reopened.criteria_progress.get(&45085), Some(&1));
+    assert_eq!(reopened.criteria_progress.get(&45084), Some(&1));
+}
+
+/// Two-Timer5210 (map726): TrackedWorldStateUIModified14869 counts PvpStat290 Twin Peaks
+/// flag captures; two native captures by one carrier earn it in its own map.
+#[test]
+fn achievements_criteria_native_twin_peaks_captures_count_pvp_stat_per_credit() {
+    use crate::achievement::PlayerAchievementState;
+    use crate::persistence;
+    use shared::battleground::BgTeam;
+    let template = shared::battleground::twin_peaks();
+    let (mut world, players, file) = native_flag_match(&template);
+    pvp_objective::update_battleground_objectives(&mut world);
+    let progress = |world: &World, i: usize| {
+        let state = world.get::<PlayerAchievementState>(players[i].1).unwrap();
+        state.account.as_deref().map_or((None, false), |account| {
+            (
+                account.criteria_progress.get(&14869).copied(),
+                account.earned_ids.contains(&5210),
+            )
+        })
+    };
+    let carry = |world: &mut World| {
+        let mut state = world.resource_mut::<PvpServerState>();
+        let battle = state.battleground_matches.get_mut(&17).unwrap();
+        assert!(
+            battle
+                .flags
+                .as_mut()
+                .unwrap()
+                .flags
+                .pickup(BgTeam::A, players[0].0)
+        );
+    };
+    assert_eq!(progress(&world, 0), (None, false));
+    carry(&mut world);
+    pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(progress(&world, 0), (Some(1), false));
+    pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(progress(&world, 0), (Some(1), false), "idle tick");
+    carry(&mut world);
+    pvp_objective::update_battleground_objectives(&mut world);
+    assert_eq!(progress(&world, 0), (Some(2), true));
+    for i in [1, 2] {
+        assert_eq!(progress(&world, i), (None, false));
+    }
+    let scores = &world.resource::<PvpServerState>().battleground_matches[&17]
+        .scoreboard
+        .rows;
+    let carrier = scores.iter().find(|row| row.character_id == players[0].0);
+    assert_eq!(carrier.unwrap().objective_scores, vec![(290, 2), (291, 0)]);
+    let character = players[0].0;
+    drop(world);
+    let db = redb::Database::open(file.path()).unwrap();
     assert_eq!(
-        persistence::load_achievements(&db, winner)
+        persistence::load_achievements(&db, character)
             .criteria_progress
-            .get(&45085),
-        Some(&1)
+            .get(&14869),
+        Some(&2)
     );
 }
