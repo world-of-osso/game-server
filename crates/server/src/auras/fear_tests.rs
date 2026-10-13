@@ -18,6 +18,7 @@ use crate::world_data::WorldData;
 const INTIMIDATING_SHOUT: u32 = 5246;
 const SLEEP_WALK: u32 = 360806;
 const SLAM: u32 = 1464;
+const TURN_EVIL: u32 = 10326;
 const BERSERKER_RAGE: u32 = 18499;
 const WILL_OF_THE_FORSAKEN: u32 = 7744;
 const BARKSKIN: u32 = 22812;
@@ -190,7 +191,14 @@ fn class_completeness_native_sleep_fear_requires_a_matching_purge_mechanic() {
 
 #[test]
 fn class_completeness_native_allow_while_fleeing_uses_allowed_mechanics() {
-    for (fear, index, allowed) in [(INTIMIDATING_SHOUT, 1, true), (SLEEP_WALK, 0, false)] {
+    // TC adds stun/freeze/knockout/sleep plus fear/horror for Barkskin22812; Turn Evil
+    // carries mechanic23, outside that allowed mask.
+    let cases = [
+        (INTIMIDATING_SHOUT, 1, true),
+        (SLEEP_WALK, 0, true),
+        (TURN_EVIL, 0, false),
+    ];
+    for (fear, index, allowed) in cases {
         let mut h = harness(Vec::new(), &[fear, BARKSKIN], DRUID).expect("real world.db required");
         fear_player(&mut h, fear, index);
         let outcome = cast_outcome(&mut h, BARKSKIN, None);
