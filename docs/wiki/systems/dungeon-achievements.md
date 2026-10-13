@@ -106,6 +106,10 @@ Earned player levels are published at the native XP persistence boundary, not fr
 
 `pvp_arena_rated_results::apply_result` collects online winners while persisting their ratings, sets the match result’s once-only `applied` marker, then publishes Type37 credit through the authenticated achievement boundary. Pre-result rating follows TC Arena.cpp249 (minimum1); the criterion increments by one, not the rating amount. Native-channel 2v2/3v3 tests cover winner/loser isolation, skirmishes, no queue/preparation credit, idle replay and redb reopen. Type39 remains disabled: pinned TC uses team sizes2/3/5 while current Retail assets are slot-like0/1/2; mapping is unresolved. [Producer inventory](../../achievement-criteria-producer-inventory.md) owns the current census and remaining gaps.
 
+## Current-head live sample (verified 2026-10-13)
+
+At server `33a58e14`, engine `ebedc08ab`, protocol `98f1bd9`, fresh Modern and Forever clients on private UDP5898 paid for Ring/Bear/Mammoth, earned2084/2076/2078, advanced actual known-mount progress2→4 and compared against a separate online peer (own Completed, peer Incomplete). Sixteen1280×720 PNGs reside in `/syncthing/AgentShared/2026-10-12/achievements/criteria17/`; logs and source-placement receipt are under the achievements-criteria logs’ `live/criteria17/`. This is a commerce/mount/comparison sample, not proof of every enabled criterion; arena37 has separate real-channel persistence proof. All owned processes stopped.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
