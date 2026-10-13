@@ -821,7 +821,9 @@ fn combat_event_owner(world: &World, unit: Entity) -> Entity {
         return follower.owner;
     }
     match world.get::<crate::hunter_pet::HunterPet>(unit) {
-        Some(pet) => pet.owner,
+        Some(pet) => world
+            .get::<crate::followers::Follower>(pet.owner)
+            .map_or(pet.owner, |follower| follower.owner),
         None => unit,
     }
 }
