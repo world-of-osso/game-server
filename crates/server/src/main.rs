@@ -102,6 +102,7 @@ mod quest_time;
 mod quest_view;
 mod race_class;
 mod raid_history;
+mod renown;
 mod reputation;
 mod rest;
 mod scripted_ai;
@@ -194,7 +195,8 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(achievement::AchievementPlugin)
         .add_plugins(adventure_guide::AdventureGuidePlugin)
-        .add_plugins(trading_post::TradingPostPlugin);
+        .add_plugins(trading_post::TradingPostPlugin)
+        .add_plugins(renown::RenownPlugin);
     add_social_plugins(app);
     add_progression_plugins(app);
     add_world_plugins(app);
