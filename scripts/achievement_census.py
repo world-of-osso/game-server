@@ -114,7 +114,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
 def fact_can_hold(kind, asset, spells, zones, maps, identities, map_types):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
     return {2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
-            32: asset in maps, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
+            32: asset in maps, 35: asset == 0, 41: asset in zones, 122: asset in map_types, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 
 def supports_tree(root, trees, children, supported, visiting=frozenset()):
