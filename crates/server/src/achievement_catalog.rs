@@ -372,12 +372,28 @@ impl MythicRequirements {
     }
 }
 
+#[path = "achievement_difficulty_rules.rs"]
+mod difficulty_rules;
 #[path = "achievement_mythic_predicates.rs"]
 mod mythic_predicates;
 #[path = "achievement_overlays.rs"]
 mod overlays;
 #[path = "achievement_single_modifiers.rs"]
 mod single_modifiers;
+
+/// Compiled TC DungeonDifficulty68 tree: the player's current map difficulty must
+/// (`allowed`) or must not be one of `ids`.
+#[derive(Debug, Clone, Copy)]
+struct DifficultyRule {
+    allowed: bool,
+    ids: &'static [u32],
+}
+
+impl DifficultyRule {
+    fn admits(self, difficulty: u32) -> bool {
+        self.ids.contains(&difficulty) == self.allowed
+    }
+}
 
 #[derive(Debug, Clone)]
 struct Criteria {
@@ -387,6 +403,7 @@ struct Criteria {
     mythic: Option<MythicRequirements>,
     /// Compiled sole PlayerClass26/BattlePetSpecies91 requirement.
     modifier_asset: Option<u32>,
+    difficulty: Option<DifficultyRule>,
     exploration_bits: Vec<u32>,
     area_members: BTreeSet<u32>,
 }
@@ -500,14 +517,28 @@ impl AchievementCatalog {
             .any(|id| event.matches(&self.criteria[id]))
     }
 
-    /// Apply one event and return newly earned toasts. Map achievements are granted
-    /// only at the complete-run boundary, not on a partial dungeon's boss kill.
+    /// An event outside any instance copy (Difficulty 0).
+    #[cfg(test)]
     pub fn update(
         &self,
         state: &mut PlayerAchievementState,
         event: CriteriaEvent,
         completed_map: Option<u32>,
         race: u8,
+    ) -> Vec<AchievementToastSnapshot> {
+        self.update_at(state, event, completed_map, race, 0)
+    }
+
+    /// Apply one event by a player whose current map copy has Difficulty.db2 ID
+    /// `difficulty`, and return newly earned toasts. Map achievements are granted
+    /// only at the complete-run boundary, not on a partial dungeon's boss kill.
+    pub fn update_at(
+        &self,
+        state: &mut PlayerAchievementState,
+        event: CriteriaEvent,
+        completed_map: Option<u32>,
+        race: u8,
+        difficulty: u32,
     ) -> Vec<AchievementToastSnapshot> {
         if !state.signed_reputation {
             state
@@ -516,7 +547,12 @@ impl AchievementCatalog {
             state.signed_reputation = true;
         }
         for &id in self.event_criteria.get(&event.kind()).into_iter().flatten() {
-            if !event.matches(&self.criteria[&id]) {
+            let criteria = &self.criteria[&id];
+            if !event.matches(criteria)
+                || criteria
+                    .difficulty
+                    .is_some_and(|rule| !rule.admits(difficulty))
+            {
                 continue;
             }
             Self::update_counter(state, id, event);
@@ -1095,6 +1131,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
         } else {
             None
         };
+        let difficulty = difficulty_rules::difficulty_rule(criteria_id, conditional[0]);
         let supported_predicate = (mythic.is_some() || modifier_asset.is_some())
             && conditional.iter().skip(1).all(|value| *value == 0);
         Ok((
@@ -1149,7 +1186,10 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         || (kind == 29
                             && row.get::<_, bool>(8)?
                             && !(11118..=11127).contains(&row.get::<_, u32>(0)?)))
-                        && conditional.iter().all(|value| *value == 0)),
+                        && (conditional.iter().all(|value| *value == 0)
+                            || (difficulty.is_some()
+                                && conditional.iter().skip(1).all(|value| *value == 0)))),
+                difficulty,
             },
         ))
     })?;
