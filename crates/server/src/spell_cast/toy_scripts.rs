@@ -23,15 +23,15 @@ const EFFECT_DUMMY: u32 = 3;
 const EFFECT_SCRIPT: u32 = 77;
 
 #[derive(Resource)]
-pub(crate) struct DiceTexts(HashMap<u32, (String, String)>);
+pub(crate) struct ToyTexts(HashMap<u32, (String, String)>);
 
-pub(crate) fn load_dice_texts(conn: &Connection) -> rusqlite::Result<DiceTexts> {
+pub(crate) fn load_toy_texts(conn: &Connection) -> rusqlite::Result<ToyTexts> {
     let mut statement = conn.prepare(
         "SELECT ID, MaleText, FemaleText FROM content_broadcast_text WHERE ID IN (26147, 26152)",
     )?;
     let rows = statement.query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?;
     rows.collect::<rusqlite::Result<HashMap<_, _>>>()
-        .map(DiceTexts)
+        .map(ToyTexts)
 }
 
 #[derive(Clone, Copy)]
@@ -91,7 +91,7 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
         return Some("dice group authority is unavailable".into());
     }
     let text = world
-        .get_resource::<DiceTexts>()
+        .get_resource::<ToyTexts>()
         .and_then(|texts| texts.0.get(&plan.text_id));
     match text {
         Some((male, female)) if !male.is_empty() && !female.is_empty() => None,
@@ -175,7 +175,7 @@ fn emit_dice_emote_and_rolls(world: &mut World, ctx: &EffectCtx, _effect: &Spell
 fn read_dice_emote(world: &World, caster: Entity, text_id: u32) -> ChatMessage {
     let player = world.get::<Player>(caster).expect("validated dice player");
     let female = player.appearance.sex == 1;
-    let texts = &world.resource::<DiceTexts>().0[&text_id];
+    let texts = &world.resource::<ToyTexts>().0[&text_id];
     let content = if female {
         texts.1.clone()
     } else {
