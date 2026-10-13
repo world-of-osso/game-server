@@ -100,6 +100,7 @@ impl Plugin for AchievementPlugin {
             PostUpdate,
             flush_achievement_updates
                 .after(kills::publish_rewarded_creature_kills)
+                .after(crate::toys::send_initial)
                 .before(MessageSystems::Send),
         );
         app.add_systems(
@@ -138,7 +139,8 @@ fn send_initial_achievement_snapshot(world: &mut World) {
             continue;
         };
         let events = load_login_events(world, character, account, level);
-        let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) else {
+        let Some((updated_player, toasts)) = update_player_events(world, player, &events, None)
+        else {
             continue;
         };
         crate::adventure_guide::ignore_login_achievements(
@@ -146,7 +148,7 @@ fn send_initial_achievement_snapshot(world: &mut World) {
             player,
             toasts.iter().map(|toast| toast.achievement_id),
         );
-        send_updates(world, connection, snapshot, Vec::new());
+        send_updates(world, connection, updated_player, Vec::new());
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
             last_processed_zone: None,
@@ -209,7 +211,7 @@ fn process_level_achievement_updates(world: &mut World) {
         .map(|(player, level, _)| (player, level.0))
         .collect();
     for (player, level) in players {
-        let Some((snapshot, toasts)) =
+        let Some((updated_player, toasts)) =
             update_player_events(world, player, &[CriteriaEvent::ReachLevel(level)], None)
         else {
             continue;
@@ -220,7 +222,7 @@ fn process_level_achievement_updates(world: &mut World) {
             .unwrap()
             .last_processed_level = level;
         if let Some(connection) = connection_for_player(world, player) {
-            send_updates(world, connection, snapshot, toasts);
+            send_updates(world, connection, updated_player, toasts);
         }
     }
 }
@@ -380,11 +382,11 @@ fn process_exploration_achievement_updates(world: &mut World) {
         if !state.explored_area_bits.insert(bit) {
             continue;
         }
-        if let Some((snapshot, toasts)) =
+        if let Some((updated_player, toasts)) =
             update_player_events(world, player, &[CriteriaEvent::ExploreAreaBit(bit)], None)
             && let Some(connection) = connection_for_player(world, player)
         {
-            send_updates(world, connection, snapshot, toasts);
+            send_updates(world, connection, updated_player, toasts);
         }
     }
 }
@@ -510,8 +512,8 @@ pub(crate) fn record_quest_reward(
         scenario::record(world, player, event);
         crate::adventure_guide::record(world, player, event);
     }
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) {
-        send_updates(world, connection, snapshot, toasts);
+    if let Some((updated_player, toasts)) = update_player_events(world, player, &events, None) {
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 
@@ -654,10 +656,10 @@ pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
 /// completed in the battleground's map.
 pub(crate) fn record_pvp_stat(world: &mut World, player: Entity, map: u32, stat: u32) {
     let events = [CriteriaEvent::TrackedWorldStateUIModified(stat)];
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
+    if let Some((updated_player, toasts)) = update_player_events(world, player, &events, Some(map))
         && let Some(connection) = connection_for_player(world, player)
     {
-        send_updates(world, connection, snapshot, toasts);
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 
@@ -666,10 +668,10 @@ pub(crate) fn record_battleground_kill(world: &mut World, player: Entity, map: u
     let event = CriteriaEvent::KillPlayer;
     scenario::record(world, player, event);
     crate::adventure_guide::record(world, player, event);
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &[event], Some(map))
+    if let Some((updated_player, toasts)) = update_player_events(world, player, &[event], Some(map))
         && let Some(connection) = connection_for_player(world, player)
     {
-        send_updates(world, connection, snapshot, toasts);
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 
@@ -732,11 +734,11 @@ pub(crate) fn record_mythic_completion(world: &mut World, run: &ChallengeRun) {
         };
         let event = CriteriaEvent::CompleteMythicPlus(completion);
         scenario::record(world, player, event);
-        if let Some((snapshot, toasts)) =
+        if let Some((updated_player, toasts)) =
             update_player_events(world, player, &[event], Some(run.map_id))
             && let Some(connection) = connection_for_player(world, player)
         {
-            send_updates(world, connection, snapshot, toasts);
+            send_updates(world, connection, updated_player, toasts);
         }
     }
 }
@@ -762,10 +764,10 @@ pub(crate) fn record_battleground_end(world: &mut World, player: Entity, map: u3
     ];
     let mut events = if won { win.to_vec() } else { Vec::new() };
     events.push(CriteriaEvent::ParticipateInBattleground(map));
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
+    if let Some((updated_player, toasts)) = update_player_events(world, player, &events, Some(map))
         && let Some(connection) = connection_for_player(world, player)
     {
-        send_updates(world, connection, snapshot, toasts);
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 
@@ -779,11 +781,11 @@ fn record_scenario_completion(world: &mut World, map: InMap, scenario: u32) {
         for &event in &events {
             crate::adventure_guide::record(world, player, event);
         }
-        if let Some((snapshot, toasts)) =
+        if let Some((updated_player, toasts)) =
             update_player_events(world, player, &events, Some(map.map_id))
             && let Some(connection) = connection_for_player(world, player)
         {
-            send_updates(world, connection, snapshot, toasts);
+            send_updates(world, connection, updated_player, toasts);
         }
     }
 }
@@ -817,8 +819,9 @@ pub(crate) fn record_ranked_arena_result(
         scenario::record(world, player, event);
         crate::adventure_guide::record(world, player, event);
     }
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map)) {
-        send_updates(world, connection, snapshot, toasts);
+    if let Some((updated_player, toasts)) = update_player_events(world, player, &events, Some(map))
+    {
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 
@@ -846,10 +849,10 @@ fn record_criteria_events(world: &mut World, player: Entity, events: &[CriteriaE
     if tracked.is_empty() {
         return;
     }
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &tracked, None)
+    if let Some((updated_player, toasts)) = update_player_events(world, player, &tracked, None)
         && let Some(connection) = connection_for_player(world, player)
     {
-        send_updates(world, connection, snapshot, toasts);
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 
@@ -965,7 +968,7 @@ fn update_player_events(
     player: Entity,
     events: &[CriteriaEvent],
     completed_map: Option<u32>,
-) -> Option<(AchievementSnapshot, Vec<AchievementToastSnapshot>)> {
+) -> Option<(Entity, Vec<AchievementToastSnapshot>)> {
     if !world.contains_resource::<AchievementCatalog>() {
         return None;
     }
@@ -1005,9 +1008,8 @@ fn update_player_events(
                 },
             ));
         }
-        let snapshot = catalog.snapshot(&state, race);
         world.entity_mut(player).insert(state);
-        Some((snapshot, toasts))
+        Some((player, toasts))
     })
 }
 
@@ -1028,23 +1030,23 @@ pub(crate) fn monthly_contributions(
 
 #[derive(Component)]
 struct PendingAchievementUpdate {
-    snapshot: AchievementSnapshot,
+    player: Entity,
     toasts: Vec<AchievementToastSnapshot>,
 }
 
 fn send_updates(
     world: &mut World,
     connection: Entity,
-    snapshot: AchievementSnapshot,
+    player: Entity,
     toasts: Vec<AchievementToastSnapshot>,
 ) {
     if let Some(mut pending) = world.get_mut::<PendingAchievementUpdate>(connection) {
-        pending.snapshot = snapshot;
+        pending.player = player;
         pending.toasts.extend(toasts);
     } else {
         world
             .entity_mut(connection)
-            .insert(PendingAchievementUpdate { snapshot, toasts });
+            .insert(PendingAchievementUpdate { player, toasts });
     }
 }
 
@@ -1054,12 +1056,25 @@ fn flush_achievement_updates(
 ) {
     let connections: Vec<_> = pending.iter(world).collect();
     for connection in connections {
-        let PendingAchievementUpdate { snapshot, toasts } = world
+        let PendingAchievementUpdate { player, toasts } = world
             .entity_mut(connection)
             .take::<PendingAchievementUpdate>()
             .expect("pending achievement update");
+        let Some(snapshot) = snapshot_for_player(world, player) else {
+            continue;
+        };
         publish_updates(world, connection, snapshot, toasts);
     }
+}
+
+fn snapshot_for_player(world: &World, player: Entity) -> Option<AchievementSnapshot> {
+    let state = world.get::<PlayerAchievementState>(player)?;
+    let owner = world.get::<Player>(player)?;
+    Some(
+        world
+            .resource::<AchievementCatalog>()
+            .snapshot(state, owner.race),
+    )
 }
 
 fn publish_updates(
@@ -1210,13 +1225,13 @@ pub(crate) fn record_encounter_defeat(
         for &event in &events {
             crate::adventure_guide::record(world, player, event);
         }
-        let Some((snapshot, toasts)) =
+        let Some((updated_player, toasts)) =
             update_player_events(world, player, &events, complete.then_some(map.map_id))
         else {
             continue;
         };
         if let Some(connection) = connection_for_player(world, player) {
-            send_updates(world, connection, snapshot, toasts);
+            send_updates(world, connection, updated_player, toasts);
         }
     }
 }
@@ -1243,13 +1258,13 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity, killer:
     }
     scenario::record(world, killer, CriteriaEvent::KillCreature(entry));
     crate::adventure_guide::record(world, killer, CriteriaEvent::KillCreature(entry));
-    let Some((snapshot, toasts)) =
+    let Some((updated_player, toasts)) =
         update_player_events(world, killer, &[CriteriaEvent::KillCreature(entry)], None)
     else {
         return;
     };
     if let Some(connection) = connection_for_player(world, killer) {
-        send_updates(world, connection, snapshot, toasts);
+        send_updates(world, connection, updated_player, toasts);
     }
 }
 

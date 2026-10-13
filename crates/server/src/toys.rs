@@ -57,7 +57,7 @@ pub(crate) fn snapshot(world: &World, account_id: u64) -> ToyCollectionUpdate {
     }
 }
 
-fn send_initial(world: &mut World) {
+pub(crate) fn send_initial(world: &mut World) {
     let mut query = world.query_filtered::<(Entity, &Authenticated, &PlayerLink), Added<InWorld>>();
     let connections: Vec<_> = query
         .iter(world)

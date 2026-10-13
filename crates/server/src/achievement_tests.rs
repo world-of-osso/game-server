@@ -1717,8 +1717,9 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
             },
         ))
         .id();
-    let (snapshot, toasts) =
+    let (_, toasts) =
         update_player_events(&mut world, player, &[CriteriaEvent::ReachLevel(1)], None).unwrap();
+    let snapshot = snapshot_for_player(&world, player).unwrap();
     assert!(
         snapshot.earned_ids.contains(&4899),
         "account quests must combine both characters"
@@ -1754,10 +1755,10 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
     world
         .entity_mut(player)
         .insert(PlayerAchievementState::default());
+    update_player_events(&mut world, player, &[], None).unwrap();
     assert!(
-        !update_player_events(&mut world, player, &[], None)
+        !snapshot_for_player(&world, player)
             .unwrap()
-            .0
             .earned_ids
             .contains(&4899)
     );
@@ -1785,7 +1786,8 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
             character_id: second,
         },
     ));
-    let (snapshot, toasts) = update_player_events(&mut world, player, &[], None).unwrap();
+    let (_, toasts) = update_player_events(&mut world, player, &[], None).unwrap();
+    let snapshot = snapshot_for_player(&world, player).unwrap();
     assert!(snapshot.earned_ids.contains(&4899));
     assert!(toasts.is_empty());
 }
