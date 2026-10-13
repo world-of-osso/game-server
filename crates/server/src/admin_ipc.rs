@@ -257,6 +257,21 @@ fn dispatch_trading_post(
                 Err(error) => AdminResponse::Error(error),
             },
         ),
+        AdminRequest::RenownGrant {
+            character_name,
+            major_faction,
+            amount,
+        } => Some(
+            match crate::renown::admin_grant(&db.db, character_name, *major_faction, *amount) {
+                Ok(progress) => AdminResponse::RenownGranted {
+                    character_name: character_name.clone(),
+                    major_faction: *major_faction,
+                    level: progress.level,
+                    standing: progress.standing,
+                },
+                Err(error) => AdminResponse::Error(error),
+            },
+        ),
         AdminRequest::TradingPostRefundWindow { seconds } => Some(match &mut res.refund_window {
             Some(window) => {
                 window.0 = *seconds;
@@ -742,6 +757,7 @@ fn dispatch(
         ),
         // Handled in early-dispatch functions before this match
         AdminRequest::TradingPostGrantTender { .. }
+        | AdminRequest::RenownGrant { .. }
         | AdminRequest::TradingPostRefundWindow { .. }
         | AdminRequest::TicketList
         | AdminRequest::TicketClaim { .. }
