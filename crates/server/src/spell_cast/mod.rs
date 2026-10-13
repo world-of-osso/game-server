@@ -2822,10 +2822,6 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         crate::crafting_orders::interrupt(world, caster);
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
-        let owner = owner_connection(world, caster);
-        let has_sender = owner
-            .is_some_and(|connection| world.get::<MessageSender<CastFailed>>(connection).is_some());
-        debug!(spell_id, caster = caster.to_bits(), owner = ?owner, has_sender, "Completion refusal owner transport");
         let (reason, detail) = failure.to_contract();
         // `Spell::cast` cleanup: SendCastResult to the caster, SendInterrupted to its set.
         send_spell_failure(world, caster, spell_id, reason, None);
