@@ -72,7 +72,7 @@ fn load_definitions(conn: &Connection) -> rusqlite::Result<HashMap<i32, SpellImm
         [], |row| row.get(0),
     )?;
     if !present {
-        // Explicit lead-requested early-merge compatibility, retired after mandatory import.
+        // Explicit lead-requested early-merge compatibility; never hide malformed tables.
         warn!("creature_immunities absent: native aura147 definitions remain unavailable");
         return Ok(HashMap::new());
     }
@@ -102,4 +102,49 @@ pub(super) fn attach_definitions(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn database() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE creature_immunities (
+            ID INTEGER PRIMARY KEY, SchoolMask INTEGER, DispelTypeMask INTEGER,
+            MechanicsMask INTEGER, Effects TEXT, Auras TEXT,
+            ImmuneAoE INTEGER, ImmuneChain INTEGER);",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn class_completeness_native_immunity_loader_preserves_u64_and_csv_fields() {
+        let conn = database();
+        // Exact TDB1210 row1630; the mechanic mask exceeds32 bits.
+        conn.execute_batch(
+            "INSERT INTO creature_immunities VALUES
+            (1630,0,0,69954075814,'114','5,7,11,12,26,33,455',0,0);",
+        )
+        .unwrap();
+        let definitions = load_definitions(&conn).unwrap();
+        let native = &definitions[&1630];
+        assert_eq!(native.mechanics_mask, 69954075814);
+        assert_eq!(native.effects, [114]);
+        assert_eq!(native.auras, [5, 7, 11, 12, 26, 33, 455]);
+        assert!(native.has_unmodeled_fields());
+    }
+
+    #[test]
+    fn class_completeness_malformed_present_immunity_table_is_not_empty_compatibility() {
+        let conn = database();
+        conn.execute_batch(
+            "INSERT INTO creature_immunities VALUES
+            (1808,0,0,0,'98,not-an-effect','',0,0);",
+        )
+        .unwrap();
+        assert!(load_definitions(&conn).is_err());
+    }
 }
