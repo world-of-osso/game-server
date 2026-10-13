@@ -68,6 +68,41 @@ fn bound_boss_in_state(
     catalog: Option<bossmod::Catalog>,
     initial_state: EncounterState,
 ) -> (Harness, Entity, InMap) {
+    let (h, boss, map) = encounter_fixture(
+        entry,
+        map_id,
+        bit,
+        difficulty,
+        catalog,
+        initial_state,
+        false,
+    );
+    (h, boss.expect("authored boss spawn"), map)
+}
+
+/// A Kings' Rest copy filled by production copy fill from the real map1762 rows.
+fn kings_rest_copy(difficulty: u32) -> (Harness, InMap) {
+    let (h, _, map) = encounter_fixture(
+        135322,
+        1762,
+        0,
+        difficulty,
+        None,
+        EncounterState::NotStarted,
+        true,
+    );
+    (h, map)
+}
+
+fn encounter_fixture(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    difficulty: u32,
+    catalog: Option<bossmod::Catalog>,
+    initial_state: EncounterState,
+    populate: bool,
+) -> (Harness, Option<Entity>, InMap) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     if let Some(catalog) = catalog {
@@ -88,11 +123,20 @@ fn bound_boss_in_state(
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
+    let spawns: Vec<_> = if populate {
+        crate::world_data::load_spawns(&conn)
+            .into_iter()
+            .filter(|spawn| u32::from(spawn.map) == map_id)
+            .collect()
+    } else {
+        Vec::new()
+    };
     let mut templates = crate::world_data::load_templates(&conn, &expected);
     templates.retain(|id, _| {
         *id == entry
             || (entry == 234648 && [234660, 255050].contains(id))
             || (entry == 135322 && *id == 135406)
+            || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
     let difficulty_templates =
@@ -109,9 +153,22 @@ fn bound_boss_in_state(
         .unwrap()
         .map(Result::unwrap)
         .collect();
+    let (spawn_string_ids, script_spawn_groups) = if populate {
+        (
+            crate::world_data::load_spawn_string_ids(&conn).unwrap(),
+            crate::world_data::load_script_spawn_groups(&conn, super::super::SCRIPT_SPAWN_GROUPS)
+                .unwrap(),
+        )
+    } else {
+        Default::default()
+    };
     app.insert_resource(WorldData {
         templates,
         difficulty_templates,
+        spawns_by_map: crate::world_data::build_spawns_by_map(&spawns),
+        spawns,
+        spawn_string_ids,
+        script_spawn_groups,
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
@@ -163,23 +220,43 @@ fn bound_boss_in_state(
             initial_state
         ));
     }
-    let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-    let near = if entry == 135322 && initial_state != EncounterState::NotStarted {
-        // Keep the relocated source branch idle until its fixture explicitly pulls.
-        let position = app.world().get::<Position>(boss).unwrap();
-        [
-            position.x + 500.0,
-            -position.z,
-            position.y,
-            std::f32::consts::PI,
-        ]
+    let (boss, near) = if populate {
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, app.world());
+        let content = crate::zones::MapContent {
+            map,
+            difficulty_id: difficulty,
+            dead_bosses: Vec::new(),
+        };
+        crate::zones::spawn_map_creatures(
+            &mut commands,
+            app.world().resource::<WorldData>(),
+            content,
+            false,
+        );
+        queue.apply(app.world_mut());
+        // 500 yards east of the Serpent's spawn, outside every aggro radius.
+        (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
-        [
-            spawn.position_x + 3.0,
-            spawn.position_y,
-            spawn.position_z,
-            std::f32::consts::PI,
-        ]
+        let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
+        let near = if entry == 135322 && initial_state != EncounterState::NotStarted {
+            // Keep the relocated source branch idle until its fixture explicitly pulls.
+            let position = app.world().get::<Position>(boss).unwrap();
+            [
+                position.x + 500.0,
+                -position.z,
+                position.y,
+                std::f32::consts::PI,
+            ]
+        } else {
+            [
+                spawn.position_x + 3.0,
+                spawn.position_y,
+                spawn.position_z,
+                std::f32::consts::PI,
+            ]
+        };
+        (Some(boss), near)
     };
     let (player, connection) = spawn_player(&mut app, map, near, 1);
     app.world_mut()
@@ -476,6 +553,49 @@ fn encounter_coverage_golden_serpent_intro_flies_authored_paths_then_lands_hosti
         instance_script::get_boss_state(h.app.world_mut(), map, 0),
         Some(EncounterState::NotStarted)
     );
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_spawns_after_last_temple_event_death() {
+    let (mut h, map) = kings_rest_copy(23);
+    assert!(
+        h.creatures_of(135322).is_empty(),
+        "manual spawn group1256 is withheld at copy fill"
+    );
+    let temple: Vec<Entity> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &InMap, &crate::zones::CreatureStringId)>()
+        .iter(h.app.world())
+        .filter(|(_, other, id)| **other == map && id.0 == "TempleEvent")
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert_eq!(temple.len(), 17, "TDB1210 TempleEvent creatures on map1762");
+    for &creature in &temple[..16] {
+        h.hit_pct(creature, 1_000.0);
+    }
+    h.advance(0.1);
+    assert!(
+        h.creatures_of(135322).is_empty(),
+        "one living TempleEvent creature still holds the Serpent"
+    );
+    h.hit_pct(temple[16], 1_000.0);
+    h.advance(0.1);
+    let serpents = h.creatures_of(135322);
+    assert_eq!(serpents.len(), 1);
+    let serpent = serpents[0];
+    assert_eq!(*h.app.world().get::<InMap>(serpent).unwrap(), map);
+    assert!(
+        h.wow_position(serpent)
+            .distance(Vec3::new(-1065.97, 2641.51, 796.115))
+            < 0.01
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(serpent).unwrap().0,
+        35,
+        "spawned Serpent starts its NotStarted intro"
+    );
+    assert!(h.has_aura(serpent, 271598));
 }
 
 fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {
