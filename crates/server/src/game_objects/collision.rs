@@ -1,5 +1,5 @@
-//! Live arena GO hulls: TC GameObject::EnableCollision / DynamicMapTree.
-//! Cache authored M2 collision, never render meshes or GeoBox substitutes.
+//! Live arena and transport GO hulls: TC GameObject::EnableCollision / DynamicMapTree.
+//! Cache authored M2/WMO collision, never render meshes or GeoBox substitutes.
 use crate::{ground::GroundMap, line_of_sight::LineOfSight, maps::InMap};
 use bevy::{math::Affine3A, prelude::*};
 use shared::{
@@ -31,6 +31,7 @@ type Objects<'w, 's> = Query<
 #[derive(Clone, PartialEq)]
 struct Placement {
     display: u32,
+    go_type: u8,
     position: Vec3,
     yaw: f32,
     scale: f32,
@@ -92,8 +93,35 @@ fn place_hull(triangles: &[[Vec3; 3]], placement: &Placement) -> LosTile {
     LosTile::build(0, 0, vertices, indices)
 }
 
+fn read_model_triangles(data: &Path, fdid: u32, go_type: u8) -> Result<Vec<[Vec3; 3]>, String> {
+    if go_type != 15 {
+        let path = data.join(format!("models/{fdid}.m2"));
+        let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        return los::bake::m2::M2File::parse(&bytes)?.collision_triangles();
+    }
+    let path = data.join(format!("models/{fdid}.wmo"));
+    let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let root = los::bake::wmo::WmoRoot::parse(&bytes)?;
+    let mut triangles = Vec::new();
+    for group in root.group_fdids {
+        let path = data.join(format!("models/{group}.wmo"));
+        let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        let collision = shared::ground::WmoGroupCollision::parse(&bytes)?;
+        triangles.extend(collision.collidable_triangles());
+    }
+    if triangles.is_empty() {
+        return Err(format!("transport WMO {fdid} has no authored collision"));
+    }
+    Ok(triangles)
+}
+
 impl HullCache {
-    fn load_triangles(&mut self, data: &Path, display: u32) -> Result<&[[Vec3; 3]], String> {
+    fn load_triangles(
+        &mut self,
+        data: &Path,
+        display: u32,
+        go_type: u8,
+    ) -> Result<&[[Vec3; 3]], String> {
         if self.displays.is_none() {
             self.displays = Some(read_displays(data)?);
         }
@@ -105,11 +133,7 @@ impl HullCache {
             .ok_or_else(|| format!("display {display} has no FileDataID"))?;
         self.models
             .entry(fdid)
-            .or_insert_with(|| {
-                let path = data.join(format!("models/{fdid}.m2"));
-                let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-                los::bake::m2::M2File::parse(&bytes)?.collision_triangles()
-            })
+            .or_insert_with(|| read_model_triangles(data, fdid, go_type))
             .as_ref()
             .map(Vec::as_slice)
             .map_err(Clone::clone)
@@ -126,7 +150,7 @@ impl HullCache {
         {
             return Ok(Arc::clone(hull));
         }
-        let triangles = self.load_triangles(data, placement.display)?;
+        let triangles = self.load_triangles(data, placement.display, placement.go_type)?;
         let hull = Arc::new(place_hull(triangles, &placement));
         self.placed.insert(entity, (placement, Arc::clone(&hull)));
         Ok(hull)
@@ -150,13 +174,15 @@ pub(crate) fn sync_live_objects(
         let arena = catalog
             .as_ref()
             .is_some_and(|catalog| catalog.contains_map(map.map_id));
-        let has_model_collision = matches!(info.go_type, 0 | 5 | 6 | 35);
+        let arena_model = arena && matches!(info.go_type, 0 | 5 | 6 | 35);
+        let transport_model = info.go_type == 15;
         let enabled = collision.0 && visible.is_none_or(|v| v.0);
-        if !(arena && has_model_collision && enabled) {
+        if !((arena_model || transport_model) && enabled) {
             continue;
         }
         let placement = Placement {
             display: info.display_id,
+            go_type: info.go_type,
             position: Vec3::new(position.x, position.y, position.z),
             yaw: rotation.y,
             scale: info.scale,
@@ -164,7 +190,7 @@ pub(crate) fn sync_live_objects(
         match cache.load_placed_hull(ground.data_dir(), entity, placement) {
             Ok(hull) => active.entry(*map).or_default().push(hull),
             Err(error) => panic!(
-                "Arena GO {} (entity {entity}, map {map:?}) collision unavailable: {error}",
+                "Live GO {} (entity {entity}, map {map:?}) collision unavailable: {error}",
                 info.entry
             ),
         }

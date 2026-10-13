@@ -558,6 +558,8 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     >,
     mounted: Query<'w, 's, Entity, (With<Player>, With<Mounted>)>,
     controls: Query<'w, 's, &'static shared::components::MovementControl>,
+    passengers: Query<'w, 's, &'static shared::components::TransportPassenger>,
+    ships: crate::transport::ShipQuery<'w, 's>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
@@ -644,7 +646,28 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         }
         let map = params.maps.get(link.0).copied().ok();
         let mut changes = MovementChanges::default();
+        let passenger = params.passengers.get(link.0).ok().copied();
+        let ship = passenger
+            .and_then(|passenger| crate::transport::movement_frame(&params.ships, passenger));
         for input in inputs {
+            let input = match crate::transport_movement::resolve_input(
+                &input,
+                passenger,
+                ship,
+                map.expect("validated player movement map"),
+            ) {
+                Ok(input) => input,
+                Err(error) => {
+                    warn!(player=?link.0, "Transport movement refused: {error}");
+                    continue;
+                }
+            };
+            if passenger.is_some() && input.transport.is_none() {
+                let player = link.0;
+                params
+                    .commands
+                    .queue(move |world: &mut World| crate::transport::disembark(world, player));
+            }
             let terrain = params.ground.as_deref_mut().zip(map);
             changes = changes.merge(apply_movement_input(
                 &input,
@@ -699,6 +722,7 @@ type GravityPlayerData<'w, 's> = Query<
         Has<OutOfBounds>,
         Option<&'static mut PlayerMotion>,
         Option<&'static shared::components::FeatherFall>,
+        Option<&'static crate::auras::ActiveAuras>,
     ),
     With<Player>,
 >;
@@ -734,6 +758,7 @@ pub(crate) fn apply_terrain_gravity(
         out_of_bounds,
         motion,
         feather_fall,
+        auras,
     ) in players.iter_mut()
     {
         if control.controlled {
@@ -769,7 +794,10 @@ pub(crate) fn apply_terrain_gravity(
                 *health,
                 death_state,
                 dt,
-                feather_fall.is_some_and(|state| state.0),
+                FallAuras {
+                    feather_fall: feather_fall.is_some_and(|state| state.0),
+                    damage_multiplier: fall_damage_multiplier(auras),
+                },
             );
         let min_height =
             ground.min_height(map.map_id, Vec3::new(next_pos.x, next_pos.y, next_pos.z));
@@ -888,7 +916,7 @@ fn calculate_gravity_state(
     mut health: Health,
     death_state: Option<&crate::death::PlayerDeathState>,
     dt: f32,
-    feather_fall: bool,
+    fall_auras: FallAuras,
 ) -> (
     Position,
     VerticalVelocity,
@@ -911,7 +939,7 @@ fn calculate_gravity_state(
             &mut fall_tracker,
             &mut health,
             dt,
-            feather_fall,
+            fall_auras,
         );
     }
     (pos, vert_vel, fall_tracker, health, fall)
@@ -929,8 +957,9 @@ fn clamp_to_ground(
     fall_tracker: &mut FallTracker,
     health: &mut Health,
     dt: f32,
-    feather_fall: bool,
+    fall_auras: FallAuras,
 ) -> Option<CombatLogEvent> {
+    let feather_fall = fall_auras.feather_fall;
     let ground_y = match ground {
         GroundProbe::Supported(ground_y) => ground_y,
         // Nothing within step reach: keep falling until a surface is under the feet.
@@ -978,8 +1007,38 @@ fn clamp_to_ground(
         player,
         EnvironmentalKind::Falling,
         health,
-        health.max * if feather_fall { 0.0 } else { fall_damage },
+        health.max * if feather_fall { 0.0 } else { fall_damage } * fall_auras.damage_multiplier,
     )
+}
+
+/// Auras shaping a fall: FEATHER_FALL caps the descent and negates the landing,
+/// MODIFY_FALL_DAMAGE_PCT 374 multiplies its damage.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct FallAuras {
+    pub(crate) feather_fall: bool,
+    pub(crate) damage_multiplier: f32,
+}
+
+impl FallAuras {
+    #[cfg(test)]
+    pub(crate) const NONE: Self = Self {
+        feather_fall: false,
+        damage_multiplier: 1.0,
+    };
+}
+
+/// `GetTotalAuraMultiplier(SPELL_AURA_MODIFY_FALL_DAMAGE_PCT)` of `Player::HandleFall`.
+pub(crate) fn fall_damage_multiplier(auras: Option<&crate::auras::ActiveAuras>) -> f32 {
+    auras
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .flat_map(|aura| {
+            aura.effects
+                .iter()
+                .filter(|effect| effect.aura_type == crate::auras::handlers::MODIFY_FALL_DAMAGE_PCT)
+                .map(|effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
+        })
+        .product()
 }
 
 /// Track the fall; on landing, the fraction of maximum health it deals.

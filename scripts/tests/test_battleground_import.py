@@ -36,6 +36,17 @@ CREATE TABLE `npc_spellclick_spells` (
   PRIMARY KEY (`npc_entry`,`spell_id`)
 ) ENGINE=InnoDB;
 INSERT INTO `npc_spellclick_spells` VALUES (60283,124491,1,0);
+CREATE TABLE `transports` (
+  `guid` bigint unsigned NOT NULL DEFAULT '0',
+  `entry` int unsigned NOT NULL DEFAULT '0',
+  `name` mediumtext,
+  `phaseUseFlags` tinyint unsigned NOT NULL DEFAULT '0',
+  `phaseid` int NOT NULL DEFAULT '0',
+  `phasegroup` int NOT NULL DEFAULT '0',
+  `ScriptName` varchar(64) NOT NULL DEFAULT '',
+  PRIMARY KEY (`guid`)
+) ENGINE=InnoDB;
+INSERT INTO `transports` VALUES (35,278407,'Sword of Dawn',0,0,0,'transport_seething_shore'),(36,279254,'The warbringer',0,0,0,'transport_seething_shore');
 CREATE TABLE `areatrigger_create_properties_orbit` (
   `AreaTriggerCreatePropertiesId` int unsigned NOT NULL,
   `IsCustom` tinyint unsigned NOT NULL,
@@ -71,6 +82,10 @@ class BattlegroundImportTests(unittest.TestCase):
                 self.assertEqual(conn.execute('SELECT DefaultValue,MapIDs FROM tdb_world_state WHERE ID=17303').fetchone(), (3,'489,726,2106'))
                 self.assertEqual(conn.execute('SELECT value FROM unrelated').fetchall(), [('keep',)])
                 self.assertEqual(conn.execute('SELECT * FROM tdb_npc_spellclick_spells').fetchall(), [(60283,124491,1,0)])
+                self.assertEqual(conn.execute('SELECT guid,entry,name,ScriptName FROM tdb_transports ORDER BY guid').fetchall(), [
+                    (35,278407,'Sword of Dawn','transport_seething_shore'),
+                    (36,279254,'The warbringer','transport_seething_shore'),
+                ])
                 self.assertEqual(conn.execute('SELECT CircleRadius,BlendFromRadius,CounterClockwise,CanLoop FROM tdb_areatrigger_create_properties_orbit WHERE AreaTriggerCreatePropertiesId=13339').fetchone(), (5.0,0.0,0,1))
 
 

@@ -215,6 +215,8 @@ pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 /// SpellHistory::StartCooldown adds signed milliseconds to matching categories.
 pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
+/// Percent faster/slower cooldown recovery, matched by the native class mask.
+pub const MOD_RECOVERY_RATE: u32 = 286;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
@@ -235,6 +237,8 @@ pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
+/// Read at landing by `networking::fall_damage_multiplier` (`Player::HandleFall`).
+pub const MODIFY_FALL_DAMAGE_PCT: u32 = 374;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -272,6 +276,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DAMAGE_PERCENT_DONE
         | MOD_CRIT_DAMAGE_BONUS
         | MOD_THREAT
+        | MODIFY_FALL_DAMAGE_PCT
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT
@@ -344,7 +349,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
         | MOD_COOLDOWN_BY_HASTE_REGEN
-        | MOD_SPELL_CATEGORY_COOLDOWN => SpellMod,
+        | MOD_SPELL_CATEGORY_COOLDOWN
+        | MOD_RECOVERY_RATE => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,

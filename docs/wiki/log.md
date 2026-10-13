@@ -1,3 +1,7 @@
+## 2026-10-13 — Achievement zone predicates
+
+[Zone41](systems/dungeon-achievements.md#player-zone-predicates--verified-2026-10-13) uses one flagged parent, not ancestry. Native Stormwind pet win and reopened storage prove city credit; six account definitions become structurally evaluable without a world-honor or all-city-content claim.
+
 ## 2026-10-13 — Unrated Shuffle and authored cooldown reset
 
 [Native arenas](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13): six source-role solo entrants, real first-kill rounds, spec lock, source gate/start/reset restoration and character wins; both-skin live proof and four-map full-channel exact origins. Item overrides survive real cast-time completion and reset only the actual category; RED/GREEN fixtures preserve unrelated600s timers, charges/GCD/school locks and prove active-pet reset. Current Retail rated/leaver policy and dampening remain unclaimed.
@@ -31,6 +35,9 @@
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
 
 # Wiki Log
+
+- 2026-10-13 — [Recovery rates](systems/auras.md#cooldown-recovery-rates): native286 start/apply/remove/refresh/expiry, owning spell attribution for category-only timers, real Rapid Fire/Sprint/Hot Hand controls and current owner updates; full ability/global-time/native-rendered parity remains open.
+- 2026-10-13 — [Map instance type](systems/dungeon-achievements.md#map-instance-type-verified-2026-10-13): exact authored122 map membership, native arena/BG killing-blow/reward/queued-death RED/GREEN and cross-type/persistence controls; +4 statistics, missing raid-death18 unclaimed.
 
 - 2026-10-13 — [Flat versatility](systems/auras.md#flat-versatility-bonuses): source471 computed percentage and real damage/heal/taken/auto RED/GREEN; pinned69933 CASC rating/curve proof and lifecycle/flag/recipient controls. Owner inheritance/native-rendered parity remains open.
 
