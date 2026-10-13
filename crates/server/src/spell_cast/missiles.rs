@@ -89,6 +89,9 @@ pub(super) fn launch(
         reflect::log_miss(world, caster, spell, unit, reflection);
     }
     let delays = hit_delays(world, caster, spell, &plan);
+    if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        debug!(caster = ?caster, speed = spell.speed, launch_delay = spell.launch_delay, min_duration = spell.min_duration, delays = ?delays, "Azerite launch delays");
+    }
     let launched = now(world);
     let (plan, reflected) = split_reflected(plan, &reflections, caster);
     let mut snapshot = None;
@@ -186,6 +189,9 @@ fn reachable(world: &World, unit: Entity, alive_at_launch: bool) -> bool {
 /// enters combat with the caster, lifting the suppression of its launch reference;
 /// then the effects resolve.
 fn hit(world: &mut World, caster: Entity, spell: &SpellInfo, plan: &TargetPlan, depth: u8) {
+    if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        debug!(caster = ?caster, plan = ?plan, "Azerite landing plan");
+    }
     for target in super::hit_units(plan) {
         if super::starts_combat(world, caster, target, spell) {
             crate::combat_refs::set_in_combat_with(world, target, caster);

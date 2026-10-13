@@ -1906,7 +1906,9 @@ pub(crate) fn execute_cast(
     ));
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
-    debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
+    if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+        debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
+    }
     const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
     let discounted_player =
         world.get::<Player>(caster).is_some() && attributes(spell, 1) & DISCOUNT_POWER_ON_MISS != 0;
@@ -2190,6 +2192,9 @@ fn resolve_effects(
             index, units, dest, ..
         } = planned;
         let effect = &spell.effects[*index];
+        if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
+            debug!(caster = ?caster, effect = ?effect, enabled = scripts::effect_enabled(world, caster, spell.id, effect.index), "Azerite effect dispatch");
+        }
         if !scripts::effect_enabled(world, caster, spell.id, effect.index) {
             continue;
         }
