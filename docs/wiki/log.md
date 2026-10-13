@@ -1,5 +1,7 @@
 # Wiki Log
 
+- 2026-10-12 — [Portals, dual wield and parry](../class-completeness6.md#dual-wield-and-parry-knowledge--batch34): all29 class trans-door spells proved (census analyzer fix), off-hand weapons gated on native Dual Wield knowledge, Parry knowledge characterized; census3105/4540/182 (+113 working). Unlearn-time off-hand removal remains a gap.
+
 - 2026-10-12 — [Fear control and armor percentage](../class-completeness6.md#fear-control-state-and-armor-percentage--batch32): native aura7 cast admission/swings/target/avoidance (flee movement pending direction decision) and aura101 armor TOTAL_PCT for players and creatures; census2992/4653/182, nine armor memberships now working.
 
 - 2026-10-12 — [Creature-immunity definitions](../class-completeness6.md#native-creature-immunity-definitions--batch31): authentic235-row TDB importer, aura147 definition lookup, per-effect immunity miss logging; RED→GREEN plus403 adjacent passes. Census2983/4662/182, Bladestorm Arms/Fury now working; knockback effect lists and four absent TDB definitions remain gaps.
