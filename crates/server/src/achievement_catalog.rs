@@ -456,7 +456,7 @@ enum CriteriaFact {
     RankedArena,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
     LessThanGroupMembers(u32),
-    /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
+    /// Accepted current areas: descendants for17, one flagged parent for Zone41.
     Area(BTreeSet<u32>),
     Race(u8),
     Class(u8),
@@ -1212,6 +1212,18 @@ fn load_map_instance_type(
     Ok((!members.is_empty()).then_some(CriteriaFact::MapInstanceType(members)))
 }
 
+/// TC Zone41 uses the current area, or its immediate parent only when flagged subzone.
+fn load_zone_members(conn: &Connection, zone: u32) -> rusqlite::Result<BTreeSet<u32>> {
+    let areas = crate::area_table::load_area_table(conn)?;
+    let mut query = conn.prepare_cached("SELECT ID, ContinentID FROM area_table")?;
+    let rows = query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    let members = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(members
+        .into_iter()
+        .filter_map(|(area, map)| (areas.zone_id(area, map) == Some(zone)).then_some(area))
+        .collect())
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1248,12 +1260,18 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Class),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            41 => {
+                if !exists("area_table")? {
+                    return Ok(None);
+                }
+                Some(CriteriaFact::Area(load_zone_members(conn, asset)?))
+            }
             122 => load_map_instance_type(conn, asset)?,
             69 => small
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/60/69/71/122"),
+            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/41/60/69/71/122"),
         };
         let Some(fact) = fact else {
             return Ok(None);
