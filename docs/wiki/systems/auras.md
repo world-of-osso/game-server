@@ -291,7 +291,15 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
   - `flags` carry PASSIVE, HIDDEN and FROM_PLAYER.
 - Combat log: `AuraApplied`, `AuraRefreshed` and `AuraRemoved` go to the owners of the caster and the unit, with `amount` = stacks. `Dispel` goes out as described above.
 
+## Critical-damage school bonuses
+
+Aura163 adds `(school_mask, multiplier)` entries to `AuraStatMods.critical_damage_mods`. The critical hit multiplies each matching effect once, so a school127 hit against separate mask1 and mask4 effects consumes both; a per-school maximum would lose one. Stacks scale the effect amount before its percentage multiplier. Mask0 matches nothing. Direct damage/leech and auto-attack critical paths consume these entries; ordinary hits and critical healing do not.
+
+TC a352b1fa Unit.cpp:1222-1237/7297-7324 applies CritDamageAndHealing spellmods before163 for weapons, but after its critical-bonus calculation for magic. Existing floating damage and log rounding/truncation remain; no exact Retail integer-intermediate parity claim. Native-input damage tests cover both orderings, mixed masks, stack caps, noncritical/zero-mask behavior and unlearning; [contract/tests](../../specs/class-completeness.md#critical-damage-bonuses).
+
 ## Script hooks
+
+Know Your Enemy388118 and Penetrating Shots459783 share Critical Chaos's effect1-percent-of-owner-crit updater. They recalculate effect0 on apply/effect1 ticks; `auras_changed` refreshes stat multipliers for live damage. Source: TC spell_dh.cpp:1571-1593/632-655 and spell_hunter.cpp:869-891. Penetrating Shots uses native25% with1s ticks; real Aimed Shot casts retain native variance, coefficient, cast time and missile travel. Tests cover live crit changes, unlearning, zero-crit damage and healing isolation. Guaranteed-crit endpoints and cross-class healing fixtures are test boundaries, not player-build or talent-availability claims.
 
 Ysera's Gift 145108 reads its owner's live max health on each authored 5 s effect-0 tick and floors its native 3% amount. Injured owners trigger 145109; full owners trigger the [raid-area group child](spell-casting.md#implicit-targets), 145110. `cast_triggered_with_effect0_amount` overrides only a cloned per-cast child; later direct casts retain the native 15-point definition. Both children carry Can'tCrit, enforced before crit modifiers/scripts. Six native Bevy App tests cover timing, live max health, self/group priority, 100% crit, unlearning, overflow, no-group isolation and override non-leakage. Source: TC a352b1fa `spell_dru_yseras_gift`, SharedDefines.h:539; [contract](../../specs/class-completeness.md#yseras-gift-periodic-healing).
 

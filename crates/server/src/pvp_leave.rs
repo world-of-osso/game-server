@@ -70,6 +70,10 @@ fn return_to_origin(
         .resource_mut::<InstanceManager>()
         .unassign_battleground_player(map, character_id);
     remove_participant(state, match_id, character_id);
+    state.offline_players.remove(&character_id);
+    if let Some(database) = world.get_resource::<crate::persistence::GameDatabase>() {
+        super::reconnect::remove(&database.db, character_id);
+    }
     if !state.battleground_matches.contains_key(&match_id) {
         super::pvp_invites::close_match_map(world, map)?;
     }
@@ -109,7 +113,7 @@ fn return_destination(
     Ok((map, origin))
 }
 
-fn remove_participant(state: &mut PvpServerState, match_id: u64, character_id: u64) {
+pub(super) fn remove_participant(state: &mut PvpServerState, match_id: u64, character_id: u64) {
     let matched = state
         .battleground_matches
         .get_mut(&match_id)

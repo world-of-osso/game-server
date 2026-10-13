@@ -601,10 +601,11 @@ fn is_ranged_weapon_spell(spell: &SpellInfo) -> bool {
     hunter_weapon || ranged_item || super::attributes(spell, 0) & USES_RANGED_SLOT != 0
 }
 
+const DEFENSE_MELEE: u32 = 2;
+const DEFENSE_RANGED: u32 = 3;
+
 /// Unit::SpellCritChanceTaken plus SpellInfo::GetAttackType (a352b1fa).
 fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
-    const DEFENSE_MELEE: u32 = 2;
-    const DEFENSE_RANGED: u32 = 3;
     match spell
         .categories
         .as_ref()
@@ -664,12 +665,57 @@ fn with_crit(
     (amount + bonus, true)
 }
 
+fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
+    spell
+        .categories
+        .as_ref()
+        .is_some_and(|categories| matches!(categories.defense_type, DEFENSE_MELEE | DEFENSE_RANGED))
+}
+
+/// TC Unit.cpp:1222-1237/7297-7324:163 multiplies the whole critical hit;
+/// CritDamageAndHealing mods apply before163 for weapons, after163 for magic.
+fn with_damage_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> (f32, bool) {
+    let crit = rand::random::<f32>() * 100.0 < crit_chance(world, caster, target, spell);
+    if !crit {
+        return (amount, false);
+    }
+    let multiplier = world
+        .get::<AuraStatMods>(caster)
+        .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
+    let weapon_order = uses_weapon_crit_bonus_order(spell);
+    let base_bonus = if weapon_order {
+        amount
+    } else {
+        amount * 2.0 * multiplier - amount
+    };
+    let bonus = spell_mods::modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::CritDamageAndHealing,
+        base_bonus,
+    );
+    let total = amount + bonus;
+    let total = if weapon_order {
+        total * multiplier
+    } else {
+        total
+    };
+    (total, true)
+}
+
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, amount);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -678,7 +724,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
     let base =
         (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -686,7 +732,7 @@ fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let base =
         weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
@@ -816,7 +862,7 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
-    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, base);
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_leech(world, ctx, effect, target, amount, crit, false);
 }
 
