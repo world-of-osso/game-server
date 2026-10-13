@@ -1058,6 +1058,21 @@ fn encounter_coverage_gordoth_static_intro_trigger_is_box_scoped_and_once() {
     );
 }
 
+/// Canonical binds only Koranthal on map389: a populated copy initializes the
+/// unbound Gordoth script without a boss state, so it stays at its spawn.
+#[test]
+fn encounter_coverage_gordoth_unbound_copy_initializes_at_spawn() {
+    let (mut h, _, _) = encounter_fixture(61412, 389, 1, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let gordoth = h.creatures_of(61528);
+    assert_eq!(gordoth.len(), 1);
+    let at = h.wow_position(gordoth[0]);
+    assert!(
+        at.distance(Vec3::new(-369.501, 166.212, -18.5202)) < 0.01,
+        "authored spawn, no started relocation: {at:?}"
+    );
+}
+
 /// Source DoAction(ACTION_JUMP): MoveJump50 speed/min-height4, then effect-motion
 /// landing sets the vials DESTROYED and the nearby researchers cast Bloody Suicide.
 /// The pinned UpdateAI does not pump its separately scheduled cage task.
