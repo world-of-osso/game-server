@@ -35,39 +35,45 @@ fn eligible_for_arena(spell: &SpellInfo, item: Option<&ItemCooldownSource>) -> b
     recovery_ms < ARENA_RESET_LIMIT_MS && category_ms < ARENA_RESET_LIMIT_MS && !excluded
 }
 
+fn find_reset_cooldowns(world: &World, unit: Entity, scope: ResetScope) -> Option<Vec<(u32, u32)>> {
+    let history = world.get::<SpellHistory>(unit)?;
+    let store = world.resource::<SpellStore>();
+    Some(
+        history
+            .spell_ready_at
+            .keys()
+            .filter_map(|id| {
+                let spell = store
+                    .get(*id)
+                    .expect("tracked cooldown must have source spell metadata");
+                let item = history.item_cooldown_sources.get(id);
+                let eligible = matches!(scope, ResetScope::All) || eligible_for_arena(spell, item);
+                let category = match item {
+                    Some(item) => item.category,
+                    None => spell
+                        .categories
+                        .as_ref()
+                        .map_or(0, |category| category.category),
+                };
+                eligible.then_some((*id, category))
+            })
+            .collect(),
+    )
+}
+
 fn clear_cooldowns(world: &mut World, unit: Entity, scope: ResetScope) {
-    let Some(history) = world.get::<SpellHistory>(unit) else {
+    let Some(cleared) = find_reset_cooldowns(world, unit, scope) else {
         return;
     };
-    let store = world.resource::<SpellStore>();
-    let cleared: Vec<_> = history
-        .spell_ready_at
-        .keys()
-        .filter_map(|id| {
-            let spell = store
-                .get(*id)
-                .expect("tracked cooldown must have source spell metadata");
-            let item = history.item_cooldown_sources.get(id);
-            let eligible = matches!(scope, ResetScope::All) || eligible_for_arena(spell, item);
-            eligible.then_some((
-                *id,
-                spell.categories.as_ref().map_or(0, |c| c.category),
-                item.map(|item| item.category),
-            ))
-        })
-        .collect();
     let mut history = world
         .get_mut::<SpellHistory>(unit)
         .expect("cooldown history");
-    for &(id, category, item_category) in &cleared {
+    for &(id, category) in &cleared {
         history.spell_ready_at.remove(&id);
         history.category_ready_at.remove(&category);
         history.item_cooldown_sources.remove(&id);
-        if let Some(category) = item_category {
-            history.category_ready_at.remove(&category);
-        }
     }
-    for (spell_id, category, item_category) in cleared {
+    for (spell_id, category) in cleared {
         send_to_owner(
             world,
             unit,
@@ -79,20 +85,5 @@ fn clear_cooldowns(world: &mut World, unit: Entity, scope: ResetScope) {
                 is_gcd: false,
             },
         );
-        if let Some(item_category) =
-            item_category.filter(|item_category| *item_category != category)
-        {
-            send_to_owner(
-                world,
-                unit,
-                SpellCooldownUpdate {
-                    spell_id,
-                    category: item_category,
-                    duration_ms: 0,
-                    remaining_ms: 0,
-                    is_gcd: false,
-                },
-            );
-        }
     }
 }
