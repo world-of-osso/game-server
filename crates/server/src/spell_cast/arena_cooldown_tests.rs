@@ -41,6 +41,7 @@ fn arena_item_category_reset_uses_item_duration_and_sends_native_clear() {
                 category_ms: duration,
             },
             90,
+            None,
         )
         .unwrap();
         h.advance(1);

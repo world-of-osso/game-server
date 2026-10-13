@@ -274,7 +274,7 @@ fn rejoined_snapshot(
         score_b,
         flags: matched.flag_objective(),
         outcome: matched.instance.outcome,
-        players: matched.scoreboard.clone(),
+        players: matched.scoreboard.rows.clone(),
         honor_reward: None,
         arena: matched.arena.as_ref().map(|arena| arena.snapshot.clone()),
         world_states: matched.world_states(),
