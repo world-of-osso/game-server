@@ -18,11 +18,12 @@ Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Bliz
 
 - `crates/server/src/adventure_guide.rs`: monthly gameplay projection and award boundary.
 - `crates/server/src/adventure_guide_catalog.rs`: load sourced default thresholds.
-- `crates/server/src/trading_post_store.rs`: durable account threshold receipts and balance.
+- `crates/server/src/trading_post_store.rs`: durable account threshold receipts, atomic balance/collection purchases, refund deltas and freeze.
 
 ## Tests asserting this spec
 
 - `trading_post_store::tests::trading_post_thresholds_once_per_account_month_survive_database_reopen`.
+- `trading_post_store::tests::trading_post_purchase_atomic_collection_grants_and_refund_survive_reopen`: all four collection stores, duplicate/insufficient-funds refusal, zero-duration/expiry/repeated refund and database reopen.
 - Existing Adventure Guide live-event/alt projection tests.
 
 ## Known gaps (current cycle)
