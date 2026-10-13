@@ -299,6 +299,10 @@ pub(crate) fn harness_with_plugins(
         app.add_plugins(crate::stats::StatsPlugin);
     }
     add_plugins(&mut app);
+    app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&crate::test_data::world_db_path())
+            .expect("authored spell target conditions from fixture world.db"),
+    );
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));

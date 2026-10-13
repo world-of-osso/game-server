@@ -3,7 +3,373 @@ use crate::persistence::GameDatabase;
 use crate::pvp::pvp_support::build_pvp_snapshot;
 use shared::currency::{CurrencyWallet, currency_by_id};
 use shared::protocol::CurrencyStateUpdate;
-use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
+use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot, QueueForRatedPvp};
+
+#[test]
+fn arena_skirmish_pairing_requires_four_or_six_unique_eligible_players() {
+    use shared::protocol::ArenaQueueMode;
+    let mut database = rusqlite::Connection::open_in_memory().unwrap();
+    database.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
+    let catalog = arena::Catalog::load(&mut database).unwrap();
+    for (mode, count) in [
+        (ArenaQueueMode::Skirmish2v2, 4),
+        (ArenaQueueMode::Skirmish3v3, 6),
+    ] {
+        let mut state = PvpServerState::default();
+        let mut players = vec![PlayerPvpState::default(); count];
+        assert!(arena::queue_player(&mut players[0], &mut state, &catalog, 1, 19, mode).is_err());
+        for (index, player) in players.iter_mut().enumerate() {
+            arena::queue_player(player, &mut state, &catalog, index as u64 + 1, 90, mode).unwrap();
+            if index + 1 < count {
+                assert!(arena::form_match(&mut state, &catalog, mode).is_none());
+            }
+        }
+        assert!(arena::queue_player(&mut players[0], &mut state, &catalog, 1, 90, mode).is_err());
+        let id = arena::form_match(&mut state, &catalog, mode).unwrap();
+        let matched = &state.battleground_matches[&id];
+        assert_eq!(matched.instance.team_a_players.len(), count / 2);
+        assert_eq!(matched.instance.team_b_players.len(), count / 2);
+        assert!(matched.accepted.is_empty());
+        assert_eq!(
+            matched.instance.phase,
+            shared::battleground::BgPhase::Waiting
+        );
+        assert_eq!(matched.arena.as_ref().unwrap().source.map_id, 572);
+        assert!(arena::form_match(&mut state, &catalog, mode).is_none());
+    }
+}
+
+#[test]
+fn arena_preparation_waits_for_worldport_then_runs_sixty_seconds_and_eliminates() {
+    use shared::components::{Health, Player, Position};
+    use shared::protocol::ArenaQueueMode;
+    let db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
+    let catalog = arena::Catalog::load(&db).unwrap();
+    let mut state = PvpServerState::default();
+    for id in 1..=4 {
+        arena::queue_player(
+            &mut PlayerPvpState::default(),
+            &mut state,
+            &catalog,
+            id,
+            90,
+            ArenaQueueMode::Skirmish2v2,
+        )
+        .unwrap();
+    }
+    let id = arena::form_match(&mut state, &catalog, ArenaQueueMode::Skirmish2v2).unwrap();
+    let map = crate::maps::InMap {
+        map_id: 572,
+        instance_id: 1,
+    };
+    let matched = state.battleground_matches.get_mut(&id).unwrap();
+    matched.map = Some(map);
+    matched.accepted.extend(1..=4);
+    let mut world = World::new();
+    world.insert_resource(state);
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(crate::game_objects::GameObjectSpawns::default());
+    db.execute_batch("CREATE TABLE arena_gate(map_id INTEGER,entry INTEGER,action TEXT,despawn_secs INTEGER); INSERT INTO arena_gate VALUES(572,185918,'open',5);").unwrap();
+    world.insert_resource(arena_objects::GateCatalog::load(&db).unwrap());
+    world.insert_resource(arena_objects::SightCatalog::default());
+    world.insert_resource(arena_objects::SightTimers::default());
+    let gate = world
+        .spawn((
+            map,
+            shared::protocol::GameObjectInfo {
+                entry: 185918,
+                go_type: 0,
+                display_id: 0,
+                name: "source door".into(),
+                scale: 1.0,
+            },
+        ))
+        .id();
+    let mut actors = Vec::new();
+    for player in 1..=4 {
+        let entity = world
+            .spawn((
+                crate::persistence::ClientId(player),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                Player {
+                    name: format!("fb_arena_{player}"),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                Level(90),
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ))
+            .id();
+        if player != 4 {
+            world.entity_mut(entity).insert(map);
+        }
+        actors.push(entity);
+    }
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .arena
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .preparation_remaining_secs,
+        None
+    );
+    assert_eq!(
+        world
+            .get::<shared::protocol::GameObjectAnimation>(gate)
+            .unwrap()
+            .animation_id,
+        147
+    );
+    world.entity_mut(actors[3]).insert(map);
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .arena
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .preparation_remaining_secs,
+        Some(60)
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(59));
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .instance
+            .phase,
+        shared::battleground::BgPhase::Waiting
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(1));
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .instance
+            .phase,
+        shared::battleground::BgPhase::InProgress
+    );
+    assert_eq!(
+        world
+            .get::<shared::protocol::GameObjectAnimation>(gate)
+            .unwrap()
+            .animation_id,
+        148
+    );
+    world
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(5));
+    arena::update_matches(&mut world);
+    assert!(
+        world.get_entity(gate).is_err(),
+        "source door despawns five seconds after opening"
+    );
+    world.get_mut::<Health>(actors[1]).unwrap().current = 0.0;
+    arena::update_matches(&mut world);
+    assert_eq!(
+        world.resource::<PvpServerState>().battleground_matches[&id]
+            .instance
+            .phase,
+        shared::battleground::BgPhase::InProgress
+    );
+    world.get_mut::<Health>(actors[3]).unwrap().current = 0.0;
+    arena::update_matches(&mut world);
+    let matched = &world.resource::<PvpServerState>().battleground_matches[&id];
+    assert_eq!(
+        matched.instance.outcome,
+        Some(shared::battleground::BgOutcome::Winner(
+            shared::battleground::BgTeam::A
+        ))
+    );
+    assert_eq!(
+        matched
+            .scoreboard
+            .rows
+            .iter()
+            .filter(|row| row.team == shared::battleground::BgTeam::B)
+            .map(|row| row.deaths)
+            .sum::<u32>(),
+        2
+    );
+}
+
+fn arena_player_state(
+    team: shared::battleground::BgTeam,
+    phase: shared::battleground::BgPhase,
+) -> PlayerPvpState {
+    PlayerPvpState {
+        battleground: Some(shared::protocol::BattlegroundSnapshot {
+            match_id: 1,
+            battleground_id: 8,
+            name: "Ruins of Lordaeron".into(),
+            map_id: 572,
+            team,
+            phase,
+            accepted: true,
+            invitation_time_left_secs: None,
+            score_a: 0,
+            score_b: 0,
+            flags: Default::default(),
+            world_states: Vec::new(),
+            outcome: None,
+            players: Vec::new(),
+            honor_reward: None,
+            arena: Some(shared::protocol::ArenaMatchSnapshot {
+                mode: shared::protocol::ArenaQueueMode::Skirmish2v2,
+                preparation_remaining_secs: None,
+                shadow_sight_available: false,
+                units: Vec::new(),
+                rating_changes: Vec::new(),
+            }),
+        }),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn arena_opponents_of_same_race_attack_only_after_preparation_and_never_attack_teammates() {
+    use crate::spell_cast::targets::{Relation, is_friendly, is_hostile, relation_matches};
+    use shared::battleground::{BgPhase, BgTeam};
+    use shared::components::{Health, Player, UnitFactionTemplate};
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .main_hand = crate::item_stats::WeaponDamage::UNARMED;
+    let map = crate::maps::InMap {
+        map_id: 572,
+        instance_id: 1,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((map, arena_player_state(BgTeam::A, BgPhase::Waiting)));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        map,
+        UnitFactionTemplate(1),
+        Player {
+            name: "fb_arena_enemy".into(),
+            race: 1,
+            class: 1,
+            appearance: Default::default(),
+        },
+        arena_player_state(BgTeam::B, BgPhase::Waiting),
+    ));
+    let health = h.app.world().get::<Health>(h.npc).unwrap().current;
+    h.attack(h.npc);
+    h.advance(5);
+    assert_eq!(h.app.world().get::<Health>(h.npc).unwrap().current, health);
+    for entity in [h.caster, h.npc] {
+        h.app
+            .world_mut()
+            .get_mut::<PlayerPvpState>(entity)
+            .unwrap()
+            .battleground
+            .as_mut()
+            .unwrap()
+            .phase = BgPhase::InProgress;
+    }
+    assert!(
+        is_hostile(h.app.world(), h.caster, h.npc),
+        "same-race arena opponents are hostile"
+    );
+    assert!(!is_friendly(h.app.world(), h.caster, h.npc));
+    assert!(relation_matches(
+        h.app.world(),
+        h.caster,
+        h.npc,
+        Relation::Enemy
+    ));
+    h.attack(h.npc);
+    for _ in 0..100 {
+        h.advance(5);
+        if h.app.world().get::<Health>(h.npc).unwrap().current < health {
+            break;
+        }
+    }
+    assert!(
+        h.app.world().get::<Health>(h.npc).unwrap().current < health,
+        "actual HostClient attack caused damage"
+    );
+    h.stop_attack();
+    h.advance(3);
+    h.app
+        .world_mut()
+        .get_mut::<PlayerPvpState>(h.npc)
+        .unwrap()
+        .battleground
+        .as_mut()
+        .unwrap()
+        .team = BgTeam::A;
+    assert!(is_friendly(h.app.world(), h.caster, h.npc));
+    assert!(!relation_matches(
+        h.app.world(),
+        h.caster,
+        h.npc,
+        Relation::Enemy
+    ));
+    let teammate_health = h.app.world().get::<Health>(h.npc).unwrap().current;
+    h.attack(h.npc);
+    h.advance(20);
+    assert_eq!(
+        h.app.world().get::<Health>(h.npc).unwrap().current,
+        teammate_health
+    );
+}
+
+#[test]
+fn arena_rating_reference_uses_pinned_tc_formula_not_the_retired_elo_simulation() {
+    assert_eq!(arena_rating::rating_delta(0, 1500, true), 48);
+    assert_eq!(arena_rating::rating_delta(0, 1500, false), 0);
+    assert_eq!(arena_rating::rating_delta(1200, 1200, true), 16);
+    assert_eq!(arena_rating::rating_delta(1300, 1300, true), 12);
+    assert_eq!(arena_rating::rating_delta(1500, 1500, false), -12);
+    assert_eq!(arena_rating::matchmaker_delta(1500, 1500, true), 12);
+    assert_eq!(arena_rating::matchmaker_delta(1500, 1500, false), -12);
+}
+
+#[test]
+fn arena_rated_pairing_uses_source_mmr_window_and_discard_age() {
+    let team = |leader, mmr, queued_at| arena_rating::QueuedTeam {
+        leader,
+        members: vec![leader, leader + 1],
+        levels: vec![90, 90],
+        mmr,
+        queued_at,
+    };
+    let queue = vec![team(1, 1500, 0.0), team(3, 1700, 600.001)];
+    assert_eq!(
+        arena_rating::find_pair(&queue, 600.001, Some(1700)),
+        Some((0, 1))
+    );
+    assert_eq!(arena_rating::find_pair(&queue, 600.0, None), None);
+    assert_eq!(
+        arena_rating::find_pair(&[team(1, 1500, 0.0), team(3, 1650, 0.0)], 1.0, None),
+        Some((0, 1))
+    );
+    assert_eq!(
+        arena_rating::find_pair(&[team(1, 1500, 0.0), team(3, 1651, 0.0)], 1.0, None),
+        None
+    );
+    assert_eq!(
+        arena_rating::find_pair(&[team(1, 1500, 0.0)], 1.0, None),
+        None
+    );
+}
 
 #[test]
 fn queue_for_battleground_sets_queue_state() {
@@ -128,6 +494,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             alterac: None,
             scoreboard: Scoreboard::default(),
             flag_positions: [None, None],
+            arena: None,
         },
     );
     respond_to_battleground_invitation(&mut state, 17, 1, true).unwrap();
@@ -154,27 +521,23 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
 }
 
 #[test]
-fn queue_for_rated_bracket_blocks_double_queue() {
-    let mut player_state = PlayerPvpState::default();
+fn rated_modes_cannot_bypass_full_group_queue_through_solo_skirmish_message() {
+    let db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE arena_map(battlemaster_id INTEGER,map_id INTEGER,name TEXT,start_a INTEGER,start_b INTEGER,min_level INTEGER,max_level INTEGER,weight INTEGER,wdt_fdid INTEGER); INSERT INTO arena_map VALUES(8,572,'Ruins of Lordaeron',1258,1259,10,90,1,789984);").unwrap();
+    let catalog = arena::Catalog::load(&db).unwrap();
+    let mut player = PlayerPvpState::default();
     let mut state = PvpServerState::default();
-
-    queue_for_rated_bracket(
-        &mut player_state,
-        &mut state,
-        44,
-        PvpBracketSnapshot::Arena2v2,
-    )
-    .expect("first queue succeeds");
-
-    let error = queue_for_rated_bracket(
-        &mut player_state,
-        &mut state,
-        44,
-        PvpBracketSnapshot::Arena3v3,
-    )
-    .expect_err("second queue must fail");
-
-    assert!(error.contains("already queued"));
+    for mode in [
+        shared::protocol::ArenaQueueMode::Rated2v2,
+        shared::protocol::ArenaQueueMode::Rated3v3,
+    ] {
+        assert!(
+            arena::queue_player(&mut player, &mut state, &catalog, 44, 90, mode)
+                .unwrap_err()
+                .contains("full group")
+        );
+    }
+    assert!(player.queue.is_none());
 }
 
 #[test]
@@ -286,8 +649,8 @@ fn rated_pairing_never_manufactures_a_result_or_currency() {
             "pairing is not a played arena"
         );
         assert!(
-            state.queue.is_some(),
-            "queue remains pending real match lifecycle"
+            state.queue.is_none(),
+            "ungrouped rated request cannot manufacture a team"
         );
         assert!(
             app.world()
@@ -404,6 +767,7 @@ fn native_flag_match(
             spawn_difficulties: vec![0],
             chair: None,
             quest_object: None,
+            initial_state: 1,
         })
         .collect();
     world.insert_resource(GameObjectSpawns(homes));
@@ -426,6 +790,7 @@ fn native_flag_match(
         seething: None,
         deephaul: None,
         alterac: None,
+        arena: None,
         scoreboard: Scoreboard::default(),
         flag_positions: [None, None],
     };

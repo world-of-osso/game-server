@@ -756,6 +756,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         creature_type: 1,
         family: 0,
         type_flags: 0,
+        flags_extra: 0,
         min_level,
         max_level: min_level,
         faction: 32,

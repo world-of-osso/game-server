@@ -25,6 +25,113 @@ const SLAM: u32 = 1464;
 const BATTLE_SHOUT: u32 = 6673;
 
 #[test]
+fn arena_exclude_caster_filters_source_36003_before_its_one_target_cap() {
+    let mut h = harness(Vec::new(), &[36003], 8).unwrap();
+    let ally = spawn_player(&mut h.app, 8, 3.0);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(36003)
+        .unwrap()
+        .clone();
+    let cap = spell.target_restrictions.as_ref().unwrap().max_targets;
+    assert_eq!(cap, 1);
+    let effect = &spell.effects[0];
+    assert_eq!(super::targets::effect_radius(effect), 25.0);
+    let selected = super::targets::select_targets(
+        h.app.world_mut(),
+        h.caster,
+        None,
+        &spell,
+        effect,
+        cap,
+        false,
+    )
+    .unwrap();
+    assert_eq!(
+        selected,
+        vec![ally],
+        "caster must not consume the eligible ally's slot"
+    );
+}
+
+#[test]
+fn arena_exclude_caster_rejects_explicit_self_before_cast_effects() {
+    let mut h = harness(Vec::new(), &[36003], 8).unwrap();
+    h.cast_and_deliver(36003, Some(h.caster));
+    assert_eq!(
+        h.inbox.failed,
+        vec![CastFailed {
+            spell_id: 36003,
+            reason: CastFailReason::InvalidTarget,
+            detail: None,
+        }]
+    );
+    assert!(h.inbox.go.is_empty());
+}
+
+#[test]
+fn arena_preparation_school_mask_power_cost_and_unit_flag_follow_actual_aura() {
+    let mut h = harness(Vec::new(), &[32727, FIREBALL], 8).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .base_mana = 2_000.0;
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(FIREBALL)
+        .unwrap()
+        .clone();
+    let costs = |h: &Harness| super::applicable_costs(h.app.world(), h.caster, &spell).unwrap();
+    let before = costs(&h);
+    assert!(before.iter().any(|(_, amount, _)| *amount > 0.0));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 32727,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(
+        costs(&h).iter().all(|(_, amount, _)| *amount == 0.0),
+        "source school-mask power cost pct72 makes preparation spells free"
+    );
+    assert_ne!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFlags>(h.caster)
+            .unwrap()
+            .0
+            & 0x20,
+        0,
+        "source arena preparation unit flag"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 32727,
+    );
+    assert_eq!(costs(&h), before, "gate opening restores normal costs");
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFlags>(h.caster)
+            .unwrap()
+            .0
+            & 0x20,
+        0
+    );
+}
+
+#[test]
 fn scaled_overkill_spells_and_periodic_ticks_use_logged_damage_units() {
     for periodic in [false, true] {
         for (health_before, expected_health, expected_overkill) in

@@ -39,8 +39,12 @@ fn return_to_origin(
     match_id: u64,
 ) -> Result<String, String> {
     let (map, origin) = return_destination(world, state, player, character_id, match_id)?;
+    let arena = state.battleground_matches[&match_id].arena.is_some();
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
+    }
+    if arena {
+        super::arena_preparation::clear_preparation(world, player);
     }
     let original_faction = {
         let mut pvp = world
