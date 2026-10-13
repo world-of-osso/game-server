@@ -1109,6 +1109,35 @@ fn advance_companion_follow(
     }
 }
 
+/// Follower hazard escape uses the same native movement/interest/replication writer.
+pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
+    let mut state = bevy::ecs::system::SystemState::<(
+        MoveQueues,
+        Query<
+            (
+                &mut Position,
+                Option<&mut Rotation>,
+                Option<&mut CreatureMotion>,
+                Option<&mut MovementSpeed>,
+            ),
+            ActiveUncontrolled,
+        >,
+    )>::new(world);
+    let (queues, mut units) = state.get_mut(world);
+    let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) else {
+        debug!("Follower {entity} escape movement held while externally controlled");
+        return;
+    };
+    let stride = Stride::moving(*position, to, CreatureMotion::Run, speed);
+    queues.apply(
+        entity,
+        &mut position,
+        (rotation, motion, movement_speed),
+        stride,
+    );
+    state.apply(world);
+}
+
 /// Bevy (x, z) `reach` yards from the owner at the follower's angle around it, clamped to
 /// `PET_FOLLOW_ANGLE` ± `PET_FOLLOW_ANGLE_TOLERANCE` (`ChaseAngle::IsAngleOkay`).
 fn follow_point(leader: &Leader, follower: Position, reach: f32) -> (f32, f32) {

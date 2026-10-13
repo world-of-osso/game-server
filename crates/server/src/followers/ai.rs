@@ -26,6 +26,9 @@ pub(super) fn update(world: &mut World) {
 }
 
 fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    if super::hazards::escape(world, unit) {
+        return;
+    }
     let party = party_units(world, follower.owner);
     let enemy = select_enemy(world, follower, unit, &party);
     if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
@@ -251,10 +254,15 @@ fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee:
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
-    world.entity_mut(unit).remove::<FollowOwner>().insert((
+    let state = if super::hazards::target_is_hazardous(world, unit, target) {
+        CreatureState::Idle
+    } else {
         CreatureState::Pursuing {
             target: target.to_bits(),
-        },
+        }
+    };
+    world.entity_mut(unit).remove::<FollowOwner>().insert((
+        state,
         FollowerReach(reach),
         CombatTarget(Some(target)),
     ));
@@ -288,6 +296,13 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 
 fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
+    if super::hazards::target_is_hazardous(world, unit, owner) {
+        world
+            .entity_mut(unit)
+            .remove::<FollowOwner>()
+            .insert((CreatureState::Idle, CombatTarget(None)));
+        return;
+    }
     let following_owner = world
         .get::<FollowOwner>(unit)
         .is_some_and(|follow| follow.owner == owner);

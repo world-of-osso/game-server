@@ -13,7 +13,7 @@ fn wow(x: f32, y: f32, z: f32) -> Position {
 fn point(position: Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
-fn stockade_fixture(from: Position) -> (Harness, Entity, PathBuf) {
+pub(super) fn stockade_fixture(from: Position) -> (Harness, Entity, PathBuf) {
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     h.app.world_mut().despawn(h.npc);
     h.app
