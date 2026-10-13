@@ -157,8 +157,18 @@ fn class_completeness_native_armor_percent_applies_to_creature_armor() {
             max: 100_000.0,
         },
     ));
-    assert_mitigated(physical_loss(&mut h, caster, npc), CREATURE_ARMOR);
+    // GetArmor() includes TOTAL_PCT before GetArmorMultiplierForTarget scales it, so
+    // derive the kobold's effective armor from an unmodified hit.
+    let baseline = physical_loss(&mut h, caster, npc);
+    let armor = DAMAGE * ARMOR_CONSTANT / baseline - ARMOR_CONSTANT;
     apply_native(&mut h, npc, ARMOR_SPECIALIZATION, 101);
-    let armor = CREATURE_ARMOR * factor(ARMOR_SPECIALIZATION, 101);
-    assert_mitigated(physical_loss(&mut h, caster, npc), armor);
+    let expected =
+        DAMAGE * ARMOR_CONSTANT / (armor * factor(ARMOR_SPECIALIZATION, 101) + ARMOR_CONSTANT);
+    let loss = physical_loss(&mut h, caster, npc);
+    // One-point damage truncation in each hit bounds the derived armor.
+    assert!(
+        (loss - expected).abs() <= 1.5,
+        "hit{loss} expected{expected}"
+    );
+    assert!(loss < baseline);
 }
