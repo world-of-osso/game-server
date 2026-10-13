@@ -12,6 +12,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
+
 - 2026-10-13 — [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage): native25%-of-owner-crit aura updater, real Aimed Shot RED/GREEN, live crit/unlearn and heal isolation; full-class/rendered parity remains open.
 - 2026-10-13 — [Full-roster criterion limit](systems/dungeon-achievements.md#full-roster-limit-verified-2026-10-13): LessThanTappers29 uses full native group membership, not physical tappers; authored Malygos solo/8/9 roster RED/GREEN, offline-member and persistence controls. +8 ordinary; complete raw inventory counts reconciled. Full boss mechanics/rendering unclaimed.
 
