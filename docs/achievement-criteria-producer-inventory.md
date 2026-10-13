@@ -2,11 +2,11 @@
 
 verified: 2026-10-12
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5015 ordinary (3288 account/1727 character),1485 statistics; 94 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5144 ordinary (3319 account/1825 character),1707 statistics; 94 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
-- ModifierTree DungeonDifficulty68 (TC CriteriaHandler2090–2093, operators1723–1751): 2539 criteria whose only condition is an All/SingleTrue, All/SingleFalse or Some(≤1) difficulty tree are compiled (`achievement_difficulty_rules.rs`) and checked against the player's current copy Difficulty (continents0) at event time; +460 ordinary/+1226 statistics. Raw counts below include these rows under their own criteria type.
+- ModifierTree DungeonDifficulty68 (TC CriteriaHandler2090–2093) and LegacyDungeonDifficulty20 (1860–1865, Difficulty.db2 OldEnumValue), operators1723–1751: 3085 criteria whose only condition is an All/SingleTrue, All/SingleFalse or Some(≤1) tree of these leaves are compiled (`achievement_difficulty_rules.rs`) and checked against the player's current copy Difficulty (continents0) at event time; 68 added +460 ordinary/+1226 statistics, 20 added +129/+222. Raw counts below include these rows under their own criteria type.
 - Types196/221/253 are earned native XP transitions, not login/admin facts. Thirteen exact current221 class leaves now admit7382/7383/7384/19489; native Paladin+Mage transitions earn7382 and survive reopened account login.
 - Types13/54/55/102–106 and the new unconditional rank/area/level counters do not gain an Achievement merely because a raw CriteriaTree references them. Census follows actual Achievement roots; orphan raw rows are retained for non-achievement consumers, never relinked.
 - Damage Control227 is still blocked by battleground start/fail lifetime conditions and zone/target predicates, not missing raw damage/healing counters. Unknown conditions cannot be stripped.

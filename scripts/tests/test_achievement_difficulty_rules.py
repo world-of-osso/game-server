@@ -18,7 +18,25 @@ class DifficultyRules(unittest.TestCase):
                              'FailEvent': '0', 'EligibilityWorldStateID': '0'}}
 
     def compile(self, modifiers, criteria=None):
-        return rules.qualified_difficulty_rules(criteria or self.criteria, modifiers)
+        # Pinned Difficulty.db2 OldEnumValue 0 = Normal1, 10-player3, Normal38, Lorewalking236.
+        legacy = {0: {1, 3, 38, 236}, 1: {2, 4, 39}}
+        return rules.qualified_difficulty_rules(criteria or self.criteria, modifiers, legacy)
+
+    def test_legacy_value_admits_every_difficulty_with_that_old_enum(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 20, 0)}
+        self.assertEqual(self.compile(modifiers), {1: (10, True, (1, 3, 38, 236))})
+
+    def test_legacy_and_current_difficulty_leaves_intersect(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 20, 1), 12: node(10, 2, 68, 4)}
+        self.assertEqual(self.compile(modifiers), {1: (10, True, (4,))})
+
+    def test_legacy_single_false_excludes_its_difficulties(self):
+        modifiers = {10: node(0, 4), 11: node(10, 3, 20, 1)}
+        self.assertEqual(self.compile(modifiers), {1: (10, False, (2, 4, 39))})
+
+    def test_unknown_legacy_value_is_unsatisfiable(self):
+        modifiers = {10: node(0, 4), 11: node(10, 2, 20, 7)}
+        self.assertEqual(self.compile(modifiers), {})
 
     def test_all_single_true_mythic_requires_that_difficulty(self):
         modifiers = {10: node(0, 4), 11: node(10, 2, 68, 23)}
@@ -35,6 +53,7 @@ class DifficultyRules(unittest.TestCase):
     def test_unsatisfiable_or_mixed_or_foreign_trees_stay_disabled(self):
         cases = {
             'all of two different difficulties': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
+            'legacy normal and heroic': {10: node(0, 4), 11: node(10, 2, 20, 0), 12: node(10, 2, 68, 2)},
             'some needing two': {10: node(0, 8, amount=2), 11: node(10, 2, 68, 1), 12: node(10, 2, 68, 2)},
             'mixed operators': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 3, 68, 2)},
             'foreign leaf': {10: node(0, 4), 11: node(10, 2, 68, 1), 12: node(10, 2, 69, 10)},
