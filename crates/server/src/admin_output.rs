@@ -212,6 +212,12 @@ fn print_character_response(response: &AdminResponse) -> bool {
             let how = if *online { "teleporting" } else { "saved" };
             println!("Teleport: {character_name} -> map {map_id} ({how})");
         }
+        AdminResponse::TradingPostTenderGranted { username, tender } => {
+            println!("Trading Post Tender: {username} -> {tender}");
+        }
+        AdminResponse::TradingPostRefundWindowSet { seconds } => {
+            println!("Trading Post refund window: {seconds}s");
+        }
         AdminResponse::GoldSet {
             character_name,
             copper,

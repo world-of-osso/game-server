@@ -139,19 +139,25 @@ fn dummy16_holy_judgment_generates_named_rank_power_once() {
     judgment_power(275773);
 }
 #[test]
-fn dummy16_arcane_power_mana_discount_requires_native_rank() {
-    for ranked in [false, true] {
+fn dummy16_arcane_power_native_school_discount_applies_once_with_or_without_rank() {
+    for (active, ranked) in [(false, false), (true, false), (true, true)] {
         let mut h = fixture(&[12042, 343208, 133], &[12042, 133], 8);
         if ranked {
             apply(&mut h, 343208);
         }
-        apply(&mut h, 12042);
+        if active {
+            apply(&mut h, 12042);
+        }
         let before = h.app.world().get::<Mana>(h.caster).unwrap().current;
         let target = h.npc;
         execute(&mut h, 133, Some(target));
         let spent = before - h.app.world().get::<Mana>(h.caster).unwrap().current;
-        //133's native1% base-mana cost;12042s2=-30% gated by343208.
-        assert_eq!(spent, if ranked { 70.0 } else { 100.0 });
+        // TC CalcPowerCost applies native12042s2 aura72 once;343208 adds no gate.
+        assert_eq!(
+            spent,
+            if active { 70.0 } else { 100.0 },
+            "active={active} ranked={ranked}"
+        );
     }
 }
 #[test]

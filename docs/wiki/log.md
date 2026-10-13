@@ -9,6 +9,7 @@
 - 2026-10-12 — [Source summon flags/privacy](systems/toys.md#source-summon-flag-import-2026-10-12): atomic3610-record flags import, real two-peer owner-only/public-control proof, wild spawn/target visibility fixes and preserved337 census; group-private remains explicit gap.
 
 - 2026-10-12 — [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12): source31442/7353 environmental activation, snapshotted versatility retention, seven actual-use identities and census330→337; representative native both-skin proof and lead-only asset publication recorded.
+- 2026-10-13 — [Master arena/class regressions](investigations/master-arena-fixture-regressions.md): pinned TC target/cost/cap rules; duplicate Arcane discount removed, reciprocal Moloch success/refusal controls, unchanged mastery expiry assertions isolated from capped selection. Historical bisect limitations retained explicitly.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
 

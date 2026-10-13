@@ -3,6 +3,7 @@
 - [Source summon flags and privacy](systems/toys.md#source-summon-flag-import-2026-10-12) —3610 readable source records, atomic legacy import, real owner/observer UDP proof and preserved337 census; group/private flag boundaries explicit.
 
 - [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
+- [Master arena/class regressions](investigations/master-arena-fixture-regressions.md) — duplicate Arcane school discount, source-correct reciprocal Moloch controls, and mastery cap/tie fixture isolation; qualified bisect evidence.
 
 - [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29) — player-only263 admission/completion, caster-class and parent flags, thirteen controls; cooking-focus/spellcaster integration preserves both payload contracts.
 
