@@ -2,7 +2,7 @@
 
 ## Contract
 
-Finish one Retail Mainline match: queue → invite/accept → isolated map entry → map objective → scoreboard → sourced honor → return to origin. Extend `pvp.rs` and shared `battleground*.rs`; Modern and Forever share behavior. No synthetic identifiers, timings or rewards; no agent world.db writes.
+Finish one Retail Mainline match: queue → invite/accept → isolated map entry → map objective → scoreboard → sourced honor → return to origin. Extend `pvp.rs` and shared `battleground*.rs`; Modern and Forever share behavior. No synthetic identifiers, timings or rewards; no agent world.db writes. Final leave/decline must retire the copy only after that frame's corpse-loot writes settle, including NPC deaths concurrent with all-player departure; no despawn errors may be suppressed.
 
 ## Kotmogu continuation — active 2026-10-12
 
@@ -21,6 +21,10 @@ Lead-owned `python3 scripts/promote_battlegrounds.py --db <database> --maps <exp
 Sources: local BattlemasterList FDID 1360265/layout 3414CBD7 and Map CSV 12.1.0.69933; read-only TDB1210 catalogs; local CASC WDT extraction; TC a352b1fa9017138cc2f1dcfc0a51afaa17391ecf. BattlemasterList's layout has no MapID field; BattlemasterListXMap (FDID 5916746) joins each queue ID to its map (e.g. 108→726, 7→566, 699→998, 708→727, 894→1803, 1110→2656, 1→30, 30→628, 1037/1039→2245), agreeing with the TDB templates' safe-location maps. Scoreboard objective columns are PvpStat (FDID 2992919) descriptions ordered by PvpScoreboardLayout (FDID 2992918) OrderIndex, as `PVPMatchTable.lua` sorts them; every participant row carries each source stat of its map. Resource/flag IDs must retain this distinction. WorldState FDID 1374383 is absent from the local CASC root; TDB world_state and pinned TC references remain available, but independent DB2 WorldState row verification is a recorded gap.
 
 Current proof/source ledger: `/home/osso/.worktrees/handoff-bg-coverage.md`; durable receipts in engine `data/diagnostics/bg-coverage-2026-10-12/`. This section supersedes WSG-only scope, not previously proved WSG behavior.
+
+### Alterac Valley — active implementation
+
+Retail queue1/map30 admits10–40/team, levels20–90, with source world-space starts611/610 and700 reinforcements. Preserve15 authored nodes and45 exact source button/goober banner variants; show only the current variant in each isolated copy. Lock1479/LockType17 grants Opening21651, CastingTime170=8000ms: normal cast cancellation, reach/copy/accepted-match validation and completion revalidation precede assault/defense. Seven graveyards capture after four minutes; neutral Snowfall may be counter-assaulted before its first capture. Eight towers burn permanently after four minutes, costing their original team75. Captains11949/11947 cost100 once; general11948/11946 deaths end with the opposing team winning. Source mine leaders transfer ownership and grant one uncapped reinforcement per45seconds per owned mine. WorldStates retain TC BGAVNodeInfo identities; displayed scores are reinforcements, not resource-race score. Source scoreboard order is63/65/61/64/82 from PvpScoreboardLayout. NPC credit must enter at authoritative `insert_npc_death`, player loss at validated PlayerDeathTransition, never from a global zero-health poll. Pure rules pass; serverb8fa49d6 real-channel20-account source-entry/eight-second cast cancellation/completion/tower/captain/general/return fixture passes. Servera9522a29 adds passing wrong-copy object/NPC rejection and actual player-death transition loss/death counter; replayed death transitions do not deduct twice. No native/live lifecycle claim. Native rendering, preparation, resurrection/spawn-group and marshal/defender/quest/summon/broadcast/aura/reward parity remain unproved.
 
 ### Deephaul Ravine — active implementation
 

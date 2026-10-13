@@ -453,7 +453,13 @@ fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bo
 }
 
 /// A creature's own armor or a player's gear armor.
-type TargetArmor<'a> = (Option<&'a CreatureArmor>, Option<&'a CharacterStats>);
+type TargetArmor<'a> = (
+    Option<&'a CreatureArmor>,
+    Option<&'a CharacterStats>,
+    Option<&'a crate::stats::StatModifiers>,
+    Option<&'a crate::hunter_pet::HunterPet>,
+    Option<&'a crate::spell_cast::summon::SummonedCreature>,
+);
 
 /// The same unit bodies and server ray search used by creature spells.
 #[derive(SystemParam)]
@@ -498,6 +504,7 @@ impl SwingSight<'_, '_> {
 pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
+    summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     sight: SwingSight<'w, 's>,
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
@@ -556,6 +563,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
                 &mut params.units.p1(),
                 &SwingContext {
                     scaling: &params.scaling,
+                    summon_modifiers: &params.summon_modifiers,
                     sight: &params.sight,
                     armor_constants: params.armor_constants.as_deref(),
                     spells: params.spells.as_deref(),
@@ -725,6 +733,7 @@ impl Attacker<'_> {
 /// World data a swing reads besides the two units.
 pub(crate) struct SwingContext<'a, 'w, 's> {
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
+    summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
     sight: &'a SwingSight<'w, 's>,
@@ -740,6 +749,7 @@ fn swing_damage(
     hand: Hand,
     scaling: &UnitScaling,
     target_mods: Option<&AuraStatMods>,
+    summon_damage_mult: f32,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let mut rng = rand::thread_rng();
@@ -754,7 +764,7 @@ fn swing_damage(
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
-    (base * done * taken).max(0.0).round()
+    (base * done * summon_damage_mult * taken).max(0.0).round()
 }
 
 /// A creature's main-hand weapon damage roll (Unit::CalculateDamage): its
@@ -777,12 +787,15 @@ pub(crate) fn creature_miss_chance(mods: Option<&AuraStatMods>) -> f32 {
 /// The target's armor against `attacker` (Unit::CalcArmorReducedDamage): a
 /// creature's own armor × its level-scaling armor multiplier, a player's gear armor.
 fn target_armor(
-    (creature, player): TargetArmor,
+    (creature, player, modifiers, hunter, summon): TargetArmor,
     target: &UnitScaling,
     attacker: &UnitScaling,
 ) -> f32 {
     match (creature, player) {
-        (Some(armor), _) => target.armor_against(armor.0, attacker),
+        (Some(armor), _) => {
+            let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
+            target.armor_against(armor.0 * multiplier, attacker)
+        }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     }
@@ -840,7 +853,14 @@ fn roll_outcome(
     } else {
         chances.miss
     };
-    chances.miss = (base_miss - hit_modifier).clamp(0.0, 100.0);
+    // Creature miss_pct already includes its own aura54; players must subtract
+    // their caster modifier here too (Unit::MeleeSpellMissChance, Unit.cpp12525).
+    let player_hit_modifier = if attacker.creature {
+        0.0
+    } else {
+        attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
+    };
+    chances.miss = (base_miss - player_hit_modifier - hit_modifier).clamp(0.0, 100.0);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -1003,7 +1023,14 @@ fn try_swing(
     let level_difference = i32::from(target.level_against(&attacker_scaling))
         - i32::from(attacker_scaling.level_against(&target));
     let armored = armor_mitigated(
-        swing_damage(attacker, &weapon, hand, &attacker_scaling, target_mods),
+        swing_damage(
+            attacker,
+            &weapon,
+            hand,
+            &attacker_scaling,
+            target_mods,
+            context.summon_modifiers.multiplier(attacker.entity),
+        ),
         target_armor(armor, &target, &attacker_scaling),
         &attacker_scaling,
         &target,
@@ -1328,6 +1355,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         combat_stop(world, npc);
         crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
         crate::achievement::record_creature_death(world, npc, killer);
+        crate::pvp::record_creature_death(world, npc, killer);
         crate::mythic_plus::record_kill(world, npc);
         crate::maps::raid::record_creature_death(world, npc);
     });

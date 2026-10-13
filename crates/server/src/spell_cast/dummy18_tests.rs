@@ -373,8 +373,12 @@ fn dummy18_native_roots_reach_leech_through_completed_casts() {
         (50842, 55078, 6),
         (205179, 205179, 9),
     ] {
-        let mut h = fixture(&[root, aura], class);
+        let mut h = fixture(&[root, aura, 232698], class);
         if root == 335467 {
+            // Native Devouring Plague requires form28. Unlike Vampiric Touch,
+            // it lacks AllowCasterForm; use native Shadowform's form effect.
+            let caster = h.caster;
+            apply(&mut h, caster, caster, 232698, 1 << 1);
             h.set_power(PowerType::Insanity, 10_000.0);
         }
         let npc = h.npc;
