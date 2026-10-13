@@ -66,9 +66,11 @@ fn assert_profile_combat(entry: u32) {
                 .unwrap()
                 .0,
             Some(unit),
-            "{} must taunt the ally's attacker with spell{}",
+            "{} must taunt the ally's attacker with spell{}; casts {:?}; combat {:?}",
             profile.name,
-            profile.taunt_spell
+            profile.taunt_spell,
+            h.inbox.go,
+            h.inbox.log
         );
     }
     let before = h.health(enemy);
