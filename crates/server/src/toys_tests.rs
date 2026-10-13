@@ -4132,10 +4132,7 @@ fn toyfx25_facing_uses_source_creature_radius_not_its_combat_reach() {
                     template_id: 61463,
                     name: "Slagmaw".into(),
                 },
-                ModelDisplay {
-                    display_id: 42247,
-                    ..Default::default()
-                },
+                ModelDisplay { display_id: 42247 },
                 Position {
                     x: -distance,
                     y: 0.0,
