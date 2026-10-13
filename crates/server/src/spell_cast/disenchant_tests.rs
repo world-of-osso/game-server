@@ -24,11 +24,20 @@ fn collect_loot(
 }
 
 fn setup(item_id: u32, enchanting: bool) -> (Harness, tempfile::TempDir, u64, u32) {
+    setup_with(item_id, enchanting, |_| {})
+}
+
+fn setup_with(
+    item_id: u32,
+    enchanting: bool,
+    add_plugins: impl FnOnce(&mut App),
+) -> (Harness, tempfile::TempDir, u64, u32) {
     let path = crate::test_data::world_db_path();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let mut h = harness_with_plugins(Vec::new(), &[13262], 2, false, |app| {
+        add_plugins(app);
         app.add_plugins(crate::loot::LootPlugin);
         app.insert_resource(super::disenchant::load_data(&conn).unwrap());
         app.insert_resource(crate::loot::load_loot_tables(&conn).unwrap());
@@ -247,6 +256,60 @@ fn disenchant_materials_can_be_taken_manually() {
             .get::<crate::loot::ActiveLoot>(h.connection)
             .is_none()
     );
+}
+
+/// TC Player::StoreLootItem: taken disenchant materials credit GetLootByType
+/// LOOT_DISENCHANTING (criterion5304, statistic183 "Materials produced from disenchanting").
+#[test]
+fn achievements_criteria_disenchant_materials_credit_disenchant_loot_type_when_taken() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let (mut h, _directory, guid, _) = setup_with(727, true, |app| {
+        app.add_plugins(AchievementPlugin);
+    });
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerAchievementState::default());
+    let progress = |h: &Harness| {
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&5304)
+            .copied()
+    };
+    cast_item(&mut h, guid);
+    let response = h
+        .app
+        .world()
+        .resource::<LootInbox>()
+        .0
+        .last()
+        .unwrap()
+        .clone();
+    assert_eq!(progress(&h), None, "opening the window credits nothing");
+    let mut materials = 0;
+    for slot in &response.slots {
+        let LootContent::Item { count, .. } = slot.content else {
+            unreachable!()
+        };
+        materials += u64::from(count);
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::LootSlotRequest>>(h.connection)
+            .unwrap()
+            .send::<LootChannel>(shared::protocol::LootSlotRequest {
+                corpse: response.corpse,
+                slot: slot.slot,
+            });
+    }
+    h.advance(5);
+    assert!(materials > 0);
+    assert_eq!(progress(&h), Some(materials));
 }
 
 #[test]

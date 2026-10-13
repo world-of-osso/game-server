@@ -231,6 +231,8 @@ struct InteractionWorld<'w, 's> {
             &'static GameObjectInfo,
             &'static Position,
             &'static GameObjectBounds,
+            Has<crate::game_objects::GameObjectScript>,
+            Has<crate::game_objects::GameObjectInUse>,
         ),
     >,
     templates: Res<'w, FactionTemplates>,
@@ -254,11 +256,13 @@ impl InteractionWorld<'_, '_> {
 
     /// What using a game object does if `player` may use it now.
     fn usable_object(&self, player: Entity, object: Entity) -> Result<ObjectUse, InteractionError> {
-        let (info, position, bounds) = self
+        let (info, position, bounds, scripted, in_use) = self
             .objects
             .get(object)
             .map_err(|_| InteractionError::InvalidTarget)?;
         let role = match info.go_type {
+            // Only buttons with a ported GameObjectAI; generic door/button use is not modelled.
+            crate::game_objects::GAMEOBJECT_TYPE_BUTTON if scripted && !in_use => ObjectUse::Script,
             GAMEOBJECT_TYPE_GUILD_BANK => ObjectUse::Role(NpcRole::GuildBanker),
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
@@ -325,6 +329,8 @@ enum ObjectUse {
     Challenge,
     BattlegroundFlag,
     HousingUiLink,
+    /// `GameObjectAI::OnGossipHello` of a ported object script.
+    Script,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -511,6 +517,13 @@ fn process_game_object_uses(
                                 error,
                             });
                         }
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::Script)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::scripted_ai::game_object_gossip_hello(world, player, object);
                     });
                     continue;
                 }

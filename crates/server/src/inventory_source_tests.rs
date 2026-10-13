@@ -60,6 +60,7 @@ fn catalog() -> ItemTemplates {
             ),
         ]),
         loot_need: Default::default(),
+        retail_learning_spells: Default::default(),
     }
 }
 

@@ -2,6 +2,92 @@ use super::*;
 use shared::protocol::{AchievementCatalogPage, QueryAchievementCatalog};
 
 #[test]
+fn achievements_comparison_request_carries_an_authentic_target_and_bounded_catalog_cursor() {
+    let wire = serde_json::json!({"Comparison": {"target_entity": 42, "query": {"Category": {"category_id": 92, "after_id": 633}}}});
+    let request: QueryAchievementCatalog =
+        serde_json::from_value(wire.clone()).expect("authoritative comparison request");
+    assert_eq!(serde_json::to_value(request).unwrap(), wire);
+}
+
+#[test]
+fn achievements_criteria_pages_normalize_zero_quantity_boolean_progress() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    state.account = Some(Box::new(PlayerAchievementState::default()));
+    let rows = |state: &PlayerAchievementState| {
+        let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+            state,
+            QueryAchievementCatalog::Criteria {
+                achievement_id: 2076,
+                after_id: 0,
+            },
+            1,
+        ) else {
+            panic!("bear criteria reply")
+        };
+        criteria
+    };
+    let before = rows(&state);
+    assert_eq!(before.len(), 2);
+    assert!(
+        before
+            .iter()
+            .all(|row| row.current == 0 && row.required == 1 && !row.completed)
+    );
+    catalog.update(
+        state.account.as_deref_mut().unwrap(),
+        CriteriaEvent::LearnSpell(60114),
+        None,
+        1,
+    );
+    let after = rows(&state);
+    // Authenticated Alliance60114 is criterion7369; Horde60116 is7368.
+    let learned = after.iter().find(|row| row.criteria_id == 7369).unwrap();
+    assert_eq!(
+        (learned.current, learned.required, learned.completed),
+        (1, 1, true)
+    );
+    let other = after.iter().find(|row| row.criteria_id == 7368).unwrap();
+    assert_eq!(
+        (other.current, other.required, other.completed),
+        (0, 1, false)
+    );
+}
+
+#[test]
+fn achievements_criteria_pages_present_skill_step_in_authored_rank_units() {
+    let catalog = catalog();
+    let mut state = PlayerAchievementState::default();
+    let row = |state: &PlayerAchievementState| {
+        let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+            state,
+            QueryAchievementCatalog::Criteria {
+                achievement_id: 1199,
+                after_id: 0,
+            },
+            1,
+        ) else {
+            panic!("professions criteria reply")
+        };
+        criteria
+            .into_iter()
+            .find(|row| row.criteria_id == 5561)
+            .unwrap()
+    };
+    let before = row(&state);
+    assert_eq!(
+        (before.current, before.required, before.completed),
+        (0, 75, false)
+    );
+    catalog.update(&mut state, CriteriaEvent::SkillMaxRank(197, 75), None, 1);
+    let after = row(&state);
+    assert_eq!(
+        (after.current, after.required, after.completed),
+        (75, 75, true)
+    );
+}
+
+#[test]
 fn achievements_summary_counts_full_catalog_and_account_scope_not_loaded_pages() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();

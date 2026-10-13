@@ -70,6 +70,8 @@ pub(crate) fn effect_trans_door(world: &mut World, ctx: &EffectCtx, effect: &Spe
             map,
             template.bounds(rotation.y - FRAC_PI_2),
             template.info.clone(),
+            // EffectTransmitted creates the ritual portal GO_STATE_READY.
+            shared::protocol::GameObjectCollision(true),
             Ritual {
                 owner: caster,
                 channel_spell: ctx.spell.id,

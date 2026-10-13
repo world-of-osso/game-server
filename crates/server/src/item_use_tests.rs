@@ -56,6 +56,76 @@ fn companion_item_learns_three_instances_and_keeps_fourth_item() {
 
 const MAGE: u8 = 8;
 
+/// Item140316 teaches species1928 (spell223339); Raiding with Leashes IV leaf33626 is
+/// TC LearnedNewPet155 with BattlePetSpecies91 1928. Species1929's leaf33625 must not move.
+#[test]
+fn achievements_criteria_companion_item_learns_new_pet_species_through_native_use() {
+    let mut eater = eater_with_spells(&[140316], 2, &[223339], MAGE)
+        .expect("local Retail companion item/spell data");
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    eater
+        .h
+        .app
+        .insert_resource(crate::battle_pets::load_test_catalog());
+    bevy::app::Plugin::build(&crate::battle_pets::BattlePetPlugin, &mut eater.h.app);
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    let player = eater.h.caster;
+    let connection = eater.h.connection;
+    let character_id = eater.character_id;
+    let account = app_world(&mut eater.h)
+        .get::<Authenticated>(connection)
+        .unwrap()
+        .account_id;
+    app_world(&mut eater.h).entity_mut(player).insert((
+        crate::collection::default_collection_state(),
+        crate::persistence::ClientId(character_id),
+        crate::achievement::PlayerAchievementState::default(),
+    ));
+    app_world(&mut eater.h)
+        .entity_mut(connection)
+        .remove::<InWorld>()
+        .insert(InWorld { character_id });
+    eater.h.advance(1);
+    let progress = |eater: &Eater, criterion: u32| {
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .and_then(|state| state.account.as_ref())
+            .and_then(|account| account.criteria_progress.get(&criterion).copied())
+    };
+    assert_eq!(progress(&eater, 33626), None);
+    use_slot(&mut eater, 0);
+    let refused = errors(&mut eater);
+    assert!(refused.is_empty(), "{refused:?}");
+    assert_eq!(count_of(&eater, 140316), 1);
+    eater.h.advance(2);
+    assert_eq!(progress(&eater, 33626), Some(1));
+    assert_eq!(progress(&eater, 33625), None);
+    use_slot(&mut eater, 0);
+    eater.h.advance(2);
+    assert_eq!(count_of(&eater, 140316), 0);
+    assert_eq!(progress(&eater, 33626), Some(1));
+    eater.h.advance(5);
+    assert_eq!(progress(&eater, 33626), Some(1));
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        crate::battle_pets::load_journal(db, account).count_species(1928),
+        2
+    );
+    assert_eq!(
+        persistence::load_achievements(db, character_id)
+            .criteria_progress
+            .get(&33626),
+        Some(&1)
+    );
+}
+
 #[test]
 fn mount_journal_item_learning_consumes_once_and_rejects_duplicate() {
     let mut eater = eater_with_spells(&[5655], 2, &[6648], MAGE).expect("Chestnut Mare data");
@@ -103,6 +173,203 @@ const BREAD_FOOD: u32 = 1_291_822;
 /// Refreshing Spring Water: on use Drink 1291950 (category 59 "Item - Drink").
 const WATER: u32 = 159;
 const WATER_DRINK: u32 = 1_291_950;
+
+#[test]
+fn achievements_criteria_item_use_counts_accepted_native_uses_not_refusals() {
+    let mut eater = eater(&[WATER], 2).expect("real water data");
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    let player = eater.h.caster;
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    use_slot(&mut eater, 1);
+    assert_eq!(count_of(&eater, WATER), 2);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 1);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 1);
+    eater.h.advance(10);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+    let character = eater.character_id;
+    let db = &eater.h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_achievements(db, character)
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+}
+
+#[test]
+fn achievements_criteria_item_use_delayed_cast_credits_only_execution() {
+    let mut eater = eater(&[WATER], 2).expect("real water data");
+    let mut spell = eater
+        .h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(WATER_DRINK)
+        .unwrap()
+        .clone();
+    // Explicit timing fixture exercises a queued item cast with an authentic item/criterion.
+    spell.misc.as_mut().unwrap().cast_time = Some(crate::spell_info::SpellCastTime {
+        base_ms: 1000,
+        minimum_ms: 1000,
+    });
+    eater
+        .h
+        .app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    let player = eater.h.caster;
+    eater
+        .h
+        .app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 1);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    crate::spell_cast::cancel_cast(eater.h.app.world_mut(), player);
+    eater.h.advance(40);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    use_slot(&mut eater, 0);
+    assert_eq!(count_of(&eater, WATER), 0);
+    assert!(
+        !eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&4705)
+    );
+    eater.h.advance(30);
+    assert_eq!(
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .criteria_progress
+            .get(&4705),
+        Some(&1)
+    );
+}
+
+/// Alliance Reins44225 teach an account Mount Journal entry; TC CollectionMgr::AddMount
+/// LearnSpells the mount, so LearnOrKnowSpell34 credits it.
+#[test]
+fn achievements_criteria_mount_item_use_learns_authored_spell_and_completes() {
+    let mut eater = eater_with_spells(&[44225], 1, &[55884, 60114], MAGE)
+        .expect("authentic armored bear item/spells");
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    eater
+        .h
+        .app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    eater
+        .h
+        .app
+        .insert_resource(crate::mount_journal::load(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut eater.h.app);
+    let player = eater.h.caster;
+    eater.h.app.world_mut().entity_mut(player).insert((
+        crate::persistence::ClientId(eater.character_id),
+        crate::achievement::PlayerAchievementState::default(),
+        crate::class_progression::KnownSpells::fixture(vec![]),
+    ));
+    eater.h.advance(1);
+    let earned = |eater: &Eater| {
+        eater
+            .h
+            .app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .account
+            .as_ref()
+            .is_some_and(|account| account.earned_ids.contains(&2076))
+    };
+    assert!(!earned(&eater));
+    use_slot(&mut eater, 0);
+    let refused = errors(&mut eater);
+    assert!(refused.is_empty(), "{refused:?}");
+    assert_eq!(count_of(&eater, 44225), 0);
+    eater.h.advance(2);
+    assert!(crate::mount_journal::knows_spell(
+        eater.h.app.world(),
+        player,
+        60114
+    ));
+    // Armored Brown Bear2076 tree11216 MeetsAtLeast1: LearnOrKnowSpell34 60114 or 60116.
+    assert!(earned(&eater));
+}
 
 struct Eater {
     h: Harness,

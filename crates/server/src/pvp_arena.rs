@@ -215,7 +215,7 @@ pub(super) fn create_match(
             deephaul: None,
             seething: None,
             alterac: None,
-            scoreboard: Vec::new(),
+            scoreboard: Default::default(),
             flag_positions: [None, None],
             arena: Some(arena),
         },

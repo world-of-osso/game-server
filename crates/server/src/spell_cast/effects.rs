@@ -53,12 +53,14 @@ pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
 pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
+pub const EFFECT_SEND_EVENT: u32 = 61;
 pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const EFFECT_FORCE_CAST: u32 = 140;
-/// TC a352b1fa SharedDefines.h:1549; SpellEffects.cpp:295 uses EffectRemoveAura.
+/// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
+pub const EFFECT_REMOVE_AURA: u32 = 164;
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
 pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
@@ -105,10 +107,11 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
         // missile's spell hits the unit target, like TRIGGER_SPELL.
         EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
+        EFFECT_SEND_EVENT => send_game_event,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
-        EFFECT_REMOVE_AURA_2 => remove_aura,
+        EFFECT_REMOVE_AURA | EFFECT_REMOVE_AURA_2 => remove_aura,
         EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
         EFFECT_ATTACK_ME => attack_me,
@@ -140,6 +143,18 @@ fn quest_kill_credit(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, 
     );
 }
 
+/// TC EffectSendEvent → GameEvents::TriggerForPlayer: event is the authored MiscValue.
+pub(super) fn send_game_event(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    _target: Entity,
+) {
+    if let Ok(event) = u32::try_from(effect.misc_values[0]) {
+        crate::achievement::record_player_game_event(world, ctx.caster, event);
+    }
+}
+
 fn attack_me(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
     crate::creature_aggro::taunt(world, target, ctx.caster);
 }
@@ -154,6 +169,9 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
         254 => super::teleport::jump_to_destination,
         crate::game_objects::summoned::EFFECT_TRANSMITTED => {
             crate::game_objects::summoned::spawn_transmitted
+        }
+        crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD => {
+            crate::game_objects::summoned::spawn_wild
         }
         crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
         crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
@@ -858,6 +876,7 @@ fn deal_damage_and_report(
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, incoming_loss);
     }
     let lethal = crate::auras::apply_attack_damage(world, target, loss);
+    crate::achievement::record_damage(world, ctx.caster, target, before, amount, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
     }
@@ -1030,6 +1049,7 @@ fn apply_resolved_heal(
     }
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
+    crate::achievement::record_healing(world, ctx.caster, target, amount, effective);
     crate::creature_aggro::add_healing_threat(
         world,
         ctx.caster,
@@ -1117,7 +1137,7 @@ fn dispel(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Enti
     crate::auras::dispel(world, &event, dispel_type, count);
 }
 
-/// 203 REMOVE_AURA_2 (`Spell::EffectRemoveAura`, TC a352b1fa
+/// 164 REMOVE_AURA / 203 REMOVE_AURA_2 (`Spell::EffectRemoveAura`, TC a352b1fa
 /// SpellEffects.cpp:5154-5163): remove all target auras of `TriggerSpell`,
 /// regardless of their caster (`RemoveAurasDueToSpell`'s default remove mode).
 fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {

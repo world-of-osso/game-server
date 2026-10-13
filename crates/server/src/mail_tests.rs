@@ -12,6 +12,74 @@ use crate::persistence::mail_store::{MailData, MailItemData, MailSender, load_ma
 
 const DAY: u64 = 86_400;
 
+#[test]
+fn achievements_criteria_postage_and_most_money_follow_committed_mail_not_requests() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState};
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Posta").unwrap();
+    let recipient = h.create_alt("Postb");
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    let progress = |h: &Harness, criterion: u32| {
+        persistence::load_achievements(h.db(), h.character_id)
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    let before = h.gold();
+    let mailbox = h.open_mailbox();
+    send(&mut h, mailbox, letter("Posta"));
+    assert_eq!(failures(&mut h), vec![MailError::ToSelf]);
+    assert_eq!(h.gold(), before);
+    assert_eq!(progress(&h, 3358), None);
+    assert_eq!(progress(&h, 4224), None);
+
+    let linen = h.guid_of(LINEN);
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![linen],
+            money: 5_000,
+            ..letter("Postb")
+        },
+    );
+    assert!(failures(&mut h).is_empty());
+    assert_eq!(h.take::<MailSent>().len(), 1);
+    assert_eq!(h.gold(), before - 5_030);
+    assert_eq!(progress(&h, 3358), Some(30));
+    assert_eq!(progress(&h, 4224), Some(before - 5_030));
+    assert_eq!(load_mailbox(h.db(), recipient).len(), 1);
+
+    send(&mut h, mailbox, letter("Postb"));
+    assert!(failures(&mut h).is_empty());
+    assert_eq!(h.gold(), before - 5_060);
+    assert_eq!(progress(&h, 3358), Some(60));
+    assert_eq!(progress(&h, 4224), Some(before - 5_030));
+    for _ in 0..3 {
+        h.app.update();
+    }
+    assert_eq!(progress(&h, 3358), Some(60));
+    assert_eq!(progress(&h, 4224), Some(before - 5_030));
+    assert!(
+        !persistence::load_achievements(h.db(), recipient)
+            .criteria_progress
+            .contains_key(&3358)
+    );
+    let character = h.character_id;
+    drop(h);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&reopened, character);
+    assert_eq!(saved.criteria_progress.get(&3358), Some(&60));
+    assert_eq!(saved.criteria_progress.get(&4224), Some(&(before - 5_030)));
+}
+
 fn send(h: &mut Harness, mailbox: Entity, mail: SendMail) {
     h.send::<_, MailChannel>(SendMail {
         object: mailbox.to_bits(),

@@ -13,7 +13,7 @@ use rand::Rng;
 use shared::components::{Health, Player, Position};
 use shared::death::DeathState;
 use shared::protocol::{
-    CombatLogEvent, EnvironmentalKind, MIRROR_TIMER_BREATH, MIRROR_TIMER_FATIGUE,
+    CombatLogEvent, CombatLogKind, EnvironmentalKind, MIRROR_TIMER_BREATH, MIRROR_TIMER_FATIGUE,
     MirrorTimerChannel, MirrorTimerStart, MirrorTimerStop,
 };
 
@@ -358,6 +358,9 @@ pub(crate) fn update_mirror_timers(
         if !tick.damage.is_empty() {
             let logs = deal_environmental_damage(entity, &mut health, &tick.damage);
             let killed = health.current <= 0.0;
+            if killed {
+                queue_environmental_death(&mut commands, entity, &logs);
+            }
             for log in logs {
                 commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, log));
             }
@@ -373,6 +376,24 @@ pub(crate) fn update_mirror_timers(
         }
     }
     send_timer_messages(&mut senders, outgoing);
+}
+
+fn queue_environmental_death(commands: &mut Commands, player: Entity, logs: &[CombatLogEvent]) {
+    let last = logs
+        .last()
+        .expect("lethal environmental damage has a source log");
+    let CombatLogKind::Environmental(kind) = last.kind else {
+        unreachable!("environmental producer emitted a different combat log kind")
+    };
+    // TC Player.h937-945: exhausted0, drowning1, fall2.
+    let kind = match kind {
+        EnvironmentalKind::Fatigue => 0,
+        EnvironmentalKind::Drowning => 1,
+        EnvironmentalKind::Falling => 2,
+    };
+    commands.queue(move |world: &mut World| {
+        crate::achievement::record_environmental_death(world, player, kind);
+    });
 }
 
 /// Replicate the damaged health; a lethal hit is a player death.

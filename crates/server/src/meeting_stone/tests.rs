@@ -573,6 +573,13 @@ fn finished_cast_opens_the_portal_at_the_summoner_and_channels_for_two_minutes()
         h.app.world().get::<crate::maps::InMap>(portals[0].0),
         Some(&crate::maps::InMap::continent(0))
     );
+    // GO_STATE_READY: the client draws no game object without this replicated state.
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(portals[0].0),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
     let channel = h.cast(summoner).expect("summoning channel");
     assert_eq!(channel.spell_id, SUMMONING_STONE_EFFECT);
     assert_eq!(channel.cast_type, CastType::Channel);
@@ -661,6 +668,133 @@ fn a_helper_outside_the_party_cannot_complete_the_ritual() {
 
     assert!(h.requests.is_empty());
     assert_eq!(h.portals().len(), 1);
+}
+
+#[test]
+fn achievements_criteria_accept_summon_credits_valid_native_acceptance_once_and_persists() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState};
+    use crate::persistence::{self, GameDatabase};
+    let mut h = harness(DEADMINES_STONE).expect("native Deadmines meeting stone");
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let mut characters = Vec::new();
+    for (account, name, member) in [
+        (1, "Stonecaller", &h.summoner),
+        (2, "Ritualist", &h.helper),
+        (3, "Farwalker", &h.target),
+        (4, "Stranger", &h.stranger),
+    ] {
+        let (character, _) = persistence::create_character(&db, account, name, 1, 1).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(member.connection)
+            .insert(InWorld {
+                character_id: character,
+            });
+        h.app
+            .world_mut()
+            .entity_mut(member.player)
+            .insert((ClientId(character), PlayerAchievementState::default()));
+        characters.push(character);
+    }
+    h.app.insert_resource(party(&[
+        (characters[0], "Stonecaller", h.summoner.player),
+        (characters[1], "Ritualist", h.helper.player),
+        (characters[2], "Farwalker", h.target.player),
+    ]));
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    h.app.insert_resource(GameDatabase { db });
+    bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
+    let target = h.target.player;
+    h.offer_summon();
+    assert!(!h.requests.is_empty());
+    let before = h.position(target);
+    h.respond(false);
+    h.respond(true);
+    assert_eq!(h.position(target), before);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(target)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&8586)
+    );
+    h.requests.clear();
+    h.offer_summon();
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(CombatStatus(true));
+    h.respond(true);
+    assert_eq!(h.position(target), before);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(target)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&8586)
+    );
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(CombatStatus(false));
+    h.respond(true);
+    assert_eq!(h.position(target), h.position(h.summoner.player));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(target)
+            .unwrap()
+            .criteria_progress
+            .get(&8586),
+        Some(&1)
+    );
+    h.respond(true);
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(target)
+            .unwrap()
+            .criteria_progress
+            .get(&8586),
+        Some(&1)
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.summoner.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&8586)
+    );
+    h.requests.clear();
+    h.offer_summon();
+    h.advance_secs(121.0);
+    h.respond(true);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(target)
+            .unwrap()
+            .criteria_progress
+            .get(&8586),
+        Some(&1)
+    );
+    let character = characters[2];
+    drop(h);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    assert_eq!(
+        persistence::load_achievements(&reopened, character)
+            .criteria_progress
+            .get(&8586),
+        Some(&1)
+    );
 }
 
 #[test]
