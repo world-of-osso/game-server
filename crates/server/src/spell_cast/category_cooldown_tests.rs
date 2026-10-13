@@ -47,8 +47,10 @@ fn class_completeness_native_category_cooldown_excludes_other_categories_and_abs
 fn class_completeness_native_category_cooldown_reduces_both_native_recovery_fields() {
     // Native pet spell115781 has both spell andcategory cooldown24000ms;
     // shared cast pipeline fixture, not player spellbook availability.
-    let mut h = harness(Vec::new(), &[QUICK_WITTED, OPTICAL_BLAST], 8).unwrap();
+    // Energy-bearing caster supplies the native pet spell's Energy cost.
+    let mut h = harness(Vec::new(), &[QUICK_WITTED, OPTICAL_BLAST], 4).unwrap();
     h.advance(3);
+    h.set_power(shared::components::PowerType::Energy, 100.0);
     let target = h.npc;
     assert_eq!(cast_cooldown(&mut h, OPTICAL_BLAST, target), 19_000);
     h.advance(385);
