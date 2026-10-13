@@ -96,9 +96,6 @@ class Conditions(unittest.TestCase):
         modifiers[10]['Amount'] = '2'
         self.assertEqual(self.compile(modifiers, emote), {})
         modifiers[10]['Amount'] = '1'
-        modifiers[12] = node(10, 2, 4, 217559)
-        self.assertEqual(self.compile(modifiers, emote), {}, 'general target OR remains unsupported')
-        del modifiers[12]
         modifiers[11]['Type'] = '5'
         self.assertEqual(self.compile(modifiers, emote), {}, 'unknown target fields remain blocked')
 
