@@ -977,15 +977,24 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
             assert_eq!(state.criteria_progress.get(&64625), Some(&1));
             assert!(!state.criteria_progress.contains_key(&64623));
             assert!(!state.earned_ids.contains(&7382));
+            assert_eq!(
+                state.criteria_progress.get(&66145),
+                Some(&1),
+                "Alliance cap"
+            );
+            assert!(
+                !state.criteria_progress.contains_key(&66146),
+                "no Horde credit"
+            );
             let db = &app.world().resource::<GameDatabase>().db;
             let (mage_character, _) =
-                persistence::create_character(db, 1, "Mageproof", HUMAN, 8).unwrap();
+                persistence::create_character(db, 1, "Mageproof", 2, 8).unwrap();
             save_xp(
                 db,
                 mage_character,
                 crate::experience::xp_to_next_level(89) - 1,
             );
-            let mage = spawn_player(&mut app, mage_character, HUMAN, 8, 89);
+            let mage = spawn_player(&mut app, mage_character, 2, 8, 89); // Orc Mage
             app.world_mut().entity_mut(mage).insert((
                 Position {
                     x: 0.0,
@@ -1029,6 +1038,15 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
             assert_eq!(state.criteria_progress.get(&64623), Some(&1));
             assert!(!state.criteria_progress.contains_key(&64625));
             assert!(state.account.as_ref().unwrap().earned_ids.contains(&7382));
+            assert_eq!(state.criteria_progress.get(&66146), Some(&1), "Horde cap");
+            assert!(
+                !state.criteria_progress.contains_key(&66145),
+                "no Alliance credit"
+            );
+            assert!(
+                state.account.as_ref().unwrap().earned_ids.contains(&7380),
+                "Double Agent"
+            );
         }
         // Unrelated/admin level mutation is not an XP transition.
         app.world_mut().entity_mut(player).insert(Level(90));
@@ -1067,6 +1085,11 @@ fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() 
             assert_eq!(state.criteria_progress.get(&62399), Some(&1));
             assert_eq!(state.criteria_progress.get(&64625), Some(&1));
             assert!(state.account.as_ref().unwrap().earned_ids.contains(&7382));
+            assert_eq!(state.criteria_progress.get(&66145), Some(&1));
+            assert!(
+                state.account.as_ref().unwrap().earned_ids.contains(&7380),
+                "reopened Double Agent"
+            );
         }
     }
 }

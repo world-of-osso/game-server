@@ -110,6 +110,10 @@ Earned player levels are published at the native XP persistence boundary, not fr
 
 At server `33a58e14`, engine `ebedc08ab`, protocol `98f1bd9`, fresh Modern and Forever clients on private UDP5898 paid for Ring/Bear/Mammoth, earned2084/2076/2078, advanced actual known-mount progress2→4 and compared against a separate online peer (own Completed, peer Incomplete). Sixteen1280×720 PNGs reside in `/syncthing/AgentShared/2026-10-12/achievements/criteria17/`; logs and source-placement receipt are under the achievements-criteria logs’ `live/criteria17/`. This is a commerce/mount/comparison sample, not proof of every enabled criterion; arena37 has separate real-channel persistence proof. All owned processes stopped.
 
+## Identity PlayerCondition criteria (verified 2026-10-13)
+
+The criteria condition compiler now carries ModifierTree type2 PlayerCondition IDs. Catalog loading delegates to `game_objects::identity_conditions::load_condition`, retaining every flag/non-identity/TDB source34 restriction; `permits_race_class` is shared by object interaction and criteria evaluation. No second mask implementation or general PlayerCondition interpreter was added. Native XP tests prove Human Paladin and Orc Mage cap transitions earn Double Agent7380 through account aggregation and remain earned after redb reopen, without opposite-faction or admin/login event credit. The [inventory](../../achievement-criteria-producer-inventory.md) owns the updated structural census.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
