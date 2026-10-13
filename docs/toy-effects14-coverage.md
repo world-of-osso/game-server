@@ -10,7 +10,7 @@
 | Source visual metadata / ribbon scalar parser | Core visual1 PASS; real1417024 scalar RED→GREEN plus six parser regressions; [format](../../game-engine/docs/wiki/formats/m2-format.md#ribbon-emitter-scalars-2026-10-13) |
 | Modern stationary native | Aura/kit ready, natural removal, recovery retained;27318ms after model readiness, not exact20s wall. Stationary PNG does not certify rainbow trail |
 | Forever native | First-learning timeout; reconnect model/aura with immediateCD0; instrumented BFF learning and Bauble120000ms receipt pass but model predicate fails. Latest initial catalog sent but no native apply observed before120s timeout. No lifecycle PASS or ownership fix |
-| Native rainbow / whole1166 | 1417024 has one ribbon and one particle; effect builder lacks ribbon consumer. Moving trail and complete1166 remain open; no independent verification PASS |
+| Native rainbow / whole1166 | 1417024 has one ribbon and one particle. Native moving raster RED0 → Modern2880/four bands and Forever2994/five bands. Final current-revision lifecycle gate remains open; complete1166 and independent verification remain unclaimed |
 
 ## Source Toy facing — bounded gate (2026-10-13)
 
