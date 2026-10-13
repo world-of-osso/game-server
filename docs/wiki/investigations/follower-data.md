@@ -76,6 +76,10 @@ Durable evidence: engine `data/diagnostics/follower-ai3-2026-10-11/`: `{modern,f
 
 Private appearance cache strictly adds138 displays while preserving13,218; existing M2 baker produces142 displays/1,420 eye poses. Maintained frozen-root local-CASC importer publishes768 additive private asset receipts/422 aliases over six fragments. These restore the selected encounter/party render dependencies, not general asset closure. All cache/model/texture/product overlays remain private; no promotion to canonical data. The incomplete loot/walk gates keep the full requested goal open.
 
+## Native Group Finder catalog — 2026-10-13
+
+`lfg/follower_catalog.rs` answers authenticated `QueryFollowerDungeons` with sorted IDs/names/maps from prepared catalog destinations. Known205 IDs lacking an authored entrance/Normal population are not offered; an empty prepared catalog produces an empty reply, never fabricated choices. Actual registered host-loopback RED→GREEN exercises both populated and empty replies. Existing admission validation remains authoritative. [Native UI and its proof boundary](../../../../game-engine/docs/wiki/systems/follower-dungeons.md) owns the Group Finder role/type/list rendering; no new full-dungeon or all-class claim follows from catalog publication.
+
 ## Lead import instructions
 
 Agents prepared SQL only and applied it solely to the explicitly authorized private `world-followers.sqlite`. Lead confirmed canonical import of11 profiles,27 LFG rows,9,586 source spell rows and11 content templates. Agent writes remain private. Existing instance population is separate from follower profile/reference import.
@@ -102,6 +106,7 @@ Prepared artifacts already exist under engine `data/diagnostics/follower-ai2-202
 ## Sources
 
 - [Reference importer](../../../scripts/follower_import.py), [profile importer](../../../scripts/follower_profiles.py), [SQL tests](../../../scripts/tests/test_follower_profiles.py)
+- [Group Finder catalog](../../../crates/server/src/lfg/follower_catalog.rs), [catalog loopback](../../../crates/server/src/followers/wire_tests.rs)
 - [Runtime bridge](../../../crates/server/src/followers/mod.rs), [group presence](../../../crates/server/src/group/mod.rs), [member health](../../../crates/server/src/group/member_state.rs)
 - Local pinned Spell/Difficulty CSVs, canonical read-only world.db, full TDB1210.26091 SQL, diagnostics receipts
 - [TrinityCore a352b1fa grid loader](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Grids/ObjectGridLoader.cpp#L95-L103), [exact difficulty key](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Globals/ObjectMgr.cpp#L2180-L2216)

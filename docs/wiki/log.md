@@ -1030,3 +1030,7 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: Native Ysera145108 owner-health ticks/self-group switching and CannotCrit; six Bevy App controls, isolated per-cast override, no rendered parity claim.
 
 - 2026-10-13: Native163 school-mask critical-damage product and KnowYourEnemy percent updater; actual damage/order/lifecycle controls, retained floating-rounding and rendered-parity limits.
+
+## 2026-10-13 — Prepared follower Group Finder catalog
+
+[Catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13): authenticated sorted source entries and empty-catalog reply; actual registered loopback RED→GREEN. Server2d62a2dc targeted22 plus required-environment companion test pass, check/fmt pass. No new live/full-instance proof or canonical data writes.
