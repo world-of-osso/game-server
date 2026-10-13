@@ -132,6 +132,8 @@ pub mod powers;
 mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
+#[cfg(test)]
+mod recovery_rate_tests;
 mod reflect;
 #[cfg(test)]
 mod resistance_pct_tests;
