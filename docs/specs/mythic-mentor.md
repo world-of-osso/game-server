@@ -5,6 +5,7 @@ Server-authoritative party key summaries for the native [Keys panel](../../../ga
 ## What it must do
 
 - [x] Authenticated in-world clients receive complete recipient-specific `PartyKeystoneSnapshot` replacements on reliable ordered InstanceChannel when data changes (one-second refresh); no addon messaging.
+- [ ] Existing native post-InWorld `ChallengeRequest::Query` also returns the complete party list even when the change cache matches. This is the readiness handshake, not retry polling.
 - [x] Recipient first, then party roster; solo receives self, raids no rows, outsiders never disclosed. Include members without keys.
 - [x] Join persisted bag item IDs/GUIDs to persisted keystone records, labelled by imported MapChallengeMode summaries from the existing [Mythic+ catalog](mythic-plus.md), independently of full run qualification. Records without matching bags are not keys. Never disclose peer item GUIDs.
 - [ ] Include every imported challenge's authored dungeon/time for real owned keys; current installed-addon eight-map regression plus Azure401 must pass. Catalog-only administrative issuance does not enable unsupported challenge runs.

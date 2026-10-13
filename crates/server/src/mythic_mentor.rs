@@ -56,6 +56,27 @@ fn load_member_identity(db: &redb::Database, registry: &GroupRegistry, id: u64) 
     (data.name, data.class)
 }
 
+fn publish_party_keys(world: &mut World, connection: Entity, snapshot: PartyKeystoneSnapshot) {
+    world
+        .get_mut::<MessageSender<PartyKeystoneSnapshot>>(connection)
+        .expect("authenticated connection has registered party keystone sender")
+        .send::<InstanceChannel>(snapshot.clone());
+    world
+        .resource_mut::<PublishedKeys>()
+        .sent
+        .insert(connection, snapshot);
+}
+
+/// The existing native post-InWorld challenge query is the party-list readiness handshake.
+pub(super) fn send_party_snapshot(world: &mut World, connection: Entity) {
+    let character = world
+        .get::<InWorld>(connection)
+        .expect("party key query requires authenticated world entry")
+        .character_id;
+    let snapshot = load_party_snapshot(world, character);
+    publish_party_keys(world, connection, snapshot);
+}
+
 pub(super) fn send_changed_party_keys(world: &mut World) {
     let elapsed = world.resource::<Time>().elapsed_secs_f64();
     let mut published = world.resource_mut::<PublishedKeys>();
@@ -77,14 +98,7 @@ pub(super) fn send_changed_party_keys(world: &mut World) {
         let snapshot = load_party_snapshot(world, character);
         let changed = world.resource::<PublishedKeys>().sent.get(&connection) != Some(&snapshot);
         if changed {
-            let mut sender = world
-                .get_mut::<MessageSender<PartyKeystoneSnapshot>>(connection)
-                .expect("authenticated connection has registered party keystone sender");
-            sender.send::<InstanceChannel>(snapshot.clone());
-            world
-                .resource_mut::<PublishedKeys>()
-                .sent
-                .insert(connection, snapshot);
+            publish_party_keys(world, connection, snapshot);
         }
     }
 }
@@ -116,6 +130,70 @@ mod tests {
                 level,
                 affixes: vec![],
             },
+        );
+    }
+
+    #[test]
+    fn mythic_mentor_ready_query_republishes_unchanged_recipient_snapshot() {
+        #[derive(Resource, Default)]
+        struct Replies(Vec<PartyKeystoneSnapshot>);
+        fn collect(
+            mut receivers: Query<&mut MessageReceiver<PartyKeystoneSnapshot>>,
+            mut replies: ResMut<Replies>,
+        ) {
+            for mut receiver in &mut receivers {
+                replies.0.extend(receiver.receive());
+            }
+        }
+        let mut h = crate::bank_test_harness::harness().unwrap();
+        let owner = h.character_id;
+        let outsider = h.create_alt("Outsider");
+        let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").unwrap();
+        let conn =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        h.app.init_resource::<GroupRegistry>();
+        h.app.init_resource::<PublishedKeys>();
+        h.app.init_resource::<Replies>();
+        h.app.insert_resource(Challenges {
+            summaries: load_summaries(&conn).unwrap(),
+            ..Default::default()
+        });
+        h.app.add_systems(First, collect);
+        h.app.add_systems(Update, receive);
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChallengeRequest>::default(),
+            MessageReceiver::<ChallengeRequest>::default(),
+            MessageSender::<ChallengeSnapshot>::default(),
+            MessageReceiver::<ChallengeSnapshot>::default(),
+            MessageSender::<PartyKeystoneSnapshot>::default(),
+            MessageReceiver::<PartyKeystoneSnapshot>::default(),
+        ));
+        let txn = h.db().begin_write().unwrap();
+        txn.open_table(KEYS).unwrap();
+        txn.commit().unwrap();
+        put_key(&h, owner, 4242, 8);
+        put_key(&h, outsider, 4243, 20);
+        send_changed_party_keys(h.app.world_mut());
+        for _ in 0..3 {
+            h.app.update();
+        }
+        let initial = std::mem::take(&mut h.app.world_mut().resource_mut::<Replies>().0);
+        assert_eq!(initial.len(), 1);
+        assert_eq!(initial[0].members.len(), 1);
+        assert_eq!(initial[0].members[0].character_id, owner);
+        assert_eq!(initial[0].members[0].key.as_ref().unwrap().level, 8);
+        // Model the live boundary: one-way bootstrap is absent at the ready reader; cache matches.
+        // A ready client uses the existing one-shot ChallengeRequest::Query, not retry polling.
+        h.app
+            .world_mut()
+            .resource_mut::<PublishedKeys>()
+            .next_refresh = f64::INFINITY;
+        h.send::<_, InstanceChannel>(ChallengeRequest::Query);
+        let refreshed = std::mem::take(&mut h.app.world_mut().resource_mut::<Replies>().0);
+        assert_eq!(
+            refreshed, initial,
+            "Ready query must republish even when change cache matches"
         );
     }
 
