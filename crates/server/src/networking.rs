@@ -528,6 +528,8 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     >,
     mounted: Query<'w, 's, Entity, (With<Player>, With<Mounted>)>,
     controls: Query<'w, 's, &'static shared::components::MovementControl>,
+    passengers: Query<'w, 's, &'static shared::components::TransportPassenger>,
+    ships: crate::transport::ShipQuery<'w, 's>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
@@ -614,7 +616,28 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         }
         let map = params.maps.get(link.0).copied().ok();
         let mut changes = MovementChanges::default();
+        let passenger = params.passengers.get(link.0).ok().copied();
+        let ship = passenger
+            .and_then(|passenger| crate::transport::movement_frame(&params.ships, passenger));
         for input in inputs {
+            let input = match crate::transport_movement::resolve_input(
+                &input,
+                passenger,
+                ship,
+                map.expect("validated player movement map"),
+            ) {
+                Ok(input) => input,
+                Err(error) => {
+                    warn!(player=?link.0, "Transport movement refused: {error}");
+                    continue;
+                }
+            };
+            if passenger.is_some() && input.transport.is_none() {
+                let player = link.0;
+                params
+                    .commands
+                    .queue(move |world: &mut World| crate::transport::disembark(world, player));
+            }
             let terrain = params.ground.as_deref_mut().zip(map);
             changes = changes.merge(apply_movement_input(
                 &input,

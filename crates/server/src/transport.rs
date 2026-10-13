@@ -12,7 +12,18 @@ use shared::{
 };
 
 #[derive(Component)]
-struct ShipRoute(TransportRoute);
+pub(crate) struct ShipRoute(TransportRoute);
+
+pub(crate) type ShipQuery<'w, 's> =
+    Query<'w, 's, (&'static TransportState, &'static ShipRoute, &'static InMap)>;
+
+pub(crate) fn movement_frame(
+    ships: &ShipQuery<'_, '_>,
+    passenger: TransportPassenger,
+) -> Option<(u64, InMap, TransportPose)> {
+    let (state, route, map) = ships.get(Entity::from_bits(passenger.transport)).ok()?;
+    Some((passenger.transport, *map, route.0.pose_at(state.elapsed_ms)))
+}
 
 #[derive(Component)]
 struct PendingTransportEntry(TransportPassenger);
@@ -193,6 +204,75 @@ fn carry_passengers(world: &mut World) {
         world.entity_mut(player).insert((position, rotation));
         mark_replication(world, player);
     }
+}
+
+pub(crate) fn store_passenger_offsets(world: &mut World) {
+    let mut players = world.query::<(Entity, &TransportPassenger, &Position, &Rotation)>();
+    let updates: Vec<_> = players
+        .iter(world)
+        .map(|(entity, passenger, position, rotation)| {
+            let ship = Entity::from_bits(passenger.transport);
+            let world_pose = TransportPose {
+                position: [position.x, -position.z, position.y],
+                orientation: rotation.y - std::f32::consts::FRAC_PI_2,
+            };
+            let local = source_pose(world, ship).world_to_local(world_pose);
+            (
+                entity,
+                TransportPassenger {
+                    transport: passenger.transport,
+                    position: local.position,
+                    orientation: local.orientation,
+                },
+            )
+        })
+        .collect();
+    for (entity, local) in updates {
+        if world.get::<TransportPassenger>(entity) != Some(&local) {
+            world.entity_mut(entity).insert(local);
+            mark_replication(world, entity);
+        }
+    }
+}
+
+pub(crate) fn disembark(world: &mut World, player: Entity) {
+    if world
+        .entity_mut(player)
+        .take::<TransportPassenger>()
+        .is_none()
+    {
+        return;
+    }
+    let bg = world
+        .get::<crate::pvp::PlayerPvpState>(player)
+        .and_then(|state| state.battleground.as_ref())
+        .expect("Seething passenger match");
+    if bg.phase != shared::battleground::BgPhase::InProgress {
+        let team = bg.team;
+        let start = shared::battleground::SEETHING_STARTS[if team == shared::battleground::BgTeam::A
+        {
+            0
+        } else {
+            1
+        }];
+        let map = *world.get::<InMap>(player).expect("disembarking player map");
+        let store = world.resource::<crate::maps::MapStore>();
+        let local = store.safe_locs[&start];
+        let spawn_id = store.safe_loc_transports[&start];
+        let destination =
+            prepare_entry(world, player, map, local, spawn_id).expect("validated ship start");
+        assert!(crate::maps::teleport_to(
+            world,
+            player,
+            destination,
+            crate::maps::TeleportOptions::default()
+        ));
+        finish_entry(world, player, map);
+        return;
+    }
+    // TC transport_seething_shore::OnRemovePassenger, both triggered on the player.
+    crate::spell_cast::cast_triggered(world, player, 250917, Some(player), 0);
+    crate::spell_cast::cast_triggered(world, player, 262359, Some(player), 0);
 }
 
 fn mark_replication(world: &World, entity: Entity) {
