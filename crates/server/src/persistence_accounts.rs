@@ -27,7 +27,8 @@ pub struct AccountInspection {
     pub ban_reason: Option<String>,
 }
 
-/// Authenticate via token or username+password. Returns (account_id, token) or error.
+/// Synchronous account-store fixture helper; the runtime hashes off-thread.
+#[cfg(test)]
 pub fn login_with_credentials(
     db: &Database,
     token: Option<&str>,
