@@ -5,6 +5,7 @@
 # Wiki Log
 
 - 2026-10-12 — [Achievement criteria producer inventory](../achievement-criteria-producer-inventory.md): all243 raw types separated from current-root rows and unsupported actors/conditions; earned XP196/221/253,13 sourced class predicates, traditional ranks47/87/88 and real terrain163/164. Native account Dynamic Duo, authenticated45068 settlement, five terrain destinations and reopened persistence proved; current-build both-skin/integration gate remains open.
+- 2026-10-13 — [Master arena/class regressions](investigations/master-arena-fixture-regressions.md): pinned TC target/cost/cap rules; duplicate Arcane discount removed, reciprocal Moloch success/refusal controls, unchanged mastery expiry assertions isolated from capped selection. Historical bisect limitations retained explicitly.
 
 - 2026-10-12 — [Native casting restrictions](../class-completeness6.md#native-casting-restrictions--batch29): exact263 parent-family rule and exemptions, RED3→thirteen controls; [cooking-focus/spellcaster integration](../class-completeness6.md#cooking-focus-and-spellcaster-integration) preserves both SELECT payloads and twenty merged native behavior controls. Current integration gates/census tracked separately.
 

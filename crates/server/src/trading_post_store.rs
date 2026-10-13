@@ -91,6 +91,19 @@ pub(crate) fn refund(db: &Database, account: u64, vendor: u32, now: i64) -> Resu
     Ok(state)
 }
 
+/// Admin-socket test setup only; players earn Tender through `settle`.
+pub(crate) fn grant_tender(db: &Database, account: u64, amount: u32) -> Result<State, String> {
+    let txn = db.begin_write().expect("begin Trading Post Tender grant");
+    let mut state = read_state(&txn, account);
+    state.tender = state
+        .tender
+        .checked_add(amount)
+        .ok_or("Tender balance overflow.")?;
+    write_state(&txn, account, &state);
+    txn.commit().expect("commit Trading Post Tender grant");
+    Ok(state)
+}
+
 pub(crate) fn freeze(db: &Database, account: u64, vendor: Option<u32>) -> State {
     let txn = db.begin_write().expect("begin Trading Post freeze");
     let mut state = read_state(&txn, account);
