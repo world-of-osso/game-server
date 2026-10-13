@@ -30,17 +30,14 @@ pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
     /// TC DB2Manager::IsInArea: the area itself or any ParentAreaID ancestor.
-    pub(crate) fn is_in_area(&self, mut area_id: u32, map_id: u32, required: u32) -> bool {
-        for _ in 0..self.0.len() {
-            let Some(area) = self.0.get(&area_id) else {
-                return false;
-            };
-            if area.map_id != map_id {
-                return false;
-            }
+    pub(crate) fn is_in_area(&self, mut area_id: u32, required: u32) -> bool {
+        for _ in 0..=self.0.len() {
             if area_id == required {
                 return true;
             }
+            let Some(area) = self.0.get(&area_id) else {
+                return false;
+            };
             if area.parent == 0 {
                 return false;
             }
@@ -153,10 +150,10 @@ mod tests {
         let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
         let areas = load_area_table(&conn).unwrap();
         // TC DB2Stores.cpp1868: IDs and parent links, without a continent test.
-        assert!(areas.is_in_area(6797, 0, 6719));
+        assert!(areas.is_in_area(6797, 6719));
         // Genuine69933 parent16311 has no row; matching that ID precedes lookup.
-        assert!(areas.is_in_area(16328, 2907, 16311));
-        assert!(!areas.is_in_area(16328, 2907, 6719));
+        assert!(areas.is_in_area(16328, 16311));
+        assert!(!areas.is_in_area(16328, 6719));
     }
 
     #[test]

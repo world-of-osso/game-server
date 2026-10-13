@@ -30,17 +30,17 @@ fn requirements() -> &'static Requirements {
     })
 }
 
-fn current_area(world: &mut World, unit: Entity) -> Option<(u32, u32)> {
+fn load_current_area(world: &mut World, unit: Entity) -> Option<u32> {
     let position = *world.get::<Position>(unit)?;
     let map = world.get::<crate::maps::InMap>(unit)?.map_id;
     let area = world
         .get_resource_mut::<crate::ground::GroundMap>()?
         .area_at(map, Vec3::new(position.x, position.y, position.z))?;
-    Some((area, map))
+    Some(area)
 }
 
-fn permits(world: &World, group: u32, location: Option<(u32, u32)>) -> bool {
-    let Some((area, map)) = location else {
+fn permits(world: &World, group: u32, location: Option<u32>) -> bool {
+    let Some(area) = location else {
         return false;
     };
     let Some(table) = world.get_resource::<crate::area_table::AreaTable>() else {
@@ -48,14 +48,14 @@ fn permits(world: &World, group: u32, location: Option<(u32, u32)>) -> bool {
     };
     requirements().groups[&group]
         .iter()
-        .any(|&member| table.is_in_area(area, map, member))
+        .any(|&member| table.is_in_area(area, member))
 }
 
 pub(crate) fn check_cast(world: &mut World, caster: Entity, spell: u32) -> Result<(), CastFailure> {
     let Some(&group) = requirements().spells.get(&spell) else {
         return Ok(());
     };
-    let location = current_area(world, caster);
+    let location = load_current_area(world, caster);
     if permits(world, group, location) {
         Ok(())
     } else {
@@ -85,7 +85,7 @@ pub(crate) fn remove_outside_auras(world: &mut World, owner: Entity) {
     if restricted.is_empty() {
         return;
     }
-    let location = current_area(world, owner);
+    let location = load_current_area(world, owner);
     let removed: Vec<_> = restricted
         .into_iter()
         .filter_map(|(instance, group)| (!permits(world, group, location)).then_some(instance))
