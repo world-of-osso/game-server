@@ -52,7 +52,14 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - `spell_cast/class_completeness_probe.rs`: opt-in controlled native-row census.
 - `spell_cast/open_lock.rs`, `game_objects/locks.rs`, `persistence_inventory.rs`: native bag-item lock metadata, ordered alternatives and per-GUID unlock state.
 
+## Immunity definition source compatibility
+
+- [x] The creature-immunity importer reads all235 authentic TDB1210 rows, verifies the pinned full-row fingerprint, and transactionally replaces only `creature_immunities` in an existing database copy. Invalid/incomplete input changes no database state; repeated imports are idempotent. Canonical publication belongs to lead.
+- [ ] Explicit compatibility requirement: the immunity loader warns and returns empty definitions when the table is absent, without crashing spell loading. Missing definition IDs remain named unsupported inputs; no immunity masks are invented from the aura147 ID itself.
+
 ## Tests asserting this spec
+
+- `scripts/tests/test_creature_immunities_import.py`: native process import, idempotence/fingerprint, unrelated-data preservation and invalid-source no-write boundary.
 
 - `crates/server/src/spell_cast/class_completeness_tests.rs`: native owner/label, charge/cooldown, level80 resources and immune/partial-school boundaries.
 - `crates/server/src/spell_cast/class_completeness_probe.rs`: executed membership receipts (manifest supplied explicitly).
