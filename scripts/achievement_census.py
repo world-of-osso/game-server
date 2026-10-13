@@ -10,6 +10,7 @@ from pathlib import Path
 
 from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_single_modifiers import qualified_single_modifiers
+from import_achievement_difficulty_rules import qualified_difficulty_rules
 import db2_casc
 
 BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 30, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 155, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
@@ -41,7 +42,7 @@ def walk_tree(root, rows, children, visiting=frozenset()):
     return descendants, errors
 
 
-def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers):
+def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules):
     supported = set()
     for row_id, row in criteria.items():
         kind, asset = int(row['Type']), int(row['Asset'])
@@ -58,7 +59,8 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             if row_id in single_modifiers and single_modifiers[row_id][1] in pet_species:
                 supported.add(row_id)
             continue
-        if any(int(row[key]) for key in CONDITIONS):
+        # A compiled DungeonDifficulty68 tree may be the only condition.
+        if any(int(row[key]) for key in CONDITIONS) and row_id not in difficulty_rules:
             continue
         if kind in (28, 29, 34, 69, 110) and asset not in spells:
             continue
@@ -157,7 +159,8 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     overlay_assets = {row_id for row_id, row in overlays.items() if any(area in areas for area in row[12:16])}
     mythic_ids = qualified_mythic_criteria(criteria, modifiers)
     single_modifiers = qualified_single_modifiers(criteria, modifiers)
-    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers)
+    difficulty_rules = qualified_difficulty_rules(criteria, modifiers)
+    supported = supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules)
     by_type = collections.defaultdict(set)
     records = {}
     for row_id, row in achievements.items():
@@ -195,7 +198,7 @@ def census(db2, modifiers_path, world_db, types, overlays_path):
     trackable = [row for row in records.values() if row['trackable']]
     ranking = []
     for kind, ids in sorted(by_type.items(), key=lambda item: (-len(item[1]), item[0])):
-        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers)
+        newly_supported = supported_criteria(criteria, types | {kind}, spells, skills, mythic_ids, overlay_assets, pet_creatures, pet_species, toy_items, scenarios, zones, taxi_nodes, single_modifiers, difficulty_rules)
         gain = sum(not records[id]['trackable'] and not records[id]['flags'] & (1 | 0x4000)
                    and supports_tree(records[id]['root'], trees, children, newly_supported)
                    for id in ids)

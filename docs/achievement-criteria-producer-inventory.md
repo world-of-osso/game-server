@@ -2,10 +2,11 @@
 
 verified: 2026-10-12
 
-Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **4555 ordinary (3260 account/1295 character),259 statistics; 94 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
+Scope: all243 distinct Types in the pinned69933 Criteria.csv. Raw support is NOT a promise that every conditional row, actor, timer, world-state or current achievement tree is executable. Current structural all-faction player union: **5015 ordinary (3288 account/1727 character),1485 statistics; 94 enabled types**. Spec/producer contracts: [dungeon achievements](specs/dungeon-achievements.md).
 
 ## Current-tree wiring
 
+- ModifierTree DungeonDifficulty68 (TC CriteriaHandler2090–2093, operators1723–1751): 2539 criteria whose only condition is an All/SingleTrue, All/SingleFalse or Some(≤1) difficulty tree are compiled (`achievement_difficulty_rules.rs`) and checked against the player's current copy Difficulty (continents0) at event time; +460 ordinary/+1226 statistics. Raw counts below include these rows under their own criteria type.
 - Types196/221/253 are earned native XP transitions, not login/admin facts. Thirteen exact current221 class leaves now admit7382/7383/7384/19489; native Paladin+Mage transitions earn7382 and survive reopened account login.
 - Types13/54/55/102–106 and the new unconditional rank/area/level counters do not gain an Achievement merely because a raw CriteriaTree references them. Census follows actual Achievement roots; orphan raw rows are retained for non-achievement consumers, never relinked.
 - Damage Control227 is still blocked by battleground start/fail lifetime conditions and zone/target predicates, not missing raw damage/healing counters. Unknown conditions cannot be stripped.
@@ -18,7 +19,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 
 | Type | Pinned source name | Raw | Current roots | Orphans | State / producer evidence |
 |---:|---|---:|---:|---:|---|
-| 0 | KillCreature | 6189/10154 | 2442/4428 | 3747 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 0 | KillCreature | 6564/10154 | 2725/4428 | 3839 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 1 | WinBattleground | 25/212 | 25/160 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 3 | CompleteAnyResearchProject | 0/12 | 0/12 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
 | 4 | FindResearchObject | 0/12 | 0/0 | 0 | Producer gap: no archaeology/research runtime; enum names do not authorize synthetic progress. |
@@ -44,15 +45,15 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 24 | MaxDistFallenWithoutDying | 0/3 | 0/3 | 0 | Condition gap: every raw row has an unsupported qualifier; native candidate does not authorize dropping conditions. |
 | 26 | DieFromEnviromentalDamage | 3/6 | 3/6 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 27 | CompleteQuest | 12627/14115 | 9393/9889 | 3234 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 28 | BeSpellTarget | 653/1839 | 404/1290 | 249 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 29 | CastSpell | 2387/2972 | 1381/1657 | 1006 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 28 | BeSpellTarget | 715/1839 | 458/1290 | 257 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 29 | CastSpell | 2397/2972 | 1391/1657 | 1006 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 30 | TrackedWorldStateUIModified | 15/87 | 15/78 | 0 | Native: every battleground objective credit (TC BattlegroundScore::UpdatePvpStat:78-80) records +1 for the connected character, completed in the match map; only unconditional rows whose PvpStat is a native column. BG start/fail-event rows stay disabled. Native completion-map gate leaves 199/200 (Instance_ID489) unearned on WSG2106. See spec. |
 | 31 | PVPKillInArea | 0/51 | 0/45 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 32 | WinArena | 0/82 | 0/62 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 33 | ParticipateInArena | 0/87 | 0/61 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 34 | LearnOrKnowSpell | 530/578 | 441/467 | 89 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 35 | EarnHonorableKill | 0/62 | 0/52 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
-| 36 | AcquireItem | 1646/1759 | 1119/1132 | 527 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 36 | AcquireItem | 1650/1759 | 1123/1132 | 527 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 37 | WinAnyRankedArena | 0/60 | 0/34 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 38 | EarnTeamArenaRating | 0/6 | 0/3 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 39 | EarnPersonalArenaRating | 0/88 | 0/68 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
@@ -85,7 +86,7 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 66 | MoneySpentOnPostage | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 67 | MoneyLootedFromCreatures | 1/2 | 1/2 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 68 | UseGameobject | 498/578 | 354/383 | 144 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 69 | GainAura | 483/760 | 41/225 | 442 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 69 | GainAura | 495/760 | 53/225 | 442 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 70 | KillPlayer | 0/180 | 0/102 | 0 | Producer/state gap: no sourced honor eligibility, rated arena/BG result or honor/prestige/solo-shuffle progression; pvp_objective.rs initializes honor/rating facts to None. |
 | 71 | CompleteChallengeMode | 0/244 | 0/120 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
 | 72 | CatchFishInFishingHole | 0/38 | 0/36 | 0 | Producer gap: no fishing pool/catch settlement (toy transmitted-object placeholders are not fishing). |
@@ -161,8 +162,8 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 148 | KickVoterInLFRDungeon | 0/1 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
 | 149 | KickTargetInLFRDungeon | 0/1 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
 | 150 | GroupedTankLeftEarlyInLFRDungeon | 0/1 | 0/0 | 0 | Producer gap: lfg.rs stores role checks/match_found only, not an LFG/LFR instance completion, stranger roster or kick/abandon settlement. |
-| 151 | CompleteAnyScenario | 0/8 | 0/2 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 152 | CompleteScenario | 577/1070 | 67/139 | 510 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 151 | CompleteAnyScenario | 6/8 | 1/2 | 5 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 152 | CompleteScenario | 865/1070 | 70/139 | 795 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 153 | EnterAreaTriggerWithActionSet | 0/33 | 0/8 | 0 | Source/qualification gap: requires exact producer boundary or progress rule not established by current native criterion implementation; no enum-name inference. |
 | 155 | LearnedNewPet | 127/127 | 122/122 | 5 | Native: battle_pets::learn_companion_from_item and wild capture credit species after the new-GUID journal commit (TC BattlePetMgr::AddPet:483); compiled AND4→BattlePetSpecies91 leaves only. Local item sources exist for species1928/1929 only; Coiled Isle wild species lack battle abilities. See spec. |
 | 156 | UniquePetsOwned | 1/1 | 1/1 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
@@ -172,9 +173,9 @@ Counts: supported raw / raw; supported current-root rows / all current-root rows
 | 160 | BattlePetReachLevel | 6/31 | 6/27 | 0 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 161 | PlayerObtainPetThroughBattle | 0/79 | 0/68 | 0 | Source semantics gap: native candidate event/state exists, but pinned evaluator supplies no executable progress rule for this raw type; do not infer count/reset/asset semantics. |
 | 162 | ActivelyEarnPetLevel | 6/24 | 0/0 | 6 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 163 | EnterArea | 143/174 | 0/4 | 143 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 163 | EnterArea | 145/174 | 0/4 | 145 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 164 | LeaveArea | 4/5 | 0/0 | 4 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
-| 165 | DefeatDungeonEncounter | 866/4358 | 331/2757 | 535 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
+| 165 | DefeatDungeonEncounter | 2363/4358 | 1429/2757 | 934 | Native criterion events wired in achievement_catalog.rs/achievement.rs; exact boundary and limits in linked spec. Conditional/unsupported rows stay disabled. |
 | 167 | PlaceGarrisonBuilding | 0/35 | 0/0 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 168 | ActivateAnyGarrisonBuilding | 0/3 | 0/2 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |
 | 169 | ActivateGarrisonBuilding | 0/77 | 0/44 | 0 | Producer gap: no Garrison building/mission/research actor or lifecycle in current server. |

@@ -848,6 +848,15 @@ fn connection_for_player(world: &mut World, player: Entity) -> Option<Entity> {
         .find_map(|(connection, link)| (link.0 == player).then_some(connection))
 }
 
+/// TC Map::GetDifficultyID of the player's current map: its copy's difficulty, else 0.
+fn current_difficulty(world: &World, player: Entity) -> u32 {
+    let instances = world.get_resource::<crate::maps::InstanceManager>();
+    world
+        .get::<InMap>(player)
+        .and_then(|map| instances?.copy_difficulty(*map))
+        .map_or(0, |difficulty| difficulty.difficulty_id)
+}
+
 fn update_player_events(
     world: &mut World,
     player: Entity,
@@ -858,6 +867,7 @@ fn update_player_events(
         return None;
     }
     let race = world.get::<Player>(player)?.race;
+    let difficulty = current_difficulty(world, player);
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let owner = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()
@@ -869,7 +879,9 @@ fn update_player_events(
         let mut state = world.get::<PlayerAchievementState>(player)?.clone();
         let mut toasts: Vec<_> = events
             .iter()
-            .flat_map(|event| catalog.update(&mut state, *event, completed_map, race))
+            .flat_map(|event| {
+                catalog.update_at(&mut state, *event, completed_map, race, difficulty)
+            })
             .collect();
         for toast in &toasts {
             state.earned_at.insert(toast.achievement_id, now);
