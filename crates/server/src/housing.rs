@@ -64,7 +64,7 @@ pub(crate) fn spawn_neighborhood_objects(
 ) {
     if let Ok(catalog) = &source.0 {
         let objects = crate::game_objects::GameObjectSpawns(catalog.neighborhood_objects());
-        crate::game_objects::spawn_map_game_objects(commands, &objects, map, 0);
+        crate::game_objects::spawn_map_game_objects(commands, &objects, map, 0, None);
     }
 }
 
