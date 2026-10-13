@@ -1960,6 +1960,8 @@ mod toy_effects_tests;
 #[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]
+mod charred_warblades_tests;
+#[cfg(test)]
 mod crit_damage_bonus_tests;
 #[cfg(test)]
 mod critical_chaos_tests;
