@@ -51,6 +51,128 @@ const CHIPPED_CLAW: u32 = 7074;
 /// Pattern: Blue Linen Vest: maxcount 1, incrtime 9000 at Tharynn Bouden.
 const BLUE_LINEN_VEST_PATTERN: u32 = 6270;
 
+#[test]
+fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut h = harness_with(|app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic vendor database");
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    h.app.world_mut().entity_mut(h.player).insert(Level(10));
+    let vendor = h.open(17904);
+    let inventory = h.take::<VendorInventory>();
+    assert_eq!(inventory.len(), 1);
+    let item = inventory[0]
+        .items
+        .iter()
+        .find(|item| item.item_id == 33999)
+        .unwrap();
+    let slot = item.slot;
+    h.buy(vendor, slot, 33999, 1);
+    assert_eq!(h.take::<MerchantFailed>().len(), 1);
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .contains_key(&1874)
+    );
+    // Purchase money and the authored Exalted Cenarion Expedition942 gate (item_sparse
+    // MinFactionID/MinReputation) are setup; the merchant transaction is the acquisition.
+    h.set_gold(20_000_000);
+    let mut reputation = shared::reputation::CharacterReputation::default();
+    reputation.set_rep(
+        942,
+        shared::reputation::threshold_for_standing(shared::reputation::Standing::Exalted),
+    );
+    h.app.world_mut().entity_mut(h.player).insert(reputation);
+    h.buy(vendor, slot, 33999, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&1874),
+        Some(&1)
+    );
+    // Tree5192 is MeetsAtLeast8 amount1 (TC IsCompletedCriteriaTree): acquiring 33999
+    // or knowing 43927 completes Cenarion War Hippogryph893.
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .account
+            .as_deref()
+            .unwrap()
+            .earned_ids
+            .contains(&893)
+    );
+    h.app.world_mut().entity_mut(h.player).insert(Level(30));
+    h.set_gold(85_000_000);
+    let ring_vendor = h.open(32172);
+    let ring_inventory = h.take::<VendorInventory>();
+    let ring_slot = ring_inventory[0]
+        .items
+        .iter()
+        .find(|item| item.item_id == 40586)
+        .unwrap()
+        .slot;
+    h.buy(ring_vendor, ring_slot, 40586, 1);
+    assert!(h.take::<MerchantFailed>().is_empty());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&7401),
+        Some(&1)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .earned_ids
+            .contains(&2084)
+    );
+    assert_eq!(
+        persistence::load_achievements(
+            &h.app.world().resource::<GameDatabase>().db,
+            h.character_id
+        )
+        .criteria_progress
+        .get(&1874),
+        Some(&1)
+    );
+    for _ in 0..3 {
+        h.app.update();
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap()
+            .criteria_progress
+            .get(&1874),
+        Some(&1)
+    );
+}
+
 fn world_db_path() -> Option<PathBuf> {
     let path = crate::test_data::world_db_path();
     Some(path)
@@ -88,6 +210,10 @@ struct Harness {
 }
 
 fn harness() -> Option<Harness> {
+    harness_with(|_| {})
+}
+
+fn harness_with(add_plugins: impl FnOnce(&mut App)) -> Option<Harness> {
     let path = world_db_path()?;
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut app = App::new();
@@ -108,6 +234,7 @@ fn harness() -> Option<Harness> {
     app.add_plugins((NpcInteractionPlugin, MerchantPlugin));
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
     app.insert_resource(load_item_durability(&conn).unwrap());
+    add_plugins(&mut app);
     app.finish();
     app.cleanup();
     let db = &app.world().resource::<GameDatabase>().db;
@@ -1328,4 +1455,59 @@ fn source_requirements_static_merchant_unique_limit_counts_retail_only() {
         assert_eq!(h.failures(), vec![MerchantError::CantCarryMore]);
         assert_eq!(h.count_of(id), vec![1, 1]);
     }
+}
+
+/// TC BuyItemFromVendorSlot/SellItemToVendor: committed purchases (219), sales (220) and
+/// sale copper (59) only; refusals and buybacks credit nothing.
+#[test]
+fn achievements_criteria_vendor_purchases_and_sales_count_only_committed_trades() {
+    use crate::achievement::{AchievementPlugin, PlayerAchievementState, load_achievement_catalog};
+    let mut h = harness_with(|app| {
+        app.add_plugins(AchievementPlugin);
+    })
+    .expect("authentic vendor database");
+    h.app
+        .insert_resource(load_achievement_catalog(&h.conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(PlayerAchievementState::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
+    // Hidden NPE trackers14223 (criterion48159) / 14221 (47940); Gold from vendors921 (4091).
+    let counters = |h: &Harness| {
+        let state = h
+            .app
+            .world()
+            .get::<PlayerAchievementState>(h.player)
+            .unwrap();
+        [48159, 47940, 4091].map(|id| state.criteria_progress.get(&id).copied())
+    };
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.set_gold(88);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
+    assert_eq!(h.failures(), vec![MerchantError::NotEnoughMoney]);
+    assert_eq!(counters(&h), [None, None, None]);
+    h.set_gold(100_000);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
+    assert!(h.failures().is_empty());
+    assert_eq!(counters(&h), [Some(1), None, None]);
+    let linen = h.guid_of(LINEN);
+    h.sell(godric, linen, 5);
+    assert!(h.failures().is_empty());
+    assert_eq!(counters(&h), [Some(1), Some(1), Some(5 * 13)]);
+    h.send::<_, MerchantChannel>(BuybackItemRequest {
+        npc: godric.to_bits(),
+        slot: 0,
+    });
+    assert!(h.failures().is_empty());
+    assert_eq!(counters(&h), [Some(1), Some(1), Some(5 * 13)]);
+    let state = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.player)
+        .unwrap();
+    assert!(state.earned_ids.contains(&14223) && state.earned_ids.contains(&14221));
 }

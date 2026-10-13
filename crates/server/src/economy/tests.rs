@@ -757,3 +757,98 @@ fn economy_failed_collector_commit_keeps_mail_items_and_runtime_state() {
     assert_eq!(inventory.items[1], mailbox[0].items[1].item);
     assert_eq!(inventory.gold, 919 - listed.deposit);
 }
+
+#[test]
+fn achievements_criteria_auctions_native_economy_purchase_credits_only_online_seller() {
+    use crate::auction_house::tests::criteria::{prepare_auction_players, progress};
+    use shared::protocol::{AuctionChannel, AuctionDuration, CreateAuction};
+    for online in [true, false] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let (mut h, _, buyer) = prepare_auction_players(file.path());
+        let seller = h.character_id;
+        let mut inventory = persistence::load_inventory(h.db(), seller);
+        let guid = persistence::next_id(h.db(), "item_instance");
+        inventory.items.push(persistence::InventoryItemData {
+            item_guid: guid,
+            item_id: 2318,
+            name: "Light Leather".into(),
+            quality: 1,
+            required_level: 0,
+            stack_count: 1,
+            vendor_sell_price: 15,
+            unique_auction: false,
+        });
+        persistence::save_inventory(h.db(), seller, &inventory);
+        h.send::<_, AuctionChannel>(CreateAuction {
+            item_guid: guid,
+            stack_count: 1,
+            min_bid: 1,
+            buyout_price: Some(10),
+            duration: AuctionDuration::Short,
+        });
+        let auction = h
+            .app
+            .world()
+            .resource::<AuctionHouseState>()
+            .auctions
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        if !online {
+            h.app
+                .world_mut()
+                .entity_mut(h.connection)
+                .remove::<crate::auth::InWorld>();
+        }
+        let (mut config, mut state) = fixture();
+        config.gatherables.clear();
+        h.app
+            .world_mut()
+            .resource_scope(|world, mut auctions: Mut<AuctionHouseState>| {
+                let db = &world.resource::<GameDatabase>().db;
+                run_cycle(
+                    db,
+                    &mut auctions,
+                    &mut state,
+                    &config,
+                    unix_now(),
+                    &mut || 0,
+                )
+                .unwrap();
+            });
+        for _ in 0..4 {
+            h.app.update();
+        }
+        assert!(persistence::load_auctions(h.db()).is_empty());
+        let payout = 10 + auction.deposit;
+        assert_eq!(
+            persistence::mail_store::load_mailbox(h.db(), seller)[0].money,
+            payout
+        );
+        assert_eq!(progress(&h, seller, 4225), online.then_some(payout));
+        assert_eq!(progress(&h, seller, 4223), online.then_some(10));
+        assert_eq!(progress(&h, buyer, 4221), None);
+        if !online {
+            h.app
+                .world_mut()
+                .entity_mut(h.connection)
+                .insert(crate::auth::InWorld {
+                    character_id: seller,
+                });
+            for _ in 0..3 {
+                h.app.update();
+            }
+            assert_eq!(progress(&h, seller, 4225), None);
+        }
+        drop(h);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        assert_eq!(
+            persistence::load_achievements(&reopened, seller)
+                .criteria_progress
+                .get(&4225)
+                .copied(),
+            online.then_some(payout)
+        );
+    }
+}

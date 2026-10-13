@@ -13,6 +13,10 @@
 //! See `docs/wiki/systems/spell-casting.md`.
 
 #[cfg(test)]
+mod achievement_damage_tests;
+#[cfg(test)]
+mod achievement_healing_tests;
+#[cfg(test)]
 mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
@@ -201,8 +205,12 @@ mod knockback;
 mod knockback_tests;
 mod school_costs;
 pub(crate) mod teleport;
-mod teleport_positions;
+pub(crate) mod teleport_positions;
+mod toy_coin;
+mod toy_foam_sword;
 pub(crate) mod toy_scripts;
+mod toy_weather;
+mod toy_wormhole;
 
 pub struct SpellCastPlugin;
 
@@ -256,6 +264,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );
     }
@@ -599,6 +608,24 @@ fn channel_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bo
     intrinsic || aura_allows_moving(world, caster, spell)
 }
 
+/// The channel half of `Unit::RemoveAurasWithInterruptFlags` (Unit.cpp:4278-4284): a
+/// channel whose `ChannelInterruptFlags` share `flags` ends (`InterruptNonMeleeSpells`).
+/// Moving and Turning are enforced through `CastState::cast_while_moving` instead.
+pub(crate) fn interrupt_channel_with_flags(world: &mut World, caster: Entity, flags: [u32; 2]) {
+    let Some((spell, CastType::Channel)) = read_active_cast_spell(world, caster) else {
+        return;
+    };
+    let channel_flags = spell
+        .interrupts
+        .as_ref()
+        .map_or([0; 2], |interrupts| interrupts.channel_interrupt_flags);
+    let handled_elsewhere = [CHANNEL_INTERRUPT_MOVING, 0];
+    let matches = (0..2).any(|i| channel_flags[i] & flags[i] & !handled_elsewhere[i] != 0);
+    if matches {
+        cancel_cast(world, caster);
+    }
+}
+
 /// TC Unit::CanCastSpellWhileMoving: native330 uses a family mask, not its amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
@@ -749,13 +776,13 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     crate::pvp::record_arena_event(world, &event);
     scripts::record_health_change(world, &event);
     if event.kind == CombatLogKind::Death {
-        let source = event
-            .source
-            .and_then(Entity::try_from_bits)
-            .map(|unit| combat_event_owner(world, unit));
+        let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
         if let (Some(killer), Some(victim)) = (source, target) {
-            crate::quest::record_player_kill(world, killer, victim);
+            crate::achievement::record_delivered_killing_blow(world, killer);
+            crate::achievement::record_player_killed_by(world, victim, killer);
+            let owner = combat_event_owner(world, killer);
+            crate::quest::record_player_kill(world, owner, victim);
         }
     }
     let mut players: Vec<Entity> = Vec::new();
@@ -941,15 +968,16 @@ pub(crate) fn cast_granted(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    cast_granted_with_item_level(world, caster, spell_id, target, None)
+    cast_granted_with_item_context(world, caster, spell_id, target, None, None)
 }
 
-fn cast_granted_with_item_level(
+fn cast_granted_with_item_context(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
     target: Option<Entity>,
     item_level: Option<u16>,
+    retail_item_id: Option<u32>,
 ) -> Result<(), CastFailure> {
     let result = world
         .get_resource::<SpellStore>()
@@ -958,6 +986,7 @@ fn cast_granted_with_item_level(
         .ok_or(CastFailure::UnknownSpell)
         .and_then(|mut spell| {
             spell.cast_item_level = item_level;
+            spell.cast_retail_item_id = retail_item_id;
             start_cast(world, caster, &spell, target, None)
         });
     if let Err(failure) = &result {
@@ -994,6 +1023,7 @@ pub(crate) fn cast_item_spell(
     target: Option<Entity>,
     cooldown: ItemCooldown,
     item_level: u16,
+    retail_item_id: Option<u32>,
 ) -> Result<(), CastFailure> {
     let now = now(world);
     let cooling = cooldown.category != 0
@@ -1016,7 +1046,14 @@ pub(crate) fn cast_item_spell(
         );
         return Err(CastFailure::OnCooldown);
     }
-    cast_granted_with_item_level(world, caster, spell_id, target, Some(item_level))?;
+    cast_granted_with_item_context(
+        world,
+        caster,
+        spell_id,
+        target,
+        Some(item_level),
+        retail_item_id,
+    )?;
     if cooldown.category != 0 && cooldown.category_ms > 0 {
         world
             .entity_mut(caster)
@@ -1857,6 +1894,10 @@ pub(crate) fn execute_cast(
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     open_lock::unlock_cast(world, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
+    if let Some(item) = spell.cast_retail_item_id {
+        // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
+        crate::achievement::record_item_use(world, caster, item);
+    }
     spend_costs(world, caster, &costs);
     scripts::empower_gargoyles(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
@@ -1940,7 +1981,7 @@ type TargetPlan = Vec<PlannedEffect>;
 /// The first effect whose targets `Spell::SelectSpellTargets` selects together with
 /// effect `index` (Spell.cpp:741-781): an effect with the same implicit targets and, for
 /// area selections, the same radii. Its selection (its chain) serves both.
-fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
+fn target_group_leader(world: &World, spell: &SpellInfo, index: usize) -> usize {
     let effect = &spell.effects[index];
     spell.effects[..index]
         .iter()
@@ -1948,9 +1989,14 @@ fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
             other.effect != 0
                 && targets::unsupported_target(other).is_none()
                 && other.implicit_targets == effect.implicit_targets
+                && world
+                    .get_resource::<crate::conditions::SpellTargetConditions>()
+                    .is_none_or(|conditions| {
+                        conditions.share_targets(spell.id, other.index, effect.index)
+                    })
                 && other.attributes & EFFECT_ATTR_PLAYERS_ONLY
                     == effect.attributes & EFFECT_ATTR_PLAYERS_ONLY
-                && (!targets::selects_area(effect)
+                && (!targets::shared_selection_checks_radius(effect)
                     || (other.radius[0] == effect.radius[0] && other.radius[1] == effect.radius[1]))
         })
         .unwrap_or(index)
@@ -2019,6 +2065,13 @@ fn plan_targets(
                 return Err(CastFailure::Unsupported(reason));
             }
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
         if effect.effect == disenchant::EFFECT_DISENCHANT {
             plan.push(PlannedEffect {
                 index,
@@ -2028,7 +2081,7 @@ fn plan_targets(
             });
             continue;
         }
-        let leader = target_group_leader(spell, index);
+        let leader = target_group_leader(world, spell, index);
         let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
             None => {
@@ -2093,7 +2146,7 @@ fn resolve_effects(
 ) {
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
-        crate::achievement::record_spell_target(world, unit, spell.id);
+        crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
         if !selects_targets(spell, effect) {
@@ -2136,6 +2189,12 @@ fn resolve_effects(
                     None => aura_masks.push((unit, 1 << effect.index)),
                 }
             }
+            continue;
+        }
+        // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
+        // Unit-targeted events use the normal hit/immunity boundary below.
+        if effect.effect == effects::EFFECT_SEND_EVENT && effect.implicit_targets == [0, 0] {
+            effects::send_game_event(world, &ctx, effect, caster);
             continue;
         }
         // Item unlock is persisted before the cast success receipt; it has no

@@ -26,15 +26,30 @@ fn scenarios_active_tree_uses_fresh_criteria_and_completes_once() {
     let def = gnomeregan();
     let mut run = ScenarioRun::default();
     assert_eq!(run.snapshot(&def, &catalog).stage, 1);
-    assert!(!run.apply(&def, &catalog, CriteriaEvent::KillCreature(7361)));
+    assert!(!run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7361),
+        &PlayerConditions::default()
+    ));
     assert!(!run.snapshot(&def, &catalog).completed);
-    assert!(run.apply(&def, &catalog, CriteriaEvent::KillCreature(7800)));
+    assert!(run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7800),
+        &PlayerConditions::default()
+    ));
     let snapshot = run.snapshot(&def, &catalog);
     assert!(snapshot.completed);
     assert_eq!(snapshot.stage, 2);
     assert_eq!(snapshot.num_stages, 1);
     assert!(snapshot.criteria.is_empty());
-    assert!(!run.apply(&def, &catalog, CriteriaEvent::KillCreature(7800)));
+    assert!(!run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7800),
+        &PlayerConditions::default()
+    ));
     assert_eq!(run.criteria.criteria_progress[&18529], 1);
     assert_eq!(ScenarioRun::default().snapshot(&def, &catalog).stage, 1);
 }
@@ -52,11 +67,26 @@ fn scenarios_ordered_progress_does_not_credit_future_steps_or_lifetime_achieveme
         root: 36988,
     });
     let mut run = ScenarioRun::default();
-    assert!(!run.apply(&def, &catalog, CriteriaEvent::KillCreature(7361)));
-    assert!(run.apply(&def, &catalog, CriteriaEvent::KillCreature(7800)));
+    assert!(!run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7361),
+        &PlayerConditions::default()
+    ));
+    assert!(run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7800),
+        &PlayerConditions::default()
+    ));
     assert_eq!(run.snapshot(&def, &catalog).stage, 2);
     assert!(!run.snapshot(&def, &catalog).completed);
-    assert!(run.apply(&def, &catalog, CriteriaEvent::KillCreature(7361)));
+    assert!(run.apply(
+        &def,
+        &catalog,
+        CriteriaEvent::KillCreature(7361),
+        &PlayerConditions::default()
+    ));
     assert!(run.snapshot(&def, &catalog).completed);
     assert!(run.criteria.earned_ids.is_empty());
 }
@@ -156,4 +186,94 @@ fn scenarios_entry_and_real_death_boundary_are_copy_scoped_and_clear_on_exit() {
     world.entity_mut(players[0]).insert(InMap::continent(0));
     send_entry_progress(&mut world);
     assert!(snapshot(&world, InMap::continent(0)).scenario.is_none());
+}
+
+#[test]
+fn achievements_criteria_real_scenario_completion_credits_each_copy_player_once() {
+    use shared::components::CharacterAppearance;
+    let db = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    let achievements = load_achievement_catalog(&db).unwrap();
+    // Production loader admits authored Arena of Annihilation58 (five kill+event32548 steps).
+    let scenarios = load_scenarios(&db, &achievements).unwrap();
+    assert_eq!(scenarios.definitions[&58].steps.len(), 5);
+    let mut world = World::new();
+    world.insert_resource(achievements);
+    world.insert_resource(scenarios);
+    world.init_resource::<crate::maps::ServerClock>();
+    // MAP_SCENARIO1031 is still rejected by InstanceManager admission; two copies are bound
+    // directly so the completion producer is exercised, not map entry.
+    let arena = InMap {
+        map_id: 1031,
+        instance_id: 7,
+    };
+    let other = InMap {
+        map_id: 1031,
+        instance_id: 8,
+    };
+    world.insert_resource(ScenarioRuns(HashMap::from([
+        (arena, (58, ScenarioRun::default())),
+        (other, (58, ScenarioRun::default())),
+    ])));
+    let [participant, bystander] = [arena, other].map(|map| {
+        world
+            .spawn((
+                Player {
+                    name: format!("Scenario{}", map.instance_id),
+                    race: 2,
+                    class: 1,
+                    appearance: CharacterAppearance::default(),
+                },
+                PlayerAchievementState::default(),
+                map,
+            ))
+            .id()
+    });
+    let challengers = [63311, 63312, 63313, 63318, 64894];
+    for (index, entry) in challengers.into_iter().enumerate() {
+        let state = world.get::<PlayerAchievementState>(participant).unwrap();
+        assert!(
+            !state.earned_ids.contains(&7271),
+            "early grant at step {index}"
+        );
+        assert!(!state.criteria_progress.contains_key(&21813));
+        let npc = world
+            .spawn((
+                Npc {
+                    template_id: entry,
+                    name: "Challenger".into(),
+                },
+                arena,
+            ))
+            .id();
+        super::super::record_creature_death(&mut world, npc, Some(participant));
+        super::super::record_player_game_event(&mut world, participant, 32548);
+    }
+    assert!(snapshot(&world, arena).scenario.unwrap().completed);
+    let state = world.get::<PlayerAchievementState>(participant).unwrap();
+    assert!(state.earned_ids.contains(&7271));
+    assert_eq!(state.criteria_progress.get(&21813), Some(&1));
+    // A finished run cannot be completed again by later authored events.
+    super::super::record_player_game_event(&mut world, participant, 32548);
+    let npc = world
+        .spawn((
+            Npc {
+                template_id: 64894,
+                name: "Challenger".into(),
+            },
+            arena,
+        ))
+        .id();
+    super::super::record_creature_death(&mut world, npc, Some(participant));
+    assert_eq!(
+        world
+            .get::<PlayerAchievementState>(participant)
+            .unwrap()
+            .criteria_progress
+            .get(&21813),
+        Some(&1)
+    );
+    let bystander = world.get::<PlayerAchievementState>(bystander).unwrap();
+    assert!(!snapshot(&world, other).scenario.unwrap().completed);
+    assert!(!bystander.earned_ids.contains(&7271));
+    assert!(!bystander.criteria_progress.contains_key(&21813));
 }

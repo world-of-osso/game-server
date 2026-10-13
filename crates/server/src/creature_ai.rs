@@ -58,6 +58,7 @@ type Roaming = (
     Without<Feared>,
     Without<crate::scripted_ai::movement::PointMovement>,
     Without<crate::scripted_ai::movement::ScriptedPath>,
+    Without<crate::scripted_ai::waypoint_path::PathMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
 type ActiveUncontrolled = (

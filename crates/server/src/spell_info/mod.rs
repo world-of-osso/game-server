@@ -63,6 +63,9 @@ pub struct SpellInfo {
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
     pub(crate) cast_item_level: Option<u16>,
+    /// Retail item actually used by this cast; delayed casts credit only on execution.
+    #[serde(skip)]
+    pub(crate) cast_retail_item_id: Option<u32>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,

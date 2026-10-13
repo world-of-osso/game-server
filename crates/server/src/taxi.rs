@@ -170,6 +170,7 @@ fn open_flight_maps(
     network: Res<TaxiNetwork>,
     db: Option<Res<GameDatabase>>,
     mut senders: TaxiSenders,
+    mut commands: Commands,
 ) {
     let Some(db) = db else { return };
     for (connection, in_world, link, interaction) in &opened {
@@ -189,6 +190,15 @@ fn open_flight_maps(
         if known.insert(current) {
             save_known_taxi_nodes(&db.db, in_world.character_id, &known);
             senders.discovered(connection, current);
+            // TC TaxiHandler.cpp:146 credits only a newly learned node.
+            let character = in_world.character_id;
+            commands.queue(move |world: &mut World| {
+                crate::achievement::record_character_event(
+                    world,
+                    character,
+                    crate::achievement::CriteriaEvent::LearnTaxiNode(current),
+                );
+            });
         }
         let map = taxi_map(&network, npc.to_bits(), current, &known, team);
         senders.map(connection, map);
@@ -309,6 +319,23 @@ fn process_activate_taxi(
             };
             senders.closed(connection, npc);
             commands.entity(connection).remove::<ActiveInteraction>();
+            // TC Player.cpp:23289-23307: a paid, started flight.
+            let (character, cost) = (in_world.character_id, u64::from(route.cost));
+            commands.queue(move |world: &mut World| {
+                use crate::achievement::CriteriaEvent;
+                crate::achievement::record_character_event(
+                    world,
+                    character,
+                    CriteriaEvent::BuyTaxi,
+                );
+                if cost > 0 {
+                    crate::achievement::record_character_event(
+                        world,
+                        character,
+                        CriteriaEvent::MoneySpentOnTaxis(cost),
+                    );
+                }
+            });
             let points = takeoff.network.flight_points(&route.nodes);
             commands.entity(link.0).insert((
                 TaxiFlight { points, next: 0 },

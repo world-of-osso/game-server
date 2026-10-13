@@ -164,6 +164,15 @@ impl AuraStatMods {
     }
 }
 
+/// HandleModRating snapshots points; TC Aura::Update keeps its duration even
+/// with a null caster. Other aura kinds retain their existing source requirements.
+pub(crate) fn retains_rating_snapshot(aura: &AuraInstance) -> bool {
+    !aura.effects.is_empty()
+        && aura.effects.iter().all(|effect| {
+            effect.aura_type == MOD_RATING && effect.misc_values[0] == VERSATILITY_RATING_MASK
+        })
+}
+
 fn pct(amount: f32) -> f32 {
     1.0 + amount / 100.0
 }
@@ -348,6 +357,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_CRIT_PCT => stats.crit_pct += amount,
+            // HandleModRating truncates each effect before ApplyRatingMod. Do not
+            // triple-count the same rating for damage/healing/damage-taken bits.
+            MOD_RATING if misc == VERSATILITY_RATING_MASK => {
+                stats.ratings_flat.versatility += effect.amount.trunc() * stacks;
+            }
             // Retail 12.x haste is one stat: melee, ranged and spell haste
             // auras all add to it.
             MOD_MELEE_HASTE

@@ -812,8 +812,10 @@ fn advance_encounter(
     let guid = encounter.captured.as_ref().map(|_| {
         crate::persistence::next_id(&world.resource::<GameDatabase>().db, "battle_pet_instance")
     });
+    let before = journal.clone();
     let rewards = encounter.apply_rewards(world.resource::<WildCatalog>(), &mut journal, guid)?;
     save_journal(&world.resource::<GameDatabase>().db, account, &journal);
+    crate::achievement::record_pet_level_changes(world, owner, &before, &journal);
     world
         .get_mut::<AccountPetJournal>(owner)
         .expect("journal checked")
@@ -829,6 +831,13 @@ fn advance_encounter(
             Outcome::Draw => WildPetBattleOutcome::Draw,
         }
     };
+    if outcome == WildPetBattleOutcome::Won {
+        crate::achievement::record_pet_battle_win(world, owner);
+    }
+    if let Some(captured) = guid.and(encounter.captured.as_ref()) {
+        crate::achievement::record_pet_capture(world, owner);
+        crate::achievement::record_learned_pet(world, owner, captured.species);
+    }
     info!(
         "Wild pet battle {} ended: account {}, outcome {:?}, captured {:?}, rewards {:?}",
         encounter.id, account, outcome, guid, rewards

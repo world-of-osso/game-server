@@ -93,7 +93,12 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             poolSpawnId INTEGER NOT NULL, chance REAL NOT NULL, description TEXT,
             PRIMARY KEY (type, spawnId));
         CREATE TABLE content_gameobject (guid INTEGER PRIMARY KEY, map INTEGER);
-        CREATE TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, VignetteID INTEGER);
+        CREATE TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, VignetteID INTEGER,
+            StringId TEXT);
+        CREATE TABLE tdb_creature (guid INTEGER PRIMARY KEY, id INTEGER, StringId TEXT);
+        CREATE TABLE tdb_spawn_group (groupId INTEGER, spawnType INTEGER, spawnId INTEGER);
+        CREATE TABLE tdb_spawn_group_template (groupId INTEGER PRIMARY KEY, groupName TEXT,
+            groupFlags INTEGER);
         CREATE TABLE vignette (ID INTEGER PRIMARY KEY, Flags INTEGER);
         CREATE TABLE content_game_event_pool (eventEntry INTEGER NOT NULL,
             pool_entry INTEGER NOT NULL PRIMARY KEY);
