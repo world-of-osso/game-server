@@ -255,6 +255,35 @@ fn follower_felguard_unbaked_chase_does_not_use_direct_movement() {
 }
 
 #[test]
+fn follower_felguard_melee_kill_taps_the_authenticated_player() {
+    let mut f = fixture();
+    f.h.app
+        .world_mut()
+        .entity_mut(f.h.caster)
+        .insert(crate::persistence::ClientId(30));
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
+        .unwrap();
+    f.h.advance(160);
+    f.h.app
+        .world_mut()
+        .entity_mut(f.h.npc)
+        .insert(shared::components::Health {
+            current: 5.0,
+            max: 5.0,
+        });
+    crate::pet_control::order_companion_pet(f.h.app.world_mut(), f.unit, Some(f.h.npc));
+    f.h.advance(120);
+    assert_eq!(f.h.health(f.h.npc), 0.0);
+    let tap =
+        f.h.app
+            .world()
+            .get::<crate::creature_tap::CreatureTap>(f.h.npc)
+            .expect("pet kill tapped actual character");
+    assert_eq!(tap.tappers, vec![30]);
+    assert_eq!(tap.xp_factor(5.0), 1.0);
+}
+
+#[test]
 fn follower_felguard_fights_the_companions_selected_enemy() {
     let mut f = fixture();
     for _ in 0..240 {
