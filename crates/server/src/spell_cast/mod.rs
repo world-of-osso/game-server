@@ -2218,6 +2218,11 @@ fn resolve_effects(
             }
             continue;
         }
+        // Authored spell scripts own their effect before generic dispatch.
+        if let Some(handler) = scripts::cast_effect(spell.id, effect.index) {
+            handler(world, &ctx, effect);
+            continue;
+        }
         // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
         // hit units, but still cast their child once with the parent's destination.
         if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
@@ -2235,9 +2240,7 @@ fn resolve_effects(
         if open_lock::is_item_cast(spell) && open_lock::is_item_effect(effect) {
             continue;
         }
-        if let Some(handler) = scripts::cast_effect(spell.id, effect.index)
-            .or_else(|| effects::cast_handler(effect.effect))
-        {
+        if let Some(handler) = effects::cast_handler(effect.effect) {
             handler(world, &ctx, effect);
             continue;
         }
