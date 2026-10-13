@@ -272,11 +272,8 @@ fn path_velocity(path: &ScriptPath, spawn: &SpawnPoint, walking: bool, flying: b
     } else {
         run
     });
-    let limit = if flying || path.exact_spline() {
-        50.0
-    } else {
-        (run * 4.0).max(28.0)
-    };
+    // Catmullrom splines need CanFly, so `Flying` covers both 50-yard limits.
+    let limit = if flying { 50.0 } else { (run * 4.0).max(28.0) };
     velocity.min(limit)
 }
 
