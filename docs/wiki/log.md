@@ -5,6 +5,10 @@
 ## 2026-10-13 — Follower utilities and strict-nav boundaries
 
 [Follower data](investigations/follower-data.md#advanced-bridge-utilities-and-bound-fields--2026-10-13): real interrupts, casting-time readiness/cancellation, eleven-profile defensive mitigation/healing and real Stockade hostile-field escape; native Group Finder current-source Ruby admission does not close its disconnected authored route or full-dungeon acceptance. No source-coordinate changes, canonical writes or direct movement substitute.
+## 2026-10-13 — PlayerHasAura Some alternatives
+
+[Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
+
 ## 2026-10-13 — PlayerIsInArea Some alternatives
 
 [Complete area alternatives](systems/dungeon-achievements.md#player-area-alternatives) reuse recursive ancestry and retain every authenticated leaf. Five controlled cached authority snapshots drive real queued death109755/character61456 and reopened persistence; no terrain-travel or holiday/NPC content claim. Focused3/3, compiler24/24; four additional ordinary definitions are structural only.
