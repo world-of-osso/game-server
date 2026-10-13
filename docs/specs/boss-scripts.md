@@ -53,6 +53,14 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 - [ ] Slagmaw binding: journal actor1344 display38391 differs from TDB model42247, so no binding SQL is prepared. Vehicle2206 accessory61800 (Magnaw's Head) and `ENCOUNTER_FRAME_ENGAGE` are unmodelled. The East teleport lands ~48yd from spawn and stays engaged: dungeon maps skip the flat40yd spawn leash ([contract](creature-aggro.md)); open-world behavior is unchanged.
 - [ ] Canonical publication of the Adarogg/Gordoth bindings and server-side/summon/model rows, loot/lockout/native acceptance remain open. Fixtures bind the source actor/bit in an independent map resource; they do not mutate canonical data.
 
+## Deadmines source audit
+
+- [x] TC a352b1fa `Deadmines/deadmines.h` and `instance_deadmines.cpp` identify Glubtok47162, Helix47296, Foe Reaper43778, Ripsnarl47626, Cookie47739 and Vanessa49541. Census retains all11 Normal/Heroic encounter records; Lumbering Oaf47297 is a journal companion, not Helix's primary. These identities do not authorize runtime kill credit.
+- [ ] Pinned Deadmines directory has only header/instance files, no boss AI files. Local primary templates have empty AIName/ScriptName and no source0 SmartScripts; authentic combat schedules are unavailable. Do not synthesize timers or import Classic mechanics as Retail boss behavior.
+- [ ] TC ordinals0–5 differ from local difficulty-specific DB2 bits (e.g. Glubtok2976/bit8 Normal,2981/bit9 Heroic). Current `raid_encounter_creature` key `(map_id,creature_entry)` stores one bit; no ambiguous multi-difficulty credit binding is published.
+- [ ] Factory13965 opens after Glubtok, Mast16400 after Helix, Heavy17153 outside Helix combat and Foundry16399 after Foe Reaper per source. Source-authored door behavior is identified, not implemented or proved. Missing primaries47296/47739/49541 have no TDB placements; no invented spawn coordinates.
+- [ ] No Deadmines full-combat, loot/lockout or native acceptance claim. [Census](../encounter-coverage.md).
+
 ## Ruby Life Pools source hooks
 
 Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Local Melidrussa/Kokia/Kyrakka/Erkhart templates have empty AIName/ScriptName; no boss schedules are inferred.
