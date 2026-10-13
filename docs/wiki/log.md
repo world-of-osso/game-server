@@ -1,6 +1,6 @@
 ## 2026-10-13 — PlayerHasAura Some alternatives
 
-[Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; committed native Jaguar/Mighty Loa fixture awaits resource capacity for GREEN. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
+[Complete aura alternatives](systems/dungeon-achievements.md#player-aura-alternatives) read authenticated current player aura membership and reject one missing spell without dropping it. Compiler25/25; native Jaguar/Mighty Loa fixture GREEN2/2 proves independent source alternatives, unrelated/removed auras, depth refusal and reopened counters. Four additional ordinary definitions are structural, not boss/form-acquisition or encounter-completion certification.
 
 ## 2026-10-13 — PlayerIsInArea Some alternatives
 
