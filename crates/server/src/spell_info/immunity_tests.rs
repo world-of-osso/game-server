@@ -8,6 +8,9 @@ use crate::spell_cast::test_harness::*;
 const FROST_NOVA: u32 = 122;
 const BLADESTORM: u32 = 227847;
 const BERSERK: u32 = 50334;
+const DEATHS_ADVANCE: u32 = 48265;
+const TAIL_SWIPE: u32 = 368970;
+const THUNDERSTORM: u32 = 51490;
 const IMMUNITY_PURGES_EFFECT: u32 = 0x0000_8000;
 const SPELL_NO_IMMUNITIES: u32 = 0x2000_0000;
 
@@ -38,9 +41,9 @@ fn copy_native_spell_table(conn: &Connection, name: &str, ddl: &str) {
             .unwrap()
     };
     let filter = if columns.iter().any(|column| column == "SpellID") {
-        " WHERE SpellID IN (122,227847)"
+        " WHERE SpellID IN (122,227847,48265)"
     } else if name == "spell" || name == "spell_name" {
-        " WHERE ID IN (122,227847)"
+        " WHERE ID IN (122,227847,48265)"
     } else {
         ""
     };
@@ -67,6 +70,10 @@ fn insert_native_immunity_definitions(conn: &Connection) {
 }
 
 fn load_native_bladestorm(include_immunities: bool) -> super::SpellInfo {
+    load_native_spell(BLADESTORM, include_immunities)
+}
+
+fn load_native_spell(spell_id: u32, include_immunities: bool) -> super::SpellInfo {
     let source = crate::test_data::world_db_path();
     let conn = Connection::open_in_memory().unwrap();
     let uri = format!("file:{}?mode=ro", source.display());
@@ -79,22 +86,53 @@ fn load_native_bladestorm(include_immunities: bool) -> super::SpellInfo {
     }
     super::load::load_spell_store(&conn)
         .unwrap()
-        .get(BLADESTORM)
+        .get(spell_id)
         .unwrap()
         .clone()
 }
 
-fn apply_bladestorm(h: &mut Harness, target: Entity) {
+fn apply_immunity_effect(h: &mut Harness, target: Entity, spell_id: u32, index: u8) {
     crate::auras::apply_aura(
         h.app.world_mut(),
         &AuraApplication {
             caster: target,
             target,
-            spell_id: BLADESTORM,
-            effect_mask: 1 << 1,
+            spell_id,
+            effect_mask: 1 << index,
             source: AuraSource::Cast,
         },
     );
+}
+
+fn apply_bladestorm(h: &mut Harness, target: Entity) {
+    apply_immunity_effect(h, target, BLADESTORM, 1);
+}
+
+struct KnockbackOutcome {
+    damage: bool,
+    daze: bool,
+    immune_logged: bool,
+}
+
+/// Native Death's Advance (1887: effects 98/124/144/145) or Bladestorm
+/// (1733: same effects plus snare mechanic) shields the kobold from `spell`.
+fn cast_against_immunity(shield: u32, index: u8, class: u8, spell: u32) -> KnockbackOutcome {
+    let mut h = harness(vec![load_native_spell(shield, true)], &[spell], class).unwrap();
+    let npc = h.npc;
+    apply_immunity_effect(&mut h, npc, shield, index);
+    let health = h.health(npc);
+    h.cast_and_deliver(spell, None);
+    let succeeded = h.inbox.go.iter().any(|go| go.spell_id == spell);
+    assert!(succeeded, "{spell} must cast: {:?}", h.inbox.failed);
+    KnockbackOutcome {
+        damage: h.health(npc) < health,
+        daze: crate::auras::has_aura(h.app.world(), npc, spell),
+        immune_logged: h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(spell)
+                && event.kind
+                    == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Immune)
+        }),
+    }
 }
 
 #[test]
@@ -186,4 +224,22 @@ fn class_completeness_native_missing_berserk_definition_stays_an_explicit_gap() 
     h.cast_and_deliver(FROST_NOVA, Some(npc));
     assert!(crate::auras::has_aura(h.app.world(), npc, FROST_NOVA));
     assert!(crate::auras::take_unhandled_auras(h.app.world_mut()).contains(&(BERSERK, 147)));
+}
+
+#[test]
+fn class_completeness_native_knockback_immunity_filters_only_knockback_effects() {
+    // TC Spell::AddUnitTarget drops immune effects and keeps the target hit.
+    let swipe = cast_against_immunity(DEATHS_ADVANCE, 2, 13, TAIL_SWIPE);
+    assert!(swipe.daze && !swipe.immune_logged);
+    let storm = cast_against_immunity(DEATHS_ADVANCE, 2, 7, THUNDERSTORM);
+    assert!(storm.damage && storm.daze && !storm.immune_logged);
+}
+
+#[test]
+fn class_completeness_native_mechanic_and_effect_immunity_combine_per_target() {
+    // UpdateSpellCastDataTargets logs immunity only for an empty effect mask.
+    let swipe = cast_against_immunity(BLADESTORM, 1, 13, TAIL_SWIPE);
+    assert!(!swipe.daze && swipe.immune_logged);
+    let storm = cast_against_immunity(BLADESTORM, 1, 7, THUNDERSTORM);
+    assert!(storm.damage && !storm.daze && !storm.immune_logged);
 }
