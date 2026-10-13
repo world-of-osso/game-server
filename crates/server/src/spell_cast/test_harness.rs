@@ -52,6 +52,37 @@ pub(crate) fn world_db() -> Option<&'static WorldData> {
     .as_ref()
 }
 
+/// Own the prepared native snapshot until its fixture finishes; canonical data is read-only.
+pub(crate) struct PreparedClassWorld {
+    directory: tempfile::TempDir,
+}
+
+impl PreparedClassWorld {
+    pub(crate) fn path(&self) -> PathBuf {
+        self.directory.path().join("world.class-summons.copy.db")
+    }
+}
+
+pub(crate) fn prepare_class_world() -> PreparedClassWorld {
+    let prepared = PreparedClassWorld {
+        directory: tempfile::tempdir().unwrap(),
+    };
+    let helper = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/prepare_class_summon_db.py");
+    let output = std::process::Command::new("python3")
+        .arg(helper)
+        .arg(crate::test_data::world_db_path())
+        .arg(prepared.path())
+        .output()
+        .expect("run native class fixture snapshot/import");
+    assert!(
+        output.status.success(),
+        "class fixture import failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    prepared
+}
+
 pub(crate) fn power_table(data: &WorldData) -> PowerTypeTable {
     let conn =
         Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -73,6 +104,7 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
             .map(|class| ClassInfo {
                 class_id: class.class_id,
                 skill_line: class.skill_line,
+                spell_class_set: class.spell_class_set,
                 power_types: class.power_types.clone(),
                 attack_power_per_strength: class.attack_power_per_strength,
                 attack_power_per_agility: class.attack_power_per_agility,

@@ -48,10 +48,16 @@ enum Selector {
     Caster,
     /// The explicit (requested) unit target.
     Explicit(Relation),
+    ///119: dead party/raid members selected at their stored corpse positions.
+    RaidCorpses,
     /// Area center = caster (SRC/DEST_CASTER).
     CenterCaster,
     /// Already selected destination (138 DEST_DEST_GROUND; terrain snapping is not modelled).
     ExistingDest,
+    ///72: random direction at this slot's radius around the caster.
+    CasterRandom,
+    ///86/91: destination moved in a random direction by this slot's native radius.
+    DestRandom,
     /// Destination moved backward by this target slot's DB2 radius (79).
     DestBack,
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
@@ -76,6 +82,10 @@ enum Selector {
     /// Units in the cone ahead of the caster meeting the effect's conditions
     /// (`TARGET_CHECK_ENTRY`).
     ConeEntry,
+    ///24: hostile cone along the caster's facing, using native ConeDegrees.
+    ConeEnemy,
+    ///129: hostile rectangle along caster facing, using native Width/CalcRadius.
+    CasterLine,
     ///104: hostile cone aimed from the caster toward the selected destination.
     ConeToDest,
     ///134: hostile line aimed toward the destination, to the effect radius.
@@ -88,6 +98,7 @@ fn selector(id: u32) -> Option<Selector> {
         0 | 9 | 17 => Selector::None, // Homebind / spell database destinations handled by teleport.
         1 | 56 | 120 => Selector::Caster,
         5 => Selector::Pet,
+        119 => Selector::RaidCorpses,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
         42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
         47 => Selector::CasterOffset(0.0),
@@ -96,9 +107,11 @@ fn selector(id: u32) -> Option<Selector> {
         6 => Selector::Explicit(Enemy),
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
-        18 | 22 => Selector::CenterCaster,
+        18 | 22 | 62 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
         79 => Selector::DestBack,
+        72 => Selector::CasterRandom,
+        86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
         132 => Selector::CenterExplicit(Ally),
@@ -113,8 +126,10 @@ fn selector(id: u32) -> Option<Selector> {
         29 => Selector::DynObj(Ally),
         65 => Selector::DestTargetBack,
         77 => Selector::ChannelTarget,
+        24 => Selector::ConeEnemy,
         60 => Selector::ConeEntry,
         104 => Selector::ConeToDest,
+        129 => Selector::CasterLine,
         134 => Selector::LineToDest,
         _ => return None,
     })
@@ -123,7 +138,9 @@ fn selector(id: u32) -> Option<Selector> {
 /// First implicit target ID of `effect` that has no selector.
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
-        let item_target = id == 26 && effect.effect == super::disenchant::EFFECT_DISENCHANT;
+        let item_target = id == 26
+            && (effect.effect == super::disenchant::EFFECT_DISENCHANT
+                || super::open_lock::is_item_effect(effect));
         let gathering_target = id == 23 && effect.effect == 33;
         let unsupported_back =
             id == 79 && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
@@ -143,6 +160,29 @@ pub fn explicit_requirement<'a>(
             Selector::DestTargetBack => Some(Relation::Any),
             _ => None,
         })
+}
+
+/// TC NeedsToBeTriggeredByCaster: a channel's child supplies a non-caster unit mask.
+pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
+    effect.implicit_targets.into_iter().any(|id| {
+        matches!(
+            selector(id),
+            Some(
+                Selector::Explicit(_)
+                    | Selector::RaidCorpses
+                    | Selector::ChannelTarget
+                    | Selector::Pet
+                    | Selector::AreaAroundSrc(_)
+                    | Selector::AreaAroundDest(_)
+                    | Selector::DynObj(_)
+                    | Selector::ConeEntry
+                    | Selector::ConeEnemy
+                    | Selector::CasterLine
+                    | Selector::ConeToDest
+                    | Selector::LineToDest
+            )
+        )
+    })
 }
 
 fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
@@ -362,12 +402,30 @@ pub fn select_targets(
                     ));
                 }
             }
+            Selector::RaidCorpses => {
+                selected_any = true;
+                units.extend(raid_corpses(
+                    world,
+                    caster,
+                    spell,
+                    effect,
+                    radius(effect, slot),
+                    max_targets,
+                ));
+            }
             Selector::CenterCaster => center = Some(caster_pos),
             Selector::CenterExplicit(_) => {
                 center = explicit.and_then(|target| position(world, target));
             }
             Selector::DestTargetBack => {
                 center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
+            }
+            Selector::CasterRandom => {
+                center = Some(random_destination(caster_pos, radius(effect, slot)));
+            }
+            Selector::DestRandom => {
+                let origin = center.unwrap_or(caster_pos);
+                center = Some(random_destination(origin, radius(effect, slot)));
             }
             Selector::DestBack => {
                 center = center.map(|point| {
@@ -392,12 +450,20 @@ pub fn select_targets(
                 let candidates = area_units(world, caster, src, radius(effect, slot), relation, 0);
                 units.extend(limit_spell_targets(spell, caster, candidates, max_targets));
             }
-            Selector::ConeToDest | Selector::LineToDest => {
+            Selector::ConeEnemy
+            | Selector::CasterLine
+            | Selector::ConeToDest
+            | Selector::LineToDest => {
                 selected_any = true;
-                let destination = spell
-                    .cast_destination
-                    .map(Vec3::from_array)
-                    .or_else(|| explicit.and_then(|unit| position(world, unit)));
+                let destination = if matches!(selector, Selector::ConeEnemy | Selector::CasterLine)
+                {
+                    None
+                } else {
+                    spell
+                        .cast_destination
+                        .map(Vec3::from_array)
+                        .or_else(|| explicit.and_then(|unit| position(world, unit)))
+                };
                 units.extend(directed_units(
                     world,
                     caster,
@@ -476,7 +542,64 @@ fn limit_spell_targets(
     units
 }
 
-///104/134 select hostile units along the caster-to-destination direction.
+///TC a352b1fa SpellInfo.cpp:367/Spell.cpp:9361 selects raid corpse owners.
+///The stored body, not a ghost's graveyard position, determines the radius.
+///Corpse state has no separate instance key; owners must remain in the caster's copy.
+fn raid_corpses(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    radius: f32,
+    cap: u32,
+) -> Vec<Entity> {
+    let Some(id) = world.get::<crate::persistence::ClientId>(caster) else {
+        return Vec::new();
+    };
+    let members = world
+        .resource::<crate::group::GroupRegistry>()
+        .group_members(id.0);
+    let Some(origin) = position(world, caster) else {
+        return Vec::new();
+    };
+    let Some(map) = world.get::<crate::maps::InMap>(caster).copied() else {
+        return Vec::new();
+    };
+    let mut query = world.query_filtered::<(
+        Entity,
+        &crate::persistence::ClientId,
+        &crate::death::PlayerDeathState,
+        &crate::maps::InMap,
+    ), With<Player>>();
+    let mut bodies: Vec<_> = query
+        .iter(world)
+        .filter_map(|(unit, id, death, owner_map)| {
+            if *owner_map != map
+                || !members.contains(&id.0)
+                || death.state == shared::death::DeathState::Alive
+            {
+                return None;
+            }
+            let body = death.corpse.as_ref()?;
+            if u32::from(body.map_id) != map.map_id {
+                return None;
+            }
+            let distance = origin.distance(Vec3::new(body.x, body.y, body.z));
+            (distance <= radius).then_some((distance, unit))
+        })
+        .collect();
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    bodies.retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit));
+    bodies.sort_by(|a, b| a.0.total_cmp(&b.0));
+    if cap > 0 {
+        bodies.truncate(cap as usize);
+    }
+    bodies.into_iter().map(|(_, unit)| unit).collect()
+}
+
+///24/129 use caster facing; 104/134 use the caster-to-destination direction.
+///129: SpellInfo.cpp377; SpellMgr.cpp3244-3245 marks native Width as CONE_LINE.
+///TC a352b1fa Spell.cpp:1273-1324 selects 24 with native ConeAngle/CalcRadius.
 ///The line uses catalog Width, not a radial explosion or a target-only hit.
 ///Unit-center geometry; combat-reach boundary expansion is not modelled.
 fn directed_units(
@@ -509,7 +632,7 @@ fn directed_units(
         within_directed_shape(
             offset,
             forward,
-            effect.implicit_targets[slot] == 134,
+            matches!(effect.implicit_targets[slot], 129 | 134),
             width,
             half_arc,
         )
@@ -744,6 +867,13 @@ fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option
     ))
 }
 
+///TC a352b1fa SpellInfo.cpp:128/339 and Spell.cpp:1690-1736:
+///targets72/86/91 use TARGET_DIR_RANDOM and this slot's authored CalcRadius.
+fn random_destination(point: Vec3, distance: f32) -> Vec3 {
+    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+    point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
+}
+
 /// TC SelectImplicitDestDestTargets: TARGET_DEST_DEST_BACK uses the destination's
 /// facing +pi and this slot's CalcRadius. Gnoll/Market/Expedition Tent uses2yd.
 fn offset_destination_back(point: Vec3, facing: f32, distance: f32) -> Vec3 {
@@ -782,6 +912,12 @@ pub fn effect_dest(
             Selector::ExistingDest => dest
                 .map(|dest: Dest| dest.position)
                 .or_else(|| position(world, caster)),
+            Selector::CasterRandom => {
+                position(world, caster).map(|point| random_destination(point, radius(effect, slot)))
+            }
+            Selector::DestRandom => {
+                dest.map(|dest: Dest| random_destination(dest.position, radius(effect, slot)))
+            }
             Selector::DestBack => dest.map(|dest: Dest| {
                 offset_destination_back(dest.position, dest.orientation, radius(effect, slot))
             }),
@@ -823,6 +959,36 @@ pub fn effect_dest(
     dest
 }
 
+///TC TARGET_DEST_CASTER_GROUND resolves map height when the cast plan owns mutable
+///ground access. Destination selection remains independent of ground-cache mutation.
+pub(super) fn ground_destination(
+    world: &mut World,
+    caster: Entity,
+    effect: &SpellEffect,
+    destination: Option<Dest>,
+) -> Result<Option<Dest>, super::CastFailure> {
+    if !effect.implicit_targets.contains(&62) {
+        return Ok(destination);
+    }
+    let mut destination = destination.ok_or(super::CastFailure::InvalidTarget)?;
+    let map = world
+        .get::<crate::maps::InMap>(caster)
+        .copied()
+        .ok_or(super::CastFailure::InvalidTarget)?;
+    let mut ground = world
+        .get_resource_mut::<crate::ground::GroundMap>()
+        .ok_or_else(|| {
+            super::CastFailure::Unsupported("caster-ground destination requires ground data".into())
+        })?;
+    let crate::ground::GroundProbe::Supported(height) =
+        ground.ground_at(map.map_id, destination.position)
+    else {
+        return Err(super::CastFailure::InvalidTarget);
+    };
+    destination.position.y = height;
+    Ok(Some(destination))
+}
+
 /// Whether a slot of `effect` selects units in an area (the selections whose radius
 /// `Spell::SelectSpellTargets` compares: Spell.cpp:757-775).
 pub fn selects_area(effect: &SpellEffect) -> bool {
@@ -830,8 +996,11 @@ pub fn selects_area(effect: &SpellEffect) -> bool {
         matches!(
             selector(id),
             Some(
-                Selector::AreaAroundSrc(_)
+                Selector::RaidCorpses
+                    | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
+                    | Selector::ConeEnemy
+                    | Selector::CasterLine
                     | Selector::ConeToDest
                     | Selector::LineToDest
             )

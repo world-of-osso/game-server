@@ -30,6 +30,8 @@ pub struct AuraStatMods {
     pub healing_taken_mult: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
     pub autoattack_damage_mult: f32,
+    /// MOD_SUMMON_DAMAGE429: consumed by units whose owner carries this aura.
+    pub summon_damage_mult: f32,
     /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
     /// `GetTotalAuraModifier` in `RewardRage`).
     pub rage_from_damage_dealt_pct: f32,
@@ -89,6 +91,7 @@ impl Default for AuraStatMods {
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
             autoattack_damage_mult: 1.0,
+            summon_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
             max_power_flat: Vec::new(),
@@ -202,6 +205,8 @@ struct Accumulator {
     slowest: f32,
     /// Strongest positive absolute speed cap (yards/second), not a percent.
     normal_speed_cap: f32,
+    /// Aura305's strongest positive percent floor, applied after slows.
+    minimum_speed_pct: f32,
     immobile: bool,
     /// MOD_CASTING_SPEED_NOT_STACK: strongest only.
     haste_not_stack: f32,
@@ -242,7 +247,7 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
         if acc.immobile {
             0.0
         } else {
-            (speed * pct(acc.slowest)).max(0.0)
+            (speed * pct(acc.slowest)).max(acc.minimum_speed_pct / 100.0)
         }
     };
     acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
@@ -250,6 +255,22 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     acc.combat.swim_speed = slowed(capped(run, BASE_SWIM_SPEED));
     acc.stats.haste_pct += acc.haste_not_stack;
     (acc.stats, acc.combat)
+}
+
+/// TC a352b1fa SpellAuraEffects.cpp3981 validates one Stats index; negatives are not "all".
+fn add_bonus_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount: f32) {
+    let stat = match index {
+        0 => &mut stats.strength,
+        1 => &mut stats.agility,
+        2 => &mut stats.stamina,
+        3 => &mut stats.intellect,
+        4 => &mut stats.spirit,
+        _ => {
+            warn!("Aura467 spell{spell} has invalid Stats index{index}");
+            return;
+        }
+    };
+    *stat += amount;
 }
 
 fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
@@ -264,6 +285,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_STAT => add_to_stats(&mut stats.primary_flat, amount, |index| {
                 misc < 0 || misc as usize == index
             }),
+            MOD_STAT_BONUS_PCT => {
+                add_bonus_stat_percent(&mut stats.primary_bonus_pct, aura.spell_id, misc, amount)
+            }
             // MiscValueB is a stat bitmask; 0 is every stat (TrinityCore
             // `HandleModTotalPercentStat`).
             MOD_TOTAL_STAT_PERCENTAGE => {
@@ -271,6 +295,22 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 add_to_stats(&mut stats.primary_pct, amount, |index| {
                     mask == 0 || mask & (1 << index) != 0
                 })
+            }
+            MOD_MINIMUM_SPEED => acc.minimum_speed_pct = acc.minimum_speed_pct.max(amount),
+            MOD_BONUS_ARMOR_PCT => {
+                stats.bonus_armor_pct += amount * (1.0 + stats.bonus_armor_pct / 100.0);
+            }
+            MOD_BASE_RESISTANCE_PCT => {
+                if misc & 1 != 0 {
+                    // Native independent aura factors multiply; retain a percentage value.
+                    stats.base_armor_pct += amount * (1.0 + stats.base_armor_pct / 100.0);
+                }
+                if misc & !1 != 0 {
+                    warn!(
+                        "Aura142 spell{} has unmodeled nonphysical base-resistance mask{misc}",
+                        aura.spell_id
+                    );
+                }
             }
             MOD_ARMOR_PCT_FROM_STAT => {
                 if misc == -2 {
@@ -313,6 +353,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
+            MOD_SUMMON_DAMAGE => combat.summon_damage_mult *= pct(amount),
             MOD_RAGE_FROM_DAMAGE_DEALT => combat.rage_from_damage_dealt_pct += amount,
             MOD_POWER_REGEN_PERCENT => {
                 multiply_entry(&mut combat.power_regen_mult, misc, pct(amount))

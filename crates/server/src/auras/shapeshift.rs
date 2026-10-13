@@ -22,23 +22,43 @@ const FORM_GHOUL: i32 = 7;
 const FORM_DIRE_BEAR: i32 = 8;
 const FORM_GHOST_WOLF: i32 = 16;
 
-/// `SpellShapeshiftForm.CreatureDisplayID` by form ID.
+#[derive(Debug)]
+struct ShapeshiftForm {
+    display_id: u32,
+    flags: u32,
+}
+
+/// Authored display and cast-gating flags by form ID.
 #[derive(Resource, Debug, Default)]
-pub struct ShapeshiftForms(HashMap<i32, u32>);
+pub struct ShapeshiftForms(HashMap<i32, ShapeshiftForm>);
 
 impl ShapeshiftForms {
     /// `GetModelForForm` fallback: the form's own display (0 keeps the current model).
     /// The race/gender `ChrCustomizationDisplayInfo` choice is not modelled.
     pub fn display_id(&self, form: i32) -> Option<u32> {
-        self.0.get(&form).copied().filter(|&display| display != 0)
+        self.0
+            .get(&form)
+            .map(|row| row.display_id)
+            .filter(|&display| display != 0)
+    }
+
+    pub(crate) fn flags(&self, form: i32) -> Option<u32> {
+        self.0.get(&form).map(|row| row.flags)
     }
 }
 
 pub fn load_shapeshift_forms(conn: &Connection) -> rusqlite::Result<ShapeshiftForms> {
-    let mut stmt = conn.prepare("SELECT ID, CreatureDisplayID FROM spell_shapeshift_form")?;
+    let mut stmt =
+        conn.prepare("SELECT ID, CreatureDisplayID, Flags FROM spell_shapeshift_form")?;
     let forms = stmt
         .query_map([], |r| {
-            Ok((r.get::<_, i64>(0)? as i32, r.get::<_, i64>(1)? as u32))
+            Ok((
+                r.get::<_, i64>(0)? as i32,
+                ShapeshiftForm {
+                    display_id: r.get::<_, i64>(1)? as u32,
+                    flags: r.get::<_, i64>(2)? as u32,
+                },
+            ))
         })?
         .collect::<rusqlite::Result<_>>()?;
     Ok(ShapeshiftForms(forms))
@@ -66,7 +86,7 @@ pub(super) fn aura_form(aura: &AuraInstance) -> Option<i32> {
 }
 
 /// The unit's shapeshift aura and its form; `remove_other_forms` keeps at most one.
-pub(super) fn current_form(auras: &ActiveAuras) -> Option<(&AuraInstance, i32)> {
+pub(crate) fn current_form(auras: &ActiveAuras) -> Option<(&AuraInstance, i32)> {
     auras
         .auras
         .iter()

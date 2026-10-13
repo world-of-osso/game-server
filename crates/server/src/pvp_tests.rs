@@ -490,6 +490,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
             silvershard: None,
             seething: None,
             deephaul: None,
+            alterac: None,
             scoreboard: Vec::new(),
             flag_positions: [None, None],
             arena: None,
