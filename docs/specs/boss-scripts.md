@@ -29,7 +29,8 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 
 - [x] Gordoth61528 relocates already-started actors to its source landing point, casts Ground Rupture119999 at7.3s (native1s cast) and Seismic Slam120024 at13.3s with only source flag0x2. It enrages50420 once when projected health falls below31%, resetting through source30s evade/respawn.
 - [x] Flag0x2 per-cast clones skip SpellHistory::IsReady and HandleCooldowns (including charge writes), retaining GCD, cast-time, caster-aura and power checks. Native category1152 history is not restarted by the flagged cast. No FULL_MASK shortcut.
-- [ ] Gordoth repeat12.1s/36.3s callbacks are coded but moving-target proof, jump/cage/vial/animkit intro and map389 navigation remain open.
+- [x] Gordoth DoAction1 follows source MoveJump(speed50,min-height4), effect-motion landing/facing, vial DESTROYED2 state/collision and seven researchers' gore/Bloody Suicide→51744 self-deaths without boss credit. [Jump contract](scripted-jump-movement.md).
+- [ ] Gordoth repeat12.1s/36.3s callbacks are coded but moving-target proof, spawn-independent home/facing, static AT7899/GM handling, cage task/animkit/native pose and map389 navigation remain open. Pinned UpdateAI never pumps its scheduled +30ms cage task; no guessed scheduler update.
 - [x] Koranthal61412 appearance casts119928, engage removes it/talks, Twisted119300 first6s/repeat7.3s, Storm119971 first20.5s/repeat47.2s and reschedules Twisted to15.7s. Casting blocks event dispatch as source.
 - [x] Shadow Storm119973 effect0 dummy casts its actual effect value119965 triggered; destination-only missile effect32 forwards its destination to119964 and deals real damage.
 - [x] Koranthal death marks DONE/talks; evade retires without kill credit and respawns after source30s, recasting appearance Vortex.

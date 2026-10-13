@@ -20,6 +20,7 @@ pub mod bossmod;
 pub mod creature_text;
 pub mod event_map;
 pub mod instance_script;
+pub(crate) mod jump_movement;
 pub mod kings_rest;
 pub mod movement;
 pub mod murder_row;
@@ -77,6 +78,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
+            .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
             .add_systems(
                 FixedUpdate,
                 (
@@ -95,6 +97,11 @@ impl Plugin for ScriptedAiPlugin {
                     smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
                     waypoint_path::path_movement_system.before(crate::creature_ai::chase_system),
+                    jump_movement::advance_jumps
+                        .after(movement::point_movement_system)
+                        .after(waypoint_path::path_movement_system)
+                        .before(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
                     kings_rest::update_gold_follows
                         .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
@@ -136,6 +143,8 @@ pub enum MotionType {
     Point,
     /// `FOLLOW_MOTION_TYPE`.
     Follow,
+    /// `EFFECT_MOTION_TYPE`, including source MoveJump.
+    Effect,
 }
 
 /// A `CreatureAI` hook with its arguments.

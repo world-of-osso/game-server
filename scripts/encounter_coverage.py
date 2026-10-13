@@ -30,7 +30,7 @@ PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240
 PARTIAL_GAPS = {
     'boss_lava_guard_gordoth': [
         'source already-started relocation,first7.3s Ground/13.3s Seismic and one-shot below31-percent enrage/30s evade-respawn supported; Seismic uses only source0x2 cooldown flag',
-        'repeat12.1s/36.3s callbacks coded but moving-target/native proof unproved; jump/cage/vial/animkit intro unported; map389 navigation absent',
+        'repeat12.1s/36.3s callbacks coded but moving-target/native proof unproved; source jump/landing/vial state/researcher self-death supported; AT7899/GM/home/cage task/animkit/native jump gaps; map389 navigation absent',
         'canonical primary credit binding, loot/lockout/native/full-instance proof remain open'],
     'boss_dark_shaman_koranthal': [
         'source appearance,6s/7.3s Twisted and20.5s/47.2s Storm/reschedule15.7s supported; dummy119973 effect value119965 forwards missile destination to119964 damage',

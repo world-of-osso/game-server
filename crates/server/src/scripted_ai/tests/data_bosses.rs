@@ -886,6 +886,108 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
 }
 
+/// Source DoAction(ACTION_JUMP): MoveJump50 speed/min-height4, then effect-motion
+/// landing sets the vials DESTROYED and the nearby researchers cast Bloody Suicide.
+/// The pinned UpdateAI does not pump its separately scheduled cage task.
+#[test]
+fn encounter_coverage_gordoth_source_jump_lands_breaks_vials_and_researchers_die() {
+    let (mut h, _, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(61528)[0];
+    let from = *h.app.world().get::<Position>(boss).unwrap();
+    let origin = Vec3::new(from.x, from.y, from.z);
+    let landing = Vec3::new(-363.5392, -22.005634, -203.36604);
+    let vials: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(_, info, copy)| info.entry == 211784 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert_eq!(vials.len(), 3);
+    let researchers = h.creatures_of(61644);
+    assert_eq!(researchers.len(), 7);
+    let ready = |h: &Harness, object| {
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(object)
+            .is_some_and(|state| state.0 == 1)
+    };
+    assert!(vials.iter().all(|&vial| ready(&h, vial)));
+    dispatch(h.app.world_mut(), boss, Hook::DoAction(1));
+    h.advance(0.35);
+    let at = *h.app.world().get::<Position>(boss).unwrap();
+    let duration_ms = 1 + (origin.distance(landing) * 1000.0 / 50.0) as u32;
+    let t = 350.0 / duration_ms as f32;
+    let mut expected = origin.lerp(landing, t);
+    expected.y += 4.0 * 4.0 * t * (1.0 - t);
+    assert!(
+        Vec3::new(at.x, at.y, at.z).distance(expected) < 0.001,
+        "authentic linear spline plus parabolic height, not relocation: {at:?}"
+    );
+    assert!(
+        vials.iter().all(|&vial| ready(&h, vial)),
+        "not destroyed before arrival"
+    );
+    assert!(researchers.iter().all(|&researcher| {
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(researcher)
+            .is_none()
+    }));
+    h.advance(0.55);
+    let at = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(Vec3::new(at.x, at.y, at.z).distance(landing) < 0.001);
+    let orientation = h
+        .app
+        .world()
+        .get::<shared::components::Rotation>(boss)
+        .unwrap()
+        .y
+        - std::f32::consts::FRAC_PI_2;
+    assert!(
+        (orientation - 0.30812347).abs() < 0.001,
+        "source facing after landing"
+    );
+    for vial in vials {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::game_objects::GameObjectState>(vial),
+            Some(&crate::game_objects::GameObjectState(2))
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::protocol::GameObjectCollision>(vial),
+            Some(&shared::protocol::GameObjectCollision(false))
+        );
+    }
+    for researcher in researchers {
+        assert!(
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(researcher)
+                .is_some(),
+            "real120022 extra initial periodic tick ->51744 INSTAKILL"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::combat::LastDamager>(researcher)
+                .map(|killer| killer.0),
+            Some(researcher)
+        );
+    }
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::NotStarted),
+        "researcher self-deaths never grant Gordoth credit"
+    );
+}
+
 /// TC Gordoth's already-started InitializeAI branch relocates to the source jump
 /// landing point, without inventing an intro bypass.
 #[test]

@@ -26,6 +26,16 @@ const ENRAGE: u32 = 50420;
 const EVENT_GROUND_RUPTURE: u32 = 1;
 const EVENT_SEISMIC_SLAM: u32 = 2;
 const GORDOTH_JUMP_POSITION: [f32; 4] = [-363.5392, 203.36604, -22.005634, 0.30812347];
+const GORDOTH_ACTION_JUMP: i32 = 1;
+const GORDOTH_POINT_JUMP: u32 = 1;
+const JAIL_BREAK: u32 = 120025;
+const GROUND_SLAM: u32 = 120023;
+const BLOODY_SUICIDE: u32 = 120022;
+const DARK_SHAMAN_RESEARCHER: u32 = 61644;
+const LAB_VIAL: u32 = 211784;
+const LANDING_EFFECT_RADIUS: f32 = 25.0;
+const RESEARCHER_MEAT_EXPLOSIONS: [u32; 7] =
+    [111778, 111778, 111779, 111779, 111780, 111780, 111780];
 
 pub(crate) fn is_creature_script(name: &str) -> bool {
     matches!(name, SCRIPT | GORDOTH_SCRIPT)
@@ -146,6 +156,83 @@ struct Gordoth {
     enrage_triggered: bool,
 }
 
+impl Gordoth {
+    fn destroy_landing_vials(ctx: &mut Ctx) {
+        let map = ctx.map().expect("Gordoth instance map");
+        let origin = ctx.position().expect("Gordoth position");
+        let origin = Vec3::new(origin.x, origin.y, origin.z);
+        let vials: Vec<_> = ctx
+            .world
+            .query::<(
+                Entity,
+                &crate::maps::InMap,
+                &shared::protocol::GameObjectInfo,
+                &shared::components::Position,
+            )>()
+            .iter(ctx.world)
+            .filter(|(_, copy, info, position)| {
+                **copy == map
+                    && info.entry == LAB_VIAL
+                    && Vec3::new(position.x, position.y, position.z).distance(origin)
+                        <= LANDING_EFFECT_RADIUS
+            })
+            .map(|(entity, _, _, _)| entity)
+            .collect();
+        for vial in vials {
+            crate::game_objects::set_go_state(
+                ctx.world,
+                vial,
+                crate::game_objects::GO_STATE_DESTROYED,
+            );
+        }
+    }
+
+    fn explode_landing_researchers(ctx: &mut Ctx) {
+        let map = ctx.map().expect("Gordoth instance map");
+        let origin = ctx.position().expect("Gordoth position");
+        let origin = Vec3::new(origin.x, origin.y, origin.z);
+        let researchers: Vec<_> = ctx
+            .world
+            .query::<(
+                Entity,
+                &crate::maps::InMap,
+                &shared::components::Npc,
+                &shared::components::Position,
+            )>()
+            .iter(ctx.world)
+            .filter(|(_, copy, npc, position)| {
+                **copy == map
+                    && npc.template_id == DARK_SHAMAN_RESEARCHER
+                    && Vec3::new(position.x, position.y, position.z).distance(origin)
+                        <= LANDING_EFFECT_RADIUS
+            })
+            .map(|(entity, _, _, _)| entity)
+            .collect();
+        for researcher in researchers {
+            for spell in RESEARCHER_MEAT_EXPLOSIONS {
+                if let Err(error) = crate::spell_cast::creature_cast(
+                    ctx.world,
+                    researcher,
+                    spell,
+                    Some(researcher),
+                    true,
+                ) {
+                    warn!("Gordoth researcher gore {spell} failed: {error:?}");
+                }
+            }
+            if let Err(error) = crate::spell_cast::creature_cast(
+                ctx.world,
+                researcher,
+                BLOODY_SUICIDE,
+                Some(researcher),
+                false,
+            ) {
+                warn!("Gordoth researcher Bloody Suicide failed: {error:?}");
+            }
+        }
+    }
+}
+
 impl CreatureAi for Gordoth {
     fn initialize_ai(&mut self, ctx: &mut Ctx) {
         let map = ctx.map().expect("Gordoth instance map");
@@ -177,6 +264,44 @@ impl CreatureAi for Gordoth {
         self.boss.just_engaged_with(ctx);
         self.boss.events.schedule(EVENT_GROUND_RUPTURE, 7_300);
         self.boss.events.schedule(EVENT_SEISMIC_SLAM, 13_300);
+    }
+
+    fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
+        if action != GORDOTH_ACTION_JUMP {
+            return;
+        }
+        // Source animkit state and the unpumped +30ms cage task remain gaps.
+        ctx.do_cast_self(JAIL_BREAK);
+        super::jump_movement::move_jump(
+            ctx.world,
+            ctx.me,
+            GORDOTH_POINT_JUMP,
+            shared::components::Position {
+                x: GORDOTH_JUMP_POSITION[0],
+                y: GORDOTH_JUMP_POSITION[2],
+                z: -GORDOTH_JUMP_POSITION[1],
+            },
+            50.0,
+            4.0,
+        );
+    }
+
+    fn movement_inform(&mut self, ctx: &mut Ctx, kind: super::MotionType, point: u32) {
+        if kind != super::MotionType::Effect || point != GORDOTH_POINT_JUMP {
+            return;
+        }
+        ctx.do_cast(GROUND_SLAM);
+        // SetHomePosition needs an explicit home independent of original spawn;
+        // that state/return path is not modelled yet. Preserve the spawn record.
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(shared::components::Rotation {
+                x: 0.0,
+                y: GORDOTH_JUMP_POSITION[3] + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            });
+        Self::destroy_landing_vials(ctx);
+        Self::explode_landing_researchers(ctx);
     }
 
     fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {

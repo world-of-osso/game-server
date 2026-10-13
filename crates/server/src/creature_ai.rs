@@ -58,12 +58,14 @@ type Roaming = (
     Without<crate::scripted_ai::movement::PointMovement>,
     Without<crate::scripted_ai::movement::ScriptedPath>,
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
+    Without<crate::scripted_ai::jump_movement::JumpMovement>,
 );
 /// Active creatures that are not confused: chase and leash run.
 type ActiveUncontrolled = (
     Without<GridDormant>,
     Without<Confused>,
     Without<crate::knockback::KnockbackFlight>,
+    Without<crate::scripted_ai::jump_movement::JumpMovement>,
 );
 
 pub struct CreatureAiPlugin;
@@ -1324,7 +1326,10 @@ fn return_to_spawn_system(
             Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
         ),
-        Without<GridDormant>,
+        (
+            Without<GridDormant>,
+            Without<crate::scripted_ai::jump_movement::JumpMovement>,
+        ),
     >,
     mut commands: Commands,
 ) {
