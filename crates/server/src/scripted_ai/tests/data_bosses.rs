@@ -50,8 +50,69 @@ fn bound_boss_at_difficulty(
     difficulty: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
+    bound_boss_in_state(
+        entry,
+        map_id,
+        bit,
+        difficulty,
+        catalog,
+        EncounterState::NotStarted,
+    )
+}
+
+fn bound_boss_in_state(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    difficulty: u32,
+    catalog: Option<bossmod::Catalog>,
+    initial_state: EncounterState,
+) -> (Harness, Entity, InMap) {
+    let (h, boss, map) = encounter_fixture(
+        entry,
+        map_id,
+        bit,
+        difficulty,
+        catalog,
+        initial_state,
+        false,
+    );
+    (h, boss.expect("authored boss spawn"), map)
+}
+
+/// A Kings' Rest copy filled by production copy fill from the real map1762 rows.
+fn kings_rest_copy(difficulty: u32) -> (Harness, InMap) {
+    let (h, _, map) = encounter_fixture(
+        135322,
+        1762,
+        0,
+        difficulty,
+        None,
+        EncounterState::NotStarted,
+        true,
+    );
+    (h, map)
+}
+
+fn encounter_fixture(
+    entry: u32,
+    map_id: u32,
+    bit: u32,
+    difficulty: u32,
+    catalog: Option<bossmod::Catalog>,
+    initial_state: EncounterState,
+    populate: bool,
+) -> (Harness, Option<Entity>, InMap) {
     let data = data().expect("world.db fixture");
-    let mut app = stockade_app(data);
+    let mut app = stockade_app_with(data, |app| {
+        app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        if populate {
+            app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
+            app.insert_resource(
+                crate::faction::world_db_faction_templates().expect("world.db faction templates"),
+            );
+        }
+    });
     if let Some(catalog) = catalog {
         app.insert_resource(catalog);
     }
@@ -64,13 +125,27 @@ fn bound_boss_at_difficulty(
         .as_ref()
         .map_or_else(world_db_path, |(_, path)| path.clone());
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
+    app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
+    app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
+    app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
+    app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
+    let spawns: Vec<_> = if populate {
+        crate::world_data::load_spawns(&conn)
+            .into_iter()
+            .filter(|spawn| u32::from(spawn.map) == map_id)
+            .collect()
+    } else {
+        Vec::new()
+    };
     let mut templates = crate::world_data::load_templates(&conn, &expected);
     templates.retain(|id, _| {
         *id == entry
             || (entry == 234648 && [234660, 255050].contains(id))
-            || (entry == 135322 && *id == 135406)
+            || (entry == 135322 && [135406, 137020].contains(id))
+            || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
     crate::world_data::load_template_models(&conn, &mut templates);
     let difficulty_templates =
@@ -87,9 +162,26 @@ fn bound_boss_at_difficulty(
         .unwrap()
         .map(Result::unwrap)
         .collect();
+    let (template_string_ids, spawn_string_ids, script_spawn_groups) = if populate {
+        (
+            crate::world_data::load_template_string_ids(&conn).unwrap(),
+            crate::world_data::load_spawn_string_ids(&conn).unwrap(),
+            crate::world_data::load_script_spawn_groups(&conn, super::super::SCRIPT_SPAWN_GROUPS)
+                .unwrap(),
+        )
+    } else {
+        Default::default()
+    };
     app.insert_resource(WorldData {
         templates,
         difficulty_templates,
+        spawns_by_map: crate::world_data::build_spawns_by_map(&spawns),
+        spawns,
+        template_string_ids,
+        spawn_string_ids,
+        script_spawn_groups,
+        addons: crate::world_data::load_spawn_addons(&conn),
+        template_addons: crate::world_data::load_template_addons(&conn),
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
@@ -113,10 +205,15 @@ fn bound_boss_at_difficulty(
     let mut maps = data.maps.clone();
     maps.raid_creature_encounters.insert((map_id, entry), bit);
     let mut instances = crate::maps::InstanceManager::default();
+    // Raid copies use the entrant's raid difficulty; dungeons its dungeon difficulty.
     let entrant = crate::maps::instances::InstanceEntrant {
         character_id: 2001,
         leader: 2001,
         difficulty_id: difficulty,
+        raid_difficulty: crate::maps::RaidDifficulty {
+            primary: difficulty,
+            ..Default::default()
+        },
         ..Default::default()
     };
     let map = instances
@@ -133,13 +230,57 @@ fn bound_boss_at_difficulty(
         .map;
     app.insert_resource(instances);
     app.insert_resource(maps);
-    let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
-    let near = [
-        spawn.position_x + 3.0,
-        spawn.position_y,
-        spawn.position_z,
-        std::f32::consts::PI,
-    ];
+    if initial_state != EncounterState::NotStarted {
+        assert!(instance_script::set_boss_state(
+            app.world_mut(),
+            map,
+            bit,
+            initial_state
+        ));
+    }
+    let (boss, near) = if populate {
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, app.world());
+        let content = crate::zones::MapContent {
+            map,
+            difficulty_id: difficulty,
+            dead_bosses: Vec::new(),
+        };
+        crate::zones::spawn_map_creatures(
+            &mut commands,
+            app.world().resource::<WorldData>(),
+            content,
+            false,
+        );
+        // Object spawns and their lock sidecar are unchanged by the template import.
+        let canonical =
+            Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let objects = crate::game_objects::load_game_object_spawns(&canonical).unwrap();
+        crate::game_objects::spawn_map_game_objects(&mut commands, &objects, map, difficulty);
+        queue.apply(app.world_mut());
+        // 500 yards east of the Serpent's spawn, outside every aggro radius.
+        (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
+    } else {
+        let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
+        let near = if entry == 135322 && initial_state != EncounterState::NotStarted {
+            // Keep the relocated source branch idle until its fixture explicitly pulls.
+            let position = app.world().get::<Position>(boss).unwrap();
+            [
+                position.x + 500.0,
+                -position.z,
+                position.y,
+                std::f32::consts::PI,
+            ]
+        } else {
+            [
+                spawn.position_x + 3.0,
+                spawn.position_y,
+                spawn.position_z,
+                std::f32::consts::PI,
+            ]
+        };
+        (Some(boss), near)
+    };
     let (player, connection) = spawn_player(&mut app, map, near, 1);
     app.world_mut()
         .entity_mut(player)
@@ -320,9 +461,687 @@ fn encounter_coverage_mirror_felstorm_removal_retires_actor_without_boss_credit(
 }
 
 #[test]
-fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_death() {
+fn encounter_coverage_golden_serpent_not_started_intro_is_friendly_and_uninteractible() {
     let (mut h, boss, map) = bound_boss(135322, 1762, 0);
-    let position = h.wow_position(boss);
+    h.advance(1.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(boss)
+            .unwrap()
+            .0,
+        35,
+        "TC NotStarted appearance is friendly until the landing path ends"
+    );
+    let flags = h
+        .app
+        .world()
+        .get::<shared::components::UnitFlags>(boss)
+        .unwrap()
+        .0;
+    assert_ne!(flags & shared::components::UnitFlags::NOT_SELECTABLE, 0);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::NotStarted)
+    );
+    assert!(h.inbox(0).starts.is_empty());
+    assert!(h.inbox(0).engages.is_empty());
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_intro_flies_authored_paths_then_lands_hostile() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let player = h.player();
+    let far = Position {
+        x: h.app.world().get::<Position>(boss).unwrap().x + 500.0,
+        ..*h.app.world().get::<Position>(boss).unwrap()
+    };
+    h.app.world_mut().entity_mut(player).insert(far);
+    let spawn = h.wow_position(boss);
+    // Each MovePath starts with WaypointMovementGenerator::DoInitialize's1000ms wait.
+    h.advance(0.9);
+    assert!(h.wow_position(boss).distance(spawn) < 0.01);
+    assert!(h.has_aura(boss, 271598));
+    let submerge_low = Vec3::new(-1065.97, 2641.51, 776.115);
+    let submerge_apex = Vec3::new(-1065.97, 2641.51, 816.115);
+    let flying = [
+        Vec3::new(-1064.73, 2633.53, 819.27),
+        Vec3::new(-1057.29, 2629.48, 820.627),
+        Vec3::new(-1052.35, 2632.23, 821.548),
+        Vec3::new(-1050.81, 2639.52, 821.841),
+        Vec3::new(-1051.3, 2645.3, 822.053),
+        Vec3::new(-1053.86, 2657.0, 821.205),
+        Vec3::new(-1072.12, 2661.95, 820.305),
+        Vec3::new(-1084.02, 2651.1, 820.091),
+        Vec3::new(-1089.33, 2635.23, 819.845),
+        Vec3::new(-1082.08, 2621.95, 819.27),
+        Vec3::new(-1058.84, 2615.17, 815.878),
+    ];
+    let landing = Vec3::new(-1058.84, 2615.17, 810.152);
+    let mut closest = [f32::MAX; 11];
+    let mut lowest = f32::MAX;
+    let mut emerge_removed = None;
+    let mut landed = None;
+    let mut elapsed = 0.9;
+    for _ in 0..800 {
+        h.advance(0.05);
+        elapsed += 0.05;
+        let position = h.wow_position(boss);
+        lowest = lowest.min(position.z);
+        for (node, best) in flying.iter().zip(&mut closest) {
+            *best = best.min(position.distance(*node));
+        }
+        if emerge_removed.is_none() && !h.has_aura(boss, 271598) {
+            assert!(
+                position.distance(submerge_apex) < 0.01,
+                "submerge path end removes emerge state: {position}"
+            );
+            emerge_removed = Some((elapsed, position));
+        }
+        let faction = h.app.world().get::<UnitFactionTemplate>(boss).unwrap().0;
+        if faction != 35 {
+            assert_eq!(faction, 16, "landing path end sets FACTION_MONSTER_2");
+            landed = Some(elapsed);
+            break;
+        }
+    }
+    assert!(
+        (lowest - submerge_low.z).abs() < 0.01,
+        "path13532200 first descends to node0: lowest z {lowest}"
+    );
+    let (removed_at, apex) = emerge_removed.expect("submerge path ended");
+    for (node, best) in flying.iter().zip(closest) {
+        assert!(best < 0.75, "flying spline passes node {node}: {best}");
+    }
+    let landed_at = landed.expect("landing path ended");
+    assert!(h.wow_position(boss).distance(landing) < 0.01);
+    let flags = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+    assert_eq!(flags & UnitFlags::NOT_SELECTABLE, 0);
+    // Template speed_run2.0 * baseMoveSpeed7: a Catmull-Rom path is never shorter
+    // than its chords, and the two later MovePath calls each wait1000ms.
+    let mut chords = apex.distance(flying[0]);
+    for pair in flying.windows(2) {
+        chords += pair[0].distance(pair[1]);
+    }
+    let landing_drop = flying[10].distance(landing);
+    let minimum = 2.0 + (chords + landing_drop) / 14.0;
+    let flight = landed_at - removed_at;
+    assert!(
+        flight >= minimum - 0.1 && flight <= minimum + 1.5,
+        "flight {flight}s, chord minimum {minimum}s"
+    );
+    h.advance(2.0);
+    assert!(h.wow_position(boss).distance(landing) < 0.01);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::NotStarted)
+    );
+}
+
+#[test]
+fn encounter_coverage_serpentine_seal_raises_temple_event_then_the_serpent() {
+    let (mut h, map) = kings_rest_copy(23);
+    let temple = |h: &mut Harness| -> Vec<Entity> {
+        h.app
+            .world_mut()
+            .query_filtered::<(Entity, &InMap, &crate::zones::CreatureStringIds), Without<crate::combat::DeathState>>()
+            .iter(h.app.world())
+            .filter(|(_, other, ids)| **other == map && ids.has("TempleEvent"))
+            .map(|(entity, _, _)| entity)
+            .collect()
+    };
+    assert!(temple(&mut h).is_empty(), "manual group1255 is withheld");
+    assert!(
+        h.creatures_of(135322).is_empty(),
+        "manual group1256 is withheld"
+    );
+    let seal = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(h.app.world())
+        .find(|(_, info)| info.entry == 288466)
+        .map(|(entity, _)| entity)
+        .expect("Serpentine Seal spawned in the copy");
+    let seal_position = *h.app.world().get::<Position>(seal).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: seal_position.x + 2.0,
+        ..seal_position
+    });
+    let use_seal = |h: &mut Harness| {
+        let connection = h.players[0].1;
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::UseGameObject>>(connection)
+            .unwrap()
+            .send::<shared::protocol::InteractionChannel>(shared::protocol::UseGameObject {
+                object: seal.to_bits(),
+            });
+    };
+    use_seal(&mut h);
+    h.advance(0.1);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectInUse>(seal)
+            .is_some(),
+        "UseDoorOrButton marks the seal in use"
+    );
+    use_seal(&mut h);
+    h.advance(2.7);
+    assert!(
+        h.creatures_of(137020).is_empty(),
+        "Zul waits the seal's 3s task"
+    );
+    h.advance(0.3);
+    let zuls = h.creatures_of(137020);
+    assert_eq!(zuls.len(), 1, "an in-use seal cannot be used again");
+    let zul = zuls[0];
+    assert!(
+        h.app
+            .world()
+            .get::<crate::zones::CreatureStringIds>(zul)
+            .is_some_and(|ids| ids.has("SerpentBossEvent"))
+    );
+    h.advance(1.1);
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .any(|chat| chat.content.contains("G'huun")),
+        "Zul's +1s Talk0"
+    );
+    h.advance(8.0);
+    assert!(temple(&mut h).is_empty(), "temple spawns wait for +10s");
+    h.advance(1.0);
+    let raised = temple(&mut h);
+    assert_eq!(raised.len(), 17, "SpawnGroupSpawn1255");
+    assert!(h.has_aura(zul, 269058), "shadowform until +15s");
+    h.advance(5.0);
+    assert!(!h.has_aura(zul, 269058));
+    h.advance(1.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(zul)
+            .map(|display| display.display_id),
+        Some(11686),
+        "+16s DISPLAY_INVISIBLE_ZUL, not yet unsummoned"
+    );
+    h.advance(1.0);
+    assert!(
+        h.app.world().get_entity(zul).is_err()
+            || h.app
+                .world()
+                .get::<crate::combat::DeathState>(zul)
+                .is_some(),
+        "DespawnOrUnsummon(1s) after +16s"
+    );
+    for &creature in &raised[..16] {
+        h.hit_pct(creature, 1_000.0);
+    }
+    h.advance(0.1);
+    assert!(h.creatures_of(135322).is_empty());
+    h.hit_pct(raised[16], 1_000.0);
+    h.advance(0.1);
+    let serpents = h.creatures_of(135322);
+    assert_eq!(serpents.len(), 1);
+    let serpent = serpents[0];
+    assert_eq!(*h.app.world().get::<InMap>(serpent).unwrap(), map);
+    assert_eq!(
+        h.app.world().get::<UnitFactionTemplate>(serpent).unwrap().0,
+        35,
+        "spawned Serpent starts its NotStarted intro"
+    );
+    assert!(h.has_aura(serpent, 271598));
+}
+
+#[test]
+fn encounter_coverage_zul_despawns_only_untagged_cosmetic_spirits() {
+    let (mut h, map) = kings_rest_copy(23);
+    let seal = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(h.app.world())
+        .find(|(_, info)| info.entry == 288466)
+        .map(|(entity, _)| entity)
+        .expect("Serpentine Seal spawned in the copy");
+    // go_kings_rest_serpentine_seal's summon point.
+    let zul = crate::zones::summon_creature(
+        h.app.world_mut(),
+        seal,
+        137020,
+        [-1066.0365, 2643.302, 819.37024, 5.028946],
+    )
+    .expect("Shadow of Zul template");
+    let spirits: Vec<(Entity, bool)> = h
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &InMap,
+            &shared::components::Npc,
+            Option<&crate::zones::CreatureStringIds>,
+        )>()
+        .iter(h.app.world())
+        .filter(|(_, other, npc, _)| {
+            **other == map && [137650, 137651, 137652].contains(&npc.template_id)
+        })
+        .map(|(entity, _, _, ids)| {
+            let kept = ids.is_some_and(|ids| ids.has("DontForceRespawn"));
+            (entity, kept)
+        })
+        .collect();
+    let kept = spirits.iter().filter(|(_, kept)| *kept).count();
+    assert_eq!(
+        (spirits.len(), kept),
+        (132, 27),
+        "map1762 content spirit rows"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), zul, 270692, None, false)
+        .expect("real 270692 dest-area cast");
+    h.advance(2.9);
+    assert!(
+        spirits.iter().all(|(spirit, _)| h
+            .app
+            .world()
+            .get::<crate::combat::DeathState>(*spirit)
+            .is_none()),
+        "authored SmartAI waits 3s after the hit"
+    );
+    h.advance(0.3);
+    for (spirit, kept) in spirits {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(spirit)
+                .is_none(),
+            kept,
+            "condition58 spares DontForceRespawn; others despawn"
+        );
+    }
+}
+
+/// TC kings_rest.cpp Shadow-Borne witch doctor/champion: temple_basic summon visual on
+/// appearance, then their EventMap schedules from JustEngagedWith.
+#[test]
+fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedules() {
+    let (mut h, map) = kings_rest_copy(23);
+    let raised = crate::zones::spawn_group_spawn(
+        h.app.world_mut(),
+        map,
+        23,
+        false,
+        super::super::kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    );
+    assert_eq!(raised.len(), 17);
+    h.advance(0.1);
+    let doctor = h.creatures_of(134174)[0];
+    let champion = h.creatures_of(134158)[0];
+    for unit in [doctor, champion] {
+        assert!(h.has_aura(unit, 269619), "temple_basic JustAppeared visual");
+    }
+    let player = h.player();
+    let at_doctor = *h.app.world().get::<Position>(doctor).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        at_doctor,
+        Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    h.engage(doctor);
+    let casting = |h: &Harness, unit: Entity| {
+        h.app
+            .world()
+            .get::<CastState>(unit)
+            .map(|cast| cast.spell_id)
+    };
+    h.advance(4.9);
+    assert_eq!(casting(&h, doctor), None);
+    h.advance(0.2);
+    assert_eq!(
+        casting(&h, doctor),
+        Some(269973),
+        "Deathly Chill at 5s on the victim"
+    );
+    // 1500ms cast; the event repeated 2.5s after it fired, at 7.5s.
+    h.advance(2.3);
+    assert_eq!(h.casts(0, doctor, 269973), 1);
+    assert_eq!(casting(&h, doctor), None);
+    h.advance(0.2);
+    assert_eq!(casting(&h, doctor), Some(269973), "repeat 2.5s");
+    let at_champion = *h.app.world().get::<Position>(champion).unwrap();
+    h.app.world_mut().entity_mut(player).insert(at_champion);
+    h.engage(champion);
+    h.advance(20.9);
+    assert!(!h.has_aura(champion, 269928));
+    h.advance(0.3);
+    assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
+/// TC at_kings_rest_gust_slash: 269931 creates AT17933 5yd ahead of the warrior; it
+/// orbits its creation point (TDB orbit radius5, speed5, blending from radius0,
+/// clockwise, looping) and an entering player casts 269932 once with no explicit
+/// target, which InitExplicitTargets resolves to that player's valid hostile selection.
+#[test]
+fn encounter_coverage_gust_slash_orbits_and_entering_player_casts_source_damage() {
+    let (mut h, map) = kings_rest_copy(23);
+    crate::zones::spawn_group_spawn(
+        h.app.world_mut(),
+        map,
+        23,
+        false,
+        super::super::kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    );
+    h.advance(0.1);
+    let warrior = h.creatures_of(134157)[0];
+    crate::spell_cast::creature_cast(h.app.world_mut(), warrior, 269931, None, false)
+        .expect("real Gust Slash cast");
+    h.advance(1.6);
+    let triggers: Vec<(Entity, [f32; 4], InMap)> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &super::super::kings_rest::GustSlashTrigger, &InMap)>()
+        .iter(h.app.world())
+        .map(|(entity, trigger, copy)| (entity, trigger.center, *copy))
+        .collect();
+    assert_eq!(
+        triggers.len(),
+        1,
+        "DB2 effect179 creates create properties13339"
+    );
+    let (at, center, at_map) = triggers[0];
+    assert_eq!(at_map, map);
+    let warrior_at = h.wow_position(warrior);
+    let ahead = Vec3::new(center[0] - warrior_at.x, center[1] - warrior_at.y, 0.0);
+    assert!(
+        (ahead.length() - 5.0).abs() < 0.05,
+        "target47 radius8 = 5yd: {ahead:?}"
+    );
+    let player = h.player();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(center[0], center[1], center[2]);
+    h.app.world_mut().entity_mut(player).insert((
+        Position { x, y, z },
+        crate::networking::CombatTarget(Some(warrior)),
+    ));
+    let before = h.health(warrior).current;
+    h.advance(0.1);
+    assert_eq!(h.casts(0, player, 269932), 1, "OnUnitEnter casts once");
+    assert!(
+        h.health(warrior).current < before,
+        "selection takes 269932 damage"
+    );
+    h.advance(0.3);
+    assert_eq!(h.casts(0, player, 269932), 1, "no repeat while inside");
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(Position { x: x + 500.0, y, z });
+    h.advance(1.2);
+    let wow_at = |h: &Harness| {
+        let p = h.app.world().get::<Position>(at).unwrap();
+        let (x, y, _) = crate::terrain_height::bevy_to_wow(p.x, p.y, p.z);
+        Vec3::new(x - center[0], y - center[1], 0.0)
+    };
+    let first = wow_at(&h);
+    assert!(
+        (first.length() - 5.0).abs() < 0.01,
+        "blend done by 25% of 6s: {first:?}"
+    );
+    h.advance(0.1);
+    let second = wow_at(&h);
+    assert!((second.length() - 5.0).abs() < 0.01);
+    assert!(
+        first.cross(second).z < 0.0,
+        "CounterClockwise0 orbits clockwise"
+    );
+    h.advance(27.5);
+    assert!(
+        h.app.world().get_entity(at).is_ok(),
+        "duration index9 is 30s"
+    );
+    h.advance(1.2);
+    assert!(h.app.world().get_entity(at).is_err(), "removed at 30s");
+}
+
+fn defer_due_time_while_busy(mut due: f64, next_cast: f64, busy_windows: &[(f64, f64)]) -> f64 {
+    for &(busy_start, busy_end) in busy_windows {
+        if busy_start >= next_cast - 0.001 {
+            break;
+        }
+        if busy_start <= due + 0.001 && due < busy_end {
+            due = busy_end;
+        }
+    }
+    due
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_tc_schedule_casts_at_authored_boundaries() {
+    // Source InitializeAI explicitly handles every state other than NotStarted.
+    // This is partial combat in that source branch, NOT fresh intro acceptance.
+    let (mut h, boss, _) =
+        bound_boss_in_state(135322, 1762, 0, 1, None, EncounterState::InProgress);
+    let expected = Vec3::new(-1058.8403, 2615.1667, 810.1519);
+    assert!(
+        h.wow_position(boss).distance(expected) < 0.001,
+        "position {:?}, state {:?}",
+        h.wow_position(boss),
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+    );
+    let player = h.player();
+    let boss_position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert((
+        Position {
+            x: boss_position.x + 3.0,
+            ..boss_position
+        },
+        Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    let started = crate::auras::aura_now(h.app.world());
+    h.engage(boss);
+    let mut previous_cast = None;
+    let mut cast_started = 0.0;
+    let mut busy_windows = Vec::new();
+    let mut admissions: std::collections::HashMap<u32, Vec<f64>> = Default::default();
+    for _ in 0..1_800 {
+        h.advance(0.05);
+        let now = crate::auras::aura_now(h.app.world()) - started;
+        let current_cast = h
+            .app
+            .world()
+            .get::<CastState>(boss)
+            .map(|cast| cast.spell_id);
+        if previous_cast != current_cast {
+            if previous_cast.is_some() {
+                busy_windows.push((cast_started, now));
+            }
+            cast_started = now;
+        }
+        if let Some(spell_id) = current_cast
+            && previous_cast != current_cast
+            && [265773, 265781, 265910, 265923].contains(&spell_id)
+        {
+            admissions.entry(spell_id).or_default().push(now);
+        }
+        previous_cast = current_cast;
+    }
+    let gust_cast = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(265781)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .cast_time
+        .unwrap()
+        .base_ms;
+    let tail_first = 12.5 + f64::from(gust_cast) / 1_000.0;
+    for (spell_id, first, repeat) in [
+        (265773, 9.0, 11.0),
+        (265781, 12.5, 21.5),
+        (265910, tail_first, 17.0),
+        (265923, 40.0, 41.5),
+    ] {
+        let times = admissions
+            .get(&spell_id)
+            .unwrap_or_else(|| panic!("authored spell {spell_id} never admitted"));
+        assert!(
+            (times[0] - first).abs() <= 0.1,
+            "spell {spell_id}: actual {times:?}, first {first}"
+        );
+        assert!(
+            times.len() >= 2,
+            "authored spell {spell_id} did not repeat: {times:?}"
+        );
+        for pair in times.windows(2) {
+            let expected_due = defer_due_time_while_busy(pair[0] + repeat, pair[1], &busy_windows);
+            assert!(
+                (pair[1] - expected_due).abs() <= 0.1,
+                "spell {spell_id}: actual {times:?}, due {expected_due}, busy {busy_windows:?}"
+            );
+        }
+    }
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(265773)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic)
+    );
+    assert!(
+        h.inbox(0).timeline.is_empty(),
+        "partial TC combat must not invent Retail alerts"
+    );
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_rejects_obsolete_bossmod_alert_catalog() {
+    // Authentic legacy LittleWigs GoldenSerpent.lua OnEngage CDBar265773/9s.
+    // Current Retail never invokes it, so even a stale catalog must stay silent.
+    let catalog_db = Connection::open_in_memory().unwrap();
+    catalog_db
+        .execute_batch(include_str!("bossmod_diremaul.sql"))
+        .unwrap();
+    catalog_db
+        .execute(
+            "INSERT INTO bossmod_authority VALUES(2139,'LittleWigs')",
+            [],
+        )
+        .unwrap();
+    catalog_db
+        .execute(
+            "INSERT INTO bossmod_rule(id,addon,encounter_id,trigger,action,spell_id,delay_ms)
+         VALUES(100,'LittleWigs',2139,'engage','timer',265773,9000)",
+            [],
+        )
+        .unwrap();
+    let catalog = bossmod::load_catalog(&catalog_db).unwrap();
+    let (mut h, boss, _) = bound_boss_in_state(
+        135322,
+        1762,
+        0,
+        1,
+        Some(catalog),
+        EncounterState::InProgress,
+    );
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.1);
+    assert!(
+        h.inbox(0)
+            .engages
+            .iter()
+            .any(|frame| frame.unit == boss.to_bits())
+    );
+    assert!(
+        h.inbox(0).timeline.is_empty(),
+        "stale legacy timer is not Retail authority"
+    );
+}
+
+#[test]
+fn encounter_coverage_golden_serpent_evade_retires_and_respawns_without_credit() {
+    let (mut h, boss, map) =
+        bound_boss_in_state(135322, 1762, 0, 1, None, EncounterState::InProgress);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [-1058.8403, 2615.1667, 810.1519, 0.0],
+    )
+    .unwrap();
+    h.advance(0.1);
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.05);
+    let retirement = h
+        .app
+        .world()
+        .get::<crate::combat::DeathState>(boss)
+        .expect("TC evade must retire the population actor, not just reset combat");
+    assert!(retirement.respawn_timer <= 30.0 && retirement.respawn_timer >= 29.8);
+    assert!(h.app.world().get_entity(gold).is_err());
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 500.0,
+        ..position
+    });
+    h.advance(30.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    assert!(
+        h.wow_position(boss)
+            .distance(Vec3::new(-1058.8403, 2615.1667, 810.1519))
+            < 0.001,
+        "position {:?}, state {:?}",
+        h.wow_position(boss),
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitFactionTemplate>(boss)
+            .unwrap()
+            .0,
+        16
+    );
+}
+
+/// Animated Gold as Lucre's Call leaves it: its TDB template addon spawns it molten
+/// (265915) and the call's aura removal animates it (covered by the Lucre's Call test).
+fn animated_gold(h: &mut Harness, boss: Entity, position: Vec3) -> Entity {
     let gold = crate::zones::summon_creature(
         h.app.world_mut(),
         boss,
@@ -331,6 +1150,24 @@ fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_deat
     )
     .unwrap();
     h.advance(0.1);
+    assert!(
+        h.has_aura(gold, 265915),
+        "TDB creature_template_addon spawns Animated Gold molten"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    gold
+}
+
+#[test]
+fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_death() {
+    let (mut h, boss, map) = bound_boss(135322, 1762, 0);
+    let position = h.wow_position(boss);
+    let gold = animated_gold(&mut h, boss, position);
     let amount = h.health(gold).max * 2_000.0;
     h.hit(gold, amount);
     assert_eq!(
@@ -369,14 +1206,7 @@ fn encounter_coverage_animated_gold_lethal_spell_hit_becomes_molten_without_deat
 fn encounter_coverage_animated_gold_direct_self_loss_also_intercepts_lethal_damage() {
     let (mut h, boss, map) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let amount = h.health(gold).max * 2_000.0;
     crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, amount);
     assert_eq!(
@@ -421,14 +1251,7 @@ fn encounter_coverage_animated_gold_direct_self_loss_also_intercepts_lethal_dama
 fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let player = h.player();
     let location = *h.app.world().get::<Position>(gold).unwrap();
     h.app.world_mut().entity_mut(player).insert((
@@ -513,14 +1336,7 @@ fn encounter_coverage_animated_gold_melee_lethal_hit_is_not_a_kill() {
 fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is_not_lethal() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let player = h.player();
     let before = h.health(gold).current;
     crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, before - 1.0);
@@ -560,14 +1376,7 @@ fn encounter_coverage_animated_gold_periodic_loss_intercepts_and_exact_one_hp_is
 fn encounter_coverage_animated_gold_molten_transition_stops_active_motion() {
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let position = h.wow_position(boss);
-    let gold = crate::zones::summon_creature(
-        h.app.world_mut(),
-        boss,
-        135406,
-        [position.x, position.y, position.z, 0.0],
-    )
-    .unwrap();
-    h.advance(0.1);
+    let gold = animated_gold(&mut h, boss, position);
     let start = *h.app.world().get::<Position>(gold).unwrap();
     let destination = Position {
         x: start.x + 30.0,
@@ -595,6 +1404,659 @@ fn encounter_coverage_animated_gold_molten_transition_stops_active_motion() {
             .unwrap(),
         shared::components::CreatureMotion::Still
     );
+}
+
+fn molten_gold_fixture() -> (Harness, Entity, Entity, Position, InMap) {
+    molten_gold_fixture_in_state(EncounterState::NotStarted)
+}
+
+fn molten_gold_fixture_in_state(
+    initial_state: EncounterState,
+) -> (Harness, Entity, Entity, Position, InMap) {
+    let (mut h, boss, map) = bound_boss_in_state(135322, 1762, 0, 1, None, initial_state);
+    let position = h.wow_position(boss);
+    let gold = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    let center = *h.app.world().get::<Position>(gold).unwrap();
+    let player = h.player();
+    let player_distance = if initial_state == EncounterState::NotStarted {
+        20.0
+    } else {
+        500.0
+    };
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + player_distance,
+        ..center
+    });
+    h.advance(0.1);
+    let loss = h.health(gold).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, loss);
+    assert!(h.has_aura(gold, 265915));
+    (h, gold, player, center, map)
+}
+
+#[test]
+fn encounter_coverage_molten_gold_source_sphere_enters_damages_and_exits() {
+    let (mut h, gold, player, center, _) = molten_gold_fixture();
+    // TC sphere radius5 plus Player combat reach1.5; exact distance is 3D.
+    h.app.world_mut().entity_mut(player).insert(Position {
+        y: center.y + 6.51,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(!h.has_aura(player, 265914));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        y: center.y + 6.49,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(
+        h.has_aura(player, 265914),
+        "source OnUnitEnter self-casts damage aura"
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(player)
+        .unwrap();
+    assert!(
+        aura.iter()
+            .any(|a| a.spell_id == 265914 && a.caster == player)
+    );
+    let health = h.health(player).current;
+    h.advance(1.1);
+    assert!(
+        h.health(player).current < health,
+        "actual authored periodic loss"
+    );
+    assert!(
+        !h.has_aura(gold, 265914),
+        "NPCs do not receive this player-only trigger"
+    );
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 6.51,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(player, 265914),
+        "source OnUnitExit removes damage aura"
+    );
+}
+
+#[test]
+fn encounter_coverage_molten_gold_attached_area_is_copy_local_and_removed_with_aura() {
+    let (mut h, gold, player, center, map) = molten_gold_fixture();
+    h.app.world_mut().entity_mut(player).insert(center);
+    let remote_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let wow = h.wow_position(gold);
+    let (remote, _) = spawn_player(&mut h.app, remote_map, [wow.x, wow.y, wow.z, 0.0], 999);
+    h.advance(0.1);
+    assert!(h.has_aura(player, 265914));
+    assert!(!h.has_aura(remote, 265914));
+    let moved = Position {
+        x: center.x + 30.0,
+        ..center
+    };
+    h.app.world_mut().entity_mut(gold).insert(moved);
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(player, 265914),
+        "area follows its aura target, not cast origin"
+    );
+    h.app.world_mut().entity_mut(player).insert(moved);
+    h.advance(0.1);
+    assert!(h.has_aura(player, 265914));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    h.advance(0.1);
+    assert!(
+        !h.has_aura(player, 265914),
+        "aura395 removal removes the attached area"
+    );
+}
+
+#[test]
+fn encounter_coverage_molten_gold_scripted_cast_keeps_source_player_selection() {
+    let (mut h, gold, player, center, map) = molten_gold_fixture();
+    let wow = h.wow_position(gold);
+    let (selected, _) = spawn_player(&mut h.app, map, [wow.x + 20.0, wow.y, wow.z, 0.0], 998);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert((center, CombatTarget(Some(selected))));
+    h.advance(0.1);
+    assert!(
+        h.has_aura(selected, 265914),
+        "TC null-target cast uses a valid Player selection first"
+    );
+    assert!(!h.has_aura(player, 265914));
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(selected)
+        .unwrap();
+    assert!(
+        aura.iter()
+            .any(|a| a.spell_id == 265914 && a.caster == player)
+    );
+}
+
+#[test]
+fn encounter_coverage_molten_gold_source_reach_scales_and_actor_retirement_exits() {
+    let (mut h, gold, player, center, _) = molten_gold_fixture();
+    h.app.world_mut().entity_mut(player).insert((
+        crate::zones::NativeObjectScale(2.0),
+        shared::components::UnitScale(2.0),
+        Position {
+            x: center.x + 8.01,
+            ..center
+        },
+    ));
+    h.advance(0.1);
+    assert!(!h.has_aura(player, 265914));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 7.99,
+        ..center
+    });
+    h.advance(0.1);
+    assert!(
+        h.has_aura(player, 265914),
+        "source Player combat reach follows object scale"
+    );
+    crate::zones::unsummon(h.app.world_mut(), gold);
+    h.advance(0.1);
+    assert!(h.app.world().get_entity(gold).is_err());
+    assert!(
+        !h.has_aura(player, 265914),
+        "removing the aura target exits its area members"
+    );
+}
+
+#[test]
+fn encounter_coverage_lucres_call_removes_real_molten_aura_only_in_its_copy() {
+    let (mut h, gold, _, _, map) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    let position = h.wow_position(gold);
+    let remote = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135406,
+        [position.x, position.y, position.z, 0.0],
+    )
+    .unwrap();
+    h.app.world_mut().entity_mut(remote).insert(InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    });
+    h.advance(0.1);
+    let loss = h.health(remote).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), remote, remote, loss);
+    assert!(h.has_aura(remote, 265915));
+    let cast_ms = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(265923)
+        .unwrap()
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.cast_time)
+        .map_or(0, |time| time.base_ms);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 265923, None, false)
+        .expect("real local Lucre effect164 and target8 must be admitted");
+    h.advance(cast_ms as f32 / 1000.0 + 0.1);
+    assert!(
+        !h.has_aura(gold, 265915),
+        "source effect164 removes TriggerSpell265915"
+    );
+    assert!(
+        h.has_aura(remote, 265915),
+        "source area selection cannot cross copies"
+    );
+}
+
+fn cast_real_lucre(h: &mut Harness, boss: Entity) {
+    let cast_ms = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(265923)
+        .unwrap()
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.cast_time)
+        .map_or(0, |time| time.base_ms);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 265923, None, false)
+        .expect("real Lucre cast");
+    h.advance(cast_ms as f32 / 1000.0 + 0.1);
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_delays_walk_and_rearms_molten_after_three_seconds() {
+    let (mut h, gold, _, center, _) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        x: center.x + 25.0,
+        ..center
+    });
+    let waiting_position = *h.app.world().get::<Position>(gold).unwrap();
+    cast_real_lucre(&mut h, boss);
+    assert!(!h.has_aura(gold, 265915));
+    h.advance(2.7);
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::movement::Walking>(gold)
+            .is_none()
+    );
+    h.advance(0.3);
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::movement::Walking>(gold)
+            .is_some(),
+        "source task sets walk after3s, not when Lucre first hits"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        waiting_position,
+        "missing bake must not grant straight-line movement"
+    );
+    let loss = h.health(gold).max * 2_000.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), gold, gold, loss);
+    assert!(
+        h.has_aura(gold, 265915),
+        "source task rearms the first-lethal Molten cast"
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_task_checks_molten_at_callback_not_at_hit() {
+    let (mut h, gold, _, _, _) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    cast_real_lucre(&mut h, boss);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: gold,
+            target: gold,
+            spell_id: 265915,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(3.1);
+    assert!(h.has_aura(gold, 265915));
+    assert!(
+        h.app
+            .world()
+            .get::<super::super::movement::Walking>(gold)
+            .is_none(),
+        "restored Molten blocks the delayed source task"
+    );
+}
+
+fn insert_kings_rest_navigation(h: &mut Harness) {
+    let nav_dir = crate::ground::ground_data_dir().join("navmesh");
+    assert!(
+        nav_dir.join("1762").read_dir().unwrap().any(|entry| entry
+            .unwrap()
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "nav")),
+        "real Kings' Rest bake is required for this integration boundary"
+    );
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav_dir));
+}
+
+#[test]
+fn encounter_coverage_gold_lucre_baked_follow_absorbs_then_retires_without_credit() {
+    // Source NotStarted spawn is in the unported flying intro, not a walkable start.
+    let (mut h, gold, _, center, map) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    insert_kings_rest_navigation(&mut h);
+    // This west ray has an actual nav corridor; the east fixture ray was outside the chamber.
+    let start = Position {
+        x: center.x - 25.0,
+        ..center
+    };
+    h.app.world_mut().entity_mut(gold).insert(start);
+    cast_real_lucre(&mut h, boss);
+    h.advance(2.7);
+    assert_eq!(*h.app.world().get::<Position>(gold).unwrap(), start);
+    h.advance(0.5);
+    let moving = *h.app.world().get::<Position>(gold).unwrap();
+    assert_ne!(
+        moving, start,
+        "source task starts actual walking over baked navigation"
+    );
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+    let mut absorbed = false;
+    for _ in 0..200 {
+        h.advance(0.1);
+        if h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id
+            == 11686
+        {
+            absorbed = true;
+            break;
+        }
+    }
+    assert!(absorbed, "real nav arrival must run Follow MovementInform");
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Still
+    );
+    assert_ne!(
+        h.app.world().get::<UnitFlags>(gold).unwrap().0 & UnitFlags::NOT_SELECTABLE,
+        0
+    );
+    let stopped = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(3.8);
+    assert!(h.app.world().get_entity(gold).is_ok());
+    assert_eq!(*h.app.world().get::<Position>(gold).unwrap(), stopped);
+    assert!(
+        h.has_aura(boss, 265991),
+        "actual triggered Luster lands on the source primary"
+    );
+    h.advance(0.3);
+    assert!(h.app.world().get_entity(gold).is_err());
+    assert_ne!(
+        get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::Done)
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_follow_checks_source_three_dimensional_reach() {
+    let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        y: center.y + 8.01,
+        ..center
+    });
+    cast_real_lucre(&mut h, boss);
+    h.advance(3.3);
+    assert_ne!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id,
+        11686,
+        "horizontal overlap cannot absorb outside source reach1+5+2 in3D"
+    );
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        y: center.y + 7.99,
+        ..center
+    });
+    h.advance(0.1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id,
+        11686,
+        "source100ms position check informs once inside3D reach"
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_follow_repaths_subyard_primary_displacement() {
+    let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    insert_kings_rest_navigation(&mut h);
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        x: center.x - 25.0,
+        ..center
+    });
+    cast_real_lucre(&mut h, boss);
+    h.advance(4.0);
+    let displaced = Position {
+        x: center.x + 0.5,
+        ..center
+    };
+    h.app.world_mut().entity_mut(boss).insert(displaced);
+    let mut absorbed_at = None;
+    for _ in 0..200 {
+        h.advance(0.1);
+        if h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(gold)
+            .unwrap()
+            .display_id
+            == 11686
+        {
+            absorbed_at = h.app.world().get::<Position>(gold).copied();
+            break;
+        }
+    }
+    let absorbed_at = absorbed_at.expect("subyard displacement retains actual follow arrival");
+    let separation = (displaced.x - absorbed_at.x).abs();
+    assert!(
+        separation <= 8.02,
+        "chase's1yard route tolerance must not end follow at stale8.5yard endpoint: {separation}"
+    );
+}
+
+fn walking_gold_fixture() -> (Harness, Entity, Entity) {
+    let (mut h, gold, _, center, _) = molten_gold_fixture_in_state(EncounterState::Fail);
+    let boss = h.creatures_of(135322)[0];
+    insert_kings_rest_navigation(&mut h);
+    h.app.world_mut().entity_mut(gold).insert(Position {
+        x: center.x - 25.0,
+        ..center
+    });
+    cast_real_lucre(&mut h, boss);
+    h.advance(3.5);
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+    (h, gold, boss)
+}
+
+#[test]
+fn encounter_coverage_gold_follow_root_stops_then_resumes_the_real_path() {
+    let (mut h, gold, _) = walking_gold_fixture();
+    // Actual root122 aura through Unit's aura boundary, not a fabricated movement flag.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: gold,
+            target: gold,
+            spell_id: 122,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(h.has_aura(gold, 122));
+    let rooted_at = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(0.5);
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        rooted_at,
+        "source UNIT_STATE_NOT_MOVE must prevent follow path advancement"
+    );
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Still
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 122,
+    );
+    h.advance(0.2);
+    assert_ne!(*h.app.world().get::<Position>(gold).unwrap(), rooted_at);
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+}
+
+#[test]
+fn encounter_coverage_gold_follow_respects_real_movement_interrupting_cast() {
+    let (mut h, gold, _) = walking_gold_fixture();
+    // Genuine4s Gust is a Unit-level cast fixture; Gold's authored AI never casts it.
+    crate::spell_cast::creature_cast(h.app.world_mut(), gold, 265781, Some(gold), false)
+        .expect("real movement-interrupting NPC cast");
+    let casting_at = *h.app.world().get::<Position>(gold).unwrap();
+    h.advance(0.5);
+    assert_eq!(
+        *h.app.world().get::<Position>(gold).unwrap(),
+        casting_at,
+        "source IsMovementPreventedByCasting stops the following owner"
+    );
+    h.advance(3.8);
+    assert_ne!(*h.app.world().get::<Position>(gold).unwrap(), casting_at);
+    assert_eq!(
+        *h.app.world().get::<CreatureMotion>(gold).unwrap(),
+        CreatureMotion::Walk
+    );
+}
+
+#[test]
+fn encounter_coverage_golden_absorption_announcement_is_once_until_source_reset() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    for _ in 0..2 {
+        super::super::dispatch(h.app.world_mut(), boss, super::super::Hook::DoAction(1));
+    }
+    h.advance(0.1);
+    let announcements = |h: &Harness| {
+        h.players[0]
+            .2
+            .chat
+            .iter()
+            .filter(|message| message.content.contains("absorbs an Animated Gold"))
+            .count()
+    };
+    assert_eq!(announcements(&h), 1);
+    super::super::dispatch(h.app.world_mut(), boss, super::super::Hook::Reset);
+    super::super::dispatch(h.app.world_mut(), boss, super::super::Hook::DoAction(1));
+    h.advance(0.1);
+    assert_eq!(announcements(&h), 2);
+}
+
+#[test]
+fn encounter_coverage_gold_luster_uses_real_nearby_entry_condition() {
+    let (mut h, gold, player, center, map) = molten_gold_fixture();
+    let boss = h.creatures_of(135322)[0];
+    let remote = crate::zones::summon_creature(
+        h.app.world_mut(),
+        boss,
+        135322,
+        [center.x, -center.z, center.y, 0.0],
+    )
+    .unwrap();
+    h.app.world_mut().entity_mut(remote).insert(InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    });
+    // A nearer unrelated player must not crowd out the valid entry.
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 1.0,
+        ..center
+    });
+    h.app.world_mut().entity_mut(boss).insert(Position {
+        x: center.x + 3.0,
+        ..center
+    });
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        gold,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 265915,
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), gold, 265991, None, true)
+        .expect("real Luster target38 admission");
+    // Actual Speed18, minimum missile distance5: primary hit lands after278ms.
+    h.advance(0.4);
+    assert!(
+        h.has_aura(boss, 265991),
+        "authored entry135322 condition selects the primary"
+    );
+    assert!(
+        h.has_aura(gold, 265991),
+        "unconditioned effect2 selects the nearby caster separately"
+    );
+    let primary_aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(boss)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 265991)
+        .unwrap();
+    assert_eq!(
+        primary_aura
+            .effects
+            .iter()
+            .map(|effect| effect.aura_type)
+            .collect::<Vec<_>>(),
+        vec![69, 79]
+    );
+    let gold_aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(gold)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 265991)
+        .unwrap();
+    assert_eq!(
+        gold_aura
+            .effects
+            .iter()
+            .map(|effect| effect.aura_type)
+            .collect::<Vec<_>>(),
+        vec![4]
+    );
+    assert!(!h.has_aura(player, 265991));
+    assert!(
+        !h.has_aura(remote, 265991),
+        "nearby lookup cannot cross map copies"
+    );
+}
+
+#[test]
+fn encounter_coverage_source_conditions_preserve_legacy_and_current_object_types() {
+    let (mut h, boss, _) = bound_boss(135322, 1762, 0);
+    let conditions = crate::conditions::load_spell_target_conditions(&world_db_path()).unwrap();
+    let player = h.player();
+    assert!(conditions.target_meets(h.app.world(), 265991, 0, boss));
+    assert!(!conditions.target_meets(h.app.world(), 265991, 0, player));
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Npc>(boss)
+        .unwrap()
+        .template_id = 15263;
+    // Actual retained TDB3730 row is legacy31/type3/entry15263.
+    assert!(conditions.target_meets(h.app.world(), 3730, 0, boss));
+    assert!(!conditions.target_meets(h.app.world(), 3730, 0, player));
+    assert!(!conditions.target_meets(h.app.world(), 265991, 0, boss));
 }
 
 #[test]
@@ -1215,4 +2677,93 @@ fn data_selected_grim_batol_preserves_owned_summon_cleanup_on_evade() {
         h.app.world().get_entity(summon).is_err(),
         "owned summon survived boss reset"
     );
+}
+
+/// Skorpyron (Nighthold1530, encounter1849, bit1): DefeatEncounter165 leaves gated by TC
+/// DungeonDifficulty68 credit only a native defeat in a copy of their difficulty
+/// (31656 Normal14, 31666 Heroic15, 31454 Mythic16, 64394 LFR7/17).
+#[test]
+fn achievements_criteria_dungeon_difficulty_credits_only_the_copy_difficulty() {
+    for (difficulty, credited) in [(14, 31656), (15, 31666)] {
+        assert_copy_difficulty_credit(
+            (102263, 1530, 1),
+            difficulty,
+            credited,
+            &[31656, 31666, 31454, 64394],
+        );
+    }
+}
+
+/// Erudax (Grim Batol670, encounter1049, bit1): KillCreature0 leaves gated by TC
+/// LegacyDungeonDifficulty20 compare the copy's Difficulty.db2 OldEnumValue
+/// (16783 Normal0 -> Erudax kills5732; 16784 Heroic1 -> Heroic: Grim Batol5062).
+#[test]
+fn achievements_criteria_legacy_dungeon_difficulty_credits_only_the_copy_difficulty() {
+    for (difficulty, credited) in [(1, 16783), (2, 16784)] {
+        assert_copy_difficulty_credit((40484, 670, 1), difficulty, credited, &[16783, 16784]);
+    }
+}
+
+fn assert_copy_difficulty_credit(
+    (entry, map_id, bit): (u32, u32, u32),
+    difficulty: u32,
+    credited: u32,
+    criteria: &[u32],
+) {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    let (mut h, boss, map) = bound_boss_at_difficulty(entry, map_id, bit, difficulty, None);
+    let conn = Connection::open(world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_achievement_catalog(&conn).unwrap());
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    h.app.insert_resource(crate::persistence::GameDatabase {
+        db: redb::Database::create(database_file.path()).unwrap(),
+    });
+    crate::persistence::create_tables(
+        &h.app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db,
+    );
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(PlayerAchievementState::default());
+    let other = h.players[1].0;
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(PlayerAchievementState::default());
+    h.engage(boss);
+    h.advance(0.05);
+    h.hit_pct(boss, 200.0);
+    h.advance(0.05);
+    assert_eq!(h.inbox(0).ends.last().map(|end| end.success), Some(true));
+    let instances = h.app.world().resource::<crate::maps::InstanceManager>();
+    assert_eq!(instances.completed_encounters(map), 1 << bit);
+    assert_eq!(
+        instances.copy_difficulty(map).unwrap().difficulty_id,
+        difficulty
+    );
+    let progress = |h: &Harness, entity: Entity, criterion: u32| {
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(entity)
+            .unwrap()
+            .criteria_progress
+            .get(&criterion)
+            .copied()
+    };
+    for &criterion in criteria {
+        let expected = (criterion == credited).then_some(1);
+        assert_eq!(
+            progress(&h, player, criterion),
+            expected,
+            "{difficulty}:{criterion}"
+        );
+        assert_eq!(progress(&h, other, criterion), None, "other copy");
+    }
+    h.advance(0.05);
+    assert_eq!(progress(&h, player, credited), Some(1), "idle tick");
 }

@@ -96,8 +96,35 @@ Append each row's arguments. The protocol test uses `--manifest-path /home/osso-
 
 The standalone native check uses `--config 'patch."https://github.com/world-of-osso/shared-protocol.git".shared.path="/home/osso-test/.worktrees/shared-protocol-dungeon"'` and `--config 'patch.crates-io.lightyear_netcode.path="/home/osso-test/.worktrees/shared-protocol-dungeon/vendor/lightyear_netcode"'`. Do not use Cargo `paths` overrides (they emitted dependency-graph warnings), or add `--locked` again (the native helper already injects it). Neither workaround is retained in source/config. Import code stays at `7cb75b9`; presentation/criteria code stays at `46bdcd6`. The later snapshot-only change does not invalidate their proofs. Final docs-only edits do not invalidate code evidence. No broad suite, client execution, push, merge or deployment.
 
+## Full raw producer continuation (2026-10-12)
+
+[Producer inventory and current-root coverage](../../achievement-criteria-producer-inventory.md) supersedes historical slice counts and records every raw69933 type, current wiring, source/state gaps and proof ledger. The [contract](../../specs/dungeon-achievements.md) owns per-type semantics.
+
+Earned player levels are published at the native XP persistence boundary, not from `Changed<Level>`; generated max-level class predicates admit actual current tree leaves without stripping conditions. Area transitions use authored full ancestry for IsInArea but retain the separate one-parent terrain-zone rule. Traditional faction rank totals exclude friendship, renown and paragon-target state. Raw CriteriaTree references outside all Achievement roots remain orphan counters, not artificial achievement gains.
+
+## Rated arena win criteria (verified 2026-10-13)
+
+`pvp_arena_rated_results::apply_result` collects online winners while persisting their ratings, sets the match result’s once-only `applied` marker, then publishes Type37 credit through the authenticated achievement boundary. Pre-result rating follows TC Arena.cpp249 (minimum1); the criterion increments by one, not the rating amount. Native-channel 2v2/3v3 tests cover winner/loser isolation, skirmishes, no queue/preparation credit, idle replay and redb reopen. Type39 remains disabled: pinned TC uses team sizes2/3/5 while current Retail assets are slot-like0/1/2; mapping is unresolved. [Producer inventory](../../achievement-criteria-producer-inventory.md) owns the current census and remaining gaps.
+
+## Current-head live sample (verified 2026-10-13)
+
+At server `33a58e14`, engine `ebedc08ab`, protocol `98f1bd9`, fresh Modern and Forever clients on private UDP5898 paid for Ring/Bear/Mammoth, earned2084/2076/2078, advanced actual known-mount progress2→4 and compared against a separate online peer (own Completed, peer Incomplete). Sixteen1280×720 PNGs reside in `/syncthing/AgentShared/2026-10-12/achievements/criteria17/`; logs and source-placement receipt are under the achievements-criteria logs’ `live/criteria17/`. This is a commerce/mount/comparison sample, not proof of every enabled criterion; arena37 has separate real-channel persistence proof. All owned processes stopped.
+
+## Identity PlayerCondition criteria (verified 2026-10-13)
+
+The criteria condition compiler now carries ModifierTree type2 PlayerCondition IDs. Catalog loading delegates to `game_objects::identity_conditions::load_condition`, retaining every flag/non-identity/TDB source34 restriction; `permits_race_class` is shared by object interaction and criteria evaluation. No second mask implementation or general PlayerCondition interpreter was added. Native XP tests prove Human Paladin and Orc Mage cap transitions earn Double Agent7380 through account aggregation and remain earned after redb reopen, without opposite-faction or admin/login event credit. The [inventory](../../achievement-criteria-producer-inventory.md) owns the updated structural census.
+
+## Per-request emote targets (verified 2026-10-13)
+
+`EmoteIntent.target_entity` carries the client-selected server entity with each request. `messaging::emote_target_entry` resolves its NPC template on the sender's map copy before queuing the criteria event; it never reads current CombatTarget or interprets a creature entry as an entity ID. The compiler admits All4/SingleTrue TargetCreatureId4 only for DoEmote54, alongside already-supported player/difficulty leaves. Love225 maps to text only, preserving the pose. Primary source: pinned TC a352b1fa ChatHandler.cpp703–753 and CriteriaHandler.cpp1782–1785; pinned69933 EmotesText225 EmoteID0. Native RED/GREEN exercises two different requests in one channel batch, eligibility and invalid-target controls, no idle replay and reopened counters3615/3739. Other target modifiers/producers remain disabled; [inventory](../../achievement-criteria-producer-inventory.md) owns structural counts, not creature spawn completeness.
+
+## Rated map wins and participation (verified 2026-10-13)
+
+The same native rated settlement publishes map-specific WinArena32 for winners and ParticipateInArena33 for every online in-world participant, after persistence and the result's once-only applied marker. Events carry the completed source map and native team size; compiled PlayerInArenaWithTeamSize24 (2/3) and PlayerInRankedArenaMatch60 predicates read those facts, not a guessed rating asset or current queue. Native-channel2v2/3v3 RED/GREEN covers counters8613/8617/8605/8609, losers receiving participation only, wrong map/team size, no preparation/skirmish/idle replay and redb reopen. Primary source: TC a352b1fa Arena.cpp241–250, CriteriaHandler.cpp1652–1655/1879–1885/2059–2065.5v5 remains unsupported; type39 still has a source/data slot mapping gap. The [inventory](../../achievement-criteria-producer-inventory.md) owns the structural census; no new rendered arena proof is claimed.
+
 ## Sources
 
+- [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
 - `scripts/import_achievements.py`, `scripts/db2_casc.py` — local extraction/export/import.
 - `crates/server/src/achievement_account.rs`, `achievement_catalog.rs`, `achievement_window.rs`, `achievement.rs`, `dungeon_progress.rs` — catalog, bounded presentation and gameplay delivery.
 - [Client hookup](../../dungeon-achievements-client.md) — protocol fields, bounds and Retail sources.

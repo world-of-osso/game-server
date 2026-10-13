@@ -23,12 +23,12 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
             99104, 304370, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657, 225659,
             376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162, 398329,
-            398328, 398334, 398333, 62736, 42766, 54710, 42753, 388088, 289277, 384585, 203533,
-            203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870, 383065,
-            239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090, 381262,
-            401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618, 128327,
-            196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909, 127803,
-            128150, 128151, 128152,
+            398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 289277, 384585,
+            203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563, 128328, 406870,
+            383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123, 361085, 361090,
+            381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616, 469617, 469618,
+            128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067, 430760, 71909,
+            127803, 128150, 128151, 128152, 176899, 176900,
         ],
         class,
     )
@@ -60,7 +60,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
             .unwrap();
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
-        .insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+        .insert_resource(crate::spell_cast::toy_scripts::load_toy_texts(&conn).unwrap());
     h.app.init_resource::<crate::group::GroupRegistry>();
     h.app
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
@@ -107,6 +107,86 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
         MessageReceiver::<ToyCollectionUpdate>::default(),
     ));
     (h, character)
+}
+
+#[test]
+fn achievements_criteria_toys_native_learning_sets_owned_item_and_distinct_count() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("criteria-toys.redb");
+    let (mut h, character) = setup(&path);
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    bevy::app::Plugin::build(&crate::achievement::AchievementPlugin, &mut h.app);
+    let player = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::achievement::PlayerAchievementState::default());
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut inventory = persistence::load_inventory(db, character);
+    inventory.items.push(InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id: 37710,
+        name: String::new(),
+        quality: 1,
+        required_level: 1,
+        stack_count: 2,
+        vendor_sell_price: 1,
+        unique_auction: false,
+    });
+    persistence::save_inventory(db, character, &inventory);
+    assert!(
+        learn(&mut h, 3)
+            .iter()
+            .any(|r| r.operation == ToyOperation::Learn && r.error.is_none())
+    );
+    let state = h
+        .app
+        .world()
+        .get::<crate::achievement::PlayerAchievementState>(player)
+        .unwrap();
+    assert_eq!(state.criteria_progress.get(&27841), Some(&1));
+    assert_eq!(
+        state
+            .account
+            .as_ref()
+            .unwrap()
+            .criteria_progress
+            .get(&26801),
+        Some(&1)
+    );
+    assert!(
+        learn(&mut h, 3)
+            .iter()
+            .any(|r| r.error.as_deref() == Some("toy already learned"))
+    );
+    learn(&mut h, 0);
+    let state = h
+        .app
+        .world()
+        .get::<crate::achievement::PlayerAchievementState>(player)
+        .unwrap();
+    assert_eq!(
+        state
+            .account
+            .as_ref()
+            .unwrap()
+            .criteria_progress
+            .get(&26801),
+        Some(&2)
+    );
+    assert_eq!(state.criteria_progress.get(&27841), Some(&1));
+    drop(h);
+    let db = redb::Database::open(&path).unwrap();
+    assert_eq!(toy_store::load(&db, 1).len(), 2);
+    assert!(toy_store::load(&db, 2).is_empty());
+    assert_eq!(
+        persistence::load_achievements(&db, character)
+            .criteria_progress
+            .get(&26801),
+        Some(&2)
+    );
 }
 
 fn pump(h: &mut Harness) -> (Vec<ToyResult>, Vec<ToyCollectionUpdate>) {
@@ -681,7 +761,13 @@ fn toyfx_wild_brazier_spawns_owned_with_template_faction() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
     let conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.execute_batch("CREATE TABLE summon_properties (ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER); INSERT INTO summon_properties VALUES (64,0,0,0,0);").unwrap();
+    conn.execute_batch(
+        "CREATE TABLE summon_properties (
+            ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER,
+            Flags_0 INTEGER, Flags_1 INTEGER
+        ); INSERT INTO summon_properties VALUES (64,0,0,0,0,0,0);",
+    )
+    .unwrap();
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
     learn_effect_toy(&mut h, character, 34686);
@@ -1209,7 +1295,7 @@ fn toyfx4_destination_request_does_not_select_a_unit_or_use_target_facing() {
             .get::<crate::game_objects::summoned::SummonedObject>(objects[0])
             .unwrap()
             .owner,
-        h.caster
+        Some(h.caster)
     );
 }
 
@@ -3658,6 +3744,159 @@ fn toyfx14_scaled_scenery_census() {
     }
 }
 
+#[test]
+fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use shared::components::{ModelDisplay, Npc, Position, UnitScale};
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, displays, scale) in [
+        (198646, 384618, 194793, vec![108683], 0.7),
+        (204405, 405204, 203158, vec![111821], 1.0),
+    ] {
+        let (mut h, character) = setup(&directory.path().join(format!("statue-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app
+            .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+        h.app
+            .insert_resource(crate::world_data::load_world_data(&path));
+        h.app
+            .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
+        h.app.insert_resource(store.clone());
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(
+            activate_at(&mut h, item, None)[0].error,
+            None,
+            "item {item}"
+        );
+        h.advance(50);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        let now = crate::auras::aura_now(h.app.world());
+        let world = h.app.world_mut();
+        let actors: Vec<_> = world
+            .query::<(Entity, &Npc, &SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+            .map(|(entity, _, summon)| (entity, summon.expires_at))
+            .collect();
+        assert_eq!(actors.len(), 1, "item {item}");
+        let (actor, expires_at) = actors[0];
+        // Authored SpellDuration 300000ms; 50 frames already elapsed.
+        let remaining = expires_at.unwrap() - now;
+        assert!(
+            (297.0..=300.0).contains(&remaining),
+            "item {item}: {remaining}"
+        );
+        assert!(displays.contains(&world.get::<ModelDisplay>(actor).unwrap().display_id));
+        assert_eq!(
+            world.get::<UnitScale>(actor).copied().unwrap_or_default().0,
+            scale
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(actor)
+                .is_none()
+        );
+        let placed = *world.get::<Position>(actor).unwrap();
+        world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
+        h.advance(100);
+        assert_eq!(h.app.world().get::<Position>(actor), Some(&placed));
+    }
+}
+
+#[test]
+fn toyfx19_gladiator_banners_respect_faction_and_cancel_persistent_cosmetic_aura() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let directory = tempfile::tempdir().unwrap();
+    for (item, spell, race, wrong_race) in [(119220, 176899, 1, 2), (119221, 176900, 2, 1)] {
+        let (mut h, character) = setup_for_race(
+            &directory.path().join(format!("gladiator-{item}.redb")),
+            race,
+        );
+        learn_effect_toy(&mut h, character, item);
+        let before = *h.app.world().get::<Health>(h.caster).unwrap();
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(40);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.expires_at, None);
+        assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), before);
+        assert!(h.app.world().get::<ModelDisplay>(h.caster).is_none());
+        assert!(
+            h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::CancelAura {
+                spell_id: spell,
+            });
+        h.advance(5);
+        assert!(
+            !h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|aura| aura.spell_id == spell)
+        );
+
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Player>(h.caster)
+            .unwrap()
+            .race = wrong_race;
+        h.inbox.go.clear();
+        assert_eq!(
+            activate(&mut h, item)[0].error.as_deref(),
+            Some("toy race/class restriction")
+        );
+        h.advance(40);
+        assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+    }
+}
+
+#[test]
+fn toyfx18_placed_statues_census() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = import_toyfx8_world(directory.path());
+    let report = report_toy_census(&path, "TOYFX18_STATUE_CENSUS_REPORT");
+    let toys = report["toys"].as_array().unwrap();
+    let find = |item: u32| toys.iter().find(|toy| toy["item_id"] == item).unwrap();
+    for item in [198646, 204405] {
+        assert!(find(item)["unavailable"].is_null(), "{}", find(item));
+    }
+    // Seats, target dummies and wormholes keep their interaction gap; Attraction
+    // Sign's only weighted display is an invisible trigger.
+    for item in [116689, 88375, 172924, 122126] {
+        assert!(!find(item)["unavailable"].is_null(), "{}", find(item));
+    }
+}
+
 #[derive(Resource, Default)]
 struct ToyChatCapture(std::collections::HashMap<Entity, Vec<ChatMessage>>);
 
@@ -3865,7 +4104,7 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
             "text" => {
                 h.app
                     .world_mut()
-                    .remove_resource::<crate::spell_cast::toy_scripts::DiceTexts>();
+                    .remove_resource::<crate::spell_cast::toy_scripts::ToyTexts>();
             }
             "group" => {
                 h.app
@@ -3917,6 +4156,1156 @@ fn toyfx14_dice_refuses_missing_source_or_caster_context_and_payload_drift() {
     }
 }
 
+fn coin_texts(source: &rusqlite::Connection, sex: u8) -> [String; 3] {
+    [32638, 32663, 32664].map(|id| {
+        source
+            .query_row(
+                "SELECT MaleText, FemaleText FROM content_broadcast_text WHERE ID=?",
+                [id],
+                |row| row.get::<_, String>(if sex == 1 { 1 } else { 0 }),
+            )
+            .unwrap()
+    })
+}
+
+fn emotes_for(h: &Harness, connection: Entity) -> Vec<String> {
+    h.app
+        .world()
+        .resource::<ToyChatCapture>()
+        .0
+        .get(&connection)
+        .map_or(Vec::new(), |chat| {
+            chat.iter()
+                .filter(|message| message.channel == ChatType::Emote)
+                .map(|message| message.content.clone())
+                .collect()
+        })
+}
+
+#[test]
+fn toyfx18_coin_tosses_then_catches_heads_or_tails_after_source_flight() {
+    use crate::persistence::ClientId;
+    use shared::components::{Health, Player, Position};
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&source).unwrap().0;
+    for sex in [0, 1] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("coin.redb"));
+        h.app.insert_resource(store.clone());
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        h.app
+            .world_mut()
+            .get_mut::<Player>(h.caster)
+            .unwrap()
+            .appearance
+            .sex = sex;
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        let mut peers = Vec::new();
+        for (peer, x, name) in [(2, 35.0, "Near"), (3, 500.0, "Far")] {
+            let player = spawn_player(&mut h.app, 8, x);
+            h.app.world_mut().get_mut::<Player>(player).unwrap().name = name.into();
+            h.app
+                .world_mut()
+                .entity_mut(player)
+                .insert((ClientId(100 + peer), crate::maps::InMap::continent(0)));
+            let connection = spawn_peer_connection(&mut h.app, player, peer);
+            h.app.world_mut().entity_mut(connection).insert((
+                MessageSender::<ChatMessage>::default(),
+                MessageReceiver::<ChatMessage>::default(),
+            ));
+            peers.push(connection);
+        }
+        let [toss, heads, tails] = coin_texts(&source, sex);
+        let health = *h.app.world().get::<Health>(h.caster).unwrap();
+        let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, 44430);
+        assert_eq!(activate(&mut h, 44430)[0].error, None);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == 60458));
+        assert_eq!(emotes_for(&h, h.connection), vec![toss.clone()]);
+        assert_eq!(emotes_for(&h, peers[0]), vec![toss.clone()]);
+        // Source missile: 20yd above the caster at speed10 lands after 2000ms.
+        h.advance(30);
+        assert_eq!(
+            emotes_for(&h, h.connection).len(),
+            1,
+            "caught before source flight"
+        );
+        h.advance(14);
+        let caster_emotes = emotes_for(&h, h.connection);
+        assert_eq!(caster_emotes.len(), 2);
+        assert!(
+            caster_emotes[1] == heads || caster_emotes[1] == tails,
+            "{caster_emotes:?}"
+        );
+        assert_eq!(emotes_for(&h, peers[0]), caster_emotes);
+        assert!(emotes_for(&h, peers[1]).is_empty());
+        assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&origin));
+        h.advance(20);
+        assert_eq!(emotes_for(&h, h.connection).len(), 2, "one catch per toss");
+    }
+}
+
+#[test]
+fn toyfx18_coin_refuses_missing_text_or_source_shape_drift() {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for missing in ["text", "trigger", "catch target", "extra effect"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("coin-refusal.redb"));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        let mut toss = store.get(60458).unwrap().clone();
+        let mut catch = store.get(60476).unwrap().clone();
+        match missing {
+            "text" => {
+                h.app
+                    .world_mut()
+                    .remove_resource::<crate::spell_cast::toy_scripts::ToyTexts>();
+            }
+            "trigger" => toss.effects[0].trigger_spell = 116,
+            "catch target" => catch.effects[0].implicit_targets = [6, 0],
+            "extra effect" => toss.effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![toss, catch]));
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ));
+        h.app.init_resource::<ToyChatCapture>();
+        h.app.add_systems(PostUpdate, capture_toy_chat);
+        learn_effect_toy(&mut h, character, 44430);
+        assert!(activate(&mut h, 44430)[0].error.is_some(), "{missing}");
+        h.advance(50);
+        assert!(h.inbox.go.is_empty(), "{missing}");
+        assert!(h.inbox.cooldowns.is_empty(), "{missing}");
+        assert!(emotes_for(&h, h.connection).is_empty(), "{missing}");
+    }
+}
+
+const PERSONALIZED_WEATHER: [u32; 4] = [46740, 46739, 46738, 46736];
+
+fn weather_auras(h: &Harness) -> Vec<(u32, u32, Entity)> {
+    h.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .map_or(Vec::new(), |auras| {
+            auras
+                .iter()
+                .filter(|aura| PERSONALIZED_WEATHER.contains(&aura.spell_id))
+                .map(|aura| (aura.spell_id, aura.duration_ms, aura.caster))
+                .collect()
+        })
+}
+
+#[test]
+fn toyfx18_weather_machine_applies_one_authored_personal_weather() {
+    use crate::persistence::ClientId;
+    use shared::components::{Health, Position};
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&source).unwrap().0;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("weather.redb"));
+    h.app.insert_resource(store);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    learn_effect_toy(&mut h, character, 35227);
+    assert_eq!(activate(&mut h, 35227)[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 46203));
+    let applied = weather_auras(&h);
+    assert_eq!(applied.len(), 1, "{applied:?}");
+    let (weather, duration, caster) = applied[0];
+    // SpellDuration9: 30000ms; the caster weathers itself (target->CastSpell(target)).
+    assert_eq!((duration, caster), (30000, h.caster));
+    assert!(PERSONALIZED_WEATHER.contains(&weather));
+    // 46736's 5000ms periodic dummy has no TDB script: its ticks change nothing.
+    h.advance(140);
+    assert_eq!(weather_auras(&h).len(), 1);
+    assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+    assert_eq!(h.app.world().get::<Position>(h.caster), Some(&origin));
+    h.advance(470);
+    assert!(weather_auras(&h).is_empty(), "authored 30s weather expires");
+}
+
+#[test]
+fn toyfx18_weather_machine_refuses_unaudited_weather_shape() {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for drift in [
+        "missing weather",
+        "weather trigger",
+        "no visual",
+        "extra effect",
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("weather-refusal.redb"));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ClientId(character));
+        let mut machine = store.get(46203).unwrap().clone();
+        let mut weathers: Vec<_> = PERSONALIZED_WEATHER
+            .iter()
+            .map(|id| store.get(*id).unwrap().clone())
+            .collect();
+        match drift {
+            "missing weather" => {
+                weathers.pop();
+            }
+            "weather trigger" => weathers[3].effects[0].trigger_spell = 116,
+            "no visual" => weathers[0].has_spell_visual = false,
+            "extra effect" => machine.effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        weathers.push(machine);
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(weathers));
+        learn_effect_toy(&mut h, character, 35227);
+        assert!(activate(&mut h, 35227)[0].error.is_some(), "{drift}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{drift}");
+        assert!(h.inbox.cooldowns.is_empty(), "{drift}");
+        assert!(weather_auras(&h).is_empty(), "{drift}");
+    }
+}
+
+/// Cast-event caster kits with no aura, script binding or gameplay payload.
+const CAST_KIT_TOYS: [(u32, u32); 3] = [
+    (122119, 103740), // Everlasting Darkmoon Firework
+    (166877, 290627), // Azerite Firework Launcher
+    (127668, 187150), // Jewel of Hellfire
+];
+
+#[test]
+fn toyfx18_cast_kit_visual_toys_cast_without_gameplay() {
+    use shared::components::{Health, ModelDisplay, Position, UnitAuras};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell) in CAST_KIT_TOYS {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("cast-kit.redb"));
+        h.app.insert_resource(store.clone());
+        // Azerite's TARGET_DEST_CASTER_GROUND needs authored ground under the caster.
+        h.app
+            .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+                33.0, 33.0, 2.0,
+            ));
+        h.app.world_mut().entity_mut(h.caster).insert(Position {
+            x: 10.0,
+            y: 2.0,
+            z: -10.0,
+        });
+        let model = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+        let health = *h.app.world().get::<Health>(h.caster).unwrap();
+        let position = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item {item}");
+        h.advance(5);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item {item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item {item}"
+        );
+        assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), model.as_ref());
+        assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), health);
+        assert_eq!(*h.app.world().get::<Position>(h.caster).unwrap(), position);
+        assert!(
+            h.app
+                .world()
+                .get::<UnitAuras>(h.caster)
+                .is_none_or(|auras| auras.auras.iter().all(|aura| aura.spell_id != spell)),
+            "item {item} has no aura"
+        );
+    }
+}
+
+#[test]
+fn toyfx18_cast_kit_visual_toys_refuse_lost_visual_or_payload() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for drift in ["no visual", "payload"] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("cast-kit-drift.redb"));
+        let mut spell = store.get(103740).unwrap().clone();
+        match drift {
+            "no visual" => spell.has_spell_visual = false,
+            "payload" => spell.effects[0].base_points = 50.0,
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        learn_effect_toy(&mut h, character, 122119);
+        assert!(activate(&mut h, 122119)[0].error.is_some(), "{drift}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{drift}");
+    }
+}
+
+/// TC spell_gen_upper_deck_create_foam_sword item choices.
+const FOAM_SWORDS: [u32; 5] = [45061, 45176, 45177, 45178, 45179];
+
+fn foam_swords(h: &Harness, character: u64) -> u32 {
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    persistence::load_inventory(db, character)
+        .items
+        .iter()
+        .filter(|item| FOAM_SWORDS.contains(&item.item_id))
+        .map(|item| item.stack_count)
+        .sum()
+}
+
+fn place_foam_sword_rack(h: &mut Harness, character: u64) -> Entity {
+    use crate::persistence::ClientId;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
+    learn_effect_toy(h, character, 45063);
+    assert_eq!(activate_at(h, 45063, Some([2.0, 0.0, 0.0]))[0].error, None);
+    h.advance(70); // Source CastingTimeIndex14: 3000ms; harness frames are 50ms.
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 62985));
+    let world = h.app.world_mut();
+    let racks: Vec<_> = world
+        .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+        .iter(world)
+        .filter(|(_, info)| info.entry == 194342)
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_eq!(racks.len(), 1);
+    racks[0]
+}
+
+#[test]
+fn toyfx18_foam_sword_rack_grants_one_source_sword_until_it_expires() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("foam.redb"));
+    let rack = place_foam_sword_rack(&mut h, character);
+    assert_eq!(foam_swords(&h, character), 0);
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, rack).unwrap();
+    h.advance(3);
+    assert_eq!(foam_swords(&h, character), 1);
+    // "player can only have one of these items": a second use creates nothing.
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, rack).unwrap();
+    h.advance(3);
+    assert_eq!(foam_swords(&h, character), 1);
+    // SpellDuration 180000ms: the wild rack despawns on its own (virtual clock).
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(std::time::Duration::from_secs(7200));
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_secs(180),
+        ));
+    h.advance(2);
+    assert!(h.app.world().get_entity(rack).is_err());
+}
+
+#[test]
+fn toyfx18_summoned_objects_replicate_ready_collision_state() {
+    // TC EffectTransmitted/EffectSummonObjectWild create GO_STATE_READY objects; the
+    // client draws no game object without its replicated collision state.
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("collision.redb"));
+    let rack = place_foam_sword_rack(&mut h, character);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(rack),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    learn_effect_toy(&mut h, character, 45011);
+    assert_eq!(
+        activate_at(&mut h, 45011, Some([4.0, 0.0, 0.0]))[0].error,
+        None
+    );
+    h.advance(70);
+    let world = h.app.world_mut();
+    let banners: Vec<_> = world
+        .query::<(
+            &shared::protocol::GameObjectInfo,
+            Option<&shared::protocol::GameObjectCollision>,
+        )>()
+        .iter(world)
+        .filter(|(info, _)| info.entry == 194274)
+        .map(|(_, collision)| collision.copied())
+        .collect();
+    assert_eq!(
+        banners,
+        vec![Some(shared::protocol::GameObjectCollision(true))]
+    );
+}
+
+#[test]
+fn toyfx18_foam_sword_rack_counts_a_banked_sword() {
+    use crate::persistence::banks::{BankData, BankOwner, save_bank_move};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("foam-bank.redb"));
+    let rack = place_foam_sword_rack(&mut h, character);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let mut tab = crate::bank::new_tab(1);
+    tab.slots[0] = Some(InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id: 45178,
+        name: "Foam Sword".into(),
+        quality: 0,
+        required_level: 1,
+        stack_count: 1,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    });
+    let bank = BankData {
+        tabs: vec![tab],
+        money: 0,
+    };
+    save_bank_move(db, character, BankOwner::Character(character, &bank), None);
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, rack).unwrap();
+    h.advance(3);
+    assert_eq!(foam_swords(&h, character), 0);
+}
+
+#[test]
+fn toyfx18_transmitted_spellcaster_with_unscripted_object_spell_is_unavailable() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("costume-chest.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    // Costume Chest 252775 casts 222360, a caster dummy no TC/TDB script implements.
+    let reasons = toy_catalog::unsupported_types(h.app.world(), 222367);
+    assert!(reasons.contains("effect 3"), "{reasons:?}");
+    // Audited object spells keep their banners: 424023 and 1215373 are cosmetic kits.
+    for root in [424022, 1215364] {
+        let reasons = toy_catalog::unsupported_types(h.app.world(), root);
+        assert!(reasons.is_empty(), "{root}: {reasons:?}");
+    }
+}
+
+#[test]
+fn toyfx18_celebration_banner_use_applies_its_cosmetic_aura() {
+    use crate::persistence::ClientId;
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("banner.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
+    learn_effect_toy(&mut h, character, 210042);
+    assert_eq!(
+        activate_at(&mut h, 210042, Some([2.0, 0.0, 0.0]))[0].error,
+        None
+    );
+    h.advance(70);
+    let banner = {
+        let world = h.app.world_mut();
+        world
+            .query::<(Entity, &shared::protocol::GameObjectInfo)>()
+            .iter(world)
+            .find(|(_, info)| info.entry == 409869)
+            .unwrap()
+            .0
+    };
+    let model = h.app.world().get::<ModelDisplay>(h.caster).cloned();
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    crate::game_objects::spellcaster::use_object(h.app.world_mut(), h.caster, banner).unwrap();
+    h.advance(5);
+    let aura = h
+        .app
+        .world()
+        .get::<UnitAuras>(h.caster)
+        .unwrap()
+        .auras
+        .iter()
+        .find(|aura| aura.spell_id == 424023)
+        .cloned()
+        .unwrap();
+    assert_eq!(aura.duration_ms, 3_600_000);
+    assert_eq!(h.app.world().get::<ModelDisplay>(h.caster), model.as_ref());
+    assert_eq!(*h.app.world().get::<Health>(h.caster).unwrap(), health);
+}
+
+#[test]
+fn toyfx18_wild_display_with_unscripted_object_spell_stays_unavailable() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("blaster.redb"));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    // 441724 casts dummy 445930, which TDB1210 binds to no script.
+    let reasons = toy_catalog::unsupported_types(h.app.world(), 445938);
+    assert!(reasons.contains("effect 3"), "{reasons:?}");
+    let rack = toy_catalog::unsupported_types(h.app.world(), 62985);
+    assert!(rack.is_empty(), "{rack:?}");
+}
+
+/// TC spell_item_wormhole_pandaria WormholeTargetLocations.
+const WORMHOLE_PANDARIA_DESTINATIONS: [u32; 9] = [
+    126756, 126757, 126758, 126759, 126760, 126761, 126762, 126763, 126764,
+];
+
+fn prepare_world_port(h: &mut Harness, conn: &rusqlite::Connection, character: u64) {
+    use lightyear::prelude::*;
+    use shared::protocol::{NewWorld, WorldPortAck};
+    h.app
+        .insert_resource(crate::spell_cast::teleport_positions::load_positions(conn).unwrap());
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(conn).unwrap());
+    h.app.init_resource::<crate::maps::InstanceManager>();
+    h.app
+        .add_systems(Update, crate::maps::transfer::receive_world_port_acks);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::persistence::ClientId(character),
+        shared::components::CombatStatus(false),
+        shared::components::MovementControl::default(),
+        shared::components::Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<NewWorld>::default(),
+        MessageReceiver::<NewWorld>::default(),
+        MessageSender::<WorldPortAck>::default(),
+        MessageReceiver::<WorldPortAck>::default(),
+    ));
+}
+
+#[test]
+fn toyfx18_wormhole_pandaria_transfers_to_one_authored_pandaria_point() {
+    use lightyear::prelude::*;
+    use shared::components::Position;
+    use shared::protocol::{NewWorld, TransferChannel, WorldPortAck};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("wormhole.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    prepare_world_port(&mut h, &conn, character);
+    let positions = crate::spell_cast::teleport_positions::load_positions(&conn).unwrap();
+    let destinations: Vec<_> = WORMHOLE_PANDARIA_DESTINATIONS
+        .iter()
+        .map(|spell| positions.0[&(*spell, 0)])
+        .collect();
+    assert!(destinations.iter().all(|point| point.map_id == 870));
+    learn_effect_toy(&mut h, character, 87215);
+    assert_eq!(activate(&mut h, 87215)[0].error, None);
+    let mut worlds = Vec::new();
+    for _ in 0..250 {
+        h.advance(1);
+        worlds.extend(drain::<NewWorld>(&mut h.app, h.connection));
+    }
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 126755));
+    // Triggered teleports send no SpellGo; the transfer names the chosen point.
+    let destination = h
+        .app
+        .world()
+        .get::<crate::maps::MapTransfer>(h.caster)
+        .unwrap()
+        .destination;
+    assert!(destinations.contains(&destination), "{destination:?}");
+    assert_eq!(worlds.len(), 1);
+    assert_eq!(worlds[0].map_id, 870);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<WorldPortAck>>(h.connection)
+        .unwrap()
+        .send::<TransferChannel>(WorldPortAck);
+    h.advance(4);
+    assert_eq!(
+        *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap(),
+        crate::maps::InMap::continent(870)
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        destination.bevy_position()
+    );
+}
+
+#[test]
+fn toyfx18_wormhole_refuses_missing_destination_or_source_drift() {
+    use shared::components::Position;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for drift in [
+        "missing point",
+        "missing teleport",
+        "teleport target",
+        "extra effect",
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("wormhole-refusal.redb"));
+        prepare_world_port(&mut h, &conn, character);
+        let mut spells: Vec<_> = std::iter::once(126755)
+            .chain(WORMHOLE_PANDARIA_DESTINATIONS)
+            .map(|id| store.get(id).unwrap().clone())
+            .collect();
+        match drift {
+            "missing point" => {
+                h.app
+                    .world_mut()
+                    .resource_mut::<crate::spell_cast::teleport_positions::SpellTargetPositions>()
+                    .0
+                    .remove(&(126760, 0));
+            }
+            "missing teleport" => {
+                spells.pop();
+            }
+            "teleport target" => spells[3].effects[0].implicit_targets = [25, 0],
+            "extra effect" => spells[0].effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(spells));
+        let position = *h.app.world().get::<Position>(h.caster).unwrap();
+        learn_effect_toy(&mut h, character, 87215);
+        assert!(activate(&mut h, 87215)[0].error.is_some(), "{drift}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{drift}");
+        assert!(h.inbox.cooldowns.is_empty(), "{drift}");
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+    }
+}
+
+#[test]
+fn toyfx18_compass_learn_and_use_changes_only_source_facing() {
+    use shared::components::{Health, Position, Rotation};
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("compass.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+        x: 0.0,
+        y: -10.0,
+        z: 0.0,
+    });
+    let position = *h.app.world().get::<Position>(h.caster).unwrap();
+    let health = *h.app.world().get::<Health>(h.caster).unwrap();
+    let other_rotation = h.app.world().get::<Rotation>(h.npc).copied();
+    learn_effect_toy(&mut h, character, 45984);
+    assert_eq!(activate(&mut h, 45984)[0].error, None);
+    h.advance(50); // Source cast time is 2000ms; harness frames are 50ms.
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 64385));
+    let rotation = h.app.world().get::<Rotation>(h.caster).unwrap();
+    let source_orientation = rotation.y - std::f32::consts::FRAC_PI_2;
+    assert!((0.0..=std::f32::consts::TAU).contains(&source_orientation));
+    let correction = h
+        .app
+        .world()
+        .get::<shared::components::ForcedFacing>(h.caster)
+        .unwrap();
+    assert_eq!(correction.yaw, rotation.y);
+    assert_eq!(
+        correction.epoch,
+        h.app
+            .world()
+            .get::<shared::components::MovementControl>(h.caster)
+            .unwrap()
+            .epoch
+    );
+    assert_eq!((rotation.x, rotation.z), (0.0, 0.0));
+    assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+    assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
+    assert_eq!(
+        h.app.world().get::<Rotation>(h.npc).copied(),
+        other_rotation
+    );
+}
+
+#[test]
+fn toyfx18_compass_refuses_missing_rotation_or_changed_source_payload() {
+    use shared::components::{Position, Rotation};
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for missing in [
+        "rotation",
+        "control",
+        "amount",
+        "trigger",
+        "target",
+        "extra effect",
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&directory.path().join("compass-refusal.redb"));
+        h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+            x: 0.0,
+            y: 0.7,
+            z: 0.0,
+        });
+        let mut spell = store.get(64385).unwrap().clone();
+        match missing {
+            "rotation" => {
+                h.app.world_mut().entity_mut(h.caster).remove::<Rotation>();
+            }
+            "control" => {
+                h.app
+                    .world_mut()
+                    .entity_mut(h.caster)
+                    .remove::<shared::components::MovementControl>();
+            }
+            "amount" => spell.effects[0].base_points = 1.0,
+            "trigger" => spell.effects[0].trigger_spell = 116,
+            "target" => spell.effects[0].implicit_targets = [6, 0],
+            "extra effect" => spell.effects.push(crate::spell_info::SpellEffect {
+                index: 1,
+                effect: 10,
+                implicit_targets: [1, 0],
+                base_points: 100.0,
+                ..default()
+            }),
+            _ => unreachable!(),
+        }
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        let position = *h.app.world().get::<Position>(h.caster).unwrap();
+        let rotation = h.app.world().get::<Rotation>(h.caster).copied();
+        learn_effect_toy(&mut h, character, 45984);
+        assert!(activate(&mut h, 45984)[0].error.is_some(), "{missing}");
+        h.advance(5);
+        assert!(h.inbox.go.is_empty(), "{missing}");
+        assert!(h.inbox.cooldowns.is_empty(), "{missing}");
+        assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
+        assert_eq!(h.app.world().get::<Rotation>(h.caster).copied(), rotation);
+    }
+}
+
+#[test]
+fn toyfx17_linked_cooking_fires_spawn_real_traps_and_refresh_cozy_fire() {
+    use crate::auras::ActiveAuras;
+    use shared::components::{Position, Rotation, UnitScale};
+    use shared::protocol::GameObjectInfo;
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for (item, spell, entry, display, scale) in [
+        (70722, 99767, 208935, 10726, 0.25),
+        (104309, 148553, 223229, 14358, 0.5),
+        (116435, 171549, 236014, 30040, 0.5),
+        (116757, 171760, 236110, 7385, 1.0),
+        (182780, 340241, 357706, 67291, 0.5),
+        (184404, 345745, 364811, 67976, 0.5),
+        (199892, 388258, 381360, 75335, 0.7),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut h, character) = setup(&dir.path().join("linked-fire.redb"));
+        h.app.insert_resource(store.clone());
+        h.app.world_mut().entity_mut(h.caster).insert((
+            UnitScale(1.0),
+            Rotation {
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+        ));
+        learn_effect_toy(&mut h, character, item);
+        let cursor = store
+            .get(spell)
+            .unwrap()
+            .effects
+            .iter()
+            .any(|effect| effect.implicit_targets.contains(&87));
+        let destination = cursor.then_some([3.0, 0.0, 0.0]);
+        assert_eq!(
+            activate_at(&mut h, item, destination)[0].error,
+            None,
+            "toy {item}"
+        );
+        h.advance(100);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
+        let world = h.app.world_mut();
+        let fire = world
+            .query::<(Entity, &GameObjectInfo)>()
+            .iter(world)
+            .find(|(_, info)| info.entry == entry)
+            .unwrap()
+            .0;
+        let info = world.get::<GameObjectInfo>(fire).unwrap();
+        assert_eq!(
+            (info.go_type, info.display_id, info.scale),
+            (8, display, scale)
+        );
+        let lifetime = world
+            .get::<crate::game_objects::summoned::SummonedObject>(fire)
+            .unwrap();
+        assert_eq!((lifetime.owner, lifetime.spell_id), (Some(h.caster), spell));
+        let source_ms = store
+            .get(spell)
+            .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
+            .duration
+            .unwrap()
+            .duration_ms;
+        let remaining = lifetime.expires_at.unwrap() - crate::spell_cast::now(world);
+        assert!(remaining > f64::from(source_ms / 1000) - 10.0);
+        let traps: Vec<_> = world
+            .query::<(Entity, &GameObjectInfo)>()
+            .iter(world)
+            .filter(|(_, info)| info.entry == 31442)
+            .map(|(entity, info)| (entity, info.clone()))
+            .collect();
+        assert_eq!(traps.len(), 1);
+        let (trap, info) = &traps[0];
+        assert_eq!((info.go_type, info.display_id), (6, 0));
+        assert_eq!(world.get::<Position>(fire), world.get::<Position>(*trap));
+        assert_eq!(
+            world.get::<crate::maps::InMap>(fire),
+            world.get::<crate::maps::InMap>(*trap)
+        );
+        let aura = world
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 7353)
+            .unwrap();
+        assert_eq!(
+            aura.caster, *trap,
+            "linked trap is not owned by the toy caster"
+        );
+        assert_eq!(aura.effects[0].amount, 1.0);
+        assert_eq!(
+            world
+                .get::<crate::stats::StatModifiers>(h.caster)
+                .unwrap()
+                .ratings_flat
+                .versatility,
+            1.0
+        );
+        let fire_position = *world.get::<Position>(fire).unwrap();
+        // Once triggered, the 60s buff survives leaving the 10yd spell area.
+        world.entity_mut(h.caster).insert(Position {
+            x: fire_position.x + 30.0,
+            ..fire_position
+        });
+        h.advance(100);
+        assert!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 7353)
+        );
+        // Removing the focus despawns its linked trap; the already-cast buff is not an area lease.
+        h.app.world_mut().despawn(fire);
+        h.advance(2);
+        assert!(h.app.world().get_entity(*trap).is_err());
+        assert!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 7353)
+        );
+        h.advance(1300);
+        assert!(
+            !h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 7353)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::stats::StatModifiers>(h.caster)
+                .unwrap()
+                .ratings_flat
+                .versatility,
+            0.0
+        );
+    }
+}
+
+#[test]
+fn toyfx17_linked_fire_requires_a_live_player_and_repeats_on_source_cooldown() {
+    use crate::auras::{ActiveAuras, RemoveReason};
+    use shared::components::{Health, Position, Rotation, UnitScale};
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&dir.path().join("trigger.redb"));
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        UnitScale(1.0),
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    learn_effect_toy(&mut h, character, 70722);
+    assert_eq!(activate(&mut h, 70722)[0].error, None);
+    h.advance(100);
+    let fire = {
+        let world = h.app.world_mut();
+        world
+            .query::<(&shared::protocol::GameObjectInfo, &Position)>()
+            .iter(world)
+            .find(|(info, _)| info.entry == 208935)
+            .map(|(_, position)| *position)
+            .unwrap()
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: fire.x + 30.0,
+        ..fire
+    });
+    crate::auras::remove_auras(h.app.world_mut(), h.caster, RemoveReason::Cancelled, |a| {
+        a.spell_id == 7353
+    });
+    let bystander = spawn_player(&mut h.app, 8, fire.x + 9.0);
+    let other_map = spawn_player(&mut h.app, 8, fire.x + 2.0);
+    let dead = spawn_player(&mut h.app, 8, fire.x + 2.0);
+    for entity in [bystander, other_map, dead] {
+        h.app.world_mut().entity_mut(entity).insert(UnitScale(1.0));
+    }
+    h.app
+        .world_mut()
+        .entity_mut(other_map)
+        .insert(crate::maps::InMap::continent(1));
+    h.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: fire.x + 2.0,
+        ..fire
+    });
+    h.advance(100);
+    let has_buff = |world: &World, entity| {
+        world
+            .get::<ActiveAuras>(entity)
+            .is_some_and(|auras| auras.iter().any(|a| a.spell_id == 7353))
+    };
+    assert!(
+        !has_buff(h.app.world(), bystander),
+        "9yd is inside the spell area, outside the trigger"
+    );
+    assert!(
+        !has_buff(h.app.world(), h.npc),
+        "NPC alone cannot activate this environmental trap"
+    );
+    assert!(!has_buff(h.app.world(), other_map));
+    assert!(!has_buff(h.app.world(), dead));
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: fire.x + 6.6,
+        ..fire
+    });
+    h.advance(2);
+    assert!(
+        !has_buff(h.app.world(), bystander),
+        "beyond diameter/2 + scaled1.5yd reach"
+    );
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: fire.x + 6.4,
+        ..fire
+    });
+    h.advance(2);
+    assert!(
+        has_buff(h.app.world(), bystander),
+        "source10yd area is not the5yd trigger radius"
+    );
+    assert!(!has_buff(h.app.world(), other_map));
+    assert!(!has_buff(h.app.world(), dead));
+    let deadline = |world: &World| {
+        world
+            .get::<ActiveAuras>(bystander)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 7353)
+            .unwrap()
+            .expires_at
+    };
+    let first = deadline(h.app.world());
+    h.advance(40);
+    assert_eq!(
+        deadline(h.app.world()),
+        first,
+        "no per-frame refresh before source4s cooldown"
+    );
+    h.advance(45);
+    assert!(
+        deadline(h.app.world()) > first,
+        "zero charges repeat instead of consuming the trap"
+    );
+}
+
+#[test]
+fn toyfx17_cozy_fire_adds_source_versatility_rating_and_restores_it() {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+    use shared::components::{CombatRatings, Position};
+    let mut h = harness_with(Vec::new(), &[7353], 8, true).unwrap();
+    h.advance(2);
+    let before = *h.app.world().get::<CombatRatings>(h.caster).unwrap();
+    // TC creates the linked trap without an owner: its caster is the GO, not the player.
+    let trap = h
+        .app
+        .world_mut()
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            crate::maps::InMap::continent(0),
+        ))
+        .id();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: trap,
+            target: h.caster,
+            spell_id: 7353,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(2);
+    let aura = h
+        .app
+        .world()
+        .get::<ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 7353)
+        .unwrap();
+    assert_eq!(aura.effects[0].misc_values[0], 0x7000_0000);
+    assert_eq!(
+        aura.effects[0].amount, 1.0,
+        "source scaling max level1/coefficient.8"
+    );
+    let after = *h.app.world().get::<CombatRatings>(h.caster).unwrap();
+    assert_eq!(after.versatility, before.versatility + 1.0);
+    assert_eq!(after.crit, before.crit);
+    assert_eq!(after.haste, before.haste);
+    assert_eq!(after.mastery, before.mastery);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 7353,
+    );
+    h.advance(2);
+    assert_eq!(
+        *h.app.world().get::<CombatRatings>(h.caster).unwrap(),
+        before
+    );
+}
+
 #[test]
 fn toyfx16_no_trap_cooking_fires_spawn_with_authored_identity_and_expiry() {
     use crate::game_objects::summoned::SummonedObject;
@@ -3964,7 +5353,7 @@ fn toyfx16_no_trap_cooking_fires_spawn_with_authored_identity_and_expiry() {
             world.get::<crate::maps::InMap>(h.caster)
         );
         let lifetime = world.get::<SummonedObject>(*object).unwrap();
-        assert_eq!(lifetime.owner, h.caster);
+        assert_eq!(lifetime.owner, Some(h.caster));
         assert_eq!(lifetime.spell_id, spell);
         let source_duration = store
             .get(spell)
@@ -4143,12 +5532,15 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
-    world.insert_resource(crate::spell_cast::toy_scripts::load_dice_texts(&conn).unwrap());
+    world.insert_resource(crate::spell_cast::toy_scripts::load_toy_texts(&conn).unwrap());
     world.init_resource::<crate::group::GroupRegistry>();
     world.insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     world.insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
     world.insert_resource(crate::auras::override_spell_data::load(&conn).unwrap());
     world.insert_resource(crate::world_data::load_world_data(path));
+    world.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
+    world.insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    world.insert_resource(crate::item_templates::load_item_templates(path).unwrap());
     let has_summon_properties: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",

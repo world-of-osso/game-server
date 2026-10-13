@@ -80,6 +80,28 @@ pub struct PlayerLink(pub Entity);
 #[derive(Component, Debug, Default)]
 pub struct CombatTarget(pub Option<Entity>);
 
+/// Turn a predicted player without moving it or restarting an ongoing fall.
+/// The matching epoch rejects pre-turn input until the client adopts ForcedFacing.
+pub(crate) fn face_player(world: &mut World, player: Entity, yaw: f32) {
+    let epoch = {
+        let mut control = world
+            .get_mut::<shared::components::MovementControl>(player)
+            .expect("validated player movement control");
+        control.epoch = control.epoch.wrapping_add(1);
+        control.epoch
+    };
+    if let Some(mut fall) = world.get_mut::<FallTracker>(player) {
+        fall.epoch = epoch;
+    }
+    world
+        .get_mut::<shared::components::Rotation>(player)
+        .expect("validated player rotation")
+        .y = yaw;
+    world
+        .entity_mut(player)
+        .insert(shared::components::ForcedFacing { epoch, yaw });
+}
+
 /// Whether the player's newest input requests translation. Server-only; a
 /// blocking cast freezes `Position`, so casts read intent instead.
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -745,8 +767,18 @@ pub(crate) fn apply_terrain_gravity(
             ground.min_height(map.map_id, Vec3::new(next_pos.x, next_pos.y, next_pos.z));
         let under_map = min_height.is_some_and(|min_height| next_pos.y < min_height);
         let alive = death_state.is_none_or(|state| state.state == DeathState::Alive);
+        let fell_to_void = under_map && alive && next_health.current > 0.0;
+        // TC Player.h940-945: normal falling2 differs from the custom void6 type,
+        // even though both are logged as Falling by EnvironmentalDamageLog.
+        let death_kind = if fell_to_void {
+            Some(6)
+        } else if fall.is_some() && previous_health.current > 0.0 && next_health.current <= 0.0 {
+            Some(2)
+        } else {
+            None
+        };
         let mut logs: Vec<_> = fall.into_iter().collect();
-        if under_map && alive && next_health.current > 0.0 {
+        if fell_to_void {
             logs.extend(fall_to_void(entity, &mut next_health));
             commands.entity(entity).insert(OutOfBounds);
         } else if !under_map && out_of_bounds {
@@ -776,6 +808,11 @@ pub(crate) fn apply_terrain_gravity(
             replication_dirty.as_deref(),
             &mut player_deaths,
         );
+        if let Some(kind) = death_kind {
+            commands.queue(move |world: &mut World| {
+                crate::achievement::record_environmental_death(world, entity, kind);
+            });
+        }
         for log in logs {
             commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, log));
         }

@@ -475,8 +475,9 @@ impl RollDelivery<'_, '_> {
         roll.snapshot.winner = roll.window.resolve();
         let item = roll.snapshot.item.clone();
         let refused = roll.snapshot.winner.and_then(|winner| {
+            // Rolls exist only on creature corpses (`generate_corpse_loot`).
             self.store
-                .take(winner, &item)
+                .take(winner, &item, super::LootKind::CORPSE)
                 .err()
                 .map(|error| (winner, error))
         });

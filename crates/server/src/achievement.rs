@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use shared::components::{Level, Npc, Player};
 use shared::protocol::{
     AchievementCatalogPage, AchievementChannel, AchievementSnapshot, AchievementStateUpdate,
-    AchievementToastSnapshot, QueryAchievementCatalog,
+    AchievementToastSnapshot, ChallengePhase, ChallengeRun, QueryAchievementCatalog,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -16,11 +16,15 @@ use crate::persistence::{self, GameDatabase};
 
 #[path = "achievement_catalog.rs"]
 mod catalog;
-pub(crate) use catalog::{AchievementCatalog, CriteriaEvent, load_achievement_catalog};
+pub(crate) use catalog::{
+    AchievementCatalog, CriteriaEvent, PlayerConditions, ReferencePlayer, load_achievement_catalog,
+};
 #[path = "achievement_account.rs"]
 mod account_store;
 #[path = "dungeon_progress.rs"]
 mod dungeon;
+#[path = "achievement_kills.rs"]
+mod kills;
 #[path = "scenario.rs"]
 mod scenario;
 pub(crate) use scenario::load_scenarios;
@@ -32,6 +36,12 @@ pub struct PlayerAchievementState {
     pub criteria_progress: BTreeMap<u32, u64>,
     #[serde(default)]
     pub earned_at: BTreeMap<u32, i64>,
+    /// Pre-support reputation quantities were not valid signed Retail progress.
+    #[serde(default)]
+    pub signed_reputation: bool,
+    /// Retail AreaTable.AreaBit facts; distinct AreaIDs can share one explored bit.
+    #[serde(default)]
+    pub explored_area_bits: BTreeSet<u32>,
     #[serde(default)]
     pub(crate) monthly: Option<crate::adventure_guide::MonthlyCriteriaState>,
     /// Presentation-only aggregate; never serialized into character contributions.
@@ -66,6 +76,15 @@ pub(crate) fn decode_saved_achievement_state(bytes: &[u8]) -> (PlayerAchievement
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 struct AchievementTracker {
     last_processed_level: u8,
+    last_processed_zone: Option<u32>,
+    last_processed_area: Option<u32>,
+}
+
+/// Committed gameplay credit from systems that do not own an exclusive World.
+#[derive(Message, Clone, Copy)]
+pub(crate) struct CriteriaCredit {
+    pub player: Entity,
+    pub event: CriteriaEvent,
 }
 
 pub struct AchievementPlugin;
@@ -73,13 +92,24 @@ pub struct AchievementPlugin;
 impl Plugin for AchievementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::maps::ServerClock>();
+        app.add_message::<CriteriaCredit>();
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<scenario::ScenarioRuns>();
+        app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
         app.add_systems(
             Update,
             (
                 send_initial_achievement_snapshot,
                 process_level_achievement_updates,
                 process_skill_achievement_updates,
+                process_known_spell_achievement_updates,
+                process_owned_pet_achievement_updates,
+                process_equipped_achievement_updates,
+                process_reputation_achievement_updates,
+                process_exploration_achievement_updates,
+                process_top_level_area_achievement_updates,
+                process_committed_criteria_credits,
+                process_inventory_acquisition_credits,
                 dungeon::send_entry_progress,
                 scenario::send_entry_progress,
                 send_requested_catalog_pages,
@@ -91,15 +121,17 @@ impl Plugin for AchievementPlugin {
 
 fn send_initial_achievement_snapshot(world: &mut World) {
     let connections: Vec<_> = world
-        .query_filtered::<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>()
+        .query_filtered::<(Entity, &PlayerLink, &InWorld, &Authenticated), Added<InWorld>>()
         .iter(world)
-        .map(|(connection, link, in_world)| (connection, link.0, in_world.character_id))
+        .map(|(connection, link, in_world, auth)| {
+            (connection, link.0, in_world.character_id, auth.account_id)
+        })
         .collect();
-    for (connection, player, character) in connections {
+    for (connection, player, character, account) in connections {
         let Some(level) = world.get::<Level>(player).map(|level| level.0) else {
             continue;
         };
-        let events = load_login_events(world, character, level);
+        let events = load_login_events(world, character, account, level);
         let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) else {
             continue;
         };
@@ -111,21 +143,56 @@ fn send_initial_achievement_snapshot(world: &mut World) {
         send_updates(world, connection, snapshot, Vec::new());
         world.entity_mut(player).insert(AchievementTracker {
             last_processed_level: level,
+            last_processed_zone: None,
+            last_processed_area: None,
         });
     }
 }
 
-fn load_login_events(world: &World, character: u64, level: u8) -> Vec<CriteriaEvent> {
-    let mut events = vec![CriteriaEvent::ReachLevel(level)];
+fn load_login_events(world: &World, character: u64, account: u64, level: u8) -> Vec<CriteriaEvent> {
+    let mut events = vec![CriteriaEvent::Login, CriteriaEvent::ReachLevel(level)];
     if let Some(db) = world.get_resource::<GameDatabase>() {
+        // TC BankTabPurchased login case: current tab counts of both banks.
+        let tabs = [
+            (
+                0,
+                persistence::banks::load_character_bank(&db.db, character),
+            ),
+            (2, persistence::banks::load_account_bank(&db.db, account)),
+        ];
         events.extend(
-            persistence::quest_store::load_quest_log(&db.db, character)
-                .rewarded
-                .into_iter()
-                .map(CriteriaEvent::CompleteQuest),
+            tabs.map(|(bank, data)| CriteriaEvent::BankTabsOwned(bank, data.tabs.len() as u32)),
         );
+        let rewarded = persistence::quest_store::load_quest_log(&db.db, character).rewarded;
+        events.extend(rewarded_quest_facts(world, &rewarded, true));
+        events.extend(rewarded.into_iter().map(CriteriaEvent::CompleteQuest));
     }
     events
+}
+
+/// TC GetRewardedQuestCount and the CompleteQuestsInZone login case (CriteriaHandler.cpp
+/// 627-629, 666-678) count only quests that increase rewarded counters.
+fn rewarded_quest_facts(world: &World, rewarded: &[u32], zones: bool) -> Vec<CriteriaEvent> {
+    let Some(quests) = world.get_resource::<crate::quest_data::QuestDb>() else {
+        return Vec::new();
+    };
+    let counted: Vec<_> = rewarded
+        .iter()
+        .filter_map(|id| quests.quests.get(id))
+        .filter(|quest| quest.increases_rewarded_counters())
+        .collect();
+    let mut by_zone = BTreeMap::<u32, u32>::new();
+    for quest in counted.iter().filter(|quest| quest.sort_id > 0 && zones) {
+        *by_zone.entry(quest.sort_id as u32).or_default() += 1;
+    }
+    let count = u32::try_from(counted.len()).expect("rewarded quest count fits u32");
+    std::iter::once(CriteriaEvent::RewardedQuestCount(count))
+        .chain(
+            by_zone
+                .into_iter()
+                .map(|(zone, count)| CriteriaEvent::RewardedQuestsInZone(zone, count)),
+        )
+        .collect()
 }
 
 fn process_level_achievement_updates(world: &mut World) {
@@ -142,30 +209,269 @@ fn process_level_achievement_updates(world: &mut World) {
             continue;
         };
         crate::adventure_guide::record(world, player, CriteriaEvent::ReachLevel(level));
-        world.entity_mut(player).insert(AchievementTracker {
-            last_processed_level: level,
-        });
+        world
+            .get_mut::<AchievementTracker>(player)
+            .unwrap()
+            .last_processed_level = level;
         if let Some(connection) = connection_for_player(world, player) {
             send_updates(world, connection, snapshot, toasts);
         }
     }
 }
 
-/// TC a352b1fa CriteriaHandler.cpp:601-604 reads GetBaseSkillValue;
-/// Changed includes newly loaded skill lines, so login restores historical ranks.
+/// TC a352b1fa CriteriaHandler.cpp:601-604 reads GetBaseSkillValue and 623-626
+/// GetPureMaxSkillValue; Changed includes newly loaded skill lines, so login restores them.
 fn process_skill_achievement_updates(world: &mut World) {
     let updates: Vec<_> = world.query_filtered::<(Entity, &crate::profession::PlayerProfessions), Changed<crate::profession::PlayerProfessions>>()
         .iter(world).flat_map(|(player, professions)| professions.lines.iter()
             .filter(|line| line.rank != 0)
-            .map(move |line| (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)))).collect();
+            .flat_map(move |line| [
+                (player, CriteriaEvent::SkillRank(line.skill_line, line.rank)),
+                (player, CriteriaEvent::SkillMaxRank(line.skill_line, line.max_rank)),
+            ])).collect();
     for (player, event) in updates {
         record_criteria_event(world, player, event);
     }
 }
 
+/// TC CriteriaHandler.cpp687/1530-1535: knowing the authored spell is a boolean fact.
+/// Owned account mounts are known spells on every character: TC CollectionMgr::AddMount
+/// (CollectionMgr.cpp:414-443) LearnSpells each one at login and when learned.
+fn process_known_spell_achievement_updates(world: &mut World) {
+    let mut query = world.query_filtered::<(
+        Entity,
+        Option<&crate::class_progression::KnownSpells>,
+        Option<&crate::mount_journal::AccountMounts>,
+    ), (
+        With<Player>,
+        Or<(
+            Changed<crate::class_progression::KnownSpells>,
+            Changed<crate::mount_journal::AccountMounts>,
+        )>,
+    )>();
+    let Some(catalog) = world.get_resource::<AchievementCatalog>() else {
+        return;
+    };
+    let updates: Vec<_> = query
+        .iter(world)
+        .map(|(player, known, mounts)| {
+            let spells = known
+                .into_iter()
+                .flat_map(|known| known.iter())
+                .chain(crate::mount_journal::owned_spells(world, mounts));
+            (player, catalog.known_spell_events(spells))
+        })
+        .collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
+    }
+}
+
+/// Persisted physical equipment from InventoryModel, never bag ownership or display art.
+fn process_equipped_achievement_updates(world: &mut World) {
+    let updates: Vec<_> = world.query_filtered::<(Entity, &crate::stats::EquippedItems), (With<Player>, Changed<crate::stats::EquippedItems>)>()
+        .iter(world).map(|(player, equipped)| {
+            let items: BTreeSet<_> = equipped.items.iter().filter_map(|(_, source, item)|
+                (*source == shared::item_data::ItemDefinitionSource::Retail).then_some(*item)).collect();
+            (player, items.into_iter().map(CriteriaEvent::EquipItem).collect::<Vec<_>>())
+        }).collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
+    }
+}
+
+/// Account journal facts, never the old cosmetic collection's pre-filled known flags.
+fn process_owned_pet_achievement_updates(world: &mut World) {
+    let mut query = world.query_filtered::<(Entity, &crate::battle_pets::AccountPetJournal), Changed<crate::battle_pets::AccountPetJournal>>();
+    let Some(catalog) = world.get_resource::<crate::battle_pets::PetCatalog>() else {
+        return;
+    };
+    let updates: Vec<_> = query
+        .iter(world)
+        .map(|(player, journal)| {
+            let creatures: BTreeSet<_> = journal
+                .journal
+                .pets
+                .iter()
+                .filter_map(|pet| catalog.creature_id(pet.species_id))
+                .collect();
+            let events: Vec<_> = creatures
+                .into_iter()
+                .map(CriteriaEvent::KnowPetCreature)
+                .chain(std::iter::once(CriteriaEvent::OwnUniquePets(
+                    u32::try_from(journal.journal.unique_species())
+                        .expect("journal count fits u32"),
+                )))
+                .collect();
+            (player, events)
+        })
+        .collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
+    }
+}
+
+#[path = "achievement_rank_factions.rs"]
+mod rank_factions;
+
+/// Current traditional ranks, not visible/tracked factions or historical maxima.
+fn reputation_rank_events(
+    reputation: &shared::reputation::CharacterReputation,
+) -> Vec<CriteriaEvent> {
+    let values: Vec<_> = reputation
+        .values()
+        .filter(|(id, _)| {
+            rank_factions::TRADITIONAL_RANK_FACTIONS
+                .binary_search(id)
+                .is_ok()
+        })
+        .map(|(_, standing)| standing)
+        .collect();
+    use shared::reputation::{Standing, threshold_for_standing};
+    let count = |rank| {
+        let threshold = threshold_for_standing(rank);
+        u32::try_from(values.iter().filter(|&&value| value >= threshold).count())
+            .expect("faction count fits u32")
+    };
+    vec![
+        CriteriaEvent::TotalExaltedFactions(count(Standing::Exalted)),
+        CriteriaEvent::TotalReveredFactions(count(Standing::Revered)),
+        CriteriaEvent::TotalHonoredFactions(count(Standing::Honored)),
+    ]
+}
+
+/// TC CriteriaHandler709-715/737-745: positive standing and current rank totals.
+fn process_reputation_achievement_updates(world: &mut World) {
+    let updates: Vec<_> = world.query_filtered::<(Entity, &shared::reputation::CharacterReputation), Changed<shared::reputation::CharacterReputation>>()
+        .iter(world).map(|(player, reputation)| {
+            let events = reputation.values().filter(|(_, value)| *value > 0)
+                .map(|(faction, value)| CriteriaEvent::ReputationGained(faction, value as u32))
+                .chain(reputation_rank_events(reputation)).collect::<Vec<_>>();
+            (player, events)
+        }).collect();
+    for (player, events) in updates {
+        record_criteria_events(world, player, &events);
+    }
+}
+
+/// TC Player::CheckAreaExplore: living, non-taxi players discover the authored terrain area.
+fn process_exploration_achievement_updates(world: &mut World) {
+    if !world.contains_resource::<crate::ground::GroundMap>() {
+        return;
+    }
+    let players: Vec<_> = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .map(|(_, link, _)| link.0)
+        .collect();
+    for player in players {
+        let Some(bit) = detect_explorable_area_bit(world, player) else {
+            continue;
+        };
+        let Some(mut state) = world.get_mut::<PlayerAchievementState>(player) else {
+            continue;
+        };
+        if !state.explored_area_bits.insert(bit) {
+            continue;
+        }
+        if let Some((snapshot, toasts)) =
+            update_player_events(world, player, &[CriteriaEvent::ExploreAreaBit(bit)], None)
+            && let Some(connection) = connection_for_player(world, player)
+        {
+            send_updates(world, connection, snapshot, toasts);
+        }
+    }
+}
+
+fn detect_explorable_area_bit(world: &mut World, player: Entity) -> Option<u32> {
+    let is_dead = world
+        .get::<crate::death::PlayerDeathState>(player)
+        .is_some_and(|life| life.state != shared::death::DeathState::Alive);
+    let on_taxi = world.get::<crate::taxi::TaxiFlight>(player).is_some();
+    if is_dead || on_taxi {
+        return None;
+    }
+    let (area, _) = load_player_terrain_area(world, player)?;
+    world.get_resource::<AchievementCatalog>()?.area_bit(area)
+}
+
+fn load_player_terrain_area(world: &mut World, player: Entity) -> Option<(u32, u32)> {
+    let position = *world.get::<shared::components::Position>(player)?;
+    let map = *world.get::<InMap>(player)?;
+    let area = world
+        .resource_mut::<crate::ground::GroundMap>()
+        .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))?;
+    Some((area, map.map_id))
+}
+
+fn process_top_level_area_achievement_updates(world: &mut World) {
+    if !world.contains_resource::<crate::ground::GroundMap>() {
+        return;
+    }
+    if !world.contains_resource::<crate::area_table::AreaTable>() {
+        return;
+    }
+    let players: Vec<_> = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .map(|(_, link, _)| link.0)
+        .collect();
+    for player in players {
+        update_top_level_area_credit(world, player);
+    }
+}
+
+fn update_top_level_area_credit(world: &mut World, player: Entity) {
+    let zone = load_player_terrain_area(world, player).and_then(|(area, map)| {
+        let zone = world
+            .resource::<crate::area_table::AreaTable>()
+            .zone_id(area, map)?;
+        record_terrain_area_transition(world, player, area);
+        Some(zone)
+    });
+    let Some(tracker) = world.get::<AchievementTracker>(player) else {
+        return;
+    };
+    if tracker.last_processed_zone == zone {
+        return;
+    }
+    world
+        .get_mut::<AchievementTracker>(player)
+        .unwrap()
+        .last_processed_zone = zone;
+    if let Some(zone) = zone {
+        // TC Player::UpdateZone7590 does not impose exploration's alive/non-taxi restriction.
+        record_criteria_event(world, player, CriteriaEvent::EnterTopLevelArea(zone));
+    }
+}
+
+/// TC Player::UpdateArea7507-7510: actual authenticated terrain changes only.
+fn record_terrain_area_transition(world: &mut World, player: Entity, area: u32) {
+    let Some(tracker) = world.get::<AchievementTracker>(player).copied() else {
+        return;
+    };
+    if tracker.last_processed_area == Some(area) {
+        return;
+    }
+    let events: Vec<_> = std::iter::once(CriteriaEvent::EnterArea(area))
+        .chain(tracker.last_processed_area.map(CriteriaEvent::LeaveArea))
+        .collect();
+    world
+        .get_mut::<AchievementTracker>(player)
+        .unwrap()
+        .last_processed_area = Some(area);
+    record_criteria_events(world, player, &events);
+}
+
 /// Runs only after the quest reward transaction commits. Failed/incomplete turn-ins
 /// never reach this boundary; login reconstructs missed credit from rewarded quests.
-pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32) {
+pub(crate) fn record_quest_reward(
+    world: &mut World,
+    character: u64,
+    quest: u32,
+    daily: bool,
+    money: i32,
+) {
     let owner = world
         .query_filtered::<(Entity, &PlayerLink, &InWorld), With<Authenticated>>()
         .iter(world)
@@ -175,12 +481,193 @@ pub(crate) fn record_quest_reward(world: &mut World, character: u64, quest: u32)
     let Some((connection, player)) = owner else {
         return;
     };
-    scenario::record(world, player, CriteriaEvent::CompleteQuest(quest));
-    crate::adventure_guide::record(world, player, CriteriaEvent::CompleteQuest(quest));
-    if let Some((snapshot, toasts)) =
-        update_player_events(world, player, &[CriteriaEvent::CompleteQuest(quest)], None)
+    let mut events = vec![CriteriaEvent::CompleteQuest(quest)];
+    if daily {
+        events.push(CriteriaEvent::CompleteDailyQuest);
+    }
+    // TC Player.cpp:15211-15216 and 15274-15276.
+    if money > 0 {
+        events.push(CriteriaEvent::MoneyEarnedFromQuesting(money as u64));
+    }
+    let sort = world
+        .get_resource::<crate::quest_data::QuestDb>()
+        .and_then(|quests| quests.quests.get(&quest))
+        .map_or(0, |quest| quest.sort_id);
+    if sort > 0 {
+        events.push(CriteriaEvent::CompleteQuestInZone(sort as u32));
+    }
+    if let Some(db) = world.get_resource::<GameDatabase>() {
+        let rewarded = persistence::quest_store::load_quest_log(&db.db, character).rewarded;
+        events.extend(rewarded_quest_facts(world, &rewarded, false));
+    }
+    for &event in &events {
+        scenario::record(world, player, event);
+        crate::adventure_guide::record(world, player, event);
+    }
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, None) {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+/// TC Player::setDeathState and Unit::Kill: only an accepted native death transition.
+pub(crate) fn record_player_death(world: &mut World, player: Entity) {
+    let Some(map) = world.get::<InMap>(player).copied() else {
+        return;
+    };
+    record_criteria_events(
+        world,
+        player,
+        &[
+            CriteriaEvent::DieAnywhere,
+            CriteriaEvent::DieOnMap(map.map_id),
+        ],
+    );
+}
+
+/// TC Player::EnvironmentalDamage credits the actual lethal environmental type.
+pub(crate) fn record_environmental_death(world: &mut World, player: Entity, kind: u32) {
+    record_criteria_event(
+        world,
+        player,
+        CriteriaEvent::DieFromEnvironmentalDamage(kind),
+    );
+}
+
+/// TC Unit::Kill11453: direct player or genuine HunterPet owner, not all tap recipients.
+pub(crate) fn record_delivered_killing_blow(world: &mut World, killer: Entity) {
+    let player = world
+        .get::<crate::hunter_pet::HunterPet>(killer)
+        .map_or(killer, |pet| pet.owner);
+    let in_world = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .any(|(link, _)| link.0 == player);
+    if in_world && world.get::<Player>(player).is_some() {
+        record_criteria_event(world, player, CriteriaEvent::DeliveredKillingBlow);
+    }
+}
+
+/// TC Unit::Kill uses the actual lethal unit, not a previous nonlethal LastDamager.
+pub(crate) fn record_player_killed_by(world: &mut World, player: Entity, killer: Entity) {
+    if world.get::<Player>(player).is_none() {
+        return;
+    }
+    let event = if let Some(npc) = world.get::<Npc>(killer) {
+        CriteriaEvent::KilledByCreature(npc.template_id)
+    } else if killer != player && world.get::<Player>(killer).is_some() {
+        CriteriaEvent::KilledByPlayer
+    } else {
+        return;
+    };
+    record_criteria_event(world, player, event);
+}
+
+/// Pinned CriteriaType245/246 and Retail CraftingOrderType enum: completed delivery only.
+pub(crate) fn record_order_fulfillment(world: &mut World, player: Entity, kind: u8) {
+    record_criteria_events(
+        world,
+        player,
+        &[
+            CriteriaEvent::FulfillAnyCraftingOrder,
+            CriteriaEvent::FulfillCraftingOrderType(kind),
+        ],
+    );
+}
+
+/// Committed credit for the in-world player of `character`; offline characters get none.
+pub(crate) fn record_character_event(world: &mut World, character: u64, event: CriteriaEvent) {
+    let player = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .find_map(|(link, in_world)| (in_world.character_id == character).then_some(link.0));
+    if let Some(player) = player {
+        record_criteria_event(world, player, event);
+    }
+}
+
+pub(crate) fn record_toy_ownership(world: &mut World, player: Entity, account: u64) {
+    let toys = crate::persistence::toy_store::load(&world.resource::<GameDatabase>().db, account);
+    let events: Vec<_> = toys
+        .keys()
+        .copied()
+        .map(CriteriaEvent::LearnToy)
+        .chain(std::iter::once(CriteriaEvent::OwnToys(
+            u32::try_from(toys.len()).expect("toy count fits u32"),
+        )))
+        .collect();
+    record_criteria_events(world, player, &events);
+}
+
+/// Actual XP-driven level transitions of existing owned pets, never seeded journal levels.
+pub(crate) fn record_pet_level_changes(
+    world: &mut World,
+    player: Entity,
+    before: &shared::pet_battle::PetJournal,
+    after: &shared::pet_battle::PetJournal,
+) {
+    let catalog = world.resource::<crate::battle_pets::PetCatalog>();
+    let events: Vec<_> = after
+        .pets
+        .iter()
+        .filter_map(|pet| {
+            let old = before.get(pet.id)?;
+            let creature = catalog.creature_id(pet.species_id)?;
+            (creature != 0 && pet.level > old.level).then_some((old.level, pet.level))
+        })
+        .flat_map(|(old, new)| {
+            ((old + 1)..=new).flat_map(|level| {
+                [
+                    CriteriaEvent::BattlePetReachedLevel(level),
+                    CriteriaEvent::ActivelyEarnedPetLevel(level),
+                ]
+            })
+        })
+        .collect();
+    record_criteria_events(world, player, &events);
+}
+
+/// Retail CriteriaType157 AccountObtainPetThroughBattle: committed trap reward, not request.
+pub(crate) fn record_pet_capture(world: &mut World, player: Entity) {
+    record_criteria_event(world, player, CriteriaEvent::CaptureBattlePet);
+}
+
+/// TC BattlegroundScore::UpdatePvpStat:80 TrackedWorldStateUIModified, keyed by PvpStat,
+/// completed in the battleground's map.
+pub(crate) fn record_pvp_stat(world: &mut World, player: Entity, map: u32, stat: u32) {
+    let events = [CriteriaEvent::TrackedWorldStateUIModified(stat)];
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
+        && let Some(connection) = connection_for_player(world, player)
     {
         send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+/// TC BattlePetMgr::AddPet:483 after a new GUID is saved; never journal loads or changes.
+pub(crate) fn record_learned_pet(world: &mut World, player: Entity, species: u32) {
+    record_criteria_event(world, player, CriteriaEvent::LearnedNewPet(species));
+}
+
+/// TC Spell.cpp3543-3546 credits the casting Retail item after successful cast checks.
+pub(crate) fn record_item_use(world: &mut World, player: Entity, item: u32) {
+    record_criteria_event(world, player, CriteriaEvent::UseItem(item));
+}
+
+/// TC GameObject::Use credits a validated successful use by authored entry, not entity ID.
+pub(crate) fn record_game_object_use(world: &mut World, player: Entity, entry: u32) {
+    record_criteria_event(world, player, CriteriaEvent::UseGameObject(entry));
+}
+
+/// TC Unit::_ApplyAura credits the recipient when a new application is installed.
+pub(crate) fn record_gain_aura(world: &mut World, target: Entity, spell: u32) {
+    if world.get::<Player>(target).is_some() {
+        record_criteria_event(world, target, CriteriaEvent::GainAura(spell));
+    }
+}
+
+/// TC GameEventSender.cpp:43-58 credits the player source, never an NPC/target.
+pub(crate) fn record_player_game_event(world: &mut World, source: Entity, event: u32) {
+    if event != 0 && world.get::<Player>(source).is_some() {
+        record_criteria_event(world, source, CriteriaEvent::TriggerGameEvent(event));
     }
 }
 
@@ -189,24 +676,200 @@ pub(crate) fn record_spell_cast(world: &mut World, caster: Entity, spell: u32) {
     record_criteria_event(world, caster, CriteriaEvent::CastSpell(spell));
 }
 
-/// TC a352b1fa Spell.cpp:2876-2880 credits the targeted player, not caster.
-pub(crate) fn record_spell_target(world: &mut World, target: Entity, spell: u32) {
+/// TC a352b1fa Spell::PreprocessSpellHit credits the recipient28 and caster110.
+pub(crate) fn record_targeted_spell_hit(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) {
     record_criteria_event(world, target, CriteriaEvent::BeSpellTarget(spell));
+    record_criteria_event(world, caster, CriteriaEvent::LandTargetedSpell(spell));
 }
 
-fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
-    scenario::record(world, player, event);
-    crate::adventure_guide::record(world, player, event);
-    if !world
-        .get_resource::<AchievementCatalog>()
-        .is_some_and(|catalog| catalog.tracks(event))
-    {
+/// Called only after durable M+ settlement; players must belong to the finished copy.
+pub(crate) fn record_mythic_completion(world: &mut World, run: &ChallengeRun) {
+    if run.phase != ChallengePhase::Completed {
         return;
     }
-    if let Some((snapshot, toasts)) = update_player_events(world, player, &[event], None)
+    for (player, player_level) in find_mythic_finishers(world, run) {
+        let completion = catalog::MythicCompletion {
+            key_level: run.key.level,
+            challenge_map: run.key.challenge_id,
+            player_level,
+            in_time: run.elapsed_ms <= run.time_limit_ms,
+        };
+        let event = CriteriaEvent::CompleteMythicPlus(completion);
+        scenario::record(world, player, event);
+        if let Some((snapshot, toasts)) =
+            update_player_events(world, player, &[event], Some(run.map_id))
+            && let Some(connection) = connection_for_player(world, player)
+        {
+            send_updates(world, connection, snapshot, toasts);
+        }
+    }
+}
+
+fn find_mythic_finishers(world: &mut World, run: &ChallengeRun) -> Vec<(Entity, u8)> {
+    world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .filter_map(|(link, _)| {
+            let map = world.get::<InMap>(link.0)?;
+            let level = world.get::<Level>(link.0)?;
+            let finished_copy = map.map_id == run.map_id && map.instance_id == run.instance_id;
+            finished_copy.then_some((link.0, level.0))
+        })
+        .collect()
+}
+
+/// TC Battleground::EndBattleground credits winners, then every participant, with MapID.
+pub(crate) fn record_battleground_end(world: &mut World, player: Entity, map: u32, won: bool) {
+    let win = [
+        CriteriaEvent::WinBattleground(map),
+        CriteriaEvent::WinAnyBattleground,
+    ];
+    let mut events = if won { win.to_vec() } else { Vec::new() };
+    events.push(CriteriaEvent::ParticipateInBattleground(map));
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map))
         && let Some(connection) = connection_for_player(world, player)
     {
         send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+/// TC Scenario.cpp:88-96 CompleteScenario credits every player in the finished copy once.
+fn record_scenario_completion(world: &mut World, map: InMap, scenario: u32) {
+    let events = [
+        CriteriaEvent::CompleteAnyScenario,
+        CriteriaEvent::CompleteScenario(scenario),
+    ];
+    for player in crate::scripted_ai::instance_script::players_in_map(world, map) {
+        for &event in &events {
+            crate::adventure_guide::record(world, player, event);
+        }
+        if let Some((snapshot, toasts)) =
+            update_player_events(world, player, &events, Some(map.map_id))
+            && let Some(connection) = connection_for_player(world, player)
+        {
+            send_updates(world, connection, snapshot, toasts);
+        }
+    }
+}
+
+/// Terminal authoritative winner only; conditional PvP/streak rows remain unevaluated.
+pub(crate) fn record_pet_battle_win(world: &mut World, player: Entity) {
+    record_criteria_event(world, player, CriteriaEvent::WinPetBattle);
+}
+
+/// TC Arena.cpp241–250: online rated participants/winners, after committed settlement.
+pub(crate) fn record_ranked_arena_result(
+    world: &mut World,
+    player: Entity,
+    before_rating: u32,
+    map: u32,
+    team_size: u8,
+    won: bool,
+) {
+    let connection = world
+        .query::<(Entity, &Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .find_map(|(connection, _, link, _)| (link.0 == player).then_some(connection));
+    let Some(connection) = connection else { return };
+    let mut events = vec![CriteriaEvent::ParticipateInArena(map, team_size)];
+    if won {
+        events.extend([
+            CriteriaEvent::WinAnyRankedArena(before_rating.max(1)),
+            CriteriaEvent::WinArena(map, team_size),
+        ]);
+    }
+    for &event in &events {
+        scenario::record(world, player, event);
+        crate::adventure_guide::record(world, player, event);
+    }
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &events, Some(map)) {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+pub(crate) fn record_player_event(world: &mut World, player: Entity, event: CriteriaEvent) {
+    record_criteria_event(world, player, event);
+}
+
+fn record_criteria_event(world: &mut World, player: Entity, event: CriteriaEvent) {
+    record_criteria_events(world, player, &[event]);
+}
+
+fn record_criteria_events(world: &mut World, player: Entity, events: &[CriteriaEvent]) {
+    for &event in events {
+        scenario::record(world, player, event);
+        crate::adventure_guide::record(world, player, event);
+    }
+    let Some(catalog) = world.get_resource::<AchievementCatalog>() else {
+        return;
+    };
+    let tracked: Vec<_> = events
+        .iter()
+        .copied()
+        .filter(|event| catalog.tracks(*event))
+        .collect();
+    if tracked.is_empty() {
+        return;
+    }
+    if let Some((snapshot, toasts)) = update_player_events(world, player, &tracked, None)
+        && let Some(connection) = connection_for_player(world, player)
+    {
+        send_updates(world, connection, snapshot, toasts);
+    }
+}
+
+fn process_inventory_acquisition_credits(world: &mut World) {
+    let (acquired, looted, money, criteria) = {
+        let mut updates = world.resource_mut::<crate::gold::GoldUpdateQueue>();
+        (
+            updates.take_acquisitions(),
+            updates.take_looted_items(),
+            updates.take_looted_money(),
+            updates.take_criteria(),
+        )
+    };
+    let owners: BTreeMap<_, _> = world
+        .query_filtered::<(&PlayerLink, &InWorld), With<Authenticated>>()
+        .iter(world)
+        .map(|(link, owner)| (owner.character_id, link.0))
+        .collect();
+    for (character, item, count) in acquired {
+        if let Some(&player) = owners.get(&character) {
+            record_criteria_event(world, player, CriteriaEvent::AcquireItem(item, count));
+        }
+    }
+    for (character, item, count, kind) in looted {
+        if let Some(&player) = owners.get(&character) {
+            // TC Player::StoreLootItem (Player.cpp:27202-27203).
+            record_criteria_event(world, player, CriteriaEvent::LootItem(item, count));
+            record_criteria_event(world, player, CriteriaEvent::GetLootByType(kind, count));
+        }
+    }
+    for (character, copper) in money {
+        if let Some(&player) = owners.get(&character) {
+            record_criteria_event(world, player, CriteriaEvent::LootMoney(copper));
+        }
+    }
+    for (character, event) in criteria {
+        if let Some(&player) = owners.get(&character) {
+            record_criteria_event(world, player, event);
+        }
+    }
+}
+
+fn process_committed_criteria_credits(
+    mut credits: MessageReader<CriteriaCredit>,
+    mut commands: Commands,
+) {
+    for credit in credits.read().copied() {
+        commands.queue(move |world: &mut World| {
+            record_criteria_event(world, credit.player, credit.event);
+        });
     }
 }
 
@@ -215,6 +878,49 @@ fn connection_for_player(world: &mut World, player: Entity) -> Option<Entity> {
         .query_filtered::<(Entity, &PlayerLink), With<Authenticated>>()
         .iter(world)
         .find_map(|(connection, link)| (link.0 == player).then_some(connection))
+}
+
+/// TC Map::GetDifficultyID of a map: its copy's difficulty, else 0.
+fn map_difficulty(world: &World, map: Option<InMap>) -> u32 {
+    let instances = world.get_resource::<crate::maps::InstanceManager>();
+    map.and_then(|map| instances?.copy_difficulty(map))
+        .map_or(0, |difficulty| difficulty.difficulty_id)
+}
+
+/// The reference player's ModifierTree facts at this criteria update.
+pub(crate) fn player_conditions(world: &World, player: Entity) -> PlayerConditions {
+    let map = world.get::<InMap>(player).copied();
+    PlayerConditions {
+        difficulty: map_difficulty(world, map),
+        player: reference_player(world, player, map),
+    }
+}
+
+fn reference_player(world: &World, player: Entity, map: Option<InMap>) -> Option<ReferencePlayer> {
+    let identity = world.get::<Player>(player)?;
+    Some(ReferencePlayer {
+        auras: world
+            .get::<crate::auras::ActiveAuras>(player)
+            .into_iter()
+            .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
+            .collect(),
+        area: world
+            .get::<AchievementTracker>(player)
+            .and_then(|tracker| tracker.last_processed_area),
+        map: map?.map_id,
+        race: identity.race,
+        class: identity.class,
+        level: world.get::<Level>(player)?.0,
+    })
+}
+
+/// Map-wide credit has no reference player: only the copy's difficulty is known,
+/// so player-fact criteria cannot hold.
+pub(crate) fn map_conditions(world: &World, map: InMap) -> PlayerConditions {
+    PlayerConditions {
+        difficulty: map_difficulty(world, Some(map)),
+        player: None,
+    }
 }
 
 fn update_player_events(
@@ -227,6 +933,7 @@ fn update_player_events(
         return None;
     }
     let race = world.get::<Player>(player)?.race;
+    let conditions = player_conditions(world, player);
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let owner = world
         .query::<(&Authenticated, &PlayerLink, &InWorld)>()
@@ -238,7 +945,9 @@ fn update_player_events(
         let mut state = world.get::<PlayerAchievementState>(player)?.clone();
         let mut toasts: Vec<_> = events
             .iter()
-            .flat_map(|event| catalog.update(&mut state, *event, completed_map, race))
+            .flat_map(|event| {
+                catalog.update_at(&mut state, *event, completed_map, race, &conditions)
+            })
             .collect();
         for toast in &toasts {
             state.earned_at.insert(toast.achievement_id, now);
@@ -310,6 +1019,76 @@ fn send_updates(
     }
 }
 
+/// TC Unit.cpp977-1001/1078: effective totals, raw peaks, no self-hit totals.
+pub(crate) fn record_damage(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    health_before: f32,
+    damage: f32,
+    loss: f32,
+) {
+    if attacker != victim && world.get::<Player>(attacker).is_some() {
+        record_criteria_events(
+            world,
+            attacker,
+            &[
+                CriteriaEvent::DamageDealt(health_before.min(damage) as u64),
+                CriteriaEvent::HighestDamageDone(damage as u64),
+            ],
+        );
+    }
+    if world.get::<Player>(victim).is_some() {
+        record_criteria_event(
+            world,
+            victim,
+            CriteriaEvent::HighestDamageTaken(loss as u64),
+        );
+        if attacker != victim {
+            record_criteria_event(
+                world,
+                victim,
+                CriteriaEvent::TotalDamageTaken(health_before.min(loss) as u64),
+            );
+        }
+    }
+}
+
+/// TC Unit.cpp6572-6583: totals exclude overheal; peaks retain the full heal.
+pub(crate) fn record_healing(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+    effective: f32,
+) {
+    if world.get::<Player>(caster).is_some() {
+        record_criteria_events(
+            world,
+            caster,
+            &[
+                CriteriaEvent::HealingDone(effective as u64),
+                CriteriaEvent::HighestHealCast(amount as u64),
+            ],
+        );
+    }
+    if world.get::<Player>(target).is_some() {
+        record_criteria_events(
+            world,
+            target,
+            &[
+                CriteriaEvent::TotalHealReceived(effective as u64),
+                CriteriaEvent::HighestHealReceived(amount as u64),
+            ],
+        );
+    }
+}
+
+/// TC Player::SummonIfPossible26094 credits a valid acceptance before TeleportTo.
+pub(crate) fn record_accepted_summon(world: &mut World, player: Entity) {
+    record_criteria_event(world, player, CriteriaEvent::AcceptSummon);
+}
+
 /// Successful scripted encounter boundary. A scripted defeat (Hogger's surrender
 /// included) credits its creature criteria even when no corpse is produced.
 pub(crate) fn record_encounter_defeat(
@@ -349,8 +1128,9 @@ pub(crate) fn record_encounter_defeat(
     if let Some(creature) = creature {
         events.push(CriteriaEvent::KillCreature(creature));
     }
+    let conditions = map_conditions(world, map);
     for &event in &events {
-        scenario::record_map(world, map, event);
+        scenario::record_map(world, map, event, &conditions);
     }
     for player in crate::scripted_ai::instance_script::players_in_map(world, map) {
         for &event in &events {
@@ -424,12 +1204,74 @@ fn send_requested_catalog_pages(world: &mut World) {
         let Some(owner) = world.get::<Player>(player) else {
             continue;
         };
-        let page = catalog.page(state, request, owner.race);
+        let page = match request {
+            QueryAchievementCatalog::Comparison {
+                target_entity,
+                query,
+            } => comparison_page(world, player, target_entity, (*query).into()),
+            request => catalog.page(state, request, owner.race),
+        };
         if let Some(mut sender) = world.get_mut::<MessageSender<AchievementCatalogPage>>(connection)
         {
             sender.send::<AchievementChannel>(page);
         }
     }
+}
+
+fn comparison_page(
+    world: &mut World,
+    viewer: Entity,
+    target_entity: u64,
+    query: QueryAchievementCatalog,
+) -> AchievementCatalogPage {
+    let result = query_comparison_target(world, viewer, target_entity, query);
+    match result {
+        Ok((target_name, page)) => AchievementCatalogPage::Comparison {
+            target_entity,
+            target_name,
+            page: Some(Box::new(page.try_into().expect("ordinary comparison page"))),
+            error: None,
+        },
+        Err(error) => AchievementCatalogPage::Comparison {
+            target_entity,
+            target_name: String::new(),
+            page: None,
+            error: Some(error.into()),
+        },
+    }
+}
+
+fn query_comparison_target(
+    world: &mut World,
+    viewer: Entity,
+    target_bits: u64,
+    query: QueryAchievementCatalog,
+) -> Result<(String, AchievementCatalogPage), &'static str> {
+    if matches!(query, QueryAchievementCatalog::Comparison { .. }) {
+        return Err("nested achievement comparison is invalid");
+    }
+    let target = Entity::try_from_bits(target_bits).ok_or("invalid comparison target")?;
+    if target == viewer {
+        return Err("comparison target must be another player");
+    }
+    let online = world
+        .query::<(&Authenticated, &PlayerLink, &InWorld)>()
+        .iter(world)
+        .any(|(_, link, _)| link.0 == target);
+    if !online {
+        return Err("comparison target is not an online player");
+    }
+    let player = world
+        .get::<Player>(target)
+        .ok_or("comparison target is not a player")?;
+    let state = world
+        .get::<PlayerAchievementState>(target)
+        .ok_or("comparison progress unavailable")?;
+    let catalog = world
+        .get_resource::<AchievementCatalog>()
+        .ok_or("achievement catalog unavailable")?;
+    let name = catalog::bound_text(&player.name, shared::protocol::ACHIEVEMENT_NAME_MAX_BYTES);
+    Ok((name, catalog.page(state, query, player.race)))
 }
 
 #[cfg(test)]

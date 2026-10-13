@@ -138,6 +138,8 @@ pub struct ItemTemplates {
     pub retail: HashMap<u32, ItemTemplate>,
     pub forever: HashMap<u32, ItemTemplate>,
     pub loot_need: LootNeedMetadata,
+    /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
+    pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
 }
 
 impl ItemTemplates {
@@ -257,7 +259,18 @@ pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
         retail: load_item_template_rows(&conn, ITEM_QUERY)?,
         forever: HashMap::new(),
         loot_need: loot_need::load(&conn)?,
+        retail_learning_spells: load_item_learning_spells(&conn)?,
     })
+}
+
+fn load_item_learning_spells(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+    let mut query = conn.prepare("SELECT DISTINCT x.ItemID, e.SpellID FROM item_x_item_effect x JOIN item_effect e ON e.ID=x.ItemEffectID JOIN spell s ON s.ID=e.SpellID WHERE e.TriggerType=6 AND e.SpellID>0 ORDER BY x.ItemID, e.SpellID")?;
+    let mut spells: HashMap<u32, Vec<u32>> = HashMap::new();
+    for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
+        let (item, spell) = row?;
+        spells.entry(item).or_default().push(spell);
+    }
+    Ok(spells)
 }
 
 /// Production catalog: both namespaces, no substitution.

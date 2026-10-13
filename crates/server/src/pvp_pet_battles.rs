@@ -519,6 +519,9 @@ fn finish_match(
 ) {
     for team in 0..2 {
         let owner = battle.owners[team];
+        if outcome == Outcome::Winner(team) && actions[team] != Action::Forfeit {
+            crate::achievement::record_pet_battle_win(world, owner);
+        }
         if let Ok(connection) = connection(world, owner) {
             let state = snapshot(world, battle, team);
             send_update(world, connection, WildPetBattleUpdate::State(state));

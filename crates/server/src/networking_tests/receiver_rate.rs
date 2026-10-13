@@ -82,6 +82,39 @@ fn run_north(frames: std::ops::RangeInclusive<usize>) -> Vec<PlayerInput> {
 }
 
 #[test]
+fn compass_facing_rejects_old_input_then_allows_a_new_player_turn() {
+    let (mut app, player, connection) = receiver_app();
+    let mut falling = FallTracker::grounded(20.0);
+    falling.airborne = true;
+    falling.takeoff_y = 20.0;
+    falling.air_secs = 0.7;
+    falling.last_y = 18.0;
+    app.world_mut().entity_mut(player).insert(falling);
+    crate::networking::face_player(app.world_mut(), player, 1.25);
+    let after = *app.world().get::<FallTracker>(player).unwrap();
+    assert_eq!(after.airborne_state().unwrap().secs, 0.7);
+    assert_eq!(after.takeoff_y, 20.0);
+    assert_eq!(after.last_y, 18.0);
+    assert_eq!(
+        after.for_epoch(1, 18.0),
+        after,
+        "facing must not reset the fall next tick"
+    );
+    let old = reporting([0.0; 3], make_input(0.0, 0.0, 0.0));
+    deliver_and_tick(&mut app, connection, vec![old.clone()]);
+    assert_eq!(app.world().get::<Rotation>(player).unwrap().y, 1.25);
+    assert_position(&app, player, [0.0; 3]);
+    let adopted = PlayerInput {
+        epoch: 1,
+        facing_yaw: 2.25,
+        ..old
+    };
+    deliver_and_tick(&mut app, connection, vec![adopted]);
+    assert_eq!(app.world().get::<Rotation>(player).unwrap().y, 2.25);
+    assert_position(&app, player, [0.0; 3]);
+}
+
+#[test]
 fn each_input_moves_the_player_to_the_position_it_reports() {
     // A 60 fps client sends three inputs per 50 ms server tick; the last position stands.
     for count in [1, 3] {

@@ -67,7 +67,8 @@ pub(super) fn save_account_progress(
         update.character,
         character_state,
     );
-    let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update);
+    let aggregate = load_account_aggregate(&txn, update.account, &saved, catalog);
+    let (aggregate, toasts) = evaluate_account_progress(catalog, &saved, &update, aggregate);
     saved.state = aggregate.clone();
     let bytes = serde_json::to_vec(&saved).expect("encode account achievements");
     accounts
@@ -150,12 +151,26 @@ fn write_character_contributions(
         .insert(character, decode_saved_achievement_state(&bytes).0);
 }
 
+fn load_account_aggregate(
+    txn: &redb::WriteTransaction,
+    account: u64,
+    saved: &AccountProgress,
+    catalog: &AchievementCatalog,
+) -> PlayerAchievementState {
+    let mut aggregate = catalog.aggregate(saved.contributions.values().cloned());
+    let pets = crate::battle_pets::unique_species_in_transaction(txn, account);
+    catalog.set_account_unique_pet_count(&mut aggregate, pets);
+    let toys = crate::persistence::toy_store::load_in_transaction(txn, account);
+    catalog.set_account_toy_ownership(&mut aggregate, &toys);
+    aggregate
+}
+
 fn evaluate_account_progress(
     catalog: &AchievementCatalog,
     saved: &AccountProgress,
     update: &AccountUpdate,
+    mut aggregate: PlayerAchievementState,
 ) -> (PlayerAchievementState, Vec<AchievementToastSnapshot>) {
-    let mut aggregate = catalog.aggregate(saved.contributions.values().cloned());
     aggregate.earned_ids.extend(&saved.state.earned_ids);
     for (&id, &date) in &saved.state.earned_at {
         aggregate

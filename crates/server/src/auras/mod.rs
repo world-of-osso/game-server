@@ -629,7 +629,10 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             && supported_amount
             && duration_supported
             && immunity_supported;
-        if handled || scripts::consumes_named_field(aura.spell_id, effect.index) {
+        if handled
+            || scripts::consumes_named_field(aura.spell_id, effect.index)
+            || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
+        {
             continue;
         }
         let mut logged = world.resource_mut::<UnhandledAuras>();
@@ -889,6 +892,7 @@ pub(crate) fn apply_aura_with_spell(
         .cloned()
         .expect("aura just stored");
     if kind == CombatLogKind::AuraApplied {
+        crate::achievement::record_gain_aura(world, target, aura.spell_id);
         crate::quest::record_gain_aura(world, target, spell.id);
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
@@ -1726,14 +1730,18 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
     }
 }
 
-/// Auras whose caster entity despawned end (their ticks need a source).
+/// Source-dependent auras end when their caster despawns. Rating snapshots
+/// retain their authored duration (TC Aura::Update accepts a null caster).
 fn remove_casterless(world: &mut World, unit: Entity) {
     let gone: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
-                .filter(|aura| world.get_entity(aura.caster).is_err())
+                .filter(|aura| {
+                    world.get_entity(aura.caster).is_err()
+                        && !stat_mods::retains_rating_snapshot(aura)
+                })
                 .map(|aura| aura.instance_id)
                 .collect()
         })
@@ -1807,6 +1815,9 @@ fn state_interrupts(world: &mut World, unit: Entity) {
         auras.bypass_change_detection().spec = spec;
     }
     interrupt_auras(world, unit, flags, None);
+    // Proc-derived interrupt flags approximate other TC call sites (triggered casts
+    // skip Action there), so only these state changes end matching channels.
+    crate::spell_cast::interrupt_channel_with_flags(world, unit, flags);
 }
 
 /// Rebuild `UnitAuras` for units whose auras changed; remaining times are

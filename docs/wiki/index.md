@@ -1,5 +1,12 @@
 # Wiki Index
 
+- [Source summon flags and privacy](systems/toys.md#source-summon-flag-import-2026-10-12) —3610 readable source records, atomic legacy import, real owner/observer UDP proof and preserved337 census; group/private flag boundaries explicit.
+
+- [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12) — source31442/7353 trigger/rating/cleanup, seven real-use identities, census337 and representative both-skin journal/recipe/particle/buff proof.
+- [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13) — native evaluator reused; actual faction-isolated XP-cap Double Agent and reopened account persistence.
+
+- [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
+
 - [Victim melee critical chance](../class-completeness6.md#victim-melee-critical-chance--batch30) — native187 victim-owned percentages, ranged-weapon distinction, real damage and lifecycle controls; whole class goal remains open.
 - [Master arena/class regressions](investigations/master-arena-fixture-regressions.md) — duplicate Arcane school discount, source-correct reciprocal Moloch controls, and mastery cap/tie fixture isolation; qualified bisect evidence.
 
@@ -28,7 +35,7 @@
 - [Retail follower bridge](investigations/follower-data.md) — approved Normal-population bridge; both-skin205 queue/five-role party/follow/combat/first-boss kills and owner XP; source-empty loot and walked-route gates remain open.
 - [Mythic Keystone runtime](systems/mythic-plus.md) — copy-only catalog/item publication, GUID ownership/Font authority, weighted encounter completion and durable key/history; private Modern upgrade and Forever accelerated-clock depletion proof, unsourced policy disabled.
 - [DB2 instance coverage](../instance-coverage-counts.md) — expanded dungeon/raid roster, existing124-map row preservation, source gaps and entrance/terrain reachability.
-- [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic registration/ordinals, SmartAI gaps and Skum proof; [Murder Row continuation](systems/boss-scripts.md#murder-row-continuation-2026-10-12) tracks source-bound partial combat/phase coverage and generic victim ownership; [Kings' Rest admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12) records primary-only preparation and intro/damage-hook gaps.
+- [Data-selected boss lifecycle](systems/boss-scripts.md#data-selected-encounters--2026-10-11) — authentic registration/ordinals, SmartAI gaps and Skum proof; [Murder Row continuation](systems/boss-scripts.md#murder-row-continuation-2026-10-12) tracks source-bound partial combat/phase coverage and generic victim ownership; [Kings' Rest admission](systems/boss-scripts.md#kings-rest-source-admission-2026-10-12) records source sphere gameplay/companion hooks and partial TC primary combat, with fresh intro/follow/12.1 timeline/native gaps.
 
 - [Raid entry and saved instances](systems/raid-entry.md) — native both-skin private proof, persistent difficulty/locks, Tuesday reset, source-derived credit and explicit data gaps.
 
@@ -210,7 +217,7 @@ Server gameplay systems.
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
-| [[dungeon-achievements]] | Account aggregation/migration, local cast/skill/target criteria, bounded pages/dates, ordered dungeon objectives and Stockade grants |
+| [[dungeon-achievements]] | Account aggregation/migration, raw producer/current-root inventory, earned level/class predicates, area/rank criteria, bounded pages/dates and ordered dungeon grants |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
 | [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
 | [[toys]] | Local Toy.db2 catalog, atomic account learning/favourites, account broadcasts and authoritative UseToy cooldowns; explicit effect/data gaps |

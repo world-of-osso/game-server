@@ -137,6 +137,10 @@ fn add_inbox<M: Message + serde::Serialize + serde::de::DeserializeOwned>(app: &
 }
 
 fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
+    setup_progression_app(db, classes, false)
+}
+
+fn setup_progression_app(db: redb::Database, classes: ClassSpells, achievements: bool) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -162,6 +166,9 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     app.insert_resource(classes);
     app.add_plugins((ClassProgressionPlugin, crate::profession::ProfessionPlugin));
     app.add_plugins(crate::experience::ExperiencePlugin);
+    if achievements {
+        app.add_plugins(crate::achievement::AchievementPlugin);
+    }
     app.finish();
     app.cleanup();
     app
@@ -883,6 +890,207 @@ fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
     // Divine Shield 642 and Sense Undead 5502 are level 10.
     for spell_id in [642, 5502] {
         assert!(learned[0].spells.contains(&spell_id), "missing {spell_id}");
+    }
+}
+
+#[test]
+fn achievements_criteria_native_kill_xp_credits_only_earned_level_transitions() {
+    use crate::achievement::{PlayerAchievementState, load_achievement_catalog};
+    use crate::auth::InWorld;
+    use crate::combat::DeathState;
+    use crate::persistence_progression::save_xp;
+    use shared::components::{Npc, Position};
+
+    for starting_level in [9, 79, 89] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let db = redb::Database::create(file.path()).unwrap();
+        persistence::create_tables(&db);
+        let (character, _) =
+            persistence::create_character(&db, 1, "Levelproof", HUMAN, PALADIN).unwrap();
+        save_xp(
+            &db,
+            character,
+            crate::experience::xp_to_next_level(starting_level) - 1,
+        );
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let mut app = setup_progression_app(db, class_spells().unwrap(), true);
+        app.insert_resource(load_achievement_catalog(&conn).unwrap());
+        app.insert_resource(world_with_creature(299, starting_level));
+        let player = spawn_player(&mut app, character, HUMAN, PALADIN, starting_level);
+        let origin = Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        app.world_mut()
+            .entity_mut(player)
+            .insert((origin.clone(), PlayerAchievementState::default()));
+        let connection = connection_of(&mut app, player);
+        app.world_mut().entity_mut(connection).insert(InWorld {
+            character_id: character,
+        });
+        advance(&mut app);
+        let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+        for criterion in [62399, 64498, 111909, 57642] {
+            assert!(
+                !state.criteria_progress.contains_key(&criterion),
+                "login must not infer {criterion}"
+            );
+        }
+        app.world_mut().spawn((
+            Npc {
+                template_id: 299,
+                name: "Fixture wolf".into(),
+            },
+            UnitLevel(starting_level),
+            origin,
+            crate::maps::InMap::continent(0),
+            crate::creature_tap::CreatureTap::tapped_by(character),
+            shared::components::Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            DeathState {
+                respawn_timer: 60.0,
+            },
+        ));
+        advance(&mut app);
+        assert_eq!(
+            app.world().get::<Level>(player),
+            Some(&Level(starting_level + 1))
+        );
+        let state = app.world().get::<PlayerAchievementState>(player).unwrap();
+        assert_eq!(state.criteria_progress.get(&62399), Some(&1));
+        assert_eq!(
+            state.criteria_progress.get(&64498).copied(),
+            (starting_level == 79).then_some(1)
+        );
+        assert_eq!(
+            state.criteria_progress.get(&111909).copied(),
+            (starting_level == 89).then_some(1)
+        );
+        assert_eq!(
+            state.criteria_progress.get(&57642).copied(),
+            (starting_level == 89).then_some(1)
+        );
+        if starting_level == 89 {
+            assert_eq!(state.criteria_progress.get(&64625), Some(&1));
+            assert!(!state.criteria_progress.contains_key(&64623));
+            assert!(!state.earned_ids.contains(&7382));
+            assert_eq!(
+                state.criteria_progress.get(&66145),
+                Some(&1),
+                "Alliance cap"
+            );
+            assert!(
+                !state.criteria_progress.contains_key(&66146),
+                "no Horde credit"
+            );
+            let db = &app.world().resource::<GameDatabase>().db;
+            let (mage_character, _) =
+                persistence::create_character(db, 1, "Mageproof", 2, 8).unwrap();
+            save_xp(
+                db,
+                mage_character,
+                crate::experience::xp_to_next_level(89) - 1,
+            );
+            let mage = spawn_player(&mut app, mage_character, 2, 8, 89); // Orc Mage
+            app.world_mut().entity_mut(mage).insert((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                PlayerAchievementState::default(),
+            ));
+            let connection = connection_of(&mut app, mage);
+            app.world_mut().entity_mut(connection).insert((
+                Authenticated { account_id: 1 },
+                InWorld {
+                    character_id: mage_character,
+                },
+            ));
+            advance(&mut app);
+            app.world_mut().spawn((
+                Npc {
+                    template_id: 299,
+                    name: "Second fixture wolf".into(),
+                },
+                UnitLevel(89),
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                crate::maps::InMap::continent(0),
+                crate::creature_tap::CreatureTap::tapped_by(mage_character),
+                shared::components::Health {
+                    current: 0.0,
+                    max: 100.0,
+                },
+                DeathState {
+                    respawn_timer: 60.0,
+                },
+            ));
+            advance(&mut app);
+            assert_eq!(app.world().get::<Level>(mage), Some(&Level(90)));
+            let state = app.world().get::<PlayerAchievementState>(mage).unwrap();
+            assert_eq!(state.criteria_progress.get(&64623), Some(&1));
+            assert!(!state.criteria_progress.contains_key(&64625));
+            assert!(state.account.as_ref().unwrap().earned_ids.contains(&7382));
+            assert_eq!(state.criteria_progress.get(&66146), Some(&1), "Horde cap");
+            assert!(
+                !state.criteria_progress.contains_key(&66145),
+                "no Alliance credit"
+            );
+            assert!(
+                state.account.as_ref().unwrap().earned_ids.contains(&7380),
+                "Double Agent"
+            );
+        }
+        // Unrelated/admin level mutation is not an XP transition.
+        app.world_mut().entity_mut(player).insert(Level(90));
+        advance(&mut app);
+        assert_eq!(
+            app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&62399),
+            Some(&1)
+        );
+        drop(app);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        assert_eq!(
+            persistence::load_achievements(&reopened, character)
+                .criteria_progress
+                .get(&62399),
+            Some(&1)
+        );
+        if starting_level == 89 {
+            let saved = persistence::load_achievements(&reopened, character);
+            let mut restored = setup_progression_app(reopened, class_spells().unwrap(), true);
+            restored.insert_resource(load_achievement_catalog(&conn).unwrap());
+            let player = spawn_player(&mut restored, character, HUMAN, PALADIN, 90);
+            restored.world_mut().entity_mut(player).insert(saved);
+            let connection = connection_of(&mut restored, player);
+            restored.world_mut().entity_mut(connection).insert(InWorld {
+                character_id: character,
+            });
+            advance(&mut restored);
+            let state = restored
+                .world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap();
+            assert_eq!(state.criteria_progress.get(&62399), Some(&1));
+            assert_eq!(state.criteria_progress.get(&64625), Some(&1));
+            assert!(state.account.as_ref().unwrap().earned_ids.contains(&7382));
+            assert_eq!(state.criteria_progress.get(&66145), Some(&1));
+            assert!(
+                state.account.as_ref().unwrap().earned_ids.contains(&7380),
+                "reopened Double Agent"
+            );
+        }
     }
 }
 
