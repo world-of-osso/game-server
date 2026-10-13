@@ -816,7 +816,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     }
 }
 
-fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+pub(crate) fn combat_event_owner(world: &World, unit: Entity) -> Entity {
     if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
         return follower.owner;
     }
