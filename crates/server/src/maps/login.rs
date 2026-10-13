@@ -27,6 +27,7 @@ pub(crate) struct LoginMaps<'w> {
     objects: Option<Res<'w, GameObjectSpawns>>,
     housing: Option<Res<'w, crate::housing::HousingAvailability>>,
     database: Option<Res<'w, crate::persistence::GameDatabase>>,
+    pvp: Option<Res<'w, crate::pvp::PvpServerState>>,
 }
 
 /// Where a character enters the world.
@@ -51,6 +52,8 @@ impl LoginMaps<'_> {
         map_id: u32,
         position: Position,
     ) -> Option<LoginPlace> {
+        let (map_id, position, returned_from_pvp) =
+            self.battleground_login_location(character_id, map_id, position);
         self.restore_housing_admission(map_id, character_id)?;
         let entrant: InstanceEntrant = super::transfer::entrant_for(
             self.groups.as_deref(),
@@ -58,7 +61,7 @@ impl LoginMaps<'_> {
             difficulty_id,
             raid_difficulty,
         );
-        match self.enter(map_id, entrant) {
+        let place = match self.enter(map_id, entrant) {
             Some(resolved) => {
                 let position = match (resolved.created, self.is_dungeon(map_id)) {
                     (true, true) => self
@@ -80,7 +83,51 @@ impl LoginMaps<'_> {
                 self.spawn_if_created(commands, resolved);
                 self.place(resolved.map, back.bevy_position())
             }
+        }?;
+        if returned_from_pvp {
+            crate::pvp::reconnect::remove(
+                &self.database.as_ref().expect("persisted PvP entry").db,
+                character_id,
+            );
         }
+        Some(place)
+    }
+
+    fn battleground_login_location(
+        &self,
+        character_id: u64,
+        map_id: u32,
+        position: Position,
+    ) -> (u32, Position, bool) {
+        let battleground = self.store.map(map_id).is_some_and(|map| {
+            matches!(
+                map.instance_type,
+                super::store::InstanceType::Arena | super::store::InstanceType::Battleground
+            )
+        });
+        if !battleground {
+            return (map_id, position, false);
+        }
+        let entry = self
+            .database
+            .as_ref()
+            .and_then(|db| crate::pvp::reconnect::load(&db.db, character_id));
+        let Some(entry) = entry else {
+            return (map_id, position, false);
+        };
+        let surviving = self.pvp.as_ref().and_then(|state| {
+            crate::pvp::reconnect::matching_map(
+                state,
+                character_id,
+                &entry,
+                self.time.elapsed_secs_f64(),
+            )
+        });
+        if surviving.is_some() {
+            return (map_id, position, false);
+        }
+        let origin = entry.origin();
+        (origin.map_id, origin.bevy_position(), true)
     }
 
     fn restore_housing_admission(&mut self, map_id: u32, character_id: u64) -> Option<()> {
