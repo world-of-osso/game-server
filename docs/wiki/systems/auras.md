@@ -121,6 +121,8 @@ Aura 7 (`auras/fear.rs`, `unit_state.rs`) marks the unit `Feared` with the first
 
 Aura 149 sums percentages into `AuraStatMods.pushback_reduction_pct`. Positive non-periodic damage events apply reduced pushback to the replicated CastState: normal casts +500 ms, channels −25% duration, each multiplied by `1 − reduction/100`, at most twice. 100% protection consumes no count. The shared CastState pushback method was previously unused by the server. Barkskin 22812 is 100%; catalog spell 1258016 supplies the 70% test. No spell-specific gameplay IDs are hardcoded in these handlers.
 
+Aura 319 (`AuraStatMods.attack_time_mult`) is melee attack time only: TC `HandleModMeleeSpeedPct` → `ApplyAttackTimePercentMod` (SpellAuraEffects.cpp:4564, Unit.cpp:11032) multiplies each swing by 100/(100+amount), like aura 252 but without cast time. TC's exclusive spell-group check is not modelled (no class aura319 shares a group).
+
 Aura 191 is an **absolute speed cap**, not a percentage or immunity to slows. `stat_mods.rs` takes the greatest positive amount, caps run/flight against base 7 and swim against base 4.722222 yards/second, then applies the strongest slow and root/stun. Pillar of Frost 51271 has amount 2: run speed is 2 yd/s, or 1 yd/s under Hamstring. Swim uses the existing movement path with a separately normalized multiplier.
 
 Reference: TrinityCore `a352b1fa`, `Unit::UpdateSpeed` (normalization before slows), `Spell::Delayed`/`DelayedChannel` (summed REDUCE_PUSHBACK), and `AuraEffect::HandleModMechanicImmunity` → `SpellInfo::ApplyAllSpellImmunitiesTo`. Tests: `auras::spell_auras_tests`. These handlers do not implement the other missing aura types on these spells.
