@@ -680,7 +680,7 @@ fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_
     for buff in [136775, 136777, 136778] {
         let mut h = crate::spell_cast::test_harness::harness_with_plugins(
             vec![],
-            &[136749, 136775, 136777, 136778, 1459],
+            &[136749, 136775, 136777, 136778],
             1,
             false,
             |app| {
@@ -719,10 +719,10 @@ fn achievements_criteria_native_player_aura_some_requires_actual_jaguar_aura_at_
         crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
         h.advance(1);
         assert_eq!(count(&h), None, "no Jaguar aura");
-        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 1459, None, 0);
+        // Mighty Loa itself is a real installed aura, but not a Jaguar leaf.
         assert!(
-            crate::auras::has_aura(h.app.world(), h.caster, 1459),
-            "real unrelated native aura"
+            crate::auras::has_aura(h.app.world(), h.caster, 136749),
+            "real unrelated native Mighty Loa aura"
         );
         crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 136749, None, 0);
         h.advance(1);
