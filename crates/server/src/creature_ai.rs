@@ -1123,7 +1123,9 @@ pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, spe
             ActiveUncontrolled,
         >,
     )>::new(world);
-    let (queues, mut units) = state.get_mut(world);
+    let (queues, mut units) = state
+        .get_mut(world)
+        .expect("follower native movement system parameters");
     let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) else {
         debug!("Follower {entity} escape movement held while externally controlled");
         return;
