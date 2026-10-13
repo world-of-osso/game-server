@@ -87,7 +87,8 @@ pub(super) fn save_monthly_contribution(
     character: u64,
     state: &PlayerAchievementState,
 ) {
-    let _span = bevy::log::info_span!("system", name = "tick_db::save_monthly_contribution").entered();
+    let _span =
+        bevy::log::info_span!("system", name = "tick_db::save_monthly_contribution").entered();
     let characters = persistence::load_account_char_ids(db, account);
     let txn = db
         .begin_write()

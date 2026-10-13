@@ -97,6 +97,12 @@ impl Plugin for AchievementPlugin {
         app.init_resource::<scenario::ScenarioRuns>();
         app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
         app.add_systems(
+            PostUpdate,
+            flush_achievement_updates
+                .after(kills::publish_rewarded_creature_kills)
+                .before(lightyear::messages::plugin::MessageSystems::Send),
+        );
+        app.add_systems(
             Update,
             (
                 send_initial_achievement_snapshot,
@@ -1020,7 +1026,43 @@ pub(crate) fn monthly_contributions(
     account_store::monthly_contributions(db, account)
 }
 
+#[derive(Component)]
+struct PendingAchievementUpdate {
+    snapshot: AchievementSnapshot,
+    toasts: Vec<AchievementToastSnapshot>,
+}
+
 fn send_updates(
+    world: &mut World,
+    connection: Entity,
+    snapshot: AchievementSnapshot,
+    toasts: Vec<AchievementToastSnapshot>,
+) {
+    if let Some(mut pending) = world.get_mut::<PendingAchievementUpdate>(connection) {
+        pending.snapshot = snapshot;
+        pending.toasts.extend(toasts);
+    } else {
+        world
+            .entity_mut(connection)
+            .insert(PendingAchievementUpdate { snapshot, toasts });
+    }
+}
+
+fn flush_achievement_updates(
+    world: &mut World,
+    pending: &mut QueryState<Entity, With<PendingAchievementUpdate>>,
+) {
+    let connections: Vec<_> = pending.iter(world).collect();
+    for connection in connections {
+        let PendingAchievementUpdate { snapshot, toasts } = world
+            .entity_mut(connection)
+            .take::<PendingAchievementUpdate>()
+            .expect("pending achievement update");
+        publish_updates(world, connection, snapshot, toasts);
+    }
+}
+
+fn publish_updates(
     world: &mut World,
     connection: Entity,
     snapshot: AchievementSnapshot,
@@ -1040,9 +1082,10 @@ fn send_updates(
         });
         return;
     }
+    let mut snapshot = Some(snapshot);
     for toast in toasts {
         sender.send::<AchievementChannel>(AchievementStateUpdate {
-            snapshot: Some(snapshot.clone()),
+            snapshot: snapshot.take(),
             completed: Some(toast),
             message: Some("achievement completed".into()),
             error: None,
@@ -1308,3 +1351,7 @@ fn query_comparison_target(
 #[cfg(test)]
 #[path = "achievement_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "achievement_perf_tests.rs"]
+mod perf_tests;
