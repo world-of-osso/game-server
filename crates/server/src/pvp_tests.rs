@@ -182,6 +182,7 @@ fn build_snapshot_reflects_queue_kind() {
     let state = PlayerPvpState {
         progress: PlayerPvpProgress::default(),
         battleground: None,
+        battleground_original_faction: None,
         war_mode: None,
         talents: None,
         queue: Some(PlayerPvpQueue::RatedBracket {

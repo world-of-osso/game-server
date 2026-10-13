@@ -42,10 +42,19 @@ fn return_to_origin(
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
     }
-    world
-        .get_mut::<PlayerPvpState>(player)
-        .expect("validated player")
-        .battleground = None;
+    let original_faction = {
+        let mut pvp = world
+            .get_mut::<PlayerPvpState>(player)
+            .expect("validated player");
+        pvp.battleground = None;
+        pvp.battleground_original_faction.take()
+    };
+    if let Some(original) = original_faction {
+        world
+            .get_mut::<shared::components::UnitFactionTemplate>(player)
+            .expect("validated player faction")
+            .0 = original;
+    }
     world
         .resource_mut::<InstanceManager>()
         .unassign_battleground_player(map, character_id);
