@@ -2,7 +2,7 @@
 
 ## Source RequiredAreasID lifecycle (2026-10-13)
 
-Pinned69933 exports preserve69 Toy root bindings and42 complete groups; read-only producer retains source hashes in `spell_cast/toy_required_areas.json`. TC a352b1fa SpellInfo.cpp2164 and DB2Stores.cpp1868 require exact area/ParentAreaID ancestry, not map membership. Direct ID equality precedes row lookup; terrain absence cannot establish an area. Player.cpp26509 interrupts restricted player-owned auras at the owner's area, regardless of caster. Reuse ordinary interrupted removal and cooldown history.
+Pinned69933 exports preserve69 Toy root bindings and42 complete groups; read-only producer retains source hashes in `spell_cast/toy_required_areas.json`. TC a352b1fa SpellInfo.cpp2164 and DB2Stores.cpp1985 require exact area/ParentAreaID ancestry, not map membership. Direct ID equality precedes row lookup; terrain absence cannot establish an area. Player.cpp26509 interrupts restricted player-owned auras at the owner's area, regardless of caster. Reuse ordinary interrupted removal and cooldown history.
 
 | Boundary | Proof |
 |---|---|

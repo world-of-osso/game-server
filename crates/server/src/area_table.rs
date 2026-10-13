@@ -149,7 +149,7 @@ mod tests {
     fn toyfx21_source_ancestry_does_not_infer_membership_from_continent_or_require_parent_rows() {
         let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
         let areas = load_area_table(&conn).unwrap();
-        // TC DB2Stores.cpp1868: IDs and parent links, without a continent test.
+        // TC DB2Stores.cpp1985: IDs and parent links, without a continent test.
         assert!(areas.is_in_area(6797, 6719));
         // Genuine69933 parent16311 has no row; matching that ID precedes lookup.
         assert!(areas.is_in_area(16328, 16311));
