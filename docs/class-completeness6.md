@@ -212,3 +212,13 @@ Proof ledger (slot-local `data/class-completeness6-2026-10-12/`):
 - Server/shared/Godot workspace `cargo fmt --all -- --check`: exit0.
 
 All builds started only after capacity ADD. Leases retained. No CASC extraction, canonical writes, live clients or published assets. Current install policy is 12.1.5.70391; existing lead-published DB2/catalogs remain in use pending atomic refresh. These gates do not establish independent review, whole-class completeness or rendered parity; census3151/4494/182 remains pre-union. Next bounded native148 Trueshot charge-rate consumer requires actual Aimed Shot charge RED.
+
+## Batch48: category charge-recovery rate148
+
+Native288613 effect1 amount40/category1715, category2charges/15,000ms. Source TC a352b1fa SpellHistory.cpp880–914/1003–1005; pinned SpellAuraEffects.cpp6285–6293 receipt retained. Only existing lead-published DB2 queried; no CASC extraction.
+
+`19b58427` genuine RED2: actual Aimed Shot15,000 instead of10,714ms; applying aura during real recovery produces no owner update. `27abaf37` adds native148 category product and floors charge duration per source; existing synchronizer handles live amounts and deadlines. Initial running fixture measured first wire receipt before5s advancement; corrected expectation reads current remaining clock, not obsolete receipt. This did not create the RED (owner receipt was absent).
+
+Proof ledger: `charge-rate-green`2passed18.37s; `charge-rate-controls`8passed13.81s at6b2bdf57, then `charge-rate-last-controls`2newpassed7.79s at23157831. Eight unchanged controls remain valid, total10 bounded new controls. `charge-rate-adjacent`75passed69.61s including charge/ControlDream/286/341/arena resets/RapidFire; no production source changes afterward invalidate it. `charge-rate-check`workspace/all-target exit0 at6b2bdf57/20.239s, requires current test-target refresh after later test additions. Manual changed-line Rust readability flat; no warnings suppressed.
+
+Amount-refresh test uses per-cast clone API and native Quick Shot150 override to prove consumer boundary only; not an authored Quick Shot→Trueshot relationship. Native Demonic Resolve−25 authentic category1541 slows Fiery Brand recovery. −99 clamp-edge, type-mask/global-time/charm inheritance and full ability/rendered parity remain unproved. No current census yet;3151/4494/182 remains prior union. Full13/40 goal remains open.
