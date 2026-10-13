@@ -33,9 +33,6 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
     if (spell, index) == (crate::scripted_ai::murder_row::SPELL_FEL_CRAZED, 1) {
         return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
     }
-    if (spell, index) == (crate::seething_parachute::PARACHUTE, 1) {
-        return Some(crate::seething_parachute::reset_fall_information);
-    }
     super::toy_scripts::cast_effect(spell, index)
         .or_else(|| batch14::cast_effect(spell, index))
         .or_else(|| batch9::cast_effect(spell, index))
@@ -144,6 +141,9 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::seething_parachute::PARACHUTE, 1) => {
+            Some(crate::seething_parachute::reset_fall_information)
+        }
         (crate::scripted_ai::murder_row::SPELL_FEL_NOVA_SELECTOR, 0) => {
             Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
         }
