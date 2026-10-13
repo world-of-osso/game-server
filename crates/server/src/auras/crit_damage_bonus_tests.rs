@@ -182,9 +182,10 @@ fn class_completeness_native_163_precise_killer_increases_auto_attack_crit_damag
         .collect();
     assert!(!crits.is_empty(), "{:?}", h.inbox.log);
     // Existing retail AP/6 formula:100 AP, unarmed1-2 at2s rounds34-35;
-    // ×2 crit ×1.10 gives74.8-77, versus unbuffed68-70.
+    // ×2 crit ×1.10 gives74.8-77; existing swing-log truncation reports74-77,
+    // versus unbuffed68-70.
     assert!(
-        crits.iter().all(|event| (75..=77).contains(&event.amount)),
+        crits.iter().all(|event| (74..=77).contains(&event.amount)),
         "{crits:?}"
     );
 }
