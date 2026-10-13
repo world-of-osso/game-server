@@ -22,6 +22,83 @@ fn love_counts(app: &App, player: Entity) -> [Option<u64>; 2] {
 }
 
 #[test]
+fn achievements_criteria_native_some_target_accepts_either_request_unit_and_persists() {
+    // Pinned69933 criterion20817 accepts63288 OR64798, never both on one unit.
+    for entry in [63288, 64798] {
+        let (file, mut app, player, connection, character) = emote_app();
+        app.world_mut().entity_mut(connection).insert(InWorld {
+            character_id: character,
+        });
+        let spawn = |app: &mut App, template_id, map| {
+            app.world_mut()
+                .spawn((
+                    Npc {
+                        template_id,
+                        name: "Controlled sourced selector target".into(),
+                    },
+                    map,
+                ))
+                .id()
+        };
+        let accepted = spawn(&mut app, entry, crate::maps::InMap::continent(0));
+        let wrong = spawn(&mut app, 1412, crate::maps::InMap::continent(0));
+        let foreign = spawn(&mut app, entry, crate::maps::InMap::continent(1));
+        for target in [None, Some(player), Some(wrong), Some(foreign)] {
+            send_emote(&mut app, connection, EmoteKind::Love, target);
+        }
+        send_emote(&mut app, connection, EmoteKind::Wave, Some(accepted));
+        advance(&mut app);
+        assert!(
+            !app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .contains_key(&20817)
+        );
+        // Final selection must not replace the target carried by this request.
+        app.world_mut()
+            .entity_mut(player)
+            .insert(CombatTarget(Some(wrong)));
+        send_emote(&mut app, connection, EmoteKind::Love, Some(accepted));
+        advance(&mut app);
+        assert_eq!(
+            app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .criteria_progress
+                .get(&20817),
+            Some(&1),
+            "source alternative {entry}"
+        );
+        // All six authored Wave selectors for account40624; OR groups include
+        // multiple alternatives and one duplicate entry, not fabricated credit.
+        for spider in [224734, 227217, 216213, 224061, 220568, 217468] {
+            let target = spawn(&mut app, spider, crate::maps::InMap::continent(0));
+            send_emote(&mut app, connection, EmoteKind::Wave, Some(target));
+        }
+        advance(&mut app);
+        assert!(
+            app.world()
+                .get::<PlayerAchievementState>(player)
+                .unwrap()
+                .account
+                .as_deref()
+                .unwrap()
+                .earned_ids
+                .contains(&40624)
+        );
+        advance(&mut app);
+        drop(app);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        let stored = persistence::load_achievements(&reopened, character);
+        assert_eq!(stored.criteria_progress.get(&20817), Some(&1));
+        assert_eq!(stored.criteria_progress.get(&68973), Some(&1));
+        assert_eq!(stored.criteria_progress.get(&68976), Some(&1));
+        assert_eq!(stored.criteria_progress.get(&68977), Some(&1));
+    }
+}
+
+#[test]
 fn achievements_criteria_native_single_some_target_keeps_wave_and_love_qualified() {
     let (file, mut app, player, connection, character) = emote_app();
     app.world_mut().entity_mut(connection).insert(InWorld {
