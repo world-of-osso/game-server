@@ -105,9 +105,16 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 ## Raid-area healing
 
 - [x] For player casts, native selector 56 selects living members of the caster's party/raid and their controlled units in range and the same map copy, not just the caster. ExcludeCaster applies before caps.
-- [x] Ysera's Gift group heal 145110 selects one target, preferring injured players over full-health members; outsiders and the caster are excluded. This does not certify passive 145108's missing periodic hook. Charmed controllers and NPCs marked TreatAsRaidUnit through unmodeled CreatureStaticFlags remain outside this proof.
+- [x] Ysera's Gift group heal 145110 selects one target, preferring injured players over full-health members; outsiders and the caster are excluded. Charmed controllers and NPCs marked TreatAsRaidUnit through unmodeled CreatureStaticFlags remain outside this proof.
+
+## Ysera's Gift periodic healing
+
+- [x] Native passive 145108's effect-0 tick heals 3% of the owner's live maximum health every 5 s, through 145109 when the owner is injured and 145110 when full. The first tick is delayed by the authored period.
+- [x] Both heal children honor Can'tCrit even with 100% crit; normal health clamping and overflow logging remain intact. Unlearning the passive removes its ticks.
 
 ## Tests asserting this spec
+
+- `crates/server/src/auras/yseras_gift_tests.rs`: native timing, owner-max scaling, self/group switching, unlearning, overflow and Can'tCrit.
 
 - `crates/server/src/spell_cast/raid_area_tests.rs`: real native group healing, one target and injured-member priority.
 

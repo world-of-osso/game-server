@@ -86,6 +86,9 @@ const REGROWTH: u32 = 8_936;
 const LINGERING_HEALING: u32 = 231_040;
 const FOUNT_OF_STRENGTH: u32 = 441_675;
 const FRENZIED_REGENERATION: u32 = 22_842;
+const YSERAS_GIFT: u32 = 145_108;
+const YSERAS_GIFT_SELF: u32 = 145_109;
+const YSERAS_GIFT_GROUP: u32 = 145_110;
 const POWER_STRIKE: u32 = 121_817;
 const POWER_STRIKE_PROC: u32 = 129_914;
 const POWER_STRIKE_ENERGIZE: u32 = 121_283;
@@ -375,6 +378,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        YSERAS_GIFT,
+        AuraScript {
+            on_periodic: Some(heal_yseras_gift),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         POWER_STRIKE_PROC,
         AuraScript {
             on_proc: Some(energize_power_strike),
@@ -506,6 +516,26 @@ fn decay_tiger_dash(world: &mut World, unit: Entity, aura: &AuraInstance, effect
     }
     super::auras_changed(world, unit);
     crate::spell_cast::mark_dirty(world, unit);
+}
+
+/// TC a352b1fa spell_druid.cpp:3072-3097, spell_dru_yseras_gift.
+fn heal_yseras_gift(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
+    if effect_index != 0 {
+        return;
+    }
+    let Some(percent) = aura.effects.iter().find(|effect| effect.index == 0) else {
+        return;
+    };
+    let health = world
+        .get::<shared::components::Health>(unit)
+        .expect("living aura unit health");
+    let amount = (health.max * percent.amount / 100.0).floor();
+    let heal = if health.current < health.max {
+        YSERAS_GIFT_SELF
+    } else {
+        YSERAS_GIFT_GROUP
+    };
+    crate::spell_cast::cast_triggered_with_effect0_amount(world, unit, heal, Some(unit), 1, amount);
 }
 
 /// TC a352b1fa spell_monk.cpp:318-333, spell_monk_power_strike_proc.
