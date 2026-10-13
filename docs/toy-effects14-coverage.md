@@ -1,5 +1,18 @@
 # Toy effects14 — active whole-goal coverage
 
+## Placed statues and the missing-template audit (2026-10-12)
+
+Prepared-copy census354→356/1166 (+198646/204405, zero removed; `statue-canonical-after.json`). Canonical stays354 until `scripts/add_toy_summon_templates.py --db data/world.db` runs there.
+
+110 toys are blocked only by effect28 with a missing creature template (`summon-template-audit.json`). Of these, 104 have a TDB1210 template and model, no `spell_script_names` binding on any chain spell, and no AI/ScriptName/smart_scripts/creature spells/spellclick/npcflag/vehicle. The audit does **not** show these 104 lack interactions: TDB `unit_flags` is zero for all of them and TypeFlags carry no interaction contract. Their DB2 item/spell text promises seats, target dummies, wormholes, mail, buffs, rides, fishing, portals, stacking, emote reactions or roaming. Under the existing rule (a missing template alone proves nothing about interactions), only text that describes placement alone is admitted:
+
+- Ornate Dragon Statue 198646: trigger64 384614→summon384618, wild properties64, creature194793, display108683 (template DisplayScale0.7, CDI0.3), 300000ms.
+- Stuffed Bear 204405: trigger64 405203→summon405204, wild properties64, creature203158, display111821, 300000ms.
+
+Attraction Sign 122126 is excluded. Its arrow display41343 has TDB probability0, so TC's weighted choice spawns the invisible trigger display11686 (CDI flag1), and nothing local binds the visible arrow. A native run confirmed the invisible spawn.
+
+Server RED `824dc66f` (missing creature90335) → GREEN `86be6abc`/drop-sign follow-up. Real learn/UseToy summons the source creature/display/scale, stationary when the caster moves, with the authored300s expiry. Native private5911, both skins: both statues render with replicated root scale0.7/1.0 and CDI scale0.3/1.0, and stay in place after the caster moves. PNGs in `toys/statue18/`. The private runtime world.db and slot `npc_appearance.sqlite` (coverage for108683/41343/111821; backup `.pre-statue18-20261012`) were prepared privately.
+
 ## Honest object spells and summoned-object collision (2026-10-12)
 
 Read-only canonical census355→354/1166. The only removal is Costume Chest 139337; nothing was added. `m1-canonical-after.json`.
