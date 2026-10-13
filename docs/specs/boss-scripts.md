@@ -25,6 +25,8 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 ## Ragefire Chasm source hooks
 
+- [x] `encounter_serverside_spells.py` prepares Adarogg's actual local TDB `serverside_spell`/`serverside_spell_effect` rows119297/119298, preserving all source columns and unrelated copy data; canonical/symlink/hardlink inputs and incomplete source records are refused. These raw `tdb_` tables are not runtime spell admission or AI/charge certification. No DB2 substitutes or derived effect IDs.
+
 Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then Deadmines). Source: TC a352b1fa `RagefireChasm`.
 
 - [x] Gordoth61528 relocates already-started actors to its source landing point, casts Ground Rupture119999 at7.3s (native1s cast) and Seismic Slam120024 at13.3s with only source flag0x2. It enrages50420 once when projected health falls below31%, resetting through source30s evade/respawn.
