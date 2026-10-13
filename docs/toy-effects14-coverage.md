@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Blazing Diamond Pendant — active native proof (2026-10-13)
+
+115503/171352 is the exact source Molten Path contract: one zero-payload self dummy aura, natural5000ms cast and120000ms duration; group4031 contains11 authored areas. Visual44786 starts kit48964 on AuraStart7 and ends on AuraEnd8; Type2 attachment305309 uses ground19/zero offsets/scale1, ordinary model937030 and no positioner/conditional binding. TDB1210 scanned4066 root script bindings, none for171352; this absence alone does not authorize admission. Description promises only magma-covered feet in Draenor; no gameplay damage, speed or model replacement.
+
+Evidence `pendant22-source-db.json`, `pendant22-kit-source.json`, `pendant22-script-source.json`: readable pinned69933 plus TC a352b1fa geography contract. Maintained asset closure authenticates all7 model/skin/textures against frozen local CASC content keys and publishes privately (7 receipts,1 alias); no canonical publication. Actual learning/use initially RED unsupported aura4 (`pendant22-red.log`); admission is exact171352 plus existing zero-payload shape checks, not generic aura4. Server/native lifecycle and census proof remain in progress.
+
 ## Source RequiredAreasID lifecycle (2026-10-13)
 
 Pinned69933 exports preserve69 Toy root bindings and42 complete groups; read-only producer retains source hashes in `spell_cast/toy_required_areas.json`. TC a352b1fa SpellInfo.cpp2164 and DB2Stores.cpp1985 require exact area/ParentAreaID ancestry, not map membership. Direct ID equality precedes row lookup; terrain absence cannot establish an area. Player.cpp26509 interrupts restricted player-owned auras at the owner's area, regardless of caster. Reuse ordinary interrupted removal and cooldown history.

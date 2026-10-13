@@ -12,6 +12,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     128328, // Ken-Ken's Mask (friendly-target attachment)
     131317, 131318, // Alliance / Horde fireworks
     148538, // Blackflame Daggers
+    171352, // Blazing Diamond Pendant: source120s ground magma, area group4031.
     171761, // Brewfest Banner
     176457, // Fruit Basket
     176594, // Touch of the Naaru
