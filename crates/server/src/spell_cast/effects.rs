@@ -598,8 +598,14 @@ fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
     }
 }
 
+/// SharedDefines.h:539, SPELL_ATTR2_CANT_CRIT.
+const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
+
 /// CritChance mods and script values precede the victim's melee crit modifier.
 fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT != 0 {
+        return 0.0;
+    }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
             let base = world

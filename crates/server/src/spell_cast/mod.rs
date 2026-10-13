@@ -2395,29 +2395,65 @@ pub(super) fn cast_triggered_with_item_level(
     depth: u8,
     item_level: Option<u16>,
 ) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    spell.cast_item_level = item_level;
+    launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+/// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
+pub(crate) fn cast_triggered_with_effect0_amount(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    amount: f32,
+) {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
+        warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
+        return;
+    };
+    effect.base_points = amount;
+    launch_triggered_spell(world, caster, &spell, explicit, depth);
+}
+
+fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {
     if depth > effects::MAX_TRIGGER_DEPTH {
         warn!(
             "Triggered spell {spell_id} skipped: depth {depth} exceeds {}",
             effects::MAX_TRIGGER_DEPTH
         );
-        return;
+        return None;
     }
-    let Some(mut spell) = world
+    let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned()
-    else {
+        .cloned();
+    if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
-        return;
-    };
-    spell.cast_item_level = item_level;
+    }
+    spell
+}
+
+fn launch_triggered_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) {
     // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
-    match plan_targets(world, caster, &spell, explicit, true) {
+    match plan_targets(world, caster, spell, explicit, true) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
-            missiles::launch(world, caster, &spell, plan, depth);
+            missiles::launch(world, caster, spell, plan, depth);
         }
-        Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
+        Err(failure) => warn!("Triggered spell {} skipped: {failure:?}", spell.id),
     }
 }
 

@@ -1,7 +1,6 @@
 //! TC a352b1fa spell_druid.cpp:3072-3097:145108 ticks3% of owner max
 //! health every5s, self145109 when injured, else group145110. Both native
 //! children carry SPELL_ATTR2_CANT_CRIT; their effect0 is overridden per tick.
-use bevy::prelude::*;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
