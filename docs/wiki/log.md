@@ -972,3 +972,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 - 2026-10-13: Corrected selector56 from caster-only to modeled party/raid area; native145110 group-heal priority and lifecycle tests, explicit charm/static-NPC source boundaries.
 
 - 2026-10-13: Native Ysera145108 owner-health ticks/self-group switching and CannotCrit; six Bevy App controls, isolated per-cast override, no rendered parity claim.
+
+- 2026-10-13: Native163 school-mask critical-damage product and KnowYourEnemy percent updater; actual damage/order/lifecycle controls, retained floating-rounding and rendered-parity limits.
