@@ -359,6 +359,7 @@ pub(crate) fn handle_set_position(
         &mut shared::components::MovementControl,
     )>,
     interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
+    replication_dirty: Option<&lightyear::prelude::ReplicationDirtyQueue>,
     name: &str,
     x: f32,
     y: f32,
@@ -385,6 +386,9 @@ pub(crate) fn handle_set_position(
         if cid.0 == char_id && *pos != next_position {
             *pos = next_position;
             crate::teleport::teleported(interest_dirty, entity, &mut control);
+            if let Some(dirty) = replication_dirty {
+                dirty.mark(entity);
+            }
         }
     }
 
