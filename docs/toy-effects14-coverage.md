@@ -1,5 +1,23 @@
 # Toy effects14 — active whole-goal coverage
 
+## Current PvP faction and War Banners (2026-10-13)
+
+Canonical census356→358:169275/169276 added, nothing removed (`war20-canonical-after.json` versus `gladiator19-canonical-after.json`). Statue prepared-copy promotion remains separate, not included in this canonical count. Whole1166 goal remains open.
+
+TC a352b1fa `ConditionMgr.cpp:2923–2932` compares `CurrentPvpFaction-1` to `ArenaFaction` inside BG/arena, and Alliance1/non-Alliance0 outside. Replicate source condition values1/2, with0 reserved for unknown; known neutral Pandaren follows TC's non-Alliance branch without changing neutral reactions. Modern race52/70/84/85/86/91 classifications now match local ChrRaces/FactionTemplate rows. Successful entry assigns team only after teleport acceptance; invitations/refused entries retain racial value; successful return restores it. Reaction templates remain separate, including arenas.
+
+| Boundary | Proof |
+|---|---|
+| Login and known/unknown/neutral values | Modern-race real selected-character login; neutral/unknown source-value RED→GREEN unit assertions |
+| Match entry/return | Actual20-player Human-on-Horde Alterac channel and actual4-player arena channel; source transport36 refusal preserves racial Alliance |
+| Wire and visual selection | Real UDP faction-only2→1→2→0 changes;54 pinned War Banner race/faction contexts select only the source matching model |
+| Authoritative toy lifecycle | Actual learning/UseToy300104/300144, permanent aura, mask0x10001002, real combat refs remove aura with native model/health unchanged |
+| Native presentation | Both169275/model2925498 and169276/model2925497 in Modern/Forever: physical bag learning/journal activation, back model, physical Worg right-click AttackSwing, in_combat=true and aura/model removal;8 effect PNGs inspected |
+
+Source capsule `war20-source-capsule.json`: local69933 conditions36349=2/36348=1, visuals87545/87561, zero-valued self dummy auras, duration21 and authored interrupts;4066 TDB1210 script bindings scanned, neither spell bound. Private closure authenticates10 assets/5 aliases; one source physics asset is not imported and cloth simulation is not certified. Maintained asset-chain promotion belongs to lead; no canonical writes were made. Private startup required maintained TDB battleground source refresh for new master orbit metadata; no fabricated rows.
+
+Evidence: `/home/osso/.worktrees/logs/toy-effects14-continuation/war20*`, `pvp20*`, four `*-war20*/receipts.json`; requested PNGs `/syncthing/AgentShared/2026-10-12/toys/war20/`. No independent-review PASS claim.
+
 ## Conditional Gladiator back banners (2026-10-13)
 
 Canonical census354→356 (+119220/119221, zero removed; `gladiator19-canonical-after.json`). This is separate from the prepared-copy statue gain: importing194793/203158 additionally would bring the current prepared count to358.
