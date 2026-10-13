@@ -311,3 +311,60 @@ fn trading_post_admin_tender_and_refund_window_enable_wire_refund() {
         !crate::persistence::appearance_store::load_account_appearances(h.db(), ACCOUNT).has(37866)
     );
 }
+
+#[test]
+fn trading_post_item_usability_tracks_player_level_class_race_and_unknown_metadata() {
+    use crate::item_templates::{ItemTemplate, ItemTemplates};
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderuse").unwrap();
+    prepare(&mut h, 1790812900);
+    let mut templates = ItemTemplates::default();
+    templates.retail.insert(
+        189869,
+        ItemTemplate {
+            required_level: 81,
+            allowable_class: -1,
+            allowable_race: u64::MAX,
+            ..Default::default()
+        },
+    );
+    h.app.insert_resource(templates);
+    open_tawny(&mut h);
+    let usable =
+        |reply: &TradingPostSnapshot| reply.items.iter().find(|row| row.id == 4).unwrap().usable;
+    assert_eq!(
+        usable(&request(&mut h, TradingPostRequest::Query)),
+        Some(false)
+    );
+    h.app.world_mut().entity_mut(h.player).insert(Level(81));
+    assert_eq!(
+        usable(&request(&mut h, TradingPostRequest::Query)),
+        Some(true)
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<ItemTemplates>()
+        .retail
+        .get_mut(&189869)
+        .unwrap()
+        .allowable_class = 2;
+    assert_eq!(
+        usable(&request(&mut h, TradingPostRequest::Query)),
+        Some(false)
+    );
+    let mut templates = h.app.world_mut().resource_mut::<ItemTemplates>();
+    let item = templates.retail.get_mut(&189869).unwrap();
+    item.allowable_class = -1;
+    item.allowable_race = 0;
+    drop(templates);
+    assert_eq!(
+        usable(&request(&mut h, TradingPostRequest::Query)),
+        Some(false)
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<ItemTemplates>()
+        .retail
+        .remove(&189869);
+    assert_eq!(usable(&request(&mut h, TradingPostRequest::Query)), None);
+}

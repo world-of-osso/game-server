@@ -118,6 +118,7 @@ fn read_item(
         description: String::new(),
         icon_fdid: 0,
         quality: 0,
+        usable: None,
         price: vendor.cost,
         purchased: false,
         collected: false,
