@@ -353,14 +353,27 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         for index, (record_id, (at, size)) in enumerate(zip(ids, entries)):
             if not size or not start <= at < at + size <= end:
                 raise ValueError(f"sparse DB2 row {record_id}: invalid offset/size")
-            values = read_sparse_row(
-                data[at : at + size], metadata, infos, text_columns, arrays, field_types
-            )
+            try:
+                values = read_sparse_row(
+                    data[at : at + size], metadata, infos, text_columns, arrays, field_types
+                )
+            except UnicodeDecodeError as error:
+                import warnings
+                warnings.warn(f"unreadable UTF-8 in DB2 row {record_id}: {error}", stacklevel=2)
+                header.setdefault('unreadable_record_ids', []).append(record_id)
+                continue
+            except ValueError as error:
+                raise ValueError(f"sparse DB2 row {record_id} in section {key:016X}: {error}") from error
             rows[record_id] = [record_id, *values]
             if relations:
                 rows[record_id].append(related.get(index, 0))
     for new_id, source_id in copy_pairs:
         if source_id not in rows:
+            if source_id in header.get('unreadable_record_ids', []):
+                import warnings
+                warnings.warn(f"DB2 copy {new_id} has unreadable source {source_id}", stacklevel=2)
+                header['unreadable_record_ids'].append(new_id)
+                continue
             raise ValueError(
                 f"sparse DB2 copy {new_id}: missing readable source {source_id}"
             )
