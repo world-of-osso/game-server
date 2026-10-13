@@ -97,3 +97,9 @@ Native aura319 (TC `HandleModMeleeSpeedPct` → `ApplyAttackTimePercentMod`, Spe
 9dff4006 ports TC spell_dru_tiger_dash_aura (spell_druid.cpp:2827-2843, pinned with receipt): each 500 ms effect1 PERIODIC_DUMMY tick subtracts its amount (20) from effect0's +200 run speed. RED (`tiger-dash-red.log`) → GREEN; auras scope 109 passed. Ysera's Gift145108 (3% max-health BP0 heal with random injured-raid fallback) needs a base-point override and SelectRandomInjuredTargets, which do not exist yet.
 
 Aura269 is a source conflict, not a gap closable from data: pinned TC names it MOD_IGNORE_TARGET_RESIST (attacker-owned armor/resist bypass, Unit.cpp:1712-1717), but Retail12 rows apply it to enemies with reduction amounts (Demoralizing Shout1160 −20, Punish275335 −3) or zero (Shadow Word: Pain, Holy Fire, Moonfire). Left unmodelled.
+
+Batch36 census at 33e236e9: all7827, exit0, 797.93sec: **3122 working/4523 partial/182 broken**; four Tiger Dash memberships partial→working.
+
+## Bloodsurge — batch37
+
+18c4717a ports TC spell_warr_bloodsurge (spell_warrior.cpp:282-316): each 3 s effect0 PERIODIC_DUMMY tick casts 384362 (50 raw Rage) with chance sqrt(owned Rend388539 effect0 carriers) × 30. TC counts units in the grid cells covering 50 yd with no per-unit distance check; the server counts units within 50 yd on the same map, an approximation at the cell boundary. Deterministic controls without seeding: 12 owned Rends (103.9%) always energize; none or 12 foreign Rends never do. RED (`bloodsurge-red.log`) → GREEN; adjacent auras/resource scope 142 passed.
