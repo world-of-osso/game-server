@@ -354,7 +354,10 @@ pub(crate) fn path_movement_system(world: &mut World) {
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
         Option<&mut MovementSpeed>,
-    ), Without<DeathState>>();
+    ), (
+        Without<DeathState>,
+        Without<super::jump_movement::JumpMovement>,
+    )>();
     for (entity, mut position, mut movement, spawn, walking, flying, rotation, motion, speed) in
         movers.iter_mut(world)
     {

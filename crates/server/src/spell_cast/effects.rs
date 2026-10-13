@@ -40,6 +40,7 @@ use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
+pub const EFFECT_INSTAKILL: u32 = 1;
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
@@ -89,6 +90,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 /// APPLY_AURA) are resolved per target by `resolve_effects`, not here.
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
+        EFFECT_INSTAKILL => instakill,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         33 | 95 => crate::gathering::effect_gather,
         EFFECT_HEALTH_LEECH => health_leech,
@@ -125,6 +127,12 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
+}
+
+/// TC EffectInstaKill hit-target branch. The existing Unit::Kill path handles
+/// death/AI/credit once; instakill packet details and player CHEAT_GOD are unmodelled.
+fn instakill(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
+    crate::combat::kill_unit(world, ctx.caster, target);
 }
 
 /// TC EffectKillCreditPersonal/EffectKillCredit: credit the hit player, not the caster
@@ -1246,6 +1254,59 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
 }
 
 /// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
+/// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
+/// the existing HIT_TARGET handler: forward destination, retaining child costs.
+pub(super) fn trigger_missile_at_destination(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+) {
+    if ctx.depth >= MAX_TRIGGER_DEPTH {
+        warn!("Spell {} missile child exceeds trigger depth", ctx.spell.id);
+        return;
+    }
+    let Some(destination) = ctx.dest else {
+        warn!("Spell {} missile child has no destination", ctx.spell.id);
+        return;
+    };
+    let Some(mut child) = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(effect.trigger_spell)
+        .cloned()
+    else {
+        warn!(
+            "Spell {} missile child {} missing",
+            ctx.spell.id, effect.trigger_spell
+        );
+        return;
+    };
+    child.cast_destination = Some(destination.position.to_array());
+    child.cast_item_level = ctx.spell.cast_item_level;
+    if let Err(error) = cast_destination_missile_child(world, ctx.caster, &child, ctx.depth + 1) {
+        warn!(
+            "Spell {} missile child {} failed: {error:?}",
+            ctx.spell.id, child.id
+        );
+    }
+}
+
+fn cast_destination_missile_child(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+) -> Result<(), super::CastFailure> {
+    // TC uses FULL_MASK except IGNORE_POWER_COST/IGNORE_REAGENT_COST.
+    let costs = super::spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
+    let plan = super::plan_targets(world, caster, spell, Some(caster), true)?;
+    super::spend_costs(world, caster, &costs);
+    crate::profession::take_reagents(world, caster, spell);
+    crate::achievement::record_spell_cast(world, caster, spell.id);
+    super::missiles::launch(world, caster, spell, plan, depth);
+    Ok(())
+}
+
 fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     super::cast_triggered_with_item_level(
         world,
