@@ -32,6 +32,8 @@
 
 # Wiki Log
 
+- 2026-10-13 — [Flat versatility](systems/auras.md#flat-versatility-bonuses): source471 computed percentage and real damage/heal/taken/auto RED/GREEN; pinned69933 CASC rating/curve proof and lifecycle/flag/recipient controls. Owner inheritance/native-rendered parity remains open.
+
 - 2026-10-13 — [Category cooldown offsets](systems/auras.md#category-cooldown-offsets): source341 additive milliseconds applied after haste/spellmods, actual25s→20s Counterspell RED/GREEN, category/learning/unlearn/both-timer/zero controls; no whole-role or rendered parity claim.
 
 - 2026-10-13 — [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage): native25%-of-owner-crit aura updater, real Aimed Shot RED/GREEN, live crit/unlearn and heal isolation; full-class/rendered parity remains open.
