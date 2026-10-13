@@ -265,9 +265,11 @@ Relations come from faction reactions ([[factions]]): enemy = `can_attack`, ally
 | 53 / 132 / 63 | area center = explicit enemy / ally / any |
 | 15 / 30 | area around the source (default caster), enemy / ally |
 | 16 / 31 | area around the destination (default explicit target, else caster), enemy / ally |
-| 56, 120 | caster (no group or pet backend) |
+| 56 | caster-area party/raid members and their controlled units, same-copy/range filtered; ExcludeCaster before caps |
+| 120 | caster |
 | 57, 118 | explicit ally |
 
+- For player casts, 56 checks `GroupRegistry` using player `ClientId` or a controlled unit's `UnitSummonedBy` owner. `SpellCastPlugin` initializes this existing group-state dependency. Ysera's Gift 145110's area filter reads live health, chooses one random target in the best injury/player tier, and retains a full-health target when no injured candidate exists (TC `SpellInfo.cpp:304`, `Spell.cpp:9516-9580`, `spell_druid.cpp:3100-3110`). Real native heal tests cover group membership, ownership, priority, range, departure and copy isolation; [contract](../../specs/class-completeness.md#raid-area-healing). Charmed controllers and TreatAsRaidUnit NPCs requiring unmodeled CreatureStaticFlags remain outside this proof; passive145108 is still missing its periodic hook.
 - Radius: slot A uses `EffectRadiusIndex_0`; slot B uses `_1`, falling back to `_0` (TrinityCore `CalcRadius`).
 - Area results are nearest first, capped by `SpellTargetRestrictions.MaxTargets`.
 - 87/104/134 now support selected destination, authored destination-directed enemy cone and line;47 selects the caster-front destination. Other unimplemented IDs still fail a handled cast.

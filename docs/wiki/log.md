@@ -968,3 +968,5 @@ Added source catalog, authenticated query/commit, atomic knowledge/rank/recipe p
 [Authoritative transmog](systems/transmog-apply.md): pinned local-CASC metadata, authored source enums, primary collection states and account-isolated outfit/Custom Set persistence. Current33 transmog tests pass; both-skin private5926 native paid-save, illusion selection, set membership and paged preset load proof links to the client SSOT. Paid Apply unchanged; conditional acquisition/event eligibility and equipped enchant/price policy remain explicit gaps.
 
 - 2026-10-13: Updated auras script hooks with native Power Strike Chi proc and actual Chaos Strike ProcChance consumption; real cast proofs and remaining Combat Wisdom effect-1 gap.
+
+- 2026-10-13: Corrected selector56 from caster-only to modeled party/raid area; native145110 group-heal priority and lifecycle tests, explicit charm/static-NPC source boundaries.
