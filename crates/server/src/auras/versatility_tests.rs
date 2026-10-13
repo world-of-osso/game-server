@@ -213,12 +213,43 @@ fn class_completeness_native_versatility_rating_and_bonus_share_one_incoming_fac
     apply_mark(&mut h);
     // Isolate a total23%-versatility endpoint (20rating+3aura), not a
     // source gear/build claim. Multiplying separate factors gives523, not522.
-    h.app
-        .world_mut()
-        .get_mut::<CharacterStats>(h.caster)
-        .unwrap()
-        .versatility_pct = 23.0;
-    assert_eq!(receive_native_damage(&mut h, CJ_BALL), 522);
+    for (total, expected) in [(23.0, 522), (129.0, 209)] {
+        // Native curve21024 maps raw200% to126%; curve21035 maps100% to63%.
+        // Adding3 aura points gives129 done/64.5 taken at the high-DR endpoint.
+        h.app
+            .world_mut()
+            .get_mut::<CharacterStats>(h.caster)
+            .unwrap()
+            .versatility_pct = total;
+        assert_eq!(receive_native_damage(&mut h, CJ_BALL), expected);
+    }
+}
+
+#[test]
+fn class_completeness_native_versatility_on_unowned_creature_does_not_grant_player_stats() {
+    let mut h = fixture();
+    fix_test_power(&mut h);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.npc,
+            spell_id: MARK_OF_THE_WILD,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(3);
+    h.cast_and_deliver(CJ_BALL, Some(h.npc));
+    h.advance(60);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|r| r.spell_id == Some(CJ_BALL) && r.kind == CombatLogKind::Damage)
+        .unwrap();
+    assert!(!damage.crit);
+    assert_eq!(damage.amount, 590);
 }
 
 #[test]
