@@ -1,4 +1,4 @@
-//! TC a352b1fa spell_item.cpp dice/compass/coin scripts and Player::DoRandomRoll.
+//! TC a352b1fa spell_item.cpp dice/compass/coin/weather/wormhole scripts and Player::DoRandomRoll.
 //! BroadcastText26147/26152/32638/32663/32664 and GlobalStrings RANDOM_ROLL_RESULT are authored text.
 use std::collections::{HashMap, HashSet};
 
@@ -17,6 +17,7 @@ use super::CastFailure;
 use super::effects::{CastEffectHandler, EffectCtx};
 use super::toy_coin::{self, COIN_TEXTS, COIN_TOSS};
 use super::toy_weather::{self, WEATHER_MACHINE};
+use super::toy_wormhole::{self, WORMHOLE_PANDARIA};
 
 /// TC worldserver.conf.dist ListenRange.TextEmote, not the ordinary /say range.
 const TEXT_EMOTE_RANGE: f32 = 40.0;
@@ -129,6 +130,12 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
         }
         return toy_weather::unsupported(world);
     }
+    if spell.id == WORMHOLE_PANDARIA {
+        if !has_source_signature(spell, EFFECT_DUMMY) {
+            return Some("wormhole source effect signature differs".into());
+        }
+        return toy_wormhole::unsupported(world);
+    }
     if spell.id == UNUSUAL_COMPASS {
         return (!has_source_signature(spell, EFFECT_DUMMY))
             .then(|| "compass source effect signature differs".into());
@@ -145,7 +152,7 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
-    if spell == UNUSUAL_COMPASS {
+    if spell == UNUSUAL_COMPASS || spell == WORMHOLE_PANDARIA {
         return is_caster_script_effect(effect, EFFECT_DUMMY);
     }
     if spell == COIN_TOSS {
@@ -165,7 +172,7 @@ pub(crate) fn check_cast(
     if spell.id == UNUSUAL_COMPASS {
         return check_compass_cast(world, caster, spell);
     }
-    if spell.id == WEATHER_MACHINE {
+    if spell.id == WEATHER_MACHINE || spell.id == WORMHOLE_PANDARIA {
         return unsupported(world, spell)
             .map_or(Ok(()), |reason| Err(CastFailure::Unsupported(reason)));
     }
@@ -196,6 +203,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<CastEffectHandler> {
     }
     if spell == WEATHER_MACHINE && index == 0 {
         return Some(toy_weather::cast_personal_weather);
+    }
+    if spell == WORMHOLE_PANDARIA && index == 0 {
+        return Some(toy_wormhole::teleport_to_random_pandaria_point);
     }
     (dice_plan(spell).is_some() && index == 0)
         .then_some(emit_dice_emote_and_rolls as CastEffectHandler)
