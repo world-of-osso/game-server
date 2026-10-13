@@ -232,7 +232,11 @@ struct AttackRules<'w, 's> {
         ),
     >,
     health: Query<'w, 's, &'static Health>,
+    arenas: Query<'w, 's, &'static crate::pvp::PlayerPvpState>,
+    maps: Query<'w, 's, &'static crate::maps::InMap>,
+    summon_owners: Query<'w, 's, &'static shared::components::UnitSummonedBy>,
     unit_flags: Query<'w, 's, &'static shared::components::UnitFlags>,
+    stealth: crate::auras::stealth::DetectionUnits<'w, 's>,
     templates: Res<'w, FactionTemplates>,
 }
 
@@ -256,6 +260,22 @@ impl AttackRules<'_, '_> {
             })
     }
 
+    fn arena_relation(
+        &self,
+        attacker: Entity,
+        victim: Entity,
+    ) -> Option<crate::pvp::arena_combat::ArenaRelation> {
+        let controller = |entity| match self.summon_owners.get(entity) {
+            Ok(owner) => Entity::try_from_bits(owner.0).expect("server-owned summon controller"),
+            Err(_) => entity,
+        };
+        crate::pvp::arena_combat::relation_between(
+            self.arenas.get(controller(attacker)).ok(),
+            self.arenas.get(controller(victim)).ok(),
+            self.maps.get(attacker).copied().ok(),
+            self.maps.get(victim).copied().ok(),
+        )
+    }
     fn valid_attack_target(&self, attacker: Entity, victim: Entity) -> bool {
         let player_controlled = self
             .unit_faction(attacker)
@@ -268,14 +288,23 @@ impl AttackRules<'_, '_> {
             .factions
             .get(attacker)
             .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, victim));
-        attacker != victim
-            && !self.dead(victim)
-            && !blocked_by_flags
-            && (dueling
-                || match (self.unit_faction(attacker), self.unit_faction(victim)) {
-                    (Some(attacker), Some(victim)) => self.templates.can_attack(attacker, victim),
-                    _ => false,
-                })
+        let permitted = match self.arena_relation(attacker, victim) {
+            Some(relation) => matches!(
+                relation,
+                crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: true }
+            ),
+            None => {
+                dueling
+                    || match (self.unit_faction(attacker), self.unit_faction(victim)) {
+                        (Some(attacker), Some(victim)) => {
+                            self.templates.can_attack(attacker, victim)
+                        }
+                        _ => false,
+                    }
+            }
+        };
+        let detected = crate::auras::stealth::query_can_detect(&self.stealth, attacker, victim);
+        attacker != victim && !self.dead(victim) && !blocked_by_flags && permitted && detected
     }
 }
 
@@ -509,6 +538,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     sight: SwingSight<'w, 's>,
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
+    stealth: crate::auras::stealth::DetectionUnits<'w, 's>,
     armor_constants: Option<Res<'w, ArmorConstants>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
@@ -547,7 +577,13 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             .get(target_entity)
             .cloned()
             .unwrap_or_default();
-        if !observer.detects(&target) {
+        if !observer.detects(&target, true)
+            || !crate::auras::stealth::query_can_detect(
+                &params.stealth,
+                attacker_entity,
+                target_entity,
+            )
+        {
             continue;
         }
         let attacker = Attacker {
@@ -1364,6 +1400,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         combat_stop(world, npc);
         crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
         crate::achievement::record_creature_death(world, npc, killer);
+        crate::pvp::record_creature_death(world, npc, killer);
         crate::mythic_plus::record_kill(world, npc);
         crate::maps::raid::record_creature_death(world, npc);
     });

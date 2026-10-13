@@ -22,6 +22,25 @@ use crate::persistence::{
 };
 use crate::transmog_store::ItemTransmog;
 
+pub(crate) fn authored_set_sources(set_id: u32) -> Result<Vec<u32>, String> {
+    let wardrobe = data::Wardrobe::load_embedded();
+    let set = wardrobe
+        .sets()
+        .iter()
+        .find(|set| set.set_id == set_id)
+        .ok_or_else(|| format!("TransmogSet{set_id} missing from pinned catalog"))?;
+    if set.condition_id != 0 {
+        return Err(format!(
+            "TransmogSet{set_id} PlayerCondition{} unavailable",
+            set.condition_id
+        ));
+    }
+    if set.source_ids.is_empty() {
+        return Err(format!("TransmogSet{set_id} has no readable members"));
+    }
+    Ok(set.source_ids.clone())
+}
+
 const OVERRIDE_GOLD_COST: i64 = 0x4000;
 const NO_ALTER_VISUAL: i64 = 0x200000;
 const NO_SOURCE_VISUAL: i64 = 0x400000;

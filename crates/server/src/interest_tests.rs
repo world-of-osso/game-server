@@ -109,6 +109,141 @@ fn typed_invisibility_detection_rechecks_stationary_and_new_observers() {
     assert!(visible(&app, rendan, first));
 }
 
+#[test]
+fn arena_shadow_sight_reveals_source_stealth_and_rechecks_stationary_facing_and_expiry() {
+    use crate::auras::{AuraApplication, AuraSource, RemoveReason, apply_aura, remove_auras};
+    use shared::components::{Health, Level, Player, Rotation, UnitFactionTemplate};
+    let harness = crate::spell_cast::test_harness::harness_with_plugins(
+        Vec::new(),
+        &[5215, 34709],
+        1,
+        false,
+        |app| {
+            app.add_plugins(InterestPlugin);
+        },
+    )
+    .unwrap();
+    let mut app = harness.app;
+    let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let player = app.world().get::<PlayerLink>(connection).unwrap().0;
+    app.world_mut().entity_mut(player).insert((
+        Level(20),
+        Health {
+            current: 4240.0,
+            max: 4240.0,
+        },
+        Player {
+            name: "Observer".into(),
+            race: 1,
+            class: 11,
+            appearance: Default::default(),
+        },
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+        UnitFactionTemplate(1),
+    ));
+    let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
+    app.world_mut().entity_mut(target).insert((
+        Level(20),
+        Health {
+            current: 4240.0,
+            max: 4240.0,
+        },
+        Player {
+            name: "Prowler".into(),
+            race: 2,
+            class: 11,
+            appearance: Default::default(),
+        },
+        UnitFactionTemplate(2),
+    ));
+    app.world_mut()
+        .entity_mut(player)
+        .insert(crate::duel::DuelOpponent(target));
+    app.world_mut()
+        .entity_mut(target)
+        .insert(crate::duel::DuelOpponent(player));
+    let apply = |app: &mut App, unit, spell_id| {
+        apply_aura(
+            app.world_mut(),
+            &AuraApplication {
+                caster: unit,
+                target: unit,
+                spell_id,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        )
+    };
+    let visible = |app: &App| {
+        app.world()
+            .get::<NetworkVisibility>(target)
+            .unwrap()
+            .is_visible(connection)
+    };
+    apply(&mut app, target, 5215);
+    run_fixed_ticks(&mut app, 1);
+    assert!(
+        !visible(&app),
+        "source Prowl hides a living player beyond detection range"
+    );
+    assert!(!crate::spell_cast::targets::relation_matches(
+        app.world(),
+        player,
+        target,
+        crate::spell_cast::targets::Relation::Enemy
+    ));
+    apply(&mut app, player, 34709);
+    run_fixed_ticks(&mut app, 1);
+    assert!(
+        visible(&app),
+        "physical ShadowSight aura228 reveals source type0 stealth"
+    );
+    assert!(crate::spell_cast::targets::relation_matches(
+        app.world(),
+        player,
+        target,
+        crate::spell_cast::targets::Relation::Enemy
+    ));
+    app.world_mut().get_mut::<Rotation>(player).unwrap().y = -std::f32::consts::FRAC_PI_2;
+    run_fixed_ticks(&mut app, 1);
+    assert!(!visible(&app), "TC checks rear arc before aura228");
+    app.world_mut().get_mut::<Rotation>(player).unwrap().y = std::f32::consts::FRAC_PI_2;
+    run_fixed_ticks(&mut app, 1);
+    assert!(visible(&app));
+    remove_auras(app.world_mut(), player, RemoveReason::Expired, |aura| {
+        aura.spell_id == 34709
+    });
+    run_fixed_ticks(&mut app, 1);
+    assert!(!visible(&app), "expiry hides stationary target again");
+    // Level-20 Prowl: base 85 + (20 - BaseLevel 13) * RealPointsPerLevel 5 = 120 hides
+    // against 30 + 19 * 5 = 125 detection, so 5 points * 0.3 + 1.5 reach = 3yd.
+    for (distance, expected) in [(2.9, true), (3.2, false), (1.0, true)] {
+        *app.world_mut().get_mut::<Position>(target).unwrap() = pos(distance, 0.0, 0.0);
+        crate::interest::mark_interest_position_changed(
+            app.world().get_resource::<InterestDirtyQueue>(),
+            target,
+        );
+        run_fixed_ticks(&mut app, 1);
+        assert_eq!(
+            visible(&app),
+            expected,
+            "source level20 detection at {distance}yd"
+        );
+    }
+    remove_auras(app.world_mut(), target, RemoveReason::Expired, |aura| {
+        aura.spell_id == 5215
+    });
+    run_fixed_ticks(&mut app, 1);
+    assert!(
+        visible(&app),
+        "no residual hidden state after Prowl removal"
+    );
+}
+
 fn make_state_and_conn() -> (NetworkVisibility, Entity) {
     (NetworkVisibility::default(), Entity::from_bits(1))
 }

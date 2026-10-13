@@ -28,6 +28,9 @@ pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if spell == 96538 && index == 0 {
+        return Some(crate::pvp::arena_dalaran::cast_pipe_search);
+    }
     if (spell, index) == (crate::scripted_ai::murder_row::SPELL_FEL_CRAZED, 1) {
         return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
     }
@@ -144,6 +147,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
             Some(crate::scripted_ai::murder_row::cast_blink_at_selected_target)
         }
         (124491, 0) => Some(start_switch_capture),
+        (crate::pvp::arena_cage::WARNING_TELEPORT, 0) => {
+            Some(crate::pvp::arena_cage::warning_teleport)
+        }
         (97372, 0) => Some(crate::pvp::change_track),
         (batch17::CONFLAGRATE, 0) => Some(batch17::conflagrate),
         (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),

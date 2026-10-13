@@ -47,6 +47,31 @@ fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
     );
 }
 
+#[test]
+fn arena_roster_reservation_admits_only_its_own_map_copy() {
+    let store = map_store().expect("pinned Map DB2");
+    let mut manager = InstanceManager::default();
+    let copy = manager
+        .create_battleground_map(store, 572, &[1, 2, 3, 4], 4, at(0.0))
+        .expect("arena reservation");
+    for id in 1..=4 {
+        let resolved = manager
+            .create_map(store, 572, entrant(id, None), at(0.0))
+            .expect("reserved arena entrant");
+        assert_eq!(resolved.map, copy);
+    }
+    assert!(
+        manager
+            .create_map(store, 572, entrant(5, None), at(0.0))
+            .is_err()
+    );
+    assert!(
+        manager
+            .create_map(store, 617, entrant(1, None), at(0.0))
+            .is_err()
+    );
+}
+
 const STOCKADE: u32 = 34;
 /// `areatrigger_teleport` 101 "Stormwind Jail Entrance Target": its AreaTrigger box
 /// center in Stormwind City.
@@ -518,6 +543,28 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
         OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
+    // Objective entries plus every authored flag/capture type, and Alterac/Isle doors
+    // and goobers (types 1/10) their opening and banner scripts use.
+    let mut entries = shared::battleground::objective_object_entries(map_id);
+    let authored: std::collections::BTreeSet<u32> = source
+        .prepare("SELECT DISTINCT g.id FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
+            WHERE g.map=?1 AND (t.type IN (36,42) OR (g.map IN (30,628) AND t.type IN (1,10)))")
+        .unwrap()
+        .query_map([map_id], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    let objectives: std::collections::BTreeSet<u32> = entries.iter().copied().collect();
+    entries.extend(authored.difference(&objectives));
+    source_map_objects(map_id, &entries)
+}
+
+fn source_map_objects(map_id: u32, entries: &[u32]) -> crate::game_objects::GameObjectSpawns {
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
     // The spawn loader reads the authored locks beside its database file, so the fixture
     // database lives in a temp directory next to a copy of the canonical locks.
     let dir = tempfile::tempdir().unwrap();
@@ -527,23 +574,32 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
     )
     .expect("game_object_locks.json beside world.db; run scripts/import_game_object_locks.py");
     let target = Connection::open(dir.path().join("world.db")).unwrap();
-    target.execute_batch("CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER);
-        CREATE TABLE content_gameobject_template (entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
+    target.execute_batch("CREATE TABLE arena_map(map_id INTEGER);
+        CREATE TABLE content_gameobject (guid INTEGER,id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL,orientation REAL,spawnDifficulties TEXT,spawntimesecs INTEGER,state INTEGER);
+        CREATE TABLE content_gameobject_template (entry INTEGER PRIMARY KEY,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data3 INTEGER,Data5 INTEGER,Data6 INTEGER);
         CREATE TABLE game_object_display_info (ID INTEGER PRIMARY KEY,GeoBox_0 REAL,GeoBox_1 REAL,GeoBox_2 REAL,GeoBox_3 REAL,GeoBox_4 REAL,GeoBox_5 REAL);").unwrap();
+    target
+        .execute("INSERT INTO arena_map VALUES(?)", [map_id])
+        .unwrap();
     let mut query = source.prepare("SELECT g.guid+20000000,g.id,g.map,g.position_x,g.position_y,g.position_z,g.orientation,g.spawnDifficulties,
         t.type,t.displayId,t.name,t.size,t.Data0,t.Data1,d.GeoBox_0,d.GeoBox_1,d.GeoBox_2,d.GeoBox_3,d.GeoBox_4,d.GeoBox_5,
-        g.spawntimesecs,t.Data3,t.Data5,t.Data6
+        g.spawntimesecs,t.Data3,t.Data5,t.Data6,g.state
         FROM tdb_gameobject g JOIN tdb_gameobject_template t ON t.entry=g.id
-        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=?1 AND t.type IN (36,42) ORDER BY g.guid").unwrap();
+        JOIN game_object_display_info d ON d.ID=t.displayId WHERE g.map=? ORDER BY g.guid").unwrap();
     let mut rows = query.query([map_id]).unwrap();
     while let Some(row) = rows.next().unwrap() {
+        let entry: u32 = row.get(1).unwrap();
+        if !entries.contains(&entry) {
+            continue;
+        }
         let values: Vec<rusqlite::types::Value> =
-            (0..24).map(|index| row.get(index).unwrap()).collect();
+            (0..25).map(|index| row.get(index).unwrap()).collect();
         let mut spawn = values[..8].to_vec();
         spawn.push(values[20].clone());
+        spawn.push(values[24].clone());
         target
             .execute(
-                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO content_gameobject VALUES (?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&spawn),
             )
             .unwrap();
@@ -552,7 +608,7 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
         template.extend_from_slice(&values[21..24]);
         target
             .execute(
-                "INSERT INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO content_gameobject_template VALUES (?,?,?,?,?,?,?,?,?,?)",
                 rusqlite::params_from_iter(&template),
             )
             .unwrap();
@@ -566,6 +622,34 @@ fn source_battleground_objects(map_id: u32) -> crate::game_objects::GameObjectSp
             .unwrap();
     }
     crate::game_objects::load_game_object_spawns(&target).unwrap()
+}
+
+#[test]
+fn arena_source_doors_and_shadow_sight_are_loaded_for_zero_difficulty_copy() {
+    let objects = source_map_objects(572, &[185918, 185917, 184663, 184664]);
+    assert_eq!(objects.0.len(), 4);
+    assert_eq!(
+        objects
+            .0
+            .iter()
+            .filter(|spawn| spawn.info.go_type == 0)
+            .count(),
+        2
+    );
+    assert_eq!(
+        objects
+            .0
+            .iter()
+            .filter(|spawn| spawn.info.go_type == 6)
+            .count(),
+        2
+    );
+    assert!(
+        objects
+            .0
+            .iter()
+            .all(|spawn| spawn.spawn_difficulties == vec![0])
+    );
 }
 
 #[test]
@@ -914,6 +998,10 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
         fixed_unix: Some(SUNDAY_NOON),
     });
     app.init_resource::<GroupRegistry>();
+    app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&crate::test_data::world_db_path())
+            .expect("authored conditions in map-lifetime fixture"),
+    );
     setup(&mut app);
     app.finish();
     app.cleanup();
@@ -1231,6 +1319,810 @@ fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
         STOCKADE_CREATURES,
         "the occupied copy stays"
     );
+}
+
+#[test]
+fn four_arena_players_invite_ack_prepare_pick_shadow_sight_end_and_return_over_channel() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 572);
+}
+#[test]
+fn rated_arena_groups_play_then_persist_reference_rating_without_queue_only_awards() {
+    exercise_arena_channel(ArenaQueueMode::Rated2v2, false, 572);
+}
+#[test]
+fn six_arena_players_complete_skirmish_three_v_three_over_real_channels() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish3v3, false, 572);
+}
+#[test]
+fn six_arena_players_complete_rated_three_v_three_and_persist_played_results() {
+    exercise_arena_channel(ArenaQueueMode::Rated3v3, false, 572);
+}
+#[test]
+fn arena_alive_forfeits_end_the_match_without_fabricating_scoreboard_deaths() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, true, 572);
+}
+
+#[test]
+fn arena_authored_cage_gate_is_visible_immediately_after_worldport_without_movement() {
+    let mut h = harness_with_content_and(|app| {
+        app.add_plugins(crate::interest::InterestPlugin);
+    })
+    .unwrap();
+    let actor = h.spawn_at_level(1, 90, STORMWIND, STOCKADE_ENTRANCE_TRIGGER);
+    h.app
+        .world_mut()
+        .entity_mut(actor.player)
+        .insert(crate::interest::NetworkVisibility::default());
+    let copy = h
+        .app
+        .world_mut()
+        .resource_scope(|world, mut manager: Mut<InstanceManager>| {
+            manager.create_battleground_map(
+                world.resource::<MapStore>(),
+                2759,
+                &[1, 2, 3, 4],
+                4,
+                at(0.0),
+            )
+        })
+        .unwrap();
+    super::transfer::spawn_map_content(h.app.world_mut(), copy);
+    let destination = h.app.world().resource::<MapStore>().safe_locs[&100101];
+    assert!(teleport_to(
+        h.app.world_mut(),
+        actor.player,
+        destination,
+        TeleportOptions::default()
+    ));
+    h.new_worlds(&actor).pop().expect("source Cage NewWorld");
+    h.ack(&actor);
+    let mut query = h.app.world_mut().query::<(
+        &InMap,
+        &GameObjectInfo,
+        &crate::interest::NetworkVisibility,
+        &GameObjectCollision,
+    )>();
+    let gate = query
+        .iter(h.app.world())
+        .find(|(map, info, ..)| **map == copy && info.entry == 505683)
+        .unwrap();
+    assert!(
+        gate.2.is_visible(actor.connection),
+        "source nearby trapdoor must be shown without waiting for opening"
+    );
+    assert!(
+        gate.3.0,
+        "source READY1 collision must be present during preparation"
+    );
+}
+
+#[test]
+fn arena_all_sixteen_active_source_maps_play_authored_starts_gates_orbs_and_return() {
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps: Vec<u32> = source
+        .prepare("SELECT map_id FROM arena_map WHERE min_level>0 AND max_level>=90 ORDER BY map_id")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(
+        maps.len(),
+        16,
+        "local BattlemasterList/Map/WDT source census"
+    );
+    for map_id in maps {
+        exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, map_id);
+        println!(
+            "SOURCE_ARENA_MAP_PASS {map_id}: authored starts/gates, preparation, physical orb, scored elimination, exact returns"
+        );
+    }
+}
+
+#[test]
+fn arena_cage_preparation_keeps_authored_gate_in_observer_visibility() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 2759);
+}
+
+#[test]
+fn arena_dalaran_authored_waterfall_and_pipe_hazards_follow_actual_lifetime() {
+    exercise_arena_channel(ArenaQueueMode::Skirmish2v2, false, 617);
+}
+
+fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
+    use shared::protocol::{ArenaQueueMode, QueueForArena};
+    let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
+    let team_size = match mode {
+        ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Rated2v2 => 2,
+        ArenaQueueMode::Skirmish3v3 | ArenaQueueMode::Rated3v3 => 3,
+        ArenaQueueMode::SoloShuffle => panic!("fixture requires a sourced arena bracket"),
+    };
+    let bracket = if team_size == 2 {
+        PvpBracketSnapshot::Arena2v2
+    } else {
+        PvpBracketSnapshot::Arena3v3
+    };
+    let source = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let catalog_db = Connection::open_in_memory().unwrap();
+    catalog_db
+        .execute(
+            "ATTACH DATABASE ? AS source",
+            [crate::test_data::world_db_path().to_string_lossy().as_ref()],
+        )
+        .unwrap();
+    catalog_db
+        .execute(
+            "CREATE TABLE arena_map AS SELECT * FROM source.arena_map WHERE map_id=?",
+            [map_id],
+        )
+        .unwrap();
+    let (start_a, start_b): (u32, u32) = catalog_db
+        .query_row("SELECT start_a,start_b FROM arena_map", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .unwrap();
+    let catalog = crate::pvp::arena::Catalog::load(&catalog_db).unwrap();
+    let gates = crate::pvp::arena_objects::GateCatalog::load(&source).unwrap();
+    let dalaran = crate::pvp::arena_dalaran::Catalog::load(&source).unwrap();
+    let cage = crate::pvp::arena_cage::Catalog::load(&source).unwrap();
+    let gate_actions: Vec<(u32, String, u32)> = source
+        .prepare("SELECT entry,action,despawn_secs FROM arena_gate WHERE map_id=?")
+        .unwrap()
+        .query_map([map_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(!gate_actions.is_empty(), "map{map_id} source gates");
+    let mut entries: Vec<_> = gate_actions
+        .iter()
+        .map(|(entry, _, _)| *entry)
+        .chain([184663, 184664])
+        .collect();
+    if map_id == 617 {
+        entries.extend([191877, 194395]);
+    }
+    let objects = source_map_objects(map_id, &entries);
+    let sight = crate::pvp::arena_objects::SightCatalog::load(&source, &objects).unwrap();
+    let source_orb = objects
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 184663)
+        .unwrap()
+        .clone();
+    let store = crate::spell_cast::test_harness::world_db().unwrap();
+    let spells = crate::spell_info::SpellStore::fixture(
+        [
+            32727, 34709, 57405, 96538, 96539, 58873, 254013, 48018, 228212, 1214676, 371319,
+        ]
+        .iter()
+        .map(|id| store.store.get(*id).unwrap().clone())
+        .collect(),
+    );
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(database_file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let world_data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
+    let mut h = harness_with(move |app| {
+        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(objects);
+        app.insert_resource(world_data);
+        app.insert_resource(spells);
+        app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+        app.add_plugins((
+            crate::interest::InterestPlugin,
+            crate::pvp::PvpPlugin,
+            crate::spell_cast::SpellCastPlugin,
+            crate::auras::AuraPlugin,
+            crate::combat::CombatPlugin,
+            crate::death::DeathPlugin,
+        ));
+        app.insert_resource(catalog);
+        app.insert_resource(gates);
+        app.insert_resource(sight);
+        app.insert_resource(dalaran);
+        app.insert_resource(cage);
+    })
+    .unwrap();
+    let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
+    let players: Vec<_> = (1..=(team_size * 2) as u64)
+        .map(|id| h.spawn_at_level(id, 90, STORMWIND, origin + Vec3::new(id as f32, 0.0, 0.0)))
+        .collect();
+    let origins: Vec<_> = players
+        .iter()
+        .map(|who| wow(h.app.world().get::<Position>(who.player).unwrap()))
+        .collect();
+    for who in &players {
+        h.app.world_mut().entity_mut(who.player).insert((
+            crate::pvp::PlayerPvpState::default(),
+            crate::death::PlayerDeathState::default(),
+            crate::spell_cast::powers::PowerPools {
+                order: vec![shared::components::PowerType::Rage],
+                pools: vec![crate::spell_cast::powers::PowerPool {
+                    power: shared::components::PowerType::Rage,
+                    current: 70.0,
+                    max: 100.0,
+                    regen_per_sec: 0.0,
+                }],
+                ..Default::default()
+            },
+        ));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForArena>(),
+            pair::<shared::protocol::QueueForRatedPvp>(),
+            pair::<RespondToBattlegroundInvite>(),
+            pair::<LeaveBattleground>(),
+            pair::<PvpStateUpdate>(),
+            pair::<shared::protocol::AttackSwing>(),
+        ));
+        if !rated {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<QueueForArena>>(who.connection)
+                .unwrap()
+                .send::<PvpChannel>(QueueForArena { mode });
+        }
+    }
+    if rated {
+        let online: OnlineView = players
+            .iter()
+            .enumerate()
+            .map(|(index, who)| {
+                (
+                    (index + 1) as u64,
+                    OnlineMember {
+                        entity: who.player.to_bits(),
+                        name: format!("Traveler{}", index + 1),
+                        class: 1,
+                        level: 90,
+                        portrait: Default::default(),
+                        dungeon_difficulty: 1,
+                        raid_difficulty: Default::default(),
+                    },
+                )
+            })
+            .collect();
+        let mut groups = h.app.world_mut().resource_mut::<GroupRegistry>();
+        groups.sync_presence(&online);
+        for member in 3..=(team_size * 2) as u64 {
+            let leader = if member % 2 == 1 { 1 } else { 2 };
+            groups.invite(leader, &format!("Traveler{member}"), &online);
+            groups.respond_invite(member, true);
+        }
+        assert_eq!(groups.group_members(1).len(), team_size);
+        assert_eq!(groups.group_members(2).len(), team_size);
+        for who in &players[..2] {
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<shared::protocol::QueueForRatedPvp>>(who.connection)
+                .unwrap()
+                .send::<PvpChannel>(shared::protocol::QueueForRatedPvp {
+                    bracket: bracket.clone(),
+                });
+        }
+    }
+    // Dead entrants are resurrected by the source battlefield-port flow.
+    let dead_entrant = players.last().unwrap().player;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(dead_entrant)
+        .unwrap()
+        .current = 0.0;
+    let updates = h.receive_pvp_updates(5);
+    let invitations: Vec<_> = players
+        .iter()
+        .map(|who| {
+            updates[&who.connection]
+                .iter()
+                .filter_map(|u| u.snapshot.as_ref()?.battleground.clone())
+                .last()
+                .unwrap()
+        })
+        .collect();
+    let match_id = invitations[0].match_id;
+    for (who, invite) in players.iter().zip(&invitations) {
+        assert_eq!(invite.map_id, map_id);
+        assert_eq!(invite.match_id, match_id);
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(RespondToBattlegroundInvite {
+                match_id,
+                accepted: true,
+            });
+    }
+    h.receive_pvp_updates(5);
+    for (who, invite) in players.iter().zip(&invitations) {
+        assert_eq!(h.map_of(who), None);
+        let travel = h.new_worlds(who);
+        assert_eq!(travel.len(), 1);
+        assert_eq!(travel[0].map_id, map_id);
+        let source_id = if invite.team == shared::battleground::BgTeam::A {
+            start_a
+        } else {
+            start_b
+        };
+        let source_start = map_store().unwrap().safe_locs[&source_id];
+        assert!(close(
+            wow(&Position {
+                x: travel[0].position[0],
+                y: travel[0].position[1],
+                z: travel[0].position[2]
+            }),
+            source_start.position
+        ));
+        h.ack(who);
+    }
+    h.receive_pvp_updates(5);
+    let map = h.map_of(&players[0]).unwrap();
+    assert!(players.iter().all(|who| h.map_of(who) == Some(map)));
+    let revived = h.app.world().get::<Health>(dead_entrant).unwrap();
+    assert_eq!(
+        revived.current, revived.max,
+        "source battlefield-port full resurrection before preparation"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::death::PlayerDeathState>(dead_entrant)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
+    let object_count = |world: &mut World, kind: u8| {
+        world
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                Option<&shared::protocol::GameObjectVisible>,
+            )>()
+            .iter(world)
+            .filter(|(copy, info, visible)| {
+                **copy == map && info.go_type == kind && visible.is_none_or(|visible| visible.0)
+            })
+            .count()
+    };
+    assert_eq!(
+        object_count(h.app.world_mut(), 6),
+        0,
+        "orbs hidden during preparation"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(players[0].player)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 32727)
+    );
+    let source_gates: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &InMap, &shared::protocol::GameObjectInfo)>()
+        .iter(h.app.world())
+        .filter(|(_, copy, info)| {
+            **copy == map
+                && gate_actions
+                    .iter()
+                    .any(|(entry, _, _)| *entry == info.entry)
+        })
+        .map(|(entity, _, info)| (entity, info.entry))
+        .collect();
+    for (entry, _, _) in &gate_actions {
+        assert!(
+            source_gates.iter().any(|(_, actual)| actual == entry),
+            "map{map_id} missing source gate{entry}"
+        );
+    }
+    if map_id == 2759 {
+        let position = h.app.world().get::<Position>(players[0].player).unwrap();
+        let gate = source_gates
+            .iter()
+            .min_by(|(a, _), (b, _)| {
+                let distance = |entity| {
+                    let gate = h.app.world().get::<Position>(entity).unwrap();
+                    Vec3::new(
+                        gate.x - position.x,
+                        gate.y - position.y,
+                        gate.z - position.z,
+                    )
+                    .length_squared()
+                };
+                distance(*a).total_cmp(&distance(*b))
+            })
+            .unwrap()
+            .0;
+        assert!(
+            h.app
+                .world()
+                .get::<crate::interest::NetworkVisibility>(gate)
+                .unwrap()
+                .is_visible(players[0].connection),
+            "nearby Cage gate must remain visible through actual32727 preparation"
+        );
+        for who in &players {
+            assert!(
+                crate::auras::has_aura(h.app.world(), who.player, 228212),
+                "source entrance areatrigger marks every Cage entrant during preparation"
+            );
+        }
+    }
+    for (gate, entry) in &source_gates {
+        let (_, action, _) = gate_actions
+            .iter()
+            .find(|(source, _, _)| source == entry)
+            .unwrap();
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::protocol::GameObjectCollision>(*gate),
+            Some(&shared::protocol::GameObjectCollision(true)),
+            "source gates and collision walls block during preparation"
+        );
+        if action == "delete" {
+            continue; // Empyrean collision walls exist without a door-animation contract.
+        }
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::protocol::GameObjectAnimation>(*gate)
+                .unwrap()
+                .animation_id,
+            147
+        );
+    }
+    let preparing = players[0].player;
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            h.app.world(),
+            preparing,
+            shared::components::PowerType::Rage
+        )
+        .unwrap()
+        .0,
+        0.0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<Health>(preparing)
+        .unwrap()
+        .current = 25.0;
+    crate::spell_cast::powers::change_power(
+        h.app.world_mut(),
+        preparing,
+        shared::components::PowerType::Rage,
+        60.0,
+    );
+    h.receive_pvp_updates(110);
+    let reset_health = h.app.world().get::<Health>(preparing).unwrap();
+    assert_eq!(
+        reset_health.current, reset_health.max,
+        "source preparation periodic full health"
+    );
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            h.app.world(),
+            preparing,
+            shared::components::PowerType::Rage
+        )
+        .unwrap()
+        .0,
+        0.0,
+        "source preparation resets primary rage"
+    );
+    h.receive_pvp_updates(1091);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(players[0].player)
+            .unwrap()
+            .battleground
+            .as_ref()
+            .unwrap()
+            .phase,
+        shared::battleground::BgPhase::InProgress
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(players[0].player)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 32727)
+    );
+    for (gate, entry) in &source_gates {
+        let (_, action, _) = gate_actions
+            .iter()
+            .find(|(source, _, _)| source == entry)
+            .unwrap();
+        if action == "delete" {
+            assert!(
+                h.app.world().get_entity(*gate).is_err(),
+                "map{map_id} source wall removed at start"
+            );
+        } else {
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<shared::protocol::GameObjectCollision>(*gate),
+                Some(&shared::protocol::GameObjectCollision(false)),
+                "source open gate disables model collision"
+            );
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<shared::protocol::GameObjectAnimation>(*gate)
+                    .unwrap()
+                    .animation_id,
+                148,
+                "map{map_id} source door open"
+            );
+        }
+    }
+    if map_id == 617 {
+        h.receive_pvp_updates(700);
+        let collision = h
+            .app
+            .world_mut()
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                &shared::protocol::GameObjectCollision,
+            )>()
+            .iter(h.app.world())
+            .find(|(copy, info, _)| **copy == map && info.entry == 194395)
+            .map(|(_, _, state)| state.0)
+            .unwrap();
+        assert!(
+            collision,
+            "TC waterfall collision activates after30s warning+5s"
+        );
+        h.receive_pvp_updates(600);
+        let collision = h
+            .app
+            .world_mut()
+            .query::<(
+                &InMap,
+                &shared::protocol::GameObjectInfo,
+                &shared::protocol::GameObjectCollision,
+            )>()
+            .iter(h.app.world())
+            .find(|(copy, info, _)| **copy == map && info.entry == 194395)
+            .map(|(_, _, state)| state.0)
+            .unwrap();
+        assert!(!collision, "TC waterfall resets after30s active duration");
+        h.receive_pvp_updates(400);
+    } else {
+        h.receive_pvp_updates(1700);
+    }
+    assert_eq!(
+        object_count(h.app.world_mut(), 6),
+        0,
+        "before source90second activation"
+    );
+    h.receive_pvp_updates(101);
+    assert_eq!(object_count(h.app.world_mut(), 6), 2);
+    for (gate, entry) in &source_gates {
+        let (_, action, despawn) = gate_actions
+            .iter()
+            .find(|(source, _, _)| source == entry)
+            .unwrap();
+        assert_eq!(
+            h.app.world().get_entity(*gate).is_ok(),
+            action != "delete" && *despawn == 0,
+            "map{map_id} gate{entry} source lifetime"
+        );
+    }
+    h.app
+        .world_mut()
+        .entity_mut(players[0].player)
+        .insert(bevy(source_orb.position));
+    h.receive_pvp_updates(5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(players[0].player)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 34709)
+    );
+    assert_eq!(
+        object_count(h.app.world_mut(), 6),
+        1,
+        "physical authored orb consumed"
+    );
+    let caster = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(players[0].player)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 34709)
+        .unwrap()
+        .caster;
+    assert!(
+        h.app.world().get_entity(caster).is_ok(),
+        "hidden orb retains aura ownership"
+    );
+    if forfeit {
+        exercise_arena_forfeit(&mut h, &players, &origins, match_id);
+        return;
+    }
+    let attacker = players[0].player;
+    for target in players.iter().skip(1).step_by(2).map(|who| who.player) {
+        h.app
+            .world_mut()
+            .get_mut::<Position>(target)
+            .unwrap()
+            .clone_from(&bevy(source_orb.position + Vec3::new(1.0, 0.0, 0.0)));
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<shared::protocol::AttackSwing>>(players[0].connection)
+            .unwrap()
+            .send::<shared::protocol::CombatChannel>(shared::protocol::AttackSwing {
+                target: target.to_bits(),
+            });
+        h.receive_pvp_updates(50);
+    }
+    let ended = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(attacker)
+        .unwrap()
+        .battleground
+        .as_ref()
+        .unwrap()
+        .clone();
+    assert_eq!(
+        ended.outcome,
+        Some(shared::battleground::BgOutcome::Winner(
+            shared::battleground::BgTeam::A
+        ))
+    );
+    assert_eq!(ended.players.len(), team_size * 2);
+    let killer = ended
+        .players
+        .iter()
+        .find(|player| player.character_id == 1)
+        .unwrap();
+    assert_eq!(killer.killing_blows, team_size as u32);
+    assert!(
+        killer.damage_done > 0,
+        "real combat events populate arena damage scoreboard"
+    );
+    if rated {
+        assert_eq!(ended.arena.as_ref().unwrap().mode, mode);
+        assert_eq!(
+            ended.arena.as_ref().unwrap().rating_changes.len(),
+            team_size * 2
+        );
+        for (index, who) in players.iter().enumerate() {
+            let progress = &h
+                .app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .progress;
+            let entry = progress
+                .brackets
+                .iter()
+                .find(|entry| entry.bracket == bracket)
+                .unwrap();
+            let won = index % 2 == 0;
+            assert_eq!(entry.rating, Some(if won { 48 } else { 0 }));
+            assert_eq!(entry.matchmaker_rating, Some(if won { 1512 } else { 1488 }));
+            assert_eq!(entry.season_wins, u32::from(won));
+            assert_eq!(entry.season_losses, u32::from(!won));
+            assert_eq!((progress.honor, progress.conquest), (0, 0));
+            let saved = crate::persistence::load_pvp(
+                &h.app
+                    .world()
+                    .resource::<crate::persistence::GameDatabase>()
+                    .db,
+                (index + 1) as u64,
+            );
+            assert_eq!(saved, *progress);
+        }
+    }
+    for who in &players {
+        assert_eq!(
+            h.app.world().get::<Health>(who.player).unwrap().current,
+            h.app.world().get::<Health>(who.player).unwrap().max,
+            "source full resurrection on match completion"
+        );
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for (who, origin) in players.iter().zip(&origins) {
+        h.ack(who);
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(
+            wow(h.app.world().get::<Position>(who.player).unwrap()),
+            *origin
+        ));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
+}
+
+fn exercise_arena_forfeit(h: &mut Harness, players: &[Traveler], origins: &[Vec3], match_id: u64) {
+    for who in players.iter().skip(1).step_by(2) {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in players.iter().skip(1).step_by(2) {
+        h.ack(who);
+    }
+    h.receive_pvp_updates(5);
+    let ended = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(players[0].player)
+        .unwrap()
+        .battleground
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        ended.outcome,
+        Some(shared::battleground::BgOutcome::Winner(
+            shared::battleground::BgTeam::A
+        ))
+    );
+    assert_eq!(ended.players.len(), 4);
+    assert!(
+        ended.players.iter().all(|score| score.deaths == 0),
+        "leaving alive is not a combat death: {:?}",
+        ended.players
+    );
+    for who in players.iter().step_by(2) {
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<LeaveBattleground>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(LeaveBattleground { match_id });
+    }
+    h.receive_pvp_updates(5);
+    for who in players.iter().step_by(2) {
+        h.ack(who);
+    }
+    for (who, origin) in players.iter().zip(origins) {
+        assert_eq!(h.map_of(who), Some(STORMWIND));
+        assert!(close(
+            wow(h.app.world().get::<Position>(who.player).unwrap()),
+            *origin
+        ));
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+    }
 }
 
 #[test]
