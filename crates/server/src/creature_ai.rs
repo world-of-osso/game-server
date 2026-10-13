@@ -803,6 +803,7 @@ pub(crate) fn chase_system(
                     reach,
                 },
             ) {
+                Step::Unbaked if follower_reach.is_some() => *pos,
                 Step::Unbaked => chase_step(*pos, target_pos, run_speed * dt, reach),
                 Step::Moved { position, .. } => position,
                 Step::Blocked => {
@@ -817,6 +818,10 @@ pub(crate) fn chase_system(
                     continue;
                 }
             },
+            _ if follower_reach.is_some() => {
+                error!("Follower {entity} cannot chase: navigation resource or map absent");
+                *pos
+            }
             _ => chase_step(*pos, target_pos, run_speed * dt, reach),
         };
         if cannot_reach.is_some() {
@@ -955,6 +960,7 @@ type Follower = (
     Option<&'static AuraStatMods>,
     Option<&'static InMap>,
     Bearing,
+    Option<&'static crate::followers::Follower>,
 );
 
 /// Where an owner stands and how fast it runs.
@@ -971,16 +977,31 @@ struct Leader {
 /// π/4, on the floor, and on arrival faces the owner's way (`SetFacing`). It runs at the
 /// owner's speed scaled by `Unit::UpdateSpeed`'s catch-up factor: 0.75 + 0.05 per yard
 /// beyond `PET_FOLLOW_DIST`, within 1-1.3. It holds still while it cannot move, casts
-/// a spell movement would interrupt, or is dead. Paths are straight (no `PathGenerator`).
+/// a spell movement would interrupt, or is dead. Dungeon followers use baked routes;
+/// other FollowOwner consumers retain their existing straight movement.
 #[cfg(test)]
 pub(crate) fn install_follow_fixture(app: &mut App) {
     app.add_systems(Update, follow_owner_system);
+}
+
+#[cfg(test)]
+pub(crate) fn install_follower_follow_fixture(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        (
+            crate::followers::update_ai,
+            chase_system,
+            follow_owner_system,
+        )
+            .chain(),
+    );
 }
 
 fn follow_owner_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
+    mut nav: Option<ResMut<Navigation>>,
     mut units: ParamSet<(
         Query<Follower, ActiveUncontrolled>,
         Query<(&Position, Option<&Rotation>, Option<&MovementSpeed>)>,
@@ -1007,7 +1028,9 @@ fn follow_owner_system(
             ))
         })
         .collect();
-    for (entity, mut pos, mut follow, health, cast, mods, map, bearing) in &mut units.p0() {
+    for (entity, mut pos, mut follow, health, cast, mods, map, bearing, companion) in
+        &mut units.p0()
+    {
         let Some(leader) = leaders.get(&follow.owner) else {
             continue;
         };
@@ -1030,8 +1053,31 @@ fn follow_owner_system(
         }
         let point = follow_point(&leader, *pos, reach);
         let run_speed = leader.speed * speed_mod * catch_up_factor(gap);
-        let (reached, x, z) = move_toward(pos.x, pos.z, point.0, point.1, run_speed * dt);
-        let mut next_position = Position { x, y: pos.y, z };
+        let movement = if companion.is_some() {
+            let request = map.map(|map| MoveRequest {
+                map_id: map.map_id,
+                goal: Goal::Follow(follow.owner.to_bits()),
+                from: *pos,
+                to: Position {
+                    x: point.0,
+                    y: leader.position.y,
+                    z: point.1,
+                },
+                distance: run_speed * dt,
+                reach: 0.0,
+            });
+            advance_companion_follow(nav.as_deref_mut(), entity, request)
+        } else {
+            let (reached, x, z) = move_toward(pos.x, pos.z, point.0, point.1, run_speed * dt);
+            Some((Position { x, y: pos.y, z }, reached))
+        };
+        let Some((mut next_position, reached)) = movement else {
+            follow.moving = false;
+            let here = *pos;
+            queues.apply(entity, &mut pos, bearing, Stride::still(here));
+            continue;
+        };
+        let (x, z) = (next_position.x, next_position.z);
         if next_position != *pos {
             let feet = Vec3::new(x, pos.y, z);
             next_position.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y);
@@ -1043,6 +1089,23 @@ fn follow_owner_system(
             stride.facing = Some(leader.rotation_y);
         }
         queues.apply(entity, &mut pos, bearing, stride);
+    }
+}
+
+/// Follower dungeons require an authored bake; unavailable or blocked routes never
+/// become direct movement. Other existing FollowOwner consumers keep their behavior.
+fn advance_companion_follow(
+    nav: Option<&mut Navigation>,
+    entity: Entity,
+    request: Option<MoveRequest>,
+) -> Option<(Position, bool)> {
+    let (Some(nav), Some(request)) = (nav, request) else {
+        error!("Follower {entity} cannot follow: navigation resource or map absent");
+        return None;
+    };
+    match nav.advance(entity, request) {
+        Step::Moved { position, reached } => Some((position, reached)),
+        Step::Unbaked | Step::Blocked => None,
     }
 }
 

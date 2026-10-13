@@ -94,7 +94,7 @@ impl Navigation {
                 Some(navigation::NavigationMap::open(&dir)?)
             } else {
                 error!(
-                    "Map {map_id} has no navigation bake in {}; retaining legacy movement only on this unbaked map",
+                    "Map {map_id} has no navigation bake in {}; no baked route available",
                     dir.display()
                 );
                 None
