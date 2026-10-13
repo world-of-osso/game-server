@@ -29,7 +29,8 @@ Source-authenticated `MotionMaster::MoveJump` subset used by Gordoth, from TC a3
 
 ## Known gaps (current cycle)
 
-- [ ] Static AT7899/GM handling, animkit, cage task and native jump/GO animations.
+- [x] Ordinary-player AT7899 uses source rotated-box entry, same-copy boss lookup and per-instance OnlyOnce; a missing boss leaves a later entry retryable.
+- [ ] GM-mode handling, animkit, cage task and native jump/GO animations. No account-role-to-GM inference.
 - [ ] Source Gordoth UpdateAI never pumps its scheduled +30ms cage task; no synthetic pump is introduced.
 - [ ] Instakill-specific packet/player CHEAT_GOD state are unmodelled; current proof is the researcher NPC self-kill chain.
 

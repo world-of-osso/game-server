@@ -128,6 +128,7 @@ fn encounter_fixture(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
+    app.insert_resource(super::super::ragefire_chasm::gordoth_intro::load_trigger(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
     app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
     app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -889,6 +890,151 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(!h.has_aura(champion, 269928));
     h.advance(0.3);
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
+}
+
+/// TC at_lava_guard_gordoth_intro7899: a normal player's actual DB2 box entry
+/// triggers only its copy, once per instance, not on repeated polls or re-entry.
+#[test]
+fn encounter_coverage_gordoth_static_intro_trigger_is_box_scoped_and_once() {
+    let (mut h, _, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(61528)[0];
+    let original = *h.app.world().get::<Position>(boss).unwrap();
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let trigger: (f32, f32, f32, f32, f32) = conn
+        .query_row(
+            "SELECT Pos_0,Pos_1,Pos_2,Box_length,Box_yaw FROM area_trigger WHERE ID=7899",
+            [],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
+        )
+        .unwrap();
+    let (x, y, z, length, yaw) = trigger;
+    let player = h.player();
+    let outside_x = x + yaw.cos() * (length / 2.0 + 0.5);
+    let outside_y = y + yaw.sin() * (length / 2.0 + 0.5);
+    let (px, py, pz) = crate::terrain_height::wow_to_bevy(outside_x, outside_y, z);
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: px,
+        y: py,
+        z: pz,
+    });
+    h.advance(0.1);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        original,
+        "outside the rotated narrow axis"
+    );
+    let (px, py, pz) = crate::terrain_height::wow_to_bevy(x, y, z);
+    let inside = Position {
+        x: px,
+        y: py,
+        z: pz,
+    };
+    let other_player = h.players[1].0;
+    h.app.world_mut().entity_mut(other_player).insert(inside);
+    h.advance(0.1);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        original,
+        "entry in an unpopulated other copy cannot use this copy's boss"
+    );
+    h.app.world_mut().entity_mut(player).insert(inside);
+    h.advance(0.25);
+    let moved = *h.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        Vec3::new(
+            moved.x - original.x,
+            moved.y - original.y,
+            moved.z - original.z
+        )
+        .length()
+            > 5.0,
+        "actual AT entry dispatches sourced jump, without direct DoAction"
+    );
+    h.advance(0.8);
+    // Give a later repeated action an observable destination delta. Successful
+    // OnlyOnce must retain the new position through leave/re-enter.
+    let landing = *h.app.world().get::<Position>(boss).unwrap();
+    let displaced = Position {
+        x: landing.x + 10.0,
+        ..landing
+    };
+    h.app.world_mut().entity_mut(boss).insert(displaced);
+    h.advance(0.1);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        displaced,
+        "no repeat while inside"
+    );
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: px + 100.0,
+        ..inside
+    });
+    h.advance(0.1);
+    h.app.world_mut().entity_mut(player).insert(inside);
+    h.advance(0.25);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        displaced,
+        "instance OnlyOnce survives re-entry"
+    );
+    assert_eq!(*h.app.world().get::<InMap>(boss).unwrap(), map);
+    // The failed other-copy entry must not consume OnlyOnce: create that real
+    // copy and its authored boss, then leave/re-enter to retry successfully.
+    let maps = h.app.world().resource::<crate::maps::MapStore>().clone();
+    let other_map = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            389,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 2002,
+                leader: 2002,
+                difficulty_id: 1,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 0,
+            },
+        )
+        .unwrap()
+        .map;
+    assert_eq!(
+        *h.app.world().get::<InMap>(other_player).unwrap(),
+        other_map
+    );
+    let (other_boss, _) = spawn_authored_actor(&mut h.app, &conn, 61528, other_map, 1);
+    h.app.world_mut().entity_mut(other_player).insert(Position {
+        x: px + 500.0,
+        ..inside
+    });
+    h.advance(0.1);
+    let other_original = *h.app.world().get::<Position>(other_boss).unwrap();
+    h.app.world_mut().entity_mut(other_player).insert(inside);
+    h.advance(0.25);
+    assert_ne!(
+        *h.app.world().get::<Position>(other_boss).unwrap(),
+        other_original,
+        "missing-boss retry succeeds and first copy's OnlyOnce cannot consume another copy"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        displaced,
+        "second copy jump leaves first copy unchanged"
+    );
 }
 
 /// Source DoAction(ACTION_JUMP): MoveJump50 speed/min-height4, then effect-motion

@@ -84,6 +84,7 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     bossmod::advance_schedules,
                     init_creature_ai,
+                    ragefire_chasm::gordoth_intro::detect_entries,
                     update_creature_ai,
                 )
                     .chain()
