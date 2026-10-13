@@ -988,6 +988,121 @@ fn encounter_coverage_gordoth_source_jump_lands_breaks_vials_and_researchers_die
     );
 }
 
+/// A real Mortimer POINT1 callback schedules self-death7s later. A competing
+/// point must not arrive while the highest-priority source jump owns movement.
+#[test]
+fn encounter_coverage_jump_suspends_lower_point_until_after_landing() {
+    let (mut h, parent) = Harness::new(NPC_RANDOLPH_MOLOCH, &[]).unwrap();
+    let player = h.player();
+    let at_parent = *h.app.world().get::<Position>(parent).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: at_parent.x + 500.0,
+        ..at_parent
+    });
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), parent);
+    let at = h.wow_position(parent);
+    let observer =
+        crate::zones::summon_creature(h.app.world_mut(), parent, 46482, [at.x, at.y, at.z, 0.0])
+            .unwrap();
+    let from = *h.app.world().get::<Position>(observer).unwrap();
+    super::super::movement::set_walk(h.app.world_mut(), observer, false);
+    super::super::movement::move_point(
+        h.app.world_mut(),
+        observer,
+        1,
+        Position {
+            x: from.x + 0.1,
+            ..from
+        },
+    );
+    super::super::jump_movement::move_jump(
+        h.app.world_mut(),
+        observer,
+        7,
+        Position {
+            x: from.x + 10.0,
+            ..from
+        },
+        1.0,
+        4.0,
+    );
+    h.advance(7.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(observer)
+            .is_none(),
+        "lower POINT1 never arrived and scheduled Mortimer death during the jump"
+    );
+    assert!(h.health(observer).current > 0.0);
+    h.advance(2.6);
+    let run_speed = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(observer)
+        .unwrap()
+        .speed_run
+        * 7.0;
+    h.advance(10.0 / run_speed + 6.5);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(observer)
+            .is_none(),
+        "after resuming the source point, its7s death callback has not yet fired"
+    );
+    h.advance(1.0);
+    assert!(
+        h.app.world().get_entity(observer).is_err()
+            || h.app
+                .world()
+                .get::<crate::combat::DeathState>(observer)
+                .is_some(),
+        "lower point resumes, reaches its target and executes the real callback"
+    );
+}
+
+#[test]
+fn encounter_coverage_gordoth_death_interrupts_jump_without_landing_effects() {
+    let (mut h, _, map) =
+        encounter_fixture(61528, 389, 3, 1, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    let boss = h.creatures_of(61528)[0];
+    dispatch(h.app.world_mut(), boss, Hook::DoAction(1));
+    h.advance(0.2);
+    h.hit_pct(boss, 1_000.0);
+    h.advance(1.1);
+    let vials: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(_, info, copy)| info.entry == 211784 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert_eq!(vials.len(), 3);
+    for vial in vials {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::game_objects::GameObjectState>(vial),
+            Some(&crate::game_objects::GameObjectState(1))
+        );
+    }
+    for researcher in h.creatures_of(61644) {
+        assert!(
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(researcher)
+                .is_none()
+        );
+    }
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::Done)
+    );
+}
+
 /// TC Gordoth's already-started InitializeAI branch relocates to the source jump
 /// landing point, without inventing an intro bypass.
 #[test]
