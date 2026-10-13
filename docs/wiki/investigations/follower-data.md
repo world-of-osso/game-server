@@ -2,6 +2,12 @@
 
 Verified: 2026-10-13. [Contract](../../specs/follower-dungeons.md). No authored NPC combat kit was found; the user explicitly approved labelled-spec player spells as a workaround. Source/behavioral implementation is present; user approval of same-map Normal population/entrance reuse resolves the previous admission-data blocker. Both-skin queue/party/first-boss combat is now proved; authored loot, the walked route and full-instance coverage remain open.
 
+## NPC Felguard utility source — 2026-10-13
+
+Demonology summon30146 resolves to real creature17252/Felguard. Its CreatureFamily29 exposes SkillLine761; SkillLineAbility23475 teaches89766/Axe Toss through AcquireMethod2 at native SpellLevel17. Local SpellEffect89766 index0/effect64 triggers347008, whose index0/effect68 is the actual interrupt; index1 is its stun aura. The bridge checks the pet's actual learned action bar, never assigns Spell Lock19647 (Felhunter) or invents an early-level kick. Ordinary cast readiness applies to the pet, not the companion owner, and active hostile-field escape takes priority.
+
+`pet_tests.rs` now reproduces the missing NPC pet kick with a native-level17 initialized Lantha/Felguard, real enemy Fireball and concurrent owner Shadow Bolt: RED leaves Fireball active; source-level16 negative passes. The implementation dispatches the existing real pet cast through native interrupt readiness. GREEN, cooldown/CC/hazard and player-pet persistence regression gates remain pending; this source section is not full-pet or dungeon acceptance.
+
 ## Source identity
 
 Local wow build `dcfc90fffd79ba00406ae46f5f657592` is12.1.0.69933. CASC LFGDungeons1361033/layout34B02DE8 has27 difficulty205 entries; pinned Difficulty names205 `Follower`, five players. Width truncation is required when decoding pallet values: Ruby's map is2521, not raw8128985.

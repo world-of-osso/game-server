@@ -124,7 +124,7 @@ impl PetCharm {
     }
 
     /// The bar slot holding `spell` (`HasSpell`: the bar holds the pet's learned spells).
-    fn spell_slot(&self, spell: u32) -> Option<usize> {
+    pub(crate) fn spell_slot(&self, spell: u32) -> Option<usize> {
         PET_SPELL_SLOTS.clone().find(|&slot| {
             let button = self.action_bar[slot];
             button != 0

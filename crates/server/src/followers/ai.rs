@@ -220,16 +220,30 @@ fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) ->
     if !interruptible {
         return false;
     }
-    let Some(spell) = interrupt_spell(spec) else {
+    let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
         return false;
     };
-    match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(enemy)) {
+    if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
+        return false;
+    }
+    match crate::spell_cast::creature_cast_interrupting_self(world, caster, spell, Some(enemy)) {
         Ok(()) => true,
         Err(failure) => {
             debug!("Follower {unit} interrupt {spell} at {enemy}: {failure:?}");
             false
         }
     }
+}
+
+/// CreatureFamily29/SkillLine761 teaches Felguard Axe Toss89766 at17; source
+/// SpellEffect64 triggers the real347008 effect68. Never cast an unlearned pet spell.
+fn interrupt_source(world: &World, unit: Entity, spec: u32) -> Option<(Entity, u32)> {
+    if spec != 266 {
+        return interrupt_spell(spec).map(|spell| (unit, spell));
+    }
+    let pet = crate::hunter_pet::summoned_pet(world, unit)?;
+    let charm = world.get::<crate::pet_control::PetCharm>(pet)?;
+    charm.spell_slot(89766).map(|_| (pet, 89766))
 }
 
 /// Approved bridge policy: defend a wounded companion being actively attacked.
