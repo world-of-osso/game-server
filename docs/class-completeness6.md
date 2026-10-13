@@ -109,3 +109,12 @@ Batch37 census at b2b5b164: all7827, exit0, 1164.94sec: **3124 working/4521 part
 ## Demon Hunter Metamorphosis toggles — batch38
 
 e27c28d0/6533d0d3 port TC spell_dh_monster_rising (spell_dh.cpp:1659-1689) and spell_dh_enduring_torment/_buff (1086-1140). Each 1 s PERIODIC_DUMMY tick casts the buff outside Metamorphosis and removes it inside (Monster Rising: 162264/187827; Enduring Torment: 162264/1217607). For player casters, 453314 keeps effects 0–1 only as Havoc (577) and 2–3 only as Devourer (1480), through the existing per-effect `scripts::effect_enabled` gate. Neither parent has Attr5 ExtraInitialPeriod, so the first buff arrives on the first tick. RED2+RED2 → GREEN; auras scope 114 passed.
+
+
+## Restart recovery and batch39 (2026-10-13)
+
+Batch31 remains complete at bdbc000e: selective147 definition gating, 2983 working/4662 partial/182 broken; no reimplementation needed. Batch38 census at 55f0d91d: all7827, exit0, 876.325s; 3130 working/4515 partial/182 broken, six transitions for Monster Rising/Enduring Torment memberships.
+
+Master integrated at 098adb0e, including d18e935e; both fear and knockback movement exclusions retained. Shared slot synchronized to f895cc1. New hooks 33eba099, corrected passive fixtures79f30d90: native121817 effect0 triggers129914 (authored ExtraInitialPeriod then15s); effect1 stays partial. Critical Chaos320413 recomputes effect0 ProcChance bonus as effect1 percent of owner crit on apply/effect1 1s tick. TC a352b1fa spell_dh.cpp632-655 and spell_monk_power_strike_periodic; authentic TDB registrations checked.
+
+Proof ledger at79f30d90/sharedf895cc1: power-critical-red2 (098adb0e) 2 expected failures; green2 2passed11.28s; post-master-batch39-controls47passed40.11s including mastery-refresh, immunity, knockback, parry/defensives and Metamorphosis toggles. server-check-batch39 all-targets exit0 no warnings66.905s; fmt--check exit0. Manual changed-line Rust readability: bounded hooks, shallow branches, explicit mutation, no suppressions; analysis CLI unavailable. Analyzer updated renamed master's Arcane Power test reference; refresh now succeeds with only121817 effect1 gap and no320413 gap. No canonicaldata changes, no orphans/liveprocesses. Fresh batch39 census pending; no post-merge full-ability certificate yet.
