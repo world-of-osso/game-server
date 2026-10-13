@@ -126,6 +126,12 @@ The same native rated settlement publishes map-specific WinArena32 for winners a
 
 ModifierTree29 LessThanTappers is a group roster condition (TC a352b1fa CriteriaHandler1902–1905), not a count of nearby attackers. `ReferencePlayer.group_size` snapshots `GroupRegistry.group_members` including offline members;0 means known solo and None means unknown authority. All4/SingleTrue limits remain conjunctive with legacy/current difficulty and other supported leaves. Native authored Malygos spawning/combat/death in copy616/3 proves1869 and criterion7174 for solo/roster8, rejects roster9 and25-player7175, and survives idle ticks/redb reopen. Fixture's actor UnitLevel initially lacked character Level; corrected before the retained valid RED/GREEN pair. This is criterion lifecycle proof, not full Malygos combat/render parity. The [inventory](../../achievement-criteria-producer-inventory.md) owns counts and remaining source/data gaps.
 
+## Battleground kill rewards (verified 2026-10-13)
+
+`spell_cast::log_event` forwards a real lethal event's controlling player/victim to `pvp::kill_criteria`. The active copy and accepted roster identify the killer's team; authenticated in-world members still in that copy are credited once. Killer ignores distance. Other recipients use corpse position when dead and source GetDistance: exact3D distance minus each combat reach, within74 yards. Player reach is1.5×native scale (TC Player1574–1577); Corpse inherits reach0 (Object.h302). Primary producer: Battleground1354–1383, including Arena's base call; distance: Player26397–26409/Object430–433.
+
+Native effect/death tests prove untimed **orphan** counter26004 with actual health loss, reach boundaries77/75.5, remote corpse/ghost, other-copy/far/unaccepted recipients, inactive/world/self rejection, replay and reopen. The initial fixture lacked Time/SpellStore; the first chosen11491 also has start/fail conditions and correctly stayed disabled. Corrected untimed RED/GREEN retained;11491 and aura-gated20124 remain uncredited. No current achievement grant or rendered battle is claimed. World honor eligibility/kill rewards, lifetime honor113 and scoreboard honorable-kill availability remain distinct gaps; [inventory](../../achievement-criteria-producer-inventory.md) owns structural counts.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.

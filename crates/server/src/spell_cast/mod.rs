@@ -791,6 +791,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
             crate::achievement::record_delivered_killing_blow(world, killer);
             crate::achievement::record_player_killed_by(world, victim, killer);
             let owner = combat_event_owner(world, killer);
+            crate::pvp::record_battleground_player_kill(world, owner, victim);
             crate::quest::record_player_kill(world, owner, victim);
         }
     }

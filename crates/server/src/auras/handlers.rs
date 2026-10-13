@@ -169,6 +169,8 @@ pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
 pub const ADV_FLYING: u32 = 446;
 /// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
 pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
+/// Flat percentage points, outside combat-rating diminishing returns.
+pub const MOD_VERSATILITY: u32 = 471;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -320,7 +322,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DODGE_PERCENT
         | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT
-        | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
+        | OVERRIDE_SPELL_POWER_BY_AP_PCT
+        | MOD_VERSATILITY => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL

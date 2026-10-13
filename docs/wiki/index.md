@@ -1,5 +1,6 @@
 # Wiki Index
 
+- [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.
 - [Unrated Solo Shuffle](../../../game-engine/docs/wiki/systems/arenas.md#unrated-solo-shuffle--verified-2026-10-13) — six source-role rounds, item cast-time/category reset RED/GREEN, four-map exact origins and both-skin real-kill/return proof; rated/leaver and dampening gaps explicit.
 
 - [Source summon flags and privacy](systems/toys.md#source-summon-flag-import-2026-10-12) —3610 readable source records, atomic legacy import, real owner/observer UDP proof and preserved337 census; group/private flag boundaries explicit.
@@ -8,6 +9,8 @@
 - [Identity PlayerCondition criteria](systems/dungeon-achievements.md#identity-playercondition-criteria-verified-2026-10-13) — native evaluator reused; actual faction-isolated XP-cap Double Agent and reopened account persistence.
 
 - [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
+
+- [Flat versatility](systems/auras.md#flat-versatility-bonuses) — native471 stats, real damage/heal/half-taken/auto controls and pinned rating-curve proof; owner inheritance/rendered limits retained.
 
 - [Category cooldowns](systems/auras.md#category-cooldown-offsets) — native341 signed offsets, real Counterspell/Prayer/pet lockouts and lifecycle proof; whole class coverage remains open.
 
