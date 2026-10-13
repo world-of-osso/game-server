@@ -98,6 +98,7 @@ const POWER_STRIKE_PROC: u32 = 129_914;
 const POWER_STRIKE_ENERGIZE: u32 = 121_283;
 const CRITICAL_CHAOS: u32 = 320_413;
 const KNOW_YOUR_ENEMY: u32 = 388_118;
+const PENETRATING_SHOTS: u32 = 459_783;
 const TIGER_DASH: u32 = 252_216;
 const BLOODSURGE: u32 = 384_361;
 const MONSTER_RISING: u32 = 452_414;
@@ -403,7 +404,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
-    for spell in [CRITICAL_CHAOS, KNOW_YOUR_ENEMY] {
+    for spell in [CRITICAL_CHAOS, KNOW_YOUR_ENEMY, PENETRATING_SHOTS] {
         scripts.0.insert(
             spell,
             AuraScript {
@@ -569,8 +570,8 @@ fn cast_power_strike_proc(world: &mut World, unit: Entity, _aura: &AuraInstance,
     }
 }
 
-/// TC a352b1fa spell_dh.cpp:632-655/1571-1593: effect1 recalculates effect0's
-/// crit-scaled ProcChance (Critical Chaos) or critical-damage (KnowYourEnemy) bonus.
+/// TC a352b1fa spell_dh.cpp:632-655/1571-1593, spell_hunter.cpp:869-891:
+/// effect1 recalculates effect0's crit-scaled proc or critical-damage bonus.
 fn recalculate_crit_scaled_bonus(
     world: &mut World,
     unit: Entity,

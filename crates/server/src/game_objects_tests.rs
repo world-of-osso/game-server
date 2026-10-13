@@ -221,7 +221,7 @@ fn reach_is_the_model_box_grown_by_five_yards() {
 fn bundle_places_the_vault_in_server_space() {
     let Some(spawns) = spawns() else { return };
     let vault = &spawns.0[0];
-    let (position, _, info, _, _) = game_object_bundle(vault);
+    let (position, _, info, _, _, _) = game_object_bundle(vault);
     assert_eq!(wow_position(&position), vault.position);
     assert_eq!(info, vault.info);
 }

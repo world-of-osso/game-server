@@ -15,7 +15,7 @@
 //! `IN_PROGRESS` to `NOT_STARTED` (a wipe; TrinityCore sends nothing) also sends
 //! `EncounterEnd` without success, as Retail's SMSG_ENCOUNTER_END does.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -56,6 +56,8 @@ pub struct InstanceScript {
     pub name: &'static str,
     pub bosses: Vec<BossInfo>,
     pub boss_creatures: Vec<(u32, u32)>,
+    /// `OnlyOnceAreaTriggerScript` success state; discarded when this copy unloads.
+    pub(crate) handled_area_triggers: HashSet<u32>,
 }
 
 impl InstanceScript {
@@ -102,6 +104,7 @@ fn compatibility_catalog(map_id: u32) -> InstanceScript {
         name: "data_encounters",
         bosses: Vec::new(),
         boss_creatures: Vec::new(),
+        handled_area_triggers: HashSet::new(),
     };
     for row in include_str!("encounter_compat.csv")
         .lines()
