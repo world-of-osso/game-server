@@ -17,6 +17,8 @@ mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod attack_speed_tests;
+#[cfg(test)]
 mod base_armor_tests;
 pub(crate) mod blooming_infusion;
 #[cfg(test)]
