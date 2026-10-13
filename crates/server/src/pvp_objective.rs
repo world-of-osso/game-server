@@ -570,6 +570,7 @@ pub(crate) fn use_battleground_object(
     }
     if super::pvp_seething::is_azerite_object(world, object) {
         let result = super::pvp_seething::begin_gathering(world, player, object);
+        debug!(player = ?player, object = ?object, result = ?result, "Azerite use acceptance result");
         super::pvp_invites::send_response(world, connection, player, result);
         return;
     }
