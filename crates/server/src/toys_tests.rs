@@ -3814,6 +3814,16 @@ fn toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime()
 }
 
 fn place_toy_caster_on_source_area(h: &mut Harness, fdid: u32, point: [f32; 2], area: u32) {
+    place_toy_caster_on_source_map_area(h, 0, fdid, point, area);
+}
+
+fn place_toy_caster_on_source_map_area(
+    h: &mut Harness,
+    map: u32,
+    fdid: u32,
+    point: [f32; 2],
+    area: u32,
+) {
     let data = std::fs::read(crate::ground::ground_data_dir().join(format!("terrain/{fdid}.adt")))
         .unwrap();
     let terrain = crate::terrain_height::parse_adt_heights(&data).unwrap();
@@ -3826,7 +3836,9 @@ fn place_toy_caster_on_source_area(h: &mut Harness, fdid: u32, point: [f32; 2], 
     };
     let tile = crate::ground::bevy_to_tile(position.x, position.z);
     h.app
-        .insert_resource(crate::ground::GroundMap::with_terrain_on(0, tile, terrain));
+        .insert_resource(crate::ground::GroundMap::with_terrain_on(
+            map, tile, terrain,
+        ));
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -3837,7 +3849,7 @@ fn place_toy_caster_on_source_area(h: &mut Harness, fdid: u32, point: [f32; 2], 
     h.app
         .world_mut()
         .entity_mut(h.caster)
-        .insert((position, crate::maps::InMap::continent(0)));
+        .insert((position, crate::maps::InMap::continent(map)));
 }
 
 #[test]
@@ -3866,6 +3878,152 @@ fn toyfx21_required_area_refuses_northshire_without_cast_or_item_cooldown() {
             .unwrap()
             .iter()
             .all(|aura| aura.spell_id != 61810)
+    );
+}
+
+#[test]
+fn toyfx21_allowed_area_exit_interrupts_aura_preserves_category_and_rejection_does_not_start_it() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("area-lifecycle.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    learn(&mut h, 2);
+    assert_eq!(
+        activate(&mut h, 188698)[0].error.as_deref(),
+        Some("Requires area group1103")
+    );
+    // Exact content_creature20280725 Cow2442, verified Goldshire MCNK Area87.
+    place_toy_caster_on_source_area(&mut h, 778032, [-9480.94, -38.5858], 87);
+    assert_eq!(activate(&mut h, 188698)[0].error, None);
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 61810)
+    );
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 61810),
+        "remaining in the permitted area keeps the aura"
+    );
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .all(|a| a.spell_id != 61810)
+    );
+    place_toy_caster_on_source_area(&mut h, 778032, [-9480.94, -38.5858], 87);
+    assert_eq!(
+        activate(&mut h, 188698)[0].error.as_deref(),
+        Some("OnCooldown"),
+        "area exit must not clear item category history"
+    );
+    h.advance(201);
+    assert_eq!(
+        activate(&mut h, 188698)[0].error,
+        None,
+        "natural category expiry permits reuse"
+    );
+}
+
+#[test]
+fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_history() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("all-root-areas.redb"));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    let manifest: serde_json::Value =
+        serde_json::from_str(include_str!("spell_cast/toy_required_areas.json")).unwrap();
+    let spells = manifest["spells"].as_object().unwrap();
+    assert_eq!(spells.len(), 69);
+    for (spell, group) in spells {
+        let spell: u32 = spell.parse().unwrap();
+        let toy = h
+            .app
+            .world()
+            .resource::<ToyCatalog>()
+            .0
+            .values()
+            .find(|toy| toy.snapshot.spell_id == Some(spell))
+            .unwrap()
+            .clone();
+        for absent in [false, true] {
+            if absent {
+                h.app.world_mut().entity_mut(h.caster).remove::<Position>();
+            }
+            let failure = crate::spell_cast::cast_toy_spell(
+                h.app.world_mut(),
+                h.caster,
+                &toy,
+                None,
+                1,
+                &UseToy {
+                    item_id: toy.snapshot.item_id,
+                    target_entity: None,
+                    destination: None,
+                    witness: None,
+                },
+            )
+            .unwrap_err();
+            assert_eq!(
+                failure.to_contract(),
+                (
+                    shared::spell_data::CastFailReason::IncorrectArea,
+                    Some(format!("Requires area group{}", group.as_u64().unwrap()))
+                ),
+                "spell{spell}, absent={absent}"
+            );
+            if absent {
+                place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+            }
+        }
+    }
+    h.advance(2);
+    assert!(h.inbox.go.is_empty());
+    assert!(h.inbox.cooldowns.is_empty());
+}
+
+#[test]
+fn toyfx21_pendant_parent_area_starts_real_five_second_cast_then_rechecks_completion() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, _) = setup(&directory.path().join("pendant-completion.redb"));
+    // TDB1210 creature459999/77488, ADT843253 Area6797 whose parent is6719.
+    place_toy_caster_on_source_map_area(&mut h, 1116, 843253, [1433.39, 1081.63], 6797);
+    let caster = h.caster;
+    crate::spell_cast::cast_granted(h.app.world_mut(), caster, 171352, None).unwrap();
+    let cast = h
+        .app
+        .world()
+        .get::<shared::components::CastState>(caster)
+        .unwrap();
+    assert_eq!(cast.duration, 5.0);
+    h.advance(10);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 171352));
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    h.advance(101);
+    assert!(
+        h.inbox
+            .failed
+            .iter()
+            .any(|failure| failure.spell_id == 171352
+                && failure.reason == shared::spell_data::CastFailReason::IncorrectArea)
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 171352));
+    assert!(
+        !h.inbox
+            .cooldowns
+            .iter()
+            .any(|cooldown| cooldown.spell_id == 171352 && !cooldown.is_gcd)
     );
 }
 
