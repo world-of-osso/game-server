@@ -274,6 +274,8 @@ impl Plugin for SpellCastPlugin {
 /// `NotSupported` carries the specific cause in `detail`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CastFailure {
+    /// Source RequiredAreasID does not contain the current area or its ancestors.
+    IncorrectArea(u32),
     UnknownSpell,
     NotKnown,
     CasterDead,
@@ -321,6 +323,10 @@ impl CastFailure {
     pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
         use CastFailReason as R;
         match self {
+            Self::IncorrectArea(group) => (
+                R::IncorrectArea,
+                Some(format!("Requires area group{group}")),
+            ),
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
             Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
             Self::DisenchantNotKnown => (R::NotKnown, None),
@@ -1082,6 +1088,8 @@ pub(crate) fn cast_item_spell(
 
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
 /// the per-item recovery omitted by the older consumable-item path.
+pub(crate) mod toy_area;
+
 pub(crate) fn cast_toy_spell(
     world: &mut World,
     caster: Entity,
@@ -1357,7 +1365,7 @@ fn taught_by_known_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
 fn validate_start(
-    world: &World,
+    world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
@@ -1372,6 +1380,7 @@ fn validate_start(
     }
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
+    toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
@@ -1872,6 +1881,7 @@ pub(crate) fn execute_cast(
         return Err(CastFailure::CasterDead);
     }
     casting_restriction::check_cast(world, caster, spell)?;
+    toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
     blooming_infusion::check_children(world, caster, spell)?;

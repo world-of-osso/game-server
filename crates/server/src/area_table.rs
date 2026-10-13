@@ -29,6 +29,26 @@ struct AreaEntry {
 pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
+    /// TC DB2Manager::IsInArea: the area itself or any ParentAreaID ancestor.
+    pub(crate) fn is_in_area(&self, mut area_id: u32, map_id: u32, required: u32) -> bool {
+        for _ in 0..self.0.len() {
+            let Some(area) = self.0.get(&area_id) else {
+                return false;
+            };
+            if area.map_id != map_id {
+                return false;
+            }
+            if area_id == required {
+                return true;
+            }
+            if area.parent == 0 {
+                return false;
+            }
+            area_id = area.parent;
+        }
+        false
+    }
+
     /// TC TerrainInfo::GetZoneId: one flagged parent, never a recursive ancestry walk.
     pub(crate) fn zone_id(&self, area_id: u32, map_id: u32) -> Option<u32> {
         let area = self.0.get(&area_id)?;
