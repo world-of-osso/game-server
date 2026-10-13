@@ -66,7 +66,7 @@ pub struct DeathPlugin;
 /// Per-App death-transition work counters, so parallel tests don't share them.
 #[cfg(test)]
 #[derive(Resource, Debug, Default, PartialEq)]
-struct DeathTransitionCounters {
+pub(crate) struct DeathTransitionCounters {
     players_visited: usize,
     replication_marks: usize,
 }
