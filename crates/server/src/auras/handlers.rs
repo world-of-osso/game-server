@@ -29,6 +29,8 @@ pub enum AuraKind {
     DamageFromCaster,
     ///Creature victim selection and caster-specific threat generation.
     Taunt,
+    /// The caster's preferred victim while applied (`fixate.rs`).
+    Fixate,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
     /// Casts its trigger spell on a health-percent crossing (`health_pct_trigger.rs`).
@@ -167,6 +169,8 @@ pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
 pub const ADV_FLYING: u32 = 446;
 /// Unit::SpellCriticalDamageBonus / CalculateMeleeDamage, school-mask multiplier.
 pub const MOD_CRIT_DAMAGE_BONUS: u32 = 163;
+/// Flat percentage points, outside combat-rating diminishing returns.
+pub const MOD_VERSATILITY: u32 = 471;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -209,9 +213,15 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 /// TC a352b1fa SpellHistory::StartCooldown: spell-mask-scoped haste regen.
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
+/// SpellHistory::StartCooldown adds signed milliseconds to matching categories.
+pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
+/// Percent faster/slower cooldown recovery, matched by the native class mask.
+pub const MOD_RECOVERY_RATE: u32 = 286;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
+/// SPELL_AURA_MOD_FIXATE (SpellAuraDefines.h, TrinityCore a352b1fa).
+pub const MOD_FIXATE: u32 = 128;
 pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
@@ -227,6 +237,8 @@ pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
+/// Read at landing by `networking::fall_damage_multiplier` (`Player::HandleFall`).
+pub const MODIFY_FALL_DAMAGE_PCT: u32 = 374;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -242,6 +254,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PERIODIC_DUMMY | DUMMY => Script,
         super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
+        MOD_FIXATE => Fixate,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
@@ -263,6 +276,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DAMAGE_PERCENT_DONE
         | MOD_CRIT_DAMAGE_BONUS
         | MOD_THREAT
+        | MODIFY_FALL_DAMAGE_PCT
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT
@@ -310,7 +324,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DODGE_PERCENT
         | MOD_PARRY_PERCENT
         | MOD_BLOCK_PERCENT
-        | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
+        | OVERRIDE_SPELL_POWER_BY_AP_PCT
+        | MOD_VERSATILITY => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL
@@ -333,7 +348,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
-        | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
+        | MOD_COOLDOWN_BY_HASTE_REGEN
+        | MOD_SPELL_CATEGORY_COOLDOWN
+        | MOD_RECOVERY_RATE => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,

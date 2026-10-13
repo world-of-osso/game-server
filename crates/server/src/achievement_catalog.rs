@@ -15,9 +15,9 @@ use super::PlayerAchievementState;
 
 /// Event counters add across an account's characters; absolute facts use the maximum.
 const SUMMED_ACCOUNT_KINDS: &[u32] = &[
-    0, 1, 32, 33, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62, 63, 65,
-    67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157, 158,
-    160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
+    0, 1, 32, 33, 70, 78, 11, 12, 14, 15, 16, 17, 20, 23, 26, 28, 29, 36, 37, 41, 42, 59, 62, 63,
+    65, 67, 68, 69, 73, 66, 74, 76, 77, 80, 82, 84, 107, 108, 109, 110, 114, 130, 151, 152, 157,
+    158, 160, 162, 165, 13, 54, 55, 56, 103, 105, 216, 219, 220, 221, 245, 246, 253,
 ];
 
 // Retail Blizzard_FrameXMLBase/Constants.lua:123: ACHIEVEMENT_FLAGS_ACCOUNT.
@@ -69,6 +69,8 @@ pub(crate) enum CriteriaEvent {
     /// TextEmote ID and the same-map NPC entry resolved from this request's unit GUID.
     DoEmote(u32, Option<u32>),
     DeliveredKillingBlow,
+    /// One native battleground/arena kill reward; world honor eligibility is separate.
+    KillPlayer,
     UseItem(u32),
     EquipItem(u32),
     UseGameObject(u32),
@@ -98,9 +100,9 @@ pub(crate) enum CriteriaEvent {
     WinAnyBattleground,
     /// TC Arena.cpp249: winner's pre-result personal rating, minimum1.
     WinAnyRankedArena(u32),
-    /// Native rated result: map and team size of the completed arena.
-    WinArena(u32, u8),
-    ParticipateInArena(u32, u8),
+    /// Native rated result: map of the completed arena.
+    WinArena(u32),
+    ParticipateInArena(u32),
     CompleteMythicPlus(MythicCompletion),
     CompleteScenario(u32),
     CompleteAnyScenario,
@@ -142,8 +144,8 @@ impl CriteriaEvent {
             Self::KillCreature(_) => 0,
             Self::KillAnyCreature => 78,
             Self::WinAnyRankedArena(_) => 37,
-            Self::WinArena(_, _) => 32,
-            Self::ParticipateInArena(_, _) => 33,
+            Self::WinArena(_) => 32,
+            Self::ParticipateInArena(_) => 33,
             Self::ReachLevel(_) => 5,
             Self::ActivelyReachLevel(_) => 196,
             Self::ReachMaxLevel(_) => 221,
@@ -182,6 +184,7 @@ impl CriteriaEvent {
             Self::HighestHealReceived(_) => 106,
             Self::DoEmote(_, _) => 54,
             Self::DeliveredKillingBlow => 56,
+            Self::KillPlayer => 70,
             Self::UseItem(_) => 41,
             Self::EquipItem(_) => 57,
             Self::UseGameObject(_) => 68,
@@ -244,7 +247,7 @@ impl CriteriaEvent {
         }
         match self {
             Self::ReachLevel(_) => true,
-            Self::WinArena(map, _) | Self::ParticipateInArena(map, _) => criteria.asset == map,
+            Self::WinArena(map) | Self::ParticipateInArena(map) => criteria.asset == map,
             Self::WinAnyRankedArena(rating) => rating > 0 && criteria.asset == 0,
             Self::ActivelyReachLevel(level) => u32::from(level) == criteria.asset,
             Self::BattlePetReachedLevel(level) | Self::ActivelyEarnedPetLevel(level) => {
@@ -288,6 +291,7 @@ impl CriteriaEvent {
             | Self::HighestAuctionSale(_)
             | Self::DieAnywhere
             | Self::KilledByPlayer
+            | Self::KillPlayer
             | Self::CompleteDailyQuest
             | Self::MoneyEarnedFromQuesting(_)
             | Self::RewardedQuestCount(_)
@@ -436,6 +440,8 @@ pub(crate) struct ReferencePlayer {
     pub level: u8,
     /// Full group roster, including offline members;0 means known solo, None unknown.
     pub group_size: Option<usize>,
+    pub arena_team_size: Option<u8>,
+    pub in_ranked_arena: bool,
 }
 
 /// A compiled ModifierTree leaf resolved at catalog load.
@@ -450,11 +456,13 @@ enum CriteriaFact {
     RankedArena,
     /// TC LessThanTappers29 actually compares Group::GetMembersCount, not nearby tappers.
     LessThanGroupMembers(u32),
-    /// PlayerIsInArea17: the area and its descendants (TC DB2Manager::IsInArea).
+    /// Accepted current areas: descendants for17, one flagged parent for Zone41.
     Area(BTreeSet<u32>),
     Race(u8),
     Class(u8),
     Map(u32),
+    /// Authenticated Map.InstanceType members, compared by raw type ID.
+    MapInstanceType(BTreeSet<u32>),
     MinLevel(u8),
     MaxLevel(u8),
 }
@@ -467,13 +475,8 @@ impl CriteriaFact {
             Self::TargetCreature(entry) => {
                 matches!(event, CriteriaEvent::DoEmote(_, Some(target)) if target == *entry)
             }
-            Self::ArenaTeamSize(size) => matches!(event,
-                CriteriaEvent::WinArena(_, actual) | CriteriaEvent::ParticipateInArena(_, actual)
-                if actual == *size),
-            Self::RankedArena => matches!(
-                event,
-                CriteriaEvent::WinArena(..) | CriteriaEvent::ParticipateInArena(..)
-            ),
+            Self::ArenaTeamSize(size) => player.arena_team_size == Some(*size),
+            Self::RankedArena => player.in_ranked_arena,
             Self::Area(members) => player.area.is_some_and(|area| members.contains(&area)),
             Self::Race(race) => player.race == *race,
             Self::Class(class) => player.class == *class,
@@ -481,6 +484,7 @@ impl CriteriaFact {
                 player.group_size.is_some_and(|size| size < *limit as usize)
             }
             Self::Map(map) => player.map == *map,
+            Self::MapInstanceType(maps) => maps.contains(&player.map),
             Self::MinLevel(level) => player.level >= *level,
             Self::MaxLevel(level) => player.level <= *level,
         }
@@ -1197,6 +1201,29 @@ fn collect_area_descendants(root: u32, children: &HashMap<u32, Vec<u32>>) -> BTr
     descendants
 }
 
+fn load_map_instance_type(
+    conn: &Connection,
+    instance_type: u32,
+) -> rusqlite::Result<Option<CriteriaFact>> {
+    let mut query = conn.prepare_cached("SELECT ID FROM map WHERE InstanceType = ?1")?;
+    let members = query
+        .query_map([instance_type], |row| row.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    Ok((!members.is_empty()).then_some(CriteriaFact::MapInstanceType(members)))
+}
+
+/// TC Zone41 uses the current area, or its immediate parent only when flagged subzone.
+fn load_zone_members(conn: &Connection, zone: u32) -> rusqlite::Result<BTreeSet<u32>> {
+    let areas = crate::area_table::load_area_table(conn)?;
+    let mut query = conn.prepare_cached("SELECT ID, ContinentID FROM area_table")?;
+    let rows = query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    let members = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(members
+        .into_iter()
+        .filter_map(|(area, map)| (areas.zone_id(area, map) == Some(zone)).then_some(area))
+        .collect())
+}
+
 /// Every leaf must name data the server has, else the tree can never hold (None).
 fn load_criteria_facts(
     conn: &Connection,
@@ -1233,11 +1260,18 @@ fn load_criteria_facts(
                 .map(CriteriaFact::Class),
             29 => Some(CriteriaFact::LessThanGroupMembers(asset)),
             32 => exists("map")?.then_some(CriteriaFact::Map(asset)),
+            41 => {
+                if !exists("area_table")? {
+                    return Ok(None);
+                }
+                Some(CriteriaFact::Area(load_zone_members(conn, asset)?))
+            }
+            122 => load_map_instance_type(conn, asset)?,
             69 => small
                 .filter(|level| (1..=crate::experience::MAX_LEVEL).contains(level))
                 .map(CriteriaFact::MinLevel),
             71 => Some(CriteriaFact::MaxLevel(small.unwrap_or(u8::MAX))),
-            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/60/69/71"),
+            _ => unreachable!("generated facts use only 2/4/8/17/24/25/26/29/32/41/60/69/71/122"),
         };
         let Some(fact) = fact else {
             return Ok(None);
@@ -1344,7 +1378,7 @@ fn load_criteria(conn: &Connection, catalog: &mut AchievementCatalog) -> rusqlit
                         // Loot types `crate::loot::LootKind` produces; no fishing3.
                         || (kind == 109 && matches!(row.get::<_, i32>(2)?, 1 | 4 | 6 | 9))
                         || (matches!(kind, 160 | 162) && (1..=25).contains(&row.get::<_, i32>(2)?))
-                        || (matches!(kind, 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 78) && row.get::<_, i32>(2)? == 0)
+                        || (matches!(kind, 37 | 9 | 13 | 101 | 102 | 103 | 14 | 17 | 23 | 48 | 55 | 104 | 105 | 106 | 59 | 62 | 63 | 65 | 66 | 67 | 74 | 76 | 77 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 107 | 108 | 114 | 130 | 219 | 220 | 245 | 151 | 156 | 157 | 158 | 186 | 221 | 253 | 47 | 87 | 88 | 56 | 70 | 78) && row.get::<_, i32>(2)? == 0)
                         || (matches!(kind, 7 | 40 | 75 | 112) && row.get::<_, bool>(9)?)
                         || (kind == 96
                             && catalog

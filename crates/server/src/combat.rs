@@ -1075,7 +1075,9 @@ fn try_swing(
             &attacker_scaling,
             target_mods,
             context.summon_modifiers.multiplier(attacker.entity),
-        ),
+        ) * armor
+            .1
+            .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier),
         target_armor(armor, &target, &attacker_scaling),
         &attacker_scaling,
         &target,
@@ -1752,7 +1754,8 @@ fn change_rage(world: &mut World, unit: Entity, raw: f32) {
 }
 
 /// Tick respawn timers and restore dead NPCs when ready; a pooled creature's pool
-/// re-picks instead (`spawn_pools::respawn_pooled`). A patroller
+/// re-picks instead (`spawn_pools::respawn_pooled`) and an inactive spawn group's
+/// member leaves the world. A patroller
 /// restarts its path from the first point (AzerothCore `Creature::Respawn` →
 /// `Motion_Initialize` → a new WaypointMovementGenerator at `i_path->begin()`).
 pub(crate) fn respawn_system(
@@ -1767,12 +1770,14 @@ pub(crate) fn respawn_system(
             Option<&mut WaypointState>,
             Has<crate::spawn_pools::PooledSpawn>,
             Option<&crate::vignettes::CreatureVignette>,
+            Option<(&crate::spawn_groups::GroupedSpawn, &crate::maps::InMap)>,
         ),
         (
             Without<crate::zones::TempSummon>,
             Without<crate::loot::PendingGroupLoot>,
         ),
     >,
+    inactive_groups: Option<Res<crate::spawn_groups::InactiveGroupedSpawns>>,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
@@ -1782,9 +1787,22 @@ pub(crate) fn respawn_system(
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
-    for (entity, mut death, mut health, spawn, mut pos, waypoint, pooled, vignette) in &mut query {
+    for (entity, mut death, mut health, spawn, mut pos, waypoint, pooled, vignette, grouped) in
+        &mut query
+    {
         death.respawn_timer -= dt;
         if death.respawn_timer > 0.0 {
+            continue;
+        }
+        if let Some((&crate::spawn_groups::GroupedSpawn(guid), map)) = grouped
+            && inactive_groups
+                .as_ref()
+                .and_then(|inactive| inactive.0.get(map))
+                .is_some_and(|guids| guids.contains(&guid))
+        {
+            // An inactive spawn group's member does not respawn
+            // (`Map::SetSpawnGroupInactive`).
+            commands.entity(entity).despawn();
             continue;
         }
         if pooled {
@@ -1806,7 +1824,7 @@ pub(crate) fn respawn_system(
         }
         let mut respawned = commands.entity(entity);
         respawned
-            .remove::<(DeathState, Corpse)>()
+            .remove::<(DeathState, Corpse, crate::creature_ai::HomePosition)>()
             .insert(Replicate::to_clients(NetworkTarget::All));
         if let Some(&vignette) = vignette {
             crate::vignettes::show(&mut respawned, vignette);

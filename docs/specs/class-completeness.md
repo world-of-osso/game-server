@@ -119,6 +119,24 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Penetrating Shots459783 calculates effect0 from effect1's native25% of the owner's crit on application and every1s effect1 tick; real ranged critical damage consumes the live bonus. Noncritical damage and healing remain unchanged; unlearning removes the bonus.
 - [x] CritDamageAndHealing spell modifiers precede aura163 for weapon attacks and follow its critical bonus for magic. Existing floating damage/final-rounding behavior is retained; exact Retail intermediate-integer parity is not asserted.
 
+## Category cooldown modifiers
+
+- [x] Aura341 sums signed milliseconds for the spell's native nonzero category and applies after cooldown spellmods/haste to each positive spell/category cooldown, clamping at zero. It does not create cooldowns for zero-duration entries, retime running cooldowns or alter charge recovery.
+- [x] Native Quick Witted382297 reduces Counterspell2139 category88 lockout from25s to20s; real casts remain blocked before recovery and succeed afterward.
+
+## Versatility bonuses
+
+- [x] Aura471 adds native integer percentage points to computed player versatility outside rating diminishing returns. Actual spell damage and healing consume the combined value.
+- [x] Incoming spell and auto-attack damage use half the combined rating/aura versatility percentage, with damage clamped at zero. Spells carrying IgnoreDamageTakenModifiers bypass this new reduction.
+- [ ] Full charm/pet-owner inheritance and native-rendered parity remain unproved; base-probe status is not a whole-ability certificate.
+
+## Cooldown recovery rates
+
+- [x] Aura286 multiplies matching native class-mask cooldown durations by100/(100+amount), with amount floored at−99. Application/removal scales only remaining spell/category time; category timers retain their owning spell for exact mask matching. Existing charge recovery remains separate.
+- [x] Native Trueshot288613 rate60 starts Rapid Fire257044's16s cooldown at10s. Native Deadly Pursuit1259614 rate200 scales Sprint2983's category44 cooldown120s→40s; real active-timer recasts prove application/removal boundaries.
+- [x] Unchanged refreshes do not apply the factor twice; changed native Hot Hand modifiers replace the old factor, expiry restores remaining time, and affected owners receive current spell/category cooldown updates. Other recipients and out-of-mask spells remain unchanged.
+- [ ] Full Trueshot/Deadly Pursuit ability behavior, global ModTimeRate interactions and native-rendered parity remain unproved.
+
 ## Tests asserting this spec
 
 - `crates/server/src/auras/crit_damage_bonus_tests.rs`: actual static/mixed-school damage, magic/weapon spellmod ordering, dynamic crit percentage, auto-attacks and no crit-heal leakage.

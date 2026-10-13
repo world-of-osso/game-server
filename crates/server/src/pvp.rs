@@ -51,6 +51,10 @@ mod arena_rating;
 #[path = "pvp_arena_sight.rs"]
 mod arena_sight;
 
+#[path = "pvp_kill_criteria.rs"]
+mod kill_criteria;
+pub(crate) use kill_criteria::record_battleground_player_kill;
+
 #[path = "pvp_alterac.rs"]
 mod pvp_alterac;
 pub(crate) use pvp_alterac::is_banner as is_alterac_banner;
@@ -163,6 +167,22 @@ impl PlayerPvpState {
     }
 }
 
+/// TC Player::GetBattleground: current accepted arena copy, not queued preference.
+pub(crate) fn player_arena_conditions(world: &World, player: Entity) -> Option<(u8, bool)> {
+    let character = world.get::<crate::persistence::ClientId>(player)?.0;
+    let map = *world.get::<crate::maps::InMap>(player)?;
+    let snapshot = world.get::<PlayerPvpState>(player)?.battleground.as_ref()?;
+    let matched = world
+        .get_resource::<PvpServerState>()?
+        .battleground_matches
+        .get(&snapshot.match_id)?;
+    if matched.map != Some(map) || !matched.accepted.contains(&character) {
+        return None;
+    }
+    let arena = matched.arena.as_ref()?;
+    Some((arena::team_size(arena.mode)?, arena.rated.is_some()))
+}
+
 pub(crate) fn sync_progress_currencies_from_wallet(
     progress: &mut PlayerPvpProgress,
     wallet: &CurrencyWallet,
@@ -193,7 +213,7 @@ struct InvitedBattleground {
     silvershard: Option<pvp_silvershard::CartRuntime>,
     seething: Option<pvp_seething::SeethingRuntime>,
     deephaul: Option<pvp_deephaul::DeephaulRuntime>,
-    alterac: Option<pvp_alterac::AlteracRuntime>,
+    alterac: Option<pvp_alterac::BannerRuntime>,
     scoreboard: Scoreboard,
     /// Last carried position of each team's flag; Eye of the Storm's neutral flag uses [0].
     flag_positions: [Option<Vec3>; 2],
@@ -210,7 +230,7 @@ struct Scoreboard {
 
 impl InvitedBattleground {
     fn displayed_scores(&self) -> (u32, u32) {
-        if self.instance.bg_id == 1 {
+        if self.alterac.is_some() {
             (
                 self.instance.score_a.reinforcements,
                 self.instance.score_b.reinforcements,
@@ -346,6 +366,18 @@ impl Plugin for PvpPlugin {
             arena::receive_queue_requests.before(process_battleground_invitation_responses),
         );
         app.add_systems(FixedUpdate, pvp_objective::update_battleground_objectives);
+        app.add_systems(
+            FixedUpdate,
+            crate::transport::advance_ships
+                .before(crate::game_objects::collision::sync_live_objects)
+                .before(crate::networking::process_player_inputs),
+        );
+        app.add_systems(
+            FixedUpdate,
+            crate::transport::store_passenger_offsets
+                .after(crate::networking::process_player_inputs)
+                .after(crate::networking::apply_terrain_gravity),
+        );
         app.add_systems(
             FixedUpdate,
             arena::update_matches.after(crate::death::process_player_death_transitions),

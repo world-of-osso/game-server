@@ -477,7 +477,7 @@ fn real_object(app: &mut App, entry: u32) -> Entity {
         .iter()
         .find(|spawn| spawn.info.entry == entry)
         .expect("authored quest object must spawn");
-    let (_, rotation, info, bounds, _) = crate::game_objects::game_object_bundle(spawn);
+    let (_, rotation, info, bounds, _, _) = crate::game_objects::game_object_bundle(spawn);
     // Same map and geometry as the authored spawn, translated to the test origin.
     app.world_mut()
         .spawn((

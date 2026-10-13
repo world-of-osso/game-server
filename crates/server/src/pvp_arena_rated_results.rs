@@ -27,7 +27,6 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         .collect();
     let mut changes = Vec::new();
     let mut result_credits = Vec::new();
-    let team_size = super::arena::team_size(mode).expect("validated rated mode");
     for before in &rated.players {
         let mut progress = match online.get(&before.id) {
             Some(entity) => world
@@ -89,13 +88,6 @@ pub(super) fn apply_result(world: &mut World, id: u64) {
         arena.rated.as_mut().expect("rated match").applied = true;
     }
     for (player, before_rating, won) in result_credits {
-        crate::achievement::record_ranked_arena_result(
-            world,
-            player,
-            before_rating,
-            map,
-            team_size,
-            won,
-        );
+        crate::achievement::record_ranked_arena_result(world, player, before_rating, map, won);
     }
 }
