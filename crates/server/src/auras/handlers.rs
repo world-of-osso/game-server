@@ -209,6 +209,8 @@ pub const MOD_ROOT_2: u32 = 455;
 pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 /// TC a352b1fa SpellHistory::StartCooldown: spell-mask-scoped haste regen.
 pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
+/// SpellHistory::StartCooldown adds signed milliseconds to matching categories.
+pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
@@ -333,7 +335,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
         | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
-        | MOD_COOLDOWN_BY_HASTE_REGEN => SpellMod,
+        | MOD_COOLDOWN_BY_HASTE_REGEN
+        | MOD_SPELL_CATEGORY_COOLDOWN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
