@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Single-child Some trees — verified 2026-10-13
+
+TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. General multi-child non-difficulty OR and unknown children stay disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+
 ## Empty All modifier trees — verified 2026-10-13
 
 TC a352b1fa CriteriaHandler1733–1737 returns true after looping over zero children. Compiler accepts only plain empty All4; empty Some8/SingleTrue2, nonplain roots and other unsupported conditions still reject. Native127117–127123 triggered casts produce each authored goggle77533–77539 and account18905, with refused depth and reopened state. Canonical content_item lacks those seven rows: private fixture projects exact existing Retail Item/ItemSparse metadata through `content_policy.ITEM_COLUMNS` without changing costs/effects or canonical data. This is cast/predicate/persistence proof, not the full production engineering flow. [Inventory](../../achievement-criteria-producer-inventory.md).
