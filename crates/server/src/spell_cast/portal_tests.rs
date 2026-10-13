@@ -211,3 +211,81 @@ fn class_completeness_native_portal_party_member_requires_reach_then_transports(
         destinations.0[&(121857, 0)].bevy_position()
     );
 }
+
+/// Every class-membership SPELL_EFFECT_TRANS_DOOR row in DB2 12.1.0.69933 and its TDB
+/// type22 template.
+const CLASS_TRANS_DOORS: [(u32, u32); 29] = [
+    (10059, 176296),
+    (11416, 176497),
+    (11417, 176499),
+    (11418, 176501),
+    (11419, 176498),
+    (11420, 176500),
+    (29893, 303148),
+    (32266, 182351),
+    (32267, 182352),
+    (33691, 183384),
+    (35717, 184594),
+    (49360, 189993),
+    (49361, 189994),
+    (50977, 190942),
+    (53142, 191164),
+    (88345, 206615),
+    (88346, 206616),
+    (120146, 211835),
+    (132620, 216057),
+    (132626, 216058),
+    (176244, 237624),
+    (176246, 237623),
+    (224871, 254237),
+    (281400, 302854),
+    (281402, 302855),
+    (344597, 364440),
+    (395289, 384641),
+    (446534, 441968),
+    (1259194, 584668),
+];
+
+fn transmitted_objects(h: &mut Harness, entry: u32) -> usize {
+    let world = h.app.world_mut();
+    world
+        .query::<&GameObjectInfo>()
+        .iter(world)
+        .filter(|info| info.entry == entry)
+        .count()
+}
+
+fn unsupported_effects(h: &Harness) -> Vec<(u32, u32)> {
+    let mut effects: Vec<_> = h
+        .app
+        .world()
+        .resource::<super::effects::UnhandledEffects>()
+        .0
+        .iter()
+        .copied()
+        .collect();
+    effects.sort_unstable();
+    effects
+}
+
+#[test]
+fn class_completeness_native_class_trans_doors_spawn_their_authored_objects() {
+    for (spell_id, entry) in CLASS_TRANS_DOORS {
+        let mut h = portal_fixture();
+        let spell = world_db().unwrap().store.get(spell_id).unwrap().clone();
+        super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native cast");
+        assert_eq!(transmitted_objects(&mut h, entry), 1, "{spell_id}");
+        assert_eq!(unsupported_effects(&h), Vec::new(), "{spell_id}");
+    }
+}
+
+#[test]
+fn class_completeness_unsupported_trans_door_template_is_a_recorded_effect_gap() {
+    let mut h = portal_fixture();
+    // Fault injection: the native portal pointed at an entry absent from TDB.
+    let mut spell = world_db().unwrap().store.get(10059).unwrap().clone();
+    spell.effects[0].misc_values[0] = i32::MAX;
+    super::execute_cast(h.app.world_mut(), h.caster, &spell, None).expect("native cast");
+    assert_eq!(transmitted_objects(&mut h, 176296), 0);
+    assert_eq!(unsupported_effects(&h), vec![(10059, 50)]);
+}
