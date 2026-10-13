@@ -276,6 +276,12 @@ pub enum AdminRequest {
     TradingPostRefundWindow {
         seconds: u32,
     },
+    /// Private-server test setup: add renown reputation for a sourced major faction.
+    RenownGrant {
+        character_name: String,
+        major_faction: u32,
+        amount: u32,
+    },
 }
 
 /// IPC response from server to CLI.
@@ -517,6 +523,12 @@ pub enum AdminResponse {
     },
     TradingPostRefundWindowSet {
         seconds: u32,
+    },
+    RenownGranted {
+        character_name: String,
+        major_faction: u32,
+        level: u32,
+        standing: u32,
     },
 }
 

@@ -1389,12 +1389,7 @@ pub(super) fn teleport_units(
             .get(&(ctx.spell.id, effect.index))
             .copied();
         if let Some(destination) = destination {
-            crate::maps::teleport_to(
-                world,
-                target,
-                destination,
-                crate::maps::TeleportOptions::default(),
-            );
+            teleport_to_location(world, ctx, target, destination);
         } else {
             error!(
                 "Spell {}: effect {} has no fixed destination",
@@ -1405,12 +1400,7 @@ pub(super) fn teleport_units(
     }
     if effect.implicit_targets.contains(&9) {
         if let Some(bind) = world.get::<super::homebind::HomeBind>(target).copied() {
-            crate::maps::teleport_to(
-                world,
-                target,
-                bind.0,
-                crate::maps::TeleportOptions::default(),
-            );
+            teleport_to_location(world, ctx, target, bind.0);
         } else {
             error!("Spell {}: target has no homebind", ctx.spell.id);
         }
@@ -1446,15 +1436,55 @@ pub(super) fn teleport_units(
         );
         return;
     }
+    relocate_unit(world, target, dest.position, dest.orientation);
+}
+
+/// `EffectTeleportUnits` with a world location: players `TeleportTo`; other units
+/// `NearTeleportTo` on their own map only (TC logs and skips a cross-map unit).
+fn teleport_to_location(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    location: crate::maps::WorldLocation,
+) {
+    if world.get::<shared::components::Player>(target).is_some() {
+        crate::maps::teleport_to(
+            world,
+            target,
+            location,
+            crate::maps::TeleportOptions::default(),
+        );
+        return;
+    }
+    let same_map = world
+        .get::<crate::maps::InMap>(target)
+        .is_some_and(|map| map.map_id == location.map_id);
+    if !same_map {
+        error!(
+            "Spell {}: cannot teleport a non-player unit to map {}",
+            ctx.spell.id, location.map_id
+        );
+        return;
+    }
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(
+        location.position.x,
+        location.position.y,
+        location.position.z,
+    );
+    relocate_unit(world, target, Vec3::new(x, y, z), location.orientation);
+}
+
+/// `Unit::NearTeleportTo` for a creature: Bevy-space position and WoW facing.
+fn relocate_unit(world: &mut World, target: Entity, position: Vec3, orientation: f32) {
     world.entity_mut(target).insert((
         shared::components::Position {
-            x: dest.position.x,
-            y: dest.position.y,
-            z: dest.position.z,
+            x: position.x,
+            y: position.y,
+            z: position.z,
         },
         shared::components::Rotation {
             x: 0.0,
-            y: dest.orientation + std::f32::consts::FRAC_PI_2,
+            y: orientation + std::f32::consts::FRAC_PI_2,
             z: 0.0,
         },
     ));

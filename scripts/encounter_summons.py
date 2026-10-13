@@ -5,6 +5,7 @@ No placements, guessed stats, loot or schedules. Kystia: local TDB255050/models/
 Normal1 and DB2 summon1264098. Golden Serpent: pinned Spit Gold removal summons
 TDB135406 and the Serpentine Seal summons Shadow of Zul137020; each gets its actual
 base0 row, models and template addon; no new difficulty row is fabricated.
+Adarogg: server-side Inferno Charge119297 summons TDB61409 (base0 + Normal1).
 """
 import argparse
 import sqlite3
@@ -16,6 +17,7 @@ import retail_content
 MIRROR = 255050
 ANIMATED_GOLD = 135406
 SHADOW_OF_ZUL = 137020
+DEMONIC_LEAP = 61409
 
 
 def import_mirror_template(connection):
@@ -34,6 +36,13 @@ def import_mirror_template(connection):
     connection.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(MIRROR,))
     # Only the actual authored row is projected: other difficulties remain gaps,
     # never manufactured by copying these numeric values to another difficulty.
+    project_difficulty(connection, MIRROR, 1)
+    return MIRROR
+
+
+def project_difficulty(connection, entry, difficulty):
+    """Project one actual authored TDB difficulty row with its content tuning levels."""
+    connection.create_function('health_expansion',1,retail_content.health_expansion,deterministic=True)
     connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
         (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
          LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
@@ -42,10 +51,9 @@ def import_mirror_template(connection):
             d.ContentTuningID,d.HealthScalingExpansion,d.LevelScalingDeltaMin,d.LevelScalingDeltaMax,
             d.HealthModifier,d.ManaModifier,d.ArmorModifier,d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax
         FROM tdb_creature_template_difficulty d JOIN content_tuning_level l ON l.ID=d.ContentTuningID
-        WHERE d.Entry=? AND d.DifficultyID=1''',(MIRROR,))
-    if connection.execute('SELECT count(*) FROM content_creature_template_difficulty WHERE entry=? AND DifficultyID=1',(MIRROR,)).fetchone()[0] != 1:
-        raise ValueError('Missing authored mirror content tuning')
-    return MIRROR
+        WHERE d.Entry=? AND d.DifficultyID=?''',(entry,difficulty))
+    if connection.execute('SELECT count(*) FROM content_creature_template_difficulty WHERE entry=? AND DifficultyID=?',(entry,difficulty)).fetchone()[0] != 1:
+        raise ValueError(f'Missing authored {entry} difficulty{difficulty} content tuning')
 
 
 def import_base_template(connection, entry, script_name):
@@ -75,9 +83,27 @@ def import_shadow_of_zul_template(connection):
     return import_base_template(connection, SHADOW_OF_ZUL, 'npc_kings_rest_shadow_of_zul')
 
 
+def import_demonic_leap_template(connection):
+    """boss_adarogg's server-side Inferno Charge119297 summons Demonic Leap61409.
+
+    Its identity is the prepared tdb_serverside_spell_effect row, so
+    encounter_serverside_spells.py must have run on this copy first. The copy
+    receives the actual base row/models and the authored Normal difficulty1 row.
+    """
+    try:
+        effect = connection.execute('SELECT Effect,EffectMiscValue1,EffectMiscValue2 FROM tdb_serverside_spell_effect WHERE SpellID=119297 AND EffectIndex=0 AND DifficultyID=0').fetchone()
+    except sqlite3.OperationalError as error:
+        raise ValueError('prepare server-side spells with encounter_serverside_spells.py first') from error
+    if effect != (28,DEMONIC_LEAP,491):
+        raise ValueError('Inferno Charge119297 summon identity changed')
+    import_base_template(connection, DEMONIC_LEAP, '')
+    project_difficulty(connection, DEMONIC_LEAP, 1)
+    return DEMONIC_LEAP
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
@@ -89,6 +115,8 @@ def main():
         with conn:
             if args.encounter == 'golden-serpent':
                 entries = [import_animated_gold_template(conn), import_shadow_of_zul_template(conn)]
+            elif args.encounter == 'adarogg':
+                entries = [import_demonic_leap_template(conn)]
             else:
                 entries = [import_mirror_template(conn)]
     print(f'Imported sourced encounter summon templates/models:{entries}; no placement inserted')

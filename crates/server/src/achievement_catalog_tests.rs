@@ -1,6 +1,78 @@
 use super::*;
 
 #[test]
+fn achievements_criteria_zone_pet_win_uses_one_flagged_parent_not_ancestry() {
+    let catalog = catalog();
+    for (area, qualifies) in [
+        (Some(1519), true),
+        (Some(5148), true),
+        (Some(13862), false),
+        (None, false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                area,
+                map: 0,
+                race: 1,
+                class: 1,
+                level: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::WinPetBattle,
+            None,
+            1,
+            &conditions,
+        );
+        assert_eq!(
+            state.criteria_progress.get(&19845),
+            qualifies.then_some(&1),
+            "area {area:?}"
+        );
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("zone41.db");
+    let source = Connection::open(crate::test_data::world_db_path()).unwrap();
+    source
+        .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
+        .unwrap();
+    let copy = Connection::open(&path).unwrap();
+    // A parent alone does not establish a zone; a flagged child uses only one parent.
+    copy.execute_batch(
+        "UPDATE area_table SET Flags_0 = Flags_0 & ~1073741824 WHERE ID=5148;
+        UPDATE area_table SET ParentAreaID=5148 WHERE ID=5150;",
+    )
+    .unwrap();
+    let catalog = load_achievement_catalog(&copy).unwrap();
+    for area in [5148, 5150] {
+        let mut state = PlayerAchievementState::default();
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                area: Some(area),
+                map: 0,
+                race: 1,
+                class: 1,
+                level: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        catalog.update_at(
+            &mut state,
+            CriteriaEvent::WinPetBattle,
+            None,
+            1,
+            &conditions,
+        );
+        assert!(!state.criteria_progress.contains_key(&19845), "area {area}");
+    }
+}
+
+#[test]
 fn achievements_criteria_area_predicates_use_authored_ancestry_and_negative_leave_test() {
     let catalog = catalog();
     let mut state = PlayerAchievementState::default();
@@ -149,10 +221,10 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 5407);
+    assert_eq!(union.len(), 5415);
     for achievement in [
-        578, 579, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865, 6973,
-        13623, 16729, 17852,
+        578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
+        6030, 6031, 6584, 6621, 6973, 13025, 13026, 13623, 16729, 17852,
     ] {
         assert!(
             union.contains(&achievement),
