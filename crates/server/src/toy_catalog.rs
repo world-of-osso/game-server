@@ -166,6 +166,27 @@ fn classify(
                 reasons.insert(reason);
             }
         }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
+                reasons.insert(reason);
+            }
+            // The wild object's use is the toy's action: its spell must work too.
+            let entry = effect.misc_values[0] as u32;
+            if let Some(object_spell) =
+                crate::game_objects::summoned::spellcaster_spell(world, entry)
+            {
+                classify(
+                    world,
+                    object_spell,
+                    depth + 1,
+                    visiting,
+                    reasons,
+                    supported_auras,
+                );
+            }
+        }
         if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
             if let Some(reason) = crate::spell_cast::summon::unsupported_reason(world, effect) {
                 reasons.insert(reason);
@@ -228,6 +249,9 @@ fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
     }
     if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
         return crate::game_objects::summoned::unsupported_reason(world, effect).is_none();
+    }
+    if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+        return crate::game_objects::summoned::wild_unsupported_reason(world, effect).is_none();
     }
     if effect.effect == crate::spell_cast::summon::EFFECT_SUMMON {
         return crate::spell_cast::summon::unsupported_reason(world, effect).is_none();

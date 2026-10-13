@@ -191,6 +191,7 @@ pub(crate) mod homebind;
 pub(crate) mod teleport;
 pub(crate) mod teleport_positions;
 mod toy_coin;
+mod toy_foam_sword;
 pub(crate) mod toy_scripts;
 mod toy_weather;
 mod toy_wormhole;
@@ -1993,6 +1994,13 @@ fn plan_targets(
         }
         if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
             if let Some(reason) = crate::game_objects::summoned::unsupported_reason(world, effect) {
+                return Err(CastFailure::Unsupported(reason));
+            }
+        }
+        if effect.effect == crate::game_objects::summoned::EFFECT_SUMMON_OBJECT_WILD {
+            if let Some(reason) =
+                crate::game_objects::summoned::wild_unsupported_reason(world, effect)
+            {
                 return Err(CastFailure::Unsupported(reason));
             }
         }
