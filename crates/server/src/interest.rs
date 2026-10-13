@@ -169,7 +169,7 @@ impl InterestObserver {
 }
 
 #[derive(Resource, Default)]
-struct InterestIndex {
+pub(crate) struct InterestIndex {
     buckets: HashMap<InterestBucket, EntityHashSet>,
     target_buckets: EntityHashMap<InterestBucket>,
     target_positions: EntityHashMap<(Position, Option<InMap>)>,
@@ -348,7 +348,7 @@ impl InterestIndex {
         self.dirty_targets.insert(entity);
     }
 
-    fn nearby_targets(&self, map: Option<InMap>, position: &Position) -> EntityHashSet {
+    pub(crate) fn nearby_targets(&self, map: Option<InMap>, position: &Position) -> EntityHashSet {
         let mut candidates = EntityHashSet::default();
         let Some(map) = map else {
             return candidates;
@@ -509,11 +509,20 @@ fn on_player_link_added(
 
 fn on_player_link_removed(
     trigger: On<Remove, PlayerLink>,
+    clients: Query<&ClientVisibility>,
     mut visibility: Query<&mut NetworkVisibility>,
     mut index: ResMut<InterestIndex>,
+    mut commands: Commands,
 ) {
-    for mut state in &mut visibility {
-        state.lose_visibility(trigger.entity);
+    if let Ok(client) = clients.get(trigger.entity)
+        && let Some(shown) = client.explicitly_visible()
+    {
+        for entity in shown {
+            if let Ok(mut state) = visibility.get_mut(entity) {
+                state.lose_visibility(trigger.entity);
+            }
+            commands.lose_visibility(entity, trigger.entity);
+        }
     }
     index.remove_observer(trigger.entity);
 }

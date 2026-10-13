@@ -272,13 +272,15 @@ fn on_new_link(
     links: LinkStatusQuery,
     replicated: Query<(Entity, Has<Player>, Has<Npc>), With<Replicate>>,
 ) {
-    let replicated_count = replicated.iter().count();
-    let replicated_players = replicated
-        .iter()
-        .filter(|(_, has_player, _)| *has_player)
-        .count();
-    let replicated_npcs = replicated.iter().filter(|(_, _, has_npc)| *has_npc).count();
-    if let Ok((connected, client_of, sender)) = links.query.get(trigger.entity) {
+    if bevy::log::tracing::enabled!(bevy::log::tracing::Level::DEBUG)
+        && let Ok((connected, client_of, sender)) = links.query.get(trigger.entity)
+    {
+        let replicated_count = replicated.iter().count();
+        let replicated_players = replicated
+            .iter()
+            .filter(|(_, has_player, _)| *has_player)
+            .count();
+        let replicated_npcs = replicated.iter().filter(|(_, _, has_npc)| *has_npc).count();
         debug!(
             entity = ?trigger.entity,
             connected,
@@ -334,6 +336,9 @@ fn on_client_connected(
 }
 
 fn log_replication_state(replicated: &ReplicatedQuery, client_id: u64, flags: &[bool; 6]) {
+    if !bevy::log::tracing::enabled!(bevy::log::tracing::Level::DEBUG) {
+        return;
+    }
     let replicated_count = replicated.query.iter().count();
     let replicated_players = replicated.query.iter().filter(|(_, p, _, _, _)| *p).count();
     let replicated_npcs = replicated.query.iter().filter(|(_, _, n, _, _)| *n).count();
@@ -468,6 +473,7 @@ fn on_player_link_inserted(
     link_query: Query<&PlayerLink>,
     positions: Query<(&Position, Option<&InMap>)>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    index: Option<Res<crate::interest::InterestIndex>>,
     mut vis_query: Query<(Entity, &Position, Option<&InMap>, &mut NetworkVisibility)>,
     mut commands: Commands,
 ) {
@@ -479,8 +485,14 @@ fn on_player_link_inserted(
         return;
     };
 
+    let Some(index) = index else { return };
+    let mut candidates = index.nearby_targets(player_map.copied(), player_position);
+    candidates.insert(link.0);
     let mut nearby_count = 0u32;
-    for (entity, position, map, mut visibility) in &mut vis_query {
+    for entity in candidates {
+        let Ok((entity, position, map, mut visibility)) = vis_query.get_mut(entity) else {
+            continue;
+        };
         let dx = position.x - player_position.x;
         let dy = position.y - player_position.y;
         let dz = position.z - player_position.z;
@@ -493,12 +505,9 @@ fn on_player_link_inserted(
             visibility.gain_visibility(connection);
             commands.gain_visibility(entity, connection);
             nearby_count += u32::from(!is_self);
-        } else {
-            visibility.lose_visibility(connection);
-            commands.lose_visibility(entity, connection);
-        }
-        if let Some(replication_dirty) = replication_dirty.as_deref() {
-            replication_dirty.mark_for_sender(entity, connection);
+            if let Some(replication_dirty) = replication_dirty.as_deref() {
+                replication_dirty.mark_for_sender(entity, connection);
+            }
         }
     }
 

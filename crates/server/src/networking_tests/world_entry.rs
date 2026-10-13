@@ -243,6 +243,25 @@ fn run_world_entry_case(hidden_population: usize) {
         vec![1002],
         "moving must replace the client's visible NPC set"
     );
+    server
+        .world_mut()
+        .entity_mut(connection)
+        .remove::<PlayerLink>();
+    advance_network(&mut server, &mut client, 100);
+    assert!(
+        received_npcs(&mut client).is_empty(),
+        "returning to character selection hides previous grants"
+    );
+    server
+        .world_mut()
+        .entity_mut(connection)
+        .insert(PlayerLink(player));
+    advance_network(&mut server, &mut client, 100);
+    assert_eq!(
+        received_npcs(&mut client),
+        vec![1002],
+        "re-entry restores only the current interest region"
+    );
     if hidden_population != 0 {
         let max = server.world().resource::<ServerFrameWork>().0;
         println!("{hidden_population} hidden NPCs: maximum auth/entry frame {max:?}");

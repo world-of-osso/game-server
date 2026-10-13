@@ -40,7 +40,8 @@ impl ClientVisibility {
         self.default_hidden = Some(bit);
     }
 
-    pub(crate) fn explicitly_visible(&self) -> Option<impl Iterator<Item = Entity> + '_> {
+    /// Explicit entity-scope grants when this client uses default-hidden visibility.
+    pub fn explicitly_visible(&self) -> Option<impl Iterator<Item = Entity> + '_> {
         self.default_hidden.map(|_| self.shown.iter().copied())
     }
 
