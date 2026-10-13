@@ -250,9 +250,9 @@ impl Gordoth {
 impl CreatureAi for Gordoth {
     fn initialize_ai(&mut self, ctx: &mut Ctx) {
         let map = ctx.map().expect("Gordoth instance map");
-        let state = instance_script::get_boss_state(ctx.world, map, GORDOTH_BOSS_ID)
-            .expect("Gordoth source boss state");
-        if state != instance_script::EncounterState::NotStarted {
+        // A copy without the imported 1446 binding has no boss state: nothing started.
+        let state = instance_script::get_boss_state(ctx.world, map, GORDOTH_BOSS_ID);
+        if state.is_some_and(|state| state != instance_script::EncounterState::NotStarted) {
             let position = GORDOTH_JUMP_POSITION;
             ctx.world.entity_mut(ctx.me).insert((
                 shared::components::Position {
