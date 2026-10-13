@@ -2704,6 +2704,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     });
     let cooldown_ms = recovery_ms.max(if category != 0 { category_ms } else { 0 });
     if cooldown_ms > 0 {
+        if spell.id == 223143 {
+            info!(
+                "TOY26_CD_SEND caster={caster:?} spell={} duration={cooldown_ms}",
+                spell.id
+            );
+        }
         send_to_owner(
             world,
             caster,
