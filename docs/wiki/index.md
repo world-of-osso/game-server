@@ -1,5 +1,7 @@
 # Wiki Index
 
+- [Target-creature criterion alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) — complete one-of NPC selectors, per-request native negatives and Wave40624 grant; NPC content closure remains separate.
+
 - [Dungeon spawn-leash exemption](../specs/creature-aggro.md) — TC dungeon policy, unchanged open-world40yd test, and [superseded Stockade evidence](systems/navigation.md#stationary-arch-and-leash-acceptance); Slagmaw's authored East teleport stays engaged.
 
 - [Prepared follower Group Finder catalog](investigations/follower-data.md#native-group-finder-catalog--2026-10-13) — authenticated source-backed sorted entries and explicit empty reply; native UI/full-dungeon proof remains separate.

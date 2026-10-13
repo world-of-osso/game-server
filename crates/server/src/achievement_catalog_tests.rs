@@ -221,10 +221,11 @@ fn achievements2_pinned_snapshot_trackable_union_matches_census() {
                 .map(|row| row.achievement_id)
         })
         .collect();
-    assert_eq!(union.len(), 5417);
+    assert_eq!(union.len(), 5424);
     for achievement in [
         578, 579, 603, 604, 624, 699, 1206, 1723, 1869, 1870, 1877, 2180, 2181, 2557, 5548, 5865,
-        6030, 6031, 6584, 6621, 6973, 13025, 13026, 13623, 16729, 17852, 18905, 40475,
+        6030, 6031, 6350, 6584, 6621, 6973, 13025, 13026, 13623, 14728, 14729, 14730, 14731, 16729,
+        17852, 18361, 18905, 40475, 40624,
     ] {
         assert!(
             union.contains(&achievement),

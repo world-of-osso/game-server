@@ -2,9 +2,13 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Target-creature alternatives — verified 2026-10-13
+
+Pinned TC1738–1750 Some8 with Amount0/1 requires one successful child; TargetCreatureId4 reads the request's native unit (1782–1785). Compiler preserves every plain SingleTrue target-entry alternative for DoEmote54 as exact set membership, not AND and not an unconditional event. Native63288/64798 Love requests each credit20817 independently; wrong/foreign/player/absent targets and Wave reject. Six authored Wave selectors grant account40624; idle/reopened counters are covered. Higher amounts, mixed/nested/unknown children and other producer types remain disabled. IDs are sourced selectors, not certification of authored NPC spawns/models. [Inventory](../../achievement-criteria-producer-inventory.md).
+
 ## Single-child Some trees — verified 2026-10-13
 
-TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. General multi-child non-difficulty OR and unknown children stay disabled. [Inventory](../../achievement-criteria-producer-inventory.md).
+TC1738–1750 Some8 requires max(Amount,1) successful children. With Amount0/1 and exactly one child, compiler uses the existing All-child evaluator without new runtime fields/groups. Wrong target, map, player and absent target remain negatives; native channel requests prove68751/3236 and controlled18-unit account40475. Pinned criteria authenticate target IDs, not currently missing NPC spawn/model data. Other multi-child non-difficulty OR and unknown children stay disabled; the bounded target-creature exception is described above. [Inventory](../../achievement-criteria-producer-inventory.md).
 
 ## Empty All modifier trees — verified 2026-10-13
 

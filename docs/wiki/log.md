@@ -1,3 +1,7 @@
+## 2026-10-13 — Target-creature Some alternatives
+
+[Complete target alternatives](systems/dungeon-achievements.md#target-creature-alternatives--verified-2026-10-13) preserve one-of native request matching. Source-backed Love alternatives and six Wave selectors add seven structural account definitions; unknown qualifiers and NPC content closure remain explicit.
+
 ## 2026-10-13 — Single-child Some criterion semantics
 
 [Some1-of-1](systems/dungeon-achievements.md#single-child-some-trees--verified-2026-10-13) preserves the supported child check. Native per-request target negatives and slime/wave credit add structural40475/1065; NPC spawn/model closure remains unclaimed.
