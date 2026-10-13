@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Cast-event visual kits (2026-10-12)
+
+Read-only canonical census352→355/1166 (+122119/127668/166877, zero removed; `castkit-canonical-after.json`). The existing dummy-visual audit (`data/diagnostics/toy-effects14-2026-10-11/dummy-visual-audit.json`) found 54 of 77 effect3/77 shape candidates with complete ordinary model chains. Every other remaining candidate's description promises behaviour (teleport, discovery, throw-and-return, disguise, transform, cost) or is TDB-script-bound, so only three were admitted:
+
+- Everlasting Darkmoon Firework 103740 (caster target, model 1627561).
+- Azerite Firework Launcher 290627 (TARGET_DEST_CASTER_GROUND 62, model 1983536).
+- Jewel of Hellfire 187150 (models 192714/896706).
+
+Each is a single zero-payload dummy with no duration, no aura, no TDB1210 binding and only cast-event kits (StartEvent 3). Twelve-String Guitar 232592 is excluded: its kit starts on aura start (event 7) but the spell creates no aura.
+
+Server RED refused effect3. GREEN adds the three to `VISUAL_ONLY_SPELLS`: real learn/UseToy sends SpellGo without aura, model, health or position change. Drift refusals cover a lost visual binding and a nonzero payload. Native private5911, both skins: the authored kit model is active on the caster with no aura (Darkmoon 1627561, Jewel 192714). PNGs in `toys/castkit18/`; the Forever firework frame shows the launch trail but the camera is partly blocked by a lamp post. Azerite has server proof only, no native proof.
+
 ## Foam Sword Rack: wild objects (2026-10-12)
 
 Read-only census348→349/1166 (+45063, zero removed; `foam-canonical-after.json`). Sources:
