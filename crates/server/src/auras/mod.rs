@@ -16,6 +16,7 @@
 
 pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
+mod charred_warblades;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
 mod fear;
