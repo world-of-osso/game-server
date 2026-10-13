@@ -12,6 +12,8 @@ use crate::spell_info::SpellStore;
 use crate::stats::CharacterStats;
 
 const KNOW_YOUR_ENEMY: u32 = 388_118;
+const PENETRATING_SHOTS: u32 = 459_783;
+const AIMED_SHOT: u32 = 19_434;
 const PRECISE_KILLER: u32 = 1_272_989;
 const INNER_DEMONS: u32 = 202_388;
 const CJ_BALL: u32 = 314_633;
@@ -53,7 +55,7 @@ fn apply_native(h: &mut Harness, spell_id: u32) {
             caster: unit,
             target: unit,
             spell_id,
-            effect_mask: if spell_id == KNOW_YOUR_ENEMY {
+            effect_mask: if matches!(spell_id, KNOW_YOUR_ENEMY | PENETRATING_SHOTS) {
                 u32::MAX
             } else {
                 1
@@ -74,6 +76,91 @@ fn cast_damage(h: &mut Harness, spell_id: u32) -> &CombatLogEvent {
         .rev()
         .find(|event| event.spell_id == Some(spell_id) && event.kind == CombatLogKind::Damage)
         .unwrap()
+}
+
+fn cast_aimed_shot(h: &mut Harness) -> &CombatLogEvent {
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.npc)
+        .unwrap()
+        .x = 10.0;
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 20_000.0,
+        max: 20_000.0,
+    };
+    h.cast_and_deliver(AIMED_SHOT, Some(h.npc));
+    h.advance(100);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.inbox
+        .log
+        .iter()
+        .rev()
+        .find(|event| event.spell_id == Some(AIMED_SHOT) && event.kind == CombatLogKind::Damage)
+        .expect("native Aimed Shot must land after cast and missile travel")
+}
+
+#[test]
+fn class_completeness_native_penetrating_shots_increases_actual_ranged_critical_damage() {
+    let mut h = harness(Vec::new(), &[PENETRATING_SHOTS, AIMED_SHOT], 3).unwrap();
+    set_crit(&mut h, 100.0);
+    apply_native(&mut h, PENETRATING_SHOTS);
+    let damage = cast_aimed_shot(&mut h);
+    assert!(damage.crit);
+    // Native AP9.72 ×100AP ×2crit ×1.25, with authored variance±2.5%.
+    // Unmodified crits1944±2.5% cannot enter this interval.
+    assert!((2369..=2491).contains(&damage.amount), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_penetrating_shots_refreshes_live_crit_and_unlearning_removes_bonus() {
+    let mut h = harness(Vec::new(), &[PENETRATING_SHOTS, AIMED_SHOT], 3).unwrap();
+    set_crit(&mut h, 100.0);
+    apply_native(&mut h, PENETRATING_SHOTS);
+    assert!((2369..=2491).contains(&cast_aimed_shot(&mut h).amount));
+    // Guaranteed crit remains; native1s periodic update must change25% to50%.
+    // Above100% is a deterministic test endpoint, not a player-build claim.
+    set_crit(&mut h, 200.0);
+    h.advance(800);
+    let refreshed = cast_aimed_shot(&mut h);
+    assert!(refreshed.crit);
+    assert!((2843..=2989).contains(&refreshed.amount), "{refreshed:?}");
+    let unit = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(KnownSpells::fixture(vec![AIMED_SHOT]));
+    h.advance(800);
+    let unlearned = cast_aimed_shot(&mut h);
+    assert!(unlearned.crit);
+    assert!((1895..=1993).contains(&unlearned.amount), "{unlearned:?}");
+}
+
+#[test]
+fn class_completeness_native_penetrating_shots_zero_crit_does_not_change_normal_ranged_damage() {
+    let mut h = harness(Vec::new(), &[PENETRATING_SHOTS, AIMED_SHOT], 3).unwrap();
+    set_crit(&mut h, 0.0);
+    apply_native(&mut h, PENETRATING_SHOTS);
+    let damage = cast_aimed_shot(&mut h);
+    assert!(!damage.crit);
+    assert!((948..=997).contains(&damage.amount), "{damage:?}");
+}
+
+#[test]
+fn class_completeness_native_penetrating_shots_does_not_increase_critical_healing() {
+    let mut h = harness(Vec::new(), &[PENETRATING_SHOTS, FLASH_HEAL], 3).unwrap();
+    set_crit(&mut h, 100.0);
+    apply_native(&mut h, PENETRATING_SHOTS);
+    let unit = h.caster;
+    *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+        current: 1.0,
+        max: 10_000.0,
+    };
+    // Cross-class native heal tests only shared damage/healing isolation.
+    h.cast_and_deliver(FLASH_HEAL, Some(unit));
+    h.advance(40);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let gained = h.health(unit) - 1.0;
+    assert!((1329.0..=1399.0).contains(&gained), "healed {gained}");
 }
 
 #[test]
