@@ -213,7 +213,7 @@ fn pet(h: &mut Harness) -> Entity {
         .world_mut()
         .entity_mut(owner)
         .insert(crate::hunter_pet::PetStable {
-            character_id: 1,
+            character_id: Some(1),
             stored: default(),
             summoned: Some(pet),
         });
