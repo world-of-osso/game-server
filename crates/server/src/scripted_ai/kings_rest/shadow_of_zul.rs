@@ -1,5 +1,6 @@
 //! TC a352b1fa kings_rest.cpp `npc_kings_rest_shadow_of_zul` (137020).
-//! The liquid pool's `SetGoState(GO_STATE_ACTIVE)` has no modelled GO state.
+//! Pool GO state/collision follows the source; native pool animation is unproved.
+use bevy::prelude::*;
 use shared::components::ModelDisplay;
 
 use crate::scripted_ai::{CreatureAi, Ctx, EventMap};
@@ -12,6 +13,7 @@ const ZUL_TRASH_EVENT_STATE: u32 = 269905;
 const ZUL_DESPAWN_COSMETIC_TRASH: u32 = 270692;
 const ZUL_SUMMON_VISUAL_CHANNEL: u32 = 269623;
 const INVISIBLE_DISPLAY: u32 = 11686;
+const LIQUID_POOL: u32 = 289347;
 const TASK_EVENT_START: u32 = 1;
 const TASK_SPAWN_TEMPLE: u32 = 2;
 const TASK_DROP_SHADOWFORM: u32 = 3;
@@ -29,6 +31,30 @@ impl ShadowOfZul {
         self.tasks.schedule(TASK_SPAWN_TEMPLE, 10_000);
         self.tasks.schedule(TASK_DROP_SHADOWFORM, 15_000);
         self.tasks.schedule(TASK_VANISH, 16_000);
+    }
+
+    /// InstanceScript's DATA_KINGS_REST_LIQUID_POOL lookup, scoped to this copy.
+    fn activate_liquid_pool(ctx: &mut Ctx) {
+        let Some(map) = ctx.map() else {
+            return;
+        };
+        let pool = ctx
+            .world
+            .query::<(
+                Entity,
+                &crate::maps::InMap,
+                &shared::protocol::GameObjectInfo,
+            )>()
+            .iter(ctx.world)
+            .find(|(_, copy, info)| **copy == map && info.entry == LIQUID_POOL)
+            .map(|(entity, _, _)| entity);
+        if let Some(pool) = pool {
+            crate::game_objects::set_go_state(
+                ctx.world,
+                pool,
+                crate::game_objects::GO_STATE_ACTIVE,
+            );
+        }
     }
 
     fn spawn_temple(ctx: &mut Ctx) {
@@ -71,6 +97,7 @@ impl CreatureAi for ShadowOfZul {
                     ctx.talk(SAY_ZUL_PRE_BOSS_EVENT_SPAWN);
                     ctx.do_cast_at(None, ZUL_TRASH_EVENT_STATE, false);
                     ctx.do_cast_at(None, ZUL_DESPAWN_COSMETIC_TRASH, false);
+                    Self::activate_liquid_pool(ctx);
                 }
                 TASK_SPAWN_TEMPLE => Self::spawn_temple(ctx),
                 TASK_DROP_SHADOWFORM => {
