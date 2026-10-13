@@ -2,6 +2,10 @@
 
 Server loads pinned local Retail DB2 criteria, tracks copy-specific defeated encounters, sends achievement snapshots/toasts and dungeon objectives, and serves bounded achievement catalog pages on request. [Contract](../../specs/dungeon-achievements.md).
 
+## Exact zero map
+
+TC a352b1fa CriteriaHandler1922–1925 compares the reference player's actual map ID, so0 is valid when Map contains0. Saved source root592 is plain All4 with one SingleTrue32/asset0 leaf593; native loader already validates map existence and rejects absent reference-map authority. Compiler admits the zero leaf without changing runtime defaults. Native Unit::Kill11449–11453 killing-blow56 is independent of honor35/113: orphan5512 fixture exercises known0 versus1/missing map and reopen. No current-root gain or orphan relinking. [Contract](../../specs/dungeon-achievements.md).
+
 ## Player-aura alternatives
 
 Plain Some8 Amount0/1 over complete SingleTrue PlayerHasAura8 leaves compiles to `CompiledConditions::PlayerAuras`. Existing spell validation rejects a missing alternative; `CriteriaFact::PlayerAuras` tests nonempty intersection with the reference player's current `ActiveAuras` snapshot. TC a352b1fa CriteriaHandler1738–1750/1798–1801. Native fixture casts sourced Jaguar136775/136777/136778 buffs, then Mighty Loa136749; target-hit credit28 is evaluated before effect dispatch (spell_cast/mod.rs2164–2166), not from stored historical aura possession. Cancellation/refusal/idle/reopen boundaries are exercised without synthetic credit. Boss/form acquisition and full8111 remain unclaimed. [Contract](../../specs/dungeon-achievements.md).
