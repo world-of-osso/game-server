@@ -6,7 +6,7 @@ Finish one Retail Mainline match: queue → invite/accept → isolated map entry
 
 ## Current PvP faction
 
-`CurrentPvpFaction` follows TC a352b1fa `ConditionMgr::IsPlayerMeetingCondition`: 0 unknown/neutral,1 Horde,2 Alliance. Login initializes racial identity from authored `ChrRaces`/`FactionTemplate` classification. Invitations and failed entry do not change it. Successful BG **and arena** entry select the assigned team; successful origin return restores racial identity. Reaction templates remain distinct, including arenas without mercenary reaction changes. Channel tests cover actual Human-on-Horde BG/arena entry and return, transport-entry refusal and modern-race login; client wire proof covers scalar-only updates.
+`CurrentPvpFaction` follows TC a352b1fa `ConditionMgr::IsPlayerMeetingCondition`: 0 unknown,1 Horde/non-Alliance,2 Alliance. Known neutral Pandaren follows TC's outside-match non-Alliance condition branch, without changing neutral reactions. Login initializes racial identity from authored `ChrRaces`/`FactionTemplate` classification. Invitations and failed entry do not change it. Successful BG **and arena** entry select the assigned team; successful origin return restores racial identity. Reaction templates remain distinct, including arenas without mercenary reaction changes. Channel tests cover actual Human-on-Horde BG/arena entry and return, transport-entry refusal and modern-race login; client wire proof covers scalar-only updates.
 
 ## Kotmogu continuation — active 2026-10-12
 

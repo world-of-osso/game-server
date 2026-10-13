@@ -63,6 +63,21 @@ fn toyfx20_racial_factions_include_modern_chr_races() {
 }
 
 #[test]
+fn toyfx20_neutral_pandaren_pvp_condition_follows_tc_non_alliance_branch() {
+    // TC ConditionMgr: outside matches, GetTeamId()==TEAM_ALLIANCE ? 1 : 0,
+    // then compare CurrentPvpFaction-1. This does not change neutral reactions.
+    assert_eq!(
+        current_pvp_faction_for_race(24),
+        shared::components::CurrentPvpFaction(1)
+    );
+    assert_eq!(faction_for_race(24), 0);
+    assert_eq!(
+        current_pvp_faction_for_race(0),
+        shared::components::CurrentPvpFaction(0)
+    );
+}
+
+#[test]
 fn maps_unknown_race_to_neutral_faction() {
     assert_eq!(faction_for_race(0), 0);
 }
