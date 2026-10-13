@@ -67,11 +67,14 @@ fn class_completeness_native_charge_rate_retimes_running_aimed_shot_and_notifies
     let mut h = fixture();
     cast_aimed_shot(&mut h);
     let before = h.inbox.charges.last().unwrap().clone();
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let remaining_ms =
+        ((history.charges[&1715].next_ready_at - super::now(h.app.world())) * 1000.0) as u32;
     h.inbox.charges.clear();
     apply_charge_rate(&mut h);
     h.advance(3);
     let after = h.inbox.charges.last().expect("owner charge update");
-    let expected = (before.remaining_ms as f64 / 1.4).floor() as u32;
+    let expected = (remaining_ms as f64 / 1.4).floor() as u32;
     assert!(
         after.remaining_ms.abs_diff(expected) <= 200,
         "{before:?} -> {after:?}"

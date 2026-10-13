@@ -371,3 +371,9 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
 - [[class-progression]] — `KnownSpells` passives
 - [[combat]] — melee swing events
 - [[character-stats]] — `StatModifiers` fold-in
+
+## Category charge-recovery rates
+
+Aura148 uses its native MiscValue charge category and rate100/(100+max(amount,−99)). `auras::charge_mods` multiplies category effects alongside native453/454/457; `SpellHistory::charges_mut` floors native recovery milliseconds and preserves remaining-progress fractions. Existing `sync_charge_recovery` publishes changed clocks/maxima, including refresh/removal/expiry, without an additional cast. No new polling or alternate recovery path.
+
+Pinned TC a352b1fa SpellHistory.cpp880–914 and1003–1005, SpellAuraEffects.cpp6285–6293 establish current/running semantics. Native Trueshot288613 effect1 uses40/category1715 for Aimed Shot19434. [Contract](../../specs/class-completeness.md#category-charge-recovery-rates). Type-mask/global-time/charm and complete ability/rendered proof remain open.
