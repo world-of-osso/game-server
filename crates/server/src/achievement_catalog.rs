@@ -581,6 +581,7 @@ pub(crate) struct AchievementCatalog {
     pet_creatures: BTreeSet<u32>,
     pet_species: BTreeSet<u32>,
     spell_skill_lines: HashMap<u32, BTreeSet<u32>>,
+    grant_prerequisites: HashMap<u32, (Vec<u32>, bool)>,
 }
 
 #[derive(Debug, Default)]
@@ -748,6 +749,15 @@ impl AchievementCatalog {
                 }
                 if let Some(map) = definition.map_id
                     && completed_map != Some(map)
+                {
+                    return false;
+                }
+                let (criteria, completes_empty) = &self.grant_prerequisites[&definition.id];
+                if !completes_empty
+                    && !criteria.iter().any(|id| {
+                        self.criterion_counter(*id, state)
+                            .is_some_and(|value| value != 0)
+                    })
                 {
                     return false;
                 }
@@ -1207,6 +1217,20 @@ pub(crate) fn load_achievement_catalog(conn: &Connection) -> rusqlite::Result<Ac
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<rusqlite::Result<_>>()?;
     catalog.window = window::load_window_data(conn)?;
+    let empty = PlayerAchievementState::default();
+    catalog.grant_prerequisites = catalog
+        .definitions
+        .values()
+        .map(|definition| {
+            let criteria = catalog
+                .criterion_tree_ids(definition.root)
+                .into_iter()
+                .map(|tree| catalog.trees[&tree].criteria_id)
+                .collect();
+            let completes_empty = catalog.tree_progress(definition.root, &empty).completed;
+            (definition.id, (criteria, completes_empty))
+        })
+        .collect();
     for (&id, criteria) in &catalog.criteria {
         if criteria.supported {
             catalog
