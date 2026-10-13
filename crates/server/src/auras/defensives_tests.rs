@@ -647,3 +647,47 @@ fn defensives_blur_uses_catalog_dodge_amount_and_expires() {
     );
     assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);
 }
+
+/// Every native SPELL_EFFECT_PARRY 22 class row: knowing it lets parry chance apply.
+const NATIVE_PARRY_SPELLS: [u32; 6] = [3127, 82242, 82245, 82246, 116812, 203724];
+const DIE_BY_THE_SWORD: u32 = 118038;
+
+fn parried_under_die_by_the_sword(parry_spell: Option<u32>) -> bool {
+    let mut spells = vec![DIE_BY_THE_SWORD, FIREBALL];
+    spells.extend(parry_spell);
+    let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &spells, 1, true)
+        .expect("catalog and computed stats");
+    let path = crate::test_data::world_db_path();
+    h.app
+        .world_mut()
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .world_mut()
+        .insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems {
+            items: vec![(
+                shared::protocol::EquipmentSlot::MainHand,
+                shared::item_data::ItemDefinitionSource::Retail,
+                25,
+            )],
+        });
+    h.advance(3);
+    h.cast_and_deliver(DIE_BY_THE_SWORD, Some(h.caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    incoming_melee(&mut h);
+    h.inbox
+        .log
+        .iter()
+        .any(|event| event.spell_id.is_none() && event.kind == CombatLogKind::Miss(MissKind::Parry))
+}
+
+#[test]
+fn class_completeness_native_parry_spells_enable_parry() {
+    for spell in NATIVE_PARRY_SPELLS {
+        assert!(parried_under_die_by_the_sword(Some(spell)), "{spell}");
+    }
+    assert!(!parried_under_die_by_the_sword(None));
+}

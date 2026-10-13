@@ -45,16 +45,23 @@ pub(super) fn demons_bite(world: &mut World, caster: Entity, _target: Entity, _d
 /// 162794 explicitly uses197125h (not its root's30 mirror) and193840s1.
 /// One roll for the root's landed target, never one per weapon child.
 pub(super) fn chaos_strike(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
-    let chance = world
+    let refund = world
         .resource::<SpellStore>()
         .get(CHAOS_REFUND_CHANCE)
-        .expect("Chaos Strike requires197125")
+        .expect("Chaos Strike requires197125");
+    let base_chance = refund
         .aura_options
         .as_ref()
         .expect("197125 requires proc chance")
-        .proc_chance
-        .min(100);
-    if rand::random::<f32>() * 100.0 < chance as f32 {
+        .proc_chance as f32;
+    let chance = crate::auras::spell_mods::modify(
+        world,
+        caster,
+        refund,
+        crate::auras::SpellModOp::ProcChance,
+        base_chance,
+    );
+    if rand::random::<f32>() * 100.0 < chance {
         spell_cast::cast_triggered(world, caster, CHAOS_REFUND, Some(caster), depth + 1);
     }
 }
@@ -160,6 +167,7 @@ pub(super) fn epidemic(world: &mut World, caster: Entity, target: Entity, depth:
 
 /// The infected enemy receives212739s1; other nearby foes receive212739s2.
 pub(super) fn epidemic_splash(
+    _world: &World,
     _spell: &SpellInfo,
     explicit: Option<Entity>,
     units: &mut Vec<Entity>,

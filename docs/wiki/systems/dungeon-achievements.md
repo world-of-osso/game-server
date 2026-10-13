@@ -114,6 +114,14 @@ At server `33a58e14`, engine `ebedc08ab`, protocol `98f1bd9`, fresh Modern and F
 
 The criteria condition compiler now carries ModifierTree type2 PlayerCondition IDs. Catalog loading delegates to `game_objects::identity_conditions::load_condition`, retaining every flag/non-identity/TDB source34 restriction; `permits_race_class` is shared by object interaction and criteria evaluation. No second mask implementation or general PlayerCondition interpreter was added. Native XP tests prove Human Paladin and Orc Mage cap transitions earn Double Agent7380 through account aggregation and remain earned after redb reopen, without opposite-faction or admin/login event credit. The [inventory](../../achievement-criteria-producer-inventory.md) owns the updated structural census.
 
+## Per-request emote targets (verified 2026-10-13)
+
+`EmoteIntent.target_entity` carries the client-selected server entity with each request. `messaging::emote_target_entry` resolves its NPC template on the sender's map copy before queuing the criteria event; it never reads current CombatTarget or interprets a creature entry as an entity ID. The compiler admits All4/SingleTrue TargetCreatureId4 only for DoEmote54, alongside already-supported player/difficulty leaves. Love225 maps to text only, preserving the pose. Primary source: pinned TC a352b1fa ChatHandler.cpp703–753 and CriteriaHandler.cpp1782–1785; pinned69933 EmotesText225 EmoteID0. Native RED/GREEN exercises two different requests in one channel batch, eligibility and invalid-target controls, no idle replay and reopened counters3615/3739. Other target modifiers/producers remain disabled; [inventory](../../achievement-criteria-producer-inventory.md) owns structural counts, not creature spawn completeness.
+
+## Rated map wins and participation (verified 2026-10-13)
+
+The same native rated settlement publishes map-specific WinArena32 for winners and ParticipateInArena33 for every online in-world participant, after persistence and the result's once-only applied marker. Events carry the completed source map and native team size; compiled PlayerInArenaWithTeamSize24 (2/3) and PlayerInRankedArenaMatch60 predicates read those facts, not a guessed rating asset or current queue. Native-channel2v2/3v3 RED/GREEN covers counters8613/8617/8605/8609, losers receiving participation only, wrong map/team size, no preparation/skirmish/idle replay and redb reopen. Primary source: TC a352b1fa Arena.cpp241–250, CriteriaHandler.cpp1652–1655/1879–1885/2059–2065.5v5 remains unsupported; type39 still has a source/data slot mapping gap. The [inventory](../../achievement-criteria-producer-inventory.md) owns the structural census; no new rendered arena proof is claimed.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
