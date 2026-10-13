@@ -83,6 +83,122 @@ fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
     );
 }
 
+fn stockade_pet() -> (PetFixture, Entity, std::path::PathBuf) {
+    let mut f = fixture();
+    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 30146, Some(f.unit), false)
+        .unwrap();
+    f.h.advance(160);
+    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let engine =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data");
+    f.h.app.insert_resource(crate::ground::GroundMap::new(
+        &engine,
+        std::collections::HashMap::from([(34, maps.map(34).unwrap().wdt_file_data_id)]),
+    ));
+    let nav =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh");
+    f.h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav));
+    let owner = shared::components::Position {
+        x: 103.0,
+        y: -34.85623,
+        z: -76.0,
+    };
+    let from = shared::components::Position {
+        x: 150.557,
+        y: -34.85624,
+        z: -45.8164,
+    };
+    for entity in [f.unit, f.h.caster] {
+        f.h.app
+            .world_mut()
+            .entity_mut(entity)
+            .insert((owner, crate::maps::InMap::continent(34)));
+    }
+    f.h.app
+        .world_mut()
+        .entity_mut(pet)
+        .insert((from, crate::maps::InMap::continent(34)));
+    (f, pet, engine)
+}
+
+fn assert_stockade_pet_route(chase: bool) {
+    let (mut f, pet, engine) = stockade_pet();
+    if chase {
+        let target =
+            *f.h.app
+                .world()
+                .get::<shared::components::Position>(f.unit)
+                .unwrap();
+        f.h.app
+            .world_mut()
+            .entity_mut(f.h.npc)
+            .insert((target, crate::maps::InMap::continent(34)));
+        crate::pet_control::order_companion_pet(f.h.app.world_mut(), f.unit, Some(f.h.npc));
+    }
+    let mut los = los::LosMap::new(&engine.join("los/34"));
+    let mut previous =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap();
+    for tick in 0..500 {
+        f.h.advance(1);
+        let at =
+            *f.h.app
+                .world()
+                .get::<shared::components::Position>(pet)
+                .unwrap();
+        let a = Vec3::new(previous.x, previous.y, previous.z);
+        let b = Vec3::new(at.x, at.y, at.z);
+        assert!(
+            los.clear(a + Vec3::Y, b + Vec3::Y).unwrap(),
+            "pet route crossed real collision tick{tick}"
+        );
+        let crate::ground::GroundProbe::Supported(floor) =
+            f.h.app
+                .world_mut()
+                .resource_mut::<crate::ground::GroundMap>()
+                .ground_at(34, b)
+        else {
+            panic!("pet lost ground support")
+        };
+        assert!((at.y - floor).abs() < 0.05);
+        previous = at;
+    }
+    let owner =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(f.unit)
+            .unwrap();
+    let gap = (previous.x - owner.x).hypot(previous.z - owner.z);
+    let expected = if chase {
+        crate::creature_ai::CHASE_REACH
+    } else {
+        4.0
+    };
+    assert!(
+        (gap - expected).abs() < 0.2,
+        "pet did not complete real route: gap{gap} expected{expected}"
+    );
+}
+
+#[test]
+fn follower_felguard_follow_finishes_real_stockade_route_without_crossing_collision() {
+    assert_stockade_pet_route(false);
+}
+
+#[test]
+fn follower_felguard_chase_finishes_real_stockade_route_without_crossing_collision() {
+    assert_stockade_pet_route(true);
+}
+
 #[test]
 fn follower_felguard_unbaked_follow_does_not_use_direct_movement() {
     let mut f = fixture();
