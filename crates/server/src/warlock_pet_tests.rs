@@ -49,18 +49,23 @@ impl ImpHarness {
     }
 
     fn login_with_spells(path: &Path, level: u8, known: &[u32]) -> Self {
+        Self::login_with_class(path, level, known, WARLOCK)
+    }
+
+    fn login_with_class(path: &Path, level: u8, known: &[u32], class: u8) -> Self {
         let conn = Connection::open_with_flags(
             crate::test_data::world_db_path(),
             OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
         let spells = load_pet_levelup_spells(&conn).unwrap();
-        let mut data = load_world_data(&crate::test_data::world_db_path());
+        let prepared = crate::spell_cast::test_harness::prepare_class_world();
+        let mut data = load_world_data(&prepared.path());
         data.templates
-            .retain(|entry, _| [416, 417, 1860, 1863, 17252, 184600].contains(entry));
+            .retain(|entry, _| [416, 417, 1860, 1863, 17252, 184600, 78116].contains(entry));
         let db = redb::Database::create(path).unwrap();
         persistence::create_tables(&db);
-        let mut h = harness_with_plugins(Vec::new(), known, WARLOCK, true, |app| {
+        let mut h = harness_with_plugins(Vec::new(), known, class, true, |app| {
             app.insert_resource(data);
             app.insert_resource(spells);
             app.insert_resource(GameDatabase { db });
@@ -384,6 +389,89 @@ fn achievements_criteria_killing_blow_from_authentic_summoned_imp_credits_owner_
             .get(&5529),
         Some(&1)
     );
+}
+
+#[test]
+fn class_completeness_native_water_elemental_recall_dismiss_and_record_reopen() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("elemental.redb");
+    let known = [31687, 31707, 33395];
+    let mut h = ImpHarness::login_with_class(&path, 80, &known, 8);
+    h.h.cast(31687, None);
+    h.advance(130);
+    assert!(h.h.inbox.failed.is_empty(), "{:?}", h.h.inbox.failed);
+    let pet = h.pet().expect("native Water Elemental");
+    assert_eq!(h.h.app.world().get::<Npc>(pet).unwrap().template_id, 78116);
+    assert_eq!(
+        h.h.app.world().get::<UnitSummonedBy>(pet).unwrap().0,
+        h.h.caster.to_bits()
+    );
+    assert!(
+        h.h.app
+            .world()
+            .get::<UnitPowers>(pet)
+            .unwrap()
+            .entries
+            .iter()
+            .any(|pool| pool.power == PowerType::Mana)
+    );
+    assert!(
+        h.h.app
+            .world()
+            .get::<shared::components::Mana>(pet)
+            .unwrap()
+            .max
+            > 0.0
+    );
+    h.advance(310); // Native31687 has15000ms cooldown, not a fixture override.
+    h.h.cast(31687, None);
+    h.advance(130);
+    assert!(h.h.inbox.failed.is_empty(), "{:?}", h.h.inbox.failed);
+    assert_eq!(
+        h.pet(),
+        Some(pet),
+        "living elemental recalls, not duplicates"
+    );
+    h.order(COMMAND_ABANDON, None);
+    h.advance(4);
+    assert!(h.pet().is_none());
+    assert!(
+        h.h.app
+            .world()
+            .get::<crate::hunter_pet::PetStable>(h.h.caster)
+            .unwrap()
+            .stored
+            .active[0]
+            .is_some(),
+        "SUMMON_PET record retained, unlike abandoned hunter"
+    );
+    drop(h);
+    let mut h = ImpHarness::login_with_class(&path, 80, &known, 8);
+    assert!(h.pet().is_none(), "dismissed pet is not restored at login");
+    h.h.cast(31687, None);
+    h.advance(130);
+    assert!(h.h.inbox.failed.is_empty(), "{:?}", h.h.inbox.failed);
+    assert_eq!(
+        h.h.app
+            .world()
+            .get::<Npc>(h.pet().unwrap())
+            .unwrap()
+            .template_id,
+        78116
+    );
+    let dead = h.pet().unwrap();
+    h.h.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
+    h.advance(6);
+    assert!(
+        h.pet().is_none(),
+        "non-hunter corpse removed, record retained"
+    );
+    h.advance(310);
+    h.h.cast(31687, None);
+    h.advance(130);
+    assert!(h.h.inbox.failed.is_empty(), "{:?}", h.h.inbox.failed);
+    assert_ne!(h.pet(), Some(dead));
+    assert!(h.h.health(h.pet().unwrap()) > 0.0);
 }
 
 #[test]

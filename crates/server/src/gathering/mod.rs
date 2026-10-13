@@ -374,6 +374,12 @@ pub(crate) fn effect_gather(
     _effect: &SpellEffect,
     target: Entity,
 ) {
+    if ctx.spell.id == shared::battleground::ALTERAC_OPENING_SPELL
+        && crate::pvp::is_alterac_banner(world, target)
+    {
+        crate::pvp::complete_opening(world, ctx.caster, target);
+        return;
+    }
     if ctx.spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         crate::pvp::capture_azerite(world, ctx.caster, target);
         return;

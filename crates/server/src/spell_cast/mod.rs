@@ -16,12 +16,33 @@
 mod achievement_damage_tests;
 #[cfg(test)]
 mod achievement_healing_tests;
+#[cfg(test)]
+mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
+#[cfg(test)]
+mod base_armor_tests;
+pub(crate) mod blooming_infusion;
+#[cfg(test)]
+mod blooming_infusion_tests;
+#[cfg(test)]
+mod bonus_armor_tests;
+#[cfg(test)]
+mod bonus_stat_tests;
+#[cfg(test)]
+mod cast_while_moving_tests;
+mod casting_restriction;
+#[cfg(test)]
+mod casting_restriction_tests;
+#[cfg(test)]
+mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
 #[cfg(test)]
 mod class_completeness_tests;
+pub(crate) mod control_dream;
+#[cfg(test)]
+mod control_dream_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
 mod disenchant;
@@ -80,19 +101,41 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+#[cfg(test)]
+mod fount_strength_tests;
 mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+#[cfg(test)]
+mod linked_aura_tests;
+#[cfg(test)]
+mod mechanic_duration_tests;
+#[cfg(test)]
+mod melee_hit_modifier_tests;
+#[cfg(test)]
+mod minimum_speed_tests;
 mod missiles;
+mod open_lock;
+#[cfg(test)]
+mod open_lock_tests;
+#[cfg(test)]
+mod portal_tests;
 pub mod powers;
+#[cfg(test)]
+mod protective_growth_tests;
 mod reflect;
 mod resources;
 pub mod runes;
 pub mod scripts;
+mod shapeshift;
+#[cfg(test)]
+mod shapeshift_tests;
 pub mod summon;
 #[cfg(test)]
 mod summon_at_tests;
+#[cfg(test)]
+mod summon_damage_tests;
 pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
@@ -158,7 +201,7 @@ pub struct SpellCastPlugin;
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<disenchant::DisenchantData>()
-            .add_systems(Startup, disenchant::load_startup)
+            .add_systems(Startup, (disenchant::load_startup, open_lock::load_startup))
             .init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
             .init_resource::<teleport_positions::SpellTargetPositions>()
@@ -232,6 +275,12 @@ pub enum CastFailure {
     AffectingCombat,
     /// `SPELL_FAILED_NOT_MOUNTED`.
     NotMounted,
+    /// `SPELL_FAILED_NOT_SHAPESHIFT`.
+    NotShapeshift,
+    /// `SPELL_FAILED_ONLY_SHAPESHIFT`.
+    OnlyShapeshift,
+    /// `SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW`.
+    CantDoThatRightNow,
     NotEnoughPower(PowerType),
     NotEnoughHealth,
     /// Missing `SpellReagents` item (its name).
@@ -240,6 +289,7 @@ pub enum CastFailure {
     Totems(String),
     /// A created item does not fit in the bags.
     InventoryFull,
+    LowCastLevel,
     CantBeDisenchanted,
     CantBeDisenchantedSkill,
     DisenchantNotKnown,
@@ -282,12 +332,17 @@ impl CastFailure {
             Self::LineOfSight => (R::LineOfSight, None),
             Self::AffectingCombat => (R::AffectingCombat, None),
             Self::NotMounted => (R::NotMounted, None),
+            Self::NotShapeshift => (R::NotShapeshift, None),
+            Self::OnlyShapeshift => (R::OnlyShapeshift, None),
+            Self::CantDoThatRightNow => (R::CantDoThatRightNow, None),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
             // SPELL_FAILED_REAGENTS, SPELL_FAILED_TOTEM_CATEGORY, ERR_INV_FULL
             Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
             Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
             Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
+            // Existing wire contract has no LOW_CASTLEVEL variant.
+            Self::LowCastLevel => (R::InvalidTarget, Some("SPELL_FAILED_LOW_CASTLEVEL".into())),
             Self::CantBeDisenchanted => (R::CantBeDisenchanted, None),
             Self::CantBeDisenchantedSkill => (R::CantBeDisenchantedSkill, None),
             Self::Pet(failure) => failure.to_contract(),
@@ -308,12 +363,17 @@ struct ChargeState {
     recharge_secs: f64,
     /// When the next used charge returns (valid while `used > 0`).
     next_ready_at: f64,
+    /// Exact time the last missing charge returned, not the next observed frame.
+    fully_ready_at: f64,
 }
 
 impl ChargeState {
     fn refresh(&mut self, now: f64) {
         while self.used > 0 && now >= self.next_ready_at {
             self.used -= 1;
+            if self.used == 0 {
+                self.fully_ready_at = self.next_ready_at;
+            }
             self.next_ready_at += self.recharge_secs;
         }
     }
@@ -390,6 +450,7 @@ impl SpellHistory {
                 used: 0,
                 recharge_secs: 0.0,
                 next_ready_at: 0.0,
+                fully_ready_at: 0.0,
             });
         state.max = max;
         state.refresh(now);
@@ -503,24 +564,72 @@ fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
 }
 
-fn is_channeled(spell: &SpellInfo) -> bool {
+pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
     attributes(spell, 1) & SPELL_ATTR1_CHANNELED != 0
 }
 
 /// Moving leaves the cast bar alone (`Spell::CheckMovement`: no
 /// `SpellInterruptFlags::Movement`).
-fn cast_allows_moving(spell: &SpellInfo) -> bool {
-    spell
+fn cast_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    let intrinsic = spell
         .interrupts
         .as_ref()
-        .is_none_or(|interrupts| interrupts.interrupt_flags & SPELL_INTERRUPT_MOVEMENT == 0)
+        .is_none_or(|interrupts| interrupts.interrupt_flags & SPELL_INTERRUPT_MOVEMENT == 0);
+    intrinsic || aura_allows_moving(world, caster, spell)
 }
 
 /// Moving leaves the channel alone (`SpellInfo::IsMoveAllowedChannel`).
-fn channel_allows_moving(spell: &SpellInfo) -> bool {
-    spell.interrupts.as_ref().is_none_or(|interrupts| {
+fn channel_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    let intrinsic = spell.interrupts.as_ref().is_none_or(|interrupts| {
         interrupts.channel_interrupt_flags[0] & CHANNEL_INTERRUPT_MOVING == 0
-    })
+    });
+    intrinsic || aura_allows_moving(world, caster, spell)
+}
+
+/// TC Unit::CanCastSpellWhileMoving: native330 uses a family mask, not its amount.
+fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
+    if attributes(spell, 13) & NO_DISABLE_MOVEMENT_INTERRUPT != 0 {
+        return false;
+    }
+    spell_mods::has_aura_type_affecting(
+        world,
+        caster,
+        crate::auras::handlers::CAST_WHILE_WALKING,
+        spell,
+    )
+}
+
+/// Aura gain/removal/expiry updates the server cast and its replicated movement flag.
+pub(crate) fn refresh_cast_movement_permission(world: &mut World, caster: Entity) {
+    let Some((spell, cast_type)) = read_active_cast_spell(world, caster) else {
+        return;
+    };
+    let allowed = match cast_type {
+        CastType::Normal => cast_allows_moving(world, caster, &spell),
+        CastType::Channel => channel_allows_moving(world, caster, &spell),
+    };
+    let mut cast = world.get_mut::<CastState>(caster).expect("cast read above");
+    if cast.cast_while_moving != allowed {
+        cast.cast_while_moving = allowed;
+    }
+}
+
+fn read_active_cast_spell(world: &World, caster: Entity) -> Option<(SpellInfo, CastType)> {
+    let (spell_id, cast_type) = world
+        .get::<CastState>(caster)
+        .map(|cast| (cast.spell_id, cast.cast_type))?;
+    let Some(spell) = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .cloned()
+    else {
+        warn!(
+            "Cannot refresh movement permission for active cast {spell_id}: missing SpellStore row"
+        );
+        return None;
+    };
+    Some((spell, cast_type))
 }
 
 fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
@@ -624,6 +733,7 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
+    scripts::record_health_change(world, &event);
     if event.kind == CombatLogKind::Death {
         let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
@@ -1052,7 +1162,10 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
-    let explicit = if disenchant::is_disenchant(&spell) {
+    let explicit = if disenchant::is_disenchant(&spell)
+        || (request.target_item_guid.is_some()
+            && spell.effects.iter().any(open_lock::is_item_effect))
+    {
         None
     } else {
         explicit
@@ -1216,6 +1329,8 @@ fn validate_start(
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
+    casting_restriction::check_cast(world, caster, spell)?;
+    shapeshift::check_cast(world, caster, spell)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
@@ -1224,8 +1339,11 @@ fn validate_start(
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell)?;
-    let blocked_by_moving = (cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(spell))
-        || (is_channeled(spell) && !channel_allows_moving(spell));
+    let cast_blocked_by_moving =
+        cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(world, caster, spell);
+    let channel_blocked_by_moving =
+        is_channeled(spell) && !channel_allows_moving(world, caster, spell);
+    let blocked_by_moving = cast_blocked_by_moving || channel_blocked_by_moving;
     if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }
@@ -1326,10 +1444,30 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    if spell.id == shared::battleground::ALTERAC_OPENING_SPELL
+        && explicit.is_some_and(|target| crate::pvp::is_alterac_banner(world, target))
+    {
+        let target = explicit.expect("Alterac Opening has an explicit banner");
+        crate::pvp::check_banner_target(world, caster, target)?;
+        return Ok(Some(target));
+    }
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         crate::pvp::check_azerite_target(world, caster, target)?;
         return Ok(Some(target));
+    }
+    if open_lock::is_item_cast(spell) {
+        open_lock::check_cast(world, caster, spell)?;
+        return Ok(None);
+    }
+    if spell.effects.iter().any(open_lock::is_item_effect)
+        && explicit.is_none_or(|target| {
+            world
+                .get::<shared::protocol::GameObjectInfo>(target)
+                .is_none()
+        })
+    {
+        return Err(CastFailure::InvalidTarget);
     }
     if crate::gathering::is_gathering(spell) {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
@@ -1345,7 +1483,16 @@ fn validate_target(
     let requirement = scripts::target_plan(spell.id)
         .map(|(relation, _)| relation)
         .or_else(|| targets::explicit_requirement(handled_effects(spell)))
-        .or_else(|| resurrects.then_some(Relation::Ally));
+        .or_else(|| {
+            spell
+                .effects
+                .iter()
+                .any(|effect| {
+                    crate::death::resurrection::is_resurrection(effect)
+                        && effect.implicit_targets == [0, 0]
+                })
+                .then_some(Relation::Ally)
+        });
     let Some(relation) = requirement else {
         return Ok(explicit);
     };
@@ -1577,8 +1724,8 @@ fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
 fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast: &mut CastState) {
     cast.spell_name = spell.name.clone();
     cast.cast_while_moving = match cast.cast_type {
-        CastType::Normal => cast_allows_moving(spell),
-        CastType::Channel => channel_allows_moving(spell),
+        CastType::Normal => cast_allows_moving(world, caster, spell),
+        CastType::Channel => channel_allows_moving(world, caster, spell),
     };
     world
         .entity_mut(caster)
@@ -1665,7 +1812,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.
-fn execute_cast(
+pub(crate) fn execute_cast(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -1674,13 +1821,18 @@ fn execute_cast(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
+    casting_restriction::check_cast(world, caster, spell)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
+    blooming_infusion::check_children(world, caster, spell)?;
     crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
-    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
+        world, caster, &prepared,
+    ));
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     const DISCOUNT_POWER_ON_MISS: u32 = 0x0800_0000;
@@ -1690,6 +1842,7 @@ fn execute_cast(
         explicit.is_some_and(|target| !plan.iter().any(|effect| effect.units.contains(&target)));
     let costs = discount_missed_rune_costs(costs, discounted_player && primary_missed);
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
+    open_lock::unlock_cast(world, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
     if let Some(item) = spell.cast_retail_item_id {
         // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
@@ -1732,6 +1885,7 @@ fn execute_cast(
         hook(world, caster, spell);
     }
     spell_mods::consume_charges(world, caster, spell);
+    blooming_infusion::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
     if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
         crate::combat::attack_stop(world, caster);
@@ -1809,6 +1963,20 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    if open_lock::is_item_cast(spell) {
+        return Ok(spell
+            .effects
+            .iter()
+            .enumerate()
+            .filter(|(_, effect)| open_lock::is_item_effect(effect))
+            .map(|(index, _)| PlannedEffect {
+                index,
+                units: Vec::new(),
+                dest: None,
+                chain_multipliers: Vec::new(),
+            })
+            .collect());
+    }
     if crate::gathering::is_gathering(spell) {
         let target = explicit.ok_or(CastFailure::NoTarget)?;
         return Ok(spell
@@ -1884,7 +2052,7 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let mut dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             spell.cast_destination.map(|point| targets::Dest {
                 position: Vec3::from_array(point),
                 orientation: targets::orientation(world, caster),
@@ -1892,6 +2060,7 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
+        let mut dest = targets::ground_destination(world, caster, effect, dest)?;
         if let Some(dest) = &mut dest {
             scripts::relocate_destination(spell.id, effect, dest);
         }
@@ -1926,6 +2095,7 @@ fn resolve_effects(
         resolving.0.push(HitFrame {
             caster,
             spell_id: spell.id,
+            depth,
             damage: Vec::new(),
         });
     }
@@ -1963,6 +2133,11 @@ fn resolve_effects(
         // Unit-targeted events use the normal hit/immunity boundary below.
         if effect.effect == effects::EFFECT_SEND_EVENT && effect.implicit_targets == [0, 0] {
             effects::send_game_event(world, &ctx, effect, caster);
+            continue;
+        }
+        // Item unlock is persisted before the cast success receipt; it has no
+        // unit target and must not enter the gathering-node effect handler.
+        if open_lock::is_item_cast(spell) && open_lock::is_item_effect(effect) {
             continue;
         }
         if let Some(handler) = scripts::cast_effect(spell.id, effect.index)
@@ -2093,7 +2268,16 @@ pub(crate) struct ResolvingHits(Vec<HitFrame>);
 struct HitFrame {
     caster: Entity,
     spell_id: u32,
+    depth: u8,
     damage: Vec<(Entity, f32)>,
+}
+
+/// A linked child inherits the active hit's trigger depth, without persisting cast state in an aura.
+pub(crate) fn next_trigger_depth(world: &World) -> u8 {
+    world
+        .get_resource::<ResolvingHits>()
+        .and_then(|hits| hits.0.last())
+        .map_or(1, |hit| hit.depth.saturating_add(1))
 }
 
 /// Add `amount` dealt to `target` to the innermost resolution of `spell_id` by
@@ -2269,6 +2453,7 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let now = now(world);
+    let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
     let (base_recovery_ms, base_category_ms) = spell
         .cooldowns
         .as_ref()
@@ -2282,25 +2467,28 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .max(0.0)
             .round() as u32
     };
-    let (recovery_ms, category_ms) = (cooldown(base_recovery_ms), cooldown(base_category_ms));
+    let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
+    let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
-    if recovery_ms > 0 {
+    // A fully discounted authored cooldown becomes ready now, not at its old deadline.
+    if base_recovery_ms > 0 {
         history
             .spell_ready_at
             .insert(spell.id, now + recovery_ms as f64 / 1000.0);
     }
-    if category != 0 && category_ms > 0 {
+    if category != 0 && base_category_ms > 0 {
         history
             .category_ready_at
             .insert(category, now + category_ms as f64 / 1000.0);
     }
     let charges = history.charges_mut(spell, now, mods).map(|charges| {
         if charges.used == 0 {
-            charges.next_ready_at = now + charges.recharge_secs;
+            let recovery = charges.recharge_secs - f64::from(ready_credit) / 1000.0;
+            charges.next_ready_at = now + recovery.max(0.0);
         }
         charges.used = (charges.used + 1).min(charges.max);
         charges.spell_id = spell.id;
@@ -2361,6 +2549,9 @@ pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: 
         return;
     }
     charges.used = charges.used.saturating_sub(count);
+    if charges.used == 0 {
+        charges.fully_ready_at = now;
+    }
     let charges = *charges;
     send_charges(world, unit, &charges, now);
 }

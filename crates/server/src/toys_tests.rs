@@ -1297,17 +1297,33 @@ fn toyfx4_destination_request_does_not_select_a_unit_or_use_target_facing() {
 fn toyfx4_nonritual_interactive_objects_are_not_silent_success() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
-    // Goblin Gumbo needs spellcaster object interaction, not ritual semantics.
+    // Both native spells use TARGET_DEST_DEST87: no placement click means NoTarget.
+    // Type22 now has the shared native spellcaster runtime; it is no longer an
+    // unsupported-type fixture. Goblin Gumbo must really spawn after placement.
     learn_effect_toy(&mut h, character, 33219);
     let error = activate(&mut h, 33219)[0].error.clone().unwrap();
-    assert!(
-        error.contains("186472") && error.contains("type 22"),
-        "{error}"
-    );
+    assert!(error.contains("NoTarget"), "{error}");
     assert!(!h.inbox.cooldowns.iter().any(|c| c.spell_id == 42753));
+    assert_eq!(
+        activate_at(&mut h, 33219, Some([2.0, 0.0, 0.0]))[0].error,
+        None
+    );
+    h.advance(60); // Native Goblin Gumbo has a two-second cast before object creation.
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 42753));
+    let world = h.app.world_mut();
+    let spawned: Vec<_> = world
+        .query::<&shared::protocol::GameObjectInfo>()
+        .iter(world)
+        .filter(|info| info.entry == 186472)
+        .collect();
+    assert_eq!(spawned.len(), 1);
+    assert_eq!(spawned[0].go_type, 22);
     // Actual DB2 toy199767/388088 references381317, absent in local TDB1210.
     learn_effect_toy(&mut h, character, 199767);
-    let error = activate(&mut h, 199767)[0].error.clone().unwrap();
+    let error = activate_at(&mut h, 199767, Some([2.0, 0.0, 0.0]))[0]
+        .error
+        .clone()
+        .unwrap();
     assert!(error.contains("gameobject template"), "{error}");
     assert!(!h.inbox.go.iter().any(|go| go.spell_id == 388088));
 }
