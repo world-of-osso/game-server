@@ -18,6 +18,7 @@ pub(crate) mod area_avoidance;
 pub(crate) mod base_armor;
 pub(crate) mod damage_transfer;
 pub(crate) mod effect_immunity;
+mod fixate;
 pub(crate) mod handlers;
 pub mod invisibility;
 mod linked;
@@ -839,9 +840,11 @@ pub(crate) fn apply_aura_with_spell(
             excluded.contains(&aura.spell_id)
         });
     }
-    // Atonement marks from different priests remain independently owned.
+    // Atonement marks from different priests remain independently owned; other
+    // casters' channelled auras stack (Aura::CanStackWith, SpellAuras.cpp:1695).
     let coexist = instance.harmful
         || spell.id == 194384
+        || crate::spell_cast::is_channeled(&spell)
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
@@ -871,6 +874,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        fixate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
         mount::on_applied(world, target, &aura);
         let stuns = aura
@@ -1040,6 +1044,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    fixate::on_removed(world, aura);
     mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }

@@ -817,6 +817,155 @@ fn encounter_coverage_shadow_borne_temple_trash_appear_and_cast_authored_schedul
     assert!(h.has_aura(champion, 269928), "Vigilant Defense at 21s");
 }
 
+/// TC kings_rest.cpp npc_kings_rest_minion_of_zul: only TempleEvent minions run the
+/// temple_basic visual; every minion appears with Bound by Shadow 269935.
+#[test]
+fn encounter_coverage_minion_of_zul_appears_bound_by_shadow() {
+    let (mut h, map) = kings_rest_copy(23);
+    h.advance(0.1);
+    let resident = h.creatures_of(133943);
+    assert_eq!(
+        resident.len(),
+        8,
+        "untagged map1762 minions; group1255 withheld"
+    );
+    for &minion in &resident {
+        assert!(
+            h.has_aura(minion, 269935),
+            "Bound by Shadow on JustAppeared"
+        );
+        assert!(!h.has_aura(minion, 269619), "no TempleEvent StringId");
+    }
+    crate::zones::spawn_group_spawn(
+        h.app.world_mut(),
+        map,
+        23,
+        false,
+        super::super::kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
+    );
+    h.advance(0.1);
+    let raised: Vec<Entity> = h
+        .creatures_of(133943)
+        .into_iter()
+        .filter(|minion| !resident.contains(minion))
+        .collect();
+    assert_eq!(raised.len(), 6);
+    for minion in raised {
+        assert!(h.has_aura(minion, 269935));
+        assert!(
+            h.has_aura(minion, 269619),
+            "TempleEvent temple_basic visual"
+        );
+    }
+}
+
+/// TC spell_kings_rest_bound_by_shadow: only AURA_REMOVE_BY_ENEMY_SPELL (the absorb
+/// used up) kills the minion.
+#[test]
+fn encounter_coverage_minion_of_zul_dies_when_bound_by_shadow_is_broken() {
+    let (mut h, _) = kings_rest_copy(23);
+    h.advance(0.1);
+    let minions = h.creatures_of(133943);
+    let (broken, cancelled) = (minions[0], minions[1]);
+    let absorb = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(broken)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 269935))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map(|effect| effect.amount)
+        .expect("269935 effect0 SCHOOL_ABSORB");
+    assert!(absorb > 0.0 && absorb < h.health(broken).max / 2.0);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        cancelled,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 269935,
+    );
+    h.hit(broken, absorb + 1.0);
+    h.advance(0.1);
+    assert!(!h.has_aura(broken, 269935));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(broken)
+            .is_some(),
+        "KillSelf once the shield is used up"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(cancelled)
+            .is_none(),
+        "other removal modes keep it alive"
+    );
+}
+
+/// TC npc_kings_rest_minion_of_zul::JustEngagedWith casts Fixate 269936 on one enemy
+/// within 300yd; HandleAuraModFixate makes ReselectVictim prefer it over higher threat.
+#[test]
+fn encounter_coverage_minion_of_zul_fixates_one_enemy_over_threat() {
+    let (mut h, map) = kings_rest_copy(23);
+    h.advance(0.1);
+    let minion = h.creatures_of(133943)[0];
+    let at = h.wow_position(minion);
+    let first = h.player();
+    let (second, _) = super::spawn_player(&mut h.app, map, [at.x + 400.0, at.y, at.z, 0.0], 2);
+    let near = *h.app.world().get::<Position>(minion).unwrap();
+    h.app.world_mut().entity_mut(first).insert(Position {
+        x: near.x + 2.0,
+        ..near
+    });
+    crate::creature_aggro::add_threat(h.app.world_mut(), minion, first, 1.0);
+    h.advance(0.1);
+    let fixated: Vec<Entity> = [first, second]
+        .into_iter()
+        .filter(|&player| {
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(player)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 269936 && aura.caster == minion)
+                })
+        })
+        .collect();
+    assert_eq!(fixated.len(), 1, "MaxTargets1 fixate");
+    let fixated = fixated[0];
+    assert_eq!(fixated, first, "only the engaged player is within 300yd");
+    let other = second;
+    h.app.world_mut().entity_mut(other).insert(Position {
+        x: near.x + 3.0,
+        ..near
+    });
+    crate::creature_aggro::add_threat(h.app.world_mut(), minion, other, 1_000_000.0);
+    h.advance(0.5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(minion)
+            .and_then(|target| target.0),
+        Some(fixated),
+        "the fixate target outranks a far larger threat"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        fixated,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 269936,
+    );
+    h.advance(0.5);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(minion)
+            .and_then(|target| target.0),
+        Some(other),
+        "ClearFixate returns to threat order"
+    );
+}
+
 /// TC at_kings_rest_gust_slash: 269931 creates AT17933 5yd ahead of the warrior; it
 /// orbits its creation point (TDB orbit radius5, speed5, blending from radius0,
 /// clockwise, looping) and an entering player casts 269932 once with no explicit

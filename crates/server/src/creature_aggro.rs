@@ -296,6 +296,7 @@ type Engaged<'w, 's> = Query<
             Option<&'static LastDamagedTime>,
         ),
         Has<crate::scripted_ai::ScriptedVictimUpdatePaused>,
+        Option<&'static Fixate>,
     ),
     (
         Without<DeathState>,
@@ -344,6 +345,11 @@ pub(crate) fn within_reach_of_home(
     dx * dx + dy * dy + dz * dz <= HOME_REACH * HOME_REACH
 }
 
+/// `ThreatManager::_fixateRef`: the unit `ReselectVictim` always prefers while it is
+/// on the threat list (`HandleAuraModFixate`).
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Fixate(pub Entity);
+
 /// `CreatureAI::UpdateVictim` / `Creature::SelectVictim`: drop threat
 /// entries that are no longer valid targets, attack the top-threat unit
 /// (a challenger needs 110% of the current target's threat in melee range,
@@ -371,6 +377,7 @@ pub(crate) fn update_victim_system(
         auras,
         (home, last_damaged),
         scripted_update_paused,
+        fixate,
     ) in &mut engaged
     {
         let dungeon = maps
@@ -420,7 +427,19 @@ pub(crate) fn update_victim_system(
                 .last()
                 .map(|aura| aura.caster.to_bits())
         });
-        let Some(victim) = taunted.or_else(|| threat.aggro_target(current, top_in_melee)) else {
+        // ReselectVictim: a listed fixate target is always preferred; removing its
+        // threat reference clears the fixate.
+        let fixated = fixate.map(|fixate| fixate.0.to_bits()).filter(|&fixated| {
+            let listed = threat.entries().iter().any(|entry| entry.entity == fixated);
+            if !listed {
+                commands.entity(creature).remove::<Fixate>();
+            }
+            listed
+        });
+        let Some(victim) = fixated
+            .or(taunted)
+            .or_else(|| threat.aggro_target(current, top_in_melee))
+        else {
             continue;
         };
         let attacking = combat_target
