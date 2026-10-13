@@ -83,7 +83,17 @@ fn class_completeness_native_recovery_rate_category_owner_allows_real_accelerate
     h.cast_and_deliver(SPRINT, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     h.advance(2350);
+    h.inbox.cooldowns.clear();
     apply_deadly_pursuit(&mut h);
+    h.advance(3);
+    let update = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|r| r.spell_id == SPRINT && !r.is_gcd)
+        .unwrap();
+    assert_eq!(update.category, 44);
+    assert!((780..=860).contains(&update.remaining_ms), "{update:?}");
     h.advance(5);
     h.cast_and_deliver(SPRINT, Some(h.caster));
     assert_eq!(
@@ -250,7 +260,17 @@ fn class_completeness_native_recovery_rate_application_accelerates_an_existing_r
     cast_rapid_fire(&mut h);
     // The channel has ended; accelerate only the remaining timer, not a
     // fresh full16s. Recast stays blocked6s later and succeeds9.5s later.
+    h.inbox.cooldowns.clear();
     apply_trueshot(&mut h);
+    h.advance(3);
+    let update = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|r| r.spell_id == RAPID_FIRE && !r.is_gcd)
+        .unwrap();
+    assert_eq!(update.category, 0);
+    assert!((8200..=8500).contains(&update.remaining_ms), "{update:?}");
     h.advance(120);
     h.cast_and_deliver(RAPID_FIRE, Some(h.npc));
     assert_eq!(
