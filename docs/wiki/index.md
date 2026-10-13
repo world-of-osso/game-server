@@ -7,6 +7,8 @@
 
 - [Rated arena criteria](systems/dungeon-achievements.md#rated-arena-win-criteria-verified-2026-10-13) — committed Type37 winners; native channels, negatives, replay and reopen proof; Type39 mapping remains unresolved.
 
+- [Flat versatility](systems/auras.md#flat-versatility-bonuses) — native471 stats, real damage/heal/half-taken/auto controls and pinned rating-curve proof; owner inheritance/rendered limits retained.
+
 - [Category cooldowns](systems/auras.md#category-cooldown-offsets) — native341 signed offsets, real Counterspell/Prayer/pet lockouts and lifecycle proof; whole class coverage remains open.
 
 - [Penetrating Shots](../class-completeness6.md#batch44-penetrating-shots-ranged-critical-damage) — native crit-scaled25% bonus, real ranged damage and lifecycle proof; whole class/rendered coverage remains open.
