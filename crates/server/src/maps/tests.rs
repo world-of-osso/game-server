@@ -1987,8 +1987,9 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
                 .get::<crate::achievement::PlayerAchievementState>(who.player)
                 .unwrap()
                 .criteria_progress
-                .contains_key(&306),
-            "queue, invitation and preparation cannot grant a rated win"
+                .keys()
+                .any(|id| [306, 8613, 8617, 8605, 8609].contains(id)),
+            "queue, invitation and preparation cannot grant a rated result"
         );
     }
     let attacker = players[0].player;
@@ -2044,6 +2045,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
         let expected = (rated && index % 2 == 0).then_some(1);
         assert_eq!(state.criteria_progress.get(&306).copied(), expected);
         assert_eq!(state.earned_ids.contains(&397), expected.is_some());
+        assert_rated_arena_map_credits(state, rated && map_id == 572, index % 2 == 0, team_size);
     }
     h.receive_pvp_updates(5);
     for (index, who) in players.iter().enumerate() {
@@ -2058,6 +2060,7 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             expected,
             "idle replay"
         );
+        assert_rated_arena_map_credits(state, rated && map_id == 572, index % 2 == 0, team_size);
     }
     if rated {
         assert_eq!(ended.arena.as_ref().unwrap().mode, mode);
@@ -2139,7 +2142,32 @@ fn exercise_arena_channel(mode: ArenaQueueMode, forfeit: bool, map_id: u32) {
             expected,
             "redb reopen"
         );
+        assert_rated_arena_map_credits(&saved, rated && map_id == 572, index % 2 == 0, team_size);
     }
+}
+
+fn assert_rated_arena_map_credits(
+    state: &crate::achievement::PlayerAchievementState,
+    rated: bool,
+    won: bool,
+    team_size: usize,
+) {
+    for (size, participate, win) in [(2, 8613, 8617), (3, 8605, 8609), (5, 8597, 8601)] {
+        assert_eq!(
+            state.criteria_progress.get(&participate).copied(),
+            (rated && team_size == size).then_some(1),
+            "rated Ruins participation/{size}"
+        );
+        assert_eq!(
+            state.criteria_progress.get(&win).copied(),
+            (rated && won && team_size == size).then_some(1),
+            "rated Ruins win/{size}"
+        );
+    }
+    assert!(
+        !state.criteria_progress.contains_key(&5728),
+        "Ruins cannot credit Blade's Edge"
+    );
 }
 
 fn exercise_arena_forfeit(h: &mut Harness, players: &[Traveler], origins: &[Vec3], match_id: u64) {

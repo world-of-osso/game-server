@@ -1888,3 +1888,19 @@ fn online_learn_spell_admin_publishes_without_relog() {
     }
     assert!(received::<SpellsLearned>(&mut app, reconnected).is_empty());
 }
+
+/// Native skill_race_class_info: Dual Wield skill 118 is a default line for Rogues and
+/// Demon Hunters, whose SkillLineAbility teaches Dual Wield 674 (effect 40); Paladins
+/// have no such line, and Fury's own SpecializationSpells row adds 231842.
+#[test]
+fn dual_wield_comes_from_default_skill_lines_and_spec_spells() {
+    const NIGHT_ELF: u8 = 4;
+    const ROGUE: u8 = 4;
+    const DEMON_HUNTER: u8 = 12;
+    const SPEC_FURY: u32 = 72;
+    let classes = class_spells().expect("world.db");
+    assert!(known_ids(&classes, HUMAN, ROGUE, 10, 0).contains(&674));
+    assert!(known_ids(&classes, NIGHT_ELF, DEMON_HUNTER, 10, 0).contains(&674));
+    assert!(!known_ids(&classes, HUMAN, PALADIN, 80, SPEC_RETRIBUTION).contains(&674));
+    assert!(known_ids(&classes, HUMAN, WARRIOR, 80, SPEC_FURY).contains(&231842));
+}
