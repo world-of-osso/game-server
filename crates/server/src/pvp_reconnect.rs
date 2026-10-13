@@ -3,7 +3,7 @@
 //! CharacterData keeps the current position; this separate row keeps the captured
 //! entry point and exact map copy without changing CharacterData's persisted ABI.
 use bevy::prelude::*;
-use redb::{ReadableTable, TableDefinition};
+use redb::{ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use shared::battleground::{BgTeam, template_by_id};
 use shared::protocol::BattlegroundSnapshot;
