@@ -85,7 +85,10 @@ pub(crate) fn point_movement_system(world: &mut World) {
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
         Option<&mut MovementSpeed>,
-    ), Without<DeathState>>();
+    ), (
+        Without<DeathState>,
+        Without<super::jump_movement::JumpMovement>,
+    )>();
     for (
         entity,
         mut position,

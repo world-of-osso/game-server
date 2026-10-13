@@ -20,9 +20,12 @@ pub mod bossmod;
 pub mod creature_text;
 pub mod event_map;
 pub mod instance_script;
+pub(crate) mod jump_movement;
 pub mod kings_rest;
 pub mod movement;
 pub mod murder_row;
+pub(crate) mod ragefire_chasm;
+pub(crate) mod ruby_life_pools;
 pub mod smart_ai;
 pub mod the_stockade;
 pub mod waypoint_path;
@@ -73,12 +76,15 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, bossmod::startup_load_catalog)
             .add_systems(Startup, murder_row::register_aura_scripts)
             .add_systems(Startup, kings_rest::register_aura_scripts)
+            .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
+            .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
             .add_systems(
                 FixedUpdate,
                 (
                     bossmod::advance_schedules,
                     init_creature_ai,
+                    ragefire_chasm::gordoth_intro::detect_entries,
                     update_creature_ai,
                 )
                     .chain()
@@ -92,6 +98,11 @@ impl Plugin for ScriptedAiPlugin {
                     smart_ai::lifetimes::tick_lifetimes_system.before(update_creature_ai),
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
                     waypoint_path::path_movement_system.before(crate::creature_ai::chase_system),
+                    jump_movement::advance_jumps
+                        .after(movement::point_movement_system)
+                        .after(waypoint_path::path_movement_system)
+                        .before(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
                     kings_rest::update_gold_follows
                         .after(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
@@ -133,6 +144,8 @@ pub enum MotionType {
     Point,
     /// `FOLLOW_MOTION_TYPE`.
     Follow,
+    /// `EFFECT_MOTION_TYPE`, including source MoveJump.
+    Effect,
 }
 
 /// A `CreatureAI` hook with its arguments.
@@ -250,6 +263,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if kings_rest::is_creature_script(script_name) {
         return kings_rest::creature_ai(world, creature, script_name);
     }
+    if ragefire_chasm::is_creature_script(script_name) {
+        return ragefire_chasm::creature_ai(world, creature, script_name);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -264,6 +280,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
     let script_name = if the_stockade::is_creature_script(script_name)
         || murder_row::is_creature_script(script_name)
         || kings_rest::is_creature_script(script_name)
+        || ragefire_chasm::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {

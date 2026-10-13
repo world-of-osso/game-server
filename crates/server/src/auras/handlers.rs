@@ -29,6 +29,8 @@ pub enum AuraKind {
     DamageFromCaster,
     ///Creature victim selection and caster-specific threat generation.
     Taunt,
+    /// The caster's preferred victim while applied (`fixate.rs`).
+    Fixate,
     /// Behavior lives in `AuraScripts` keyed by spell ID.
     Script,
     /// Casts its trigger spell on a health-percent crossing (`health_pct_trigger.rs`).
@@ -218,6 +220,8 @@ pub const MOD_RECOVERY_RATE: u32 = 286;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
+/// SPELL_AURA_MOD_FIXATE (SpellAuraDefines.h, TrinityCore a352b1fa).
+pub const MOD_FIXATE: u32 = 128;
 pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
@@ -248,6 +252,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PERIODIC_DUMMY | DUMMY => Script,
         super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
         MOD_TAUNT => Taunt,
+        MOD_FIXATE => Fixate,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,

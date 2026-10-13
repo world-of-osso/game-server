@@ -24,15 +24,24 @@ TARGETS = {0, 1, 2, 5, 7, 8, 12, 16, 19}
 CPP_IDENTITIES = {(2813,3101): [234648], (2813,3102): [234649],
                   (2813,3103): [234647], (2813,3105): [237415], (1762,2139): [135322]}
 PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240,474183,1223906,1217989,1265412],
-                 'boss_the_golden_serpent': [265773,265781,265910,265923]}
+                 'boss_the_golden_serpent': [265773,265781,265910,265923],
+                 'boss_dark_shaman_koranthal': [119928,119300,119971,119973],
+                 'boss_lava_guard_gordoth': [119999,120024,50420]}
 PARTIAL_GAPS = {
+    'boss_lava_guard_gordoth': [
+        'source already-started relocation,first7.3s Ground/13.3s Seismic and one-shot below31-percent enrage/30s evade-respawn supported; Seismic uses only source0x2 cooldown flag',
+        'repeat12.1s/36.3s callbacks coded but moving-target/native proof unproved; source jump/landing/vial state/researcher self-death supported; landing home/facing and ordinary-player AT7899 rotated-box entry/same-copy lookup/OnlyOnce supported; GM/cage task/animkit/native jump gaps; map389 navigation absent',
+        'canonical primary credit binding, loot/lockout/native/full-instance proof remain open'],
+    'boss_dark_shaman_koranthal': [
+        'source appearance,6s/7.3s Twisted and20.5s/47.2s Storm/reschedule15.7s supported; dummy119973 effect value119965 forwards missile destination to119964 damage',
+        'source death/30s evade-respawn fixtures supported; canonical primary credit binding, loot/lockout, native visuals and full instance remain unproved'],
     'boss_kystia_manaheart': [
         'infusion completion blocked: local15s Light/20s Destabilized; exact474238 flags do not bypass caster auras',
         'mirror Normal template/callbacks/retirement supported on private copy; other difficulties and Felstorm damage unproved',
         'Fel Spray area geometry/damage, root/visual kits, door/boundary and source-empty loot unproved'],
     'boss_the_golden_serpent': [
         'TC script schedule (partial; Retail 12.1 timeline inputs unavailable); Retail alerts disabled',
-        'source intro supported: group1256 spawns on last TempleEvent death, gravity-disabled MovePath13532200/01/02, emerge removal and hostile landing; group1255 withheld until Serpentine Seal gossip summons Zul (SerpentBossEvent +10s spawn); Shadow-Borne temple trash schedules and Gust Slash orbiting AT supported; Minion of Zul and pool GO state unported; fly/hover anim state unproved',
+        'source intro supported: group1256 spawns on last TempleEvent death, gravity-disabled MovePath13532200/01/02, emerge removal and hostile landing; group1255 withheld until Serpentine Seal gossip summons Zul (SerpentBossEvent +10s spawn); Shadow-Borne temple trash schedules and Gust Slash orbiting AT supported; Minion of Zul appearance/Bound by Shadow/fixate supported; pool GO state/collision supported; native state-to-animation mapping unported; fly/hover anim state unproved',
         'Molten Gold source static sphere/Player enter-exit and periodic damage supported; native area visuals unproved',
         'delayed follow/absorption/announcement supported: real-bake,3D reach,subyard repath,root/cast pause and4s retirement fixtures; source near-point collision/floor and full motion-priority equivalence unproved',
         'source-empty loot unproved',
