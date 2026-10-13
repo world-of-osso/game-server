@@ -204,6 +204,7 @@ pub(super) fn begin_gathering(
 }
 
 pub(crate) fn capture_azerite(world: &mut World, player: Entity, object: Entity) {
+    debug!(player = ?player, object = ?object, "Azerite capture mutation entered");
     if let Err(error) = check_azerite_target(world, player, object) {
         error!("Azerite completion refused: {error:?}");
         return;
