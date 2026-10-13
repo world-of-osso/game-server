@@ -545,7 +545,7 @@ fn seething_channel_refuses_unimplemented_transport_relative_entry() {
         updates[&who.connection].iter().any(|update| update
             .error
             .as_deref()
-            .is_some_and(|error| error.contains("transport 35"))),
+            .is_some_and(|error| error.contains("transport 36"))),
         "{:#?}",
         updates[&who.connection]
     );
