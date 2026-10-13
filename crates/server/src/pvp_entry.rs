@@ -20,6 +20,11 @@ pub(super) fn enter_battleground(
         .get(&match_id)
         .and_then(|matched| matched.arena.as_ref());
     let destination = entry_location(world, player, arena.map(|arena| arena.source.starts))?;
+    let team = world
+        .get::<PlayerPvpState>(player)
+        .and_then(|pvp| pvp.battleground.as_ref())
+        .expect("validated invitation")
+        .team;
     // TC Battleground::AddPlayer casts mercenary reactions only outside arenas.
     let reaction = match arena {
         Some(_) => None,
@@ -60,6 +65,13 @@ pub(super) fn enter_battleground(
     if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
         return Err("battleground map entry was refused".into());
     }
+    // ConditionMgr uses ArenaFaction for both BG and arena, unlike reactions.
+    world
+        .entity_mut(player)
+        .insert(shared::components::CurrentPvpFaction(match team {
+            BgTeam::A => 2,
+            BgTeam::B => 1,
+        }));
     apply_team_reaction(world, player, reaction);
     state
         .battleground_matches
