@@ -1003,6 +1003,12 @@ INSERT INTO "skyborne_item_x_item_effect" VALUES(136845,97708,4540);
 INSERT INTO "skyborne_item_x_item_effect" VALUES(136849,97715,4536);
 INSERT INTO "skyborne_item_x_item_effect" VALUES(137315,98264,6948);
 INSERT INTO "skyborne_item_x_item_effect" VALUES(137897,98985,117);
+CREATE TABLE spell (
+  ID INTEGER PRIMARY KEY,
+  NameSubtext_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  AuraDescription_lang TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE spell_effect (
   ID INTEGER PRIMARY KEY,
   EffectAura INTEGER NOT NULL DEFAULT 0,

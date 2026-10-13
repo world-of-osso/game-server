@@ -69,6 +69,13 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     groups: Res<'w, GroupRegistry>,
     time: Res<'w, Time>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
+    criteria: MessageWriter<'w, crate::achievement::CriteriaCredit>,
+    entered: Query<
+        'w,
+        's,
+        &'static PlayerLink,
+        (With<crate::auth::Authenticated>, With<crate::auth::InWorld>),
+    >,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
 }
 
@@ -82,6 +89,14 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
     }
     for emote in &emotes {
         mark_activity(&mut q, emote.player_entity, activity_at);
+        if q.entered.iter().any(|link| link.0 == emote.player_entity) {
+            q.criteria.write(crate::achievement::CriteriaCredit {
+                player: emote.player_entity,
+                event: crate::achievement::CriteriaEvent::DoEmote(retail_text_emote(
+                    emote.event.emote,
+                )),
+            });
+        }
     }
     collected.extend(emotes.iter().map(|emote| CollectedChat {
         msg: emote.chat.clone(),
@@ -551,6 +566,17 @@ fn emote_chat_message(sender: &str, emote: EmoteKind) -> ChatMessage {
     }
 }
 
+/// Pinned TC a352b1fa SharedDefines.h TextEmotes; not animation Emotes IDs.
+fn retail_text_emote(emote: EmoteKind) -> u32 {
+    match emote {
+        EmoteKind::Dance => 34,
+        EmoteKind::Wave => 101,
+        EmoteKind::Sit => 86,
+        EmoteKind::Sleep => 87,
+        EmoteKind::Kneel => 59,
+    }
+}
+
 fn emote_chat_text(emote: EmoteKind) -> &'static str {
     match emote {
         EmoteKind::Dance => "dances.",
@@ -832,6 +858,10 @@ pub fn process_target_messages(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "messaging_achievement_tests.rs"]
+mod achievement_tests;
 
 #[cfg(test)]
 mod tests {

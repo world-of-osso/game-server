@@ -13,6 +13,8 @@ const LINKED_CHAT: u32 = 0x100;
 const NO_PVP: u32 = 0x800;
 /// TC a352b1fa DBCEnums.h AreaFlags2::AllowWarModeToggle.
 const ALLOW_WAR_MODE_TOGGLE: u32 = 0x1000;
+/// TC TerrainMgr.cpp650–656 only replaces flagged subzones with their immediate parent.
+const IS_SUBZONE: u32 = 0x4000_0000;
 
 #[derive(Debug, Clone)]
 struct AreaEntry {
@@ -27,18 +29,14 @@ struct AreaEntry {
 pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
-    /// TC TerrainInfo::GetZoneId follows ParentAreaID to the top-level zone.
-    pub(crate) fn zone_id(&self, mut area_id: u32, map_id: u32) -> Option<u32> {
-        loop {
-            let area = self.0.get(&area_id)?;
-            if area.map_id != map_id {
-                return None;
-            }
-            if area.parent == 0 {
-                return Some(area_id);
-            }
-            area_id = area.parent;
+    /// TC TerrainInfo::GetZoneId: one flagged parent, never a recursive ancestry walk.
+    pub(crate) fn zone_id(&self, area_id: u32, map_id: u32) -> Option<u32> {
+        let area = self.0.get(&area_id)?;
+        if area.map_id != map_id {
+            return None;
         }
+        let is_subzone = area.flags & IS_SUBZONE != 0 && area.parent != 0;
+        Some(if is_subzone { area.parent } else { area_id })
     }
 
     /// Player::CanEnableWarModeInArea: friendly zone, then any ancestor's toggle bit.
@@ -56,7 +54,10 @@ impl AreaTable {
         let Some(faction) = factions.0.get(&template) else {
             return false;
         };
-        if faction.friend_group & self.0[&zone_id].faction_group == 0 {
+        let Some(zone) = self.0.get(&zone_id) else {
+            return false; // An unavailable parent row cannot establish friendly territory.
+        };
+        if faction.friend_group & zone.faction_group == 0 {
             return false;
         }
         loop {
@@ -83,7 +84,9 @@ impl AreaTable {
         let Some(zone_id) = self.zone_id(area_id, map_id) else {
             return false;
         };
-        let zone = &self.0[&zone_id];
+        let Some(zone) = self.0.get(&zone_id) else {
+            return false; // An unavailable parent row cannot establish city rest.
+        };
         if zone.flags & LINKED_CHAT == 0 {
             return false;
         }
@@ -124,6 +127,28 @@ mod tests {
     use rusqlite::Connection;
 
     use super::load_area_table;
+
+    #[test]
+    fn achievements_criteria_top_level_zone_uses_subzone_flag_not_recursive_parent() {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let areas = load_area_table(&conn).unwrap();
+        // TC TerrainMgr.cpp650–656: one flagged parent, otherwise this area itself.
+        assert_eq!(areas.zone_id(13862, 2444), Some(13862));
+        assert_eq!(areas.zone_id(14489, 2444), Some(13862));
+        assert_eq!(areas.zone_id(87, 0), Some(12));
+        assert_eq!(areas.zone_id(13862, 0), None);
+    }
+
+    #[test]
+    fn achievements_criteria_top_level_zone_missing_parent_does_not_infer_territory() {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let areas = load_area_table(&conn).unwrap();
+        let factions = crate::faction::load_faction_templates(&conn).unwrap();
+        // Authenticated69933 has this subzone, but no16311 parent row. Keep its ID, not flags.
+        assert_eq!(areas.zone_id(16328, 2907), Some(16311));
+        assert!(!areas.permits_city_rest(16328, 2907, 1, &factions));
+        assert!(!areas.permits_war_mode_enable(16328, 2907, 1, &factions));
+    }
 
     /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);
     /// the loader keeps the bit pattern instead of failing at startup.
