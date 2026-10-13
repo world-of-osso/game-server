@@ -21,6 +21,8 @@ pub(crate) use catalog::{AchievementCatalog, CriteriaEvent, load_achievement_cat
 mod account_store;
 #[path = "dungeon_progress.rs"]
 mod dungeon;
+#[path = "achievement_kills.rs"]
+mod kills;
 #[path = "scenario.rs"]
 mod scenario;
 pub(crate) use scenario::load_scenarios;
@@ -91,6 +93,7 @@ impl Plugin for AchievementPlugin {
         app.add_message::<CriteriaCredit>();
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<scenario::ScenarioRuns>();
+        app.add_systems(PostUpdate, kills::publish_rewarded_creature_kills);
         app.add_systems(
             Update,
             (

@@ -12,7 +12,7 @@ from import_achievement_modifiers import qualified_mythic_criteria
 from import_achievement_level_classes import qualified_level_classes
 import db2_casc
 
-BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
+BASE_TYPES = {0, 1, 5, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 20, 23, 26, 27, 28, 29, 34, 36, 40, 41, 42, 43, 46, 47, 48, 54, 55, 56, 57, 59, 62, 63, 65, 66, 67, 68, 69, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 96, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 112, 114, 130, 151, 152, 156, 157, 158, 160, 162, 163, 164, 165, 185, 186, 196, 216, 219, 220, 221, 225, 245, 246, 253, 260, 262}
 CONDITIONS = ('ModifierTreeId', 'StartEvent', 'StartTimer', 'FailEvent', 'EligibilityWorldStateID')
 
 
@@ -66,7 +66,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
             continue  # TDB1210 orphan aura66303 and holiday404 requirements.
         if kind == 29 and 11118 <= row_id <= 11127:
             continue  # TDB1210 holiday404 restrictions, independent of ModifierTree.
-        if kind in (9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56) and asset != 0:
+        if kind in (9, 13, 101, 102, 103, 14, 17, 23, 48, 55, 104, 105, 106, 59, 62, 63, 65, 66, 67, 74, 76, 77, 80, 81, 82, 83, 84, 85, 86, 107, 108, 114, 130, 151, 156, 157, 158, 186, 219, 220, 245, 221, 253, 47, 87, 88, 56, 78) and asset != 0:
             continue
         if kind == 43 and asset not in overlay_assets:
             continue
