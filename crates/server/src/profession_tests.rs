@@ -24,9 +24,9 @@ fn achievements_criteria_native_goggle_casts_accept_empty_all_and_store_real_ite
     .unwrap();
     h.app
         .insert_resource(load_achievement_catalog(&h.conn).unwrap());
-    // Existing Retail projections in a private DB; never invent or alter item definitions.
-    let fixture =
-        PathBuf::from(std::env::var_os("GOGGLE_WORLD_COPY").expect("private sourced goggle DB"));
+    // Project only pinned Retail rows in this test's owned snapshot.
+    let fixture = dir.path().join("goggle-fixture.db");
+    prepare_achievement_goggle_db(&fixture);
     let items = Connection::open_with_flags(&fixture, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     h.app
         .insert_resource(load_item_templates(&fixture).unwrap());
@@ -130,6 +130,22 @@ fn achievements_criteria_native_goggle_casts_accept_empty_all_and_store_real_ite
             .unwrap()
             .earned_ids
             .contains(&18905)
+    );
+}
+
+fn prepare_achievement_goggle_db(destination: &std::path::Path) {
+    let helper = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/prepare_achievement_goggle_db.py");
+    let output = std::process::Command::new("python3")
+        .arg(helper)
+        .arg(crate::test_data::world_db_path())
+        .arg(destination)
+        .output()
+        .expect("run sourced goggle fixture projection");
+    assert!(
+        output.status.success(),
+        "goggle fixture projection failed: {}",
+        String::from_utf8_lossy(&output.stderr)
     );
 }
 
