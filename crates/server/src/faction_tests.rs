@@ -46,6 +46,23 @@ fn skyborne_factions_follow_forever_chr_races() {
 }
 
 #[test]
+fn toyfx20_racial_factions_include_modern_chr_races() {
+    // Local 12.1.0.69933 ChrRaces.FactionID -> FactionTemplate.FactionGroup.
+    for (race, faction, template) in [
+        (52, 1, 1),
+        (70, 2, 2),
+        (84, 2, 2),
+        (85, 1, 3),
+        (86, 1, 4),
+        (91, 2, 116),
+    ] {
+        assert_eq!(faction_for_race(race), faction, "race {race}");
+        assert_eq!(faction_template_for_race(race), template);
+    }
+    assert_eq!(faction_for_race(24), 0);
+}
+
+#[test]
 fn maps_unknown_race_to_neutral_faction() {
     assert_eq!(faction_for_race(0), 0);
 }
