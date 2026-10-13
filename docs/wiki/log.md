@@ -1,5 +1,6 @@
 # Wiki Log
 
+- 2026-10-12 — [Toy root scripts](../toy-effects14-coverage.md): Unusual Compass (ForcedFacing epoch), Titanium Seal coin, Goblin Weather Machine and Wormhole Generator: Pandaria are admitted only for their exact TC/TDB source shapes; census338→348. Transporter/Teleporting/Taunt Flag are named gaps.
 - 2026-10-12 — [Source summon flags/privacy](systems/toys.md#source-summon-flag-import-2026-10-12): atomic3610-record flags import, real two-peer owner-only/public-control proof, wild spawn/target visibility fixes and preserved337 census; group-private remains explicit gap.
 
 - 2026-10-12 — [Linked cooking traps](systems/toys.md#linked-cooking-traps-2026-10-12): source31442/7353 environmental activation, snapshotted versatility retention, seven actual-use identities and census330→337; representative native both-skin proof and lead-only asset publication recorded.
