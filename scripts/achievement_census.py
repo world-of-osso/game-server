@@ -113,7 +113,7 @@ def supported_criteria(criteria, types, spells, skills, mythic_ids, overlay_asse
 
 def fact_can_hold(kind, asset, spells, zones, maps, identities):
     """Mirror of the catalog loader: a fact naming unknown data can never hold."""
-    return {2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
+    return {2: asset in identities, 4: asset > 0, 24: asset in (2, 3), 29: asset > 0, 60: asset == 0, 8: asset in spells, 17: asset in zones, 25: asset in PLAYABLE_RACES, 26: 1 <= asset <= 13,
             32: asset in maps, 69: 1 <= asset <= MAX_LEVEL, 71: asset >= 1}[kind]
 
 

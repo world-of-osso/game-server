@@ -122,6 +122,10 @@ The criteria condition compiler now carries ModifierTree type2 PlayerCondition I
 
 The same native rated settlement publishes map-specific WinArena32 for winners and ParticipateInArena33 for every online in-world participant, after persistence and the result's once-only applied marker. Events carry the completed source map and native team size; compiled PlayerInArenaWithTeamSize24 (2/3) and PlayerInRankedArenaMatch60 predicates read those facts, not a guessed rating asset or current queue. Native-channel2v2/3v3 RED/GREEN covers counters8613/8617/8605/8609, losers receiving participation only, wrong map/team size, no preparation/skirmish/idle replay and redb reopen. Primary source: TC a352b1fa Arena.cpp241–250, CriteriaHandler.cpp1652–1655/1879–1885/2059–2065.5v5 remains unsupported; type39 still has a source/data slot mapping gap. The [inventory](../../achievement-criteria-producer-inventory.md) owns the structural census; no new rendered arena proof is claimed.
 
+## Full-roster limit (verified 2026-10-13)
+
+ModifierTree29 LessThanTappers is a group roster condition (TC a352b1fa CriteriaHandler1902–1905), not a count of nearby attackers. `ReferencePlayer.group_size` snapshots `GroupRegistry.group_members` including offline members;0 means known solo and None means unknown authority. All4/SingleTrue limits remain conjunctive with legacy/current difficulty and other supported leaves. Native authored Malygos spawning/combat/death in copy616/3 proves1869 and criterion7174 for solo/roster8, rejects roster9 and25-player7175, and survives idle ticks/redb reopen. Fixture's actor UnitLevel initially lacked character Level; corrected before the retained valid RED/GREEN pair. This is criterion lifecycle proof, not full Malygos combat/render parity. The [inventory](../../achievement-criteria-producer-inventory.md) owns counts and remaining source/data gaps.
+
 ## Sources
 
 - [Producer inventory](../../achievement-criteria-producer-inventory.md) — raw/current-root census and continuation proof.
