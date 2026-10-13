@@ -768,6 +768,7 @@ fn native_flag_match(
             chair: None,
             quest_object: None,
             initial_state: 1,
+            script_name: String::new(),
         })
         .collect();
     world.insert_resource(GameObjectSpawns(homes));
