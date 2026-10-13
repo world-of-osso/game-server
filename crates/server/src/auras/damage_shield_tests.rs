@@ -61,6 +61,21 @@ fn damage_shield_uses_original_caster_bonuses_but_owner_attribution() {
     }));
 }
 
+/// Authored20570 Thorns: three base points plus1.0 spell-power coefficient.
+#[test]
+fn damage_shield_uses_native_power_coefficient_at_retaliation() {
+    const POWERED_THORNS: u32 = 20570;
+    let mut h = harness(Vec::new(), &[POWERED_THORNS], 11).unwrap();
+    let (caster, owner) = (h.caster, h.npc);
+    apply(&mut h, POWERED_THORNS, caster, owner);
+    let before = h.app.world().get::<Health>(caster).unwrap().current;
+    super::damage_shield::retaliate(h.app.world_mut(), owner, caster);
+    assert_eq!(
+        h.app.world().get::<Health>(caster).unwrap().current,
+        before - 103.0
+    );
+}
+
 #[test]
 fn damage_shield_honors_school_immunity_and_native_absorption() {
     for protection in [DIVINE_SHIELD, POWER_WORD_SHIELD] {
