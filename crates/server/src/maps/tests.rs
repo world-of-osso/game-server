@@ -1740,12 +1740,17 @@ fn exercise_arena_channel_with_reconnect(
                 .world()
                 .resource::<crate::persistence::GameDatabase>()
                 .db;
+            let name = ["Reconone", "Recontwo", "Reconthree", "Reconfour"][index];
             let (created_id, mut data) =
-                crate::persistence::create_character(db, id, &format!("Traveler{id}"), 1, 1)
-                    .unwrap();
+                crate::persistence::create_character(db, id, name, 1, 1).unwrap();
             assert_eq!(created_id, id);
             data.level = 90;
             crate::persistence::save_character(db, id, &data);
+            h.app
+                .world_mut()
+                .get_mut::<Player>(who.player)
+                .unwrap()
+                .name = name.into();
             h.app
                 .world_mut()
                 .entity_mut(who.connection)
