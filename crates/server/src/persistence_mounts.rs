@@ -3,7 +3,8 @@ use super::inventory_store::{InventoryRecord, write_inventory_record};
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use std::collections::BTreeMap;
 
-pub(crate) const ACCOUNT_MOUNTS: TableDefinition<u64, &[u8]> = TableDefinition::new("account_mounts");
+pub(crate) const ACCOUNT_MOUNTS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("account_mounts");
 pub(crate) type AccountMounts = BTreeMap<u32, bool>;
 
 pub(crate) fn create_tables(txn: &WriteTransaction) {
